@@ -1,0 +1,158 @@
+# Evergreen Project Config
+
+# When a task that used to pass starts to fail
+# Go through all versions that may have been skipped to detect
+# when the task started failing
+stepback: true
+
+# Mark a failure as a system/bootstrap failure (purple box) rather then a task
+# failure by default.
+# Actual testing tasks are marked with `type: test`
+command_type: system
+
+# Protect ourself against rogue test case, or curl gone wild, that runs forever
+# 12 minutes is the longest we'll ever run
+exec_timeout_secs: 3600 # 12 minutes is the longest we'll ever run
+
+# What to do when evergreen hits the timeout (`post:` tasks are run automatically)
+timeout:
+  - command: shell.exec
+    params:
+      script: |
+        ls -la
+
+functions:
+  "fetch source":
+    - command: git.get_project
+      params:
+        directory: mongo-odbc-driver
+
+  "generate expansions":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          export PATH="$PATH:$HOME/.cargo/bin"
+          export CARGO_NET_GIT_FETCH_WITH_CLI=true
+
+          cat <<EOT > expansions.yml
+          prepare_shell: |
+            set -o errexit
+            export PATH="$PATH"
+            export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
+            git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+          EOT
+    - command: expansions.update
+      params:
+        file: mongosql-rs/expansions.yml
+
+  "install rust toolchain":
+    - command: shell.exec
+      params:
+        shell: bash
+        script: |
+          ${prepare_shell}
+
+          # make sure to use msvc toolchain rather than gnu, which is
+          # the default for cygwin
+          if [ "Windows_NT" == "$OS" ]; then
+              if [ 'windows-64' == '${build_variant}' ]; then
+                  export DEFAULT_HOST_OPTIONS='--default-host x86_64-pc-windows-msvc'
+              elif [ 'windows-32' == '${build_variant}' ]; then
+                  export DEFAULT_HOST_OPTIONS='--default-host i686-pc-windows-msvc'
+              else
+                  echo 'unknown windows build variant ${build_variant}'
+                  exit 1;
+              fi
+          fi
+
+          # install rustup from scratch
+          rm -rf ~/.rustup
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path $DEFAULT_HOST_OPTIONS
+
+          # rustup installs into C:\Users\$USER instead of
+          # C:\home\$USER, so we symlink both .rustup and .cargo
+          if [ "Windows_NT" == "$OS" ]; then
+                ln -sf /cygdrive/c/Users/$USER/.rustup/ ~/.rustup
+                ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
+          fi
+
+  "check clippy":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          ${prepare_shell}
+          cargo clippy --all-targets -- -D warnings
+
+  "check rustfmt":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          ${prepare_shell}
+          cargo fmt --all --  --check
+
+  "compile release":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          ${prepare_shell}
+          cargo build --release
+
+pre:
+  - func: "fetch source"
+  - func: "generate expansions"
+
+tasks:
+
+  - name: clippy
+    commands:
+      - func: "install rust toolchain"
+      - func: "check clippy"
+
+  - name: rustfmt
+    commands:
+      - func: "install rust toolchain"
+      - func: "check rustfmt"
+
+  - name: compile
+    commands:
+      - func: "install rust toolchain"
+      - func: "compile release"
+
+  - name: test-rust
+    commands:
+      - func: "install rust toolchain"
+      - func: "run rust tests"
+
+buildvariants:
+
+  - name: static-analysis
+    display_name: "* Static Analysis"
+    run_on: [ ubuntu1804-test ]
+    tasks:
+      - name: clippy
+      - name: rustfmt
+
+  - name: windows-32
+    display_name: Windows (32-bit)
+    run_on: [ windows-64-vs2019-large ]
+    tasks:
+      - name: compile
+      - name: test-rust
+
+  - name: windows-64
+    display_name: Windows (64-bit)
+    run_on: [ windows-64-vs2019-large ]
+    tasks:
+      - name: compile
+      - name: test-rust
