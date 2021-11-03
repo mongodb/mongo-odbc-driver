@@ -108,6 +108,16 @@ functions:
           ${prepare_shell}
           cargo build --release
 
+  "run rust tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          ${prepare_shell}
+          cargo test
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
