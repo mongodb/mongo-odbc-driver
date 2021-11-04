@@ -45,7 +45,7 @@ functions:
           EOT
     - command: expansions.update
       params:
-        file: mongosql-rs/expansions.yml
+        file: mongo-odbc-driver/expansions.yml
 
   "install rust toolchain":
     - command: shell.exec
