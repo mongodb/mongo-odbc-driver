@@ -7,5 +7,5 @@ edition = "2018"
 [dependencies]
 
 [lib]
-name = "mongo-odbc"
+name = "mongo_odbc"
 crate-type = ["cdylib"]
