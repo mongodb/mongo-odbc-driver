@@ -1,0 +1,11 @@
+[package]
+name = "mongo-odbc-driver"
+version = "0.1.0"
+authors = ["Ryan Chipman <ryan@ryanchipman.com>"]
+edition = "2018"
+
+[dependencies]
+
+[lib]
+name = "mongoodbc"
+crate-type = ["cdylib"]
