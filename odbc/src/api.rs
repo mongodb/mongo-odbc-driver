@@ -75,17 +75,17 @@ pub extern "C" fn SQLBulkOperations(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLCancel(__statement_handle: HStmt) -> SqlReturn {
+pub extern "C" fn SQLCancel(_statement_handle: HStmt) -> SqlReturn {
     unimplemented!()
 }
 
 #[no_mangle]
-pub extern "C" fn SQLCancelHandle(__handle_type: HandleType, _handle: Handle) -> SqlReturn {
+pub extern "C" fn SQLCancelHandle(_handle_type: HandleType, _handle: Handle) -> SqlReturn {
     unimplemented!()
 }
 
 #[no_mangle]
-pub extern "C" fn SQLCloseCursor(__statement_handle: HStmt) -> SqlReturn {
+pub extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
     unimplemented!()
 }
 
@@ -432,6 +432,11 @@ pub extern "C" fn SQLForeignKeysW(
 
 #[no_mangle]
 pub extern "C" fn SQLFreeHandle(_handle_type: HandleType, _handle: Handle) -> SqlReturn {
+    unimplemented!()
+}
+
+#[no_mangle]
+pub extern "C" fn SQLFreeStmt(_statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
     unimplemented!()
 }
 
@@ -897,6 +902,16 @@ pub extern "C" fn SQLSetDescRec(
     _data_ptr: Pointer,
     _string_length_ptr: *const Len,
     _indicator_ptr: *const Len,
+) -> SqlReturn {
+    unimplemented!()
+}
+
+#[no_mangle]
+pub extern "C" fn SQLSetPos(
+    _statement_handle: HStmt,
+    _row_number: ULen,
+    _operation: USmallInt,
+    _lock_type: USmallInt,
 ) -> SqlReturn {
     unimplemented!()
 }
