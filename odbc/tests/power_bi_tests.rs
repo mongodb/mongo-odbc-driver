@@ -3,6 +3,8 @@ use odbc_sys::*;
 use std::ops::FnOnce;
 use std::ptr::null_mut;
 
+/// Validate that the outcome is SQL_SUCCESS if validate_success is true.
+/// Otherwise, only stops with an exception on SQL_ERROR.
 fn execute_odbc_call<F>(validate_success: bool, func: F)
 where
     F: FnOnce() -> SqlReturn,
@@ -55,12 +57,13 @@ fn setup(validate_success: bool) -> odbc_sys::HEnv {
     env as HEnv
 }
 
-/// Test PowerBI Setup sequence
+/// Test PowerBI Setup flow
 #[test]
 fn test_setup() {
     setup(true);
 }
 
+/// Test PowerBi environment clean-up
 #[test]
 fn test_env_cleanup() {
     // We need a handle to be able to test that freeing the handle work
@@ -73,3 +76,5 @@ fn test_env_cleanup() {
         });
     }
 }
+
+// TODO : Add the other flows
