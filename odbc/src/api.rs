@@ -18,7 +18,7 @@ impl EnvHandle {
     fn new() -> Self {
         Self {
             env: RwLock::new(Env {
-                attributes: EnvAttributes::default(),
+                _attributes: EnvAttributes::default(),
                 state: EnvState::Unallocated,
                 connections: HashSet::new(),
             }),
@@ -29,7 +29,7 @@ impl EnvHandle {
 #[derive(Debug)]
 struct Env {
     // attributes for this Env
-    pub attributes: EnvAttributes,
+    pub _attributes: EnvAttributes,
     // state of this Env
     pub state: EnvState,
     pub connections: HashSet<*mut ConnectionHandle>,
@@ -64,13 +64,13 @@ struct Connection {
     // this Connection was allocated
     pub env: *mut EnvHandle,
     // all the possible Connection settings
-    pub attributes: ConnectionAttributes,
+    pub _attributes: ConnectionAttributes,
     // state of this connection
     pub state: ConnectionState,
     // MongoDB Client for issuing commands
     // pub client: Option<MongoClient>,
     // all Descriptors attached to this Connection
-    pub descriptors: HashSet<*mut DescriptorHandle>,
+    pub _descriptors: HashSet<*mut DescriptorHandle>,
     // all Statements allocated from this Connection
     pub statements: HashSet<*mut StatementHandle>,
 }
@@ -86,13 +86,13 @@ impl Default for ConnectionAttributes {
 
 #[derive(Debug, PartialEq, Eq)]
 enum ConnectionState {
-    UnallocatedEnvUnallocatedConnection,
+    _UnallocatedEnvUnallocatedConnection,
     AllocatedEnvUnallocatedConnection,
     AllocatedEnvAllocatedConnection,
-    ConnectionFunctionNeedsDataEnv,
-    Connected,
-    StatementAllocated,
-    TransactionInProgress,
+    _ConnectionFunctionNeedsDataEnv,
+    _Connected,
+    _StatementAllocated,
+    _TransactionInProgress,
 }
 
 impl ConnectionHandle {
@@ -107,9 +107,9 @@ impl Connection {
     fn new(env: *mut EnvHandle) -> Self {
         Self {
             env,
-            attributes: ConnectionAttributes::default(),
+            _attributes: ConnectionAttributes::default(),
             state: ConnectionState::AllocatedEnvUnallocatedConnection,
-            descriptors: HashSet::new(),
+            _descriptors: HashSet::new(),
             statements: HashSet::new(),
         }
     }
@@ -123,7 +123,7 @@ struct StatementHandle {
 #[derive(Debug)]
 struct Statement {
     pub connection: *mut ConnectionHandle,
-    pub attributes: StatementAttributes,
+    pub _attributes: StatementAttributes,
     pub state: StatementState,
     //pub cursor: Option<Box<Peekable<Cursor>>>,
 }
@@ -166,7 +166,7 @@ impl Statement {
     fn new(connection: *mut ConnectionHandle) -> Self {
         Self {
             connection,
-            attributes: StatementAttributes::default(),
+            _attributes: StatementAttributes::default(),
             state: StatementState::Unallocated,
         }
     }
@@ -193,7 +193,7 @@ struct Descriptor {
 #[derive(Debug, PartialEq, Eq)]
 enum DescriptorState {
     Unallocated,
-    ImplicitlyAllocated,
+    _ImplicitlyAllocated,
     ExplicitlyAllocated,
 }
 
@@ -280,7 +280,7 @@ fn env_alloc_free() {
 #[test]
 fn connection_alloc_free() {
     unsafe {
-        let mut env_handle: *mut _ = &mut EnvHandle::new();
+        let env_handle: *mut _ = &mut EnvHandle::new();
         (*env_handle).env.write().unwrap().state = EnvState::Allocated;
 
         let mut handle: *mut _ = &mut ConnectionHandle::new(std::ptr::null_mut());
@@ -316,10 +316,10 @@ fn connection_alloc_free() {
 #[test]
 fn statement_alloc_free() {
     unsafe {
-        let mut env_handle: *mut _ = &mut EnvHandle::new();
+        let env_handle: *mut _ = &mut EnvHandle::new();
         (*env_handle).env.write().unwrap().state = EnvState::Allocated;
 
-        let mut conn_handle: *mut _ = &mut ConnectionHandle::new(env_handle);
+        let conn_handle: *mut _ = &mut ConnectionHandle::new(env_handle);
         (*conn_handle).connection.write().unwrap().state =
             ConnectionState::AllocatedEnvAllocatedConnection;
 
