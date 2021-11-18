@@ -70,9 +70,9 @@ struct Connection {
     // MongoDB Client for issuing commands
     // pub client: Option<MongoClient>,
     // all Descriptors attached to this Connection
-    pub descriptors: Vec<*mut DescriptorHandle>,
+    pub descriptors: HashSet<*mut DescriptorHandle>,
     // all Statements allocated from this Connection
-    pub statements: Vec<*mut StatementHandle>,
+    pub statements: HashSet<*mut StatementHandle>,
 }
 
 #[derive(Debug)]
@@ -109,8 +109,8 @@ impl Connection {
             env,
             attributes: ConnectionAttributes::default(),
             state: ConnectionState::AllocatedEnvUnallocatedConnection,
-            descriptors: Vec::new(),
-            statements: Vec::new(),
+            descriptors: HashSet::new(),
+            statements: HashSet::new(),
         }
     }
 }
@@ -239,7 +239,7 @@ pub extern "C" fn SQLAllocHandle(
                     .write()
                     .unwrap()
                     .statements
-                    .push(stmt_ptr);
+                    .insert(stmt_ptr);
                 *output_handle = stmt_ptr as *mut _
             }
         }
@@ -310,6 +310,52 @@ fn connection_alloc_free() {
             )
         );
         assert_eq!(0, (*env_handle).env.read().unwrap().connections.len());
+    }
+}
+
+#[test]
+fn statement_alloc_free() {
+    unsafe {
+        let mut env_handle: *mut _ = &mut EnvHandle::new();
+        (*env_handle).env.write().unwrap().state = EnvState::Allocated;
+
+        let mut conn_handle: *mut _ = &mut ConnectionHandle::new(env_handle);
+        (*conn_handle).connection.write().unwrap().state =
+            ConnectionState::AllocatedEnvAllocatedConnection;
+
+        let mut handle: *mut _ = &mut StatementHandle::new(std::ptr::null_mut());
+        let handle_ptr: *mut _ = &mut handle;
+        assert_eq!(
+            StatementState::Unallocated,
+            (*handle).stmt.lock().unwrap().state
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::Stmt,
+                conn_handle as *mut _,
+                std::mem::transmute::<*mut *mut StatementHandle, *mut Handle>(handle_ptr),
+            )
+        );
+        assert_eq!(
+            StatementState::Allocated,
+            (*handle).stmt.lock().unwrap().state
+        );
+        assert_eq!(
+            1,
+            (*conn_handle).connection.read().unwrap().statements.len()
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(
+                HandleType::Stmt,
+                std::mem::transmute::<*mut StatementHandle, Handle>(handle),
+            )
+        );
+        assert_eq!(
+            0,
+            (*conn_handle).connection.read().unwrap().statements.len()
+        );
     }
 }
 
@@ -744,9 +790,9 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
             HandleType::Dbc => {
                 let handle = handle as *mut ConnectionHandle;
                 let conn = Box::from_raw(handle);
+                let mut contents = conn.connection.write().unwrap();
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
-                let mut contents = conn.connection.write().unwrap();
                 contents.state = ConnectionState::AllocatedEnvUnallocatedConnection;
                 (*contents.env)
                     .env
@@ -756,10 +802,18 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
                     .remove(&handle);
             }
             HandleType::Stmt => {
-                let stmt = Box::from_raw(handle as *mut StatementHandle);
+                let handle = handle as *mut StatementHandle;
+                let stmt = Box::from_raw(handle);
+                let mut contents = stmt.stmt.lock().unwrap();
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
-                stmt.stmt.lock().unwrap().state = StatementState::Unallocated;
+                contents.state = StatementState::Unallocated;
+                (*contents.connection)
+                    .connection
+                    .write()
+                    .unwrap()
+                    .statements
+                    .remove(&handle);
             }
             HandleType::Desc => {
                 let desc = Box::from_raw(handle as *mut DescriptorHandle);
