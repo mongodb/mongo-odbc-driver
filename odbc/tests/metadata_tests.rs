@@ -77,5 +77,4 @@ fn test_sql_tables() {
         // free the connection handle (connection.drop calls sqlDisconnect
         // but I did not find where it calls sqlFreeHandle)
     }
-    //}
 }
