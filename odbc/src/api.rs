@@ -10,12 +10,12 @@ use std::{
 };
 
 #[derive(Debug)]
-struct EnvHandle {
-    env: RwLock<Env>,
+pub struct EnvHandle {
+    pub env: RwLock<Env>,
 }
 
 impl EnvHandle {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             env: RwLock::new(Env {
                 _attributes: EnvAttributes::default(),
@@ -27,7 +27,7 @@ impl EnvHandle {
 }
 
 #[derive(Debug)]
-struct Env {
+pub struct Env {
     // attributes for this Env
     pub _attributes: EnvAttributes,
     // state of this Env
@@ -48,18 +48,18 @@ impl Default for EnvAttributes {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum EnvState {
+pub enum EnvState {
     Unallocated,
     Allocated,
 }
 
 #[derive(Debug)]
-struct ConnectionHandle {
-    connection: RwLock<Connection>,
+pub struct ConnectionHandle {
+    pub connection: RwLock<Connection>,
 }
 
 #[derive(Debug)]
-struct Connection {
+pub struct Connection {
     // Pointer to the Env from which
     // this Connection was allocated
     pub env: *mut EnvHandle,
@@ -76,7 +76,7 @@ struct Connection {
 }
 
 #[derive(Debug)]
-struct ConnectionAttributes {}
+pub struct ConnectionAttributes {}
 
 impl Default for ConnectionAttributes {
     fn default() -> Self {
@@ -85,7 +85,7 @@ impl Default for ConnectionAttributes {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum ConnectionState {
+pub enum ConnectionState {
     _UnallocatedEnvUnallocatedConnection,
     AllocatedEnvUnallocatedConnection,
     AllocatedEnvAllocatedConnection,
@@ -96,7 +96,7 @@ enum ConnectionState {
 }
 
 impl ConnectionHandle {
-    fn new(env: *mut EnvHandle) -> Self {
+    pub fn new(env: *mut EnvHandle) -> Self {
         Self {
             connection: RwLock::new(Connection::new(env)),
         }
@@ -104,7 +104,7 @@ impl ConnectionHandle {
 }
 
 impl Connection {
-    fn new(env: *mut EnvHandle) -> Self {
+    pub fn new(env: *mut EnvHandle) -> Self {
         Self {
             env,
             _attributes: ConnectionAttributes::default(),
@@ -116,12 +116,12 @@ impl Connection {
 }
 
 #[derive(Debug)]
-struct StatementHandle {
-    stmt: Mutex<Statement>,
+pub struct StatementHandle {
+    pub stmt: Mutex<Statement>,
 }
 
 #[derive(Debug)]
-struct Statement {
+pub struct Statement {
     pub connection: *mut ConnectionHandle,
     pub _attributes: StatementAttributes,
     pub state: StatementState,
@@ -129,7 +129,7 @@ struct Statement {
 }
 
 #[derive(Debug)]
-struct StatementAttributes {}
+pub struct StatementAttributes {}
 
 impl Default for StatementAttributes {
     fn default() -> Self {
@@ -155,7 +155,7 @@ pub enum StatementState {
 }
 
 impl StatementHandle {
-    fn new(connection: *mut ConnectionHandle) -> Self {
+    pub fn new(connection: *mut ConnectionHandle) -> Self {
         Self {
             stmt: Mutex::new(Statement::new(connection)),
         }
@@ -163,7 +163,7 @@ impl StatementHandle {
 }
 
 impl Statement {
-    fn new(connection: *mut ConnectionHandle) -> Self {
+    pub fn new(connection: *mut ConnectionHandle) -> Self {
         Self {
             connection,
             _attributes: StatementAttributes::default(),
@@ -173,12 +173,12 @@ impl Statement {
 }
 
 #[derive(Debug)]
-struct DescriptorHandle {
-    descriptor: RwLock<Descriptor>,
+pub struct DescriptorHandle {
+    pub descriptor: RwLock<Descriptor>,
 }
 
 impl DescriptorHandle {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             descriptor: RwLock::new(Descriptor::new()),
         }
@@ -186,19 +186,19 @@ impl DescriptorHandle {
 }
 
 #[derive(Debug)]
-struct Descriptor {
-    state: DescriptorState,
+pub struct Descriptor {
+    pub state: DescriptorState,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum DescriptorState {
+pub enum DescriptorState {
     Unallocated,
     _ImplicitlyAllocated,
     ExplicitlyAllocated,
 }
 
 impl Descriptor {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             state: DescriptorState::Unallocated,
         }
@@ -250,113 +250,6 @@ pub extern "C" fn SQLAllocHandle(
         }
     }
     SqlReturn::SUCCESS
-}
-
-#[test]
-fn env_alloc_free() {
-    unsafe {
-        let mut handle: *mut _ = &mut EnvHandle::new();
-        let handle_ptr: *mut _ = &mut handle;
-        assert_eq!(EnvState::Unallocated, (*handle).env.read().unwrap().state);
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLAllocHandle(
-                HandleType::Env,
-                std::ptr::null_mut(),
-                std::mem::transmute::<*mut *mut EnvHandle, *mut Handle>(handle_ptr),
-            )
-        );
-        assert_eq!(EnvState::Allocated, (*handle).env.read().unwrap().state);
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLFreeHandle(
-                HandleType::Env,
-                std::mem::transmute::<*mut EnvHandle, Handle>(handle),
-            )
-        );
-    }
-}
-
-#[test]
-fn connection_alloc_free() {
-    unsafe {
-        let env_handle: *mut _ = &mut EnvHandle::new();
-        (*env_handle).env.write().unwrap().state = EnvState::Allocated;
-
-        let mut handle: *mut _ = &mut ConnectionHandle::new(std::ptr::null_mut());
-        let handle_ptr: *mut _ = &mut handle;
-        assert_eq!(
-            ConnectionState::AllocatedEnvUnallocatedConnection,
-            (*handle).connection.read().unwrap().state
-        );
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLAllocHandle(
-                HandleType::Dbc,
-                env_handle as *mut _,
-                std::mem::transmute::<*mut *mut ConnectionHandle, *mut Handle>(handle_ptr),
-            )
-        );
-        assert_eq!(
-            ConnectionState::AllocatedEnvAllocatedConnection,
-            (*handle).connection.read().unwrap().state
-        );
-        assert_eq!(1, (*env_handle).env.read().unwrap().connections.len());
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLFreeHandle(
-                HandleType::Dbc,
-                std::mem::transmute::<*mut ConnectionHandle, Handle>(handle),
-            )
-        );
-        assert_eq!(0, (*env_handle).env.read().unwrap().connections.len());
-    }
-}
-
-#[test]
-fn statement_alloc_free() {
-    unsafe {
-        let env_handle: *mut _ = &mut EnvHandle::new();
-        (*env_handle).env.write().unwrap().state = EnvState::Allocated;
-
-        let conn_handle: *mut _ = &mut ConnectionHandle::new(env_handle);
-        (*conn_handle).connection.write().unwrap().state =
-            ConnectionState::AllocatedEnvAllocatedConnection;
-
-        let mut handle: *mut _ = &mut StatementHandle::new(std::ptr::null_mut());
-        let handle_ptr: *mut _ = &mut handle;
-        assert_eq!(
-            StatementState::Unallocated,
-            (*handle).stmt.lock().unwrap().state
-        );
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLAllocHandle(
-                HandleType::Stmt,
-                conn_handle as *mut _,
-                std::mem::transmute::<*mut *mut StatementHandle, *mut Handle>(handle_ptr),
-            )
-        );
-        assert_eq!(
-            StatementState::Allocated,
-            (*handle).stmt.lock().unwrap().state
-        );
-        assert_eq!(
-            1,
-            (*conn_handle).connection.read().unwrap().statements.len()
-        );
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLFreeHandle(
-                HandleType::Stmt,
-                std::mem::transmute::<*mut StatementHandle, Handle>(handle),
-            )
-        );
-        assert_eq!(
-            0,
-            (*conn_handle).connection.read().unwrap().statements.len()
-        );
-    }
 }
 
 #[no_mangle]

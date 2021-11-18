@@ -1,0 +1,112 @@
+use crate::{
+    ConnectionHandle, ConnectionState, EnvHandle, EnvState, SQLAllocHandle, SQLFreeHandle,
+    StatementHandle, StatementState,
+};
+use odbc_sys::{Handle, HandleType, SqlReturn};
+
+#[test]
+fn env_alloc_free() {
+    unsafe {
+        let mut handle: *mut _ = &mut EnvHandle::new();
+        let handle_ptr: *mut _ = &mut handle;
+        assert_eq!(EnvState::Unallocated, (*handle).env.read().unwrap().state);
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::Env,
+                std::ptr::null_mut(),
+                std::mem::transmute::<*mut *mut EnvHandle, *mut Handle>(handle_ptr),
+            )
+        );
+        assert_eq!(EnvState::Allocated, (*handle).env.read().unwrap().state);
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(
+                HandleType::Env,
+                std::mem::transmute::<*mut EnvHandle, Handle>(handle),
+            )
+        );
+    }
+}
+
+#[test]
+fn connection_alloc_free() {
+    unsafe {
+        let env_handle: *mut _ = &mut EnvHandle::new();
+        (*env_handle).env.write().unwrap().state = EnvState::Allocated;
+
+        let mut handle: *mut _ = &mut ConnectionHandle::new(std::ptr::null_mut());
+        let handle_ptr: *mut _ = &mut handle;
+        assert_eq!(
+            ConnectionState::AllocatedEnvUnallocatedConnection,
+            (*handle).connection.read().unwrap().state
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::Dbc,
+                env_handle as *mut _,
+                std::mem::transmute::<*mut *mut ConnectionHandle, *mut Handle>(handle_ptr),
+            )
+        );
+        assert_eq!(
+            ConnectionState::AllocatedEnvAllocatedConnection,
+            (*handle).connection.read().unwrap().state
+        );
+        assert_eq!(1, (*env_handle).env.read().unwrap().connections.len());
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(
+                HandleType::Dbc,
+                std::mem::transmute::<*mut ConnectionHandle, Handle>(handle),
+            )
+        );
+        assert_eq!(0, (*env_handle).env.read().unwrap().connections.len());
+    }
+}
+
+#[test]
+fn statement_alloc_free() {
+    unsafe {
+        let env_handle: *mut _ = &mut EnvHandle::new();
+        (*env_handle).env.write().unwrap().state = EnvState::Allocated;
+
+        let conn_handle: *mut _ = &mut ConnectionHandle::new(env_handle);
+        (*conn_handle).connection.write().unwrap().state =
+            ConnectionState::AllocatedEnvAllocatedConnection;
+
+        let mut handle: *mut _ = &mut StatementHandle::new(std::ptr::null_mut());
+        let handle_ptr: *mut _ = &mut handle;
+        assert_eq!(
+            StatementState::Unallocated,
+            (*handle).stmt.lock().unwrap().state
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::Stmt,
+                conn_handle as *mut _,
+                std::mem::transmute::<*mut *mut StatementHandle, *mut Handle>(handle_ptr),
+            )
+        );
+        assert_eq!(
+            StatementState::Allocated,
+            (*handle).stmt.lock().unwrap().state
+        );
+        assert_eq!(
+            1,
+            (*conn_handle).connection.read().unwrap().statements.len()
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(
+                HandleType::Stmt,
+                std::mem::transmute::<*mut StatementHandle, Handle>(handle),
+            )
+        );
+        assert_eq!(
+            0,
+            (*conn_handle).connection.read().unwrap().statements.len()
+        );
+    }
+}
