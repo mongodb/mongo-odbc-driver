@@ -1,7 +1,34 @@
 extern crate odbc_api;
+
+use self::odbc_api::handles::StatementImpl;
+use self::odbc_api::{Connection, Cursor, CursorImpl, Environment};
 use lazy_static::lazy_static;
-use odbc_api::*;
+use odbc_api::ResultSetMetadata;
 use std::env;
+
+#[derive(Debug, PartialEq)]
+pub struct ResultsetMetadata {
+    pub expected_sql_types: Vec<String>,
+    pub expected_bson_type: Vec<String>,
+    pub expected_catalog_name: Vec<String>,
+    pub expected_column_class_name: Vec<String>,
+    pub expected_column_display_size: Vec<String>,
+    pub expected_column_label: Vec<String>,
+    pub expected_column_type: Vec<String>,
+    pub expected_precision: Vec<String>,
+    pub expected_scale: Vec<String>,
+    pub expected_schema_name: Vec<String>,
+    pub expected_is_auto_increment: Vec<String>,
+    pub expected_is_case_sensitive: Vec<String>,
+    pub expected_is_currency: Vec<String>,
+    pub expected_is_definitely_writable: Vec<String>,
+    pub expected_is_nullable: Vec<String>,
+    pub expected_is_read_only: Vec<String>,
+    pub expected_is_searchable: Vec<String>,
+    pub expected_is_signed: Vec<String>,
+    pub expected_is_writable: Vec<String>,
+    pub expected_names: Vec<String>,
+}
 
 // Allocate a new environment handle.
 // Most tests will only need one and this should be part of the setup mechanism.
@@ -49,26 +76,38 @@ pub fn connect() -> Connection<'static> {
         .unwrap()
 }
 
-/// Call sqlTables with the given arguments and validate the resultset.
-pub fn sqltables(
-    catalog_name: Option<&str>,
-    schema_name: Option<&str>,
-    table_name: Option<&str>,
-    table_type: Option<&str>,
-    expected_row_count: Option<i64>,
+/// Validate the resultset and its metadata
+pub fn validate_rs(
+    expected_row_count_opt: Option<i64>,
+    expected_result_set_opt: Option<&Vec<Vec<String>>>,
+    expected_rs_meta_opt: Option<&ResultsetMetadata>,
+    rs_cursor: &mut CursorImpl<StatementImpl>,
 ) {
-    let conn = connect();
-    let mut cursor = conn
-        .tables(catalog_name, schema_name, table_name, table_type)
-        .unwrap();
-    let num_col = cursor.num_result_cols().unwrap();
-    assert_eq!(5, num_col);
-    let mut row_count: i64 = 0;
-    while let Ok(row) = cursor.next_row() {
-        row_count = row_count + 1;
-        // TODO - Validate RS content
+    // Validate metadata
+    if expected_rs_meta_opt.is_some() {
+        let expected_rs_meta = expected_rs_meta_opt.unwrap();
+        let num_col = rs_cursor.num_result_cols().unwrap();
+        assert_eq!(expected_rs_meta.expected_names.len() as i16, num_col);
+        let column_names = rs_cursor.column_names().unwrap();
+        for (index, name) in column_names.enumerate() {
+            assert_eq!(expected_rs_meta.expected_names[index], name.unwrap());
+        }
     }
-    if expected_row_count.is_some() {
-        assert_eq!(expected_row_count.unwrap(), row_count)
+
+    if expected_row_count_opt.is_some() || expected_result_set_opt.is_some() {
+        let mut row_count: i64 = 0;
+        while let Ok(row) = rs_cursor.next_row() {
+            row_count = row_count + 1;
+            // TODO - Validate RS content
+        }
+
+        // Validate row count
+        if expected_row_count_opt.is_some() {
+            assert_eq!(expected_row_count_opt.unwrap(), row_count)
+        }
     }
+
+    // TODO Do we need to clean-up? sqlCloseCursor? sqlFreeStatement?
+    // The caller will have a clean-up session which call sqlDisconnect
+    // and should free all the statements attached to the connection
 }
