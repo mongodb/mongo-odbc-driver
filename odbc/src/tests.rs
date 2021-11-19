@@ -1,6 +1,8 @@
 use crate::{
-    ConnectionHandle, ConnectionState, EnvHandle, EnvState, SQLAllocHandle, SQLFreeHandle,
-    StatementHandle, StatementState,
+    handles::{
+        ConnectionHandle, ConnectionState, EnvHandle, EnvState, StatementHandle, StatementState,
+    },
+    SQLAllocHandle, SQLFreeHandle,
 };
 use odbc_sys::{Handle, HandleType, SqlReturn};
 
