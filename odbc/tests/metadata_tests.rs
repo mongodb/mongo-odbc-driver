@@ -3,10 +3,7 @@ extern crate odbc_api;
 use crate::common::{connect, validate_rs};
 use crate::tests_gen::{load_file_paths, parse_yaml_metadata_tests, DbMetadataTest};
 use lazy_static::lazy_static;
-use odbc_api::handles::StatementImpl;
-use odbc_api::CursorImpl;
 use std::path::PathBuf;
-use std::ptr::{null, null_mut};
 
 mod common;
 mod tests_gen;
@@ -14,7 +11,7 @@ mod tests_gen;
 lazy_static! {
     static ref TESTS_LIST: TestsList = {
         let mut sql_tables_tests = Vec::new();
-        let paths = load_file_paths(PathBuf::from("./tests/metadata_tests")).unwrap();
+        let paths = load_file_paths(PathBuf::from("./tests/metadata_tests_def")).unwrap();
         for path in paths {
                     let yaml_db_metadata_tests = parse_yaml_metadata_tests(&path).unwrap();
         for test in yaml_db_metadata_tests.tests {
