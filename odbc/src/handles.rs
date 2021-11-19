@@ -1,26 +1,8 @@
-use std::{
-    collections::HashSet,
-    sync::{Mutex, RwLock},
-};
+use std::{collections::HashSet, sync::RwLock};
 
 use odbc_sys::Integer;
 
-#[derive(Debug)]
-pub struct EnvHandle {
-    pub env: RwLock<Env>,
-}
-
-impl EnvHandle {
-    pub fn new() -> Self {
-        Self {
-            env: RwLock::new(Env {
-                _attributes: EnvAttributes::default(),
-                state: EnvState::Unallocated,
-                connections: HashSet::new(),
-            }),
-        }
-    }
-}
+pub type EnvHandle = RwLock<Env>;
 
 #[derive(Debug)]
 pub struct Env {
@@ -29,6 +11,16 @@ pub struct Env {
     // state of this Env
     pub state: EnvState,
     pub connections: HashSet<*mut ConnectionHandle>,
+}
+
+impl Env {
+    pub fn new() -> Self {
+        Self {
+            _attributes: EnvAttributes::default(),
+            state: EnvState::Unallocated,
+            connections: HashSet::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -50,10 +42,7 @@ pub enum EnvState {
     ConnectionAllocated,
 }
 
-#[derive(Debug)]
-pub struct ConnectionHandle {
-    pub connection: RwLock<Connection>,
-}
+pub type ConnectionHandle = RwLock<Connection>;
 
 #[derive(Debug)]
 pub struct Connection {
@@ -92,14 +81,6 @@ pub enum ConnectionState {
     _TransactionInProgress,
 }
 
-impl ConnectionHandle {
-    pub fn new(env: *mut EnvHandle) -> Self {
-        Self {
-            connection: RwLock::new(Connection::new(env)),
-        }
-    }
-}
-
 impl Connection {
     pub fn new(env: *mut EnvHandle) -> Self {
         Self {
@@ -112,10 +93,7 @@ impl Connection {
     }
 }
 
-#[derive(Debug)]
-pub struct StatementHandle {
-    pub stmt: Mutex<Statement>,
-}
+pub type StatementHandle = RwLock<Statement>;
 
 #[derive(Debug)]
 pub struct Statement {
@@ -151,14 +129,6 @@ pub enum StatementState {
     _AsyncCancelled,
 }
 
-impl StatementHandle {
-    pub fn new(connection: *mut ConnectionHandle) -> Self {
-        Self {
-            stmt: Mutex::new(Statement::new(connection)),
-        }
-    }
-}
-
 impl Statement {
     pub fn new(connection: *mut ConnectionHandle) -> Self {
         Self {
@@ -169,18 +139,7 @@ impl Statement {
     }
 }
 
-#[derive(Debug)]
-pub struct DescriptorHandle {
-    pub descriptor: RwLock<Descriptor>,
-}
-
-impl DescriptorHandle {
-    pub fn new() -> Self {
-        Self {
-            descriptor: RwLock::new(Descriptor::new()),
-        }
-    }
-}
+pub type DescriptorHandle = RwLock<Descriptor>;
 
 #[derive(Debug)]
 pub struct Descriptor {

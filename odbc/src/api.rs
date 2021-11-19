@@ -1,6 +1,6 @@
 use crate::handles::{
-    ConnectionHandle, ConnectionState, DescriptorHandle, DescriptorState, EnvHandle, EnvState,
-    StatementHandle, StatementState,
+    Connection, ConnectionHandle, ConnectionState, Descriptor, DescriptorHandle, DescriptorState,
+    Env, EnvHandle, EnvState, Statement, StatementHandle, StatementState,
 };
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -8,6 +8,7 @@ use odbc_sys::{
     InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
     SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
+use std::sync::RwLock;
 
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
@@ -17,18 +18,17 @@ pub extern "C" fn SQLAllocHandle(
 ) -> SqlReturn {
     match handle_type {
         HandleType::Env => {
-            let env = Box::new(EnvHandle::new());
-            env.env.write().unwrap().state = EnvState::Allocated;
+            let env = Box::new(RwLock::new(Env::new()));
+            env.write().unwrap().state = EnvState::Allocated;
             unsafe { *output_handle = Box::into_raw(env) as *mut _ }
         }
         HandleType::Dbc => {
             let env = input_handle as *mut _;
-            let conn = Box::new(ConnectionHandle::new(env));
-            conn.connection.write().unwrap().state =
-                ConnectionState::AllocatedEnvAllocatedConnection;
+            let conn = Box::new(RwLock::new(Connection::new(env)));
+            conn.write().unwrap().state = ConnectionState::AllocatedEnvAllocatedConnection;
             unsafe {
                 let conn_ptr = Box::into_raw(conn) as *mut _;
-                let mut env_contents = (*env).env.write().unwrap();
+                let mut env_contents = (*env).write().unwrap();
                 env_contents.connections.insert(conn_ptr);
                 env_contents.state = EnvState::ConnectionAllocated;
                 *output_handle = conn_ptr as *mut _
@@ -36,22 +36,17 @@ pub extern "C" fn SQLAllocHandle(
         }
         HandleType::Stmt => {
             let conn = input_handle as *mut _;
-            let stmt = Box::new(StatementHandle::new(conn));
-            stmt.stmt.lock().unwrap().state = StatementState::Allocated;
+            let stmt = Box::new(RwLock::new(Statement::new(conn)));
+            stmt.write().unwrap().state = StatementState::Allocated;
             unsafe {
                 let stmt_ptr = Box::into_raw(stmt) as *mut _;
-                (*conn)
-                    .connection
-                    .write()
-                    .unwrap()
-                    .statements
-                    .insert(stmt_ptr);
+                (*conn).write().unwrap().statements.insert(stmt_ptr);
                 *output_handle = stmt_ptr as *mut _
             }
         }
         HandleType::Desc => {
-            let desc = Box::new(DescriptorHandle::new());
-            (*desc).descriptor.write().unwrap().state = DescriptorState::ExplicitlyAllocated;
+            let desc = Box::new(RwLock::new(Descriptor::new()));
+            (*desc).write().unwrap().state = DescriptorState::ExplicitlyAllocated;
             unsafe { *output_handle = Box::into_raw(desc) as *mut _ }
         }
     }
@@ -484,16 +479,16 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
                 let env = Box::from_raw(handle as *mut EnvHandle);
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
-                env.env.write().unwrap().state = EnvState::Unallocated;
+                env.write().unwrap().state = EnvState::Unallocated;
             }
             HandleType::Dbc => {
                 let handle = handle as *mut ConnectionHandle;
                 let conn = Box::from_raw(handle);
-                let mut contents = conn.connection.write().unwrap();
+                let mut contents = conn.write().unwrap();
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
                 contents.state = ConnectionState::AllocatedEnvUnallocatedConnection;
-                let mut env_contents = (*contents.env).env.write().unwrap();
+                let mut env_contents = (*contents.env).write().unwrap();
                 env_contents.connections.remove(&handle);
                 if env_contents.connections.is_empty() {
                     env_contents.state = EnvState::Allocated;
@@ -502,12 +497,11 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
             HandleType::Stmt => {
                 let handle = handle as *mut StatementHandle;
                 let stmt = Box::from_raw(handle);
-                let mut contents = stmt.stmt.lock().unwrap();
+                let mut contents = stmt.write().unwrap();
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
                 contents.state = StatementState::Unallocated;
                 (*contents.connection)
-                    .connection
                     .write()
                     .unwrap()
                     .statements
@@ -517,7 +511,7 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
                 let desc = Box::from_raw(handle as *mut DescriptorHandle);
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
-                desc.descriptor.write().unwrap().state = DescriptorState::Unallocated;
+                desc.write().unwrap().state = DescriptorState::Unallocated;
             }
         }
     }
@@ -1000,7 +994,7 @@ pub extern "C" fn SQLSetPos(
     _statement_handle: HStmt,
     _row_number: ULen,
     _operation: USmallInt,
-    _lock_type: USmallInt,
+    _write_type: USmallInt,
 ) -> SqlReturn {
     unimplemented!()
 }
