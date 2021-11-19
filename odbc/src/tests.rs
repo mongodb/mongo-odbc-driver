@@ -57,6 +57,10 @@ fn connection_alloc_free() {
         );
         assert_eq!(1, (*env_handle).env.read().unwrap().connections.len());
         assert_eq!(
+            EnvState::ConnectionAllocated,
+            (*env_handle).env.read().unwrap().state
+        );
+        assert_eq!(
             SqlReturn::SUCCESS,
             SQLFreeHandle(
                 HandleType::Dbc,
@@ -64,6 +68,7 @@ fn connection_alloc_free() {
             )
         );
         assert_eq!(0, (*env_handle).env.read().unwrap().connections.len());
+        assert_eq!(EnvState::Allocated, (*env_handle).env.read().unwrap().state);
     }
 }
 

@@ -28,7 +28,9 @@ pub extern "C" fn SQLAllocHandle(
                 ConnectionState::AllocatedEnvAllocatedConnection;
             unsafe {
                 let conn_ptr = Box::into_raw(conn) as *mut _;
-                (*env).env.write().unwrap().connections.insert(conn_ptr);
+                let mut env_contents = (*env).env.write().unwrap();
+                env_contents.connections.insert(conn_ptr);
+                env_contents.state = EnvState::ConnectionAllocated;
                 *output_handle = conn_ptr as *mut _
             }
         }
@@ -491,12 +493,11 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
                 contents.state = ConnectionState::AllocatedEnvUnallocatedConnection;
-                (*contents.env)
-                    .env
-                    .write()
-                    .unwrap()
-                    .connections
-                    .remove(&handle);
+                let mut env_contents = (*contents.env).env.write().unwrap();
+                env_contents.connections.remove(&handle);
+                if env_contents.connections.is_empty() {
+                    env_contents.state = EnvState::Allocated;
+                }
             }
             HandleType::Stmt => {
                 let handle = handle as *mut StatementHandle;

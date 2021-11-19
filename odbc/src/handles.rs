@@ -47,6 +47,7 @@ impl Default for EnvAttributes {
 pub enum EnvState {
     Unallocated,
     Allocated,
+    ConnectionAllocated,
 }
 
 #[derive(Debug)]
