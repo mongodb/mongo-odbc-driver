@@ -501,7 +501,6 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
 
 fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<(), ()> {
     unsafe {
-        let handle = handle as *mut MongoHandle;
         match handle_type {
             // By making Boxes to the types and letting them go out of
             // scope, they will be dropped.
@@ -510,8 +509,6 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
                 env.write().unwrap().state = EnvState::Unallocated;
-                let _ = Box::from_raw(handle as *mut MongoHandle);
-                Ok(())
             }
             HandleType::Dbc => {
                 let conn = (*handle).as_connection()?;
@@ -524,8 +521,6 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                 if env_contents.connections.is_empty() {
                     env_contents.state = EnvState::Allocated;
                 }
-                let _ = Box::from_raw(handle);
-                Ok(())
             }
             HandleType::Stmt => {
                 let stmt = (*handle).as_statement()?;
@@ -538,18 +533,17 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                 if conn_contents.statements.is_empty() {
                     conn_contents.state = ConnectionState::Connected;
                 }
-                let _ = Box::from_raw(handle);
-                Ok(())
             }
             HandleType::Desc => {
                 let desc = (*handle).as_descriptor()?;
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
                 desc.write().unwrap().state = DescriptorState::Unallocated;
-                let _ = Box::from_raw(handle as *mut MongoHandle);
-                Ok(())
             }
         }
+        // create the Box at the end to ensure Drop is not reordered?
+        let _ = Box::from_raw(handle);
+        Ok(())
     }
 }
 

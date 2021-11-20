@@ -120,20 +120,20 @@ fn connection_alloc_free() {
                 std::mem::transmute::<*mut MongoHandle, Handle>(handle),
             )
         );
-        //        assert_eq!(
-        //            0,
-        //            (*env_handle)
-        //                .as_env()
-        //                .unwrap()
-        //                .read()
-        //                .unwrap()
-        //                .connections
-        //                .len()
-        //        );
-        //        assert_eq!(
-        //            EnvState::Allocated,
-        //            (*env_handle).as_env().unwrap().read().unwrap().state
-        //        );
+        assert_eq!(
+            0,
+            (*env_handle)
+                .as_env()
+                .unwrap()
+                .read()
+                .unwrap()
+                .connections
+                .len()
+        );
+        assert_eq!(
+            EnvState::Allocated,
+            (*env_handle).as_env().unwrap().read().unwrap().state
+        );
     }
 }
 
