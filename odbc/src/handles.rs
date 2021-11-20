@@ -110,8 +110,8 @@ pub enum ConnectionState {
     AllocatedEnvUnallocatedConnection,
     AllocatedEnvAllocatedConnection,
     _ConnectionFunctionNeedsDataEnv,
-    _Connected,
-    _StatementAllocated,
+    Connected,
+    StatementAllocated,
     _TransactionInProgress,
 }
 
