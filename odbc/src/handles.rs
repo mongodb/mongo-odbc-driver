@@ -1,26 +1,58 @@
 use std::{collections::HashSet, sync::RwLock};
 
-use odbc_sys::{HandleType, Integer};
+use odbc_sys::Integer;
 
-pub type EnvHandle = RwLock<Env>;
+pub enum MongoHandle {
+    Env(RwLock<Env>),
+    Connection(RwLock<Connection>),
+    Statement(RwLock<Statement>),
+    Descriptor(RwLock<Descriptor>),
+}
 
-// repr(C) is required so that all handle structs have handle_type in the same offset.
+impl MongoHandle {
+    pub fn as_env(&self) -> Result<&RwLock<Env>, ()> {
+        match self {
+            MongoHandle::Env(e) => Ok(e),
+            _ => Err(()),
+        }
+    }
+
+    pub fn as_connection(&self) -> Result<&RwLock<Connection>, ()> {
+        match self {
+            MongoHandle::Connection(c) => Ok(c),
+            _ => Err(()),
+        }
+    }
+
+    pub fn as_statement(&self) -> Result<&RwLock<Statement>, ()> {
+        match self {
+            MongoHandle::Statement(s) => Ok(s),
+            _ => Err(()),
+        }
+    }
+
+    pub fn as_descriptor(&self) -> Result<&RwLock<Descriptor>, ()> {
+        match self {
+            MongoHandle::Descriptor(d) => Ok(d),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Debug)]
-#[repr(C)]
 pub struct Env {
-    pub handle_type: HandleType,
-    // attributes for this Env
-    pub _attributes: EnvAttributes,
+    // attributes for this Env. We box the attributes so that the MongoHandle type
+    // remains fairly small regardless of underlying handle type.
+    pub _attributes: Box<EnvAttributes>,
     // state of this Env
     pub state: EnvState,
-    pub connections: HashSet<*mut ConnectionHandle>,
+    pub connections: HashSet<*mut MongoHandle>,
 }
 
 impl Env {
     pub fn new() -> Self {
         Self {
-            handle_type: HandleType::Env,
-            _attributes: EnvAttributes::default(),
+            _attributes: Box::new(EnvAttributes::default()),
             state: EnvState::Unallocated,
             connections: HashSet::new(),
         }
@@ -45,27 +77,22 @@ pub enum EnvState {
     ConnectionAllocated,
 }
 
-pub type ConnectionHandle = RwLock<Connection>;
-
-// repr(C) is required so that all handle structs have handle_type in the same offset.
 #[derive(Debug)]
-#[repr(C)]
 pub struct Connection {
     // type of this handle for runtime checking purposes.
-    pub handle_type: HandleType,
     // Pointer to the Env from which
     // this Connection was allocated
-    pub env: *mut EnvHandle,
+    pub env: *mut MongoHandle,
     // all the possible Connection settings
-    pub _attributes: ConnectionAttributes,
+    pub _attributes: Box<ConnectionAttributes>,
     // state of this connection
     pub state: ConnectionState,
     // MongoDB Client for issuing commands
     // pub client: Option<MongoClient>,
     // all Descriptors attached to this Connection
-    pub _descriptors: HashSet<*mut DescriptorHandle>,
+    pub _descriptors: HashSet<*mut MongoHandle>,
     // all Statements allocated from this Connection
-    pub statements: HashSet<*mut StatementHandle>,
+    pub statements: HashSet<*mut MongoHandle>,
 }
 
 #[derive(Debug)]
@@ -89,11 +116,10 @@ pub enum ConnectionState {
 }
 
 impl Connection {
-    pub fn new(env: *mut EnvHandle) -> Self {
+    pub fn new(env: *mut MongoHandle) -> Self {
         Self {
-            handle_type: HandleType::Dbc,
             env,
-            _attributes: ConnectionAttributes::default(),
+            _attributes: Box::new(ConnectionAttributes::default()),
             state: ConnectionState::AllocatedEnvUnallocatedConnection,
             _descriptors: HashSet::new(),
             statements: HashSet::new(),
@@ -101,15 +127,10 @@ impl Connection {
     }
 }
 
-pub type StatementHandle = RwLock<Statement>;
-
-// repr(C) is required so that all handle structs have handle_type in the same offset.
 #[derive(Debug)]
-#[repr(C)]
 pub struct Statement {
-    pub handle_type: HandleType,
-    pub connection: *mut ConnectionHandle,
-    pub _attributes: StatementAttributes,
+    pub connection: *mut MongoHandle,
+    pub _attributes: Box<StatementAttributes>,
     pub state: StatementState,
     //pub cursor: Option<Box<Peekable<Cursor>>>,
 }
@@ -141,23 +162,17 @@ pub enum StatementState {
 }
 
 impl Statement {
-    pub fn new(connection: *mut ConnectionHandle) -> Self {
+    pub fn new(connection: *mut MongoHandle) -> Self {
         Self {
-            handle_type: HandleType::Stmt,
             connection,
-            _attributes: StatementAttributes::default(),
+            _attributes: Box::new(StatementAttributes::default()),
             state: StatementState::Unallocated,
         }
     }
 }
 
-pub type DescriptorHandle = RwLock<Descriptor>;
-
-// repr(C) is required so that all handle structs have handle_type in the same offset.
 #[derive(Debug)]
-#[repr(C)]
 pub struct Descriptor {
-    pub handle_type: HandleType,
     pub state: DescriptorState,
 }
 
@@ -171,7 +186,6 @@ pub enum DescriptorState {
 impl Descriptor {
     pub fn new() -> Self {
         Self {
-            handle_type: HandleType::Desc,
             state: DescriptorState::Unallocated,
         }
     }

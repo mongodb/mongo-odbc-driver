@@ -1,6 +1,6 @@
 use crate::handles::{
-    Connection, ConnectionHandle, ConnectionState, Descriptor, DescriptorHandle, DescriptorState,
-    Env, EnvHandle, EnvState, Statement, StatementHandle, StatementState,
+    Connection, ConnectionState, Descriptor, DescriptorState, Env, EnvState, MongoHandle,
+    Statement, StatementState,
 };
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -16,49 +16,60 @@ pub extern "C" fn SQLAllocHandle(
     input_handle: Handle,
     output_handle: *mut Handle,
 ) -> SqlReturn {
-    match handle_type {
-        HandleType::Env => {
-            let env = Box::new(RwLock::new(Env::new()));
-            env.write().unwrap().state = EnvState::Allocated;
-            unsafe { *output_handle = Box::into_raw(env) as *mut _ }
-        }
-        HandleType::Dbc => {
-            let env = input_handle as *mut _;
-            let conn = Box::new(RwLock::new(Connection::new(env)));
-            conn.write().unwrap().state = ConnectionState::AllocatedEnvAllocatedConnection;
-            unsafe {
-                if (*env).read().unwrap().handle_type != HandleType::Env {
-                    // conn will be dropped if we return here.
-                    return SqlReturn::INVALID_HANDLE;
-                }
-                let conn_ptr = Box::into_raw(conn) as *mut _;
-                let mut env_contents = (*env).write().unwrap();
-                env_contents.connections.insert(conn_ptr);
-                env_contents.state = EnvState::ConnectionAllocated;
-                *output_handle = conn_ptr as *mut _
+    unsafe {
+        match sql_alloc_handle(handle_type, &mut *(input_handle as *mut _)) {
+            Ok(mh) => {
+                *output_handle = Box::into_raw(mh) as *mut _;
+                SqlReturn::SUCCESS
             }
-        }
-        HandleType::Stmt => {
-            let conn = input_handle as *mut _;
-            let stmt = Box::new(RwLock::new(Statement::new(conn)));
-            stmt.write().unwrap().state = StatementState::Allocated;
-            unsafe {
-                if (*conn).read().unwrap().handle_type != HandleType::Dbc {
-                    // stmt will be dropped if we return here.
-                    return SqlReturn::INVALID_HANDLE;
-                }
-                let stmt_ptr = Box::into_raw(stmt) as *mut _;
-                (*conn).write().unwrap().statements.insert(stmt_ptr);
-                *output_handle = stmt_ptr as *mut _
-            }
-        }
-        HandleType::Desc => {
-            let desc = Box::new(RwLock::new(Descriptor::new()));
-            (*desc).write().unwrap().state = DescriptorState::ExplicitlyAllocated;
-            unsafe { *output_handle = Box::into_raw(desc) as *mut _ }
+            Err(_) => SqlReturn::INVALID_HANDLE,
         }
     }
-    SqlReturn::SUCCESS
+}
+
+fn sql_alloc_handle(
+    handle_type: HandleType,
+    input_handle: &mut MongoHandle,
+) -> Result<Box<MongoHandle>, ()> {
+    match handle_type {
+        HandleType::Env => {
+            let env = RwLock::new(Env::new());
+            env.write().unwrap().state = EnvState::Allocated;
+            Ok(Box::new(MongoHandle::Env(env)))
+        }
+        _ => Err(()),
+        //        HandleType::Dbc => {
+        //            let env = input_handle.as_env()?;
+        //            let conn = RwLock::new(Connection::new(input_handle));
+        //            conn.write().unwrap().state = ConnectionState::AllocatedEnvAllocatedConnection;
+        //            unsafe {
+        //                let mh = MongoHandle::Connection(conn);
+        //                let mut env_contents = (*env).write().unwrap();
+        //                env_contents.connections.insert(&mut mh as *mut _);
+        //                env_contents.state = EnvState::ConnectionAllocated;
+        //                Ok(mh)
+        //            }
+        //        }
+        //        HandleType::Stmt => {
+        //            let conn = input_handle as *mut _;
+        //            let stmt = Box::new(RwLock::new(Statement::new(conn)));
+        //            stmt.write().unwrap().state = StatementState::Allocated;
+        //            unsafe {
+        //                if (*conn).read().unwrap().handle_type != HandleType::Dbc {
+        //                    // stmt will be dropped if we return here.
+        //                    return SqlReturn::INVALID_HANDLE;
+        //                }
+        //                let stmt_ptr = Box::into_raw(stmt) as *mut _;
+        //                (*conn).write().unwrap().statements.insert(stmt_ptr);
+        //                *output_handle = stmt_ptr as *mut _
+        //            }
+        //        }
+        //        HandleType::Desc => {
+        //            let desc = Box::new(RwLock::new(Descriptor::new()));
+        //            (*desc).write().unwrap().state = DescriptorState::ExplicitlyAllocated;
+        //            unsafe { *output_handle = Box::into_raw(desc) as *mut _ }
+        //        }
+    }
 }
 
 #[no_mangle]
@@ -480,62 +491,72 @@ pub extern "C" fn SQLForeignKeysW(
 #[no_mangle]
 pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
     unsafe {
+        let handle = handle as *mut MongoHandle;
         match handle_type {
             // By making Boxes to the types and letting them go out of
             // scope, they will be dropped.
             HandleType::Env => {
-                let env = Box::from_raw(handle as *mut EnvHandle);
-                if env.read().unwrap().handle_type != handle_type {
-                    return SqlReturn::INVALID_HANDLE;
+                let env = (*handle).as_env();
+                match env {
+                    Ok(env) => {
+                        env.write().unwrap().state = EnvState::Unallocated;
+                        let _ = Box::from_raw(handle as *mut MongoHandle);
+                        return SqlReturn::SUCCESS;
+                    }
+                    Err(_) => return SqlReturn::INVALID_HANDLE,
                 }
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
-                env.write().unwrap().state = EnvState::Unallocated;
             }
             HandleType::Dbc => {
-                let handle = handle as *mut ConnectionHandle;
-                let conn = Box::from_raw(handle);
-                if conn.read().unwrap().handle_type != handle_type {
-                    return SqlReturn::INVALID_HANDLE;
-                }
-                let mut contents = conn.write().unwrap();
-                // Actually reading this value would make ASAN fail, but this
-                // is what the ODBC standard expects.
-                contents.state = ConnectionState::AllocatedEnvUnallocatedConnection;
-                let mut env_contents = (*contents.env).write().unwrap();
-                env_contents.connections.remove(&handle);
-                if env_contents.connections.is_empty() {
-                    env_contents.state = EnvState::Allocated;
+                let conn = (*handle).as_connection();
+                match conn {
+                    Ok(conn) => {
+                        let mut contents = conn.write().unwrap();
+                        // Actually reading this value would make ASAN fail, but this
+                        // is what the ODBC standard expects.
+                        contents.state = ConnectionState::AllocatedEnvUnallocatedConnection;
+                        let mut env_contents = (*contents.env).as_env().unwrap().write().unwrap();
+                        env_contents.connections.remove(&handle);
+                        if env_contents.connections.is_empty() {
+                            env_contents.state = EnvState::Allocated;
+                        }
+                        let _ = Box::from_raw(handle);
+                        return SqlReturn::SUCCESS;
+                    }
+                    Err(_) => return SqlReturn::INVALID_HANDLE,
                 }
             }
-            HandleType::Stmt => {
-                let handle = handle as *mut StatementHandle;
-                let stmt = Box::from_raw(handle);
-                if stmt.read().unwrap().handle_type != handle_type {
-                    return SqlReturn::INVALID_HANDLE;
-                }
-                let mut contents = stmt.write().unwrap();
-                // Actually reading this value would make ASAN fail, but this
-                // is what the ODBC standard expects.
-                contents.state = StatementState::Unallocated;
-                (*contents.connection)
-                    .write()
-                    .unwrap()
-                    .statements
-                    .remove(&handle);
-            }
-            HandleType::Desc => {
-                let desc = Box::from_raw(handle as *mut DescriptorHandle);
-                if desc.read().unwrap().handle_type != handle_type {
-                    return SqlReturn::INVALID_HANDLE;
-                }
-                // Actually reading this value would make ASAN fail, but this
-                // is what the ODBC standard expects.
-                desc.write().unwrap().state = DescriptorState::Unallocated;
-            }
+            _ => {
+                return SqlReturn::ERROR;
+            } //            HandleType::Stmt => {
+              //                let handle = handle as *mut StatementHandle;
+              //                let stmt = Box::from_raw(handle);
+              //                if stmt.read().unwrap().handle_type != handle_type {
+              //                    return SqlReturn::INVALID_HANDLE;
+              //                }
+              //                let mut contents = stmt.write().unwrap();
+              //                // Actually reading this value would make ASAN fail, but this
+              //                // is what the ODBC standard expects.
+              //                contents.state = StatementState::Unallocated;
+              //                (*contents.connection)
+              //                    .write()
+              //                    .unwrap()
+              //                    .statements
+              //                    .remove(&handle);
+              //            }
+              //            HandleType::Desc => {
+              //                let desc = Box::from_raw(handle as *mut DescriptorHandle);
+              //                if desc.read().unwrap().handle_type != handle_type {
+              //                    return SqlReturn::INVALID_HANDLE;
+              //                }
+              //                // Actually reading this value would make ASAN fail, but this
+              //                // is what the ODBC standard expects.
+              //                desc.write().unwrap().state = DescriptorState::Unallocated;
+              //            }
+              //        }
         }
     }
-    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
