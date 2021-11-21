@@ -225,6 +225,20 @@ fn invalid_free() {
                 std::mem::transmute::<*mut MongoHandle, Handle>(handle),
             )
         );
+        assert_eq!(
+            SqlReturn::INVALID_HANDLE,
+            SQLFreeHandle(
+                HandleType::Stmt,
+                std::mem::transmute::<*mut MongoHandle, Handle>(handle),
+            )
+        );
+        assert_eq!(
+            SqlReturn::INVALID_HANDLE,
+            SQLFreeHandle(
+                HandleType::Desc,
+                std::mem::transmute::<*mut MongoHandle, Handle>(handle),
+            )
+        );
         // Free for real so we don't leak.
         assert_eq!(
             SqlReturn::SUCCESS,
