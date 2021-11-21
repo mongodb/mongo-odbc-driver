@@ -1,5 +1,8 @@
 use crate::{
-    handles::{Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState},
+    handles::{
+        Connection, ConnectionState, Descriptor, DescriptorState, Env, EnvState, MongoHandle,
+        Statement, StatementState,
+    },
     SQLAllocHandle, SQLFreeHandle,
 };
 use odbc_sys::{Handle, HandleType, SqlReturn};
@@ -30,6 +33,37 @@ fn env_alloc_free() {
             SqlReturn::SUCCESS,
             SQLFreeHandle(
                 HandleType::Env,
+                std::mem::transmute::<*mut MongoHandle, Handle>(handle),
+            )
+        );
+    }
+}
+
+#[test]
+fn desc_alloc_free() {
+    unsafe {
+        let mut handle: *mut _ = &mut MongoHandle::Descriptor(RwLock::new(Descriptor::new()));
+        let handle_ptr: *mut _ = &mut handle;
+        assert_eq!(
+            DescriptorState::Unallocated,
+            (*handle).as_descriptor().unwrap().read().unwrap().state
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::Desc,
+                std::ptr::null_mut(),
+                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
+            )
+        );
+        assert_eq!(
+            DescriptorState::ExplicitlyAllocated,
+            (*handle).as_descriptor().unwrap().read().unwrap().state
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(
+                HandleType::Desc,
                 std::mem::transmute::<*mut MongoHandle, Handle>(handle),
             )
         );
@@ -137,38 +171,66 @@ fn connection_alloc_free() {
     }
 }
 
-//#[test]
-//fn statement_alloc_free() {
-//    unsafe {
-//        let env_handle: *mut _ = &mut RwLock::new(Env::new());
-//        (*env_handle).write().unwrap().state = EnvState::Allocated;
-//
-//        let conn_handle: *mut _ = &mut RwLock::new(Connection::new(env_handle));
-//        (*conn_handle).write().unwrap().state = ConnectionState::AllocatedEnvAllocatedConnection;
-//
-//        let mut handle: *mut _ = &mut RwLock::new(Statement::new(std::ptr::null_mut()));
-//        let handle_ptr: *mut _ = &mut handle;
-//        assert_eq!(
-//            StatementState::Unallocated,
-//            (*handle).write().unwrap().state
-//        );
-//        assert_eq!(
-//            SqlReturn::SUCCESS,
-//            SQLAllocHandle(
-//                HandleType::Stmt,
-//                conn_handle as *mut _,
-//                std::mem::transmute::<*mut *mut StatementHandle, *mut Handle>(handle_ptr),
-//            )
-//        );
-//        assert_eq!(StatementState::Allocated, (*handle).write().unwrap().state);
-//        assert_eq!(1, (*conn_handle).read().unwrap().statements.len());
-//        assert_eq!(
-//            SqlReturn::SUCCESS,
-//            SQLFreeHandle(
-//                HandleType::Stmt,
-//                std::mem::transmute::<*mut StatementHandle, Handle>(handle),
-//            )
-//        );
-//        assert_eq!(0, (*conn_handle).read().unwrap().statements.len());
-//    }
-//}
+#[test]
+fn statement_alloc_free() {
+    unsafe {
+        let env_handle: *mut _ = &mut MongoHandle::Env(RwLock::new(Env::new()));
+        (*env_handle).as_env().unwrap().write().unwrap().state = EnvState::Allocated;
+
+        let conn_handle: *mut _ =
+            &mut MongoHandle::Connection(RwLock::new(Connection::new(env_handle)));
+        (*conn_handle)
+            .as_connection()
+            .unwrap()
+            .write()
+            .unwrap()
+            .state = ConnectionState::AllocatedEnvAllocatedConnection;
+
+        let mut handle: *mut _ =
+            &mut MongoHandle::Statement(RwLock::new(Statement::new(std::ptr::null_mut())));
+        let handle_ptr: *mut _ = &mut handle;
+        assert_eq!(
+            StatementState::Unallocated,
+            (*handle).as_statement().unwrap().read().unwrap().state
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::Stmt,
+                conn_handle as *mut _,
+                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
+            )
+        );
+        assert_eq!(
+            StatementState::Allocated,
+            (*handle).as_statement().unwrap().write().unwrap().state
+        );
+        assert_eq!(
+            1,
+            (*conn_handle)
+                .as_connection()
+                .unwrap()
+                .read()
+                .unwrap()
+                .statements
+                .len()
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(
+                HandleType::Stmt,
+                std::mem::transmute::<*mut MongoHandle, Handle>(handle),
+            )
+        );
+        assert_eq!(
+            0,
+            (*conn_handle)
+                .as_connection()
+                .unwrap()
+                .read()
+                .unwrap()
+                .statements
+                .len()
+        );
+    }
+}

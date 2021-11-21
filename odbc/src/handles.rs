@@ -57,6 +57,14 @@ impl Env {
             connections: HashSet::new(),
         }
     }
+
+    pub fn with_state(state: EnvState) -> Self {
+        Self {
+            _attributes: Box::new(EnvAttributes::default()),
+            state,
+            connections: HashSet::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -125,6 +133,16 @@ impl Connection {
             statements: HashSet::new(),
         }
     }
+
+    pub fn with_state(env: *mut MongoHandle, state: ConnectionState) -> Self {
+        Self {
+            env,
+            _attributes: Box::new(ConnectionAttributes::default()),
+            state,
+            _descriptors: HashSet::new(),
+            statements: HashSet::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -169,6 +187,14 @@ impl Statement {
             state: StatementState::Unallocated,
         }
     }
+
+    pub fn with_state(connection: *mut MongoHandle, state: StatementState) -> Self {
+        Self {
+            connection,
+            _attributes: Box::new(StatementAttributes::default()),
+            state,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -188,5 +214,9 @@ impl Descriptor {
         Self {
             state: DescriptorState::Unallocated,
         }
+    }
+
+    pub fn with_state(state: DescriptorState) -> Self {
+        Self { state }
     }
 }

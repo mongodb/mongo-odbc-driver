@@ -18,7 +18,7 @@ pub extern "C" fn SQLAllocHandle(
 ) -> SqlReturn {
     unsafe {
         match sql_alloc_handle(handle_type, &mut *(input_handle as *mut _), output_handle) {
-            Ok(mh) => SqlReturn::SUCCESS,
+            Ok(_) => SqlReturn::SUCCESS,
             Err(_) => SqlReturn::INVALID_HANDLE,
         }
     }
@@ -31,8 +31,7 @@ fn sql_alloc_handle(
 ) -> Result<(), ()> {
     match handle_type {
         HandleType::Env => {
-            let env = RwLock::new(Env::new());
-            env.write().unwrap().state = EnvState::Allocated;
+            let env = RwLock::new(Env::with_state(EnvState::Allocated));
             let mh = Box::new(MongoHandle::Env(env));
             unsafe {
                 *output_handle = Box::into_raw(mh) as *mut _;
@@ -40,38 +39,40 @@ fn sql_alloc_handle(
             Ok(())
         }
         HandleType::Dbc => {
-            let conn = RwLock::new(Connection::new(input_handle));
+            let conn = RwLock::new(Connection::with_state(
+                input_handle,
+                ConnectionState::AllocatedEnvAllocatedConnection,
+            ));
             let env = input_handle.as_env()?;
-            conn.write().unwrap().state = ConnectionState::AllocatedEnvAllocatedConnection;
             let mut env_contents = (*env).write().unwrap();
             let mh = Box::new(MongoHandle::Connection(conn));
             let mh_ptr = Box::into_raw(mh) as *mut _;
             env_contents.connections.insert(mh_ptr);
-            unsafe {
-                *output_handle = mh_ptr as *mut _;
-            }
             env_contents.state = EnvState::ConnectionAllocated;
+            unsafe { *output_handle = mh_ptr as *mut _ }
             Ok(())
         }
-        _ => Err(()), //        HandleType::Stmt => {
-                      //            let conn = input_handle as *mut _;
-                      //            let stmt = Box::new(RwLock::new(Statement::new(conn)));
-                      //            stmt.write().unwrap().state = StatementState::Allocated;
-                      //            unsafe {
-                      //                if (*conn).read().unwrap().handle_type != HandleType::Dbc {
-                      //                    // stmt will be dropped if we return here.
-                      //                    return SqlReturn::INVALID_HANDLE;
-                      //                }
-                      //                let stmt_ptr = Box::into_raw(stmt) as *mut _;
-                      //                (*conn).write().unwrap().statements.insert(stmt_ptr);
-                      //                *output_handle = stmt_ptr as *mut _
-                      //            }
-                      //        }
-                      //        HandleType::Desc => {
-                      //            let desc = Box::new(RwLock::new(Descriptor::new()));
-                      //            (*desc).write().unwrap().state = DescriptorState::ExplicitlyAllocated;
-                      //            unsafe { *output_handle = Box::into_raw(desc) as *mut _ }
-                      //        }
+        HandleType::Stmt => {
+            let stmt = RwLock::new(Statement::with_state(
+                input_handle,
+                StatementState::Allocated,
+            ));
+            let conn = input_handle.as_connection()?;
+            let mut conn_contents = (*conn).write().unwrap();
+            let mh = Box::new(MongoHandle::Statement(stmt));
+            let mh_ptr = Box::into_raw(mh) as *mut _;
+            conn_contents.statements.insert(mh_ptr);
+            conn_contents.state = ConnectionState::StatementAllocated;
+            unsafe { *output_handle = mh_ptr as *mut _ }
+            Ok(())
+        }
+        HandleType::Desc => {
+            let desc = RwLock::new(Descriptor::with_state(DescriptorState::ExplicitlyAllocated));
+            let mh = Box::new(MongoHandle::Descriptor(desc));
+            let mh_ptr = Box::into_raw(mh) as *mut _;
+            unsafe { *output_handle = mh_ptr as *mut _ }
+            Ok(())
+        }
     }
 }
 
