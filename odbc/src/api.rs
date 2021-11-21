@@ -16,17 +16,15 @@ pub extern "C" fn SQLAllocHandle(
     input_handle: Handle,
     output_handle: *mut Handle,
 ) -> SqlReturn {
-    unsafe {
-        match sql_alloc_handle(handle_type, &mut *(input_handle as *mut _), output_handle) {
-            Ok(_) => SqlReturn::SUCCESS,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+    match sql_alloc_handle(handle_type, input_handle as *mut _, output_handle) {
+        Ok(_) => SqlReturn::SUCCESS,
+        Err(_) => SqlReturn::INVALID_HANDLE,
     }
 }
 
 fn sql_alloc_handle(
     handle_type: HandleType,
-    input_handle: &mut MongoHandle,
+    input_handle: *mut MongoHandle,
     output_handle: *mut Handle,
 ) -> Result<(), ()> {
     match handle_type {
@@ -43,7 +41,10 @@ fn sql_alloc_handle(
                 input_handle,
                 ConnectionState::AllocatedEnvAllocatedConnection,
             ));
-            let env = input_handle.as_env()?;
+            if input_handle == std::ptr::null_mut() {
+                return Err(());
+            }
+            let env = unsafe { (*input_handle).as_env()? };
             let mut env_contents = (*env).write().unwrap();
             let mh = Box::new(MongoHandle::Connection(conn));
             let mh_ptr = Box::into_raw(mh) as *mut _;
@@ -57,7 +58,10 @@ fn sql_alloc_handle(
                 input_handle,
                 StatementState::Allocated,
             ));
-            let conn = input_handle.as_connection()?;
+            if input_handle == std::ptr::null_mut() {
+                return Err(());
+            }
+            let conn = unsafe { (*input_handle).as_connection()? };
             let mut conn_contents = (*conn).write().unwrap();
             let mh = Box::new(MongoHandle::Statement(stmt));
             let mh_ptr = Box::into_raw(mh) as *mut _;
