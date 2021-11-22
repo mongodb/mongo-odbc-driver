@@ -1,6 +1,5 @@
 use crate::handles::{
-    Connection, ConnectionState, Descriptor, DescriptorState, Env, EnvState, MongoHandle,
-    Statement, StatementState,
+    Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState,
 };
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -41,9 +40,11 @@ fn sql_alloc_handle(
                 input_handle,
                 ConnectionState::AllocatedEnvAllocatedConnection,
             ));
+            // input handle cannot be NULL
             if input_handle == std::ptr::null_mut() {
                 return Err(());
             }
+            // input handle must be an Env
             let env = unsafe { (*input_handle).as_env()? };
             let mut env_contents = (*env).write().unwrap();
             let mh = Box::new(MongoHandle::Connection(conn));
@@ -58,9 +59,11 @@ fn sql_alloc_handle(
                 input_handle,
                 StatementState::Allocated,
             ));
+            // input handle cannot be NULL
             if input_handle == std::ptr::null_mut() {
                 return Err(());
             }
+            // input handle must be an Connection
             let conn = unsafe { (*input_handle).as_connection()? };
             let mut conn_contents = (*conn).write().unwrap();
             let mh = Box::new(MongoHandle::Statement(stmt));
@@ -71,11 +74,8 @@ fn sql_alloc_handle(
             Ok(())
         }
         HandleType::Desc => {
-            let desc = RwLock::new(Descriptor::with_state(DescriptorState::ExplicitlyAllocated));
-            let mh = Box::new(MongoHandle::Descriptor(desc));
-            let mh_ptr = Box::into_raw(mh) as *mut _;
-            unsafe { *output_handle = mh_ptr as *mut _ }
-            Ok(())
+            // TODO: SQL-618
+            unimplemented!();
         }
     }
 }
@@ -540,10 +540,8 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                 }
             }
             HandleType::Desc => {
-                let desc = (*handle).as_descriptor()?;
-                // Actually reading this value would make ASAN fail, but this
-                // is what the ODBC standard expects.
-                desc.write().unwrap().state = DescriptorState::Unallocated;
+                // TODO: SQL-618
+                unimplemented!();
             }
         }
         // create the Box at the end to ensure Drop is not reordered?

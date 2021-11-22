@@ -6,7 +6,6 @@ pub enum MongoHandle {
     Env(RwLock<Env>),
     Connection(RwLock<Connection>),
     Statement(RwLock<Statement>),
-    Descriptor(RwLock<Descriptor>),
 }
 
 impl MongoHandle {
@@ -30,13 +29,6 @@ impl MongoHandle {
             _ => Err(()),
         }
     }
-
-    pub fn as_descriptor(&self) -> Result<&RwLock<Descriptor>, ()> {
-        match self {
-            MongoHandle::Descriptor(d) => Ok(d),
-            _ => Err(()),
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -50,6 +42,7 @@ pub struct Env {
 }
 
 impl Env {
+    #[cfg(test)]
     pub fn new() -> Self {
         Self {
             _attributes: Box::new(EnvAttributes::default()),
@@ -124,6 +117,7 @@ pub enum ConnectionState {
 }
 
 impl Connection {
+    #[cfg(test)]
     pub fn new(env: *mut MongoHandle) -> Self {
         Self {
             env,
@@ -180,6 +174,7 @@ pub enum StatementState {
 }
 
 impl Statement {
+    #[cfg(test)]
     pub fn new(connection: *mut MongoHandle) -> Self {
         Self {
             connection,
@@ -194,29 +189,5 @@ impl Statement {
             _attributes: Box::new(StatementAttributes::default()),
             state,
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct Descriptor {
-    pub state: DescriptorState,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum DescriptorState {
-    Unallocated,
-    _ImplicitlyAllocated,
-    ExplicitlyAllocated,
-}
-
-impl Descriptor {
-    pub fn new() -> Self {
-        Self {
-            state: DescriptorState::Unallocated,
-        }
-    }
-
-    pub fn with_state(state: DescriptorState) -> Self {
-        Self { state }
     }
 }
