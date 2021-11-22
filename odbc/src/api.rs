@@ -11,7 +11,7 @@ pub extern "C" fn SQLAllocHandle(
     _input_handle: Handle,
     _output_handle: *mut Handle,
 ) -> SqlReturn {
-    unimplemented!()
+    SqlReturn::ERROR
 }
 
 #[no_mangle]

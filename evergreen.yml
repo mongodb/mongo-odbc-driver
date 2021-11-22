@@ -25,13 +25,13 @@ functions:
   "fetch source":
     - command: git.get_project
       params:
-        directory: mongo-odbc-driver
+        directory: mongosql-odbc-driver
 
   "generate expansions":
     - command: shell.exec
       params:
         shell: bash
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         script: |
           export PATH="$PATH:$HOME/.cargo/bin"
           export CARGO_NET_GIT_FETCH_WITH_CLI=true
@@ -42,10 +42,14 @@ functions:
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+            export ADL_TEST_USER=${adl_test_user}
+            export ADL_TEST_PWD=${adl_test_pwd}
+            export ADL_TEST_HOST=${adl_test_host}
+            export ADL_TEST_AUTH_DB=${adl_test_auth_db}
           EOT
     - command: expansions.update
       params:
-        file: mongo-odbc-driver/expansions.yml
+        file: mongosql-odbc-driver/expansions.yml
 
   "install rust toolchain":
     - command: shell.exec
@@ -83,7 +87,7 @@ functions:
       type: test
       params:
         shell: bash
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
           cargo clippy --all-targets -- -D warnings
@@ -93,7 +97,7 @@ functions:
       type: test
       params:
         shell: bash
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
           cargo fmt --all --  --check
@@ -103,17 +107,54 @@ functions:
       type: test
       params:
         shell: bash
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
           cargo build --release
+
+  "upload artifact":
+    - command: s3.put
+      params:
+        build_variants: [ 'windows' ]
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libmongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/libmongoodbc.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "download artifact":
+    - command: s3.get
+      params:
+        build_variants: ['windows']
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/libmongoodbc.dll
+        local_file: mongosql-odbc-driver/libmongoodbc.dll
+        bucket: mciuploads
+
+  "setup driver on Windows":
+    - command: subprocess.exec
+      type: setup
+      params:
+        working_dir: mongosql-odbc-driver
+        command: reg import setup/setup.reg
+        env:
+          DRIVER_DLL_PATH: ${workdir}
+  "clean-up driver on Windows":
+    - command: subprocess.exec
+      type: setup
+      params:
+        working_dir: mongosql-odbc-driver
+        command: reg import setup/cleanup.reg
 
   "run rust tests":
     - command: shell.exec
       type: test
       params:
         shell: bash
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
           cargo test
@@ -138,11 +179,17 @@ tasks:
     commands:
       - func: "install rust toolchain"
       - func: "compile release"
+      - func: "upload artifact"
 
   - name: test-rust
+    depends_on:
+      - name: compile
     commands:
+      - func: "download artifact"
+      - func: "setup driver on Windows"
       - func: "install rust toolchain"
       - func: "run rust tests"
+      - func: "clean-up driver on Windows"
 
 buildvariants:
 
