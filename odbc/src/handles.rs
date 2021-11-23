@@ -43,15 +43,6 @@ pub struct Env {
 }
 
 impl Env {
-    #[cfg(test)]
-    pub fn new() -> Self {
-        Self {
-            _attributes: Box::new(EnvAttributes::default()),
-            state: EnvState::Allocated,
-            connections: HashSet::new(),
-        }
-    }
-
     pub fn with_state(state: EnvState) -> Self {
         Self {
             _attributes: Box::new(EnvAttributes::default()),
@@ -115,16 +106,6 @@ pub enum ConnectionState {
 }
 
 impl Connection {
-    #[cfg(test)]
-    pub fn new(env: *mut MongoHandle) -> Self {
-        Self {
-            env,
-            _attributes: Box::new(ConnectionAttributes::default()),
-            state: ConnectionState::Allocated,
-            statements: HashSet::new(),
-        }
-    }
-
     pub fn with_state(env: *mut MongoHandle, state: ConnectionState) -> Self {
         Self {
             env,
@@ -169,15 +150,6 @@ pub enum StatementState {
 }
 
 impl Statement {
-    #[cfg(test)]
-    pub fn new(connection: *mut MongoHandle) -> Self {
-        Self {
-            connection,
-            _attributes: Box::new(StatementAttributes::default()),
-            state: StatementState::Allocated,
-        }
-    }
-
     pub fn with_state(connection: *mut MongoHandle, state: StatementState) -> Self {
         Self {
             connection,
