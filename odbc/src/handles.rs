@@ -98,11 +98,13 @@ pub struct Connection {
 }
 
 #[derive(Debug)]
-pub struct ConnectionAttributes {}
+pub struct ConnectionAttributes {
+    pub current_db: Option<String>,
+}
 
 impl Default for ConnectionAttributes {
     fn default() -> Self {
-        Self {}
+        Self { current_db: None }
     }
 }
 
