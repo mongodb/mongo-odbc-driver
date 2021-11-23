@@ -1,8 +1,0 @@
-tests:
-  - description: sqlTableNoFilters
-    #skip_reason: Need a working connection for testing
-    meta_function: ["getTables","","","",""]
-    row_count: 5
-    expected_results:
-      - ["dummy1", "dummy2"]
-      - ["dummy10", "dummy11"]

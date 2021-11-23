@@ -39,6 +39,7 @@ lazy_static! {
     };
 }
 
+#[allow(dead_code)]
 /// Connect to the given Driver or DSN with the provided uid, pwd and host.
 /// The default auth db is 'admin' is not specified.
 pub fn connect() -> Connection<'static> {
@@ -57,7 +58,7 @@ pub fn connect() -> Connection<'static> {
         Err(_e) => "ADL_ODBC_DRIVER".to_string(), //Default driver name
     };
 
-    let dsn = env::var("ADL_TEST_DSN");
+    let _dsn = env::var("ADL_TEST_DSN");
     // TODO : If DSN is specified, it should take over using 'DRIVER=' for connecting and use 'DSN='.
 
     let mut connection_string = format!(
@@ -76,6 +77,7 @@ pub fn connect() -> Connection<'static> {
         .unwrap()
 }
 
+#[allow(dead_code)]
 /// Validate the resultset and its metadata
 pub fn validate_rs(
     expected_row_count_opt: Option<i64>,
@@ -96,7 +98,7 @@ pub fn validate_rs(
 
     if expected_row_count_opt.is_some() || expected_result_set_opt.is_some() {
         let mut row_count: i64 = 0;
-        while let Ok(row) = rs_cursor.next_row() {
+        while let Ok(_row) = rs_cursor.next_row() {
             row_count = row_count + 1;
             // TODO - Validate RS content
         }
