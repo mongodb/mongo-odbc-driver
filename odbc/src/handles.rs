@@ -91,8 +91,6 @@ pub struct Connection {
     pub state: ConnectionState,
     // MongoDB Client for issuing commands
     // pub client: Option<MongoClient>,
-    // all Descriptors attached to this Connection
-    pub _descriptors: HashSet<*mut MongoHandle>,
     // all Statements allocated from this Connection
     pub statements: HashSet<*mut MongoHandle>,
 }
@@ -126,7 +124,6 @@ impl Connection {
             env,
             _attributes: Box::new(ConnectionAttributes::default()),
             state: ConnectionState::AllocatedEnvUnallocatedConnection,
-            _descriptors: HashSet::new(),
             statements: HashSet::new(),
         }
     }
@@ -136,7 +133,6 @@ impl Connection {
             env,
             _attributes: Box::new(ConnectionAttributes::default()),
             state,
-            _descriptors: HashSet::new(),
             statements: HashSet::new(),
         }
     }
