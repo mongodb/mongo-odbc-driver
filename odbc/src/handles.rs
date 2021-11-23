@@ -2,6 +2,7 @@ use std::{collections::HashSet, sync::RwLock};
 
 use odbc_sys::Integer;
 
+#[derive(Debug)]
 pub enum MongoHandle {
     Env(RwLock<Env>),
     Connection(RwLock<Connection>),
