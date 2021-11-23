@@ -85,15 +85,9 @@ pub struct Connection {
     pub statements: HashSet<*mut MongoHandle>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ConnectionAttributes {
     pub current_db: Option<String>,
-}
-
-impl Default for ConnectionAttributes {
-    fn default() -> Self {
-        Self { current_db: None }
-    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -124,14 +118,8 @@ pub struct Statement {
     //pub cursor: Option<Box<Peekable<Cursor>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StatementAttributes {}
-
-impl Default for StatementAttributes {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StatementState {

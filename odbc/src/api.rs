@@ -41,7 +41,7 @@ fn sql_alloc_handle(
                 ConnectionState::Allocated,
             ));
             // input handle cannot be NULL
-            if input_handle == std::ptr::null_mut() {
+            if input_handle.is_null() {
                 return Err(());
             }
             // input handle must be an Env
@@ -60,7 +60,7 @@ fn sql_alloc_handle(
                 StatementState::Allocated,
             ));
             // input handle cannot be NULL
-            if input_handle == std::ptr::null_mut() {
+            if input_handle.is_null() {
                 return Err(());
             }
             // input handle must be an Connection
