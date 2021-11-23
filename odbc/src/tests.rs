@@ -11,10 +11,6 @@ fn env_alloc_free() {
         let mut handle: *mut _ = &mut MongoHandle::Env(RwLock::new(Env::new()));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
-            EnvState::Unallocated,
-            (*handle).as_env().unwrap().read().unwrap().state
-        );
-        assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
                 HandleType::Env,
@@ -46,10 +42,6 @@ fn connection_alloc_free() {
             &mut MongoHandle::Connection(RwLock::new(Connection::new(std::ptr::null_mut())));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
-            ConnectionState::AllocatedEnvUnallocatedConnection,
-            (*handle).as_connection().unwrap().read().unwrap().state
-        );
-        assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
                 HandleType::Dbc,
@@ -58,7 +50,7 @@ fn connection_alloc_free() {
             )
         );
         assert_eq!(
-            ConnectionState::AllocatedEnvAllocatedConnection,
+            ConnectionState::Allocated,
             (*handle).as_connection().unwrap().read().unwrap().state
         );
         assert_eq!(
@@ -112,15 +104,11 @@ fn statement_alloc_free() {
             .unwrap()
             .write()
             .unwrap()
-            .state = ConnectionState::AllocatedEnvAllocatedConnection;
+            .state = ConnectionState::Allocated;
 
         let mut handle: *mut _ =
             &mut MongoHandle::Statement(RwLock::new(Statement::new(std::ptr::null_mut())));
         let handle_ptr: *mut _ = &mut handle;
-        assert_eq!(
-            StatementState::Unallocated,
-            (*handle).as_statement().unwrap().read().unwrap().state
-        );
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
@@ -168,10 +156,6 @@ fn invalid_free() {
     unsafe {
         let mut handle: *mut _ = &mut MongoHandle::Env(RwLock::new(Env::new()));
         let handle_ptr: *mut _ = &mut handle;
-        assert_eq!(
-            EnvState::Unallocated,
-            (*handle).as_env().unwrap().read().unwrap().state
-        );
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(

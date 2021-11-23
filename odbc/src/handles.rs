@@ -47,7 +47,7 @@ impl Env {
     pub fn new() -> Self {
         Self {
             _attributes: Box::new(EnvAttributes::default()),
-            state: EnvState::Unallocated,
+            state: EnvState::Allocated,
             connections: HashSet::new(),
         }
     }
@@ -74,7 +74,6 @@ impl Default for EnvAttributes {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum EnvState {
-    Unallocated,
     Allocated,
     ConnectionAllocated,
 }
@@ -108,9 +107,7 @@ impl Default for ConnectionAttributes {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ConnectionState {
-    _UnallocatedEnvUnallocatedConnection,
-    AllocatedEnvUnallocatedConnection,
-    AllocatedEnvAllocatedConnection,
+    Allocated,
     _ConnectionFunctionNeedsDataEnv,
     Connected,
     StatementAllocated,
@@ -123,7 +120,7 @@ impl Connection {
         Self {
             env,
             _attributes: Box::new(ConnectionAttributes::default()),
-            state: ConnectionState::AllocatedEnvUnallocatedConnection,
+            state: ConnectionState::Allocated,
             statements: HashSet::new(),
         }
     }
@@ -157,7 +154,6 @@ impl Default for StatementAttributes {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StatementState {
-    Unallocated,
     Allocated,
     _Prepared,
     _PreparedHasResultSet,
@@ -178,7 +174,7 @@ impl Statement {
         Self {
             connection,
             _attributes: Box::new(StatementAttributes::default()),
-            state: StatementState::Unallocated,
+            state: StatementState::Allocated,
         }
     }
 

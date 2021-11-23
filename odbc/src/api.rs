@@ -38,7 +38,7 @@ fn sql_alloc_handle(
         HandleType::Dbc => {
             let conn = RwLock::new(Connection::with_state(
                 input_handle,
-                ConnectionState::AllocatedEnvAllocatedConnection,
+                ConnectionState::Allocated,
             ));
             // input handle cannot be NULL
             if input_handle == std::ptr::null_mut() {
@@ -510,18 +510,11 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
             // By making Boxes to the types and letting them go out of
             // scope, they will be dropped.
             HandleType::Env => {
-                let env = (*handle).as_env()?;
-                // Actually reading this value would make ASAN fail, but this
-                // is what the ODBC standard expects.
-                env.write().unwrap().state = EnvState::Unallocated;
+                let _ = (*handle).as_env()?;
             }
             HandleType::Dbc => {
                 let conn = (*handle).as_connection()?;
-                let mut contents = conn.write().unwrap();
-                // Actually reading this value would make ASAN fail, but this
-                // is what the ODBC standard expects.
-                contents.state = ConnectionState::AllocatedEnvUnallocatedConnection;
-                let mut env_contents = (*contents.env).as_env()?.write().unwrap();
+                let mut env_contents = (*conn.write().unwrap().env).as_env()?.write().unwrap();
                 env_contents.connections.remove(&handle);
                 if env_contents.connections.is_empty() {
                     env_contents.state = EnvState::Allocated;
@@ -529,11 +522,12 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
             }
             HandleType::Stmt => {
                 let stmt = (*handle).as_statement()?;
-                let mut contents = stmt.write().unwrap();
                 // Actually reading this value would make ASAN fail, but this
                 // is what the ODBC standard expects.
-                contents.state = StatementState::Unallocated;
-                let mut conn_contents = (*contents.connection).as_connection()?.write().unwrap();
+                let mut conn_contents = (*stmt.write().unwrap().connection)
+                    .as_connection()?
+                    .write()
+                    .unwrap();
                 conn_contents.statements.remove(&handle);
                 if conn_contents.statements.is_empty() {
                     conn_contents.state = ConnectionState::Connected;
