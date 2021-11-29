@@ -75,39 +75,36 @@ functions:
           # the default for cygwin
           if [ "Windows_NT" == "$OS" ]; then
               if [ 'windows-64' == '${build_variant}' ]; then
-                  export TOOLCHAIN='x86_64-pc-windows-msvc'
+                  export HOST="x86_64-pc-windows-msvc"
               elif [ 'windows-32' == '${build_variant}' ]; then
-                  export TOOLCHAIN='i686-pc-windows-msvc'
+                  export HOST="i686-pc-windows-msvc"
               else
                   echo 'unknown windows build variant ${build_variant}'
                   exit 1;
               fi
+              export DEFAULT_HOST_OPTIONS="--default-host $HOST"
+              export DEFAULT_TOOLCHAIN="stable-$HOST"
           fi
-
-          echo "TOOLCHAIN is "  $TOOLCHAIN
 
           # install rustup from scratch
           rm -rf ~/.rustup
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-host $TOOLCHAIN
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path $DEFAULT_HOST_OPTIONS
 
           # rustup installs into C:\Users\$USER instead of
           # C:\home\$USER, so we symlink both .rustup and .cargo
           if [ "Windows_NT" == "$OS" ]; then
-                ln -sf /cygdrive/c/Users/$USER/.rustup/ ~/.rustup
-                ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
+              ln -sf /cygdrive/c/Users/$USER/.rustup/ ~/.rustup
+              ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
+
+              rustup toolchain install $DEFAULT_TOOLCHAIN
+              rustup default $DEFAULT_TOOLCHAIN
           fi
-          echo -------- rustup show before-----
-          rustup show
-          echo -------- Rustup toolchain list before-----
-          rustup toolchain list
 
-          rustup toolchain install stable-$TOOLCHAIN
-          rustup default stable-$TOOLCHAIN
-
-          echo -------- rustup show after -----
+          echo --------- rustup show -----------
           rustup show
-          echo -------- Rustup toolchain list after -----
+          echo ----- Rustup toolchain list -----
           rustup toolchain list
+          echo ---------------------------------
 
   "check clippy":
     - command: shell.exec
@@ -137,11 +134,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          echo $DEFAULT_HOST_OPTIONS
-          echo -------- rustup show -----
-          rustup show
-          echo -------- Rustup toolchain list -----
-          rustup toolchain list
           cargo build --release
 
   "upload artifact":
@@ -227,19 +219,11 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          echo "DEFAULT_HOST_OPTIONS is " $DEFAULT_HOST_OPTIONS
-          echo -------- rustup show -----
-          rustup show
-          echo ----------------------------
-          echo -------- Rustup toolchain list -----
-          rustup toolchain list
-          echo ------------------------------------
           cargo test
 
 pre:
   - func: "fetch source"
   - func: "generate expansions"
-  - func: "add Windows DLL path"
 
 tasks:
 
@@ -264,6 +248,7 @@ tasks:
       - name: compile
     commands:
       - func: "download artifact"
+      - func: "add Windows DLL path"
       - func: "setup driver on Windows"
       - func: "install rust toolchain"
       - func: "run rust tests"
