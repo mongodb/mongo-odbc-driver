@@ -1020,7 +1020,7 @@ pub extern "C" fn SQLSetPos(
     _statement_handle: HStmt,
     _row_number: ULen,
     _operation: USmallInt,
-    _write_type: USmallInt,
+    _lock_type: USmallInt,
 ) -> SqlReturn {
     unimplemented!()
 }
