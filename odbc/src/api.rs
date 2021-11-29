@@ -36,16 +36,16 @@ fn sql_alloc_handle(
             Ok(())
         }
         HandleType::Dbc => {
-            let conn = RwLock::new(Connection::with_state(
-                input_handle,
-                ConnectionState::Allocated,
-            ));
             // input handle cannot be NULL
             if input_handle.is_null() {
                 return Err(());
             }
             // input handle must be an Env
             let env = unsafe { (*input_handle).as_env()? };
+            let conn = RwLock::new(Connection::with_state(
+                input_handle,
+                ConnectionState::Allocated,
+            ));
             let mut env_contents = (*env).write().unwrap();
             let mh = Box::new(MongoHandle::Connection(conn));
             let mh_ptr = Box::into_raw(mh) as *mut _;
@@ -55,16 +55,16 @@ fn sql_alloc_handle(
             Ok(())
         }
         HandleType::Stmt => {
-            let stmt = RwLock::new(Statement::with_state(
-                input_handle,
-                StatementState::Allocated,
-            ));
             // input handle cannot be NULL
             if input_handle.is_null() {
                 return Err(());
             }
             // input handle must be an Connection
             let conn = unsafe { (*input_handle).as_connection()? };
+            let stmt = RwLock::new(Statement::with_state(
+                input_handle,
+                StatementState::Allocated,
+            ));
             let mut conn_contents = (*conn).write().unwrap();
             let mh = Box::new(MongoHandle::Statement(stmt));
             let mh_ptr = Box::into_raw(mh) as *mut _;
