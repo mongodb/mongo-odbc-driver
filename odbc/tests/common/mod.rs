@@ -33,10 +33,7 @@ pub struct ResultsetMetadata {
 // Allocate a new environment handle.
 // Most tests will only need one and this should be part of the setup mechanism.
 lazy_static! {
-    pub static ref ODBC_ENV: Environment = {
-        let env = Environment::new().unwrap();
-        env
-    };
+    pub static ref ODBC_ENV: Environment = Environment::new().unwrap();
 }
 
 #[allow(dead_code)]
@@ -86,8 +83,7 @@ pub fn validate_rs(
     rs_cursor: &mut CursorImpl<StatementImpl>,
 ) {
     // Validate metadata
-    if expected_rs_meta_opt.is_some() {
-        let expected_rs_meta = expected_rs_meta_opt.unwrap();
+    if let Some(expected_rs_meta) = expected_rs_meta_opt {
         let num_col = rs_cursor.num_result_cols().unwrap();
         assert_eq!(expected_rs_meta.expected_names.len() as i16, num_col);
         let column_names = rs_cursor.column_names().unwrap();
@@ -99,7 +95,7 @@ pub fn validate_rs(
     if expected_row_count_opt.is_some() || expected_result_set_opt.is_some() {
         let mut row_count: i64 = 0;
         while let Ok(_row) = rs_cursor.next_row() {
-            row_count = row_count + 1;
+            row_count += 1;
             // TODO - Validate RS content
         }
 
