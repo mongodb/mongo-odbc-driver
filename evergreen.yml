@@ -42,11 +42,24 @@ functions:
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
-            export ADL_TEST_USER=${adl_test_user}
-            export ADL_TEST_PWD=${adl_test_pwd}
-            export ADL_TEST_HOST=${adl_test_host}
-            export ADL_TEST_DB=${adl_test_db}
+            export ADL_TEST_USER=test_user
+            export ADL_TEST_PWD=test_pwd
+            export ADL_TEST_HOST=test_host
+            export ADL_TEST_DB=test_db
           EOT
+    - command: expansions.update
+      params:
+        file: mongosql-odbc-driver/expansions.yml
+
+  "add Windows DLL path":
+    - command: shell.exec
+      params:
+        shell: cmd
+        working_dir: mongosql-odbc-driver
+        script: |
+          set WIN_DRIVER_DLL_PATH=%cd%
+          set WIN_DRIVER_DLL_PATH=%WIN_DRIVER_DLL_PATH:\=\\\\\\\\%
+          echo   export DRIVER_DLL_PATH="%WIN_DRIVER_DLL_PATH%" >> expansions.yml
     - command: expansions.update
       params:
         file: mongosql-odbc-driver/expansions.yml
@@ -62,18 +75,20 @@ functions:
           # the default for cygwin
           if [ "Windows_NT" == "$OS" ]; then
               if [ 'windows-64' == '${build_variant}' ]; then
-                  export DEFAULT_HOST_OPTIONS='--default-host x86_64-pc-windows-msvc'
+                  export TOOLCHAIN='x86_64-pc-windows-msvc'
               elif [ 'windows-32' == '${build_variant}' ]; then
-                  export DEFAULT_HOST_OPTIONS='--default-host i686-pc-windows-msvc'
+                  export TOOLCHAIN='i686-pc-windows-msvc'
               else
                   echo 'unknown windows build variant ${build_variant}'
                   exit 1;
               fi
           fi
 
+          echo "TOOLCHAIN is "  $TOOLCHAIN
+
           # install rustup from scratch
           rm -rf ~/.rustup
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path $DEFAULT_HOST_OPTIONS
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-host $TOOLCHAIN
 
           # rustup installs into C:\Users\$USER instead of
           # C:\home\$USER, so we symlink both .rustup and .cargo
@@ -81,6 +96,18 @@ functions:
                 ln -sf /cygdrive/c/Users/$USER/.rustup/ ~/.rustup
                 ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
           fi
+          echo -------- rustup show before-----
+          rustup show
+          echo -------- Rustup toolchain list before-----
+          rustup toolchain list
+
+          rustup toolchain install stable-$TOOLCHAIN
+          rustup default stable-$TOOLCHAIN
+
+          echo -------- rustup show after -----
+          rustup show
+          echo -------- Rustup toolchain list after -----
+          rustup toolchain list
 
   "check clippy":
     - command: shell.exec
@@ -110,16 +137,23 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          echo $DEFAULT_HOST_OPTIONS
+          echo -------- rustup show -----
+          rustup show
+          echo -------- Rustup toolchain list -----
+          rustup toolchain list
           cargo build --release
 
   "upload artifact":
     - command: s3.put
       params:
-        build_variants: [ 'windows' ]
+        build_variants:
+          - windows-32
+          - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/libmongoodbc.dll
-        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/libmongoodbc.dll
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.dll
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -127,27 +161,63 @@ functions:
   "download artifact":
     - command: s3.get
       params:
-        build_variants: ['windows']
+        build_variants:
+          - windows-32
+          - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/libmongoodbc.dll
-        local_file: mongosql-odbc-driver/libmongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.dll
+        local_file: mongosql-odbc-driver/mongoodbc.dll
         bucket: mciuploads
 
   "setup driver on Windows":
-    - command: subprocess.exec
-      type: setup
+    - command: shell.exec
       params:
+        shell: bash
         working_dir: mongosql-odbc-driver
-        command: reg import setup/setup.reg
-        env:
-          DRIVER_DLL_PATH: ${workdir}
+        script:  |
+          ${prepare_shell}
+          sed -i 's@%DRIVER_DLL_PATH%@'"$DRIVER_DLL_PATH"'@' setup/setupDSN.reg
+          if [ 'windows-32' == '${build_variant}' ]; then
+            sed -i 's@SOFTWARE@'"SOFTWARE\\\\Wow6432Node"'@' setup/setupDSN.reg
+          fi
+          reg import "setup\setupDSN.reg"
+          echo "----- Registry entries after setup ----"
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s
+          if [ 'windows-32' == '${build_variant}' ]; then
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+          else
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+          fi
+          echo "-------------------------"
+        continue_on_err: true
+
   "clean-up driver on Windows":
-    - command: subprocess.exec
-      type: setup
+    - command: shell.exec
       params:
+        shell: bash
         working_dir: mongosql-odbc-driver
-        command: reg import setup/cleanup.reg
+        script:  |
+          ${prepare_shell}
+          if [ 'windows-32' == '${build_variant}' ]; then
+            sed -i 's@SOFTWARE@'"SOFTWARE\\\\Wow6432Node"'@' setup/cleanup.reg
+          fi
+          reg import "setup\cleanup.reg"
+          echo "----- Registry entries after clean-up----"
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s
+          if [ 'windows-32' == '${build_variant}' ]; then
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+          else
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+          fi
+          echo "-------------------------"
+        continue_on_err: true
 
   "run rust tests":
     - command: shell.exec
@@ -157,11 +227,19 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          echo "DEFAULT_HOST_OPTIONS is " $DEFAULT_HOST_OPTIONS
+          echo -------- rustup show -----
+          rustup show
+          echo ----------------------------
+          echo -------- Rustup toolchain list -----
+          rustup toolchain list
+          echo ------------------------------------
           cargo test
 
 pre:
   - func: "fetch source"
   - func: "generate expansions"
+  - func: "add Windows DLL path"
 
 tasks:
 
