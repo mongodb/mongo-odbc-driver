@@ -41,14 +41,14 @@ fn sql_alloc_handle(
                 return Err(());
             }
             // input handle must be an Env
-            let env = unsafe { (*input_handle).as_env()? };
+            let env = unsafe { (*input_handle).as_env().ok_or(())? };
             let conn = RwLock::new(Connection::with_state(
                 input_handle,
                 ConnectionState::Allocated,
             ));
             let mut env_contents = (*env).write().unwrap();
             let mh = Box::new(MongoHandle::Connection(conn));
-            let mh_ptr = Box::into_raw(mh) as *mut _;
+            let mh_ptr = Box::into_raw(mh);
             env_contents.connections.insert(mh_ptr);
             env_contents.state = EnvState::ConnectionAllocated;
             unsafe { *output_handle = mh_ptr as *mut _ }
@@ -60,21 +60,20 @@ fn sql_alloc_handle(
                 return Err(());
             }
             // input handle must be an Connection
-            let conn = unsafe { (*input_handle).as_connection()? };
+            let conn = unsafe { (*input_handle).as_connection().ok_or(())? };
             let stmt = RwLock::new(Statement::with_state(
                 input_handle,
                 StatementState::Allocated,
             ));
             let mut conn_contents = (*conn).write().unwrap();
             let mh = Box::new(MongoHandle::Statement(stmt));
-            let mh_ptr = Box::into_raw(mh) as *mut _;
+            let mh_ptr = Box::into_raw(mh);
             conn_contents.statements.insert(mh_ptr);
             conn_contents.state = ConnectionState::StatementAllocated;
             unsafe { *output_handle = mh_ptr as *mut _ }
             Ok(())
         }
         HandleType::Desc => {
-            // TODO: SQL-618
             unimplemented!();
         }
     }
@@ -505,43 +504,50 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
 }
 
 fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<(), ()> {
-    unsafe {
-        match handle_type {
-            // By making Boxes to the types and letting them go out of
-            // scope, they will be dropped.
-            HandleType::Env => {
-                let _ = (*handle).as_env()?;
-            }
-            HandleType::Dbc => {
-                let conn = (*handle).as_connection()?;
-                let mut env_contents = (*conn.write().unwrap().env).as_env()?.write().unwrap();
-                env_contents.connections.remove(&handle);
-                if env_contents.connections.is_empty() {
-                    env_contents.state = EnvState::Allocated;
-                }
-            }
-            HandleType::Stmt => {
-                let stmt = (*handle).as_statement()?;
-                // Actually reading this value would make ASAN fail, but this
-                // is what the ODBC standard expects.
-                let mut conn_contents = (*stmt.write().unwrap().connection)
-                    .as_connection()?
+    match handle_type {
+        // By making Boxes to the types and letting them go out of
+        // scope, they will be dropped.
+        HandleType::Env => {
+            let _ = unsafe { (*handle).as_env().ok_or(())? };
+        }
+        HandleType::Dbc => {
+            let conn = unsafe { (*handle).as_connection().ok_or(())? };
+            let mut env_contents = unsafe {
+                (*conn.write().unwrap().env)
+                    .as_env()
+                    .ok_or(())?
                     .write()
-                    .unwrap();
-                conn_contents.statements.remove(&handle);
-                if conn_contents.statements.is_empty() {
-                    conn_contents.state = ConnectionState::Connected;
-                }
-            }
-            HandleType::Desc => {
-                // TODO: SQL-618
-                unimplemented!();
+                    .unwrap()
+            };
+            env_contents.connections.remove(&handle);
+            if env_contents.connections.is_empty() {
+                env_contents.state = EnvState::Allocated;
             }
         }
-        // create the Box at the end to ensure Drop is not reordered?
-        let _ = Box::from_raw(handle);
-        Ok(())
+        HandleType::Stmt => {
+            let stmt = unsafe { (*handle).as_statement().ok_or(())? };
+            // Actually reading this value would make ASAN fail, but this
+            // is what the ODBC standard expects.
+            let mut conn_contents = unsafe {
+                (*stmt.write().unwrap().connection)
+                    .as_connection()
+                    .ok_or(())?
+                    .write()
+                    .unwrap()
+            };
+            conn_contents.statements.remove(&handle);
+            if conn_contents.statements.is_empty() {
+                conn_contents.state = ConnectionState::Connected;
+            }
+        }
+        HandleType::Desc => {
+            unimplemented!();
+        }
     }
+    // create the Box at the end to ensure Drop only occurs when there are no errors due
+    // to incorrect handle type.
+    let _ = unsafe { Box::from_raw(handle) };
+    Ok(())
 }
 
 #[no_mangle]

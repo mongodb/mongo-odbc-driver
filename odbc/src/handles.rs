@@ -10,24 +10,24 @@ pub enum MongoHandle {
 }
 
 impl MongoHandle {
-    pub fn as_env(&self) -> Result<&RwLock<Env>, ()> {
+    pub fn as_env(&self) -> Option<&RwLock<Env>> {
         match self {
-            MongoHandle::Env(e) => Ok(e),
-            _ => Err(()),
+            MongoHandle::Env(e) => Some(e),
+            _ => None,
         }
     }
 
-    pub fn as_connection(&self) -> Result<&RwLock<Connection>, ()> {
+    pub fn as_connection(&self) -> Option<&RwLock<Connection>> {
         match self {
-            MongoHandle::Connection(c) => Ok(c),
-            _ => Err(()),
+            MongoHandle::Connection(c) => Some(c),
+            _ => None,
         }
     }
 
-    pub fn as_statement(&self) -> Result<&RwLock<Statement>, ()> {
+    pub fn as_statement(&self) -> Option<&RwLock<Statement>> {
         match self {
-            MongoHandle::Statement(s) => Ok(s),
-            _ => Err(()),
+            MongoHandle::Statement(s) => Some(s),
+            _ => None,
         }
     }
 }
