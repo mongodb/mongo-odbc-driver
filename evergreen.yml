@@ -118,6 +118,48 @@ functions:
           ${prepare_shell}
           cargo test
 
+  "install unix odbc":
+    - command: shell.exec
+      type: system
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          ${prepare_shell}
+          dir="$PWD"
+          mkdir -p unixodbc/install
+          cd unixodbc
+          echo "downloading unixODBC"
+          unixODBC_dir=unixODBC-2.3.6
+          curl -O "http://noexpire.s3.amazonaws.com/sqlproxy/binary/linux/unixODBC-2.3.6.tar.gz" \
+            --silent \
+            --fail \
+            --max-time 60 \
+            --retry 5 \
+            --retry-delay 0
+          tar xf "$unixODBC_dir.tar.gz"
+          cd "$unixODBC_dir"
+          ./configure --prefix="$dir/unixodbc/install" --with-pic
+          make
+          make install
+
+
+  "run asan tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          ${prepare_shell}
+          dir="$PWD"
+          ~/.cargo/bin/rustup default nightly
+          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          export LD_LIBRARY_PATH="$dir/unixodbc/install/lib"
+          export LIBRARY_PATH="$dir/unixodbc/install/lib"
+          export RUSTFLAGS="-Z sanitizer=address"
+          cargo test --target x86_64-unknown-linux-gnu
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -144,6 +186,12 @@ tasks:
       - func: "install rust toolchain"
       - func: "run rust tests"
 
+  - name: asan
+    commands:
+      - func: "install rust toolchain"
+      - func: "install unix odbc"
+      - func: "run asan tests"
+
 buildvariants:
 
   - name: static-analysis
@@ -166,3 +214,9 @@ buildvariants:
     tasks:
       - name: compile
       - name: test-rust
+
+  - name: ubuntu1804
+    display_name: Ubuntu Sanitizers
+    run_on: [ ubuntu1804-test ]
+    tasks:
+      - name: asan
