@@ -154,41 +154,86 @@ fn statement_alloc_free() {
 #[test]
 fn invalid_free() {
     unsafe {
-        let mut handle: *mut _ =
+        let mut env_handle: *mut _ =
             &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
-        let handle_ptr: *mut _ = &mut handle;
+        let env_handle_ptr: *mut _ = &mut env_handle;
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
                 HandleType::Env,
                 std::ptr::null_mut(),
-                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
+                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(env_handle_ptr),
             )
         );
         assert_eq!(
             EnvState::Allocated,
-            (*handle).as_env().unwrap().read().unwrap().state
+            (*env_handle).as_env().unwrap().read().unwrap().state
         );
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
                 HandleType::Dbc,
-                std::mem::transmute::<*mut MongoHandle, Handle>(handle),
+                std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
             )
         );
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
                 HandleType::Stmt,
-                std::mem::transmute::<*mut MongoHandle, Handle>(handle),
+                std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
             )
         );
-        // Free for real so we don't leak.
+
+        let mut conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
+            Connection::with_state(env_handle, ConnectionState::Allocated),
+        ));
+        let conn_handle_ptr: *mut _ = &mut conn_handle;
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::Dbc,
+                env_handle as *mut _,
+                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(conn_handle_ptr),
+            )
+        );
+        assert_eq!(
+            ConnectionState::Allocated,
+            (*conn_handle)
+                .as_connection()
+                .unwrap()
+                .read()
+                .unwrap()
+                .state
+        );
+        assert_eq!(
+            SqlReturn::INVALID_HANDLE,
+            SQLFreeHandle(
+                HandleType::Env,
+                std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
+            )
+        );
+        assert_eq!(
+            SqlReturn::INVALID_HANDLE,
+            SQLFreeHandle(
+                HandleType::Stmt,
+                std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
+            )
+        );
+
+        // Free for real so we don't leak. Note we must free the Connection before the Env or we
+        // will violate ASAN!
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(
+                HandleType::Dbc,
+                std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
+            )
+        );
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLFreeHandle(
                 HandleType::Env,
-                std::mem::transmute::<*mut MongoHandle, Handle>(handle),
+                std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
             )
         );
     }
