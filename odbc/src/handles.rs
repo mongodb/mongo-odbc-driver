@@ -40,14 +40,16 @@ pub struct Env {
     // state of this Env
     pub state: EnvState,
     pub connections: HashSet<*mut MongoHandle>,
+    pub sql_state: Option<String>
 }
 
 impl Env {
-    pub fn with_state(state: EnvState) -> Self {
+    pub fn with_state(state: EnvState, sql_state: Option<String>) -> Self {
         Self {
             _attributes: Box::new(EnvAttributes::default()),
             state,
             connections: HashSet::new(),
+            sql_state
         }
     }
 }
@@ -83,6 +85,7 @@ pub struct Connection {
     // pub client: Option<MongoClient>,
     // all Statements allocated from this Connection
     pub statements: HashSet<*mut MongoHandle>,
+    pub sql_state: Option<String>
 }
 
 #[derive(Debug, Default)]
@@ -100,12 +103,13 @@ pub enum ConnectionState {
 }
 
 impl Connection {
-    pub fn with_state(env: *mut MongoHandle, state: ConnectionState) -> Self {
+    pub fn with_state(env: *mut MongoHandle, state: ConnectionState, sql_state: Option<String>) -> Self {
         Self {
             env,
             _attributes: Box::new(ConnectionAttributes::default()),
             state,
             statements: HashSet::new(),
+            sql_state
         }
     }
 }
@@ -116,6 +120,7 @@ pub struct Statement {
     pub _attributes: Box<StatementAttributes>,
     pub state: StatementState,
     //pub cursor: Option<Box<Peekable<Cursor>>>,
+    pub sql_state: Option<String>
 }
 
 #[derive(Debug, Default)]
@@ -138,11 +143,12 @@ pub enum StatementState {
 }
 
 impl Statement {
-    pub fn with_state(connection: *mut MongoHandle, state: StatementState) -> Self {
+    pub fn with_state(connection: *mut MongoHandle, state: StatementState, sql_state: Option<String>) -> Self {
         Self {
             connection,
             _attributes: Box::new(StatementAttributes::default()),
             state,
+            sql_state
         }
     }
 }

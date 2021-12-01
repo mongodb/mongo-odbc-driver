@@ -7,7 +7,10 @@ use odbc_sys::{
     InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
     SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
-use std::sync::RwLock;
+use std::{
+    sync::RwLock,
+    ptr
+};
 
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
@@ -28,7 +31,7 @@ fn sql_alloc_handle(
 ) -> Result<(), ()> {
     match handle_type {
         HandleType::Env => {
-            let env = RwLock::new(Env::with_state(EnvState::Allocated));
+            let env = RwLock::new(Env::with_state(EnvState::Allocated, None));
             let mh = Box::new(MongoHandle::Env(env));
             unsafe {
                 *output_handle = Box::into_raw(mh) as *mut _;
@@ -45,6 +48,7 @@ fn sql_alloc_handle(
             let conn = RwLock::new(Connection::with_state(
                 input_handle,
                 ConnectionState::Allocated,
+                None
             ));
             let mut env_contents = (*env).write().unwrap();
             let mh = Box::new(MongoHandle::Connection(conn));
@@ -64,6 +68,7 @@ fn sql_alloc_handle(
             let stmt = RwLock::new(Statement::with_state(
                 input_handle,
                 StatementState::Allocated,
+                None
             ));
             let mut conn_contents = (*conn).write().unwrap();
             let mh = Box::new(MongoHandle::Statement(stmt));
@@ -93,7 +98,7 @@ pub extern "C" fn SQLBindCol(
 
 #[no_mangle]
 pub extern "C" fn SQLBindParameter(
-    _hstmt: HStmt,
+    hstmt: HStmt,
     _parameter_number: USmallInt,
     _input_output_type: ParamType,
     _value_type: CDataType,
@@ -104,7 +109,11 @@ pub extern "C" fn SQLBindParameter(
     _buffer_length: Len,
     _str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
-    unimplemented!()
+    let mongo_handle = hstmt as *mut MongoHandle;
+    let stmt = unsafe { (*mongo_handle).as_statement().unwrap() };
+    let mut stmt_contents = stmt.write().unwrap();
+    stmt_contents.sql_state = Some("HCY00".to_string());
+    SqlReturn::ERROR
 }
 
 #[no_mangle]
@@ -693,18 +702,57 @@ pub extern "C" fn SQLGetDiagFieldW(
     unimplemented!()
 }
 
+macro_rules! set_sql_state {
+    ( $sql_state:expr, $output_ptr:expr ) => {{
+        if $sql_state.is_none() { // TODO: why?
+            true
+        } else {
+            unsafe { ptr::copy_nonoverlapping(($sql_state).as_ref().unwrap().as_ptr(), $output_ptr, 6) };
+            false
+        }
+    }};
+}
+
 #[no_mangle]
 pub extern "C" fn SQLGetDiagRec(
-    _handle_type: HandleType,
-    _handle: Handle,
+    handle_type: HandleType,
+    handle: Handle,
     _rec_number: SmallInt,
-    _state: *mut Char,
+    state: *mut Char,
     _native_error_ptr: *mut Integer,
     _message_text: *mut Char,
     _buffer_length: SmallInt,
     _text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    let mongo_handle = handle as *mut MongoHandle;
+    match handle_type {
+        HandleType::Env => {
+            let env = unsafe { (*mongo_handle).as_env().unwrap() }; // TODO: error handling
+            let env_contents = (*env).read().unwrap();
+            let no_error = set_sql_state!(env_contents.sql_state, state);
+            if no_error {
+                return SqlReturn::NO_DATA
+            }
+        },
+        HandleType::Dbc => {
+            let dbc = unsafe { (*mongo_handle).as_connection().unwrap() }; // TODO: error handling
+            let dbc_contents = (*dbc).read().unwrap();
+            let no_error = set_sql_state!(dbc_contents.sql_state, state);
+            if no_error {
+                return SqlReturn::NO_DATA
+            }
+        },
+        HandleType::Stmt => {
+            let stmt = unsafe { (*mongo_handle).as_statement().unwrap() }; // TODO: error handling
+            let stmt_contents = (*stmt).read().unwrap();
+            let no_error = set_sql_state!(stmt_contents.sql_state, state);
+            if no_error {
+                return SqlReturn::NO_DATA
+            }
+        },
+        HandleType::Desc => unimplemented!()
+    }
+    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
