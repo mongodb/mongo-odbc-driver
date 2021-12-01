@@ -1,17 +1,82 @@
+use crate::handles::{
+    Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState,
+};
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
     EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
     InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
     SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
+use std::sync::RwLock;
 
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
-    _handle_type: HandleType,
-    _input_handle: Handle,
-    _output_handle: *mut Handle,
+    handle_type: HandleType,
+    input_handle: Handle,
+    output_handle: *mut Handle,
 ) -> SqlReturn {
-    unimplemented!()
+    match sql_alloc_handle(handle_type, input_handle as *mut _, output_handle) {
+        Ok(_) => SqlReturn::SUCCESS,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
+}
+
+fn sql_alloc_handle(
+    handle_type: HandleType,
+    input_handle: *mut MongoHandle,
+    output_handle: *mut Handle,
+) -> Result<(), ()> {
+    match handle_type {
+        HandleType::Env => {
+            let env = RwLock::new(Env::with_state(EnvState::Allocated));
+            let mh = Box::new(MongoHandle::Env(env));
+            unsafe {
+                *output_handle = Box::into_raw(mh) as *mut _;
+            }
+            Ok(())
+        }
+        HandleType::Dbc => {
+            // input handle cannot be NULL
+            if input_handle.is_null() {
+                return Err(());
+            }
+            // input handle must be an Env
+            let env = unsafe { (*input_handle).as_env().ok_or(())? };
+            let conn = RwLock::new(Connection::with_state(
+                input_handle,
+                ConnectionState::Allocated,
+            ));
+            let mut env_contents = (*env).write().unwrap();
+            let mh = Box::new(MongoHandle::Connection(conn));
+            let mh_ptr = Box::into_raw(mh);
+            env_contents.connections.insert(mh_ptr);
+            env_contents.state = EnvState::ConnectionAllocated;
+            unsafe { *output_handle = mh_ptr as *mut _ }
+            Ok(())
+        }
+        HandleType::Stmt => {
+            // input handle cannot be NULL
+            if input_handle.is_null() {
+                return Err(());
+            }
+            // input handle must be an Connection
+            let conn = unsafe { (*input_handle).as_connection().ok_or(())? };
+            let stmt = RwLock::new(Statement::with_state(
+                input_handle,
+                StatementState::Allocated,
+            ));
+            let mut conn_contents = (*conn).write().unwrap();
+            let mh = Box::new(MongoHandle::Statement(stmt));
+            let mh_ptr = Box::into_raw(mh);
+            conn_contents.statements.insert(mh_ptr);
+            conn_contents.state = ConnectionState::StatementAllocated;
+            unsafe { *output_handle = mh_ptr as *mut _ }
+            Ok(())
+        }
+        HandleType::Desc => {
+            unimplemented!();
+        }
+    }
 }
 
 #[no_mangle]
@@ -431,8 +496,58 @@ pub extern "C" fn SQLForeignKeysW(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLFreeHandle(_handle_type: HandleType, _handle: Handle) -> SqlReturn {
-    unimplemented!()
+pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
+    match sql_free_handle(handle_type, handle as *mut _) {
+        Ok(_) => SqlReturn::SUCCESS,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
+}
+
+fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<(), ()> {
+    match handle_type {
+        // By making Boxes to the types and letting them go out of
+        // scope, they will be dropped.
+        HandleType::Env => {
+            let _ = unsafe { (*handle).as_env().ok_or(())? };
+        }
+        HandleType::Dbc => {
+            let conn = unsafe { (*handle).as_connection().ok_or(())? };
+            let mut env_contents = unsafe {
+                (*conn.write().unwrap().env)
+                    .as_env()
+                    .ok_or(())?
+                    .write()
+                    .unwrap()
+            };
+            env_contents.connections.remove(&handle);
+            if env_contents.connections.is_empty() {
+                env_contents.state = EnvState::Allocated;
+            }
+        }
+        HandleType::Stmt => {
+            let stmt = unsafe { (*handle).as_statement().ok_or(())? };
+            // Actually reading this value would make ASAN fail, but this
+            // is what the ODBC standard expects.
+            let mut conn_contents = unsafe {
+                (*stmt.write().unwrap().connection)
+                    .as_connection()
+                    .ok_or(())?
+                    .write()
+                    .unwrap()
+            };
+            conn_contents.statements.remove(&handle);
+            if conn_contents.statements.is_empty() {
+                conn_contents.state = ConnectionState::Connected;
+            }
+        }
+        HandleType::Desc => {
+            unimplemented!();
+        }
+    }
+    // create the Box at the end to ensure Drop only occurs when there are no errors due
+    // to incorrect handle type.
+    let _ = unsafe { Box::from_raw(handle) };
+    Ok(())
 }
 
 #[no_mangle]
