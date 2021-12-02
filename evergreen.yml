@@ -41,6 +41,7 @@ functions:
             set -o errexit
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
+            export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
           EOT
     - command: expansions.update
@@ -126,8 +127,7 @@ functions:
         working_dir: mongo-odbc-driver
         script: |
           ${prepare_shell}
-          dir="$PWD"
-          mkdir -p unixodbc/install
+          mkdir -p "$UNIX_ODBC_PATH"
           cd unixodbc
           echo "downloading unixODBC"
           unixODBC_dir=unixODBC-2.3.6
@@ -139,7 +139,7 @@ functions:
             --retry-delay 0
           tar xf "$unixODBC_dir.tar.gz"
           cd "$unixODBC_dir"
-          ./configure --prefix="$dir/unixodbc/install" --with-pic
+          ./configure --prefix="$UNIX_ODBC_PATH" --with-pic
           make
           make install
 
@@ -152,11 +152,10 @@ functions:
         working_dir: mongo-odbc-driver
         script: |
           ${prepare_shell}
-          dir="$PWD"
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-          export LD_LIBRARY_PATH="$dir/unixodbc/install/lib"
-          export LIBRARY_PATH="$dir/unixodbc/install/lib"
+          export LD_LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
+          export LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
           export RUSTFLAGS="-Z sanitizer=address"
           cargo test --target x86_64-unknown-linux-gnu
 
