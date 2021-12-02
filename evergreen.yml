@@ -215,8 +215,8 @@ buildvariants:
       - name: compile
       - name: test-rust
 
-  - name: ubuntu1804
-    display_name: Ubuntu Sanitizers
-    run_on: [ ubuntu1804-test ]
+  - name: ubuntu2004
+    display_name: Ubuntu 20.04
+    run_on: [ ubuntu2004-large ]
     tasks:
       - name: asan
