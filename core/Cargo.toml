@@ -4,4 +4,11 @@ version = "0.1.0"
 authors = ["Ryan Chipman <ryan@ryanchipman.com>"]
 edition = "2018"
 
+
 [dependencies]
+bson = "1.0.0"
+
+[dependencies.mongodb]
+version = "1.0.0"
+default-features = false
+features = ["sync"]

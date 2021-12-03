@@ -80,6 +80,52 @@ fn sql_alloc_handle(
 }
 
 #[no_mangle]
+pub extern "C" fn SQLConnect(
+    _connection_handle: HDbc,
+    _server_name: *const Char,
+    _name_length_1: SmallInt,
+    _user_name: *const Char,
+    _name_length_2: SmallInt,
+    _authentication: *const Char,
+    _name_length_3: SmallInt,
+) -> SqlReturn {
+    unimplemented!()
+}
+
+#[no_mangle]
+pub extern "C" fn SQLConnectW(
+    _connection_handle: HDbc,
+    _server_name: *const WChar,
+    _name_length_1: SmallInt,
+    _user_name: *const WChar,
+    _name_length_2: SmallInt,
+    _authentication: *const WChar,
+    _name_length_3: SmallInt,
+) -> SqlReturn {
+    // Pre operation validation :
+    //  - Handle is not null and is a connection handle
+    //  - ODBC state is correct (C2)
+
+    // Get the handles::Connection from the connection handle
+
+    // Convert WChar + length to str
+
+    // Call sql_connect(conn, server_name, uid, pwd);
+
+    // If OK, return Sql_SUCCESS
+    // If Error, check error kind (error or warning) and return SQL_ERROR or SQL_SUCCESS_WITH_INFO
+
+    unimplemented!()
+}
+
+fn sql_connect(conn: &RwLock<Connection>, server_name: &str, user_name: &str, pwd: &str)
+{
+    // Pre operation preparation :
+    //  - Clean-up connection status containing the previous call outcome
+
+}
+
+#[no_mangle]
 pub extern "C" fn SQLBindCol(
     _hstmt: HStmt,
     _col_number: USmallInt,
@@ -245,32 +291,6 @@ pub extern "C" fn SQLCompleteAsync(
     _handle_type: HandleType,
     _handle: Handle,
     _async_ret_code_ptr: *mut RetCode,
-) -> SqlReturn {
-    unimplemented!()
-}
-
-#[no_mangle]
-pub extern "C" fn SQLConnect(
-    _connection_handle: HDbc,
-    _server_name: *const Char,
-    _name_length_1: SmallInt,
-    _user_name: *const Char,
-    _name_length_2: SmallInt,
-    _authentication: *const Char,
-    _name_length_3: SmallInt,
-) -> SqlReturn {
-    unimplemented!()
-}
-
-#[no_mangle]
-pub extern "C" fn SQLConnectW(
-    _connection_handle: HDbc,
-    _server_name: *const WChar,
-    _name_length_1: SmallInt,
-    _user_name: *const WChar,
-    _name_length_2: SmallInt,
-    _authentication: *const WChar,
-    _name_length_3: SmallInt,
 ) -> SqlReturn {
     unimplemented!()
 }
