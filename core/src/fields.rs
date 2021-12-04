@@ -3,6 +3,7 @@ use crate::error::Error;
 use crate::stmt::MongoStatement;
 use bson::Bson;
 
+#[derive(Debug)]
 pub struct MongoFields {
     // The list of all the databases
     databases_names: Vec<String>,
@@ -18,7 +19,7 @@ pub struct MongoFields {
 // TABLE_CAT, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE.
 impl MongoFields {
     // Create a new MongoStatement to list tables with the given database (catalogs) and collection (tables) names filters.
-    pub fn listColumns(
+    pub fn list_columns(
         client: &MongoConnection,
         db_name_filter: &str,
         collection_name_filter: &str,
@@ -30,13 +31,13 @@ impl MongoFields {
 impl MongoStatement for MongoFields {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&self) -> Result<bool, Error> {
+    fn next(&mut self) -> Result<bool, Error> {
         unimplemented!()
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn getValue(&self, colIndex: u16) -> Result<Option<&Bson>, Error> {
+    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, Error> {
         unimplemented!()
     }
 }

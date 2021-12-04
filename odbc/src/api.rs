@@ -9,6 +9,22 @@ use odbc_sys::{
 };
 use std::sync::RwLock;
 
+use mongo_odbc_core::conn::MongoConnection;
+use mongo_odbc_core::error::Error;
+
+fn sqlhdbc_to_conn<'a>(hd: HDbc) -> Result<&'a RwLock<Connection>, ()> {
+    //  Verify that thehandle is not null, otherwise return error? If DM pre validate this, not needed
+    if hd.is_null() {
+        return Err(());
+    }
+
+    let handle = unsafe { &*(hd as *mut MongoHandle)};
+    return match handle.as_connection() {
+        Some(c) => Ok(c),
+        None => Err(())
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
     handle_type: HandleType,
@@ -94,7 +110,7 @@ pub extern "C" fn SQLConnect(
 
 #[no_mangle]
 pub extern "C" fn SQLConnectW(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _server_name: *const WChar,
     _name_length_1: SmallInt,
     _user_name: *const WChar,
@@ -102,27 +118,67 @@ pub extern "C" fn SQLConnectW(
     _authentication: *const WChar,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    // Pre operation validation :
-    //  - Handle is not null and is a connection handle
-    //  - ODBC state is correct (C2)
+    // Get the handles::Connection from HDbc
+    let conn= sqlhdbc_to_conn(connection_handle);
+    match conn {
+        Ok(_) => {
+            // Convert server_name, user_name and authentication  WChar + length to Rust str
+            // If this fails, return SQL_ERROR and add HY090 to the connection status
 
-    // Get the handles::Connection from the connection handle
-
-    // Convert WChar + length to str
-
-    // Call sql_connect(conn, server_name, uid, pwd);
-
-    // If OK, return Sql_SUCCESS
-    // If Error, check error kind (error or warning) and return SQL_ERROR or SQL_SUCCESS_WITH_INFO
-
-    unimplemented!()
+            // Call sql_connect(conn, server_name, uid, pwd) and propagate the return
+            sql_connect(conn.unwrap(), "dsn", "username", "pwd")
+        },
+        Err(e) =>  SqlReturn::INVALID_HANDLE
+    }
 }
 
-fn sql_connect(conn: &RwLock<Connection>, server_name: &str, user_name: &str, pwd: &str)
+// Read the DSN settings and creates the corresponding MongoDB connection string.
+// Creates a new MongoDB client connection using the connection string.
+fn sql_connect(conn: &RwLock<Connection>, dsn: &str, user_name: &str, pwd: &str) -> SqlReturn
 {
-    // Pre operation preparation :
+    // Pre validation :
+    //  - ODBC state is correct (C2)? DM will return 08002 if not true, so we might not have to check this
     //  - Clean-up connection status containing the previous call outcome
 
+    // Retrieve the connection settings from the DSN and creates a MongoDB connection string
+    // from the values.
+    // This is platform specific because DSN configuration are stored differently on Windows vs Mac/Linux
+
+    // Calls connect
+    let connection_outcome = connect(conn, "connectionString");
+
+    // If OK, update ODBC state to Connected (C4)? If DM is taking care of the state transition, no need for this
+    // If Error, check error kind, generate the right corresponding SQL error (Sql state, message, vendor code, component)
+    // and update the connection status, return either SQL_ERROR or SQL_SUCCESS_WITH_INFO depending on the type of error
+    match connection_outcome
+    {
+        Ok(_) => SqlReturn::SUCCESS,
+        // TODO - Generate the error and correct return
+        Err(e) => SqlReturn::ERROR
+    }
+}
+
+
+// Creates a new MongoDB client connection using the connection string.
+// SQLConnect, SQLDriverConnect and SQLBrowseConnect will all call this in order to obtained a
+// MongoConnection
+fn connect(conn: &RwLock<Connection>, connection_settings: &str) -> Result<(), Error> {
+    // Create a new MongoConnection using MongoConnection::connect() and add it to the connection handle
+    let mut conn_contents = (*conn).write().unwrap();
+
+    // Create a new MongoConnection. currentDB and loginTimeout come from Connection attributes
+    // SQL_ATTR_CURRENT_CATALOG and SQL_ATTR_LOGIN_TIMEOUT, both can be set prior to connecting
+    let mongo_conn = MongoConnection::connect("uri", Some("current_db"), None);
+    match mongo_conn {
+        Ok(_) => {
+            conn_contents.mongodb_conn = Some(Box::new(mongo_conn.unwrap()));
+        }
+        Err(e) => {
+            // Propagate the error if any
+            return Err(e);}
+    }
+
+    Ok(())
 }
 
 #[no_mangle]

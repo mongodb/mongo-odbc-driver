@@ -4,6 +4,7 @@ use crate::stmt::MongoStatement;
 use bson::{Array, Bson, Document};
 use mongodb::sync::Cursor;
 
+#[derive(Debug)]
 pub struct MongoQuery {
     // The cursor on the result set.
     resultset_cursor: Cursor<Document>,
@@ -21,12 +22,12 @@ impl MongoQuery {
     }
 
     // Return the number of fields/columns in the resultset
-    fn getColCount(&self) -> u32 {
+    fn get_col_count(&self) -> u32 {
         unimplemented!()
     }
 
     // Get the metadata for the column with the given index.
-    fn getColMetadata(&self, colIndex: u16) -> Result<MongoColMetadata, Error> {
+    fn get_col_metadata(&self, col_index: u16) -> Result<MongoColMetadata, Error> {
         unimplemented!()
     }
 }
@@ -34,13 +35,13 @@ impl MongoQuery {
 impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&self) -> Result<bool, Error> {
+    fn next(&mut self) -> Result<bool, Error> {
         unimplemented!()
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn getValue(&self, colIndex: u16) -> Result<Option<&Bson>, Error> {
+    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, Error> {
         unimplemented!()
     }
 }
@@ -48,6 +49,7 @@ impl MongoStatement for MongoQuery {
 // Metadata information for a column of the result set.
 // The information is to be used when reporting columns information from
 // SQLColAtrribute or SQLDescibeCol and when converting the data to the targeted C type.
+#[derive(Debug)]
 pub struct MongoColMetadata {
     pub base_col_name: Box<str>,
     pub base_table_name: Box<str>,

@@ -4,6 +4,7 @@ use crate::stmt::MongoStatement;
 use bson::{Array, Bson, Document};
 use mongodb::sync::Cursor;
 
+#[derive(Debug)]
 pub struct MongoCollections {
     // The cursor on the result set.
     resultset_cursor: Cursor<Document>,
@@ -14,7 +15,7 @@ pub struct MongoCollections {
 // Statement related to a SQLColumns call.
 impl MongoCollections {
     // Create a new MongoStatement to list tables with the given database (catalogs) and collection (tables) names filters.
-    pub fn listTables(
+    pub fn list_tables(
         client: &MongoConnection,
         db_name_filter: &str,
         collection_name_filter: &str,
@@ -32,7 +33,7 @@ impl MongoStatement for MongoCollections {
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn getValue(&self, colIndex: u16) -> Result<Option<&Bson>, Error> {
+    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, Error> {
         unimplemented!()
     }
 }

@@ -1,6 +1,6 @@
-use std::{collections::HashSet, sync::RwLock};
-
+use mongo_odbc_core::conn::MongoConnection;
 use odbc_sys::Integer;
+use std::{collections::HashSet, sync::RwLock};
 
 #[derive(Debug)]
 pub enum MongoHandle {
@@ -83,6 +83,7 @@ pub struct Connection {
     // pub client: Option<MongoClient>,
     // all Statements allocated from this Connection
     pub statements: HashSet<*mut MongoHandle>,
+    pub mongodb_conn: Option<Box<MongoConnection>>,
 }
 
 #[derive(Debug, Default)]
@@ -106,6 +107,7 @@ impl Connection {
             _attributes: Box::new(ConnectionAttributes::default()),
             state,
             statements: HashSet::new(),
+            mongodb_conn: None,
         }
     }
 }
