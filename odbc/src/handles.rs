@@ -7,6 +7,7 @@ pub enum MongoHandle {
     Env(RwLock<Env>),
     Connection(RwLock<Connection>),
     Statement(RwLock<Statement>),
+    Descriptor(RwLock<Descriptor>)
 }
 
 impl MongoHandle {
@@ -30,6 +31,13 @@ impl MongoHandle {
             _ => None,
         }
     }
+
+    pub fn as_descriptor(&self) -> Option<&RwLock<Descriptor>> {
+        match self {
+            MongoHandle::Descriptor(d) => Some(d),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -40,16 +48,18 @@ pub struct Env {
     // state of this Env
     pub state: EnvState,
     pub connections: HashSet<*mut MongoHandle>,
-    pub sql_state: Option<String>
+    pub sql_states: Vec<String>,
+    pub error_messages: Vec<String>,
 }
 
 impl Env {
-    pub fn with_state(state: EnvState, sql_state: Option<String>) -> Self {
+    pub fn with_state(state: EnvState) -> Self {
         Self {
             _attributes: Box::new(EnvAttributes::default()),
             state,
             connections: HashSet::new(),
-            sql_state
+            sql_states: vec![],
+            error_messages: vec![]
         }
     }
 }
@@ -85,7 +95,8 @@ pub struct Connection {
     // pub client: Option<MongoClient>,
     // all Statements allocated from this Connection
     pub statements: HashSet<*mut MongoHandle>,
-    pub sql_state: Option<String>
+    pub sql_states: Vec<String>,
+    pub error_messages: Vec<String>,
 }
 
 #[derive(Debug, Default)]
@@ -103,13 +114,15 @@ pub enum ConnectionState {
 }
 
 impl Connection {
-    pub fn with_state(env: *mut MongoHandle, state: ConnectionState, sql_state: Option<String>) -> Self {
+    pub fn with_state(env: *mut MongoHandle, state: ConnectionState) -> Self {
         Self {
             env,
             _attributes: Box::new(ConnectionAttributes::default()),
             state,
             statements: HashSet::new(),
-            sql_state
+            sql_states: vec![],
+            error_messages: vec![]
+
         }
     }
 }
@@ -120,7 +133,8 @@ pub struct Statement {
     pub _attributes: Box<StatementAttributes>,
     pub state: StatementState,
     //pub cursor: Option<Box<Peekable<Cursor>>>,
-    pub sql_state: Option<String>
+    pub sql_states: Vec<String>,
+    pub error_messages: Vec<String>,
 }
 
 #[derive(Debug, Default)]
@@ -143,12 +157,28 @@ pub enum StatementState {
 }
 
 impl Statement {
-    pub fn with_state(connection: *mut MongoHandle, state: StatementState, sql_state: Option<String>) -> Self {
+    pub fn with_state(connection: *mut MongoHandle, state: StatementState) -> Self {
         Self {
             connection,
             _attributes: Box::new(StatementAttributes::default()),
             state,
-            sql_state
+            sql_states: vec![],
+            error_messages: vec![]
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Descriptor {
+    pub sql_states: Vec<String>,
+    pub error_messages: Vec<String>,
+}
+
+impl Descriptor {
+    pub fn default() -> Descriptor {
+        Self {
+            sql_states: vec![],
+            error_messages: vec![]
         }
     }
 }

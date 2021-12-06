@@ -4,3 +4,4 @@ pub use api::*;
 
 #[cfg(test)]
 mod tests;
+mod util;

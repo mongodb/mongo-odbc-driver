@@ -1,5 +1,8 @@
-use crate::handles::{
-    Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState,
+use crate::{
+    handles::{
+        Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState,
+    },
+    util::set_handle_state
 };
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -9,8 +12,11 @@ use odbc_sys::{
 };
 use std::{
     sync::RwLock,
-    ptr
+    ptr,
+    cmp::min
 };
+
+pub const UNIMPLEMENTED_FUNC: &str = "HYC00";
 
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
@@ -31,7 +37,7 @@ fn sql_alloc_handle(
 ) -> Result<(), ()> {
     match handle_type {
         HandleType::Env => {
-            let env = RwLock::new(Env::with_state(EnvState::Allocated, None));
+            let env = RwLock::new(Env::with_state(EnvState::Allocated));
             let mh = Box::new(MongoHandle::Env(env));
             unsafe {
                 *output_handle = Box::into_raw(mh) as *mut _;
@@ -48,7 +54,6 @@ fn sql_alloc_handle(
             let conn = RwLock::new(Connection::with_state(
                 input_handle,
                 ConnectionState::Allocated,
-                None
             ));
             let mut env_contents = (*env).write().unwrap();
             let mh = Box::new(MongoHandle::Connection(conn));
@@ -68,7 +73,6 @@ fn sql_alloc_handle(
             let stmt = RwLock::new(Statement::with_state(
                 input_handle,
                 StatementState::Allocated,
-                None
             ));
             let mut conn_contents = (*conn).write().unwrap();
             let mh = Box::new(MongoHandle::Statement(stmt));
@@ -109,11 +113,15 @@ pub extern "C" fn SQLBindParameter(
     _buffer_length: Len,
     _str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
-    let mongo_handle = hstmt as *mut MongoHandle;
-    let stmt = unsafe { (*mongo_handle).as_statement().unwrap() };
-    let mut stmt_contents = stmt.write().unwrap();
-    stmt_contents.sql_state = Some("HCY00".to_string());
-    SqlReturn::ERROR
+    match set_handle_state(
+        HandleType::Stmt,
+        hstmt as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLBindParameter is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -142,10 +150,18 @@ pub extern "C" fn SQLBrowseConnectW(
 
 #[no_mangle]
 pub extern "C" fn SQLBulkOperations(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _operation: BulkOperation,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLBulkOperations is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -251,11 +267,19 @@ pub extern "C" fn SQLColumnsW(
 
 #[no_mangle]
 pub extern "C" fn SQLCompleteAsync(
-    _handle_type: HandleType,
-    _handle: Handle,
+    handle_type: HandleType,
+    handle: Handle,
     _async_ret_code_ptr: *mut RetCode,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        handle_type,
+        handle,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLCompleteAsync is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -285,13 +309,22 @@ pub extern "C" fn SQLConnectW(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLCopyDesc(_source_desc_handle: HDesc, _target_desc_handle: HDesc) -> SqlReturn {
-    unimplemented!()
+pub extern "C" fn SQLCopyDesc(source_desc_handle: HDesc, target_desc_handle: HDesc) -> SqlReturn {
+    let error_message = "SQLCopyDesc is unimplemented";
+    match set_handle_state(HandleType::Desc, source_desc_handle as *mut _, UNIMPLEMENTED_FUNC.clone(), error_message) {
+        Ok(_) => {
+            match set_handle_state(HandleType::Desc, target_desc_handle as *mut _, UNIMPLEMENTED_FUNC.clone(), error_message) {
+                Ok(_) => SqlReturn::ERROR,
+                Err(_) => SqlReturn::INVALID_HANDLE
+            }
+        },
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLDataSources(
-    _environment_handle: HEnv,
+    environment_handle: HEnv,
     _direction: FetchOrientation,
     _server_name: *mut Char,
     _buffer_length_1: SmallInt,
@@ -300,12 +333,20 @@ pub extern "C" fn SQLDataSources(
     _buffer_length_2: SmallInt,
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Env,
+        environment_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLDataSources is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLDataSourcesW(
-    _environment_handle: HEnv,
+    environment_handle: HEnv,
     _direction: FetchOrientation,
     _server_name: *mut WChar,
     _buffer_length_1: SmallInt,
@@ -314,7 +355,15 @@ pub extern "C" fn SQLDataSourcesW(
     _buffer_length_2: SmallInt,
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Env,
+        environment_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLDataSourcesW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -349,14 +398,22 @@ pub extern "C" fn SQLDescribeColW(
 
 #[no_mangle]
 pub extern "C" fn SQLDescribeParam(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _parameter_number: USmallInt,
     _data_type_ptr: *mut SqlDataType,
     _parameter_size_ptr: *mut ULen,
     _decimal_digits_ptr: *mut SmallInt,
     _nullable_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLDescribeParam is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -366,7 +423,7 @@ pub extern "C" fn SQLDisconnect(_connection_handle: HDbc) -> SqlReturn {
 
 #[no_mangle]
 pub extern "C" fn SQLDriverConnect(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _window_handle: HWnd,
     _in_connection_string: *const Char,
     _string_length_1: SmallInt,
@@ -375,12 +432,20 @@ pub extern "C" fn SQLDriverConnect(
     _string_length_2: *mut SmallInt,
     _drive_completion: DriverConnectOption,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Dbc,
+        connection_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLDriverConnect is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLDriverConnectW(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _window_handle: HWnd,
     _in_connection_string: *const WChar,
     _string_length_1: SmallInt,
@@ -389,12 +454,20 @@ pub extern "C" fn SQLDriverConnectW(
     _string_length_2: *mut SmallInt,
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Dbc,
+        connection_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLDriverConnectW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLDrivers(
-    _henv: HEnv,
+    henv: HEnv,
     _direction: FetchOrientation,
     _driver_desc: *mut Char,
     _driver_desc_max: SmallInt,
@@ -403,12 +476,20 @@ pub extern "C" fn SQLDrivers(
     _drvr_attr_max: SmallInt,
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Env,
+        henv as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLDrivers is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLDriversW(
-    _henv: HEnv,
+    henv: HEnv,
     _direction: FetchOrientation,
     _driver_desc: *mut WChar,
     _driver_desc_max: SmallInt,
@@ -417,39 +498,79 @@ pub extern "C" fn SQLDriversW(
     _drvr_attr_max: SmallInt,
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Env,
+        henv as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLDriversW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLEndTran(
-    _handle_type: HandleType,
-    _handle: Handle,
+    handle_type: HandleType,
+    handle: Handle,
     _completion_type: CompletionType,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        handle_type,
+        handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLEndTran is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLExecDirect(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _statement_text: *const Char,
     _text_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLExecDirect is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLExecDirectW(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _statement_text: *const WChar,
     _text_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLExecDirectW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
-pub extern "C" fn SQLExecute(_statement_handle: HStmt) -> SqlReturn {
-    unimplemented!()
+pub extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLExecute is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -620,31 +741,47 @@ pub extern "C" fn SQLGetData(
 
 #[no_mangle]
 pub extern "C" fn SQLGetDescField(
-    _descriptor_handle: HDesc,
+    descriptor_handle: HDesc,
     _record_number: SmallInt,
     _field_identifier: SmallInt,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Desc,
+        descriptor_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLGetDescField is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLGetDescFieldW(
-    _descriptor_handle: HDesc,
+    descriptor_handle: HDesc,
     _record_number: SmallInt,
     _field_identifier: SmallInt,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Desc,
+        descriptor_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLGetDescFieldW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLGetDescRec(
-    _descriptor_handle: HDesc,
+    descriptor_handle: HDesc,
     _record_number: SmallInt,
     _name: *mut Char,
     _buffer_length: SmallInt,
@@ -656,12 +793,20 @@ pub extern "C" fn SQLGetDescRec(
     _scale_ptr: *mut SmallInt,
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Desc,
+        descriptor_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLGetDescRec is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLGetDescRecW(
-    _descriptor_handle: HDesc,
+    descriptor_handle: HDesc,
     _record_number: SmallInt,
     _name: *mut WChar,
     _buffer_length: SmallInt,
@@ -673,7 +818,15 @@ pub extern "C" fn SQLGetDescRecW(
     _scale_ptr: *mut SmallInt,
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Desc,
+        descriptor_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLGetDescRecW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -704,12 +857,19 @@ pub extern "C" fn SQLGetDiagFieldW(
 
 macro_rules! set_sql_state {
     ( $sql_state:expr, $output_ptr:expr ) => {{
-        if $sql_state.is_none() { // TODO: why?
-            true
-        } else {
-            unsafe { ptr::copy_nonoverlapping(($sql_state).as_ref().unwrap().as_ptr(), $output_ptr, 6) };
-            false
-        }
+        unsafe { ptr::copy_nonoverlapping(($sql_state).as_ptr(), $output_ptr, 5) };
+    }};
+}
+
+macro_rules! set_error_message {
+    ( $error_message:expr, $output_ptr:expr, $buff_len:expr, $text_length_ptr:expr ) => {{
+        use std::ptr::copy_nonoverlapping;
+        unsafe { copy_nonoverlapping(
+            $error_message.as_ptr(),
+            $output_ptr,
+            min($error_message.len(), $buff_len as usize),
+        ) };
+        unsafe { *$text_length_ptr = min($error_message.len() as SmallInt, $buff_len) };
     }};
 }
 
@@ -717,40 +877,72 @@ macro_rules! set_sql_state {
 pub extern "C" fn SQLGetDiagRec(
     handle_type: HandleType,
     handle: Handle,
-    _rec_number: SmallInt,
+    rec_number: SmallInt,
     state: *mut Char,
-    _native_error_ptr: *mut Integer,
-    _message_text: *mut Char,
-    _buffer_length: SmallInt,
-    _text_length_ptr: *mut SmallInt,
+    native_error_ptr: *mut Integer,
+    message_text: *mut Char,
+    buffer_length: SmallInt,
+    text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    if rec_number < 1 || buffer_length < 0 {
+        return SqlReturn::ERROR
+    }
     let mongo_handle = handle as *mut MongoHandle;
+    let rec_number = (rec_number - 1) as usize; // subtract one because vecs are zero-indexed
     match handle_type {
         HandleType::Env => {
             let env = unsafe { (*mongo_handle).as_env().unwrap() }; // TODO: error handling
             let env_contents = (*env).read().unwrap();
-            let no_error = set_sql_state!(env_contents.sql_state, state);
-            if no_error {
-                return SqlReturn::NO_DATA
+            match env_contents.sql_states.get(rec_number) {
+                Some(sql_state) => set_sql_state!(sql_state, state),
+                None => return SqlReturn::NO_DATA
+            }
+
+            // TODO: add tests for error messages
+            match env_contents.error_messages.get(rec_number) {
+                Some(error_message) => set_error_message!(error_message, message_text, buffer_length, text_length_ptr),
+                None => return SqlReturn::NO_DATA
             }
         },
         HandleType::Dbc => {
             let dbc = unsafe { (*mongo_handle).as_connection().unwrap() }; // TODO: error handling
             let dbc_contents = (*dbc).read().unwrap();
-            let no_error = set_sql_state!(dbc_contents.sql_state, state);
-            if no_error {
-                return SqlReturn::NO_DATA
+            match dbc_contents.sql_states.get(rec_number) {
+                Some(sql_state) => set_sql_state!(sql_state, state),
+                None => return SqlReturn::NO_DATA
+            }
+
+            match dbc_contents.error_messages.get(rec_number) {
+                Some(error_message) => set_error_message!(error_message, message_text, buffer_length, text_length_ptr),
+                None => return SqlReturn::NO_DATA
             }
         },
         HandleType::Stmt => {
             let stmt = unsafe { (*mongo_handle).as_statement().unwrap() }; // TODO: error handling
             let stmt_contents = (*stmt).read().unwrap();
-            let no_error = set_sql_state!(stmt_contents.sql_state, state);
-            if no_error {
-                return SqlReturn::NO_DATA
+            match stmt_contents.sql_states.get(rec_number) {
+                Some(sql_state) => set_sql_state!(sql_state, state),
+                None => return SqlReturn::NO_DATA
+            }
+
+            match stmt_contents.error_messages.get(rec_number) {
+                Some(error_message) => set_error_message!(error_message, message_text, buffer_length, text_length_ptr),
+                None => return SqlReturn::NO_DATA
             }
         },
-        HandleType::Desc => unimplemented!()
+        HandleType::Desc => {
+            let desc = unsafe { (*mongo_handle).as_descriptor().unwrap() }; // TODO: error handling
+            let desc_contents = (*desc).read().unwrap();
+            match desc_contents.sql_states.get(rec_number) {
+                Some(sql_state) => set_sql_state!(sql_state, state),
+                None => return SqlReturn::NO_DATA
+            }
+
+            match desc_contents.error_messages.get(rec_number) {
+                Some(error_message) => set_error_message!(error_message, message_text, buffer_length, text_length_ptr),
+                None => return SqlReturn::NO_DATA
+            }
+        }
     }
     SqlReturn::SUCCESS
 }
@@ -871,41 +1063,81 @@ pub extern "C" fn SQLNativeSqlW(
 
 #[no_mangle]
 pub extern "C" fn SQLNumParams(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _param_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLNumParams is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLNumResultCols(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _column_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLNumResultCols is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
-pub extern "C" fn SQLParamData(_hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> SqlReturn {
-    unimplemented!()
+pub extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> SqlReturn {
+    match set_handle_state(
+        HandleType::Stmt,
+        hstmt as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLParamData is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLPrepare(
-    _hstmt: HStmt,
+    hstmt: HStmt,
     _statement_text: *const Char,
     _text_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        hstmt as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLPrepare is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLPrepareW(
-    _hstmt: HStmt,
+    hstmt: HStmt,
     _statement_text: *const WChar,
     _text_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        hstmt as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLPrepareW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -936,7 +1168,7 @@ pub extern "C" fn SQLPrimaryKeysW(
 
 #[no_mangle]
 pub extern "C" fn SQLProcedureColumns(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const Char,
     _catalog_name_length: SmallInt,
     _schema_name: *const Char,
@@ -946,12 +1178,20 @@ pub extern "C" fn SQLProcedureColumns(
     _column_name: *const Char,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLProcedureColumns is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLProcedureColumnsW(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const WChar,
     _catalog_name_length: SmallInt,
     _schema_name: *const WChar,
@@ -961,12 +1201,20 @@ pub extern "C" fn SQLProcedureColumnsW(
     _column_name: *const WChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLProcedureColumnsW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLProcedures(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const Char,
     _catalog_name_length: SmallInt,
     _schema_name: *const Char,
@@ -974,12 +1222,20 @@ pub extern "C" fn SQLProcedures(
     _proc_name: *const Char,
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLProcedures is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLProceduresW(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const WChar,
     _catalog_name_length: SmallInt,
     _schema_name: *const WChar,
@@ -987,16 +1243,32 @@ pub extern "C" fn SQLProceduresW(
     _proc_name: *const WChar,
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLProceduresW is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLPutData(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _data_ptr: Pointer,
     _str_len_or_ind_ptr: Len,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLPutData is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
@@ -1044,18 +1316,26 @@ pub extern "C" fn SQLSetCursorNameW(
 
 #[no_mangle]
 pub extern "C" fn SQLSetDescField(
-    _desc_handle: HDesc,
+    desc_handle: HDesc,
     _rec_number: SmallInt,
     _field_identifier: SmallInt,
     _value_ptr: Pointer,
     _buffer_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Desc,
+        desc_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLSetDescField is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLSetDescRec(
-    _desc_handle: HDesc,
+    desc_handle: HDesc,
     _rec_number: SmallInt,
     _desc_type: SmallInt,
     _desc_sub_type: SmallInt,
@@ -1066,17 +1346,33 @@ pub extern "C" fn SQLSetDescRec(
     _string_length_ptr: *const Len,
     _indicator_ptr: *const Len,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Desc,
+        desc_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLSetDescRec is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLSetPos(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _row_number: ULen,
     _operation: USmallInt,
     _lock_type: USmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    match set_handle_state(
+        HandleType::Stmt,
+        statement_handle as *mut _,
+        UNIMPLEMENTED_FUNC.clone(),
+        "SQLSetPos is unimplemented"
+    ) {
+        Ok(_) => SqlReturn::ERROR,
+        Err(_) => SqlReturn::INVALID_HANDLE,
+    }
 }
 
 #[no_mangle]

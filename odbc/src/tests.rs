@@ -1,15 +1,19 @@
 use crate::{
-    handles::{Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState},
+    api::UNIMPLEMENTED_FUNC,
+    handles::{
+        Connection, ConnectionState, Descriptor, Env, EnvState, MongoHandle, Statement, StatementState
+    },
     SQLAllocHandle, SQLFreeHandle,
+    util::set_handle_state
 };
-use odbc_sys::{Handle, HandleType, SqlReturn, SQLBindParameter, ParamType, CDataType, SqlDataType, HStmt, SQLGetDiagRec, Char};
+use odbc_sys::{Handle, HandleType, SqlReturn, SQLGetDiagRec, Char, SmallInt, Integer};
 use std::{sync::RwLock, ptr};
 
 #[test]
 fn env_alloc_free() {
     unsafe {
         let mut handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated, None)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -37,12 +41,11 @@ fn env_alloc_free() {
 fn connection_alloc_free() {
     unsafe {
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated, None)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
         let mut handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(Connection::with_state(
             std::ptr::null_mut(),
             ConnectionState::Allocated,
-            None
         )));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
@@ -99,16 +102,15 @@ fn connection_alloc_free() {
 fn statement_alloc_free() {
     unsafe {
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated, None)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
         let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
-            Connection::with_state(env_handle, ConnectionState::Allocated, None),
+            Connection::with_state(env_handle, ConnectionState::Allocated),
         ));
 
         let mut handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-            None
         )));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
@@ -157,7 +159,7 @@ fn statement_alloc_free() {
 fn invalid_free() {
     unsafe {
         let mut env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated, None)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
         let env_handle_ptr: *mut _ = &mut env_handle;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -187,7 +189,7 @@ fn invalid_free() {
         );
 
         let mut conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
-            Connection::with_state(env_handle, ConnectionState::Allocated, None),
+            Connection::with_state(env_handle, ConnectionState::Allocated),
         ));
         let conn_handle_ptr: *mut _ = &mut conn_handle;
         assert_eq!(
@@ -245,7 +247,7 @@ fn invalid_free() {
 fn invalid_alloc() {
     unsafe {
         let mut handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated, None)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
         let handle_ptr: *mut _ = &mut handle;
         // first check null ptrs for the two handles that require parent handles
         assert_eq!(
@@ -268,7 +270,6 @@ fn invalid_alloc() {
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-            None
         )));
 
         // now test wrong parent handle type (Dbc needs Env, and Stmt needs Connection).
@@ -291,43 +292,65 @@ fn invalid_alloc() {
     }
 }
 
-#[test]
-fn unimplemented_funcs() {
+struct Buffers {
+    sql_state: *mut Char,
+    message_text: *mut Char,
+    text_length_ptr: *mut i16,
+    native_err_ptr: *mut i32
+}
+
+fn initialize_buffers() -> Buffers {
     unsafe {
+        Buffers {
+            sql_state: std::mem::transmute::<*mut u8, *mut Char>([0u8].as_mut_ptr()),
+            message_text: std::mem::transmute::<*mut u8, *mut Char>([0u8].as_mut_ptr()),
+            text_length_ptr: Box::into_raw( Box::new(0)),
+            native_err_ptr: Box::into_raw( Box::new(0))
+        }
+    }
+}
+
+#[test]
+fn set_sql_state() {
+    let error_message = "func is unimplemented";
+    unsafe {
+        // Environment handle
         let env_handle: *mut _ =
-          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated, None)));
+          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let buffers = initialize_buffers();
+        // TODO: native err ptr
+        assert_eq!(Ok(()), set_handle_state(HandleType::Env, env_handle as *mut _, UNIMPLEMENTED_FUNC, error_message));
+        assert_eq!(SqlReturn::SUCCESS, SQLGetDiagRec(HandleType::Env, env_handle as *mut _, 1, buffers.sql_state, buffers.native_err_ptr, buffers.message_text, 100, buffers.text_length_ptr));
+        assert_eq!(UNIMPLEMENTED_FUNC.to_string(), (*env_handle).as_env().unwrap().read().unwrap().sql_states[0]);
+        assert_eq!(error_message, (*env_handle).as_env().unwrap().read().unwrap().error_messages[0]);
 
+        // Connection handle
         let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
-            Connection::with_state(env_handle, ConnectionState::Allocated, None),
+            Connection::with_state(env_handle, ConnectionState::Allocated)
         ));
+        let buffers = initialize_buffers();
+        assert_eq!(Ok(()), set_handle_state(HandleType::Dbc, conn_handle as *mut _, UNIMPLEMENTED_FUNC, error_message));
+        assert_eq!(SqlReturn::SUCCESS, SQLGetDiagRec(HandleType::Dbc, conn_handle as *mut _, 1, buffers.sql_state, buffers.native_err_ptr, buffers.message_text, 0, buffers.text_length_ptr));
+        assert_eq!(UNIMPLEMENTED_FUNC.to_string(), (*conn_handle).as_connection().unwrap().read().unwrap().sql_states[0]);
+        assert_eq!(error_message, (*conn_handle).as_connection().unwrap().read().unwrap().error_messages[0]);
 
-        let mut handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        // Statement handle
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
             std::ptr::null_mut(),
-            StatementState::Allocated,
-            None
+            StatementState::Allocated
         )));
-        let handle_ptr: *mut _ = &mut handle;
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLAllocHandle(
-                HandleType::Stmt,
-                conn_handle as *mut _,
-                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
-            )
-        );
-        let dbc = (*conn_handle).as_connection().unwrap(); // TODO: condense
-        let dbc_contents = (dbc).read().unwrap();
-        assert_eq!(1, dbc_contents.statements.len());
+        let buffers = initialize_buffers();
+        assert_eq!(Ok(()), set_handle_state(HandleType::Stmt, stmt_handle as *mut _, UNIMPLEMENTED_FUNC, error_message));
+        assert_eq!(SqlReturn::SUCCESS, SQLGetDiagRec(HandleType::Stmt, stmt_handle as *mut _, 1, buffers.sql_state, buffers.native_err_ptr, buffers.message_text, 0, buffers.text_length_ptr));
+        assert_eq!(UNIMPLEMENTED_FUNC.to_string(), (*stmt_handle).as_statement().unwrap().read().unwrap().sql_states[0]);
+        assert_eq!(error_message, (*stmt_handle).as_statement().unwrap().read().unwrap().error_messages[0]);
 
-        let hstmt = std::mem::transmute::<*mut MongoHandle, HStmt>(handle); // TODO: rename
-        assert_eq!(SqlReturn::ERROR, SQLBindParameter(
-            hstmt, 0, ParamType::Unknown, CDataType::Ard,
-            SqlDataType(0), 0, 0, ptr::null_mut(),
-            0, ptr::null_mut()));
-        let empty_state = [0u8].as_mut_ptr();
-        let sql_state: *mut Char = std::mem::transmute::<*mut u8, *mut Char>(empty_state);
-        assert_eq!(SqlReturn::SUCCESS, SQLGetDiagRec(HandleType::Stmt, handle as *mut _, 0, sql_state, ptr::null_mut(), ptr::null_mut(), 0, ptr::null_mut()));
-        let expected_error = Some("HCY00".to_string());
-        assert_eq!(expected_error, (*handle).as_statement().unwrap().read().unwrap().sql_state);
+        // Descriptor handle
+        let desc_handle: *mut _ = &mut MongoHandle::Descriptor(RwLock::new(Descriptor::default()));
+        let buffers = initialize_buffers();
+        assert_eq!(Ok(()), set_handle_state(HandleType::Desc, desc_handle as *mut _, UNIMPLEMENTED_FUNC, error_message));
+        assert_eq!(SqlReturn::SUCCESS, SQLGetDiagRec(HandleType::Desc, desc_handle as *mut _, 1, buffers.sql_state, buffers.native_err_ptr, buffers.message_text, 0, buffers.text_length_ptr));
+        assert_eq!(UNIMPLEMENTED_FUNC.to_string(), (*desc_handle).as_descriptor().unwrap().read().unwrap().sql_states[0]);
+        assert_eq!(error_message, (*desc_handle).as_descriptor().unwrap().read().unwrap().error_messages[0]);
     }
 }
