@@ -855,22 +855,21 @@ pub extern "C" fn SQLGetDiagFieldW(
     unimplemented!()
 }
 
-macro_rules! set_sql_state {
-    ( $sql_state:expr, $output_ptr:expr ) => {{
-        unsafe { ptr::copy_nonoverlapping(($sql_state).as_ptr(), $output_ptr, 5) };
-    }};
+fn set_sql_state(mut sql_state: String, output_ptr: *mut Char) -> () {
+    unsafe {
+        let state = std::mem::transmute::<*mut u8, *mut Char>(sql_state.as_mut_ptr());
+        std::ptr::copy_nonoverlapping(state,output_ptr, 5)
+    }
 }
 
-macro_rules! set_error_message {
-    ( $error_message:expr, $output_ptr:expr, $buff_len:expr, $text_length_ptr:expr ) => {{
-        use std::ptr::copy_nonoverlapping;
-        unsafe { copy_nonoverlapping(
-            $error_message.as_ptr(),
-            $output_ptr,
-            min($error_message.len(), $buff_len as usize),
-        ) };
-        unsafe { *$text_length_ptr = min($error_message.len() as SmallInt, $buff_len) };
-    }};
+fn set_error_message(mut error_message: String, output_ptr: *mut Char, buffer_len: usize, text_length_ptr: *mut SmallInt) -> () {
+    // TODO: make note abt how i wanted these to be macros but was getting weird issues when transmuting between types (byte slices were changing)
+    unsafe {
+        let msg = std::mem::transmute::<*mut u8, *mut Char>(error_message.as_mut_ptr());
+        let num_chars =  min(error_message.len(),buffer_len);
+        *text_length_ptr = num_chars as SmallInt;
+        ptr::copy_nonoverlapping(msg, output_ptr, num_chars);
+    }
 }
 
 #[no_mangle]
@@ -889,18 +888,17 @@ pub extern "C" fn SQLGetDiagRec(
     }
     let mongo_handle = handle as *mut MongoHandle;
     let rec_number = (rec_number - 1) as usize; // subtract one because vecs are zero-indexed
+    // TODO: unsafe { ptr::copy_nonoverlapping(0 as *mut Integer, native_error_ptr, 1) };
     match handle_type {
         HandleType::Env => {
             let env = unsafe { (*mongo_handle).as_env().unwrap() }; // TODO: error handling
             let env_contents = (*env).read().unwrap();
             match env_contents.sql_states.get(rec_number) {
-                Some(sql_state) => set_sql_state!(sql_state, state),
+                Some(sql_state) => set_sql_state(sql_state.clone(), state),
                 None => return SqlReturn::NO_DATA
             }
-
-            // TODO: add tests for error messages
             match env_contents.error_messages.get(rec_number) {
-                Some(error_message) => set_error_message!(error_message, message_text, buffer_length, text_length_ptr),
+                Some(error_message) => set_error_message(error_message.clone(), message_text, buffer_length as usize, text_length_ptr),
                 None => return SqlReturn::NO_DATA
             }
         },
@@ -908,25 +906,27 @@ pub extern "C" fn SQLGetDiagRec(
             let dbc = unsafe { (*mongo_handle).as_connection().unwrap() }; // TODO: error handling
             let dbc_contents = (*dbc).read().unwrap();
             match dbc_contents.sql_states.get(rec_number) {
-                Some(sql_state) => set_sql_state!(sql_state, state),
+                Some(sql_state) => set_sql_state(sql_state.clone(), state),
                 None => return SqlReturn::NO_DATA
             }
 
             match dbc_contents.error_messages.get(rec_number) {
-                Some(error_message) => set_error_message!(error_message, message_text, buffer_length, text_length_ptr),
+                // TODO: rm clones
+                Some(error_message) => set_error_message(error_message.clone(), message_text, buffer_length as usize, text_length_ptr),
                 None => return SqlReturn::NO_DATA
             }
         },
         HandleType::Stmt => {
             let stmt = unsafe { (*mongo_handle).as_statement().unwrap() }; // TODO: error handling
             let stmt_contents = (*stmt).read().unwrap();
+
             match stmt_contents.sql_states.get(rec_number) {
-                Some(sql_state) => set_sql_state!(sql_state, state),
+                Some(sql_state) => set_sql_state(sql_state.clone(), state),
                 None => return SqlReturn::NO_DATA
             }
 
             match stmt_contents.error_messages.get(rec_number) {
-                Some(error_message) => set_error_message!(error_message, message_text, buffer_length, text_length_ptr),
+                Some(error_message) => set_error_message(error_message.clone(), message_text, buffer_length as usize, text_length_ptr),
                 None => return SqlReturn::NO_DATA
             }
         },
@@ -934,12 +934,12 @@ pub extern "C" fn SQLGetDiagRec(
             let desc = unsafe { (*mongo_handle).as_descriptor().unwrap() }; // TODO: error handling
             let desc_contents = (*desc).read().unwrap();
             match desc_contents.sql_states.get(rec_number) {
-                Some(sql_state) => set_sql_state!(sql_state, state),
+                Some(sql_state) => set_sql_state(sql_state.clone(), state),
                 None => return SqlReturn::NO_DATA
             }
 
             match desc_contents.error_messages.get(rec_number) {
-                Some(error_message) => set_error_message!(error_message, message_text, buffer_length, text_length_ptr),
+                Some(error_message) => set_error_message(error_message.clone(), message_text, buffer_length as usize, text_length_ptr),
                 None => return SqlReturn::NO_DATA
             }
         }
