@@ -1,12 +1,13 @@
 use crate::{
     api::UNIMPLEMENTED_FUNC,
     handles::{
-        Connection, ConnectionState, Descriptor, Env, EnvState, MongoHandle, Statement, StatementState
+        Connection, ConnectionState, Descriptor, Env, EnvState, MongoHandle, Statement,
+        StatementState,
     },
+    util::set_handle_state,
     SQLAllocHandle, SQLFreeHandle,
-    util::set_handle_state
 };
-use odbc_sys::{Handle, HandleType, SqlReturn, SQLGetDiagRec, Char};
+use odbc_sys::{Char, Handle, HandleType, SQLGetDiagRec, SqlReturn};
 use std::sync::RwLock;
 
 const ERROR_MESSAGE: &str = "func is unimplemented";
@@ -298,65 +299,129 @@ fn invalid_alloc() {
 fn env_diag_rec() {
     unsafe {
         let env_handle: *mut _ =
-          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
         assert_eq!(
             Ok(()),
-            set_handle_state(HandleType::Env, env_handle as *mut _, UNIMPLEMENTED_FUNC, ERROR_MESSAGE)
+            set_handle_state(
+                HandleType::Env,
+                env_handle as *mut _,
+                UNIMPLEMENTED_FUNC,
+                ERROR_MESSAGE
+            )
         );
         // Initialize buffers
-        let sql_state: *mut Char = [0u8;5].as_mut_ptr();
-        let message_text: *mut Char = [0u8;21].as_mut_ptr();
-        let text_length_ptr = Box::into_raw( Box::new(0));
-        let native_err_ptr = Box::into_raw( Box::new(0));
+        let sql_state: *mut Char = [0u8; 5].as_mut_ptr();
+        let message_text: *mut Char = [0u8; 21].as_mut_ptr();
+        let text_length_ptr = Box::into_raw(Box::new(0));
+        let native_err_ptr = Box::into_raw(Box::new(0));
         // Buffer is large enough to hold the entire error message (length >= 21)
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLGetDiagRec(HandleType::Env, env_handle as *mut _, 1, sql_state, native_err_ptr, message_text, 21, text_length_ptr)
+            SQLGetDiagRec(
+                HandleType::Env,
+                env_handle as *mut _,
+                1,
+                sql_state,
+                native_err_ptr,
+                message_text,
+                21,
+                text_length_ptr
+            )
         );
         assert_eq!(
             Ok(UNIMPLEMENTED_FUNC),
-            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;5]>(sql_state))
+            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
         );
         assert_eq!(
             Ok(ERROR_MESSAGE),
-            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;21]>(message_text))
+            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 21]>(message_text))
         );
         // Buffer is too small to hold the entire error message (0 < length < 21)
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLGetDiagRec(HandleType::Env, env_handle as *mut _, 1, sql_state, native_err_ptr, message_text, 15, text_length_ptr)
+            SQLGetDiagRec(
+                HandleType::Env,
+                env_handle as *mut _,
+                1,
+                sql_state,
+                native_err_ptr,
+                message_text,
+                15,
+                text_length_ptr
+            )
         );
         assert_eq!(
             Ok("func is unimple"),
-            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;15]>(message_text))
+            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 15]>(message_text))
         );
         // Buffer length < 0
         assert_eq!(
             SqlReturn::ERROR,
-            SQLGetDiagRec(HandleType::Env, env_handle as *mut _, 0, sql_state, native_err_ptr, message_text, -1, text_length_ptr)
+            SQLGetDiagRec(
+                HandleType::Env,
+                env_handle as *mut _,
+                0,
+                sql_state,
+                native_err_ptr,
+                message_text,
+                -1,
+                text_length_ptr
+            )
         );
         // Record number <= 0
         assert_eq!(
             SqlReturn::ERROR,
-            SQLGetDiagRec(HandleType::Env, env_handle as *mut _, 0, sql_state, native_err_ptr, message_text, 21, text_length_ptr)
+            SQLGetDiagRec(
+                HandleType::Env,
+                env_handle as *mut _,
+                0,
+                sql_state,
+                native_err_ptr,
+                message_text,
+                21,
+                text_length_ptr
+            )
         );
         // 1 < RecNumber =< number of diagnostic records
         assert_eq!(
             Ok(()),
-            set_handle_state(HandleType::Env, env_handle as *mut _, "XYZ00", ERROR_MESSAGE)
+            set_handle_state(
+                HandleType::Env,
+                env_handle as *mut _,
+                "XYZ00",
+                ERROR_MESSAGE
+            )
         );
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLGetDiagRec(HandleType::Env, env_handle as *mut _, 2, sql_state, native_err_ptr, message_text, 21, text_length_ptr)
+            SQLGetDiagRec(
+                HandleType::Env,
+                env_handle as *mut _,
+                2,
+                sql_state,
+                native_err_ptr,
+                message_text,
+                21,
+                text_length_ptr
+            )
         );
         assert_eq!(
             Ok("XYZ00"),
-            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;5]>(sql_state))
+            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
         );
         // Record number > number of diagnostic records
         assert_eq!(
             SqlReturn::NO_DATA,
-            SQLGetDiagRec(HandleType::Env, env_handle as *mut _, 3, sql_state, native_err_ptr, message_text, 21, text_length_ptr)
+            SQLGetDiagRec(
+                HandleType::Env,
+                env_handle as *mut _,
+                3,
+                sql_state,
+                native_err_ptr,
+                message_text,
+                21,
+                text_length_ptr
+            )
         );
         // Native error pointer
         assert_eq!(0, *native_err_ptr);
@@ -366,60 +431,84 @@ fn env_diag_rec() {
 #[test]
 fn conn_diag_rec() {
     let env_handle: *mut _ =
-      &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
-    let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
-        Connection::with_state(env_handle, ConnectionState::Allocated)
-    ));
+        &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+    let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(Connection::with_state(
+        env_handle,
+        ConnectionState::Allocated,
+    )));
     assert_eq!(
         Ok(()),
-        set_handle_state(HandleType::Dbc, conn_handle as *mut _, UNIMPLEMENTED_FUNC, ERROR_MESSAGE)
+        set_handle_state(
+            HandleType::Dbc,
+            conn_handle as *mut _,
+            UNIMPLEMENTED_FUNC,
+            ERROR_MESSAGE
+        )
     );
 
     // Initialize buffers
-    let sql_state: *mut Char = [0u8;5].as_mut_ptr();
-    let message_text: *mut Char = [0u8;21].as_mut_ptr();
-    let text_length_ptr = Box::into_raw( Box::new(0));
-    let native_err_ptr = Box::into_raw( Box::new(0));
-    assert_eq!(
-        SqlReturn::SUCCESS,
-        unsafe { SQLGetDiagRec(HandleType::Dbc, conn_handle as *mut _, 1, sql_state, native_err_ptr, message_text, 50, text_length_ptr) }
-    );
-    assert_eq!(
-        Ok(UNIMPLEMENTED_FUNC),
-        unsafe { std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;5]>(sql_state)) }
-    );
-    assert_eq!(
-        Ok(ERROR_MESSAGE),
-        unsafe { std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;21]>(message_text)) }
-    );
+    let sql_state: *mut Char = [0u8; 5].as_mut_ptr();
+    let message_text: *mut Char = [0u8; 21].as_mut_ptr();
+    let text_length_ptr = Box::into_raw(Box::new(0));
+    let native_err_ptr = Box::into_raw(Box::new(0));
+    assert_eq!(SqlReturn::SUCCESS, unsafe {
+        SQLGetDiagRec(
+            HandleType::Dbc,
+            conn_handle as *mut _,
+            1,
+            sql_state,
+            native_err_ptr,
+            message_text,
+            50,
+            text_length_ptr,
+        )
+    });
+    assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
+        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
+    });
+    assert_eq!(Ok(ERROR_MESSAGE), unsafe {
+        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 21]>(message_text))
+    });
 }
 
 #[test]
 fn stmt_diag_rec() {
-    let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(
-        Statement::with_state(std::ptr::null_mut(), StatementState::Allocated)
-    ));
+    let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        std::ptr::null_mut(),
+        StatementState::Allocated,
+    )));
     assert_eq!(
         Ok(()),
-        set_handle_state(HandleType::Stmt, stmt_handle as *mut _, UNIMPLEMENTED_FUNC, ERROR_MESSAGE)
+        set_handle_state(
+            HandleType::Stmt,
+            stmt_handle as *mut _,
+            UNIMPLEMENTED_FUNC,
+            ERROR_MESSAGE
+        )
     );
     // Initialize buffers
-    let sql_state: *mut Char = [0u8;5].as_mut_ptr();
-    let message_text: *mut Char = [0u8;21].as_mut_ptr();
-    let text_length_ptr = Box::into_raw( Box::new(0));
-    let native_err_ptr = Box::into_raw( Box::new(0));
-    assert_eq!(
-        SqlReturn::SUCCESS,
-        unsafe { SQLGetDiagRec(HandleType::Stmt, stmt_handle as *mut _, 1, sql_state, native_err_ptr, message_text, 50, text_length_ptr) }
-    );
-    assert_eq!(
-        Ok(UNIMPLEMENTED_FUNC),
-        unsafe { std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;5]>(sql_state)) }
-    );
-    assert_eq!(
-        Ok(ERROR_MESSAGE),
-        unsafe { std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;21]>(message_text)) }
-    );
+    let sql_state: *mut Char = [0u8; 5].as_mut_ptr();
+    let message_text: *mut Char = [0u8; 21].as_mut_ptr();
+    let text_length_ptr = Box::into_raw(Box::new(0));
+    let native_err_ptr = Box::into_raw(Box::new(0));
+    assert_eq!(SqlReturn::SUCCESS, unsafe {
+        SQLGetDiagRec(
+            HandleType::Stmt,
+            stmt_handle as *mut _,
+            1,
+            sql_state,
+            native_err_ptr,
+            message_text,
+            50,
+            text_length_ptr,
+        )
+    });
+    assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
+        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
+    });
+    assert_eq!(Ok(ERROR_MESSAGE), unsafe {
+        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 21]>(message_text))
+    });
 }
 
 #[test]
@@ -427,23 +516,34 @@ fn desc_diag_rec() {
     let desc_handle: *mut _ = &mut MongoHandle::Descriptor(RwLock::new(Descriptor::default()));
     assert_eq!(
         Ok(()),
-        set_handle_state(HandleType::Desc, desc_handle as *mut _, UNIMPLEMENTED_FUNC, ERROR_MESSAGE)
+        set_handle_state(
+            HandleType::Desc,
+            desc_handle as *mut _,
+            UNIMPLEMENTED_FUNC,
+            ERROR_MESSAGE
+        )
     );
     // Initialize buffers
-    let sql_state: *mut Char = [0u8;5].as_mut_ptr();
-    let message_text: *mut Char = [0u8;21].as_mut_ptr();
-    let text_length_ptr = Box::into_raw( Box::new(0));
-    let native_err_ptr = Box::into_raw( Box::new(0));
-    assert_eq!(
-        SqlReturn::SUCCESS,
-        unsafe { SQLGetDiagRec(HandleType::Desc, desc_handle as *mut _, 1, sql_state, native_err_ptr, message_text, 50, text_length_ptr) }
-    );
-    assert_eq!(
-        Ok(UNIMPLEMENTED_FUNC),
-        unsafe { std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;5]>(sql_state)) }
-    );
-    assert_eq!(
-        Ok(ERROR_MESSAGE),
-        unsafe { std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8;21]>(message_text)) }
-    );
+    let sql_state: *mut Char = [0u8; 5].as_mut_ptr();
+    let message_text: *mut Char = [0u8; 21].as_mut_ptr();
+    let text_length_ptr = Box::into_raw(Box::new(0));
+    let native_err_ptr = Box::into_raw(Box::new(0));
+    assert_eq!(SqlReturn::SUCCESS, unsafe {
+        SQLGetDiagRec(
+            HandleType::Desc,
+            desc_handle as *mut _,
+            1,
+            sql_state,
+            native_err_ptr,
+            message_text,
+            50,
+            text_length_ptr,
+        )
+    });
+    assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
+        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
+    });
+    assert_eq!(Ok(ERROR_MESSAGE), unsafe {
+        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 21]>(message_text))
+    });
 }
