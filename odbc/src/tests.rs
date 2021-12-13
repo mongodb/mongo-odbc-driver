@@ -1,5 +1,5 @@
 use crate::{
-    api::UNIMPLEMENTED_FUNC,
+    api::{SQLGetDiagRec, UNIMPLEMENTED_FUNC},
     handles::{
         Connection, ConnectionState, Descriptor, Env, EnvState, MongoHandle, Statement,
         StatementState,
@@ -451,7 +451,8 @@ fn conn_diag_rec() {
     let message_text: *mut Char = [0u8; 21].as_mut_ptr();
     let text_length_ptr = Box::into_raw(Box::new(0));
     let native_err_ptr = Box::into_raw(Box::new(0));
-    assert_eq!(SqlReturn::SUCCESS, unsafe {
+    assert_eq!(
+        SqlReturn::SUCCESS,
         SQLGetDiagRec(
             HandleType::Dbc,
             conn_handle as *mut _,
@@ -462,7 +463,7 @@ fn conn_diag_rec() {
             50,
             text_length_ptr,
         )
-    });
+    );
     assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
         std::str::from_utf8(&*(sql_state as *const [u8; 5]))
     });
@@ -491,7 +492,8 @@ fn stmt_diag_rec() {
     let message_text: *mut Char = [0u8; 21].as_mut_ptr();
     let text_length_ptr = Box::into_raw(Box::new(0));
     let native_err_ptr = Box::into_raw(Box::new(0));
-    assert_eq!(SqlReturn::SUCCESS, unsafe {
+    assert_eq!(
+        SqlReturn::SUCCESS,
         SQLGetDiagRec(
             HandleType::Stmt,
             stmt_handle as *mut _,
@@ -502,7 +504,7 @@ fn stmt_diag_rec() {
             50,
             text_length_ptr,
         )
-    });
+    );
     assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
         std::str::from_utf8(&*(sql_state as *const [u8; 5]))
     });
@@ -528,7 +530,8 @@ fn desc_diag_rec() {
     let message_text: *mut Char = [0u8; 21].as_mut_ptr();
     let text_length_ptr = Box::into_raw(Box::new(0));
     let native_err_ptr = Box::into_raw(Box::new(0));
-    assert_eq!(SqlReturn::SUCCESS, unsafe {
+    assert_eq!(
+        SqlReturn::SUCCESS,
         SQLGetDiagRec(
             HandleType::Desc,
             desc_handle as *mut _,
@@ -539,7 +542,7 @@ fn desc_diag_rec() {
             50,
             text_length_ptr,
         )
-    });
+    );
     assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
         std::str::from_utf8(&*(sql_state as *const [u8; 5]))
     });
