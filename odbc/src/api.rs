@@ -110,7 +110,7 @@ pub extern "C" fn SQLBindParameter(
     match set_handle_state(
         HandleType::Stmt,
         hstmt as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLBindParameter is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -150,7 +150,7 @@ pub extern "C" fn SQLBulkOperations(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLBulkOperations is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -268,7 +268,7 @@ pub extern "C" fn SQLCompleteAsync(
     match set_handle_state(
         handle_type,
         handle,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLCompleteAsync is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -308,14 +308,14 @@ pub extern "C" fn SQLCopyDesc(source_desc_handle: HDesc, target_desc_handle: HDe
     match set_handle_state(
         HandleType::Desc,
         source_desc_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         error_message,
     ) {
         Ok(_) => {
             match set_handle_state(
                 HandleType::Desc,
                 target_desc_handle as *mut _,
-                UNIMPLEMENTED_FUNC.clone(),
+                UNIMPLEMENTED_FUNC,
                 error_message,
             ) {
                 Ok(_) => SqlReturn::ERROR,
@@ -340,7 +340,7 @@ pub extern "C" fn SQLDataSources(
     match set_handle_state(
         HandleType::Env,
         environment_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLDataSources is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -362,7 +362,7 @@ pub extern "C" fn SQLDataSourcesW(
     match set_handle_state(
         HandleType::Env,
         environment_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLDataSourcesW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -412,7 +412,7 @@ pub extern "C" fn SQLDescribeParam(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLDescribeParam is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -439,7 +439,7 @@ pub extern "C" fn SQLDriverConnect(
     match set_handle_state(
         HandleType::Dbc,
         connection_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLDriverConnect is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -461,7 +461,7 @@ pub extern "C" fn SQLDriverConnectW(
     match set_handle_state(
         HandleType::Dbc,
         connection_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLDriverConnectW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -483,7 +483,7 @@ pub extern "C" fn SQLDrivers(
     match set_handle_state(
         HandleType::Env,
         henv as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLDrivers is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -505,7 +505,7 @@ pub extern "C" fn SQLDriversW(
     match set_handle_state(
         HandleType::Env,
         henv as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLDriversW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -522,7 +522,7 @@ pub extern "C" fn SQLEndTran(
     match set_handle_state(
         handle_type,
         handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLEndTran is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -539,7 +539,7 @@ pub extern "C" fn SQLExecDirect(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLExecDirect is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -556,7 +556,7 @@ pub extern "C" fn SQLExecDirectW(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLExecDirectW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -569,7 +569,7 @@ pub extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLExecute is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -755,7 +755,7 @@ pub extern "C" fn SQLGetDescField(
     match set_handle_state(
         HandleType::Desc,
         descriptor_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLGetDescField is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -775,7 +775,7 @@ pub extern "C" fn SQLGetDescFieldW(
     match set_handle_state(
         HandleType::Desc,
         descriptor_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLGetDescFieldW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -800,7 +800,7 @@ pub extern "C" fn SQLGetDescRec(
     match set_handle_state(
         HandleType::Desc,
         descriptor_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLGetDescRec is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -825,7 +825,7 @@ pub extern "C" fn SQLGetDescRecW(
     match set_handle_state(
         HandleType::Desc,
         descriptor_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLGetDescRecW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1087,7 +1087,7 @@ pub extern "C" fn SQLNumParams(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLNumParams is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1103,7 +1103,7 @@ pub extern "C" fn SQLNumResultCols(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLNumResultCols is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1116,7 +1116,7 @@ pub extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> Sq
     match set_handle_state(
         HandleType::Stmt,
         hstmt as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLParamData is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1133,7 +1133,7 @@ pub extern "C" fn SQLPrepare(
     match set_handle_state(
         HandleType::Stmt,
         hstmt as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLPrepare is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1150,7 +1150,7 @@ pub extern "C" fn SQLPrepareW(
     match set_handle_state(
         HandleType::Stmt,
         hstmt as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLPrepareW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1199,7 +1199,7 @@ pub extern "C" fn SQLProcedureColumns(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLProcedureColumns is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1222,7 +1222,7 @@ pub extern "C" fn SQLProcedureColumnsW(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLProcedureColumnsW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1243,7 +1243,7 @@ pub extern "C" fn SQLProcedures(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLProcedures is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1264,7 +1264,7 @@ pub extern "C" fn SQLProceduresW(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLProceduresW is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1281,7 +1281,7 @@ pub extern "C" fn SQLPutData(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLPutData is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1343,7 +1343,7 @@ pub extern "C" fn SQLSetDescField(
     match set_handle_state(
         HandleType::Desc,
         desc_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLSetDescField is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1367,7 +1367,7 @@ pub extern "C" fn SQLSetDescRec(
     match set_handle_state(
         HandleType::Desc,
         desc_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLSetDescRec is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,
@@ -1385,7 +1385,7 @@ pub extern "C" fn SQLSetPos(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC.clone(),
+        UNIMPLEMENTED_FUNC,
         "SQLSetPos is unimplemented",
     ) {
         Ok(_) => SqlReturn::ERROR,

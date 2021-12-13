@@ -7,7 +7,8 @@ pub enum MongoHandle {
     Env(RwLock<Env>),
     Connection(RwLock<Connection>),
     Statement(RwLock<Statement>),
-    Descriptor(RwLock<Descriptor>)
+    #[allow(dead_code)]
+    Descriptor(RwLock<Descriptor>),
 }
 
 impl MongoHandle {
@@ -59,7 +60,7 @@ impl Env {
             state,
             connections: HashSet::new(),
             sql_states: vec![],
-            error_messages: vec![]
+            error_messages: vec![],
         }
     }
 }
@@ -121,8 +122,7 @@ impl Connection {
             state,
             statements: HashSet::new(),
             sql_states: vec![],
-            error_messages: vec![]
-
+            error_messages: vec![],
         }
     }
 }
@@ -163,7 +163,7 @@ impl Statement {
             _attributes: Box::new(StatementAttributes::default()),
             state,
             sql_states: vec![],
-            error_messages: vec![]
+            error_messages: vec![],
         }
     }
 }
@@ -175,10 +175,11 @@ pub struct Descriptor {
 }
 
 impl Descriptor {
+    #[allow(dead_code)]
     pub fn default() -> Descriptor {
         Self {
             sql_states: vec![],
-            error_messages: vec![]
+            error_messages: vec![],
         }
     }
 }

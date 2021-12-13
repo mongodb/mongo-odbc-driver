@@ -330,11 +330,11 @@ fn env_diag_rec() {
         );
         assert_eq!(
             Ok(UNIMPLEMENTED_FUNC),
-            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
+            std::str::from_utf8(&*(sql_state as *const [u8; 5]))
         );
         assert_eq!(
             Ok(ERROR_MESSAGE),
-            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 21]>(message_text))
+            std::str::from_utf8(&*(message_text as *const [u8; 21]))
         );
         // Buffer is too small to hold the entire error message (0 < length < 21)
         assert_eq!(
@@ -352,7 +352,7 @@ fn env_diag_rec() {
         );
         assert_eq!(
             Ok("func is unimple"),
-            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 15]>(message_text))
+            std::str::from_utf8(&*(message_text as *const [u8; 15]))
         );
         // Buffer length < 0
         assert_eq!(
@@ -407,7 +407,7 @@ fn env_diag_rec() {
         );
         assert_eq!(
             Ok("XYZ00"),
-            std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
+            std::str::from_utf8(&*(sql_state as *const [u8; 5]))
         );
         // Record number > number of diagnostic records
         assert_eq!(
@@ -464,10 +464,10 @@ fn conn_diag_rec() {
         )
     });
     assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
-        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
+        std::str::from_utf8(&*(sql_state as *const [u8; 5]))
     });
     assert_eq!(Ok(ERROR_MESSAGE), unsafe {
-        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 21]>(message_text))
+        std::str::from_utf8(&*(message_text as *const [u8; 21]))
     });
 }
 
@@ -504,10 +504,10 @@ fn stmt_diag_rec() {
         )
     });
     assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
-        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
+        std::str::from_utf8(&*(sql_state as *const [u8; 5]))
     });
     assert_eq!(Ok(ERROR_MESSAGE), unsafe {
-        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 21]>(message_text))
+        std::str::from_utf8(&*(message_text as *const [u8; 21]))
     });
 }
 
@@ -541,9 +541,9 @@ fn desc_diag_rec() {
         )
     });
     assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
-        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 5]>(sql_state))
+        std::str::from_utf8(&*(sql_state as *const [u8; 5]))
     });
     assert_eq!(Ok(ERROR_MESSAGE), unsafe {
-        std::str::from_utf8(std::mem::transmute::<*mut u8, &[u8; 21]>(message_text))
+        std::str::from_utf8(&*(message_text as *const [u8; 21]))
     });
 }
