@@ -34,6 +34,7 @@ pub fn set_handle_state(handle_type: HandleType, handle: Handle, sql_state: &str
   Ok(())
 }
 
+/// set_sql_state writes the given sql state to the [`output_ptr`].
 pub fn set_sql_state(mut sql_state: String, output_ptr: *mut Char) -> () {
   unsafe {
     let state = std::mem::transmute::<*mut u8, *mut Char>(sql_state.as_mut_ptr());
@@ -41,6 +42,10 @@ pub fn set_sql_state(mut sql_state: String, output_ptr: *mut Char) -> () {
   }
 }
 
+/// set_error_message writes [`error_message`] to the [`output_ptr`]. [`buffer_len`] is the
+/// length of the [`output_ptr`] buffer in characters; the error message should be truncated
+/// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+/// should be stored in [`text_length_ptr`].
 pub fn set_error_message(mut error_message: String, output_ptr: *mut Char, buffer_len: usize, text_length_ptr: *mut SmallInt) -> () {
   unsafe {
     let msg = std::mem::transmute::<*mut u8, *mut Char>(error_message.as_mut_ptr());
