@@ -1,6 +1,6 @@
 use crate::handles::MongoHandle;
 use odbc_sys::{Char, Handle, HandleType, SmallInt};
-use std::{cmp::min, ptr::copy_nonoverlapping};
+use std::{cmp::min, ptr::copy};
 
 /// set_handle_state writes the error code [`sql_state`] to the field `sql_state`
 /// in [`handle`].
@@ -43,7 +43,7 @@ pub fn set_handle_state(
 pub fn set_sql_state(mut sql_state: String, output_ptr: *mut Char) {
     unsafe {
         let state = std::mem::transmute::<*mut u8, *mut Char>(sql_state.as_mut_ptr());
-        std::ptr::copy_nonoverlapping(state, output_ptr, 5)
+        copy(state, output_ptr, 5);
     }
 }
 
@@ -61,6 +61,6 @@ pub fn set_error_message(
         let msg = std::mem::transmute::<*mut u8, *mut Char>(error_message.as_mut_ptr());
         let num_chars = min(error_message.len(), buffer_len);
         *text_length_ptr = num_chars as SmallInt;
-        copy_nonoverlapping(msg, output_ptr, num_chars);
+        copy(msg, output_ptr, num_chars);
     }
 }

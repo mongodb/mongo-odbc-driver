@@ -7,7 +7,7 @@ use crate::{
     util::set_handle_state,
     SQLAllocHandle, SQLFreeHandle,
 };
-use odbc_sys::{Char, Handle, HandleType, SQLGetDiagRec, SqlReturn};
+use odbc_sys::{Char, Handle, HandleType, SqlReturn};
 use std::sync::RwLock;
 
 const ERROR_MESSAGE: &str = "func is unimplemented";
