@@ -11,6 +11,8 @@ use odbc_sys::{Char, Handle, HandleType, SqlReturn};
 use std::sync::RwLock;
 
 const ERROR_MESSAGE: &str = "func is unimplemented";
+const ERROR_MESSAGE_NULL: &str = "func is unimplemented\0";
+const UNIMPLEMENTED_FUNC_NULL: &str = "HYC00\0";
 
 #[test]
 fn env_alloc_free() {
@@ -311,11 +313,12 @@ fn env_diag_rec() {
             )
         );
         // Initialize buffers
-        let sql_state: *mut Char = [0u8; 5].as_mut_ptr();
-        let message_text: *mut Char = [0u8; 21].as_mut_ptr();
+        let sql_state: *mut Char = [0u8; 6].as_mut_ptr();
+        let message_text: *mut Char = [0u8; 22].as_mut_ptr();
         let text_length_ptr = Box::into_raw(Box::new(0));
         let native_err_ptr = Box::into_raw(Box::new(0));
-        // Buffer is large enough to hold the entire error message (length >= 21)
+        // Buffer is large enough to hold the entire error message + null terminator
+        // (length >= 22)
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLGetDiagRec(
@@ -325,19 +328,19 @@ fn env_diag_rec() {
                 sql_state,
                 native_err_ptr,
                 message_text,
-                21,
+                22,
                 text_length_ptr
             )
         );
         assert_eq!(
-            Ok(UNIMPLEMENTED_FUNC),
-            std::str::from_utf8(&*(sql_state as *const [u8; 5]))
+            Ok(UNIMPLEMENTED_FUNC_NULL),
+            std::str::from_utf8(&*(sql_state as *const [u8; 6]))
         );
         assert_eq!(
-            Ok(ERROR_MESSAGE),
-            std::str::from_utf8(&*(message_text as *const [u8; 21]))
+            Ok(ERROR_MESSAGE_NULL),
+            std::str::from_utf8(&*(message_text as *const [u8; 22]))
         );
-        // Buffer is too small to hold the entire error message (0 < length < 21)
+        // Buffer is too small to hold the entire error message (0 < length < 22)
         assert_eq!(
             SqlReturn::SUCCESS_WITH_INFO,
             SQLGetDiagRec(
@@ -379,7 +382,7 @@ fn env_diag_rec() {
                 sql_state,
                 native_err_ptr,
                 message_text,
-                21,
+                22,
                 text_length_ptr
             )
         );
@@ -403,13 +406,13 @@ fn env_diag_rec() {
                 sql_state,
                 native_err_ptr,
                 message_text,
-                21,
+                22,
                 text_length_ptr
             )
         );
         assert_eq!(
-            Ok("XYZ00"),
-            std::str::from_utf8(&*(sql_state as *const [u8; 5]))
+            Ok("XYZ00\0"),
+            std::str::from_utf8(&*(sql_state as *const [u8; 6]))
         );
         // Record number > number of diagnostic records
         assert_eq!(
@@ -421,7 +424,7 @@ fn env_diag_rec() {
                 sql_state,
                 native_err_ptr,
                 message_text,
-                21,
+                22,
                 text_length_ptr
             )
         );
@@ -450,8 +453,8 @@ fn conn_diag_rec() {
     );
 
     // Initialize buffers
-    let sql_state: *mut Char = [0u8; 5].as_mut_ptr();
-    let message_text: *mut Char = [0u8; 21].as_mut_ptr();
+    let sql_state: *mut Char = [0u8; 6].as_mut_ptr();
+    let message_text: *mut Char = [0u8; 22].as_mut_ptr();
     let text_length_ptr = Box::into_raw(Box::new(0));
     let native_err_ptr = Box::into_raw(Box::new(0));
     assert_eq!(
@@ -467,11 +470,11 @@ fn conn_diag_rec() {
             text_length_ptr,
         )
     );
-    assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
-        std::str::from_utf8(&*(sql_state as *const [u8; 5]))
+    assert_eq!(Ok(UNIMPLEMENTED_FUNC_NULL), unsafe {
+        std::str::from_utf8(&*(sql_state as *const [u8; 6]))
     });
-    assert_eq!(Ok(ERROR_MESSAGE), unsafe {
-        std::str::from_utf8(&*(message_text as *const [u8; 21]))
+    assert_eq!(Ok(ERROR_MESSAGE_NULL), unsafe {
+        std::str::from_utf8(&*(message_text as *const [u8; 22]))
     });
 }
 
@@ -492,8 +495,8 @@ fn stmt_diag_rec() {
         )
     );
     // Initialize buffers
-    let sql_state: *mut Char = [0u8; 5].as_mut_ptr();
-    let message_text: *mut Char = [0u8; 21].as_mut_ptr();
+    let sql_state: *mut Char = [0u8; 6].as_mut_ptr();
+    let message_text: *mut Char = [0u8; 22].as_mut_ptr();
     let text_length_ptr = Box::into_raw(Box::new(0));
     let native_err_ptr = Box::into_raw(Box::new(0));
     assert_eq!(
@@ -509,11 +512,11 @@ fn stmt_diag_rec() {
             text_length_ptr,
         )
     );
-    assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
-        std::str::from_utf8(&*(sql_state as *const [u8; 5]))
+    assert_eq!(Ok(UNIMPLEMENTED_FUNC_NULL), unsafe {
+        std::str::from_utf8(&*(sql_state as *const [u8; 6]))
     });
-    assert_eq!(Ok(ERROR_MESSAGE), unsafe {
-        std::str::from_utf8(&*(message_text as *const [u8; 21]))
+    assert_eq!(Ok(ERROR_MESSAGE_NULL), unsafe {
+        std::str::from_utf8(&*(message_text as *const [u8; 22]))
     });
 }
 
@@ -531,8 +534,8 @@ fn desc_diag_rec() {
         )
     );
     // Initialize buffers
-    let sql_state: *mut Char = [0u8; 5].as_mut_ptr();
-    let message_text: *mut Char = [0u8; 21].as_mut_ptr();
+    let sql_state: *mut Char = [0u8; 6].as_mut_ptr();
+    let message_text: *mut Char = [0u8; 22].as_mut_ptr();
     let text_length_ptr = Box::into_raw(Box::new(0));
     let native_err_ptr = Box::into_raw(Box::new(0));
     assert_eq!(
@@ -548,10 +551,10 @@ fn desc_diag_rec() {
             text_length_ptr,
         )
     );
-    assert_eq!(Ok(UNIMPLEMENTED_FUNC), unsafe {
-        std::str::from_utf8(&*(sql_state as *const [u8; 5]))
+    assert_eq!(Ok(UNIMPLEMENTED_FUNC_NULL), unsafe {
+        std::str::from_utf8(&*(sql_state as *const [u8; 6]))
     });
-    assert_eq!(Ok(ERROR_MESSAGE), unsafe {
-        std::str::from_utf8(&*(message_text as *const [u8; 21]))
+    assert_eq!(Ok(ERROR_MESSAGE_NULL), unsafe {
+        std::str::from_utf8(&*(message_text as *const [u8; 22]))
     });
 }

@@ -1,6 +1,6 @@
 use crate::handles::{MongoHandle, ODBCError};
 use odbc_sys::{Char, Handle, HandleType, SmallInt, SqlReturn};
-use std::{cmp::min, ptr::copy};
+use std::{cmp::min, ffi::CString, ptr::copy};
 
 /// set_handle_state writes the error code [`sql_state`] to the field `sql_state`
 /// in [`handle`].
@@ -44,8 +44,9 @@ pub fn set_handle_state(
 /// set_sql_state writes the given sql state to the [`output_ptr`].
 pub fn set_sql_state(mut sql_state: String, output_ptr: *mut Char) {
     unsafe {
+        sql_state.push('\0');
         let state = std::mem::transmute::<*mut u8, *mut Char>(sql_state.as_mut_ptr());
-        copy(state, output_ptr, 5);
+        copy(state, output_ptr, 6);
     }
 }
 
@@ -54,21 +55,26 @@ pub fn set_sql_state(mut sql_state: String, output_ptr: *mut Char) {
 /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
 /// should be stored in [`text_length_ptr`].
 pub fn set_error_message(
-    mut error_message: String,
+    error_message: String,
     output_ptr: *mut Char,
     buffer_len: usize,
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        if output_ptr.is_null() {}
-        let msg = std::mem::transmute::<*mut u8, *mut Char>(error_message.as_mut_ptr());
-        let num_chars = min(error_message.len(), buffer_len);
-        *text_length_ptr = num_chars as SmallInt;
-        copy(msg, output_ptr, num_chars);
-        if num_chars < error_message.len() {
-            SqlReturn::SUCCESS_WITH_INFO
-        } else {
-            SqlReturn::SUCCESS
+        match CString::new(error_message.clone()) {
+            Ok(cstr) => {
+                let msg =
+                    std::mem::transmute::<*const u8, *mut Char>(cstr.as_bytes_with_nul().as_ptr());
+                let num_chars = min(error_message.len(), buffer_len - 1);
+                *text_length_ptr = num_chars as SmallInt;
+                copy(msg, output_ptr, num_chars);
+                if num_chars < error_message.len() {
+                    SqlReturn::SUCCESS_WITH_INFO
+                } else {
+                    SqlReturn::SUCCESS
+                }
+            }
+            Err(_) => SqlReturn::ERROR,
         }
     }
 }
