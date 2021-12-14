@@ -317,6 +317,7 @@ fn env_diag_rec() {
         let message_text: *mut Char = [0u8; 22].as_mut_ptr();
         let text_length_ptr = Box::into_raw(Box::new(0));
         let native_err_ptr = Box::into_raw(Box::new(0));
+
         // Buffer is large enough to hold the entire error message + null terminator
         // (length >= 22)
         assert_eq!(
@@ -340,6 +341,7 @@ fn env_diag_rec() {
             Ok(ERROR_MESSAGE_NULL),
             std::str::from_utf8(&*(message_text as *const [u8; 22]))
         );
+        assert_eq!(22, *text_length_ptr);
         // Buffer is too small to hold the entire error message (0 < length < 22)
         assert_eq!(
             SqlReturn::SUCCESS_WITH_INFO,
@@ -355,9 +357,10 @@ fn env_diag_rec() {
             )
         );
         assert_eq!(
-            Ok("func is unimple"),
+            Ok("func is unimpl\0"),
             std::str::from_utf8(&*(message_text as *const [u8; 15]))
         );
+        assert_eq!(15, *text_length_ptr);
         // Buffer length < 0
         assert_eq!(
             SqlReturn::ERROR,

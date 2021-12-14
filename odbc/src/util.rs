@@ -1,6 +1,6 @@
 use crate::handles::{MongoHandle, ODBCError};
 use odbc_sys::{Char, Handle, HandleType, SmallInt, SqlReturn};
-use std::{cmp::min, ffi::CString, ptr::copy};
+use std::{cmp::min, ptr::copy};
 
 /// set_handle_state writes the error code [`sql_state`] to the field `sql_state`
 /// in [`handle`].
@@ -61,20 +61,18 @@ pub fn set_error_message(
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match CString::new(error_message.clone()) {
-            Ok(cstr) => {
-                let msg =
-                    std::mem::transmute::<*const u8, *mut Char>(cstr.as_bytes_with_nul().as_ptr());
-                let num_chars = min(error_message.len(), buffer_len - 1);
-                *text_length_ptr = num_chars as SmallInt;
-                copy(msg, output_ptr, num_chars);
-                if num_chars < error_message.len() {
-                    SqlReturn::SUCCESS_WITH_INFO
-                } else {
-                    SqlReturn::SUCCESS
-                }
-            }
-            Err(_) => SqlReturn::ERROR,
+        // Check if the entire error message plus a null terminator can fit in the buffer;
+        // we should truncate the error message if it's too long.
+        let num_chars = min(error_message.len() + 1, buffer_len);
+        let msg = &mut error_message[..num_chars - 1].to_string();
+        msg.push('\0');
+        let msg = std::mem::transmute::<*mut u8, *mut Char>(msg.as_mut_ptr());
+        *text_length_ptr = num_chars as SmallInt;
+        copy(msg, output_ptr, num_chars);
+        if num_chars < error_message.len() {
+            SqlReturn::SUCCESS_WITH_INFO
+        } else {
+            SqlReturn::SUCCESS
         }
     }
 }
