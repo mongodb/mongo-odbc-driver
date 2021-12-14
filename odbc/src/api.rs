@@ -110,8 +110,9 @@ pub extern "C" fn SQLBindParameter(
     match set_handle_state(
         HandleType::Stmt,
         hstmt as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLBindParameter is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLBindParameter is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -150,8 +151,9 @@ pub extern "C" fn SQLBulkOperations(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLBulkOperations is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLBulkOperations is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -268,8 +270,9 @@ pub extern "C" fn SQLCompleteAsync(
     match set_handle_state(
         handle_type,
         handle,
-        UNIMPLEMENTED_FUNC,
-        "SQLCompleteAsync is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLCompleteAsync is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -304,19 +307,21 @@ pub extern "C" fn SQLConnectW(
 
 #[no_mangle]
 pub extern "C" fn SQLCopyDesc(source_desc_handle: HDesc, target_desc_handle: HDesc) -> SqlReturn {
-    let error_message = "SQLCopyDesc is unimplemented";
+    let error_message = "SQLCopyDesc is unimplemented".to_string();
     match set_handle_state(
         HandleType::Desc,
         source_desc_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        error_message,
+        UNIMPLEMENTED_FUNC.to_string(),
+        error_message.clone(),
+        0,
     ) {
         Ok(_) => {
             match set_handle_state(
                 HandleType::Desc,
                 target_desc_handle as *mut _,
-                UNIMPLEMENTED_FUNC,
+                UNIMPLEMENTED_FUNC.to_string(),
                 error_message,
+                0,
             ) {
                 Ok(_) => SqlReturn::ERROR,
                 Err(_) => SqlReturn::INVALID_HANDLE,
@@ -340,8 +345,9 @@ pub extern "C" fn SQLDataSources(
     match set_handle_state(
         HandleType::Env,
         environment_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLDataSources is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLDataSources is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -362,8 +368,9 @@ pub extern "C" fn SQLDataSourcesW(
     match set_handle_state(
         HandleType::Env,
         environment_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLDataSourcesW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLDataSourcesW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -412,8 +419,9 @@ pub extern "C" fn SQLDescribeParam(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLDescribeParam is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLDescribeParam is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -439,8 +447,9 @@ pub extern "C" fn SQLDriverConnect(
     match set_handle_state(
         HandleType::Dbc,
         connection_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLDriverConnect is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLDriverConnect is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -461,8 +470,9 @@ pub extern "C" fn SQLDriverConnectW(
     match set_handle_state(
         HandleType::Dbc,
         connection_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLDriverConnectW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLDriverConnectW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -483,8 +493,9 @@ pub extern "C" fn SQLDrivers(
     match set_handle_state(
         HandleType::Env,
         henv as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLDrivers is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLDrivers is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -505,8 +516,9 @@ pub extern "C" fn SQLDriversW(
     match set_handle_state(
         HandleType::Env,
         henv as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLDriversW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLDriversW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -522,8 +534,9 @@ pub extern "C" fn SQLEndTran(
     match set_handle_state(
         handle_type,
         handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLEndTran is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLEndTran is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -539,8 +552,9 @@ pub extern "C" fn SQLExecDirect(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLExecDirect is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLExecDirect is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -556,8 +570,9 @@ pub extern "C" fn SQLExecDirectW(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLExecDirectW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLExecDirectW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -569,8 +584,9 @@ pub extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLExecute is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLExecute is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -755,8 +771,9 @@ pub extern "C" fn SQLGetDescField(
     match set_handle_state(
         HandleType::Desc,
         descriptor_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLGetDescField is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLGetDescField is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -775,8 +792,9 @@ pub extern "C" fn SQLGetDescFieldW(
     match set_handle_state(
         HandleType::Desc,
         descriptor_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLGetDescFieldW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLGetDescFieldW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -800,8 +818,9 @@ pub extern "C" fn SQLGetDescRec(
     match set_handle_state(
         HandleType::Desc,
         descriptor_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLGetDescRec is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLGetDescRec is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -825,8 +844,9 @@ pub extern "C" fn SQLGetDescRecW(
     match set_handle_state(
         HandleType::Desc,
         descriptor_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLGetDescRecW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLGetDescRecW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -876,93 +896,86 @@ pub extern "C" fn SQLGetDiagRec(
     let mongo_handle = handle as *mut MongoHandle;
     // Make the record number zero-indexed
     let rec_number = (rec_number - 1) as usize;
-
-    // The native error code should be zero if the error is returned by the driver
-    unsafe { *native_error_ptr = 0 };
-
     match handle_type {
         HandleType::Env => match unsafe { (*mongo_handle).as_env() } {
+            // TODO: redundant unsafe?
             Some(env) => {
                 let env_contents = (*env).read().unwrap();
-                match env_contents.sql_states.get(rec_number) {
-                    Some(sql_state) => set_sql_state(sql_state.clone(), state),
-                    None => return SqlReturn::NO_DATA,
-                }
-                match env_contents.error_messages.get(rec_number) {
-                    Some(error_message) => set_error_message(
-                        error_message.clone(),
-                        message_text,
-                        buffer_length as usize,
-                        text_length_ptr,
-                    ),
-                    None => return SqlReturn::NO_DATA,
+                match env_contents.errors.get(rec_number) {
+                    Some(odbc_error) => {
+                        unsafe { *native_error_ptr = odbc_error.native_err_code };
+                        set_sql_state(odbc_error.sql_state.clone(), state);
+                        set_error_message(
+                            odbc_error.error_message.clone(),
+                            message_text,
+                            buffer_length as usize,
+                            text_length_ptr,
+                        )
+                    }
+                    None => SqlReturn::NO_DATA,
                 }
             }
-            None => return SqlReturn::INVALID_HANDLE,
+            None => SqlReturn::INVALID_HANDLE,
         },
         HandleType::Dbc => match unsafe { (*mongo_handle).as_connection() } {
             Some(dbc) => {
                 let dbc_contents = (*dbc).read().unwrap();
-                match dbc_contents.sql_states.get(rec_number) {
-                    Some(sql_state) => set_sql_state(sql_state.clone(), state),
-                    None => return SqlReturn::NO_DATA,
-                }
-
-                match dbc_contents.error_messages.get(rec_number) {
-                    Some(error_message) => set_error_message(
-                        error_message.clone(),
-                        message_text,
-                        buffer_length as usize,
-                        text_length_ptr,
-                    ),
-                    None => return SqlReturn::NO_DATA,
+                match dbc_contents.errors.get(rec_number) {
+                    Some(odbc_error) => {
+                        unsafe { *native_error_ptr = odbc_error.native_err_code };
+                        set_sql_state(odbc_error.sql_state.clone(), state);
+                        set_error_message(
+                            odbc_error.error_message.clone(),
+                            message_text,
+                            buffer_length as usize,
+                            text_length_ptr,
+                        )
+                    }
+                    None => SqlReturn::NO_DATA,
                 }
             }
-            None => return SqlReturn::INVALID_HANDLE,
+            None => SqlReturn::INVALID_HANDLE,
         },
         HandleType::Stmt => match unsafe { (*mongo_handle).as_statement() } {
             Some(stmt) => {
                 let stmt_contents = (*stmt).read().unwrap();
 
-                match stmt_contents.sql_states.get(rec_number) {
-                    Some(sql_state) => set_sql_state(sql_state.clone(), state),
-                    None => return SqlReturn::NO_DATA,
-                }
-
-                match stmt_contents.error_messages.get(rec_number) {
-                    Some(error_message) => set_error_message(
-                        error_message.clone(),
-                        message_text,
-                        buffer_length as usize,
-                        text_length_ptr,
-                    ),
-                    None => return SqlReturn::NO_DATA,
+                match stmt_contents.errors.get(rec_number) {
+                    Some(odbc_error) => {
+                        unsafe { *native_error_ptr = odbc_error.native_err_code };
+                        set_sql_state(odbc_error.sql_state.clone(), state);
+                        set_error_message(
+                            odbc_error.error_message.clone(),
+                            message_text,
+                            buffer_length as usize,
+                            text_length_ptr,
+                        )
+                    }
+                    None => SqlReturn::NO_DATA,
                 }
             }
-            None => return SqlReturn::INVALID_HANDLE,
+            None => SqlReturn::INVALID_HANDLE,
         },
         HandleType::Desc => match unsafe { (*mongo_handle).as_descriptor() } {
             Some(desc) => {
                 let desc_contents = (*desc).read().unwrap();
-                match desc_contents.sql_states.get(rec_number) {
-                    Some(sql_state) => set_sql_state(sql_state.clone(), state),
-                    None => return SqlReturn::NO_DATA,
-                }
-
-                match desc_contents.error_messages.get(rec_number) {
-                    Some(error_message) => set_error_message(
-                        error_message.clone(),
-                        message_text,
-                        buffer_length as usize,
-                        text_length_ptr,
-                    ),
-                    None => return SqlReturn::NO_DATA,
+                match desc_contents.errors.get(rec_number) {
+                    Some(odbc_error) => {
+                        unsafe { *native_error_ptr = odbc_error.native_err_code };
+                        set_sql_state(odbc_error.sql_state.clone(), state);
+                        set_error_message(
+                            odbc_error.error_message.clone(),
+                            message_text,
+                            buffer_length as usize,
+                            text_length_ptr,
+                        )
+                    }
+                    None => SqlReturn::NO_DATA,
                 }
             }
-            None => return SqlReturn::INVALID_HANDLE,
+            None => SqlReturn::INVALID_HANDLE,
         },
     }
-    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
@@ -1087,8 +1100,9 @@ pub extern "C" fn SQLNumParams(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLNumParams is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLNumParams is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1103,8 +1117,9 @@ pub extern "C" fn SQLNumResultCols(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLNumResultCols is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLNumResultCols is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1116,8 +1131,9 @@ pub extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> Sq
     match set_handle_state(
         HandleType::Stmt,
         hstmt as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLParamData is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLParamData is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1133,8 +1149,9 @@ pub extern "C" fn SQLPrepare(
     match set_handle_state(
         HandleType::Stmt,
         hstmt as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLPrepare is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLPrepare is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1150,8 +1167,9 @@ pub extern "C" fn SQLPrepareW(
     match set_handle_state(
         HandleType::Stmt,
         hstmt as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLPrepareW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLPrepareW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1199,8 +1217,9 @@ pub extern "C" fn SQLProcedureColumns(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLProcedureColumns is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLProcedureColumns is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1222,8 +1241,9 @@ pub extern "C" fn SQLProcedureColumnsW(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLProcedureColumnsW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLProcedureColumnsW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1243,8 +1263,9 @@ pub extern "C" fn SQLProcedures(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLProcedures is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLProcedures is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1264,8 +1285,9 @@ pub extern "C" fn SQLProceduresW(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLProceduresW is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLProceduresW is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1281,8 +1303,9 @@ pub extern "C" fn SQLPutData(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLPutData is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLPutData is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1343,8 +1366,9 @@ pub extern "C" fn SQLSetDescField(
     match set_handle_state(
         HandleType::Desc,
         desc_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLSetDescField is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLSetDescField is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1367,8 +1391,9 @@ pub extern "C" fn SQLSetDescRec(
     match set_handle_state(
         HandleType::Desc,
         desc_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLSetDescRec is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLSetDescRec is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1385,8 +1410,9 @@ pub extern "C" fn SQLSetPos(
     match set_handle_state(
         HandleType::Stmt,
         statement_handle as *mut _,
-        UNIMPLEMENTED_FUNC,
-        "SQLSetPos is unimplemented",
+        UNIMPLEMENTED_FUNC.to_string(),
+        "SQLSetPos is unimplemented".to_string(),
+        0,
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,

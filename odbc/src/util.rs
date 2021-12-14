@@ -1,5 +1,5 @@
-use crate::handles::MongoHandle;
-use odbc_sys::{Char, Handle, HandleType, SmallInt};
+use crate::handles::{MongoHandle, ODBCError};
+use odbc_sys::{Char, Handle, HandleType, SmallInt, SqlReturn};
 use std::{cmp::min, ptr::copy};
 
 /// set_handle_state writes the error code [`sql_state`] to the field `sql_state`
@@ -7,33 +7,35 @@ use std::{cmp::min, ptr::copy};
 pub fn set_handle_state(
     handle_type: HandleType,
     handle: Handle,
-    sql_state: &str,
-    error_message: &str,
+    sql_state: String,
+    error_message: String,
+    native_err_code: i32,
 ) -> Result<(), ()> {
+    let error = ODBCError {
+        sql_state,
+        error_message,
+        native_err_code,
+    };
     match handle_type {
         HandleType::Env => {
             let env = unsafe { (*(handle as *mut MongoHandle)).as_env().ok_or(())? };
             let mut env_contents = env.write().unwrap();
-            env_contents.sql_states.push(sql_state.to_string());
-            env_contents.error_messages.push(error_message.to_string());
+            env_contents.errors.push(error);
         }
         HandleType::Dbc => {
             let dbc = unsafe { (*(handle as *mut MongoHandle)).as_connection().ok_or(())? };
             let mut dbc_contents = dbc.write().unwrap();
-            dbc_contents.sql_states.push(sql_state.to_string());
-            dbc_contents.error_messages.push(error_message.to_string());
+            dbc_contents.errors.push(error);
         }
         HandleType::Stmt => {
             let stmt = unsafe { (*(handle as *mut MongoHandle)).as_statement().ok_or(())? };
             let mut stmt_contents = stmt.write().unwrap();
-            stmt_contents.sql_states.push(sql_state.to_string());
-            stmt_contents.error_messages.push(error_message.to_string());
+            stmt_contents.errors.push(error);
         }
         HandleType::Desc => {
             let desc = unsafe { (*(handle as *mut MongoHandle)).as_descriptor().ok_or(())? };
             let mut desc_contents = desc.write().unwrap();
-            desc_contents.sql_states.push(sql_state.to_string());
-            desc_contents.error_messages.push(error_message.to_string());
+            desc_contents.errors.push(error);
         }
     };
     Ok(())
@@ -56,11 +58,17 @@ pub fn set_error_message(
     output_ptr: *mut Char,
     buffer_len: usize,
     text_length_ptr: *mut SmallInt,
-) {
+) -> SqlReturn {
     unsafe {
+        if output_ptr.is_null() {}
         let msg = std::mem::transmute::<*mut u8, *mut Char>(error_message.as_mut_ptr());
         let num_chars = min(error_message.len(), buffer_len);
         *text_length_ptr = num_chars as SmallInt;
         copy(msg, output_ptr, num_chars);
+        if num_chars < error_message.len() {
+            SqlReturn::SUCCESS_WITH_INFO
+        } else {
+            SqlReturn::SUCCESS
+        }
     }
 }

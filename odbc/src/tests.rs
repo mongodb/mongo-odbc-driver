@@ -1,11 +1,11 @@
 use crate::{
-    api::{SQLGetDiagRec, UNIMPLEMENTED_FUNC},
+    api::UNIMPLEMENTED_FUNC,
     handles::{
         Connection, ConnectionState, Descriptor, Env, EnvState, MongoHandle, Statement,
         StatementState,
     },
     util::set_handle_state,
-    SQLAllocHandle, SQLFreeHandle,
+    SQLAllocHandle, SQLFreeHandle, SQLGetDiagRec,
 };
 use odbc_sys::{Char, Handle, HandleType, SqlReturn};
 use std::sync::RwLock;
@@ -305,8 +305,9 @@ fn env_diag_rec() {
             set_handle_state(
                 HandleType::Env,
                 env_handle as *mut _,
-                UNIMPLEMENTED_FUNC,
-                ERROR_MESSAGE
+                UNIMPLEMENTED_FUNC.to_string(),
+                ERROR_MESSAGE.to_string(),
+                3
             )
         );
         // Initialize buffers
@@ -338,7 +339,7 @@ fn env_diag_rec() {
         );
         // Buffer is too small to hold the entire error message (0 < length < 21)
         assert_eq!(
-            SqlReturn::SUCCESS,
+            SqlReturn::SUCCESS_WITH_INFO,
             SQLGetDiagRec(
                 HandleType::Env,
                 env_handle as *mut _,
@@ -388,8 +389,9 @@ fn env_diag_rec() {
             set_handle_state(
                 HandleType::Env,
                 env_handle as *mut _,
-                "XYZ00",
-                ERROR_MESSAGE
+                "XYZ00".to_string(),
+                ERROR_MESSAGE.to_string(),
+                3
             )
         );
         assert_eq!(
@@ -424,7 +426,7 @@ fn env_diag_rec() {
             )
         );
         // Native error pointer
-        assert_eq!(0, *native_err_ptr);
+        assert_eq!(3, *native_err_ptr);
     }
 }
 
@@ -441,8 +443,9 @@ fn conn_diag_rec() {
         set_handle_state(
             HandleType::Dbc,
             conn_handle as *mut _,
-            UNIMPLEMENTED_FUNC,
-            ERROR_MESSAGE
+            UNIMPLEMENTED_FUNC.to_string(),
+            ERROR_MESSAGE.to_string(),
+            0
         )
     );
 
@@ -483,8 +486,9 @@ fn stmt_diag_rec() {
         set_handle_state(
             HandleType::Stmt,
             stmt_handle as *mut _,
-            UNIMPLEMENTED_FUNC,
-            ERROR_MESSAGE
+            UNIMPLEMENTED_FUNC.to_string(),
+            ERROR_MESSAGE.to_string(),
+            0
         )
     );
     // Initialize buffers
@@ -521,8 +525,9 @@ fn desc_diag_rec() {
         set_handle_state(
             HandleType::Desc,
             desc_handle as *mut _,
-            UNIMPLEMENTED_FUNC,
-            ERROR_MESSAGE
+            UNIMPLEMENTED_FUNC.to_string(),
+            ERROR_MESSAGE.to_string(),
+            0
         )
     );
     // Initialize buffers

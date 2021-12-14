@@ -42,6 +42,13 @@ impl MongoHandle {
 }
 
 #[derive(Debug)]
+pub struct ODBCError {
+    pub sql_state: String,
+    pub error_message: String,
+    pub native_err_code: i32,
+}
+
+#[derive(Debug)]
 pub struct Env {
     // attributes for this Env. We box the attributes so that the MongoHandle type
     // remains fairly small regardless of underlying handle type.
@@ -49,8 +56,7 @@ pub struct Env {
     // state of this Env
     pub state: EnvState,
     pub connections: HashSet<*mut MongoHandle>,
-    pub sql_states: Vec<String>,
-    pub error_messages: Vec<String>,
+    pub errors: Vec<ODBCError>,
 }
 
 impl Env {
@@ -59,8 +65,7 @@ impl Env {
             _attributes: Box::new(EnvAttributes::default()),
             state,
             connections: HashSet::new(),
-            sql_states: vec![],
-            error_messages: vec![],
+            errors: vec![],
         }
     }
 }
@@ -96,8 +101,7 @@ pub struct Connection {
     // pub client: Option<MongoClient>,
     // all Statements allocated from this Connection
     pub statements: HashSet<*mut MongoHandle>,
-    pub sql_states: Vec<String>,
-    pub error_messages: Vec<String>,
+    pub errors: Vec<ODBCError>,
 }
 
 #[derive(Debug, Default)]
@@ -121,8 +125,7 @@ impl Connection {
             _attributes: Box::new(ConnectionAttributes::default()),
             state,
             statements: HashSet::new(),
-            sql_states: vec![],
-            error_messages: vec![],
+            errors: vec![],
         }
     }
 }
@@ -133,8 +136,7 @@ pub struct Statement {
     pub _attributes: Box<StatementAttributes>,
     pub state: StatementState,
     //pub cursor: Option<Box<Peekable<Cursor>>>,
-    pub sql_states: Vec<String>,
-    pub error_messages: Vec<String>,
+    pub errors: Vec<ODBCError>,
 }
 
 #[derive(Debug, Default)]
@@ -162,24 +164,19 @@ impl Statement {
             connection,
             _attributes: Box::new(StatementAttributes::default()),
             state,
-            sql_states: vec![],
-            error_messages: vec![],
+            errors: vec![],
         }
     }
 }
 
 #[derive(Debug)]
 pub struct Descriptor {
-    pub sql_states: Vec<String>,
-    pub error_messages: Vec<String>,
+    pub errors: Vec<ODBCError>,
 }
 
 impl Descriptor {
     #[allow(dead_code)]
     pub fn default() -> Descriptor {
-        Self {
-            sql_states: vec![],
-            error_messages: vec![],
-        }
+        Self { errors: vec![] }
     }
 }
