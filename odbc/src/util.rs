@@ -43,11 +43,8 @@ pub fn set_handle_state(
 
 /// set_sql_state writes the given sql state to the [`output_ptr`].
 pub fn set_sql_state(mut sql_state: String, output_ptr: *mut WChar) {
-    unsafe {
-        sql_state.push('\0');
-        let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>().as_ptr();
-        copy(state_u16, output_ptr, 6);
-    }
+    sql_state.push('\0');
+    cp_str_to_buffer(sql_state, output_ptr, 6);
 }
 
 /// set_error_message writes [`error_message`] to the [`output_ptr`]. [`buffer_len`] is the
@@ -66,13 +63,19 @@ pub fn set_error_message(
         let num_chars = min(error_message.len() + 1, buffer_len);
         let msg = &mut error_message[..num_chars - 1].to_string();
         msg.push('\0');
-        let msg_u16 = msg.encode_utf16().collect::<Vec<u16>>().as_ptr();
         *text_length_ptr = num_chars as SmallInt;
-        copy(msg_u16, output_ptr, num_chars);
+        cp_str_to_buffer(msg.clone(), output_ptr, buffer_len);
         if num_chars < error_message.len() {
             SqlReturn::SUCCESS_WITH_INFO
         } else {
             SqlReturn::SUCCESS
         }
+    }
+}
+
+fn cp_str_to_buffer(s: String, buffer: *mut WChar, buffer_len: usize) {
+    let str_u16 = s.encode_utf16().collect::<Vec<u16>>().as_ptr();
+    unsafe {
+        copy(str_u16, buffer, buffer_len);
     }
 }
