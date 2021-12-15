@@ -881,12 +881,26 @@ pub extern "C" fn SQLGetDiagFieldW(
 
 #[no_mangle]
 pub extern "C" fn SQLGetDiagRec(
+    _handle_type: HandleType,
+    _handle: Handle,
+    _rec_number: SmallInt,
+    _state: *mut Char,
+    _native_error_ptr: *mut Integer,
+    _message_text: *mut Char,
+    _buffer_length: SmallInt,
+    _text_length_ptr: *mut SmallInt,
+) -> SqlReturn {
+    unimplemented!()
+}
+
+#[no_mangle]
+pub extern "C" fn SQLGetDiagRecW(
     handle_type: HandleType,
     handle: Handle,
     rec_number: SmallInt,
-    state: *mut Char,
+    state: *mut WChar,
     native_error_ptr: *mut Integer,
-    message_text: *mut Char,
+    message_text: *mut WChar,
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
@@ -898,7 +912,6 @@ pub extern "C" fn SQLGetDiagRec(
     let rec_number = (rec_number - 1) as usize;
     match handle_type {
         HandleType::Env => match unsafe { (*mongo_handle).as_env() } {
-            // TODO: redundant unsafe?
             Some(env) => {
                 let env_contents = (*env).read().unwrap();
                 match env_contents.errors.get(rec_number) {
@@ -976,20 +989,6 @@ pub extern "C" fn SQLGetDiagRec(
             None => SqlReturn::INVALID_HANDLE,
         },
     }
-}
-
-#[no_mangle]
-pub extern "C" fn SQLGetDiagRecW(
-    _handle_type: HandleType,
-    _handle: Handle,
-    _record_rumber: SmallInt,
-    _state: *mut WChar,
-    _native_error_ptr: *mut Integer,
-    _message_text: *mut WChar,
-    _buffer_length: SmallInt,
-    _text_length_ptr: *mut SmallInt,
-) -> SqlReturn {
-    unimplemented!()
 }
 
 #[no_mangle]
