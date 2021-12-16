@@ -73,6 +73,7 @@ pub fn set_error_message(
     }
 }
 
+/// cp_str_to_buffer copies [`s`] into [`buffer`].
 fn cp_str_to_buffer(s: String, buffer: *mut WChar, buffer_len: usize) {
     let str_u16 = s.encode_utf16().collect::<Vec<u16>>().as_ptr();
     unsafe {

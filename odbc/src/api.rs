@@ -915,16 +915,13 @@ pub extern "C" fn SQLGetDiagRecW(
             Some(env) => {
                 let env_contents = (*env).read().unwrap();
                 match env_contents.errors.get(rec_number) {
-                    Some(odbc_error) => {
-                        unsafe { *native_error_ptr = odbc_error.native_err_code };
-                        set_sql_state(odbc_error.sql_state.clone(), state);
-                        set_error_message(
-                            odbc_error.error_message.clone(),
-                            message_text,
-                            buffer_length as usize,
-                            text_length_ptr,
-                        )
-                    }
+                    Some(odbc_err) => odbc_err.get_diag_rec(
+                        state,
+                        message_text,
+                        buffer_length,
+                        text_length_ptr,
+                        native_error_ptr,
+                    ),
                     None => SqlReturn::NO_DATA,
                 }
             }
@@ -934,16 +931,13 @@ pub extern "C" fn SQLGetDiagRecW(
             Some(dbc) => {
                 let dbc_contents = (*dbc).read().unwrap();
                 match dbc_contents.errors.get(rec_number) {
-                    Some(odbc_error) => {
-                        unsafe { *native_error_ptr = odbc_error.native_err_code };
-                        set_sql_state(odbc_error.sql_state.clone(), state);
-                        set_error_message(
-                            odbc_error.error_message.clone(),
-                            message_text,
-                            buffer_length as usize,
-                            text_length_ptr,
-                        )
-                    }
+                    Some(odbc_err) => odbc_err.get_diag_rec(
+                        state,
+                        message_text,
+                        buffer_length,
+                        text_length_ptr,
+                        native_error_ptr,
+                    ),
                     None => SqlReturn::NO_DATA,
                 }
             }
@@ -952,18 +946,14 @@ pub extern "C" fn SQLGetDiagRecW(
         HandleType::Stmt => match unsafe { (*mongo_handle).as_statement() } {
             Some(stmt) => {
                 let stmt_contents = (*stmt).read().unwrap();
-
                 match stmt_contents.errors.get(rec_number) {
-                    Some(odbc_error) => {
-                        unsafe { *native_error_ptr = odbc_error.native_err_code };
-                        set_sql_state(odbc_error.sql_state.clone(), state);
-                        set_error_message(
-                            odbc_error.error_message.clone(),
-                            message_text,
-                            buffer_length as usize,
-                            text_length_ptr,
-                        )
-                    }
+                    Some(odbc_err) => odbc_err.get_diag_rec(
+                        state,
+                        message_text,
+                        buffer_length,
+                        text_length_ptr,
+                        native_error_ptr,
+                    ),
                     None => SqlReturn::NO_DATA,
                 }
             }
@@ -973,16 +963,13 @@ pub extern "C" fn SQLGetDiagRecW(
             Some(desc) => {
                 let desc_contents = (*desc).read().unwrap();
                 match desc_contents.errors.get(rec_number) {
-                    Some(odbc_error) => {
-                        unsafe { *native_error_ptr = odbc_error.native_err_code };
-                        set_sql_state(odbc_error.sql_state.clone(), state);
-                        set_error_message(
-                            odbc_error.error_message.clone(),
-                            message_text,
-                            buffer_length as usize,
-                            text_length_ptr,
-                        )
-                    }
+                    Some(odbc_err) => odbc_err.get_diag_rec(
+                        state,
+                        message_text,
+                        buffer_length,
+                        text_length_ptr,
+                        native_error_ptr,
+                    ),
                     None => SqlReturn::NO_DATA,
                 }
             }

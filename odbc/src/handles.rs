@@ -1,6 +1,7 @@
+use crate::util::*;
 use std::{collections::HashSet, sync::RwLock};
 
-use odbc_sys::Integer;
+use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
 
 #[derive(Debug)]
 pub enum MongoHandle {
@@ -46,6 +47,26 @@ pub struct ODBCError {
     pub sql_state: String,
     pub error_message: String,
     pub native_err_code: i32,
+}
+
+impl ODBCError {
+    pub fn get_diag_rec(
+        &self,
+        state: *mut WChar,
+        message_text: *mut WChar,
+        buffer_length: SmallInt,
+        text_length_ptr: *mut SmallInt,
+        native_error_ptr: *mut Integer,
+    ) -> SqlReturn {
+        unsafe { *native_error_ptr = self.native_err_code };
+        set_sql_state(self.sql_state.clone(), state);
+        set_error_message(
+            self.error_message.clone(),
+            message_text,
+            buffer_length as usize,
+            text_length_ptr,
+        )
+    }
 }
 
 #[derive(Debug)]
