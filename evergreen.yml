@@ -252,7 +252,7 @@ functions:
       type: test
       params:
         shell: bash
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
           ~/.cargo/bin/rustup default nightly
