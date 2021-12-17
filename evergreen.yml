@@ -227,7 +227,7 @@ functions:
       type: system
       params:
         shell: bash
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
           mkdir -p "$UNIX_ODBC_PATH"
