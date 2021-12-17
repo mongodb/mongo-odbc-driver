@@ -254,6 +254,7 @@ task_groups:
     setup_group:
       - func: "fetch source"
       - func: "generate expansions"
+      - func: "install rust toolchain"
       - func: "download artifact"
       - func: "add Windows DLL path"
       - func: "setup driver on Windows"
