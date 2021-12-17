@@ -41,6 +41,7 @@ functions:
             set -o errexit
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
+            export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
             export ADL_TEST_USER=test_user
             export ADL_TEST_PWD=test_pwd
@@ -221,6 +222,46 @@ functions:
           ${prepare_shell}
           cargo test
 
+  "install unix odbc":
+    - command: shell.exec
+      type: system
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          ${prepare_shell}
+          mkdir -p "$UNIX_ODBC_PATH"
+          cd unixodbc
+          echo "downloading unixODBC"
+          unixODBC_dir=unixODBC-2.3.6
+          curl -O "http://noexpire.s3.amazonaws.com/sqlproxy/binary/linux/unixODBC-2.3.6.tar.gz" \
+            --silent \
+            --fail \
+            --max-time 60 \
+            --retry 5 \
+            --retry-delay 0
+          tar xf "$unixODBC_dir.tar.gz"
+          cd "$unixODBC_dir"
+          ./configure --prefix="$UNIX_ODBC_PATH" --with-pic
+          make
+          make install
+
+
+  "run asan tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongo-odbc-driver
+        script: |
+          ${prepare_shell}
+          ~/.cargo/bin/rustup default nightly
+          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          export LD_LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
+          export LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
+          export RUSTFLAGS="-Z sanitizer=address"
+          cargo test --target x86_64-unknown-linux-gnu
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -246,6 +287,11 @@ tasks:
       - name: compile
     commands:
       - func: "run rust tests"
+
+  - name: asan
+    commands:
+      - func: "install unix odbc"
+      - func: "run asan tests"
 
 task_groups:
 
@@ -285,3 +331,10 @@ buildvariants:
     tasks:
       - name: compile
       - name: test-rust-group
+
+
+  - name: ubuntu2004
+    display_name: Ubuntu 20.04
+    run_on: [ ubuntu2004-large ]
+    tasks:
+      - name: asan
