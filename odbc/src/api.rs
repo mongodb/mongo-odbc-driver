@@ -114,7 +114,7 @@ pub extern "C" fn SQLBindParameter(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLBindParameter is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -156,7 +156,7 @@ pub extern "C" fn SQLBulkOperations(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLBulkOperations is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -276,7 +276,7 @@ pub extern "C" fn SQLCompleteAsync(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLCompleteAsync is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -318,7 +318,7 @@ pub extern "C" fn SQLCopyDesc(source_desc_handle: HDesc, target_desc_handle: HDe
         UNIMPLEMENTED_FUNC.to_string(),
         error_message.clone(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => {
             match add_diag_info(
@@ -327,7 +327,7 @@ pub extern "C" fn SQLCopyDesc(source_desc_handle: HDesc, target_desc_handle: HDe
                 UNIMPLEMENTED_FUNC.to_string(),
                 error_message,
                 0,
-                "core".to_string(),
+                "api".to_string(),
             ) {
                 Ok(_) => SqlReturn::ERROR,
                 Err(_) => SqlReturn::INVALID_HANDLE,
@@ -354,7 +354,7 @@ pub extern "C" fn SQLDataSources(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLDataSources is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -378,7 +378,7 @@ pub extern "C" fn SQLDataSourcesW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLDataSourcesW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -430,7 +430,7 @@ pub extern "C" fn SQLDescribeParam(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLDescribeParam is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -459,7 +459,7 @@ pub extern "C" fn SQLDriverConnect(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLDriverConnect is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -483,7 +483,7 @@ pub extern "C" fn SQLDriverConnectW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLDriverConnectW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -507,7 +507,7 @@ pub extern "C" fn SQLDrivers(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLDrivers is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -531,7 +531,7 @@ pub extern "C" fn SQLDriversW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLDriversW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -550,7 +550,7 @@ pub extern "C" fn SQLEndTran(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLEndTran is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -569,7 +569,7 @@ pub extern "C" fn SQLExecDirect(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLExecDirect is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -588,7 +588,7 @@ pub extern "C" fn SQLExecDirectW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLExecDirectW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -603,7 +603,7 @@ pub extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLExecute is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -791,7 +791,7 @@ pub extern "C" fn SQLGetDescField(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLGetDescField is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -813,7 +813,7 @@ pub extern "C" fn SQLGetDescFieldW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLGetDescFieldW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -840,7 +840,7 @@ pub extern "C" fn SQLGetDescRec(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLGetDescRec is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -867,7 +867,7 @@ pub extern "C" fn SQLGetDescRecW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLGetDescRecW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1110,7 +1110,7 @@ pub extern "C" fn SQLNumParams(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLNumParams is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1128,7 +1128,7 @@ pub extern "C" fn SQLNumResultCols(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLNumResultCols is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1143,7 +1143,7 @@ pub extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> Sq
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLParamData is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1162,7 +1162,7 @@ pub extern "C" fn SQLPrepare(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLPrepare is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1181,7 +1181,7 @@ pub extern "C" fn SQLPrepareW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLPrepareW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1232,7 +1232,7 @@ pub extern "C" fn SQLProcedureColumns(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLProcedureColumns is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1257,7 +1257,7 @@ pub extern "C" fn SQLProcedureColumnsW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLProcedureColumnsW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1280,7 +1280,7 @@ pub extern "C" fn SQLProcedures(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLProcedures is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1303,7 +1303,7 @@ pub extern "C" fn SQLProceduresW(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLProceduresW is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1322,7 +1322,7 @@ pub extern "C" fn SQLPutData(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLPutData is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1386,7 +1386,7 @@ pub extern "C" fn SQLSetDescField(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLSetDescField is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1412,7 +1412,7 @@ pub extern "C" fn SQLSetDescRec(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLSetDescRec is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,
@@ -1432,7 +1432,7 @@ pub extern "C" fn SQLSetPos(
         UNIMPLEMENTED_FUNC.to_string(),
         "SQLSetPos is unimplemented".to_string(),
         0,
-        "core".to_string(),
+        "api".to_string(),
     ) {
         Ok(_) => SqlReturn::ERROR,
         Err(_) => SqlReturn::INVALID_HANDLE,

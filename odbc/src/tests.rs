@@ -312,7 +312,7 @@ fn validate_diag_rec(handle_type: HandleType, handle: Handle) {
             UNIMPLEMENTED_FUNC.to_string(),
             ERROR_MESSAGE.to_string(),
             3,
-            "core".to_string()
+            "api".to_string()
         )
     );
     assert_eq!(
@@ -381,7 +381,7 @@ fn diag_rec_error_message() {
             UNIMPLEMENTED_FUNC.to_string(),
             ERROR_MESSAGE.to_string(),
             3,
-            "core".to_string()
+            "api".to_string()
         )
     );
     // Buffer is too small to hold the entire error message (0 < length < 22)
@@ -412,7 +412,7 @@ fn diag_rec_error_message() {
             UNIMPLEMENTED_FUNC.to_string(),
             "✐ 𑜲 is a funky string".to_string(),
             3,
-            "core".to_string()
+            "api".to_string()
         )
     );
     assert_eq!(
@@ -453,7 +453,7 @@ fn invalid_get_diag_rec() {
             UNIMPLEMENTED_FUNC.to_string(),
             ERROR_MESSAGE.to_string(),
             3,
-            "core".to_string()
+            "api".to_string()
         )
     );
     // Buffer length < 0
