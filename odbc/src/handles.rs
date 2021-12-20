@@ -47,6 +47,7 @@ pub struct ODBCError {
     pub sql_state: String,
     pub error_message: String,
     pub native_err_code: i32,
+    pub component: String,
 }
 
 impl ODBCError {

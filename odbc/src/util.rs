@@ -2,19 +2,21 @@ use crate::handles::{MongoHandle, ODBCError};
 use odbc_sys::{Handle, HandleType, SmallInt, SqlReturn, WChar};
 use std::{cmp::min, ptr::copy};
 
-/// set_handle_state writes the error code [`sql_state`] to the field `sql_state`
-/// in [`handle`].
-pub fn set_handle_state(
+/// add_diag_info creates a new `ODBCError` object and appends it to the
+/// given handle's `errors` field.
+pub fn add_diag_info(
     handle_type: HandleType,
     handle: Handle,
     sql_state: String,
     error_message: String,
     native_err_code: i32,
+    component: String,
 ) -> Result<(), ()> {
     let error = ODBCError {
         sql_state,
         error_message,
         native_err_code,
+        component,
     };
     match handle_type {
         HandleType::Env => {
@@ -44,7 +46,10 @@ pub fn set_handle_state(
 /// set_sql_state writes the given sql state to the [`output_ptr`].
 pub fn set_sql_state(mut sql_state: String, output_ptr: *mut WChar) {
     sql_state.push('\0');
-    cp_str_to_buffer(sql_state, output_ptr, 6);
+    let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>().as_ptr();
+    unsafe {
+        copy(state_u16, output_ptr, 6);
+    }
 }
 
 /// set_error_message writes [`error_message`] to the [`output_ptr`]. [`buffer_len`] is the
@@ -60,23 +65,16 @@ pub fn set_error_message(
     unsafe {
         // Check if the entire error message plus a null terminator can fit in the buffer;
         // we should truncate the error message if it's too long.
-        let num_chars = min(error_message.len() + 1, buffer_len);
-        let msg = &mut error_message[..num_chars - 1].to_string();
-        msg.push('\0');
+        let msg_u16 = error_message.encode_utf16().collect::<Vec<u16>>();
+        let num_chars = min(msg_u16.len() + 1, buffer_len);
+        let mut msg = msg_u16[..num_chars - 1].to_vec();
+        msg.push('\u{0}' as u16);
+        copy(msg.as_ptr(), output_ptr, num_chars);
         *text_length_ptr = num_chars as SmallInt;
-        cp_str_to_buffer(msg.clone(), output_ptr, buffer_len);
-        if num_chars < error_message.len() {
+        if num_chars < msg_u16.len() {
             SqlReturn::SUCCESS_WITH_INFO
         } else {
             SqlReturn::SUCCESS
         }
-    }
-}
-
-/// cp_str_to_buffer copies [`s`] into [`buffer`].
-fn cp_str_to_buffer(s: String, buffer: *mut WChar, buffer_len: usize) {
-    let str_u16 = s.encode_utf16().collect::<Vec<u16>>().as_ptr();
-    unsafe {
-        copy(str_u16, buffer, buffer_len);
     }
 }
