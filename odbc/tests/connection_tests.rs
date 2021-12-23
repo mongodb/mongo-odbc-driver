@@ -1,5 +1,7 @@
 mod common;
+
 use common::connect;
+use odbc_api::Error;
 
 #[test]
 fn test_invalid_connection() {
@@ -16,9 +18,5 @@ fn test_invalid_connection() {
 // Uncomment to verify that driver is installed.
 // It will still fail until SQLDriverConnect is implemented, but it will show that the DM found the driver.
 fn test_default_connection() {
-    let result = connect(None);
-    assert!(
-        result.is_ok(),
-        "The connection should have succeeded, but it failed."
-    );
+    connect(None).unwrap();
 }
