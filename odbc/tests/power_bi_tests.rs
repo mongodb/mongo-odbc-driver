@@ -1,26 +1,9 @@
-extern crate odbc_sys;
 use odbc_sys::*;
-use std::ops::FnOnce;
 use std::ptr::null_mut;
-
-/// Validate that the outcome is SQL_SUCCESS if validate_success is true.
-/// Otherwise, only stops with an exception on SQL_ERROR.
-fn execute_odbc_call<F>(validate_success: bool, func: F)
-where
-    F: FnOnce() -> SqlReturn,
-{
-    let outcome: SqlReturn = func();
-    if validate_success {
-        assert_eq!(SqlReturn::SUCCESS, outcome)
-    } else if SqlReturn::ERROR == outcome {
-        panic!("ODBC call failed. Outcome is SQL_ERROR")
-        // TODO : Get the error information for the diagnostic records
-    }
-}
 
 /// Setup flow.
 /// This will allocate a new environment handle and set ODBC_VERSION and CONNECTION_POOLING environment attributes.
-fn setup(validate_success: bool) -> odbc_sys::HEnv {
+fn setup() -> odbc_sys::HEnv {
     /*
         Setup flow :
             SQLAllocHandle(SQL_HANDLE_ENV)
@@ -31,27 +14,30 @@ fn setup(validate_success: bool) -> odbc_sys::HEnv {
     let mut env: Handle = null_mut();
 
     unsafe {
-        execute_odbc_call(validate_success, || {
+        assert_eq!(
+            SqlReturn::SUCCESS,
             SQLAllocHandle(HandleType::Env, null_mut(), &mut env as *mut Handle)
-        });
+        );
 
-        execute_odbc_call(validate_success, || {
+        assert_eq!(
+            SqlReturn::SUCCESS,
             SQLSetEnvAttr(
                 env as HEnv,
                 EnvironmentAttribute::OdbcVersion,
                 AttrOdbcVersion::Odbc3.into(),
                 0,
             )
-        });
+        );
 
-        execute_odbc_call(validate_success, || {
+        assert_eq!(
+            SqlReturn::SUCCESS,
             SQLSetEnvAttr(
                 env as HEnv,
                 EnvironmentAttribute::ConnectionPooling,
                 AttrConnectionPooling::OnePerHenv.into(),
                 0,
             )
-        });
+        );
     }
 
     env as HEnv
@@ -60,21 +46,22 @@ fn setup(validate_success: bool) -> odbc_sys::HEnv {
 /// Test PowerBI Setup flow
 #[test]
 fn test_setup() {
-    setup(true);
+    setup();
 }
 
 /// Test PowerBi environment clean-up
 #[test]
 fn test_env_cleanup() {
     // We need a handle to be able to test that freeing the handle work
-    let env_handle: HEnv = setup(false);
+    let env_handle: HEnv = setup();
 
     unsafe {
         // Verify that freeing the handle is working as expected
-        execute_odbc_call(true, || {
+        assert_eq!(
+            SqlReturn::SUCCESS,
             SQLFreeHandle(HandleType::Env, env_handle as Handle)
-        });
+        );
     }
 }
 
-// TODO : Add the other flows
+// TODO : Add the other flows [SQL-639], [SQL-640], [SQL-641] [SQL-642]
