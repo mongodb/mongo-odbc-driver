@@ -1,7 +1,6 @@
 mod common;
 
 use common::connect;
-use odbc_api::Error;
 
 #[test]
 fn test_invalid_connection() {
