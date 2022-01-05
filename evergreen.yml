@@ -186,7 +186,6 @@ functions:
             reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
           fi
           echo "-------------------------"
-        continue_on_err: true
 
   "clean-up driver on Windows":
     - command: shell.exec
@@ -210,7 +209,6 @@ functions:
             reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
           fi
           echo "-------------------------"
-        continue_on_err: true
 
   "run rust tests":
     - command: shell.exec
