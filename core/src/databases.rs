@@ -1,7 +1,7 @@
 use crate::conn::MongoConnection;
-use crate::error::Error;
 use crate::stmt::MongoStatement;
 use bson::Bson;
+use std::error::Error;
 
 #[derive(Debug)]
 pub struct MongoDatabases {
@@ -24,12 +24,12 @@ impl MongoDatabases {
 impl MongoStatement for MongoDatabases {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self) -> Result<bool, Error> {
+    fn next(&mut self) -> Result<bool, Box<dyn Error>> {
         unimplemented!()
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, Error> {
+    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, Box<dyn Error>> {
         unimplemented!()
     }
 }

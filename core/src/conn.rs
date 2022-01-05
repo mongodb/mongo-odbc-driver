@@ -1,10 +1,18 @@
-use crate::error::Error;
 use mongodb::sync::Client;
+use std::error::Error;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct MongoConnection {
     // The mongo DB client
     pub client: Client,
+    // The current database set for this client.
+    // All new queries will be done on this DB.
+    pub current_db: Box<str>,
+    // Number of seconds to wait for any request on the connection to complete before returning to
+    // the application.
+    // Comes from SQL_ATTR_CONNECTION_TIMEOUT if set. Used for database metadata.
+    pub operation_timeout: Option<Duration>,
 }
 
 impl MongoConnection {
@@ -17,7 +25,7 @@ impl MongoConnection {
         uri: &str,
         current_db: Option<&str>,
         login_time_out: Option<i32>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, Box<dyn Error>> {
         unimplemented!()
     }
 }
