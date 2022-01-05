@@ -1,5 +1,5 @@
+use crate::conn::MongoConnection;
 use bson::Bson;
-use conn::MongoConnection;
 use std::error::Error;
 use stmt::MongoStatement;
 
@@ -18,9 +18,13 @@ pub struct MongoFields {
 // The Resultset columns are hard-coded and follow the ODBC resultset for SQLColumns :
 // TABLE_CAT, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE.
 impl MongoFields {
-    // Create a new MongoStatement to list tables with the given database (catalogs) and collection (tables) names filters.
+    // Create a new MongoStatement to list tables with the given database (catalogs) and collection
+    // (tables) names filters.
+    // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
+    // timeout, the query must finish before the timeout or an error is returned.
     pub fn list_columns(
         client: &MongoConnection,
+        query_timeout: Option<i32>,
         db_name_filter: &str,
         collection_name_filter: &str,
     ) -> Self {

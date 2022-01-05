@@ -1,5 +1,6 @@
+use crate::conn::MongoConnection;
+use crate::stmt::MongoStatement;
 use bson::{Array, Bson, Document};
-use conn::MongoConnection;
 use mongodb::sync::Cursor;
 use std::error::Error;
 use stmt::MongoStatement;
@@ -14,9 +15,13 @@ pub struct MongoCollections {
 
 // Statement related to a SQLColumns call.
 impl MongoCollections {
-    // Create a new MongoStatement to list tables with the given database (catalogs) and collection (tables) names filters.
+    // Create a new MongoStatement to list tables with the given database (catalogs) and collection
+    // (tables) names filters.
+    // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
+    // timeout, the query must finish before the timeout or an error is returned.
     pub fn list_tables(
         client: &MongoConnection,
+        query_timeout: Option<i32>,
         db_name_filter: &str,
         collection_name_filter: &str,
     ) -> Self {

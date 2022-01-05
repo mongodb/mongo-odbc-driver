@@ -1,3 +1,4 @@
+use crate::conn::MongoConnection;
 use bson::{Array, Bson, Document};
 use conn::MongoConnection;
 use mongodb::sync::Cursor;

@@ -1,7 +1,7 @@
+use crate::conn::MongoConnection;
+use crate::stmt::MongoStatement;
 use bson::Bson;
-use conn::MongoConnection;
 use std::error::Error;
-use stmt::MongoStatement;
 
 #[derive(Debug)]
 pub struct MongoDatabases {
@@ -16,7 +16,9 @@ impl MongoDatabases {
     // Create a new MongoStatement to list all the valid catalogs.
     // Correspond to SQLTables(SQL_ALL_CATALOGS, "","").
     // All columns except the TABLE_CAT column contain NULLs.
-    pub fn list_all_catalogs(client: &MongoConnection) -> Self {
+    // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
+    // timeout, the query must finish before the timeout or an error is returned.
+    pub fn list_all_catalogs(client: &MongoConnection, query_timeout: Option<i32>) -> Self {
         unimplemented!()
     }
 }
