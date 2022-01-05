@@ -1,10 +1,9 @@
 mod collections;
 pub mod conn;
 mod databases;
-pub mod error;
 mod fields;
 mod query;
-pub mod stmt;
+pub mod resultset;
 
 #[cfg(test)]
 mod tests {

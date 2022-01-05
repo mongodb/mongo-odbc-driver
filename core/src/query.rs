@@ -1,5 +1,5 @@
 use crate::conn::MongoConnection;
-use crate::stmt::MongoStatement;
+use crate::resultset::MongoResultSet;
 use bson::{Array, Bson, Document};
 use mongodb::sync::Cursor;
 use std::error::Error;
@@ -17,7 +17,13 @@ pub struct MongoQuery {
 impl MongoQuery {
     // Create a new MongoStatement with StmtKind::Query on the connection currentDB.
     // Executes a $sql aggregation with the given query and initialize the Resultset cursor.
-    pub fn execute(client: &MongoConnection, query: &str) -> Result<Self, Box<dyn Error>> {
+    // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
+    // timeout, the query must finish before the timeout or an error is returned
+    pub fn execute(
+        client: &MongoConnection,
+        query_timeout: Option<i32>,
+        query: &str,
+    ) -> Result<Self, Box<dyn Error>> {
         unimplemented!()
     }
 
@@ -32,7 +38,7 @@ impl MongoQuery {
     }
 }
 
-impl MongoStatement for MongoQuery {
+impl MongoResultSet for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool, Box<dyn Error>> {
@@ -71,26 +77,3 @@ pub struct MongoColMetadata {
     pub is_unsigned: bool,
     pub is_updatable: bool,
 }
-// MongoDB doesn't have auto-incremented fields
-// pub is_auto_unique: bool,
-
-// This is always true
-// pub is_case_sensitive: bool,
-
-// Always null
-//pub schema_name: str
-
-// Only used for IRD
-//pub unnamed: u16,
-
-// Conversion from BSON to SQL will be done by the ODBC component
-//pub type: SQLDataType,
-//pub concise_type: SqlDataType,
-
-// Can be inferred from the SQL type
-//pub num_prec_radix: u16,
-//pub literal_prefix: str,
-//pub literal_suffix: str,
-
-// N/A
-//pub local_type_name: str,

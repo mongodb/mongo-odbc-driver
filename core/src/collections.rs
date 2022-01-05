@@ -1,5 +1,5 @@
 use crate::conn::MongoConnection;
-use crate::stmt::MongoStatement;
+use crate::resultset::MongoResultSet;
 use bson::{Array, Bson, Document};
 use mongodb::sync::Cursor;
 use std::error::Error;
@@ -24,7 +24,7 @@ impl MongoCollections {
     }
 }
 
-impl MongoStatement for MongoCollections {
+impl MongoResultSet for MongoCollections {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool, Box<dyn Error>> {
