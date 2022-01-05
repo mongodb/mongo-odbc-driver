@@ -12,8 +12,7 @@ pub struct MongoConnection {
     // Number of seconds to wait for any request on the connection to complete before returning to
     // the application.
     // Comes from SQL_ATTR_CONNECTION_TIMEOUT if set. Used any time there is a time out in a
-    // situation not associated with query execution or login. For example, for database metadata
-    // operations.
+    // situation not associated with query execution or login.
     pub operation_timeout: Option<Duration>,
 }
 

@@ -1,7 +1,7 @@
-use crate::conn::MongoConnection;
-use crate::resultset::MongoResultSet;
 use bson::Bson;
+use conn::MongoConnection;
 use std::error::Error;
+use stmt::MongoStatement;
 
 #[derive(Debug)]
 pub struct MongoFields {
@@ -28,7 +28,7 @@ impl MongoFields {
     }
 }
 
-impl MongoResultSet for MongoFields {
+impl MongoStatement for MongoFields {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool, Box<dyn Error>> {

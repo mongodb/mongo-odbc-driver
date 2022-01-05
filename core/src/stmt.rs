@@ -1,7 +1,7 @@
 use bson::Bson;
 use std::error::Error;
 
-pub trait MongoResultSet {
+pub trait MongoStatement {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool, Box<dyn Error>>;
