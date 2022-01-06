@@ -113,14 +113,18 @@ pub extern "C" fn SQLBindParameter(
 
 #[no_mangle]
 pub extern "C" fn SQLBrowseConnect(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _in_connection_string: *const Char,
     _string_length: SmallInt,
     _out_connection_string: *mut Char,
     _buffer_length: SmallInt,
     _out_buffer_length: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(connection_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLBrowseConnect".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -164,7 +168,7 @@ pub extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
 
 #[no_mangle]
 pub extern "C" fn SQLColAttribute(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _column_number: USmallInt,
     _field_identifier: Desc,
     _character_attribute_ptr: Pointer,
@@ -172,7 +176,11 @@ pub extern "C" fn SQLColAttribute(
     _string_length_ptr: *mut SmallInt,
     _numeric_attribute_ptr: *mut Len,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLColAttribute".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -190,7 +198,7 @@ pub extern "C" fn SQLColAttributeW(
 
 #[no_mangle]
 pub extern "C" fn SQLColumnPrivileges(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const Char,
     _catalog_name_length: SmallInt,
     _schema_name: *const Char,
@@ -200,7 +208,11 @@ pub extern "C" fn SQLColumnPrivileges(
     _column_name: *const Char,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLColumnPrivileges".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -220,7 +232,7 @@ pub extern "C" fn SQLColumnPrivilegesW(
 
 #[no_mangle]
 pub extern "C" fn SQLColumns(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const Char,
     _catalog_name_length: SmallInt,
     _schema_name: *const Char,
@@ -230,7 +242,11 @@ pub extern "C" fn SQLColumns(
     _column_name: *const Char,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLColumn".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -263,7 +279,7 @@ pub extern "C" fn SQLCompleteAsync(
 
 #[no_mangle]
 pub extern "C" fn SQLConnect(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _server_name: *const Char,
     _name_length_1: SmallInt,
     _user_name: *const Char,
@@ -271,12 +287,16 @@ pub extern "C" fn SQLConnect(
     _authentication: *const Char,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(connection_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLConnect".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLConnectW(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _server_name: *const WChar,
     _name_length_1: SmallInt,
     _user_name: *const WChar,
@@ -284,7 +304,11 @@ pub extern "C" fn SQLConnectW(
     _authentication: *const WChar,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(connection_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLConnectW".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -336,7 +360,7 @@ pub extern "C" fn SQLDataSourcesW(
 
 #[no_mangle]
 pub extern "C" fn SQLDescribeCol(
-    _hstmt: HStmt,
+    hstmt: HStmt,
     _col_number: USmallInt,
     _col_name: *mut Char,
     _buffer_length: SmallInt,
@@ -346,7 +370,11 @@ pub extern "C" fn SQLDescribeCol(
     _decimal_digits: *mut SmallInt,
     _nullable: *mut Nullability,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(hstmt as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLDescribeCol".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -405,7 +433,7 @@ pub extern "C" fn SQLDriverConnect(
 
 #[no_mangle]
 pub extern "C" fn SQLDriverConnectW(
-    connection_handle: HDbc,
+    _connection_handle: HDbc,
     _window_handle: HWnd,
     _in_connection_string: *const WChar,
     _string_length_1: SmallInt,
@@ -414,11 +442,7 @@ pub extern "C" fn SQLDriverConnectW(
     _string_length_2: *mut SmallInt,
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
-    unsafe {
-        (*(connection_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLDriverConnectW".to_string()));
-        SqlReturn::ERROR
-    }
+    unimplemented!()
 }
 
 #[no_mangle]
@@ -466,7 +490,9 @@ pub extern "C" fn SQLEndTran(
     unsafe {
         (*(handle as *mut MongoHandle))
             .add_diag_info(ODBCError::Unimplemented("SQLEndTran".to_string()));
-        SqlReturn::ERROR
+        // Drivers that do not support transactions are effectively always in
+        // autocommit mode, and therefore always return SQL_SUCCESS.
+        SqlReturn::SUCCESS
     }
 }
 
@@ -521,7 +547,7 @@ pub extern "C" fn SQLFetchScroll(
 
 #[no_mangle]
 pub extern "C" fn SQLForeignKeys(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _pk_catalog_name: *const Char,
     _pk_catalog_name_length: SmallInt,
     _pk_schema_name: *const Char,
@@ -535,7 +561,11 @@ pub extern "C" fn SQLForeignKeys(
     _fk_table_name: *const Char,
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLForeignKeys".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -619,13 +649,17 @@ pub extern "C" fn SQLFreeStmt(_statement_handle: HStmt, _option: SmallInt) -> Sq
 
 #[no_mangle]
 pub extern "C" fn SQLGetConnectAttr(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _attribute: ConnectionAttribute,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(connection_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetConnectAttr".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -641,12 +675,16 @@ pub extern "C" fn SQLGetConnectAttrW(
 
 #[no_mangle]
 pub extern "C" fn SQLGetCursorName(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _cursor_name: *mut Char,
     _buffer_length: SmallInt,
     _name_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetCursorName".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -748,14 +786,18 @@ pub extern "C" fn SQLGetDescRecW(
 #[no_mangle]
 pub extern "C" fn SQLGetDiagField(
     _handle_type: HandleType,
-    _handle: Handle,
+    handle: Handle,
     _record_rumber: SmallInt,
     _diag_identifier: SmallInt,
     _diag_info_ptr: Pointer,
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetDiagField".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -774,7 +816,7 @@ pub extern "C" fn SQLGetDiagFieldW(
 #[no_mangle]
 pub extern "C" fn SQLGetDiagRec(
     _handle_type: HandleType,
-    _handle: Handle,
+    handle: Handle,
     _rec_number: SmallInt,
     _state: *mut Char,
     _native_error_ptr: *mut Integer,
@@ -782,7 +824,11 @@ pub extern "C" fn SQLGetDiagRec(
     _buffer_length: SmallInt,
     _text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetDiagRec".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -872,13 +918,17 @@ pub extern "C" fn SQLGetDiagRecW(
 
 #[no_mangle]
 pub extern "C" fn SQLGetEnvAttr(
-    _environment_handle: HEnv,
+    environment_handle: HEnv,
     _attribute: EnvironmentAttribute,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(environment_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetEnvAttr".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -894,13 +944,17 @@ pub extern "C" fn SQLGetEnvAttrW(
 
 #[no_mangle]
 pub extern "C" fn SQLGetInfo(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _info_type: InfoType,
     _info_value_ptr: Pointer,
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(connection_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetInfo".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -916,13 +970,17 @@ pub extern "C" fn SQLGetInfoW(
 
 #[no_mangle]
 pub extern "C" fn SQLGetStmtAttr(
-    _handle: HStmt,
+    handle: HStmt,
     _attribute: StatementAttribute,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetStmtAttr".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -948,14 +1006,18 @@ pub extern "C" fn SQLMoreResults(_handle: HStmt) -> SqlReturn {
 
 #[no_mangle]
 pub extern "C" fn SQLNativeSql(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _in_statement_text: *const Char,
     _in_statement_len: Integer,
     _out_statement_text: *mut Char,
     _buffer_len: Integer,
     _out_statement_len: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(connection_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLNativeSql".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -1031,7 +1093,7 @@ pub extern "C" fn SQLPrepareW(
 
 #[no_mangle]
 pub extern "C" fn SQLPrimaryKeys(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const Char,
     _catalog_name_length: SmallInt,
     _schema_name: *const Char,
@@ -1039,7 +1101,11 @@ pub extern "C" fn SQLPrimaryKeys(
     _table_name: *const Char,
     _table_name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLPrimaryKeys".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -1147,12 +1213,16 @@ pub extern "C" fn SQLRowCount(_statement_handle: HStmt, _row_count_ptr: *mut Len
 
 #[no_mangle]
 pub extern "C" fn SQLSetConnectAttr(
-    _hdbc: HDbc,
+    hdbc: HDbc,
     _attr: ConnectionAttribute,
     _value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(hdbc as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLSetConnectAttr".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -1167,11 +1237,15 @@ pub extern "C" fn SQLSetConnectAttrW(
 
 #[no_mangle]
 pub extern "C" fn SQLSetCursorName(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _cursor_name: *const Char,
     _name_length: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLSetCursorName".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -1234,12 +1308,16 @@ pub extern "C" fn SQLSetPos(
 
 #[no_mangle]
 pub extern "C" fn SQLSetEnvAttr(
-    _environment_handle: HEnv,
+    environment_handle: HEnv,
     _attribute: EnvironmentAttribute,
     _value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(environment_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLSetEnvAttr".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -1254,12 +1332,16 @@ pub extern "C" fn SQLSetEnvAttrW(
 
 #[no_mangle]
 pub extern "C" fn SQLSetStmtAttr(
-    _hstmt: HStmt,
+    hstmt: HStmt,
     _attr: StatementAttribute,
     _value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(hstmt as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLSetStmtAttr".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -1274,7 +1356,7 @@ pub extern "C" fn SQLSetStmtAttrW(
 
 #[no_mangle]
 pub extern "C" fn SQLSpecialColumns(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _identifier_type: SmallInt,
     _catalog_name: *const Char,
     _catalog_name_length: SmallInt,
@@ -1285,7 +1367,11 @@ pub extern "C" fn SQLSpecialColumns(
     _scope: SmallInt,
     _nullable: Nullability,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLSpecialColumns".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -1321,7 +1407,7 @@ pub extern "C" fn SQLStatistics(
 
 #[no_mangle]
 pub extern "C" fn SQLTablePrivileges(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const Char,
     _name_length_1: SmallInt,
     _schema_name: *const Char,
@@ -1329,7 +1415,11 @@ pub extern "C" fn SQLTablePrivileges(
     _table_name: *const Char,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLTablePrivileges".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
@@ -1347,7 +1437,7 @@ pub extern "C" fn SQLTablesPrivilegesW(
 
 #[no_mangle]
 pub extern "C" fn SQLTables(
-    _statement_handle: HStmt,
+    statement_handle: HStmt,
     _catalog_name: *const Char,
     _name_length_1: SmallInt,
     _schema_name: *const Char,
@@ -1357,7 +1447,11 @@ pub extern "C" fn SQLTables(
     _table_type: *const Char,
     _name_length_4: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsafe {
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLTables".to_string()));
+        SqlReturn::ERROR
+    }
 }
 
 #[no_mangle]
