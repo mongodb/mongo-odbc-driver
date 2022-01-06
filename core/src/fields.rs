@@ -1,7 +1,7 @@
 use crate::conn::MongoConnection;
+use crate::stmt::MongoStatement;
 use bson::Bson;
 use std::error::Error;
-use stmt::MongoStatement;
 
 #[derive(Debug)]
 pub struct MongoFields {

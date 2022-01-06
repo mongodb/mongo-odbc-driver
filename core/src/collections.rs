@@ -3,7 +3,6 @@ use crate::stmt::MongoStatement;
 use bson::{Array, Bson, Document};
 use mongodb::sync::Cursor;
 use std::error::Error;
-use stmt::MongoStatement;
 
 #[derive(Debug)]
 pub struct MongoCollections {
