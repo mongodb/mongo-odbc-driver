@@ -1,8 +1,10 @@
 use crate::util::*;
-use std::{collections::HashSet, sync::RwLock};
-
 use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
-use std::fmt::{Display, Formatter};
+use std::{
+    collections::HashSet,
+    fmt::{Display, Formatter},
+    sync::RwLock,
+};
 
 pub const VENDOR_IDENTIFIER: &str = "MongoDB";
 
@@ -45,7 +47,7 @@ impl MongoHandle {
     }
 
     /// add_diag_info appends a new ODBCError object to the `errors` field.
-    pub fn add_diag_info(&mut self, error: ODBCError) -> Result<(), ()> {
+    pub fn add_diag_info(&mut self, error: ODBCError) {
         match self {
             MongoHandle::Env(e) => {
                 let mut env_contents = (*e).write().unwrap();
@@ -63,8 +65,7 @@ impl MongoHandle {
                 let mut desc_contents = (*d).write().unwrap();
                 desc_contents.errors.push(error);
             }
-        };
-        Ok(())
+        }
     }
 }
 
@@ -102,6 +103,7 @@ impl ODBCError {
             ODBCError::Unimplemented(_) => 0,
         }
     }
+
     pub fn get_diag_rec(
         &self,
         state: *mut WChar,

@@ -105,12 +105,9 @@ pub extern "C" fn SQLBindParameter(
     _str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
     unsafe {
-        match (*(hstmt as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLBindParameter".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(hstmt as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLBindParameter".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -144,12 +141,9 @@ pub extern "C" fn SQLBulkOperations(
     _operation: BulkOperation,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLBulkOperations".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLBulkOperations".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -261,12 +255,9 @@ pub extern "C" fn SQLCompleteAsync(
     _async_ret_code_ptr: *mut RetCode,
 ) -> SqlReturn {
     unsafe {
-        match (*(handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLCompleteAsync".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLCompleteAsync".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -299,17 +290,11 @@ pub extern "C" fn SQLConnectW(
 #[no_mangle]
 pub extern "C" fn SQLCopyDesc(source_desc_handle: HDesc, target_desc_handle: HDesc) -> SqlReturn {
     unsafe {
-        match (*(source_desc_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLCopyDesc".to_string()))
-        {
-            Ok(_) => match (*(target_desc_handle as *mut MongoHandle))
-                .add_diag_info(ODBCError::Unimplemented("SQLCopyDesc".to_string()))
-            {
-                Ok(_) => SqlReturn::ERROR,
-                Err(_) => SqlReturn::INVALID_HANDLE,
-            },
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(source_desc_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLCopyDesc".to_string()));
+        (*(target_desc_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLCopyDesc".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -325,12 +310,9 @@ pub extern "C" fn SQLDataSources(
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(environment_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLDataSources".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(environment_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLDataSources".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -346,12 +328,9 @@ pub extern "C" fn SQLDataSourcesW(
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(environment_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLDataSourcesW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(environment_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLDataSourcesW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -395,12 +374,9 @@ pub extern "C" fn SQLDescribeParam(
     _nullable_ptr: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLDescribeParam".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLDescribeParam".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -421,12 +397,9 @@ pub extern "C" fn SQLDriverConnect(
     _drive_completion: DriverConnectOption,
 ) -> SqlReturn {
     unsafe {
-        match (*(connection_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLDriverConnect".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(connection_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLDriverConnect".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -442,12 +415,9 @@ pub extern "C" fn SQLDriverConnectW(
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     unsafe {
-        match (*(connection_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLDriverConnectW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(connection_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLDriverConnectW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -463,12 +433,9 @@ pub extern "C" fn SQLDrivers(
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(henv as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(henv as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -484,12 +451,9 @@ pub extern "C" fn SQLDriversW(
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(henv as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLDriversW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(henv as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLDriversW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -500,12 +464,9 @@ pub extern "C" fn SQLEndTran(
     _completion_type: CompletionType,
 ) -> SqlReturn {
     unsafe {
-        match (*(handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLEndTran".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLEndTran".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -516,12 +477,9 @@ pub extern "C" fn SQLExecDirect(
     _text_length: Integer,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLExecDirect".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLExecDirect".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -532,24 +490,18 @@ pub extern "C" fn SQLExecDirectW(
     _text_length: Integer,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLExecDirectW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLExecDirectW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLExecute".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLExecute".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -729,12 +681,9 @@ pub extern "C" fn SQLGetDescField(
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
     unsafe {
-        match (*(descriptor_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLGetDescField".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(descriptor_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetDescField".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -748,12 +697,9 @@ pub extern "C" fn SQLGetDescFieldW(
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
     unsafe {
-        match (*(descriptor_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLGetDescFieldW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(descriptor_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetDescFieldW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -772,12 +718,9 @@ pub extern "C" fn SQLGetDescRec(
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
     unsafe {
-        match (*(descriptor_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLGetDescRec".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(descriptor_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetDescRec".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -796,12 +739,9 @@ pub extern "C" fn SQLGetDescRecW(
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
     unsafe {
-        match (*(descriptor_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLGetDescRecW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(descriptor_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLGetDescRecW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1036,12 +976,9 @@ pub extern "C" fn SQLNumParams(
     _param_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLNumParams".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLNumParams".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1051,24 +988,18 @@ pub extern "C" fn SQLNumResultCols(
     _column_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLNumResultCols".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLNumResultCols".to_string()));
+        SqlReturn::ERROR
     }
 }
 
 #[no_mangle]
 pub extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> SqlReturn {
     unsafe {
-        match (*(hstmt as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLParamData".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(hstmt as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLParamData".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1079,12 +1010,9 @@ pub extern "C" fn SQLPrepare(
     _text_length: Integer,
 ) -> SqlReturn {
     unsafe {
-        match (*(hstmt as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLPrepare".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(hstmt as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLPrepare".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1095,12 +1023,9 @@ pub extern "C" fn SQLPrepareW(
     _text_length: Integer,
 ) -> SqlReturn {
     unsafe {
-        match (*(hstmt as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLPrepareW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(hstmt as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLPrepareW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1143,12 +1068,9 @@ pub extern "C" fn SQLProcedureColumns(
     _column_name_length: SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLProcedureColumns".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLProcedureColumns".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1165,12 +1087,9 @@ pub extern "C" fn SQLProcedureColumnsW(
     _column_name_length: SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLProcedureColumnsW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLProcedureColumnsW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1185,12 +1104,9 @@ pub extern "C" fn SQLProcedures(
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLProcedures".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLProcedures".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1205,12 +1121,9 @@ pub extern "C" fn SQLProceduresW(
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLProceduresW".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLProceduresW".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1221,12 +1134,9 @@ pub extern "C" fn SQLPutData(
     _str_len_or_ind_ptr: Len,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLPutData".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLPutData".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1282,12 +1192,9 @@ pub extern "C" fn SQLSetDescField(
     _buffer_length: Integer,
 ) -> SqlReturn {
     unsafe {
-        match (*(desc_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLSetDescField".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(desc_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLSetDescField".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1305,12 +1212,9 @@ pub extern "C" fn SQLSetDescRec(
     _indicator_ptr: *const Len,
 ) -> SqlReturn {
     unsafe {
-        match (*(desc_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLSetDescRec".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(desc_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLSetDescRec".to_string()));
+        SqlReturn::ERROR
     }
 }
 
@@ -1322,12 +1226,9 @@ pub extern "C" fn SQLSetPos(
     _lock_type: USmallInt,
 ) -> SqlReturn {
     unsafe {
-        match (*(statement_handle as *mut MongoHandle))
-            .add_diag_info(ODBCError::Unimplemented("SQLSetPos".to_string()))
-        {
-            Ok(_) => SqlReturn::ERROR,
-            Err(_) => SqlReturn::INVALID_HANDLE,
-        }
+        (*(statement_handle as *mut MongoHandle))
+            .add_diag_info(ODBCError::Unimplemented("SQLSetPos".to_string()));
+        SqlReturn::ERROR
     }
 }
 

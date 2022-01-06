@@ -301,9 +301,7 @@ fn validate_diag_rec(handle_type: HandleType, handle: *mut MongoHandle) {
     let text_length_ptr = &mut 0;
     let native_err_ptr = &mut 0;
 
-    assert_eq!(Ok(()), unsafe {
-        (*handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string()))
-    });
+    unsafe { (*handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string())) }
     assert_eq!(
         SqlReturn::SUCCESS,
         SQLGetDiagRecW(
@@ -361,9 +359,7 @@ fn diag_rec_error_message() {
     let text_length_ptr = &mut 0;
     let native_err_ptr = &mut 0;
 
-    assert_eq!(Ok(()), unsafe {
-        (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string()))
-    });
+    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string())) }
     // Buffer is too small to hold the entire error message and the null terminator (0 < length < 25)
     assert_eq!(
         SqlReturn::SUCCESS_WITH_INFO,
@@ -384,9 +380,7 @@ fn diag_rec_error_message() {
     );
     // Error message string where some characters are composed of more than one byte.
     // 1 < RecNumber =< number of diagnostic records.
-    assert_eq!(Ok(()), unsafe {
-        (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDriv✐𑜲".to_string()))
-    });
+    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDriv✐𑜲".to_string())) }
     assert_eq!(
         SqlReturn::SUCCESS,
         SQLGetDiagRecW(
@@ -417,9 +411,7 @@ fn invalid_get_diag_rec() {
     let text_length_ptr = &mut 0;
     let native_err_ptr = &mut 0;
 
-    assert_eq!(Ok(()), unsafe {
-        (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string()))
-    });
+    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string())) }
     // Buffer length < 0
     assert_eq!(
         SqlReturn::ERROR,
