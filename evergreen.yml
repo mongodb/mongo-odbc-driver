@@ -52,19 +52,6 @@ functions:
       params:
         file: mongosql-odbc-driver/expansions.yml
 
-  "add Windows DLL path":
-    - command: shell.exec
-      params:
-        shell: cmd
-        working_dir: mongosql-odbc-driver
-        script: |
-          set WIN_DRIVER_DLL_PATH=%cd%
-          set WIN_DRIVER_DLL_PATH=%WIN_DRIVER_DLL_PATH:\=\\\\\\\\%
-          echo   export DRIVER_DLL_PATH="%WIN_DRIVER_DLL_PATH%" >> expansions.yml
-    - command: expansions.update
-      params:
-        file: mongosql-odbc-driver/expansions.yml
-
   "install rust toolchain":
     - command: shell.exec
       params:
@@ -170,20 +157,20 @@ functions:
         working_dir: mongosql-odbc-driver
         script:  |
           ${prepare_shell}
-          sed -i 's@%DRIVER_DLL_PATH%@'"$DRIVER_DLL_PATH"'@' setup/setupDSN.reg
+          sed -i 's@%DRIVER_DLL_PATH%@'"$(echo "$(cygpath -w $(pwd))" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           if [ 'windows-32' == '${build_variant}' ]; then
             sed -i 's@SOFTWARE@'"SOFTWARE\\\\Wow6432Node"'@' setup/setupDSN.reg
           fi
           reg import "setup\setupDSN.reg"
           echo "----- Registry entries after setup ----"
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
           if [ 'windows-32' == '${build_variant}' ]; then
             reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
           else
             reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
           fi
           echo "-------------------------"
 
@@ -199,14 +186,14 @@ functions:
           fi
           reg import "setup\cleanup.reg"
           echo "----- Registry entries after clean-up----"
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
           if [ 'windows-32' == '${build_variant}' ]; then
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
           else
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
           fi
           echo "-------------------------"
 
@@ -300,7 +287,6 @@ task_groups:
       - func: "fetch source"
       - func: "generate expansions"
       - func: "download artifact"
-      - func: "add Windows DLL path"
       - func: "setup driver on Windows"
     teardown_group:
       - func: "clean-up driver on Windows"
