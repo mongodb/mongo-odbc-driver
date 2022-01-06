@@ -1,17 +1,14 @@
 use crate::{
-    api::UNIMPLEMENTED_FUNC,
     handles::{
-        Connection, ConnectionState, Descriptor, Env, EnvState, MongoHandle, Statement,
+        Connection, ConnectionState, Descriptor, Env, EnvState, MongoHandle, ODBCError, Statement,
         StatementState,
     },
-    util::add_diag_info,
     SQLAllocHandle, SQLFreeHandle, SQLGetDiagRecW,
 };
 use odbc_sys::{Handle, HandleType, SqlReturn};
 use std::sync::RwLock;
 
-const ERROR_MESSAGE: &str = "func is unimplemented";
-const ERROR_MESSAGE_NULL: &str = "func is unimplemented\0";
+const ERROR_MESSAGE_NULL: &str = "[MongoDB][API]SQLDrivers\0";
 const UNIMPLEMENTED_FUNC_NULL: &str = "HYC00\0";
 
 #[test]
@@ -297,29 +294,21 @@ fn invalid_alloc() {
     }
 }
 
-fn validate_diag_rec(handle_type: HandleType, handle: Handle) {
+fn validate_diag_rec(handle_type: HandleType, handle: *mut MongoHandle) {
     // Initialize buffers
-    let sql_state = [0u16; 6].as_mut_ptr();
-    let message_text = [0u16; 22].as_mut_ptr();
-    let text_length_ptr = Box::into_raw(Box::new(0));
-    let native_err_ptr = Box::into_raw(Box::new(0));
+    let sql_state = &mut [0u16; 6] as *mut _;
+    let message_text = &mut [0u16; 25] as *mut _;
+    let text_length_ptr = &mut 0;
+    let native_err_ptr = &mut 0;
 
-    assert_eq!(
-        Ok(()),
-        add_diag_info(
-            handle_type,
-            handle,
-            UNIMPLEMENTED_FUNC.to_string(),
-            ERROR_MESSAGE.to_string(),
-            3,
-            "api".to_string()
-        )
-    );
+    assert_eq!(Ok(()), unsafe {
+        (*handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string()))
+    });
     assert_eq!(
         SqlReturn::SUCCESS,
         SQLGetDiagRecW(
             handle_type,
-            handle,
+            handle as *mut _,
             1,
             sql_state,
             native_err_ptr,
@@ -332,34 +321,33 @@ fn validate_diag_rec(handle_type: HandleType, handle: Handle) {
         String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
     });
     assert_eq!(ERROR_MESSAGE_NULL, unsafe {
-        String::from_utf16(&*(message_text as *const [u16; 22])).unwrap()
+        String::from_utf16(&*(message_text as *const [u16; 25])).unwrap()
     });
-    unsafe {
-        assert_eq!(22, *text_length_ptr);
-        assert_eq!(3, *native_err_ptr);
-    }
+    // Exclude the number of characters required for the null terminator
+    assert_eq!(24, *text_length_ptr);
+    assert_eq!(0, *native_err_ptr);
 }
 
 #[test]
 fn simple_get_diag_rec() {
     let env_handle: *mut _ =
         &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
-    validate_diag_rec(HandleType::Env, env_handle as *mut _);
+    validate_diag_rec(HandleType::Env, env_handle);
 
     let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(Connection::with_state(
         env_handle,
         ConnectionState::Allocated,
     )));
-    validate_diag_rec(HandleType::Dbc, conn_handle as *mut _);
+    validate_diag_rec(HandleType::Dbc, conn_handle);
 
     let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
         std::ptr::null_mut(),
         StatementState::Allocated,
     )));
-    validate_diag_rec(HandleType::Stmt, stmt_handle as *mut _);
+    validate_diag_rec(HandleType::Stmt, stmt_handle);
 
     let desc_handle: *mut _ = &mut MongoHandle::Descriptor(RwLock::new(Descriptor::default()));
-    validate_diag_rec(HandleType::Desc, desc_handle as *mut _);
+    validate_diag_rec(HandleType::Desc, desc_handle);
 }
 
 #[test]
@@ -368,23 +356,15 @@ fn diag_rec_error_message() {
         &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
     // Initialize buffers
-    let sql_state = [0u16; 6].as_mut_ptr();
-    let message_text = [0u16; 23].as_mut_ptr();
-    let text_length_ptr = Box::into_raw(Box::new(0));
-    let native_err_ptr = Box::into_raw(Box::new(0));
+    let sql_state = &mut [0u16; 6] as *mut _;
+    let message_text = &mut [0u16; 25] as *mut _;
+    let text_length_ptr = &mut 0;
+    let native_err_ptr = &mut 0;
 
-    assert_eq!(
-        Ok(()),
-        add_diag_info(
-            HandleType::Env,
-            env_handle as *mut _,
-            UNIMPLEMENTED_FUNC.to_string(),
-            ERROR_MESSAGE.to_string(),
-            3,
-            "api".to_string()
-        )
-    );
-    // Buffer is too small to hold the entire error message (0 < length < 22)
+    assert_eq!(Ok(()), unsafe {
+        (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string()))
+    });
+    // Buffer is too small to hold the entire error message and the null terminator (0 < length < 25)
     assert_eq!(
         SqlReturn::SUCCESS_WITH_INFO,
         SQLGetDiagRecW(
@@ -399,22 +379,14 @@ fn diag_rec_error_message() {
         )
     );
     assert_eq!(
-        "func is unimpl\0",
+        "[MongoDB][API]\0",
         String::from_utf16(unsafe { &*(message_text as *const [u16; 15]) }).unwrap()
     );
     // Error message string where some characters are composed of more than one byte.
     // 1 < RecNumber =< number of diagnostic records.
-    assert_eq!(
-        Ok(()),
-        add_diag_info(
-            HandleType::Env,
-            env_handle as *mut _,
-            UNIMPLEMENTED_FUNC.to_string(),
-            "✐ 𑜲 is a funky string".to_string(),
-            3,
-            "api".to_string()
-        )
-    );
+    assert_eq!(Ok(()), unsafe {
+        (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDriv✐𑜲".to_string()))
+    });
     assert_eq!(
         SqlReturn::SUCCESS,
         SQLGetDiagRecW(
@@ -424,13 +396,13 @@ fn diag_rec_error_message() {
             sql_state,
             native_err_ptr,
             message_text,
-            23,
+            25,
             text_length_ptr
         )
     );
     assert_eq!(
-        "✐ 𑜲 is a funky string\0",
-        String::from_utf16(unsafe { &*(message_text as *const [u16; 23]) }).unwrap()
+        "[MongoDB][API]SQLDriv✐𑜲\0",
+        String::from_utf16(unsafe { &*(message_text as *const [u16; 25]) }).unwrap()
     );
 }
 
@@ -440,22 +412,14 @@ fn invalid_get_diag_rec() {
         &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
     // Initialize buffers
-    let sql_state = Box::new([0u16; 6]).as_mut_ptr();
-    let message_text = Box::new([0u16; 22]).as_mut_ptr();
-    let text_length_ptr = Box::into_raw(Box::new(0));
-    let native_err_ptr = Box::into_raw(Box::new(0));
+    let sql_state = &mut [0u16; 6] as *mut _;
+    let message_text = &mut [0u16; 25] as *mut _;
+    let text_length_ptr = &mut 0;
+    let native_err_ptr = &mut 0;
 
-    assert_eq!(
-        Ok(()),
-        add_diag_info(
-            HandleType::Env,
-            env_handle as *mut _,
-            UNIMPLEMENTED_FUNC.to_string(),
-            ERROR_MESSAGE.to_string(),
-            3,
-            "api".to_string()
-        )
-    );
+    assert_eq!(Ok(()), unsafe {
+        (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string()))
+    });
     // Buffer length < 0
     assert_eq!(
         SqlReturn::ERROR,
@@ -480,7 +444,7 @@ fn invalid_get_diag_rec() {
             sql_state,
             native_err_ptr,
             message_text,
-            22,
+            25,
             text_length_ptr
         )
     );
@@ -494,7 +458,7 @@ fn invalid_get_diag_rec() {
             sql_state,
             native_err_ptr,
             message_text,
-            22,
+            5,
             text_length_ptr
         )
     );

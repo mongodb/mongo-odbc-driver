@@ -2,6 +2,9 @@ use crate::util::*;
 use std::{collections::HashSet, sync::RwLock};
 
 use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
+use std::fmt::{Display, Formatter};
+
+pub const VENDOR_IDENTIFIER: &str = "MongoDB";
 
 #[derive(Debug)]
 pub enum MongoHandle {
@@ -40,17 +43,65 @@ impl MongoHandle {
             _ => None,
         }
     }
+
+    /// add_diag_info appends a new ODBCError object to the `errors` field.
+    pub fn add_diag_info(&mut self, error: ODBCError) -> Result<(), ()> {
+        match self {
+            MongoHandle::Env(e) => {
+                let mut env_contents = (*e).write().unwrap();
+                env_contents.errors.push(error);
+            }
+            MongoHandle::Connection(c) => {
+                let mut dbc_contents = (*c).write().unwrap();
+                dbc_contents.errors.push(error);
+            }
+            MongoHandle::Statement(s) => {
+                let mut stmt_contents = (*s).write().unwrap();
+                stmt_contents.errors.push(error);
+            }
+            MongoHandle::Descriptor(d) => {
+                let mut desc_contents = (*d).write().unwrap();
+                desc_contents.errors.push(error);
+            }
+        };
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
-pub struct ODBCError {
-    pub sql_state: String,
-    pub error_message: String,
-    pub native_err_code: i32,
-    pub component: String,
+pub enum SQLState {
+    HYC00,
+}
+
+impl Display for SQLState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SQLState::HYC00 => write!(f, "HYC00"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ODBCError {
+    Unimplemented(String),
 }
 
 impl ODBCError {
+    pub fn get_sql_state(&self) -> SQLState {
+        match self {
+            ODBCError::Unimplemented(_) => SQLState::HYC00,
+        }
+    }
+    pub fn get_error_message(&self) -> String {
+        match self {
+            ODBCError::Unimplemented(fn_name) => format!("[{}][API]{}", VENDOR_IDENTIFIER, fn_name),
+        }
+    }
+    pub fn get_native_err_code(&self) -> i32 {
+        match self {
+            ODBCError::Unimplemented(_) => 0,
+        }
+    }
     pub fn get_diag_rec(
         &self,
         state: *mut WChar,
@@ -59,10 +110,10 @@ impl ODBCError {
         text_length_ptr: *mut SmallInt,
         native_error_ptr: *mut Integer,
     ) -> SqlReturn {
-        unsafe { *native_error_ptr = self.native_err_code };
-        set_sql_state(self.sql_state.clone(), state);
+        unsafe { *native_error_ptr = self.get_native_err_code() };
+        set_sql_state(self.get_sql_state(), state);
         set_error_message(
-            self.error_message.clone(),
+            self.get_error_message(),
             message_text,
             buffer_length as usize,
             text_length_ptr,
@@ -191,14 +242,7 @@ impl Statement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Descriptor {
     pub errors: Vec<ODBCError>,
-}
-
-impl Descriptor {
-    #[allow(dead_code)]
-    pub fn default() -> Descriptor {
-        Self { errors: vec![] }
-    }
 }
