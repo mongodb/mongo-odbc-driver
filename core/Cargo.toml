@@ -2,7 +2,7 @@
 name = "mongo-odbc-core"
 version = "0.1.0"
 authors = ["Ryan Chipman <ryan@ryanchipman.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 bson = "1.0.0"
