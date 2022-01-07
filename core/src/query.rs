@@ -57,23 +57,23 @@ impl MongoStatement for MongoQuery {
 // SQLColAtrribute or SQLDescibeCol and when converting the data to the targeted C type.
 #[derive(Debug)]
 pub struct MongoColMetadata {
-    pub base_col_name: Box<str>,
-    pub base_table_name: Box<str>,
-    pub catalog_name: Box<str>,
+    pub base_col_name: String,
+    pub base_table_name: String,
+    pub catalog_name: String,
     pub col_count: u16,
     pub display_size: u64,
     pub fixed_prec_scale: bool,
-    pub label: Box<str>,
+    pub label: String,
     pub length: u128,
-    pub col_name: Box<str>,
+    pub col_name: String,
     pub is_nullable: bool,
     pub octet_length: u128,
     pub precision: u16,
     pub scale: u16,
     pub is_searchable: bool,
-    pub table_name: Box<str>,
+    pub table_name: String,
     // BSON type name
-    pub type_name: Box<str>,
+    pub type_name: String,
     pub is_unsigned: bool,
     pub is_updatable: bool,
 }
