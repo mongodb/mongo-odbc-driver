@@ -2,7 +2,7 @@ use crate::conn::MongoConnection;
 use crate::stmt::MongoStatement;
 use bson::{Array, Bson, Document};
 use mongodb::sync::Cursor;
-use std::error::Error;
+use crate::err::RustCoreError;
 
 #[derive(Debug)]
 pub struct MongoQuery {
@@ -23,7 +23,7 @@ impl MongoQuery {
         client: &MongoConnection,
         query_timeout: Option<i32>,
         query: &str,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, RustCoreError> {
         unimplemented!()
     }
 
@@ -33,7 +33,7 @@ impl MongoQuery {
     }
 
     // Get the metadata for the column with the given index.
-    fn get_col_metadata(&self, col_index: u16) -> Result<MongoColMetadata, Box<dyn Error>> {
+    fn get_col_metadata(&self, col_index: u16) -> Result<MongoColMetadata, RustCoreError> {
         unimplemented!()
     }
 }
@@ -41,13 +41,13 @@ impl MongoQuery {
 impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self) -> Result<bool, Box<dyn Error>> {
+    fn next(&mut self) -> Result<bool, RustCoreError> {
         unimplemented!()
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, Box<dyn Error>> {
+    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, RustCoreError> {
         unimplemented!()
     }
 }

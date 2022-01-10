@@ -4,6 +4,7 @@ pub mod databases;
 pub mod fields;
 pub mod query;
 pub mod stmt;
+pub mod err;
 
 #[cfg(test)]
 mod tests {

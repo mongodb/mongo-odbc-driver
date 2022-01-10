@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 bson = "1.0.0"
+thiserror = "1"
 
 [dependencies.mongodb]
 version = "1.0.0"

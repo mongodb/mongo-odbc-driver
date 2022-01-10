@@ -1,6 +1,6 @@
 use mongodb::sync::Client;
-use std::error::Error;
 use std::time::Duration;
+use crate::err::RustCoreError;
 
 #[derive(Debug)]
 pub struct MongoConnection {
@@ -29,7 +29,7 @@ impl MongoConnection {
         current_db: Option<&str>,
         operation_timeout: Option<i32>,
         login_timeout: Option<i32>,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, RustCoreError> {
         unimplemented!()
     }
 }
