@@ -13,7 +13,7 @@ pub struct MongoDatabases {
 
 // Statement for SQLTables(SQL_ALL_CATALOGS, "","").
 impl MongoDatabases {
-    // Create a new MongoStatement to list all the valid catalogs.
+    // Create a new MongoStatement to list all the valid databases.
     // Correspond to SQLTables(SQL_ALL_CATALOGS, "","").
     // All columns except the TABLE_CAT column contain NULLs.
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
