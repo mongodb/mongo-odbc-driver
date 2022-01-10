@@ -250,21 +250,20 @@ functions:
 pre:
   - func: "fetch source"
   - func: "generate expansions"
+  - func: "install rust toolchain"
 
 tasks:
+
   - name: clippy
     commands:
-      - func: "install rust toolchain"
       - func: "check clippy"
 
   - name: rustfmt
     commands:
-      - func: "install rust toolchain"
       - func: "check rustfmt"
 
   - name: compile
     commands:
-      - func: "install rust toolchain"
       - func: "compile release"
       - func: "upload artifact"
 
@@ -272,7 +271,6 @@ tasks:
     depends_on:
       - name: compile
     commands:
-      - func: "install rust toolchain"
       - func: "run rust tests"
 
   - name: asan
@@ -281,11 +279,13 @@ tasks:
       - func: "run asan tests"
 
 task_groups:
+
   - name: test-rust-group
     setup_group_can_fail_task: false
     setup_group:
       - func: "fetch source"
       - func: "generate expansions"
+      - func: "install rust toolchain"
       - func: "download artifact"
       - func: "setup driver on Windows"
     teardown_group:
