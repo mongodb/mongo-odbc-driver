@@ -8,12 +8,19 @@ edition = "2021"
 odbc-sys = "0.18.4"
 bson = "2.0.1"
 chrono = "0.4.11"
-lazy_static = "1.0.0"
+lazy_static = "1.4.0"
 
 [dependencies.mongodb]
 version = "2.0.2"
 default-features = false
 features = ["sync"]
+
+
+[dev-dependencies]
+odbc-api = "0.30.1"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.8.21"
+thiserror = "1"
 
 [lib]
 name = "mongoodbc"
