@@ -1,5 +1,5 @@
 use crate::{
-    errors::ODBCError,
+    api::util::unsupported_function,
     handles::{
         Connection, ConnectionState, Env, EnvState, MongoHandle, MongoHandleRef, Statement,
         StatementState,
@@ -108,10 +108,7 @@ pub extern "C" fn SQLBindParameter(
     _buffer_length: Len,
     _str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(hstmt);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLBindParameter"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(hstmt), "SQLBindParameter")
 }
 
 #[no_mangle]
@@ -123,10 +120,7 @@ pub extern "C" fn SQLBrowseConnect(
     _buffer_length: SmallInt,
     _out_buffer_length: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(connection_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLBrowseConnect"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLBrowseConnect")
 }
 
 #[no_mangle]
@@ -146,10 +140,7 @@ pub extern "C" fn SQLBulkOperations(
     statement_handle: HStmt,
     _operation: BulkOperation,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLBulkOperations"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLBulkOperations")
 }
 
 #[no_mangle]
@@ -177,10 +168,7 @@ pub extern "C" fn SQLColAttribute(
     _string_length_ptr: *mut SmallInt,
     _numeric_attribute_ptr: *mut Len,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLColAttribute"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLColAttribute")
 }
 
 #[no_mangle]
@@ -208,10 +196,10 @@ pub extern "C" fn SQLColumnPrivileges(
     _column_name: *const Char,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLColumnPrivileges"));
-    SqlReturn::ERROR
+    unsupported_function(
+        MongoHandleRef::from(statement_handle),
+        "SQLColumnPrivileges",
+    )
 }
 
 #[no_mangle]
@@ -241,10 +229,7 @@ pub extern "C" fn SQLColumns(
     _column_name: *const Char,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLColumn"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLColumns")
 }
 
 #[no_mangle]
@@ -268,10 +253,7 @@ pub extern "C" fn SQLCompleteAsync(
     handle: Handle,
     _async_ret_code_ptr: *mut RetCode,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLCompleteAsync"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(handle), "SQLCompleteAsync")
 }
 
 #[no_mangle]
@@ -284,10 +266,7 @@ pub extern "C" fn SQLConnect(
     _authentication: *const Char,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(connection_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLConnect"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLConnect")
 }
 
 #[no_mangle]
@@ -300,10 +279,7 @@ pub extern "C" fn SQLConnectW(
     _authentication: *const WChar,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(connection_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLConnectW"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLConnectW")
 }
 
 #[no_mangle]
@@ -322,10 +298,7 @@ pub extern "C" fn SQLDataSources(
     _buffer_length_2: SmallInt,
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(environment_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLDataSources"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(environment_handle), "SQLDataSources")
 }
 
 #[no_mangle]
@@ -339,10 +312,7 @@ pub extern "C" fn SQLDataSourcesW(
     _buffer_length_2: SmallInt,
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(environment_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLDataSourcesW"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(environment_handle), "SQLDataSourcesW")
 }
 
 #[no_mangle]
@@ -357,10 +327,7 @@ pub extern "C" fn SQLDescribeCol(
     _decimal_digits: *mut SmallInt,
     _nullable: *mut Nullability,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(hstmt);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLDescribeCol"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(hstmt), "SQLDescribeCol")
 }
 
 #[no_mangle]
@@ -387,10 +354,7 @@ pub extern "C" fn SQLDescribeParam(
     _decimal_digits_ptr: *mut SmallInt,
     _nullable_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLDescribeParam"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLDescribeParam")
 }
 
 #[no_mangle]
@@ -409,10 +373,7 @@ pub extern "C" fn SQLDriverConnect(
     _string_length_2: *mut SmallInt,
     _drive_completion: DriverConnectOption,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(connection_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLDriverConnect"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLDriverConnect")
 }
 
 #[no_mangle]
@@ -440,10 +401,7 @@ pub extern "C" fn SQLDrivers(
     _drvr_attr_max: SmallInt,
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(henv);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLDrivers"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(henv), "SQLDrivers")
 }
 
 #[no_mangle]
@@ -457,10 +415,7 @@ pub extern "C" fn SQLDriversW(
     _drvr_attr_max: SmallInt,
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(henv);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLDriversW"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(henv), "SQLDriversW")
 }
 
 #[no_mangle]
@@ -478,10 +433,7 @@ pub extern "C" fn SQLExecDirect(
     _statement_text: *const Char,
     _text_length: Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLExecDirect"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLExecDirect")
 }
 
 #[no_mangle]
@@ -490,18 +442,12 @@ pub extern "C" fn SQLExecDirectW(
     _statement_text: *const WChar,
     _text_length: Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLExecDirectW"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLExecDirectW")
 }
 
 #[no_mangle]
 pub extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLExecute"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLExecute")
 }
 
 #[no_mangle]
@@ -534,10 +480,7 @@ pub extern "C" fn SQLForeignKeys(
     _fk_table_name: *const Char,
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLForeignKeys"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLForeignKeys")
 }
 
 #[no_mangle]
@@ -627,10 +570,7 @@ pub extern "C" fn SQLGetConnectAttr(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(connection_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLGetConnectAttr"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetConnectAttr")
 }
 
 #[no_mangle]
@@ -651,10 +591,7 @@ pub extern "C" fn SQLGetCursorName(
     _buffer_length: SmallInt,
     _name_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLGetCursorName"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLGetCursorName")
 }
 
 #[no_mangle]
@@ -747,10 +684,7 @@ pub extern "C" fn SQLGetDiagField(
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLGetDiagField"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagField")
 }
 
 #[no_mangle]
@@ -777,10 +711,7 @@ pub extern "C" fn SQLGetDiagRec(
     _buffer_length: SmallInt,
     _text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLGetDiagRec"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagRec")
 }
 
 #[no_mangle]
@@ -864,10 +795,7 @@ pub extern "C" fn SQLGetEnvAttr(
     _buffer_length: Integer,
     _string_length: *mut Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(environment_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLGetEnvAttr"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(environment_handle), "SQLGetEnvAttr")
 }
 
 #[no_mangle]
@@ -889,10 +817,7 @@ pub extern "C" fn SQLGetInfo(
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(connection_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLGetInfo"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetInfo")
 }
 
 #[no_mangle]
@@ -914,10 +839,7 @@ pub extern "C" fn SQLGetStmtAttr(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLGetStmtAttr"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(handle), "SQLGetStmtAttr")
 }
 
 #[no_mangle]
@@ -950,10 +872,7 @@ pub extern "C" fn SQLNativeSql(
     _buffer_len: Integer,
     _out_statement_len: *mut Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(connection_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLNativeSql"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLNativeSql")
 }
 
 #[no_mangle]
@@ -973,10 +892,7 @@ pub extern "C" fn SQLNumParams(
     statement_handle: HStmt,
     _param_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLNumParams"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLNumParams")
 }
 
 #[no_mangle]
@@ -984,18 +900,12 @@ pub extern "C" fn SQLNumResultCols(
     statement_handle: HStmt,
     _column_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLNumResultCols"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLNumResultCols")
 }
 
 #[no_mangle]
 pub extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> SqlReturn {
-    let handle = MongoHandleRef::from(hstmt);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLParamData"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(hstmt), "SQLParamData")
 }
 
 #[no_mangle]
@@ -1004,10 +914,7 @@ pub extern "C" fn SQLPrepare(
     _statement_text: *const Char,
     _text_length: Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(hstmt);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLPrepare"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(hstmt), "SQLPrepare")
 }
 
 #[no_mangle]
@@ -1016,10 +923,7 @@ pub extern "C" fn SQLPrepareW(
     _statement_text: *const WChar,
     _text_length: Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(hstmt);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLPrepareW"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(hstmt), "SQLPrepareW")
 }
 
 #[no_mangle]
@@ -1032,10 +936,7 @@ pub extern "C" fn SQLPrimaryKeys(
     _table_name: *const Char,
     _table_name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLPrimaryKeys"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLPrimaryKeys")
 }
 
 #[no_mangle]
@@ -1063,10 +964,10 @@ pub extern "C" fn SQLProcedureColumns(
     _column_name: *const Char,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLProcedureColumns"));
-    SqlReturn::ERROR
+    unsupported_function(
+        MongoHandleRef::from(statement_handle),
+        "SQLProcedureColumns",
+    )
 }
 
 #[no_mangle]
@@ -1081,10 +982,10 @@ pub extern "C" fn SQLProcedureColumnsW(
     _column_name: *const WChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLProcedureColumnsW"));
-    SqlReturn::ERROR
+    unsupported_function(
+        MongoHandleRef::from(statement_handle),
+        "SQLProcedureColumnsW",
+    )
 }
 
 #[no_mangle]
@@ -1097,10 +998,7 @@ pub extern "C" fn SQLProcedures(
     _proc_name: *const Char,
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLProcedures"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLProcedures")
 }
 
 #[no_mangle]
@@ -1113,10 +1011,7 @@ pub extern "C" fn SQLProceduresW(
     _proc_name: *const WChar,
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLProceduresW"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLProceduresW")
 }
 
 #[no_mangle]
@@ -1125,10 +1020,7 @@ pub extern "C" fn SQLPutData(
     _data_ptr: Pointer,
     _str_len_or_ind_ptr: Len,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLPutData"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLPutData")
 }
 
 #[no_mangle]
@@ -1143,10 +1035,7 @@ pub extern "C" fn SQLSetConnectAttr(
     _value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(hdbc);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLSetConnectAttr"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(hdbc), "SQLSetConnectAttr")
 }
 
 #[no_mangle]
@@ -1165,10 +1054,7 @@ pub extern "C" fn SQLSetCursorName(
     _cursor_name: *const Char,
     _name_length: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLSetCursorName"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLSetCursorName")
 }
 
 #[no_mangle]
@@ -1214,10 +1100,7 @@ pub extern "C" fn SQLSetPos(
     _operation: USmallInt,
     _lock_type: USmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLSetPos"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLSetPos")
 }
 
 #[no_mangle]
@@ -1227,10 +1110,7 @@ pub extern "C" fn SQLSetEnvAttr(
     _value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(environment_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLSetEnvAttr"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(environment_handle), "SQLSetEnvAttr")
 }
 
 #[no_mangle]
@@ -1250,10 +1130,7 @@ pub extern "C" fn SQLSetStmtAttr(
     _value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(hstmt);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLSetStmtAttr"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(hstmt), "SQLSetStmtAttr")
 }
 
 #[no_mangle]
@@ -1279,10 +1156,7 @@ pub extern "C" fn SQLSpecialColumns(
     _scope: SmallInt,
     _nullable: Nullability,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLSpecialColumns"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLSpecialColumns")
 }
 
 #[no_mangle]
@@ -1326,10 +1200,7 @@ pub extern "C" fn SQLTablePrivileges(
     _table_name: *const Char,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLTablePrivileges"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLTablePrivileges")
 }
 
 #[no_mangle]
@@ -1357,10 +1228,7 @@ pub extern "C" fn SQLTables(
     _table_type: *const Char,
     _name_length_4: SmallInt,
 ) -> SqlReturn {
-    let handle = MongoHandleRef::from(statement_handle);
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented("SQLTables"));
-    SqlReturn::ERROR
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLTables")
 }
 
 #[no_mangle]
@@ -1379,7 +1247,7 @@ pub extern "C" fn SQLTablesW(
 }
 
 mod util {
-    use crate::errors::ODBCError;
+    use crate::{errors::ODBCError, handles::MongoHandle};
     use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
     use std::{cmp::min, ptr::copy_nonoverlapping};
 
@@ -1440,5 +1308,11 @@ mod util {
             buffer_length as usize,
             text_length_ptr,
         )
+    }
+
+    pub fn unsupported_function(handle: &mut MongoHandle, name: &'static str) -> SqlReturn {
+        handle.clear_diagnostics();
+        handle.add_diag_info(ODBCError::Unimplemented(name));
+        SqlReturn::ERROR
     }
 }
