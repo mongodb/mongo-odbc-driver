@@ -1,15 +1,13 @@
 use crate::{
-    handles::{
-        Connection, ConnectionState, Descriptor, Env, EnvState, MongoHandle, ODBCError, Statement,
-        StatementState,
-    },
+    errors::ODBCError,
+    handles::{Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState},
     SQLAllocHandle, SQLFreeHandle, SQLGetDiagRecW,
 };
 use odbc_sys::{Handle, HandleType, SqlReturn};
 use std::sync::RwLock;
 
-const ERROR_MESSAGE_NULL: &str = "[MongoDB][API]SQLDrivers\0";
-const UNIMPLEMENTED_FUNC_NULL: &str = "HYC00\0";
+const ERROR_MESSAGE: &str = "[MongoDB][API] The feature SQLDrivers is not implemented\0";
+const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
 
 #[test]
 fn env_alloc_free() {
@@ -297,11 +295,12 @@ fn invalid_alloc() {
 fn validate_diag_rec(handle_type: HandleType, handle: *mut MongoHandle) {
     // Initialize buffers
     let sql_state = &mut [0u16; 6] as *mut _;
-    let message_text = &mut [0u16; 25] as *mut _;
+    // Note: len(ERROR_MESSAGE) = 57
+    let message_text = &mut [0u16; 57] as *mut _;
     let text_length_ptr = &mut 0;
     let native_err_ptr = &mut 0;
 
-    unsafe { (*handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string())) }
+    unsafe { (*handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers")) }
     assert_eq!(
         SqlReturn::SUCCESS,
         SQLGetDiagRecW(
@@ -311,18 +310,18 @@ fn validate_diag_rec(handle_type: HandleType, handle: *mut MongoHandle) {
             sql_state,
             native_err_ptr,
             message_text,
-            50,
+            60, // some number >= 57
             text_length_ptr,
         )
     );
-    assert_eq!(UNIMPLEMENTED_FUNC_NULL, unsafe {
+    assert_eq!(UNIMPLEMENTED_FUNC, unsafe {
         String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
     });
-    assert_eq!(ERROR_MESSAGE_NULL, unsafe {
-        String::from_utf16(&*(message_text as *const [u16; 25])).unwrap()
+    assert_eq!(ERROR_MESSAGE, unsafe {
+        String::from_utf16(&*(message_text as *const [u16; 57])).unwrap()
     });
     // Exclude the number of characters required for the null terminator
-    assert_eq!(24, *text_length_ptr);
+    assert_eq!(56, *text_length_ptr);
     assert_eq!(0, *native_err_ptr);
 }
 
@@ -343,9 +342,6 @@ fn simple_get_diag_rec() {
         StatementState::Allocated,
     )));
     validate_diag_rec(HandleType::Stmt, stmt_handle);
-
-    let desc_handle: *mut _ = &mut MongoHandle::Descriptor(RwLock::new(Descriptor::default()));
-    validate_diag_rec(HandleType::Desc, desc_handle);
 }
 
 #[test]
@@ -355,12 +351,12 @@ fn diag_rec_error_message() {
 
     // Initialize buffers
     let sql_state = &mut [0u16; 6] as *mut _;
-    let message_text = &mut [0u16; 25] as *mut _;
+    let message_text = &mut [0u16; 57] as *mut _;
     let text_length_ptr = &mut 0;
     let native_err_ptr = &mut 0;
 
-    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string())) }
-    // Buffer is too small to hold the entire error message and the null terminator (0 < length < 25)
+    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers")) }
+    // Buffer is too small to hold the entire error message and the null terminator (0 < length < 57)
     assert_eq!(
         SqlReturn::SUCCESS_WITH_INFO,
         SQLGetDiagRecW(
@@ -380,7 +376,7 @@ fn diag_rec_error_message() {
     );
     // Error message string where some characters are composed of more than one byte.
     // 1 < RecNumber =< number of diagnostic records.
-    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDriv✐𑜲".to_string())) }
+    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDriv✐𑜲")) }
     assert_eq!(
         SqlReturn::SUCCESS,
         SQLGetDiagRecW(
@@ -390,13 +386,13 @@ fn diag_rec_error_message() {
             sql_state,
             native_err_ptr,
             message_text,
-            25,
+            57,
             text_length_ptr
         )
     );
     assert_eq!(
-        "[MongoDB][API]SQLDriv✐𑜲\0",
-        String::from_utf16(unsafe { &*(message_text as *const [u16; 25]) }).unwrap()
+        "[MongoDB][API] The feature SQLDriv✐𑜲 is not implemented\0",
+        String::from_utf16(unsafe { &*(message_text as *const [u16; 57]) }).unwrap()
     );
 }
 
@@ -407,11 +403,11 @@ fn invalid_get_diag_rec() {
 
     // Initialize buffers
     let sql_state = &mut [0u16; 6] as *mut _;
-    let message_text = &mut [0u16; 25] as *mut _;
+    let message_text = &mut [0u16; 57] as *mut _;
     let text_length_ptr = &mut 0;
     let native_err_ptr = &mut 0;
 
-    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers".to_string())) }
+    unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers")) }
     // Buffer length < 0
     assert_eq!(
         SqlReturn::ERROR,
@@ -436,7 +432,7 @@ fn invalid_get_diag_rec() {
             sql_state,
             native_err_ptr,
             message_text,
-            25,
+            57,
             text_length_ptr
         )
     );

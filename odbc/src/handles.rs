@@ -1,20 +1,12 @@
-use crate::util::*;
-use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
-use std::{
-    collections::HashSet,
-    fmt::{Display, Formatter},
-    sync::RwLock,
-};
-
-pub const VENDOR_IDENTIFIER: &str = "MongoDB";
+use crate::errors::ODBCError;
+use odbc_sys::{HDbc, HEnv, HStmt, Handle, Integer};
+use std::{borrow::BorrowMut, collections::HashSet, sync::RwLock};
 
 #[derive(Debug)]
 pub enum MongoHandle {
     Env(RwLock<Env>),
     Connection(RwLock<Connection>),
     Statement(RwLock<Statement>),
-    #[allow(dead_code)]
-    Descriptor(RwLock<Descriptor>),
 }
 
 impl MongoHandle {
@@ -39,13 +31,6 @@ impl MongoHandle {
         }
     }
 
-    pub fn as_descriptor(&self) -> Option<&RwLock<Descriptor>> {
-        match self {
-            MongoHandle::Descriptor(d) => Some(d),
-            _ => None,
-        }
-    }
-
     /// add_diag_info appends a new ODBCError object to the `errors` field.
     pub fn add_diag_info(&mut self, error: ODBCError) {
         match self {
@@ -61,65 +46,50 @@ impl MongoHandle {
                 let mut stmt_contents = (*s).write().unwrap();
                 stmt_contents.errors.push(error);
             }
-            MongoHandle::Descriptor(d) => {
-                let mut desc_contents = (*d).write().unwrap();
-                desc_contents.errors.push(error);
+        }
+    }
+
+    pub fn clear_diagnostics(&mut self) {
+        match self {
+            MongoHandle::Env(e) => {
+                let mut env_contents = (*e).write().unwrap();
+                env_contents.errors.clear();
+            }
+            MongoHandle::Connection(c) => {
+                let mut dbc_contents = (*c).write().unwrap();
+                dbc_contents.errors.clear();
+            }
+            MongoHandle::Statement(s) => {
+                let mut stmt_contents = (*s).write().unwrap();
+                stmt_contents.errors.clear();
             }
         }
     }
 }
 
-#[derive(Debug)]
-pub enum SQLState {
-    HYC00,
-}
+pub type MongoHandleRef = &'static mut MongoHandle;
 
-impl Display for SQLState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SQLState::HYC00 => write!(f, "HYC00"),
-        }
+impl From<Handle> for MongoHandleRef {
+    fn from(handle: Handle) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
     }
 }
 
-#[derive(Debug)]
-pub enum ODBCError {
-    Unimplemented(String),
+impl From<HEnv> for MongoHandleRef {
+    fn from(handle: HEnv) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+    }
 }
 
-impl ODBCError {
-    pub fn get_sql_state(&self) -> SQLState {
-        match self {
-            ODBCError::Unimplemented(_) => SQLState::HYC00,
-        }
+impl From<HStmt> for MongoHandleRef {
+    fn from(handle: HStmt) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
     }
-    pub fn get_error_message(&self) -> String {
-        match self {
-            ODBCError::Unimplemented(fn_name) => format!("[{}][API]{}", VENDOR_IDENTIFIER, fn_name),
-        }
-    }
-    pub fn get_native_err_code(&self) -> i32 {
-        match self {
-            ODBCError::Unimplemented(_) => 0,
-        }
-    }
+}
 
-    pub fn get_diag_rec(
-        &self,
-        state: *mut WChar,
-        message_text: *mut WChar,
-        buffer_length: SmallInt,
-        text_length_ptr: *mut SmallInt,
-        native_error_ptr: *mut Integer,
-    ) -> SqlReturn {
-        unsafe { *native_error_ptr = self.get_native_err_code() };
-        set_sql_state(self.get_sql_state(), state);
-        set_error_message(
-            self.get_error_message(),
-            message_text,
-            buffer_length as usize,
-            text_length_ptr,
-        )
+impl From<HDbc> for MongoHandleRef {
+    fn from(handle: HDbc) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
     }
 }
 
@@ -242,9 +212,4 @@ impl Statement {
             errors: vec![],
         }
     }
-}
-
-#[derive(Debug, Default)]
-pub struct Descriptor {
-    pub errors: Vec<ODBCError>,
 }
