@@ -1,6 +1,6 @@
-use std::{collections::HashSet, sync::RwLock};
-
-use odbc_sys::Integer;
+use crate::errors::ODBCError;
+use odbc_sys::{HDbc, HEnv, HStmt, Handle, Integer};
+use std::{borrow::BorrowMut, collections::HashSet, sync::RwLock};
 
 #[derive(Debug)]
 pub enum MongoHandle {
@@ -30,6 +30,67 @@ impl MongoHandle {
             _ => None,
         }
     }
+
+    /// add_diag_info appends a new ODBCError object to the `errors` field.
+    pub fn add_diag_info(&mut self, error: ODBCError) {
+        match self {
+            MongoHandle::Env(e) => {
+                let mut env_contents = (*e).write().unwrap();
+                env_contents.errors.push(error);
+            }
+            MongoHandle::Connection(c) => {
+                let mut dbc_contents = (*c).write().unwrap();
+                dbc_contents.errors.push(error);
+            }
+            MongoHandle::Statement(s) => {
+                let mut stmt_contents = (*s).write().unwrap();
+                stmt_contents.errors.push(error);
+            }
+        }
+    }
+
+    pub fn clear_diagnostics(&mut self) {
+        match self {
+            MongoHandle::Env(e) => {
+                let mut env_contents = (*e).write().unwrap();
+                env_contents.errors.clear();
+            }
+            MongoHandle::Connection(c) => {
+                let mut dbc_contents = (*c).write().unwrap();
+                dbc_contents.errors.clear();
+            }
+            MongoHandle::Statement(s) => {
+                let mut stmt_contents = (*s).write().unwrap();
+                stmt_contents.errors.clear();
+            }
+        }
+    }
+}
+
+pub type MongoHandleRef = &'static mut MongoHandle;
+
+impl From<Handle> for MongoHandleRef {
+    fn from(handle: Handle) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+    }
+}
+
+impl From<HEnv> for MongoHandleRef {
+    fn from(handle: HEnv) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+    }
+}
+
+impl From<HStmt> for MongoHandleRef {
+    fn from(handle: HStmt) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+    }
+}
+
+impl From<HDbc> for MongoHandleRef {
+    fn from(handle: HDbc) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+    }
 }
 
 #[derive(Debug)]
@@ -40,6 +101,7 @@ pub struct Env {
     // state of this Env
     pub state: EnvState,
     pub connections: HashSet<*mut MongoHandle>,
+    pub errors: Vec<ODBCError>,
 }
 
 impl Env {
@@ -48,6 +110,7 @@ impl Env {
             _attributes: Box::new(EnvAttributes::default()),
             state,
             connections: HashSet::new(),
+            errors: vec![],
         }
     }
 }
@@ -83,6 +146,7 @@ pub struct Connection {
     // pub client: Option<MongoClient>,
     // all Statements allocated from this Connection
     pub statements: HashSet<*mut MongoHandle>,
+    pub errors: Vec<ODBCError>,
 }
 
 #[derive(Debug, Default)]
@@ -106,6 +170,7 @@ impl Connection {
             _attributes: Box::new(ConnectionAttributes::default()),
             state,
             statements: HashSet::new(),
+            errors: vec![],
         }
     }
 }
@@ -116,6 +181,7 @@ pub struct Statement {
     pub _attributes: Box<StatementAttributes>,
     pub state: StatementState,
     //pub cursor: Option<Box<Peekable<Cursor>>>,
+    pub errors: Vec<ODBCError>,
 }
 
 #[derive(Debug, Default)]
@@ -143,6 +209,7 @@ impl Statement {
             connection,
             _attributes: Box::new(StatementAttributes::default()),
             state,
+            errors: vec![],
         }
     }
 }
