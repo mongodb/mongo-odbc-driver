@@ -118,20 +118,14 @@ impl Env {
 #[derive(Debug)]
 pub struct EnvAttributes {
     pub odbc_ver: Integer,
-    pub output_nts: SqlBool,
-}
-
-#[derive(Debug, Clone)]
-pub enum SqlBool {
-    SqlTrue,
-    SqlFalse,
+    pub output_nts: Integer,
 }
 
 impl Default for EnvAttributes {
     fn default() -> Self {
         Self {
-            odbc_ver: 3, // TODO: should be 3.8
-            output_nts: SqlBool::SqlTrue,
+            odbc_ver: 380,
+            output_nts: 1,
         }
     }
 }
