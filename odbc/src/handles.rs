@@ -97,7 +97,7 @@ impl From<HDbc> for MongoHandleRef {
 pub struct Env {
     // attributes for this Env. We box the attributes so that the MongoHandle type
     // remains fairly small regardless of underlying handle type.
-    pub _attributes: Box<EnvAttributes>,
+    pub attributes: Box<EnvAttributes>,
     // state of this Env
     pub state: EnvState,
     pub connections: HashSet<*mut MongoHandle>,
@@ -107,7 +107,7 @@ pub struct Env {
 impl Env {
     pub fn with_state(state: EnvState) -> Self {
         Self {
-            _attributes: Box::new(EnvAttributes::default()),
+            attributes: Box::new(EnvAttributes::default()),
             state,
             connections: HashSet::new(),
             errors: vec![],
@@ -118,11 +118,21 @@ impl Env {
 #[derive(Debug)]
 pub struct EnvAttributes {
     pub odbc_ver: Integer,
+    pub output_nts: SqlBool,
+}
+
+#[derive(Debug, Clone)]
+pub enum SqlBool {
+    SqlTrue,
+    SqlFalse,
 }
 
 impl Default for EnvAttributes {
     fn default() -> Self {
-        Self { odbc_ver: 3 }
+        Self {
+            odbc_ver: 3, // TODO: should be 3.8
+            output_nts: SqlBool::SqlTrue,
+        }
     }
 }
 

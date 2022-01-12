@@ -339,7 +339,7 @@ mod get_diag_rec {
         }
 
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
         validate_diag_rec(HandleType::Env, env_handle);
 
         let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
@@ -357,7 +357,7 @@ mod get_diag_rec {
     #[test]
     fn error_message() {
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
         // Initialize buffers
         let sql_state = &mut [0u16; 6] as *mut _;
@@ -410,7 +410,7 @@ mod get_diag_rec {
     #[test]
     fn invalid_ops() {
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
         // Initialize buffers
         let sql_state = &mut [0u16; 6] as *mut _;
@@ -461,5 +461,44 @@ mod get_diag_rec {
                 text_length_ptr
             )
         );
+    }
+}
+mod env_attributes {
+    use odbc_sys::{SqlReturn, AttrOdbcVersion, HEnv, EnvironmentAttribute, Pointer};
+    use crate::{SQLSetEnvAttrW, SQLGetEnvAttrW, handles::{MongoHandle, Env, EnvState}};
+    use std::{
+        ffi::c_void,
+        sync::RwLock
+    };
+
+    #[test]
+    fn get_set_simple() {
+        let env_handle: *mut _ = &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLSetEnvAttrW(
+                env_handle as HEnv,
+                EnvironmentAttribute::OdbcVersion,
+                Pointer::from(AttrOdbcVersion::Odbc3_80),
+                0
+            )
+        );
+        let attr_buffer = Box::into_raw(Box::new(0));
+        // let attr_buffer = &0;
+        let string_length_ptr = &mut 0;
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::OdbcVersion,
+                attr_buffer as *mut c_void,
+                0,
+                string_length_ptr
+            )
+        );
+        assert_eq!(380, unsafe { attr_buffer.read() });
+        assert_eq!(4, *string_length_ptr ); // TODO: maybe don't hardcode
+        // Drop pointer
+        unsafe { Box::from_raw(attr_buffer) };
     }
 }

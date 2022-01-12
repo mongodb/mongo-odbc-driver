@@ -1,17 +1,18 @@
 use crate::{
     api::util::unsupported_function,
     handles::{
-        Connection, ConnectionState, Env, EnvState, MongoHandle, MongoHandleRef, Statement,
+        Connection, ConnectionState, Env, EnvState, MongoHandle, MongoHandleRef, SqlBool, Statement,
         StatementState,
     },
 };
 use odbc_sys::{
-    BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
-    EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
-    InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
-    SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
+    AttrConnectionPooling, AttrCpMatch, BulkOperation, CDataType, Char, CompletionType,
+    ConnectionAttribute, Desc, DriverConnectOption, EnvironmentAttribute, FetchOrientation, HDbc,
+    HDesc, HEnv, HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, Nullability, ParamType,
+    Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
-use std::sync::RwLock;
+use std::borrow::Borrow;
+use std::{intrinsics::copy_nonoverlapping, mem::size_of, sync::RwLock};
 
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
@@ -800,13 +801,51 @@ pub extern "C" fn SQLGetEnvAttr(
 
 #[no_mangle]
 pub extern "C" fn SQLGetEnvAttrW(
-    _environment_handle: HEnv,
-    _attribute: EnvironmentAttribute,
-    _value_ptr: Pointer,
+    environment_handle: HEnv,
+    attribute: EnvironmentAttribute,
+    value_ptr: Pointer,
     _buffer_length: Integer,
-    _string_length: *mut Integer,
+    string_length: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    let env_handle = MongoHandleRef::from(environment_handle);
+    match (*env_handle).as_env() {
+        // TODO: do i need to dereference?
+        None => SqlReturn::INVALID_HANDLE,
+        Some(env) => {
+            let env_contents = env.read().unwrap();
+            match attribute {
+                EnvironmentAttribute::OdbcVersion => unsafe {
+                    // TODO: null handling below
+                    if value_ptr.is_null() {
+                        *string_length = 0;
+                    } else {
+                        let version = (*env_contents).attributes.odbc_ver;
+                        *string_length = size_of::<Integer>() as Integer;
+                        *(value_ptr as *mut Integer) = version;
+                    }
+                    SqlReturn::SUCCESS
+                },
+                EnvironmentAttribute::OutputNts => unsafe {
+                    if value_ptr.is_null() {
+                        *string_length = 0;
+                    } else {
+                        match (*env_contents).attributes.output_nts {
+                            SqlBool::SqlTrue => {
+                                let bool = "true\0".encode_utf16().collect::<Vec<u16>>();
+                                copy_nonoverlapping(bool.as_ptr(), value_ptr as *mut WChar, 5);
+                            }
+                            SqlBool::SqlFalse => {
+                                let bool = "false\0".encode_utf16().collect::<Vec<u16>>();
+                                copy_nonoverlapping(bool.as_ptr(), value_ptr as *mut WChar, 6);
+                            }
+                        }
+                    }
+                    SqlReturn::SUCCESS
+                },
+                _ => SqlReturn::ERROR,
+            }
+        }
+    }
 }
 
 #[no_mangle]
@@ -1115,12 +1154,49 @@ pub extern "C" fn SQLSetEnvAttr(
 
 #[no_mangle]
 pub extern "C" fn SQLSetEnvAttrW(
-    _environment_handle: HEnv,
-    _attribute: EnvironmentAttribute,
-    _value: Pointer,
+    environment_handle: HEnv,
+    attribute: EnvironmentAttribute,
+    value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    let env_handle = environment_handle as *mut MongoHandle;
+    match unsafe { (*env_handle).as_env() } {
+        None => SqlReturn::INVALID_HANDLE,
+        Some(env) => {
+            let mut env_contents = (*env).write().unwrap();
+            match attribute {
+                EnvironmentAttribute::OdbcVersion => {
+                    if (value as Integer) == 380 {
+                        env_contents.attributes.odbc_ver = value as _;
+                        SqlReturn::SUCCESS
+                    } else {
+                        SqlReturn::ERROR // TODO: log an ODBCError instance on the handle?
+                    }
+                }
+                EnvironmentAttribute::ConnectionPooling => unsafe {
+                    match *(value as *const AttrConnectionPooling) {
+                        AttrConnectionPooling::Off => SqlReturn::SUCCESS,
+                        // TODO: set state to HYC00
+                        _ => SqlReturn::ERROR,
+                    }
+                },
+                EnvironmentAttribute::CpMatch => unsafe {
+                    match *(value as *const AttrCpMatch) {
+                        AttrCpMatch::Strict => SqlReturn::SUCCESS,
+                        // TODO: set state to HYC00
+                        AttrCpMatch::Relaxed => SqlReturn::ERROR,
+                    }
+                },
+                EnvironmentAttribute::OutputNts => unsafe {
+                    match *(value as *const SqlBool) {
+                        SqlBool::SqlTrue => SqlReturn::SUCCESS,
+                        // TODO: set state to HYC00
+                        SqlBool::SqlFalse => SqlReturn::ERROR,
+                    }
+                },
+            }
+        }
+    }
 }
 
 #[no_mangle]
