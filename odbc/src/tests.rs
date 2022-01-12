@@ -289,18 +289,21 @@ fn invalid_alloc() {
 }
 
 mod get_diag_rec {
-    use odbc_sys::{HandleType, SqlReturn};
     use crate::{
         errors::ODBCError,
-        handles::{MongoHandle, Env, EnvState, ConnectionState, Connection, Statement, StatementState},
-        SQLGetDiagRecW
+        handles::{
+            Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState,
+        },
+        SQLGetDiagRecW,
     };
+    use odbc_sys::{HandleType, SqlReturn};
     use std::sync::RwLock;
 
     #[test]
     fn simple() {
         fn validate_diag_rec(handle_type: HandleType, handle: *mut MongoHandle) {
-            const ERROR_MESSAGE: &str = "[MongoDB][API] The feature SQLDrivers is not implemented\0";
+            const ERROR_MESSAGE: &str =
+                "[MongoDB][API] The feature SQLDrivers is not implemented\0";
             const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
 
             // Initialize buffers
@@ -336,13 +339,12 @@ mod get_diag_rec {
         }
 
         let env_handle: *mut _ =
-          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
         validate_diag_rec(HandleType::Env, env_handle);
 
-        let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(Connection::with_state(
-            env_handle,
-            ConnectionState::Allocated,
-        )));
+        let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
+            Connection::with_state(env_handle, ConnectionState::Allocated),
+        ));
         validate_diag_rec(HandleType::Dbc, conn_handle);
 
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
@@ -355,7 +357,7 @@ mod get_diag_rec {
     #[test]
     fn error_message() {
         let env_handle: *mut _ =
-          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
         // Initialize buffers
         let sql_state = &mut [0u16; 6] as *mut _;
@@ -408,7 +410,7 @@ mod get_diag_rec {
     #[test]
     fn invalid_ops() {
         let env_handle: *mut _ =
-          &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
         // Initialize buffers
         let sql_state = &mut [0u16; 6] as *mut _;
@@ -460,5 +462,4 @@ mod get_diag_rec {
             )
         );
     }
-
 }
