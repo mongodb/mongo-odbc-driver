@@ -8,7 +8,7 @@ pub struct MongoConnection {
     pub client: Client,
     // The current database set for this client.
     // All new queries will be done on this DB.
-    pub current_db: String,
+    pub current_db: Option<String>,
     // Number of seconds to wait for any request on the connection to complete before returning to
     // the application.
     // Comes from SQL_ATTR_CONNECTION_TIMEOUT if set. Used any time there is a time out in a
