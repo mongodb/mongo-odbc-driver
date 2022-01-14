@@ -8,8 +8,6 @@ use mongodb::sync::Cursor;
 pub struct MongoQuery {
     // The cursor on the result set.
     resultset_cursor: Cursor<Document>,
-    // The current row the cursor points to.
-    current_row: Box<Array>,
     // The result set metadata.
     resultset_metadata: Vec<MongoColMetadata>,
 }
@@ -33,7 +31,7 @@ impl MongoQuery {
     }
 
     // Get the metadata for the column with the given index.
-    fn get_col_metadata(&self, col_index: u16) -> Result<MongoColMetadata, RustCoreError> {
+    fn get_col_metadata(&self, col_index: u16) -> Result<MongoColMetadata> {
         unimplemented!()
     }
 }
@@ -41,13 +39,13 @@ impl MongoQuery {
 impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self) -> Result<bool, RustCoreError> {
+    fn next(&mut self) -> Result<bool> {
         unimplemented!()
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, RustCoreError> {
+    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>> {
         unimplemented!()
     }
 }
