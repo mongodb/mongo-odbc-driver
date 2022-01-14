@@ -6,13 +6,8 @@ use mongodb::sync::Cursor;
 
 #[derive(Debug)]
 pub struct MongoFields {
-    // The list of all the databases
-    databases_names: Vec<String>,
-
-    // The current database index.
-    current_db_index: u32,
-    // The current collection index.
-    current_collection_index: u32,
+    // The cursor on the result set.
+    resultset_cursor: Cursor<Document>,
 }
 
 // Statement related to a SQLTables call.

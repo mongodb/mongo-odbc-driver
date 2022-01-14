@@ -8,9 +8,7 @@ use mongodb::sync::Cursor;
 #[derive(Debug)]
 pub struct MongoCollections {
     // The cursor on the result set.
-    resultset_cursor: Cursor<Document>,
-    // The current row the cursor points to.
-    current_row: Box<Array>,
+    resultset_cursor: Cursor<CollectionSpecification>,
 }
 
 // Statement related to a SQLColumns call.
