@@ -808,6 +808,7 @@ pub extern "C" fn SQLGetEnvAttrW(
     string_length: *mut Integer,
 ) -> SqlReturn {
     let env_handle = MongoHandleRef::from(environment_handle);
+    env_handle.clear_diagnostics();
     match env_handle.as_env() {
         None => SqlReturn::INVALID_HANDLE,
         Some(env) => {
@@ -1148,7 +1149,6 @@ pub extern "C" fn SQLSetEnvAttrW(
     value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
-    // let mut env_handle = environment_handle as *mut MongoHandle;
     let env_handle = MongoHandleRef::from(environment_handle);
     env_handle.clear_diagnostics();
     match env_handle.as_env() {
