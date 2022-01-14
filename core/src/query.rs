@@ -1,8 +1,8 @@
 use crate::conn::MongoConnection;
+use crate::err::Result;
 use crate::stmt::MongoStatement;
-use bson::{Array, Bson, Document};
+use bson::{Bson, Document};
 use mongodb::sync::Cursor;
-use crate::err::RustCoreError;
 
 #[derive(Debug)]
 pub struct MongoQuery {
@@ -23,7 +23,7 @@ impl MongoQuery {
         client: &MongoConnection,
         query_timeout: Option<i32>,
         query: &str,
-    ) -> Result<Self, RustCoreError> {
+    ) -> Result<Self> {
         unimplemented!()
     }
 

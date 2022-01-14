@@ -1,8 +1,9 @@
 use crate::conn::MongoConnection;
+use crate::err::Result;
 use crate::stmt::MongoStatement;
-use bson::{Array, Bson, Document};
+use bson::Bson;
+use mongodb::results::CollectionSpecification;
 use mongodb::sync::Cursor;
-use crate::err::RustCoreError;
 
 #[derive(Debug)]
 pub struct MongoCollections {
@@ -31,13 +32,13 @@ impl MongoCollections {
 impl MongoStatement for MongoCollections {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self) -> Result<bool, RustCoreError> {
+    fn next(&mut self) -> Result<bool> {
         unimplemented!()
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>, RustCoreError> {
+    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>> {
         unimplemented!()
     }
 }
