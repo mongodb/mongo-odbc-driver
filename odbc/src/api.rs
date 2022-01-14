@@ -1,15 +1,16 @@
 use crate::{
     api::util::unsupported_function,
+    errors::ODBCError,
     handles::{
-        Connection, ConnectionState, Env, EnvState, MongoHandle, MongoHandleRef,
-        Statement, StatementState,
+        Connection, ConnectionState, Env, EnvState, MongoHandle, MongoHandleRef, Statement,
+        StatementState,
     },
 };
 use odbc_sys::{
-    AttrConnectionPooling, AttrCpMatch, BulkOperation, CDataType, Char, CompletionType,
-    ConnectionAttribute, Desc, DriverConnectOption, EnvironmentAttribute, FetchOrientation, HDbc,
-    HDesc, HEnv, HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, Nullability, ParamType,
-    Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
+    BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
+    EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
+    InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
+    SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
 use std::{mem::size_of, sync::RwLock};
 
@@ -807,33 +808,31 @@ pub extern "C" fn SQLGetEnvAttrW(
     string_length: *mut Integer,
 ) -> SqlReturn {
     let env_handle = MongoHandleRef::from(environment_handle);
-    match (*env_handle).as_env() {
-        // TODO: do i need to dereference?
+    match env_handle.as_env() {
         None => SqlReturn::INVALID_HANDLE,
         Some(env) => {
             let env_contents = env.read().unwrap();
+            unsafe {
+                *string_length = match value_ptr.is_null() {
+                    true => 0,
+                    false => size_of::<Integer>() as Integer,
+                }
+            }
             match attribute {
                 EnvironmentAttribute::OdbcVersion => unsafe {
-                    // TODO: null handling below
-                    if value_ptr.is_null() {
-                        *string_length = 0;
-                    } else {
-                        *string_length = size_of::<Integer>() as Integer;
-                        *(value_ptr as *mut Integer) = (*env_contents).attributes.odbc_ver;
-                    }
-                    SqlReturn::SUCCESS
+                    *(value_ptr as *mut Integer) = env_contents.attributes.odbc_ver;
                 },
                 EnvironmentAttribute::OutputNts => unsafe {
-                    if value_ptr.is_null() {
-                        *string_length = 0;
-                    } else {
-                        *string_length = size_of::<Integer>() as Integer;
-                        *(value_ptr as *mut Integer) = (*env_contents).attributes.output_nts;
-                    }
-                    SqlReturn::SUCCESS
+                    *(value_ptr as *mut Integer) = env_contents.attributes.output_nts;
                 },
-                _ => SqlReturn::ERROR,
+                EnvironmentAttribute::ConnectionPooling => unsafe {
+                    *(value_ptr as *mut Integer) = env_contents.attributes.connection_pooling;
+                },
+                EnvironmentAttribute::CpMatch => unsafe {
+                    *(value_ptr as *mut Integer) = env_contents.attributes.cp_match;
+                },
             }
+            SqlReturn::SUCCESS
         }
     }
 }
@@ -1147,51 +1146,52 @@ pub extern "C" fn SQLSetEnvAttrW(
     environment_handle: HEnv,
     attribute: EnvironmentAttribute,
     value: Pointer,
-    _string_length: Integer, // TODO
+    _string_length: Integer,
 ) -> SqlReturn {
-    let env_handle = environment_handle as *mut MongoHandle;
-    match unsafe { (*env_handle).as_env() } {
+    // let mut env_handle = environment_handle as *mut MongoHandle;
+    let env_handle = MongoHandleRef::from(environment_handle);
+    env_handle.clear_diagnostics();
+    match env_handle.as_env() {
         None => SqlReturn::INVALID_HANDLE,
-        Some(env) => {
-            let mut env_contents = (*env).write().unwrap();
-            match attribute {
-                EnvironmentAttribute::OdbcVersion => {
-                    if (value as Integer) == 380 {
-                        env_contents.attributes.odbc_ver = value as _;
-                        SqlReturn::SUCCESS
-                    } else {
-                        SqlReturn::ERROR // TODO: log an ODBCError instance on the handle?
-                    }
+        Some(env) => match attribute {
+            EnvironmentAttribute::OdbcVersion => match value as Integer {
+                380 => {
+                    let mut env_contents = (*env).write().unwrap();
+                    env_contents.attributes.odbc_ver = value as _;
+                    SqlReturn::SUCCESS
                 }
-                EnvironmentAttribute::ConnectionPooling => unsafe {
-                    match *(value as *const AttrConnectionPooling) {
-                        AttrConnectionPooling::Off => SqlReturn::SUCCESS,
-                        // TODO: set state to HYC00
-                        _ => SqlReturn::ERROR,
-                    }
-                },
-                EnvironmentAttribute::CpMatch => unsafe {
-                    match *(value as *const AttrCpMatch) {
-                        AttrCpMatch::Strict => SqlReturn::SUCCESS,
-                        // TODO: set state to HYC00
-                        AttrCpMatch::Relaxed => SqlReturn::ERROR,
-                    }
-                },
-                EnvironmentAttribute::OutputNts => unsafe {
-                    // println!("a: {:?}", value as String);
-                    let x = *(value as *const Integer);
-                    println!("{:?}", x);
-                    match x {
-                        1 => {
-                            SqlReturn::SUCCESS
-                        },
-                        // TODO: set state to HYC00
-                        0 => SqlReturn::ERROR,
-                        _ => SqlReturn::ERROR // TODO: log different sql states
-                    }
-                },
-            }
-        }
+                _ => {
+                    env_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ODBC_VERSION"));
+                    SqlReturn::ERROR
+                }
+            },
+            EnvironmentAttribute::ConnectionPooling => match value as Integer {
+                0 => SqlReturn::SUCCESS,
+                _ => {
+                    env_handle
+                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_CONNECTION_POOLING"));
+                    SqlReturn::ERROR
+                }
+            },
+            EnvironmentAttribute::CpMatch => match value as Integer {
+                0 => SqlReturn::SUCCESS,
+                _ => {
+                    env_handle.add_diag_info(ODBCError::Unimplemented("SQL_CP_RELAXED_MATCH"));
+                    SqlReturn::ERROR
+                }
+            },
+            EnvironmentAttribute::OutputNts => match unsafe { *(value as *const Integer) } {
+                1 => SqlReturn::SUCCESS,
+                0 => {
+                    env_handle.add_diag_info(ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"));
+                    SqlReturn::ERROR
+                }
+                _ => {
+                    env_handle.add_diag_info(ODBCError::InvalidAttrValue("OUTPUT_NTS=SQL_FALSE"));
+                    SqlReturn::ERROR
+                }
+            },
+        },
     }
 }
 
