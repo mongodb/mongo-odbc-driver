@@ -6,9 +6,17 @@ use mongodb::results::CollectionSpecification;
 use mongodb::sync::Cursor;
 
 #[derive(Debug)]
+struct CollectionsForDb {
+    database_name: String,
+    collection_list: Cursor<CollectionSpecification>,
+}
+
+#[derive(Debug)]
 pub struct MongoCollections {
-    // The cursor on the result set.
-    resultset_cursor: Cursor<CollectionSpecification>,
+    // The current collection specification.
+    current_collection: Option<CollectionSpecification>,
+    // The cursor on the collections specification for the db.
+    current_collection_list: Option<CollectionsForDb>,
 }
 
 // Statement related to a SQLColumns call.
@@ -28,15 +36,19 @@ impl MongoCollections {
 }
 
 impl MongoStatement for MongoCollections {
-    // Move the cursor to the next document and update the current row.
+    // Move the cursor to the next CollectionSpecification.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool> {
         unimplemented!()
     }
 
-    // Get the BSON value for the cell at the given colIndex on the current row.
+    // Get the BSON value for the given colIndex on the current CollectionSpecification.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<&Bson>> {
+        // The mapping for col_index <-> Value will be hard-coded and handled in this function
+        // 1-> current_coll_list.0
+        // 2 -> current_coll.name
+        // 3 -> current_coll.CollectionType
         unimplemented!()
     }
 }

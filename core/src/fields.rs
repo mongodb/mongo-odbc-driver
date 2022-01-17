@@ -5,9 +5,18 @@ use bson::{Bson, Document};
 use mongodb::sync::Cursor;
 
 #[derive(Debug)]
+struct FieldsForCollection {
+    database_name: String,
+    collection_name: String,
+    // Info retrieved via sqlgetschema
+    // See https://docs.mongodb.com/datalake/reference/cli/sql/sqlgetschema/ for more details.
+    schema: Cursor<Document>,
+}
+
+#[derive(Debug)]
 pub struct MongoFields {
-    // The cursor on the result set.
-    resultset_cursor: Cursor<Document>,
+    // The current collection specification.
+    current_field_list: Option<FieldsForCollection>,
 }
 
 // Statement related to a SQLTables call.
