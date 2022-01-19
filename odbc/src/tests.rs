@@ -467,17 +467,18 @@ mod get_diag_rec {
 }
 mod env_attributes {
     use crate::{
+        definitions::*,
         handles::{Env, EnvState, MongoHandle},
         tests::UNIMPLEMENTED_FUNC,
         SQLGetDiagRecW, SQLGetEnvAttrW, SQLSetEnvAttrW,
     };
     use odbc_sys::{
         AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, HEnv,
-        HandleType, Integer, Pointer, SqlReturn,
+        HandleType, Pointer, SqlReturn,
     };
     use std::{ffi::c_void, sync::RwLock};
 
-    const INVALID_ATTR_VALUE: &str = "HY024\0";
+    const OPTIONAL_VALUE_CHANGED: &str = "01S02\0";
 
     #[test]
     fn get_set_odbc_version() {
@@ -507,14 +508,14 @@ mod env_attributes {
                 string_length_ptr
             )
         );
-        assert_eq!(AttrOdbcVersion::Odbc3_80 as Integer, unsafe {
-            attr_buffer.read()
+        assert_eq!(OdbcVersion::Odbc3_80, unsafe {
+            *(attr_buffer as *const OdbcVersion)
         });
         assert_eq!(4, *string_length_ptr);
 
         // SQLSetEnvAttrW(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3)
         assert_eq!(
-            SqlReturn::ERROR,
+            SqlReturn::SUCCESS,
             SQLSetEnvAttrW(
                 env_handle as HEnv,
                 EnvironmentAttribute::OdbcVersion,
@@ -524,6 +525,19 @@ mod env_attributes {
         );
 
         unsafe { Box::from_raw(attr_buffer) };
+
+        // SQLGetEnvAttrW(SQL_ATTR_ODBC_VERSION) where value_ptr is null
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::OdbcVersion,
+                std::ptr::null_mut() as *mut c_void,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(0, *string_length_ptr);
     }
 
     #[test]
@@ -532,19 +546,21 @@ mod env_attributes {
             &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
         // SQLSetEnvAttrW(SQL_ATTR_OUTPUT_NTS, SQL_TRUE)
-        let should_output_nts = Box::into_raw(Box::new(1));
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLSetEnvAttrW(
                 env_handle as HEnv,
                 EnvironmentAttribute::OutputNts,
-                should_output_nts as Pointer,
+                SqlBool::SqlTrue as i32 as Pointer,
                 0
             )
         );
 
         // SQLGetEnvAttrW(SQL_ATTR_OUTPUT_NTS)
-        let attr_buffer = Box::into_raw(Box::new(0));
+
+        // The value stored in attr_buffer doesn't matter at this point
+        // since it will get overwritten by SQLGetEnvAttrW.
+        let attr_buffer = Box::into_raw(Box::new(SqlBool::SqlFalse));
         let string_length_ptr = &mut 0;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -556,208 +572,22 @@ mod env_attributes {
                 string_length_ptr
             )
         );
-        assert_eq!(1, unsafe { attr_buffer.read() });
+        assert_eq!(SqlBool::SqlTrue, unsafe {
+            *(attr_buffer as *const SqlBool)
+        });
         assert_eq!(4, *string_length_ptr);
 
         // SQLSetEnvAttrW(SQL_ATTR_OUTPUT_NTS, SQL_FALSE)
-        unsafe { *should_output_nts = 0 };
         assert_eq!(
             SqlReturn::ERROR,
             SQLSetEnvAttrW(
                 env_handle as HEnv,
                 EnvironmentAttribute::OutputNts,
-                should_output_nts as Pointer,
+                SqlBool::SqlFalse as i32 as Pointer,
                 0
             )
         );
 
-        // Verify that the attribute's value didn't change in the previous
-        // failed call to SQLSetEnvAttrW by calling SQLGetEnvAttrW(SQL_ATTR_OUTPUT_NTS)
-        let string_length_ptr = &mut 0;
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLGetEnvAttrW(
-                env_handle as *mut _,
-                EnvironmentAttribute::OutputNts,
-                attr_buffer as *mut c_void,
-                5,
-                string_length_ptr
-            )
-        );
-        assert_eq!(1, unsafe { attr_buffer.read() });
-        assert_eq!(4, *string_length_ptr);
-
-        // SQLSetEnvAttrW(SQL_ATTR_OUTPUT_NTS, <invalid number>)
-        unsafe { *should_output_nts = 2 };
-        assert_eq!(
-            SqlReturn::ERROR,
-            SQLSetEnvAttrW(
-                env_handle as HEnv,
-                EnvironmentAttribute::OutputNts,
-                should_output_nts as Pointer,
-                0
-            )
-        );
-        // Initialize buffers
-        let sql_state = &mut [0u16; 6] as *mut _;
-        let message_text = &mut [0u16; 64] as *mut _;
-        let text_length_ptr = &mut 0;
-        let native_err_ptr = &mut 0;
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLGetDiagRecW(
-                HandleType::Env,
-                env_handle as *mut _,
-                1,
-                sql_state,
-                native_err_ptr,
-                message_text,
-                100,
-                text_length_ptr
-            )
-        );
-        assert_eq!(INVALID_ATTR_VALUE, unsafe {
-            String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
-        });
-        assert_eq!(
-            "[MongoDB][API] Invalid value for attribute OUTPUT_NTS=SQL_FALSE\0",
-            unsafe { String::from_utf16(&*(message_text as *const [u16; 64])).unwrap() }
-        );
-        unsafe { Box::from_raw(should_output_nts) };
-        unsafe { Box::from_raw(attr_buffer) };
-    }
-
-    #[test]
-    fn get_set_connection_pool() {
-        let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
-
-        // SQLGetEnvAttrW(SQL_ATTR_CONNECTION_POOLING)
-        let attr_buffer = Box::into_raw(Box::new(0));
-        let string_length_ptr = &mut 0;
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLGetEnvAttrW(
-                env_handle as *mut _,
-                EnvironmentAttribute::ConnectionPooling,
-                attr_buffer as Pointer,
-                5,
-                string_length_ptr
-            )
-        );
-        assert_eq!(AttrConnectionPooling::Off as Integer, unsafe {
-            attr_buffer.read()
-        });
-        assert_eq!(4, *string_length_ptr);
-        unsafe { Box::from_raw(attr_buffer) };
-
-        // SQLSetEnvAttrW(SQL_ATTR_CONNECTION_POOLING, SQL_CP_DRIVER_AWARE)
-        assert_eq!(
-            SqlReturn::ERROR,
-            SQLSetEnvAttrW(
-                env_handle as HEnv,
-                EnvironmentAttribute::ConnectionPooling,
-                Pointer::from(AttrConnectionPooling::DriverAware),
-                0
-            )
-        );
-        // Initialize buffers
-        let sql_state = &mut [0u16; 6] as *mut _;
-        let message_text = &mut [0u16; 74] as *mut _;
-        let text_length_ptr = &mut 0;
-        let native_err_ptr = &mut 0;
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLGetDiagRecW(
-                HandleType::Env,
-                env_handle as *mut _,
-                1,
-                sql_state,
-                native_err_ptr,
-                message_text,
-                74,
-                text_length_ptr
-            )
-        );
-        assert_eq!(UNIMPLEMENTED_FUNC, unsafe {
-            String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
-        });
-        assert_eq!(
-            "[MongoDB][API] The feature SQL_ATTR_CONNECTION_POOLING is not implemented\0",
-            unsafe { String::from_utf16(&*(message_text as *const [u16; 74])).unwrap() }
-        );
-        // Exclude the number of characters required for the null terminator
-        assert_eq!(73, *text_length_ptr);
-        assert_eq!(0, *native_err_ptr);
-
-        // SQLSetEnvAttrW(SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_HENV)
-        assert_eq!(
-            SqlReturn::ERROR,
-            SQLSetEnvAttrW(
-                env_handle as HEnv,
-                EnvironmentAttribute::ConnectionPooling,
-                Pointer::from(AttrConnectionPooling::OnePerHenv),
-                0
-            )
-        );
-
-        // SQLSetEnvAttrW(SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_DRIVER)
-        assert_eq!(
-            SqlReturn::ERROR,
-            SQLSetEnvAttrW(
-                env_handle as HEnv,
-                EnvironmentAttribute::ConnectionPooling,
-                Pointer::from(AttrConnectionPooling::OnePerDriver),
-                0
-            )
-        );
-    }
-
-    #[test]
-    fn get_set_cp_match() {
-        let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
-
-        // SQLGetEnvAttrW(SQL_ATTR_CP_MATCH)
-        let attr_buffer = Box::into_raw(Box::new(0));
-        let string_length_ptr = &mut 0;
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLGetEnvAttrW(
-                env_handle as *mut _,
-                EnvironmentAttribute::CpMatch,
-                attr_buffer as Pointer,
-                5,
-                string_length_ptr
-            )
-        );
-        assert_eq!(AttrCpMatch::Strict as Integer, unsafe {
-            attr_buffer.read()
-        });
-        assert_eq!(4, *string_length_ptr);
-        unsafe { Box::from_raw(attr_buffer) };
-
-        // SQLSetEnvAttrW(SQL_ATTR_CP_MATCH, SQL_CP_STRICT_MATCH)
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLSetEnvAttrW(
-                env_handle as HEnv,
-                EnvironmentAttribute::CpMatch,
-                Pointer::from(AttrCpMatch::Strict),
-                0
-            )
-        );
-
-        // SQLSetEnvAttrW(SQL_ATTR_CP_MATCH, SQL_CP_RELAXED_MATCH)
-        assert_eq!(
-            SqlReturn::ERROR,
-            SQLSetEnvAttrW(
-                env_handle as HEnv,
-                EnvironmentAttribute::CpMatch,
-                Pointer::from(AttrCpMatch::Relaxed),
-                0
-            )
-        );
         // Initialize buffers
         let sql_state = &mut [0u16; 6] as *mut _;
         let message_text = &mut [0u16; 67] as *mut _;
@@ -780,11 +610,256 @@ mod env_attributes {
             String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
         });
         assert_eq!(
-            "[MongoDB][API] The feature SQL_CP_RELAXED_MATCH is not implemented\0",
+            "[MongoDB][API] The feature OUTPUT_NTS=SQL_FALSE is not implemented\0",
             unsafe { String::from_utf16(&*(message_text as *const [u16; 67])).unwrap() }
         );
+
+        // SQLGetEnvAttrW(SQL_ATTR_OUTPUT_NTS)
+
+        // Verify that the attribute's value didn't change in the previous
+        // failed call to SQLSetEnvAttrW
+        let string_length_ptr = &mut 0;
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::OutputNts,
+                attr_buffer as Pointer,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(SqlBool::SqlTrue, unsafe {
+            *(attr_buffer as *const SqlBool)
+        });
+        assert_eq!(4, *string_length_ptr);
+
+        unsafe { Box::from_raw(attr_buffer) };
+
+        // SQLGetEnvAttrW(SQL_ATTR_OUTPUT_NTS) where value_ptr is null
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::OutputNts,
+                std::ptr::null_mut() as *mut c_void,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(0, *string_length_ptr);
+    }
+
+    #[test]
+    fn get_set_connection_pool() {
+        let env_handle: *mut _ =
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+
+        // SQLGetEnvAttrW(SQL_ATTR_CONNECTION_POOLING)
+        let attr_buffer = Box::into_raw(Box::new(0));
+        let string_length_ptr = &mut 0;
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::ConnectionPooling,
+                attr_buffer as Pointer,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(ConnectionPooling::Off, unsafe {
+            *(attr_buffer as *const ConnectionPooling)
+        });
+        assert_eq!(4, *string_length_ptr);
+
+        // SQLSetEnvAttrW(SQL_ATTR_CONNECTION_POOLING, SQL_CP_DRIVER_AWARE)
+        assert_eq!(
+            SqlReturn::SUCCESS_WITH_INFO,
+            SQLSetEnvAttrW(
+                env_handle as HEnv,
+                EnvironmentAttribute::ConnectionPooling,
+                Pointer::from(AttrConnectionPooling::DriverAware),
+                0
+            )
+        );
+
+        // SQLGetEnvAttrW(SQL_ATTR_CONNECTION_POOLING)
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::ConnectionPooling,
+                attr_buffer as Pointer,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(ConnectionPooling::Off, unsafe {
+            *(attr_buffer as *const ConnectionPooling)
+        });
+        assert_eq!(4, *string_length_ptr);
+        unsafe { Box::from_raw(attr_buffer) };
+
+        // SQLSetEnvAttrW(SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_HENV)
+        assert_eq!(
+            SqlReturn::SUCCESS_WITH_INFO,
+            SQLSetEnvAttrW(
+                env_handle as HEnv,
+                EnvironmentAttribute::ConnectionPooling,
+                Pointer::from(AttrConnectionPooling::OnePerHenv),
+                0
+            )
+        );
+
+        // Initialize buffers
+        let sql_state = &mut [0u16; 6] as *mut _;
+        let message_text = &mut [0u16; 71] as *mut _;
+        let text_length_ptr = &mut 0;
+        let native_err_ptr = &mut 0;
+        assert_eq!(
+            SqlReturn::SUCCESS_WITH_INFO,
+            SQLGetDiagRecW(
+                HandleType::Env,
+                env_handle as *mut _,
+                1,
+                sql_state,
+                native_err_ptr,
+                message_text,
+                71,
+                text_length_ptr
+            )
+        );
+        assert_eq!(OPTIONAL_VALUE_CHANGED, unsafe {
+            String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
+        });
+        assert_eq!(
+            "[MongoDB][API] Invalid value for attribute SQL_ATTR_CONNECTION_POOLING\0",
+            unsafe { String::from_utf16(&*(message_text as *const [u16; 71])).unwrap() }
+        );
         // Exclude the number of characters required for the null terminator
-        assert_eq!(66, *text_length_ptr);
+        assert_eq!(70, *text_length_ptr);
         assert_eq!(0, *native_err_ptr);
+
+        // SQLSetEnvAttrW(SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_DRIVER)
+        assert_eq!(
+            SqlReturn::SUCCESS_WITH_INFO,
+            SQLSetEnvAttrW(
+                env_handle as HEnv,
+                EnvironmentAttribute::ConnectionPooling,
+                Pointer::from(AttrConnectionPooling::OnePerDriver),
+                0
+            )
+        );
+
+        // SQLGetEnvAttrW(SQL_ATTR_CONNECTION_POOLING) where value_ptr is null
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::ConnectionPooling,
+                std::ptr::null_mut() as *mut c_void,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(0, *string_length_ptr);
+    }
+
+    #[test]
+    fn get_set_cp_match() {
+        let env_handle: *mut _ =
+            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+
+        // SQLGetEnvAttrW(SQL_ATTR_CP_MATCH)
+        let attr_buffer = Box::into_raw(Box::new(0));
+        let string_length_ptr = &mut 0;
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::CpMatch,
+                attr_buffer as Pointer,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(CpMatch::Strict, unsafe { *(attr_buffer as *const CpMatch) });
+        assert_eq!(4, *string_length_ptr);
+
+        // SQLSetEnvAttrW(SQL_ATTR_CP_MATCH, SQL_CP_STRICT_MATCH)
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLSetEnvAttrW(
+                env_handle as HEnv,
+                EnvironmentAttribute::CpMatch,
+                Pointer::from(AttrCpMatch::Strict),
+                0
+            )
+        );
+
+        // SQLSetEnvAttrW(SQL_ATTR_CP_MATCH, SQL_CP_RELAXED_MATCH)
+        assert_eq!(
+            SqlReturn::SUCCESS_WITH_INFO,
+            SQLSetEnvAttrW(
+                env_handle as HEnv,
+                EnvironmentAttribute::CpMatch,
+                Pointer::from(AttrCpMatch::Relaxed),
+                0
+            )
+        );
+        // Initialize buffers
+        let sql_state = &mut [0u16; 6] as *mut _;
+        let message_text = &mut [0u16; 93] as *mut _;
+        let text_length_ptr = &mut 0;
+        let native_err_ptr = &mut 0;
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetDiagRecW(
+                HandleType::Env,
+                env_handle as *mut _,
+                1,
+                sql_state,
+                native_err_ptr,
+                message_text,
+                93,
+                text_length_ptr
+            )
+        );
+        assert_eq!(OPTIONAL_VALUE_CHANGED, unsafe {
+            String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
+        });
+        assert_eq!(
+            "[MongoDB][API] Invalid value for attribute SQL_ATTR_CP_MATCH, changed to SQL_CP_STRICT_MATCH\0",
+            unsafe { String::from_utf16(&*(message_text as *const [u16; 93])).unwrap() }
+        );
+
+        // SQLGetEnvAttrW(SQL_ATTR_CP_MATCH)
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::CpMatch,
+                attr_buffer as Pointer,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(CpMatch::Strict, unsafe { *(attr_buffer as *const CpMatch) });
+        assert_eq!(4, *string_length_ptr);
+        unsafe { Box::from_raw(attr_buffer) };
+
+        // SQLGetEnvAttrW(SQL_ATTR_CP_MATCH) where value_ptr is null
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetEnvAttrW(
+                env_handle as *mut _,
+                EnvironmentAttribute::CpMatch,
+                std::ptr::null_mut() as *mut c_void,
+                5,
+                string_length_ptr
+            )
+        );
+        assert_eq!(0, *string_length_ptr);
     }
 }

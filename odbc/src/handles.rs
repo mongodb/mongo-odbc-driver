@@ -1,7 +1,5 @@
-use crate::errors::ODBCError;
-use odbc_sys::{
-    AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, HDbc, HEnv, HStmt, Handle, Integer,
-};
+use crate::{definitions::*, errors::ODBCError};
+use odbc_sys::{HDbc, HEnv, HStmt, Handle};
 use std::{borrow::BorrowMut, collections::HashSet, sync::RwLock};
 
 #[derive(Debug)]
@@ -119,19 +117,19 @@ impl Env {
 
 #[derive(Debug)]
 pub struct EnvAttributes {
-    pub odbc_ver: Integer,
-    pub output_nts: Integer,
-    pub connection_pooling: Integer,
-    pub cp_match: Integer,
+    pub odbc_ver: OdbcVersion,
+    pub output_nts: SqlBool,
+    pub connection_pooling: ConnectionPooling,
+    pub cp_match: CpMatch,
 }
 
 impl Default for EnvAttributes {
     fn default() -> Self {
         Self {
-            odbc_ver: AttrOdbcVersion::Odbc3_80 as Integer,
-            output_nts: 1,
-            connection_pooling: AttrConnectionPooling::Off as Integer,
-            cp_match: AttrCpMatch::Strict as Integer,
+            odbc_ver: OdbcVersion::Odbc3,
+            output_nts: SqlBool::SqlTrue,
+            connection_pooling: ConnectionPooling::Off,
+            cp_match: CpMatch::Strict,
         }
     }
 }

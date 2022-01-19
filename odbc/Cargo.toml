@@ -9,6 +9,8 @@ odbc-sys = "0.18.4"
 bson = "2.0.1"
 chrono = "0.4.11"
 lazy_static = "1.4.0"
+num-traits = "0.2.14"
+num-derive = "0.3.3"
 
 [dependencies.mongodb]
 version = "2.0.2"
