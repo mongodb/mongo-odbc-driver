@@ -816,7 +816,9 @@ pub extern "C" fn SQLGetEnvAttrW(
         Some(env) => {
             let env_contents = env.read().unwrap();
             if value_ptr.is_null() {
-                unsafe { *string_length = 0 }
+                if !string_length.is_null() {
+                    unsafe { *string_length = 0 }
+                }
             } else {
                 unsafe { *string_length = size_of::<Integer>() as Integer }
                 match attribute {

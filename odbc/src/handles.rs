@@ -126,7 +126,7 @@ pub struct EnvAttributes {
 impl Default for EnvAttributes {
     fn default() -> Self {
         Self {
-            odbc_ver: OdbcVersion::Odbc3,
+            odbc_ver: OdbcVersion::Odbc3_80,
             output_nts: SqlBool::SqlTrue,
             connection_pooling: ConnectionPooling::Off,
             cp_match: CpMatch::Strict,
