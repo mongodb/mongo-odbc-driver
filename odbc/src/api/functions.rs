@@ -1,5 +1,9 @@
 use crate::{
-    api::{definitions::*, errors::ODBCError, functions::util::unsupported_function},
+    api::{
+        definitions::*,
+        errors::ODBCError,
+        functions::util::{set_str_length, unsupported_function},
+    },
     handles::definitions::*,
 };
 use num_traits::FromPrimitive;
@@ -812,11 +816,11 @@ pub extern "C" fn SQLGetEnvAttrW(
             let env_contents = env.read().unwrap();
             if value_ptr.is_null() {
                 if !string_length.is_null() {
-                    unsafe { *string_length = 0 }
+                    set_str_length(string_length, 0);
                 }
             } else {
                 if !string_length.is_null() {
-                    unsafe { *string_length = size_of::<Integer>() as Integer }
+                    set_str_length(string_length, size_of::<Integer>() as Integer);
                 }
                 match attribute {
                     EnvironmentAttribute::OdbcVersion => unsafe {
@@ -1392,5 +1396,10 @@ mod util {
         handle.clear_diagnostics();
         handle.add_diag_info(ODBCError::Unimplemented(name));
         SqlReturn::ERROR
+    }
+
+    /// set_str_length writes the given length to [`string_length_ptr`].
+    pub fn set_str_length(string_length_ptr: *mut Integer, length: Integer) {
+        unsafe { *string_length_ptr = length }
     }
 }
