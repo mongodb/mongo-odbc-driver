@@ -1,17 +1,19 @@
 use crate::{
-    api::util::unsupported_function,
-    handles::{
-        Connection, ConnectionState, Env, EnvState, MongoHandle, MongoHandleRef, Statement,
-        StatementState,
+    api::{
+        definitions::*,
+        errors::ODBCError,
+        functions::util::{set_str_length, unsupported_function},
     },
+    handles::definitions::*,
 };
+use num_traits::FromPrimitive;
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
     EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
     InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
     SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
-use std::sync::RwLock;
+use std::{mem::size_of, sync::RwLock};
 
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
@@ -800,13 +802,45 @@ pub extern "C" fn SQLGetEnvAttr(
 
 #[no_mangle]
 pub extern "C" fn SQLGetEnvAttrW(
-    _environment_handle: HEnv,
-    _attribute: EnvironmentAttribute,
-    _value_ptr: Pointer,
+    environment_handle: HEnv,
+    attribute: EnvironmentAttribute,
+    value_ptr: Pointer,
     _buffer_length: Integer,
-    _string_length: *mut Integer,
+    string_length: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    let env_handle = MongoHandleRef::from(environment_handle);
+    env_handle.clear_diagnostics();
+    match env_handle.as_env() {
+        None => SqlReturn::INVALID_HANDLE,
+        Some(env) => {
+            let env_contents = env.read().unwrap();
+            if value_ptr.is_null() {
+                if !string_length.is_null() {
+                    set_str_length(string_length, 0);
+                }
+            } else {
+                if !string_length.is_null() {
+                    set_str_length(string_length, size_of::<Integer>() as Integer);
+                }
+                match attribute {
+                    EnvironmentAttribute::OdbcVersion => unsafe {
+                        *(value_ptr as *mut OdbcVersion) = env_contents.attributes.odbc_ver;
+                    },
+                    EnvironmentAttribute::OutputNts => unsafe {
+                        *(value_ptr as *mut SqlBool) = env_contents.attributes.output_nts;
+                    },
+                    EnvironmentAttribute::ConnectionPooling => unsafe {
+                        *(value_ptr as *mut ConnectionPooling) =
+                            env_contents.attributes.connection_pooling;
+                    },
+                    EnvironmentAttribute::CpMatch => unsafe {
+                        *(value_ptr as *mut CpMatch) = env_contents.attributes.cp_match;
+                    },
+                }
+            }
+            SqlReturn::SUCCESS
+        }
+    }
 }
 
 #[no_mangle]
@@ -1115,12 +1149,58 @@ pub extern "C" fn SQLSetEnvAttr(
 
 #[no_mangle]
 pub extern "C" fn SQLSetEnvAttrW(
-    _environment_handle: HEnv,
-    _attribute: EnvironmentAttribute,
-    _value: Pointer,
+    environment_handle: HEnv,
+    attribute: EnvironmentAttribute,
+    value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    let env_handle = MongoHandleRef::from(environment_handle);
+    env_handle.clear_diagnostics();
+    match env_handle.as_env() {
+        None => SqlReturn::INVALID_HANDLE,
+        Some(env) => match attribute {
+            EnvironmentAttribute::OdbcVersion => match FromPrimitive::from_i32(value as i32) {
+                Some(version) => {
+                    let mut env_contents = (*env).write().unwrap();
+                    env_contents.attributes.odbc_ver = version;
+                    SqlReturn::SUCCESS
+                }
+                None => {
+                    env_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ODBC_VERSION"));
+                    SqlReturn::ERROR
+                }
+            },
+            EnvironmentAttribute::OutputNts => match FromPrimitive::from_i32(value as i32) {
+                Some(SqlBool::SqlTrue) => SqlReturn::SUCCESS,
+                _ => {
+                    env_handle.add_diag_info(ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"));
+                    SqlReturn::ERROR
+                }
+            },
+            EnvironmentAttribute::ConnectionPooling => {
+                match FromPrimitive::from_i32(value as i32) {
+                    Some(ConnectionPooling::Off) => SqlReturn::SUCCESS,
+                    _ => {
+                        env_handle.add_diag_info(ODBCError::OptionValueChanged(
+                            "SQL_ATTR_CONNECTION_POOLING",
+                            "SQL_CP_OFF",
+                        ));
+                        SqlReturn::SUCCESS_WITH_INFO
+                    }
+                }
+            }
+            EnvironmentAttribute::CpMatch => match FromPrimitive::from_i32(value as i32) {
+                Some(CpMatch::Strict) => SqlReturn::SUCCESS,
+                _ => {
+                    env_handle.add_diag_info(ODBCError::OptionValueChanged(
+                        "SQL_ATTR_CP_MATCH",
+                        "SQL_CP_STRICT_MATCH",
+                    ));
+                    SqlReturn::SUCCESS_WITH_INFO
+                }
+            },
+        },
+    }
 }
 
 #[no_mangle]
@@ -1247,7 +1327,7 @@ pub extern "C" fn SQLTablesW(
 }
 
 mod util {
-    use crate::{errors::ODBCError, handles::MongoHandle};
+    use crate::{api::errors::ODBCError, handles::definitions::MongoHandle};
     use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
     use std::{cmp::min, ptr::copy_nonoverlapping};
 
@@ -1281,7 +1361,9 @@ mod util {
             copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
             // Store the number of characters in the error message string, excluding the
             // null terminator, in text_length_ptr
-            *text_length_ptr = (num_chars - 1) as SmallInt;
+            if !text_length_ptr.is_null() {
+                *text_length_ptr = (num_chars - 1) as SmallInt;
+            }
             if num_chars < message_len {
                 SqlReturn::SUCCESS_WITH_INFO
             } else {
@@ -1314,5 +1396,10 @@ mod util {
         handle.clear_diagnostics();
         handle.add_diag_info(ODBCError::Unimplemented(name));
         SqlReturn::ERROR
+    }
+
+    /// set_str_length writes the given length to [`string_length_ptr`].
+    pub fn set_str_length(string_length_ptr: *mut Integer, length: Integer) {
+        unsafe { *string_length_ptr = length }
     }
 }

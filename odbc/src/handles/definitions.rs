@@ -1,5 +1,5 @@
-use crate::errors::ODBCError;
-use odbc_sys::{HDbc, HEnv, HStmt, Handle, Integer};
+use crate::api::{definitions::*, errors::ODBCError};
+use odbc_sys::{HDbc, HEnv, HStmt, Handle};
 use std::{borrow::BorrowMut, collections::HashSet, sync::RwLock};
 
 #[derive(Debug)]
@@ -97,7 +97,7 @@ impl From<HDbc> for MongoHandleRef {
 pub struct Env {
     // attributes for this Env. We box the attributes so that the MongoHandle type
     // remains fairly small regardless of underlying handle type.
-    pub _attributes: Box<EnvAttributes>,
+    pub attributes: Box<EnvAttributes>,
     // state of this Env
     pub state: EnvState,
     pub connections: HashSet<*mut MongoHandle>,
@@ -107,7 +107,7 @@ pub struct Env {
 impl Env {
     pub fn with_state(state: EnvState) -> Self {
         Self {
-            _attributes: Box::new(EnvAttributes::default()),
+            attributes: Box::new(EnvAttributes::default()),
             state,
             connections: HashSet::new(),
             errors: vec![],
@@ -117,12 +117,20 @@ impl Env {
 
 #[derive(Debug)]
 pub struct EnvAttributes {
-    pub odbc_ver: Integer,
+    pub odbc_ver: OdbcVersion,
+    pub output_nts: SqlBool,
+    pub connection_pooling: ConnectionPooling,
+    pub cp_match: CpMatch,
 }
 
 impl Default for EnvAttributes {
     fn default() -> Self {
-        Self { odbc_ver: 3 }
+        Self {
+            odbc_ver: OdbcVersion::Odbc3_80,
+            output_nts: SqlBool::SqlTrue,
+            connection_pooling: ConnectionPooling::Off,
+            cp_match: CpMatch::Strict,
+        }
     }
 }
 
