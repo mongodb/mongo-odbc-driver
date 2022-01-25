@@ -1,4 +1,4 @@
-use crate::{definitions::*, errors::ODBCError};
+use crate::api::{definitions::*, errors::ODBCError};
 use odbc_sys::{HDbc, HEnv, HStmt, Handle};
 use std::{borrow::BorrowMut, collections::HashSet, sync::RwLock};
 

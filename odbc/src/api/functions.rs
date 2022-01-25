@@ -1,11 +1,6 @@
 use crate::{
-    api::util::unsupported_function,
-    definitions::*,
-    errors::ODBCError,
-    handles::{
-        Connection, ConnectionState, Env, EnvState, MongoHandle, MongoHandleRef, Statement,
-        StatementState,
-    },
+    api::{definitions::*, errors::ODBCError, functions::util::unsupported_function},
+    handles::definitions::*,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -1328,7 +1323,7 @@ pub extern "C" fn SQLTablesW(
 }
 
 mod util {
-    use crate::{errors::ODBCError, handles::MongoHandle};
+    use crate::{api::errors::ODBCError, handles::definitions::MongoHandle};
     use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
     use std::{cmp::min, ptr::copy_nonoverlapping};
 
