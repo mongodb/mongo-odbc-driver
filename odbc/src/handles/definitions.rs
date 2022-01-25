@@ -1,6 +1,7 @@
 use crate::api::{definitions::*, errors::ODBCError};
-use odbc_sys::{HDbc, HEnv, HStmt, Handle};
+use odbc_sys::{HDbc, HEnv, HStmt, Handle, Integer, Len, ULen, USmallInt, Pointer};
 use std::{borrow::BorrowMut, collections::HashSet, sync::RwLock};
+use std::ptr::null_mut;
 
 #[derive(Debug)]
 pub enum MongoHandle {
@@ -186,14 +187,41 @@ impl Connection {
 #[derive(Debug)]
 pub struct Statement {
     pub connection: *mut MongoHandle,
-    pub _attributes: Box<StatementAttributes>,
+    pub attributes: Box<StatementAttributes>,
     pub state: StatementState,
     //pub cursor: Option<Box<Peekable<Cursor>>>,
     pub errors: Vec<ODBCError>,
 }
 
-#[derive(Debug, Default)]
-pub struct StatementAttributes {}
+#[derive(Debug)]
+pub struct StatementAttributes {
+    pub async_enable: AsyncEnable,
+    pub async_stmt_event: Pointer,
+    pub cursor_scrollable: CursorScrollable,
+    pub cursor_sensitivity: CursorSensitivity, // TODO: must be SQL_INSENSITIVE, everything else is invalid
+    pub concurrency: Concurrency,
+    pub cursor_type: CursorType,
+    pub enable_auto_ipd: SqlBool,
+    pub max_length: ULen,
+    pub max_rows: ULen,
+    pub no_scan: NoScan,
+    pub param_bind_offset_ptr: *mut ULen,
+    pub param_bind_type: BindType,
+    pub param_operation_ptr: *mut ULen,
+    pub param_processed_ptr: *mut ULen,
+    pub param_status_ptr: *mut ULen,
+    pub query_timeout: ULen,
+    pub retrieve_data: RetrieveData, // TODO: must be SQL_RD_OFF
+    pub row_array_size: ULen,
+    pub row_bind_offset_ptr: *mut ULen,
+    pub row_bind_type: BindType,
+    pub row_number: ULen,
+    pub row_operation_ptr: *mut *USmallInt,
+    pub row_status_ptr: *mut USmallInt,
+    pub rows_fetched_ptr: *mut ULen,
+    pub simulate_cursor: SimulateCursor,
+    pub use_bookmarks: UseBookmarks,
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StatementState {
@@ -215,8 +243,35 @@ impl Statement {
     pub fn with_state(connection: *mut MongoHandle, state: StatementState) -> Self {
         Self {
             connection,
-            _attributes: Box::new(StatementAttributes::default()),
             state,
+            attributes: Box::new(StatementAttributes {
+                async_enable: AsyncEnable::Off,
+                async_stmt_event: null_mut(),
+                cursor_scrollable: CursorScrollable::NonScrollable,
+                cursor_sensitivity: CursorSensitivity::Insensitive,
+                concurrency: Concurrency::ReadOnly,
+                cursor_type: CursorType::ForwardOnly,
+                enable_auto_ipd: SqlBool::SqlFalse,
+                max_length: 0,
+                max_rows: 0,
+                no_scan: NoScan::Off,
+                param_bind_offset_ptr: null_mut(),
+                param_bind_type: BindType::BindByColumn,
+                param_operation_ptr: null_mut(),
+                param_processed_ptr: null_mut(),
+                param_status_ptr: null_mut(),
+                query_timeout: 0,
+                retrieve_data: RetrieveData::Off,
+                row_array_size: 0,
+                row_bind_offset_ptr: null_mut(),
+                row_bind_type: BindType::BindByColumn,
+                row_number: 0,
+                row_operation_ptr: null_mut(),
+                row_status_ptr: null_mut(),
+                rows_fetched_ptr: null_mut(),
+                simulate_cursor: SimulateCursor::NonUnique,
+                use_bookmarks: UseBookmarks::Off,
+            }),
             errors: vec![],
         }
     }
