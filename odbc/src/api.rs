@@ -820,7 +820,9 @@ pub extern "C" fn SQLGetEnvAttrW(
                     unsafe { *string_length = 0 }
                 }
             } else {
-                unsafe { *string_length = size_of::<Integer>() as Integer }
+                if !string_length.is_null() {
+                    unsafe { *string_length = size_of::<Integer>() as Integer }
+                }
                 match attribute {
                     EnvironmentAttribute::OdbcVersion => unsafe {
                         *(value_ptr as *mut OdbcVersion) = env_contents.attributes.odbc_ver;
@@ -1360,7 +1362,9 @@ mod util {
             copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
             // Store the number of characters in the error message string, excluding the
             // null terminator, in text_length_ptr
-            *text_length_ptr = (num_chars - 1) as SmallInt;
+            if !text_length_ptr.is_null() {
+                *text_length_ptr = (num_chars - 1) as SmallInt;
+            }
             if num_chars < message_len {
                 SqlReturn::SUCCESS_WITH_INFO
             } else {
