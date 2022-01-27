@@ -7,3 +7,5 @@ pub use functions::*;
 mod env_attr_tests;
 #[cfg(test)]
 mod get_diag_rec_tests;
+#[cfg(test)]
+mod stmt_attr_tests;

@@ -88,10 +88,10 @@ fn test_env_attr() {
         env_handle,
         EnvironmentAttribute::OutputNts,
         map! {
-            SqlBool::SqlTrue as i32 => SqlReturn::SUCCESS,
-            SqlBool::SqlFalse as i32 => SqlReturn::ERROR
+            SqlBool::True as i32 => SqlReturn::SUCCESS,
+            SqlBool::False as i32 => SqlReturn::ERROR
         },
-        SqlBool::SqlTrue as i32,
+        SqlBool::True as i32,
     );
 
     get_set_env_attr(
