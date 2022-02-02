@@ -152,7 +152,7 @@ fn test_supported_attributes() {
         stmt_handle,
         StatementAttribute::MaxLength,
         map! {
-            10 => SqlReturn::SUCCESS, // Any number
+            10 => SqlReturn::ERROR, // Any number
         },
         0,
     );

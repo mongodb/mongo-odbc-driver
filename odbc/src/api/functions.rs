@@ -1359,10 +1359,12 @@ pub extern "C" fn SQLSetStmtAttrW(
                 SqlReturn::ERROR
             }
             StatementAttribute::ImpRowDesc => {
+                // TODO: SQL_681, determine the correct SQL state
                 stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_IMP_ROW_DESC"));
                 SqlReturn::ERROR
             }
             StatementAttribute::ImpParamDesc => {
+                // TODO: SQL_681, determine the correct SQL state
                 stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_IMP_PARAM_DESC"));
                 SqlReturn::ERROR
             }
@@ -1422,9 +1424,8 @@ pub extern "C" fn SQLSetStmtAttrW(
                 SqlReturn::ERROR
             }
             StatementAttribute::MaxLength => {
-                let mut stmt_contents = stmt.write().unwrap();
-                stmt_contents.attributes.max_length = value as ULen;
-                SqlReturn::SUCCESS
+                stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_MAX_LENGTH"));
+                SqlReturn::ERROR
             }
             StatementAttribute::MaxRows => {
                 let mut stmt_contents = stmt.write().unwrap();
