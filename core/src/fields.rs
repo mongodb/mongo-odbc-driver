@@ -28,10 +28,10 @@ impl MongoFields {
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
     // timeout, the query must finish before the timeout or an error is returned.
     pub fn list_columns(
-        client: &MongoConnection,
-        query_timeout: Option<i32>,
-        db_name_filter: &str,
-        collection_name_filter: &str,
+        _client: &MongoConnection,
+        _query_timeout: Option<i32>,
+        _db_name_filter: &str,
+        _collection_name_filter: &str,
     ) -> Self {
         unimplemented!()
     }
@@ -46,7 +46,7 @@ impl MongoStatement for MongoFields {
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>> {
+    fn get_value(&self, _col_index: u16) -> Result<Option<&Bson>> {
         unimplemented!()
     }
 }

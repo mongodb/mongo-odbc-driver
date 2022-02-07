@@ -25,10 +25,10 @@ impl MongoConnection {
     // The initial operation time if provided should come from  and will take precedence over the
     // setting specified in the uri if any.
     pub fn connect(
-        uri: &str,
-        current_db: Option<&str>,
-        operation_timeout: Option<i32>,
-        login_timeout: Option<i32>,
+        _uri: &str,
+        _current_db: Option<&str>,
+        _operation_timeout: Option<i32>,
+        _login_timeout: Option<i32>,
     ) -> Result<Self> {
         unimplemented!()
     }

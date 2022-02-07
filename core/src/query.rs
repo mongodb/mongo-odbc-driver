@@ -18,20 +18,20 @@ impl MongoQuery {
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
     // timeout, the query must finish before the timeout or an error is returned
     pub fn execute(
-        client: &MongoConnection,
-        query_timeout: Option<i32>,
-        query: &str,
+        _client: &MongoConnection,
+        _query_timeout: Option<i32>,
+        _query: &str,
     ) -> Result<Self> {
         unimplemented!()
     }
 
     // Return the number of fields/columns in the resultset
-    fn get_col_count(&self) -> u32 {
+    fn _get_col_count(&self) -> u32 {
         unimplemented!()
     }
 
     // Get the metadata for the column with the given index.
-    fn get_col_metadata(&self, col_index: u16) -> Result<MongoColMetadata> {
+    fn _get_col_metadata(&self, _col_index: u16) -> Result<MongoColMetadata> {
         unimplemented!()
     }
 }
@@ -45,7 +45,7 @@ impl MongoStatement for MongoQuery {
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>> {
+    fn get_value(&self, _col_index: u16) -> Result<Option<&Bson>> {
         unimplemented!()
     }
 }

@@ -26,10 +26,10 @@ impl MongoCollections {
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
     // timeout, the query must finish before the timeout or an error is returned.
     pub fn list_tables(
-        client: &MongoConnection,
-        query_timeout: Option<i32>,
-        db_name_filter: &str,
-        collection_name_filter: &str,
+        _client: &MongoConnection,
+        _query_timeout: Option<i32>,
+        _db_name_filter: &str,
+        _collection_name_filter: &str,
     ) -> Self {
         unimplemented!()
     }
@@ -44,7 +44,7 @@ impl MongoStatement for MongoCollections {
 
     // Get the BSON value for the given colIndex on the current CollectionSpecification.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>> {
+    fn get_value(&self, _col_index: u16) -> Result<Option<&Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> current_coll_list.0
         // 2 -> current_coll.name

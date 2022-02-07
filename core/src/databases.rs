@@ -18,7 +18,7 @@ impl MongoDatabases {
     // All columns except the TABLE_CAT column contain NULLs.
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
     // timeout, the query must finish before the timeout or an error is returned.
-    pub fn list_all_catalogs(client: &MongoConnection, query_timeout: Option<i32>) -> Self {
+    pub fn list_all_catalogs(_client: &MongoConnection, _query_timeout: Option<i32>) -> Self {
         unimplemented!()
     }
 }
@@ -31,7 +31,7 @@ impl MongoStatement for MongoDatabases {
     }
 
     // Get the BSON value for the value at the given colIndex on the current row.
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>> {
+    fn get_value(&self, _col_index: u16) -> Result<Option<&Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> databases_names[current_row_index]
         unimplemented!()
