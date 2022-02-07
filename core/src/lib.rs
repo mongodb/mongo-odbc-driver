@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod collections;
 pub use collections::MongoCollections;
 mod conn;
