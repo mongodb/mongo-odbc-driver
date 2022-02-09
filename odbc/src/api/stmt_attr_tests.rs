@@ -156,7 +156,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::ERROR, // Any number
         },
-        0 as usize,
+        0,
     );
 
     get_set_stmt_attr(
@@ -165,7 +165,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::SUCCESS, // Any number
         },
-        0 as usize,
+        0,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -182,7 +182,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::SUCCESS, // Any number
         },
-        0 as usize,
+        0,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -208,7 +208,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::SUCCESS // Any number
         },
-        0 as usize,
+        0,
     );
     get_set_ptr(
         stmt_handle,
@@ -228,7 +228,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::SUCCESS // Any number
         },
-        1 as usize,
+        1,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -283,7 +283,7 @@ fn test_unsupported_attributes() {
         map! {
             0 as i32 => SqlReturn::ERROR, // Any number
         },
-        0 as usize,
+        0,
     );
     get_set_stmt_attr(
         stmt_handle,
