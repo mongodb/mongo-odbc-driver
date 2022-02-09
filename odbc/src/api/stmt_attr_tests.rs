@@ -295,6 +295,18 @@ fn test_unsupported_attributes() {
     );
     get_set_ptr(
         stmt_handle,
+        StatementAttribute::AppRowDesc,
+        false,
+        size_of::<Pointer>(),
+    );
+    get_set_ptr(
+        stmt_handle,
+        StatementAttribute::AppParamDesc,
+        false,
+        size_of::<Pointer>(),
+    );
+    get_set_ptr(
+        stmt_handle,
         StatementAttribute::AsyncStmtEvent,
         false,
         size_of::<Pointer>(),
@@ -302,6 +314,18 @@ fn test_unsupported_attributes() {
     get_set_ptr(
         stmt_handle,
         StatementAttribute::FetchBookmarkPtr,
+        false,
+        size_of::<Pointer>(),
+    );
+    get_set_ptr(
+        stmt_handle,
+        StatementAttribute::ImpParamDesc,
+        false,
+        size_of::<Pointer>(),
+    );
+    get_set_ptr(
+        stmt_handle,
+        StatementAttribute::ImpRowDesc,
         false,
         size_of::<Pointer>(),
     );
