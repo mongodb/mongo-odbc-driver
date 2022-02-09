@@ -10,9 +10,9 @@ fn get_set_stmt_attr(
     handle: *mut MongoHandle,
     attribute: StatementAttribute,
     value_map: BTreeMap<i32, SqlReturn>,
-    default_value: i32,
+    default_value: usize,
 ) {
-    let attr_buffer = Box::into_raw(Box::new(0));
+    let attr_buffer = Box::into_raw(Box::new(0 as usize));
     let string_length_ptr = &mut 0;
 
     // Test the statement attribute's default value
@@ -27,7 +27,7 @@ fn get_set_stmt_attr(
         )
     );
 
-    assert_eq!(default_value, unsafe { *(attr_buffer as *const _) } as i32);
+    assert_eq!(default_value, unsafe { *attr_buffer });
 
     value_map
         .into_iter()
@@ -49,10 +49,10 @@ fn get_set_stmt_attr(
             );
             match expected_return {
                 SqlReturn::SUCCESS => {
-                    assert_eq!(discriminant, unsafe { *(attr_buffer as *const _) } as i32)
+                    assert_eq!(discriminant, unsafe { *attr_buffer } as i32)
                 }
                 _ => {
-                    assert_eq!(default_value, unsafe { *(attr_buffer as *const _) } as i32)
+                    assert_eq!(default_value, unsafe { *attr_buffer })
                 }
             };
         });
@@ -63,11 +63,10 @@ fn get_set_stmt_attr(
 fn get_set_ptr(
     handle: *mut MongoHandle,
     attribute: StatementAttribute,
-    attr_value: i32,
     is_attr_supported: bool,
     str_len: usize,
 ) {
-    let attr_buffer = Box::into_raw(Box::new(0));
+    let attr_buffer = Box::into_raw(Box::new(0 as usize));
     let string_length_ptr = &mut 0;
 
     // Test the statement attribute's default value
@@ -84,9 +83,12 @@ fn get_set_ptr(
 
     assert_eq!(0, unsafe { *attr_buffer });
 
-    let expected_return = match is_attr_supported {
-        true => SqlReturn::SUCCESS,
-        false => SqlReturn::ERROR,
+    // attr_value can be any non-zero number.
+    let attr_value = 10 as usize;
+    // All pointer attributes have a default value of zero.
+    let (expected_value, expected_return) = match is_attr_supported {
+        true => (attr_value, SqlReturn::SUCCESS),
+        false => (0 as usize, SqlReturn::ERROR),
     };
     assert_eq!(
         expected_return,
@@ -102,7 +104,7 @@ fn get_set_ptr(
             string_length_ptr
         )
     );
-    assert_eq!(attr_value, unsafe { *attr_buffer });
+    assert_eq!(expected_value, unsafe { *attr_buffer });
     assert_eq!(str_len as Integer, *string_length_ptr);
 
     unsafe { Box::from_raw(attr_buffer) };
@@ -125,7 +127,7 @@ fn test_supported_attributes() {
             CursorScrollable::NonScrollable as i32 => SqlReturn::SUCCESS,
             CursorScrollable::Scrollable as i32 => SqlReturn::ERROR,
         },
-        CursorScrollable::NonScrollable as i32,
+        CursorScrollable::NonScrollable as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -135,7 +137,7 @@ fn test_supported_attributes() {
             CursorSensitivity::Sensitive as i32 => SqlReturn::ERROR,
             CursorSensitivity::Unspecified as i32 => SqlReturn::ERROR
         },
-        CursorSensitivity::Insensitive as i32,
+        CursorSensitivity::Insensitive as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -146,7 +148,7 @@ fn test_supported_attributes() {
             CursorType::KeysetDriven as i32 => SqlReturn::SUCCESS_WITH_INFO,
             CursorType::Static as i32 => SqlReturn::SUCCESS_WITH_INFO,
         },
-        CursorType::ForwardOnly as i32,
+        CursorType::ForwardOnly as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -154,7 +156,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::ERROR, // Any number
         },
-        0,
+        0 as usize,
     );
 
     get_set_stmt_attr(
@@ -163,7 +165,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::SUCCESS, // Any number
         },
-        0,
+        0 as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -172,7 +174,7 @@ fn test_supported_attributes() {
             NoScan::Off as i32 => SqlReturn::SUCCESS,
             NoScan::On as i32 => SqlReturn::SUCCESS
         },
-        NoScan::Off as i32,
+        NoScan::Off as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -180,7 +182,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::SUCCESS, // Any number
         },
-        0,
+        0 as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -189,7 +191,7 @@ fn test_supported_attributes() {
             RetrieveData::Off as i32 => SqlReturn::SUCCESS,
             RetrieveData::On as i32 => SqlReturn::ERROR
         },
-        RetrieveData::Off as i32,
+        RetrieveData::Off as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -198,7 +200,7 @@ fn test_supported_attributes() {
             BindType::BindByColumn as i32 => SqlReturn::SUCCESS,
             10 => SqlReturn::SUCCESS // Any number besides 0
         },
-        BindType::BindByColumn as i32,
+        BindType::BindByColumn as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -206,19 +208,17 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::SUCCESS // Any number
         },
-        0,
+        0 as usize,
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::RowStatusPtr,
-        10,
         true,
         size_of::<*mut USmallInt>(),
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::RowsFetchedPtr,
-        10,
         true,
         size_of::<*mut ULen>(),
     );
@@ -228,7 +228,7 @@ fn test_supported_attributes() {
         map! {
             10 => SqlReturn::SUCCESS // Any number
         },
-        1,
+        1 as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -237,7 +237,7 @@ fn test_supported_attributes() {
             UseBookmarks::Off as i32 => SqlReturn::SUCCESS,
             UseBookmarks::Variable as i32 => SqlReturn::SUCCESS
         },
-        UseBookmarks::Off as i32,
+        UseBookmarks::Off as usize,
     );
 }
 
@@ -258,7 +258,7 @@ fn test_unsupported_attributes() {
             AsyncEnable::Off as i32 => SqlReturn::ERROR,
             AsyncEnable::On as i32 => SqlReturn::ERROR,
         },
-        AsyncEnable::Off as i32,
+        AsyncEnable::Off as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -267,7 +267,7 @@ fn test_unsupported_attributes() {
             SqlBool::False as i32 => SqlReturn::ERROR,
             SqlBool::True as i32 => SqlReturn::ERROR,
         },
-        SqlBool::False as i32,
+        SqlBool::False as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -283,7 +283,7 @@ fn test_unsupported_attributes() {
         map! {
             0 as i32 => SqlReturn::ERROR, // Any number
         },
-        0 as i32,
+        0 as usize,
     );
     get_set_stmt_attr(
         stmt_handle,
@@ -296,56 +296,48 @@ fn test_unsupported_attributes() {
     get_set_ptr(
         stmt_handle,
         StatementAttribute::AsyncStmtEvent,
-        0,
         false,
         size_of::<Pointer>(),
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::FetchBookmarkPtr,
-        0,
         false,
         size_of::<Pointer>(),
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::ParamBindOffsetPtr,
-        0,
         false,
         size_of::<*mut ULen>(),
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::ParamOpterationPtr,
-        0,
         false,
         size_of::<*mut USmallInt>(),
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::ParamStatusPtr,
-        0,
         false,
         size_of::<*mut USmallInt>(),
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::ParamsProcessedPtr,
-        0,
         false,
         size_of::<*mut ULen>(),
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::RowBindOffsetPtr,
-        0,
         false,
         size_of::<*mut ULen>(),
     );
     get_set_ptr(
         stmt_handle,
         StatementAttribute::RowOperationPtr,
-        0,
         false,
         size_of::<*mut USmallInt>(),
     );
