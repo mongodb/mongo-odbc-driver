@@ -12,7 +12,7 @@ fn get_set_stmt_attr(
     value_map: BTreeMap<i32, SqlReturn>,
     default_value: usize,
 ) {
-    let attr_buffer = Box::into_raw(Box::new(0 as usize));
+    let attr_buffer = Box::into_raw(Box::new(0_usize));
     let string_length_ptr = &mut 0;
 
     // Test the statement attribute's default value
@@ -66,7 +66,7 @@ fn get_set_ptr(
     is_attr_supported: bool,
     str_len: usize,
 ) {
-    let attr_buffer = Box::into_raw(Box::new(0 as usize));
+    let attr_buffer = Box::into_raw(Box::new(0_usize));
     let string_length_ptr = &mut 0;
 
     // Test the statement attribute's default value
@@ -84,11 +84,11 @@ fn get_set_ptr(
     assert_eq!(0, unsafe { *attr_buffer });
 
     // attr_value can be any non-zero number.
-    let attr_value = 10 as usize;
+    let attr_value = 10_usize;
     // All pointer attributes have a default value of zero.
     let (expected_value, expected_return) = match is_attr_supported {
         true => (attr_value, SqlReturn::SUCCESS),
-        false => (0 as usize, SqlReturn::ERROR),
+        false => (0_usize, SqlReturn::ERROR),
     };
     assert_eq!(
         expected_return,
@@ -281,7 +281,7 @@ fn test_unsupported_attributes() {
         stmt_handle,
         StatementAttribute::ParamBindType,
         map! {
-            0 as i32 => SqlReturn::ERROR, // Any number
+            0 => SqlReturn::ERROR, // Any number
         },
         0,
     );
