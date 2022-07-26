@@ -20,19 +20,20 @@ Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers"` to 
 
 There should be a new entry called `ADL_TEST` under `ODBC/ODBC.INI` with the following subentries:
 
-	````
+	
 	database: <database name>
 	pwd: <password>
 	server: <server>
 	user: <user>
-	````
+	
 
 Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER"` to determine if the registry editor was updated successfully. There should also be a new entry called `ADL_ODBC` under `ODBC/ODBCINST.INI` with the following subentries:
 
-    ````
+	
     Driver: <path to dll>
     Setup: <path to dll>
-   ````
+	
+
 
 Open the Microsoft ODBC Administrator (64-bit) and verify that "ADL_ODBC_DRIVER" appears under "System DSN".
 
