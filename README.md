@@ -13,7 +13,7 @@ repository.
 Note: users can utilize the built-in driver manager.
 1. Update the values of `Driver`, `Pwd`, `Server`, `User`, and `Database` in `setup/setupDSN.reg`. The value of `Driver` should be the absolute path of `mongoodbc.dll`. This file should be located in either the `mongo-odbc-driver/target/debug` directory or in the release directory.
 
-2. For 32-bit architectures, use the file path `HKEY_LOCAL_MACHINE\Wow6432Node\SOFTWARE` instead of `HKEY_LOCAL_MACHINE\SOFTWARE` in `setupDSN.reg`.
+2. For 32-bit architectures, modify the file path `HKEY_LOCAL_MACHINE\SOFTWARE` in `setupDSN.reg` so that it is instead `HKEY_LOCAL_MACHINE\Wow6432Node\SOFTWARE`.
 
 3. Run `reg import "setup/setupDSN.reg"` in order to populate the registry editor with the new entries. Alternatively, simply double click on the `setupDSN.reg` file.
 
