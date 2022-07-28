@@ -147,7 +147,7 @@ pub struct Connection {
     // this Connection was allocated
     pub env: *mut MongoHandle,
     // all the possible Connection settings
-    pub _attributes: Box<ConnectionAttributes>,
+    pub attributes: Box<ConnectionAttributes>,
     // state of this connection
     pub state: ConnectionState,
     // MongoDB Client for issuing commands
@@ -175,7 +175,7 @@ impl Connection {
     pub fn with_state(env: *mut MongoHandle, state: ConnectionState) -> Self {
         Self {
             env,
-            _attributes: Box::new(ConnectionAttributes::default()),
+            attributes: Box::new(ConnectionAttributes::default()),
             state,
             statements: HashSet::new(),
             errors: vec![],

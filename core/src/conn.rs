@@ -1,5 +1,5 @@
 use crate::err::Result;
-use mongodb::sync::Client;
+use mongodb::{options::ClientOptions, sync::Client};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -22,14 +22,23 @@ impl MongoConnection {
     // The operation will timeout if it takes more than loginTimeout seconds.
     // The initial current database if provided should come from SQL_ATTR_CURRENT_CATALOG
     // and will take precedence over the database setting specified in the uri if any.
-    // The initial operation time if provided should come from  and will take precedence over the
+    // The initial operation time if provided should come from and will take precedence over the
     // setting specified in the uri if any.
     pub fn connect(
-        _uri: &str,
-        _current_db: Option<&str>,
-        _operation_timeout: Option<i32>,
-        _login_timeout: Option<i32>,
+        uri: &str,
+        current_db: Option<String>,
+        operation_timeout: Option<i32>,
+        login_timeout: Option<i32>,
     ) -> Result<Self> {
-        unimplemented!()
+        println!("uri = {:?}", uri);
+        // for now, assume we get a mongodb uri
+        let client_options = ClientOptions::parse(uri)?;
+        // set application name?
+        let client = Client::with_options(client_options)?;
+        Ok(MongoConnection {
+            client,
+            current_db,
+            operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
+        })
     }
 }

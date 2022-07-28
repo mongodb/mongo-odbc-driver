@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 mod collections;
 pub use collections::MongoCollections;
-mod conn;
+pub mod conn;
 pub use conn::MongoConnection;
 mod databases;
 pub use databases::MongoDatabases;

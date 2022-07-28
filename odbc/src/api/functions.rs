@@ -2,7 +2,7 @@ use crate::{
     api::{
         definitions::*,
         errors::ODBCError,
-        functions::util::{set_str_length, unsupported_function},
+        functions::util::{input_wtext_to_string, set_str_length, unsupported_function},
     },
     handles::definitions::*,
 };
@@ -360,8 +360,8 @@ pub extern "C" fn SQLDescribeParam(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLDisconnect(_connection_handle: HDbc) -> SqlReturn {
-    unimplemented!()
+pub extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
+    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
@@ -380,16 +380,30 @@ pub extern "C" fn SQLDriverConnect(
 
 #[no_mangle]
 pub extern "C" fn SQLDriverConnectW(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _window_handle: HWnd,
-    _in_connection_string: *const WChar,
-    _string_length_1: SmallInt,
+    in_connection_string: *const WChar,
+    string_length_1: SmallInt,
     _out_connection_string: *mut WChar,
     _buffer_length: SmallInt,
     _string_length_2: *mut SmallInt,
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
-    unimplemented!()
+    let conn_h = connection_handle as *mut MongoHandle;
+    let conn = unsafe { (*conn_h).as_connection() };
+    if conn.is_none() {
+        return SqlReturn::ERROR;
+    }
+    let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
+    match mongo_odbc_core::conn::MongoConnection::connect(
+        &uri,                                                        // uri
+        conn.unwrap().read().unwrap().attributes.current_db.clone(), // current_db
+        None,                                                        // op to i32
+        None,                                                        // login to i32
+    ) {
+        Ok(_) => SqlReturn::SUCCESS,
+        Err(_) => SqlReturn::ERROR,
+    }
 }
 
 #[no_mangle]
@@ -1654,6 +1668,29 @@ mod util {
     use crate::{api::errors::ODBCError, handles::definitions::MongoHandle};
     use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
     use std::{cmp::min, ptr::copy_nonoverlapping};
+
+    /// input_wtext_to_string converts an input cstring to a rust String.
+    /// It assumes nul termination if the supplied length is negative.
+    pub fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
+        if (len as isize) < 0 {
+            let mut dst = Vec::new();
+            let mut itr = text;
+            unsafe {
+                while *itr != 0 {
+                    dst.push(*itr);
+                    itr = itr.offset(1);
+                }
+            }
+            return String::from_utf16_lossy(&dst);
+        }
+
+        let mut dst = Vec::with_capacity(len);
+        unsafe {
+            dst.set_len(len);
+            copy_nonoverlapping(text, dst.as_mut_ptr(), len);
+        }
+        String::from_utf16_lossy(&dst)
+    }
 
     /// set_sql_state writes the given sql state to the [`output_ptr`].
     pub fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
