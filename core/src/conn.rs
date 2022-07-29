@@ -30,7 +30,6 @@ impl MongoConnection {
         operation_timeout: Option<i32>,
         login_timeout: Option<i32>,
     ) -> Result<Self> {
-        println!("uri = {:?}", uri);
         // for now, assume we get a mongodb uri
         let mut client_options = ClientOptions::parse(uri)?;
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
