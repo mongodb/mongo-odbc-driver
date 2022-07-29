@@ -30,8 +30,13 @@ impl MongoConnection {
         operation_timeout: Option<i32>,
         login_timeout: Option<i32>,
     ) -> Result<Self> {
-        // for now, assume we get a mongodb uri
-        let mut client_options = ClientOptions::parse(uri)?;
+        let attributes = MongoConnection::get_attributes(uri)?;
+        let mongo_uri = attributes.get("server");
+        if mongo_uri.is_none() {
+            return Err(Error::UriFormatError("uri must contain 'server' attribute"));
+        }
+        // for now, assume server attribute is a mongodb uri
+        let mut client_options = ClientOptions::parse(mongo_uri.unwrap())?;
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
         // set application name?
         let client = Client::with_options(client_options)?;
