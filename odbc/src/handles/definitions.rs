@@ -1,4 +1,5 @@
 use crate::api::{definitions::*, errors::ODBCError};
+use mongo_odbc_core::conn::MongoConnection;
 use odbc_sys::{HDbc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{borrow::BorrowMut, collections::HashSet, ptr::null_mut, sync::RwLock};
 
@@ -146,6 +147,9 @@ pub struct Connection {
     // Pointer to the Env from which
     // this Connection was allocated
     pub env: *mut MongoHandle,
+    // mongo_connection is the actual connection to the mongo server
+    // it will be None when the Connection is closed.
+    pub mongo_connection: Option<MongoConnection>,
     // all the possible Connection settings
     pub attributes: Box<ConnectionAttributes>,
     // state of this connection
@@ -175,6 +179,7 @@ impl Connection {
     pub fn with_state(env: *mut MongoHandle, state: ConnectionState) -> Self {
         Self {
             env,
+            mongo_connection: None,
             attributes: Box::new(ConnectionAttributes::default()),
             state,
             statements: HashSet::new(),

@@ -5,7 +5,7 @@ pub mod conn;
 pub use conn::MongoConnection;
 mod databases;
 pub use databases::MongoDatabases;
-mod err;
+pub mod err;
 mod fields;
 pub use fields::MongoFields;
 mod query;

@@ -32,7 +32,8 @@ impl MongoConnection {
     ) -> Result<Self> {
         println!("uri = {:?}", uri);
         // for now, assume we get a mongodb uri
-        let client_options = ClientOptions::parse(uri)?;
+        let mut client_options = ClientOptions::parse(uri)?;
+        client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
         // set application name?
         let client = Client::with_options(client_options)?;
         Ok(MongoConnection {

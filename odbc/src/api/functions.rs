@@ -361,6 +361,15 @@ pub extern "C" fn SQLDescribeParam(
 
 #[no_mangle]
 pub extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
+    let conn_handle = MongoHandleRef::from(connection_handle);
+    let conn = (*conn_handle).as_connection();
+    if conn.is_none() {
+        conn_handle.add_diag_info(ODBCError::InvalidHandleType("Connection"));
+        return SqlReturn::ERROR;
+    }
+    // set the mongo_connection to None. This will cause the previous mongo_connection
+    // to drop and disconnect.
+    conn.unwrap().write().unwrap().mongo_connection = None;
     SqlReturn::SUCCESS
 }
 
@@ -389,20 +398,32 @@ pub extern "C" fn SQLDriverConnectW(
     _string_length_2: *mut SmallInt,
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
-    let conn_h = connection_handle as *mut MongoHandle;
-    let conn = unsafe { (*conn_h).as_connection() };
+    let conn_handle = MongoHandleRef::from(connection_handle);
+    let conn = (*conn_handle).as_connection();
     if conn.is_none() {
+        conn_handle.add_diag_info(ODBCError::InvalidHandleType("Connection"));
         return SqlReturn::ERROR;
     }
+    let conn = conn.unwrap();
     let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
-    match mongo_odbc_core::conn::MongoConnection::connect(
-        &uri,                                                        // uri
-        conn.unwrap().read().unwrap().attributes.current_db.clone(), // current_db
-        None,                                                        // op to i32
-        None,                                                        // login to i32
-    ) {
-        Ok(_) => SqlReturn::SUCCESS,
-        Err(_) => SqlReturn::ERROR,
+    let connect_result = mongo_odbc_core::conn::MongoConnection::connect(
+        &uri,                                               // uri
+        conn.read().unwrap().attributes.current_db.clone(), // current_db
+        None,                                               // op to i32
+        None,                                               // login to i32
+    );
+    match connect_result {
+        Ok(mc) => {
+            conn.write().unwrap().mongo_connection = Some(mc);
+            SqlReturn::SUCCESS
+        }
+        Err(error) => {
+            let mdb_error = match error {
+                mongo_odbc_core::err::Error::MongoDriver(mdbe) => mdbe,
+            };
+            conn_handle.add_diag_info(ODBCError::MongoError(mdb_error));
+            SqlReturn::ERROR
+        }
     }
 }
 
