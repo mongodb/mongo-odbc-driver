@@ -1,8 +1,9 @@
 use crate::{
     api::definitions::*,
     handles::definitions::{MongoHandle, Statement, StatementState},
-    map, SQLGetStmtAttrW, SQLSetStmtAttrW,
+    SQLGetStmtAttrW, SQLSetStmtAttrW,
 };
+use mongo_odbc_core::map;
 use odbc_sys::{HStmt, Integer, Pointer, SqlReturn, StatementAttribute, ULen, USmallInt};
 use std::{collections::BTreeMap, mem::size_of, sync::RwLock};
 
@@ -114,7 +115,7 @@ fn get_set_ptr(
 // supported statement attribute value.
 #[test]
 fn test_supported_attributes() {
-    use crate::map;
+    use mongo_odbc_core::map;
     let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
         std::ptr::null_mut(),
         StatementState::Allocated,
@@ -245,7 +246,7 @@ fn test_supported_attributes() {
 // unsupported statement attribute value.
 #[test]
 fn test_unsupported_attributes() {
-    use crate::map;
+    use mongo_odbc_core::map;
     let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
         std::ptr::null_mut(),
         StatementState::Allocated,

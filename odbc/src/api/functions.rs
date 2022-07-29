@@ -418,10 +418,14 @@ pub extern "C" fn SQLDriverConnectW(
             SqlReturn::SUCCESS
         }
         Err(error) => {
-            let mdb_error = match error {
-                mongo_odbc_core::err::Error::MongoDriver(mdbe) => mdbe,
+            match error {
+                mongo_odbc_core::err::Error::MongoDriver(mdbe) => {
+                    conn_handle.add_diag_info(ODBCError::MongoError(mdbe));
+                }
+                mongo_odbc_core::err::Error::UriFormatError(s) => {
+                    conn_handle.add_diag_info(ODBCError::UriFormatError(s));
+                }
             };
-            conn_handle.add_diag_info(ODBCError::MongoError(mdb_error));
             SqlReturn::ERROR
         }
     }
@@ -1692,6 +1696,7 @@ mod util {
 
     /// input_wtext_to_string converts an input cstring to a rust String.
     /// It assumes nul termination if the supplied length is negative.
+    #[allow(clippy::uninit_vec)]
     pub fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
         if (len as isize) < 0 {
             let mut dst = Vec::new();

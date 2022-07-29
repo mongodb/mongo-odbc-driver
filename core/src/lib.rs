@@ -13,6 +13,7 @@ pub use query::{MongoColMetadata, MongoQuery};
 mod stmt;
 pub use err::{Error, Result};
 pub use stmt::MongoStatement;
+pub mod util;
 
 #[cfg(test)]
 mod tests {

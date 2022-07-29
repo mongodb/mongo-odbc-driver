@@ -29,6 +29,7 @@ pub enum ODBCError {
     InvalidAttrValue(&'static str),
     MongoError(Error),
     OptionValueChanged(&'static str, &'static str),
+    UriFormatError(&'static str),
 }
 
 impl ODBCError {
@@ -39,6 +40,7 @@ impl ODBCError {
             ODBCError::InvalidAttrValue(_) => HY024,
             ODBCError::InvalidHandleType(_) => HYC00,
             ODBCError::OptionValueChanged(_, _) => _01S02,
+            ODBCError::UriFormatError(_) => HYC00,
         }
     }
     pub fn get_error_message(&self) -> String {
@@ -63,6 +65,9 @@ impl ODBCError {
                 "[{}][API] Invalid value for attribute {}, changed to {}",
                 VENDOR_IDENTIFIER, attr, value
             ),
+            ODBCError::UriFormatError(s) => {
+                format!("[{}][API] Uri Format Error: {}", VENDOR_IDENTIFIER, s)
+            }
         }
     }
     pub fn get_native_err_code(&self) -> i32 {
@@ -73,7 +78,8 @@ impl ODBCError {
             ODBCError::Unimplemented(_)
             | ODBCError::InvalidAttrValue(_)
             | ODBCError::InvalidHandleType(_)
-            | ODBCError::OptionValueChanged(_, _) => 0,
+            | ODBCError::OptionValueChanged(_, _)
+            | ODBCError::UriFormatError(_) => 0,
             ODBCError::MongoError(me) => get_code(me).unwrap_or(-1),
         }
     }

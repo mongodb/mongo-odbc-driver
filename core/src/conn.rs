@@ -1,6 +1,6 @@
-use crate::err::Result;
+use crate::err::{Error, Result};
 use mongodb::{options::ClientOptions, sync::Client};
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 
 #[derive(Debug)]
 pub struct MongoConnection {
@@ -41,4 +41,57 @@ impl MongoConnection {
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
         })
     }
+
+    fn get_attributes(uri: &str) -> Result<BTreeMap<String, String>> {
+        if uri.is_empty() {
+            return Err(Error::UriFormatError("uri must not be empty"));
+        }
+        // split the uri attributes on ';'
+        uri.split(';')
+            .map(|attr| {
+                // now split each attribute pair on '='
+                let mut sp = attr.split('=').map(String::from).collect::<Vec<_>>();
+                if sp.len() != 2 {
+                    return Err(Error::UriFormatError(
+                        "all uri atttributes must be of the form key=value",
+                    ));
+                }
+                // ODBC attribute keys are case insensitive, so we lowercase the keys
+                Ok((
+                    // to_lowercase creates a String since it copies bytes
+                    sp.remove(0).trim().to_lowercase(),
+                    // trim just returns pointers into the original String/str, so we need
+                    // to_string
+                    sp.remove(0).trim().to_string(),
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>>>()
+    }
+}
+
+#[test]
+fn test_get_attributes() {
+    use crate::map;
+
+    assert!(MongoConnection::get_attributes("").is_err());
+    assert!(MongoConnection::get_attributes("Foo").is_err());
+    assert!(MongoConnection::get_attributes("driver=Foo;Bar").is_err());
+
+    let expected: BTreeMap<String, String> = map! {"driver".to_string() => "Foo".to_string()};
+    assert_eq!(
+        expected,
+        MongoConnection::get_attributes("Driver=Foo").unwrap()
+    );
+
+    let expected: BTreeMap<String, String> =
+        map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()};
+    assert_eq!(
+        expected,
+        MongoConnection::get_attributes("Driver=Foo;SERVER=bAr").unwrap()
+    );
+
+    assert_eq!(
+        expected,
+        MongoConnection::get_attributes("    Driver  =  Foo   ;    SERVER  =   bAr  ").unwrap()
+    );
 }
