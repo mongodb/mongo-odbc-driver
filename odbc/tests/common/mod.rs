@@ -29,7 +29,7 @@ fn generate_default_connection_str() -> String {
     };
 
     let mut connection_string = format!(
-        "Driver={};PWD={};USER={};SERVER={};AUTH_SRC={}",
+        "Driver={};USER={};PWD={};SERVER={};AUTH_SRC={}",
         driver, user_name, password, host, auth_db,
     );
 

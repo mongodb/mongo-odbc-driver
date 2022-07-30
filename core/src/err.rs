@@ -5,7 +5,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    UriFormatError(&'static str),
+    UriFormatError(String),
     #[error(transparent)]
     MongoDriver(#[from] mongodb::error::Error), // Source and Display delegate to mongodb::Error
 }

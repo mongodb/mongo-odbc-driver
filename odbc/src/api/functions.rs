@@ -13,7 +13,7 @@ use odbc_sys::{
     InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
     SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
-use std::{mem::size_of, sync::RwLock};
+use std::{env, mem::size_of, sync::RwLock};
 
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
@@ -406,15 +406,18 @@ pub extern "C" fn SQLDriverConnectW(
     }
     let conn = conn.unwrap();
     let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
+    let database = env::var("SQL_ATTR_CURRENT_CATALOG").ok();
     let connect_result = mongo_odbc_core::conn::MongoConnection::connect(
-        &uri,                                               // uri
-        conn.read().unwrap().attributes.current_db.clone(), // current_db
-        None,                                               // op to i32
-        None,                                               // login to i32
+        &uri,     // uri
+        database, // current_db
+        None,     // op timeout i32
+        None,     // login timeout i32
     );
     match connect_result {
         Ok(mc) => {
-            conn.write().unwrap().mongo_connection = Some(mc);
+            let mut conn_writer = conn.write().unwrap();
+            conn_writer.attributes.current_db = mc.current_db.clone();
+            conn_writer.mongo_connection = Some(mc);
             SqlReturn::SUCCESS
         }
         Err(error) => {

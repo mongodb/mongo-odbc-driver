@@ -29,7 +29,7 @@ pub enum ODBCError {
     InvalidAttrValue(&'static str),
     MongoError(Error),
     OptionValueChanged(&'static str, &'static str),
-    UriFormatError(&'static str),
+    UriFormatError(String),
 }
 
 impl ODBCError {

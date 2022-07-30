@@ -17,9 +17,12 @@ pub struct MongoConnection {
 }
 
 impl MongoConnection {
-    // Creates a new MongoConnection with the given settings and execute a dummy aggregation to
-    // validate it works.
-    // The operation will timeout if it takes more than loginTimeout seconds.
+    // Creates a new MongoConnection with the given settings and lists databases to make sure the
+    // connection is legit.
+    //
+    // The operation will timeout if it takes more than loginTimeout seconds. This timeout is
+    // delegated to the mongo rust driver.
+    //
     // The initial current database if provided should come from SQL_ATTR_CURRENT_CATALOG
     // and will take precedence over the database setting specified in the uri if any.
     // The initial operation time if provided should come from and will take precedence over the
@@ -30,16 +33,27 @@ impl MongoConnection {
         operation_timeout: Option<i32>,
         login_timeout: Option<i32>,
     ) -> Result<Self> {
-        let attributes = MongoConnection::get_attributes(uri)?;
-        let mongo_uri = attributes.get("server");
-        if mongo_uri.is_none() {
-            return Err(Error::UriFormatError("uri must contain 'server' attribute"));
-        }
+        let mut attributes = MongoConnection::get_attributes(uri)?;
+        let current_db = if current_db.is_none() {
+            attributes.remove("database")
+        } else {
+            current_db
+        };
+        let (user, attributes) = MongoConnection::get_attribute(attributes, "user")?;
+        let (pwd, attributes) = MongoConnection::get_attribute(attributes, "pwd")?;
+        let (server, mut attributes) = MongoConnection::get_attribute(attributes, "server")?;
+        let auth_src = attributes.remove("auth_src").unwrap_or("admin".to_string());
+
+        let mongo_uri = format!("mongodb://{}:{}@{}/{}", user, pwd, server, auth_src);
+
         // for now, assume server attribute is a mongodb uri
-        let mut client_options = ClientOptions::parse(mongo_uri.unwrap())?;
+        let client_options = ClientOptions::parse(mongo_uri);
+        let mut client_options = client_options?;
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
         // set application name?
         let client = Client::with_options(client_options)?;
+        // list databases to check connection
+        let _ = client.list_database_names(None, None)?;
         Ok(MongoConnection {
             client,
             current_db,
@@ -47,10 +61,24 @@ impl MongoConnection {
         })
     }
 
+    fn get_attribute(
+        mut attributes: BTreeMap<String, String>,
+        name: &str,
+    ) -> Result<(String, BTreeMap<String, String>)> {
+        let ret = attributes.remove(name);
+        if ret.is_none() {
+            let err_string = format!("uri must contain '{}' attribute", name);
+            Err(Error::UriFormatError(err_string))
+        } else {
+            Ok((ret.unwrap(), attributes))
+        }
+    }
+
     fn get_attributes(uri: &str) -> Result<BTreeMap<String, String>> {
         if uri.is_empty() {
-            return Err(Error::UriFormatError("uri must not be empty"));
+            return Err(Error::UriFormatError("uri must not be empty".to_string()));
         }
+        // TODO: handle DSN expansion here (i.e., lookup the DSN and add the resolved attributes).
         // split the uri attributes on ';'
         uri.split(';')
             .map(|attr| {
@@ -58,7 +86,7 @@ impl MongoConnection {
                 let mut sp = attr.split('=').map(String::from).collect::<Vec<_>>();
                 if sp.len() != 2 {
                     return Err(Error::UriFormatError(
-                        "all uri atttributes must be of the form key=value",
+                        "all uri atttributes must be of the form key=value".to_string(),
                     ));
                 }
                 // ODBC attribute keys are case insensitive, so we lowercase the keys
