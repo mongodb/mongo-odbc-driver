@@ -13,7 +13,7 @@ fn test_invalid_connection() {
     );
 }
 #[allow(dead_code)]
-#[test]
+//#[test]
 // Uncomment to verify that driver is installed.
 // It will still fail until SQLDriverConnect is implemented, but it will show that the DM found the driver.
 fn test_default_connection() {
