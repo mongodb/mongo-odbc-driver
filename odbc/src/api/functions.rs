@@ -405,7 +405,9 @@ pub extern "C" fn SQLDriverConnectW(
         return SqlReturn::ERROR;
     }
     let conn = conn.unwrap();
+    println!("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
     let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
+    println!("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
     let database = env::var("SQL_ATTR_CURRENT_CATALOG").ok();
     let connect_result = mongo_odbc_core::conn::MongoConnection::connect(
         &uri,     // uri
