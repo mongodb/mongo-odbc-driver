@@ -44,6 +44,7 @@ fn generate_default_connection_str() -> String {
 
 /// Connect using the given connection string or the default settings if no connection string are provided.
 pub fn connect(connection_string: Option<&str>) -> Result<Connection<'_>, Error> {
+    println!("CONN");
     match connection_string {
         Some(str) => ODBC_ENV.connect_with_connection_string(str),
         None => ODBC_ENV.connect_with_connection_string(generate_default_connection_str().as_str()),
