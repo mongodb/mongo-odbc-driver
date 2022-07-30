@@ -42,7 +42,9 @@ impl MongoConnection {
         let (user, attributes) = MongoConnection::get_attribute(attributes, "user")?;
         let (pwd, attributes) = MongoConnection::get_attribute(attributes, "pwd")?;
         let (server, mut attributes) = MongoConnection::get_attribute(attributes, "server")?;
-        let auth_src = attributes.remove("auth_src").unwrap_or("admin".to_string());
+        let auth_src = attributes
+            .remove("auth_src")
+            .unwrap_or_else(|| "admin".to_string());
 
         let mongo_uri = format!("mongodb://{}:{}@{}/{}", user, pwd, server, auth_src);
 
@@ -66,11 +68,11 @@ impl MongoConnection {
         name: &str,
     ) -> Result<(String, BTreeMap<String, String>)> {
         let ret = attributes.remove(name);
-        if ret.is_none() {
+        if let Some(ret) = ret {
+            Ok((ret, attributes))
+        } else {
             let err_string = format!("uri must contain '{}' attribute", name);
             Err(Error::UriFormatError(err_string))
-        } else {
-            Ok((ret.unwrap(), attributes))
         }
     }
 
