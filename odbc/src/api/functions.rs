@@ -399,7 +399,6 @@ pub extern "C" fn SQLDriverConnectW(
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     println!("______");
-    return SqlReturn::SUCCESS;
     let conn_handle = MongoHandleRef::from(connection_handle);
     let conn = (*conn_handle).as_connection();
     if conn.is_none() {
@@ -408,6 +407,7 @@ pub extern "C" fn SQLDriverConnectW(
     }
     let conn = conn.unwrap();
     println!("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+    return SqlReturn::SUCCESS;
     let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
     println!("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
     let database = env::var("SQL_ATTR_CURRENT_CATALOG").ok();
