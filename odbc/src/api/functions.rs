@@ -399,6 +399,7 @@ pub extern "C" fn SQLDriverConnectW(
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     println!("______");
+    return SqlReturn::SUCCESS;
     let conn_handle = MongoHandleRef::from(connection_handle);
     let conn = (*conn_handle).as_connection();
     if conn.is_none() {
