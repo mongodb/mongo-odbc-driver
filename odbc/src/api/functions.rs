@@ -1848,12 +1848,17 @@ mod util {
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
         dbg!(&error_message, output_ptr, buffer_len, text_length_ptr);
+        assert!(!error_message.is_empty());
         unsafe {
             // Check if the entire error message plus a null terminator can fit in the buffer;
             // we should truncate the error message if it's too long.
             let mut message_u16 = error_message.encode_utf16().collect::<Vec<u16>>();
             let message_len = message_u16.len();
             let num_chars = min(message_len + 1, buffer_len);
+            // It is possible that no buffer space has been allocated.
+            if num_chars == 0 {
+                return SqlReturn::SUCCESS_WITH_INFO;
+            }
             message_u16.resize(num_chars - 1, 0);
             message_u16.push('\u{0}' as u16);
             copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
@@ -1881,7 +1886,7 @@ mod util {
         native_error_ptr: *mut Integer,
     ) -> SqlReturn {
         dbg!(native_error_ptr);
-        if native_error_ptr != std::ptr::null_mut() {
+        if !native_error_ptr.is_null() {
             unsafe { *native_error_ptr = error.get_native_err_code() };
         }
         dbg!();
