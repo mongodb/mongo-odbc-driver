@@ -43,10 +43,11 @@ functions:
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
-            export ADL_TEST_USER=test_user
-            export ADL_TEST_PWD=test_pwd
-            export ADL_TEST_HOST=test_host
-            export ADL_TEST_DB=test_db
+            # TODO: remove these with local ADL. This isn't a real security issue because
+            # we no longer actively use this cluster
+            export ADL_TEST_HOST="connectors-data-lake-2wn65.a.query.mongodb-dev.net"
+            export ADL_TEST_USER="evg-adl-jdbc-driver"
+            export ADL_TEST_PWD="gtQZrUoRi4SGJkGo"
           EOT
     - command: expansions.update
       params:

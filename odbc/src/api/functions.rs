@@ -792,7 +792,8 @@ pub extern "C" fn SQLGetDiagFieldW(
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     dbg!();
-    unimplemented!()
+    // TODO: implement me, this is stubbed for test
+    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
@@ -1830,6 +1831,10 @@ mod util {
 
     /// set_sql_state writes the given sql state to the [`output_ptr`].
     pub fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
+        dbg!(sql_state);
+        if output_ptr.is_null() {
+            return;
+        }
         let sql_state = &format!("{}\0", sql_state);
         let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>();
         unsafe {
@@ -1854,6 +1859,7 @@ mod util {
             // we should truncate the error message if it's too long.
             let mut message_u16 = error_message.encode_utf16().collect::<Vec<u16>>();
             let message_len = message_u16.len();
+            dbg!(&message_len);
             let num_chars = min(message_len + 1, buffer_len);
             // It is possible that no buffer space has been allocated.
             if num_chars == 0 {
