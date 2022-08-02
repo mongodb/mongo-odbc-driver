@@ -863,7 +863,8 @@ pub extern "C" fn SQLGetDiagRecW(
             Some(dbc) => {
                 dbg!();
                 let dbc_contents = (*dbc).read().unwrap();
-                dbg!(&dbc_contents.errors);
+                dbg!(&dbc_contents.errors, rec_number);
+                dbg!(&dbc_contents.errors.get(rec_number));
                 match dbc_contents.errors.get(rec_number) {
                     Some(odbc_err) => util::get_diag_rec(
                         odbc_err,
