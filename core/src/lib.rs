@@ -1,17 +1,17 @@
 #![allow(dead_code)]
 mod collections;
 pub use collections::MongoCollections;
-pub mod conn;
-pub use conn::MongoConnection;
+mod conn;
+pub use crate::conn::MongoConnection;
 mod databases;
 pub use databases::MongoDatabases;
-pub mod err;
+mod err;
+pub use err::{Error, Result};
 mod fields;
 pub use fields::MongoFields;
 mod query;
 pub use query::{MongoColMetadata, MongoQuery};
 mod stmt;
-pub use err::{Error, Result};
 pub use stmt::MongoStatement;
 pub mod util;
 

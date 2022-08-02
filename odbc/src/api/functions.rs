@@ -435,7 +435,7 @@ pub extern "C" fn SQLDriverConnectW(
     let conn = conn.unwrap();
     let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
     let database = env::var("SQL_ATTR_CURRENT_CATALOG").ok();
-    let connect_result = mongo_odbc_core::conn::MongoConnection::connect(
+    let connect_result = mongo_odbc_core::MongoConnection::connect(
         &uri,     // uri
         database, // current_db
         None,     // op timeout i32
@@ -450,10 +450,10 @@ pub extern "C" fn SQLDriverConnectW(
         }
         Err(error) => {
             match error {
-                mongo_odbc_core::err::Error::MongoDriver(mdbe) => {
+                mongo_odbc_core::Error::MongoDriver(mdbe) => {
                     conn_handle.add_diag_info(ODBCError::MongoError(mdbe));
                 }
-                mongo_odbc_core::err::Error::UriFormatError(s) => {
+                mongo_odbc_core::Error::UriFormatError(s) => {
                     conn_handle.add_diag_info(ODBCError::UriFormatError(s));
                 }
             };
