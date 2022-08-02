@@ -12,6 +12,7 @@ fn test_invalid_connection() {
         "The connection should have failed, but it was successful."
     );
 }
+
 #[allow(dead_code)]
 #[test]
 // Uncomment to verify that driver is installed.

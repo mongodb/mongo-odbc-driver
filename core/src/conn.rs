@@ -33,7 +33,6 @@ impl MongoConnection {
         operation_timeout: Option<i32>,
         login_timeout: Option<i32>,
     ) -> Result<Self> {
-        println!("CONNNECEJFLKDSJFSD");
         let mut attributes = MongoConnection::get_attributes(uri)?;
         let current_db = if current_db.is_none() {
             attributes.remove("database")
@@ -47,10 +46,7 @@ impl MongoConnection {
             .remove("auth_src")
             .unwrap_or_else(|| "admin".to_string());
 
-        let mongo_uri = format!(
-            "mongodb://{}:{}@{}/{}?ssl=true",
-            user, pwd, server, auth_src
-        );
+        let mongo_uri = format!("mongodb://{}:{}@{}/{}", user, pwd, server, auth_src);
         println!("MONGO URI: {}", mongo_uri);
 
         // for now, assume server attribute is a mongodb uri
@@ -60,7 +56,8 @@ impl MongoConnection {
         // set application name?
         let client = Client::with_options(client_options)?;
         // list databases to check connection
-        let _ = client.list_database_names(None, None)?;
+        let d = client.list_database_names(None, None)?;
+        println!("show dbs to be sure this is working: {:?}", d);
         Ok(MongoConnection {
             client,
             current_db,
@@ -88,6 +85,7 @@ impl MongoConnection {
         // TODO: handle DSN expansion here (i.e., lookup the DSN and add the resolved attributes).
         // split the uri attributes on ';'
         uri.split(';')
+            .filter(|attr| !attr.is_empty())
             .map(|attr| {
                 // now split each attribute pair on '='
                 let mut sp = attr.split('=').map(String::from).collect::<Vec<_>>();
@@ -133,5 +131,10 @@ fn test_get_attributes() {
     assert_eq!(
         expected,
         MongoConnection::get_attributes("    Driver  =  Foo   ;    SERVER  =   bAr  ").unwrap()
+    );
+
+    assert_eq!(
+        expected,
+        MongoConnection::get_attributes("    Driver  =  Foo   ;    SERVER  =   bAr  ;").unwrap()
     );
 }

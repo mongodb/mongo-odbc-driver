@@ -961,7 +961,7 @@ pub extern "C" fn SQLGetInfoW(
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     dbg!();
-    unimplemented!()
+    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
@@ -1872,9 +1872,13 @@ mod util {
         text_length_ptr: *mut SmallInt,
         native_error_ptr: *mut Integer,
     ) -> SqlReturn {
+        dbg!(native_error_ptr);
+        if native_error_ptr != std::ptr::null_mut() {
+            unsafe { *native_error_ptr = error.get_native_err_code() };
+        }
         dbg!();
-        unsafe { *native_error_ptr = error.get_native_err_code() };
         set_sql_state(error.get_sql_state(), state);
+        dbg!();
         set_error_message(
             error.get_error_message(),
             message_text,
