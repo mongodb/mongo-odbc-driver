@@ -246,7 +246,8 @@ functions:
           export LD_LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
           export LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
           export RUSTFLAGS="-Z sanitizer=address"
-          cargo test --target x86_64-unknown-linux-gnu
+          # we only run asan on the unit tests for now
+          cargo test --target x86_64-unknown-linux-gnu --lib
 
 pre:
   - func: "fetch source"

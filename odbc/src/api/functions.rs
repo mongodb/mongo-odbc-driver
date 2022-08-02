@@ -861,7 +861,9 @@ pub extern "C" fn SQLGetDiagRecW(
         },
         HandleType::Dbc => match unsafe { (*mongo_handle).as_connection() } {
             Some(dbc) => {
+                dbg!();
                 let dbc_contents = (*dbc).read().unwrap();
+                dbg!(&dbc_contents.errors);
                 match dbc_contents.errors.get(rec_number) {
                     Some(odbc_err) => util::get_diag_rec(
                         odbc_err,
