@@ -830,7 +830,15 @@ pub extern "C" fn SQLGetDiagRecW(
     dbg!();
     // Make the record number zero-indexed
     let rec_number = (rec_number - 1) as usize;
-    dbg!(rec_number);
+    dbg!(
+        handle_type,
+        rec_number,
+        state,
+        native_error_ptr,
+        message_text,
+        buffer_length,
+        text_length_ptr
+    );
     match handle_type {
         HandleType::Env => match unsafe { (*mongo_handle).as_env() } {
             Some(env) => {
