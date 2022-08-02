@@ -2,7 +2,7 @@ mod common;
 
 use common::{connect, generate_default_connection_str};
 
-#[test]
+//#[test]
 fn test_invalid_connection() {
     // Invalid Driver name
     let conn_str = "Driver=ADL_ODBC_DRIVER;PWD=N/A;USER=N/A;SERVER=N/A;AUTH_SRC=N/A";
