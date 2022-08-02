@@ -57,7 +57,14 @@ impl MongoConnection {
         let client_options = ClientOptions::parse(mongo_uri);
         let mut client_options = client_options?;
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
-        // set application name?
+        // set application name, note that users can set their own application name, or we default
+        // to mongo-odbc-driver.
+        let application_name = attributes.remove("application_name");
+        if application_name.is_some() {
+            client_options.app_name = application_name;
+        } else {
+            client_options.app_name = Some("mongo-odbc-driver".to_string());
+        }
         let client = Client::with_options(client_options)?;
         // list databases to check connection
         let d = client.list_database_names(None, None)?;
