@@ -1898,7 +1898,7 @@ mod util {
     pub fn unsupported_function(handle: &mut MongoHandle, name: &'static str) -> SqlReturn {
         dbg!();
         handle.clear_diagnostics();
-        //handle.add_diag_info(ODBCError::Unimplemented(name));
+        handle.add_diag_info(ODBCError::Unimplemented(name));
         SqlReturn::ERROR
     }
 
