@@ -1394,12 +1394,13 @@ pub extern "C" fn SQLSetPos(
 #[no_mangle]
 pub extern "C" fn SQLSetEnvAttr(
     environment_handle: HEnv,
-    _attribute: EnvironmentAttribute,
-    _value: Pointer,
+    attribute: EnvironmentAttribute,
+    value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
     dbg!();
-    unsupported_function(MongoHandleRef::from(environment_handle), "SQLSetEnvAttr")
+    //unsupported_function(MongoHandleRef::from(environment_handle), "SQLSetEnvAttr")
+    SQLSetEnvAttrW(environment_handle, attribute, value, _string_length)
 }
 
 #[no_mangle]
