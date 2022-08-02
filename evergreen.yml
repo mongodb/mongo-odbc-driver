@@ -205,7 +205,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo test
+          RUST_BACKTRACE=1 cargo test
 
   "install unix odbc":
     - command: shell.exec
