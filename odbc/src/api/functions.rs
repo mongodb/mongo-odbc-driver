@@ -1847,7 +1847,7 @@ mod util {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        dbg!();
+        dbg!(error_message, output_ptr, buffer_len, text_length_ptr);
         unsafe {
             // Check if the entire error message plus a null terminator can fit in the buffer;
             // we should truncate the error message if it's too long.
