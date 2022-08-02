@@ -33,6 +33,7 @@ impl MongoConnection {
         operation_timeout: Option<i32>,
         login_timeout: Option<i32>,
     ) -> Result<Self> {
+        dbg!(uri);
         let mut attributes = MongoConnection::get_attributes(uri)?;
         let current_db = if current_db.is_none() {
             attributes.remove("database")
