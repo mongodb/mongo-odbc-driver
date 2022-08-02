@@ -12,7 +12,7 @@ lazy_static! {
 /// of the form 'Driver={};PWD={};USER={};SERVER={};AUTH_SRC={}'.
 /// The default driver is 'ADL_ODBC_DRIVER' if not specified.
 /// The default auth db is 'admin' if not specified.
-fn generate_default_connection_str() -> String {
+pub fn generate_default_connection_str() -> String {
     let user_name = env::var("ADL_TEST_USER").expect("ADL_TEST_USER is not set");
     let password = env::var("ADL_TEST_PWD").expect("ADL_TEST_PWD is not set");
     let host = env::var("ADL_TEST_HOST").expect("ADL_TEST_HOST is not set");
@@ -44,8 +44,6 @@ fn generate_default_connection_str() -> String {
 
 /// Connect using the given connection string or the default settings if no connection string are provided.
 pub fn connect(connection_string: Option<&str>) -> Result<Connection<'_>, Error> {
-    println!("CONN");
-    return Err(Error::FailedSettingConnectionPooling);
     match connection_string {
         Some(str) => ODBC_ENV.connect_with_connection_string(str),
         None => ODBC_ENV.connect_with_connection_string(generate_default_connection_str().as_str()),
