@@ -1865,19 +1865,15 @@ mod util {
         assert!(!error_message.is_empty());
         unsafe {
             if output_ptr.is_null() {
-                dbg!();
                 if !text_length_ptr.is_null() {
-                    dbg!();
                     *text_length_ptr = 0 as SmallInt;
                 }
-                dbg!();
                 return SqlReturn::SUCCESS_WITH_INFO;
             }
             // Check if the entire error message plus a null terminator can fit in the buffer;
             // we should truncate the error message if it's too long.
             let mut message_u16 = error_message.encode_utf16().collect::<Vec<u16>>();
             let message_len = message_u16.len();
-            dbg!(&message_len);
             let num_chars = min(message_len + 1, buffer_len);
             // It is possible that no buffer space has been allocated.
             if num_chars == 0 {
@@ -1909,13 +1905,10 @@ mod util {
         text_length_ptr: *mut SmallInt,
         native_error_ptr: *mut Integer,
     ) -> SqlReturn {
-        dbg!(native_error_ptr);
         if !native_error_ptr.is_null() {
             unsafe { *native_error_ptr = error.get_native_err_code() };
         }
-        dbg!();
         set_sql_state(error.get_sql_state(), state);
-        dbg!();
         set_error_message(
             error.get_error_message(),
             message_text,
@@ -1925,7 +1918,6 @@ mod util {
     }
 
     pub fn unsupported_function(handle: &mut MongoHandle, name: &'static str) -> SqlReturn {
-        dbg!();
         handle.clear_diagnostics();
         handle.add_diag_info(ODBCError::Unimplemented(name));
         SqlReturn::ERROR
