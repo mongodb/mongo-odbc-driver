@@ -823,6 +823,7 @@ pub extern "C" fn SQLGetDiagRecW(
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     dbg!();
+    return SqlReturn::NO_DATA;
     if rec_number < 1 || buffer_length < 0 {
         dbg!();
         return SqlReturn::ERROR;
