@@ -1128,6 +1128,9 @@ pub extern "C" fn SQLGetStmtAttrW(
                     StatementAttribute::AsyncStmtEvent => unsafe {
                         *(value_ptr as *mut _) = stmt_contents.attributes.async_stmt_event;
                     },
+                    StatementAttribute::MetadataId => {
+                        todo!();
+                    }
                 }
             }
             SqlReturn::SUCCESS
@@ -1694,6 +1697,9 @@ pub extern "C" fn SQLSetStmtAttrW(
             StatementAttribute::AsyncStmtEvent => {
                 stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ASYNC_STMT_EVENT"));
                 SqlReturn::ERROR
+            }
+            StatementAttribute::MetadataId => {
+                todo!()
             }
         },
     }
