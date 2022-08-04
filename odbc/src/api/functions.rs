@@ -866,15 +866,21 @@ pub extern "C" fn SQLGetDiagRecW(
                 dbg!(&dbc_contents.errors, rec_number);
                 dbg!(&dbc_contents.errors.get(rec_number));
                 match dbc_contents.errors.get(rec_number) {
-                    Some(odbc_err) => util::get_diag_rec(
-                        odbc_err,
-                        state,
-                        message_text,
-                        buffer_length,
-                        text_length_ptr,
-                        native_error_ptr,
-                    ),
-                    None => SqlReturn::NO_DATA,
+                    Some(odbc_err) => {
+                        dbg!(odbc_err);
+                        util::get_diag_rec(
+                            odbc_err,
+                            state,
+                            message_text,
+                            buffer_length,
+                            text_length_ptr,
+                            native_error_ptr,
+                        )
+                    }
+                    None => {
+                        dbg!("NO DATA");
+                        SqlReturn::NO_DATA
+                    }
                 }
             }
             None => SqlReturn::INVALID_HANDLE,
