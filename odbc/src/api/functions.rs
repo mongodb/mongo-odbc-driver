@@ -823,7 +823,6 @@ pub extern "C" fn SQLGetDiagRecW(
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     dbg!();
-    return SqlReturn::NO_DATA;
     if rec_number < 1 || buffer_length < 0 {
         dbg!();
         return SqlReturn::ERROR;
@@ -973,14 +972,14 @@ pub extern "C" fn SQLGetInfo(
 
 #[no_mangle]
 pub extern "C" fn SQLGetInfoW(
-    _connection_handle: HDbc,
+    connection_handle: HDbc,
     _info_type: InfoType,
     _info_value_ptr: Pointer,
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     dbg!();
-    SqlReturn::SUCCESS
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetInfoW")
 }
 
 #[no_mangle]
@@ -1865,6 +1864,15 @@ mod util {
         dbg!(&error_message, output_ptr, buffer_len, text_length_ptr);
         assert!(!error_message.is_empty());
         unsafe {
+            if output_ptr.is_null() {
+                dbg!();
+                if !text_length_ptr.is_null() {
+                    dbg!();
+                    *text_length_ptr = 0 as SmallInt;
+                }
+                dbg!();
+                return SqlReturn::SUCCESS_WITH_INFO;
+            }
             // Check if the entire error message plus a null terminator can fit in the buffer;
             // we should truncate the error message if it's too long.
             let mut message_u16 = error_message.encode_utf16().collect::<Vec<u16>>();
