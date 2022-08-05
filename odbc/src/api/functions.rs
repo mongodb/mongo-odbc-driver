@@ -425,13 +425,13 @@ pub extern "C" fn SQLDriverConnectW(
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     dbg!();
+    dbg!("!!!!");
     let conn_handle = MongoHandleRef::from(connection_handle);
     let conn = (*conn_handle).as_connection();
     if conn.is_none() {
         conn_handle.add_diag_info(ODBCError::InvalidHandleType("Connection"));
         return SqlReturn::ERROR;
     }
-    println!("!!!!");
     let conn = conn.unwrap();
     let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
     let database = env::var("SQL_ATTR_CURRENT_CATALOG").ok();
