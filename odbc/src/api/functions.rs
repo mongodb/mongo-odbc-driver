@@ -784,7 +784,7 @@ pub extern "C" fn SQLGetDiagField(
 #[no_mangle]
 pub extern "C" fn SQLGetDiagFieldW(
     _handle_type: HandleType,
-    _handle: Handle,
+    handle: Handle,
     _record_rumber: SmallInt,
     _diag_identifier: SmallInt,
     _diag_info_ptr: Pointer,
