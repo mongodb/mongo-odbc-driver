@@ -38,7 +38,6 @@ impl MongoConnection {
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
     ) -> Result<Self> {
-        dbg!(uri);
         let mut attributes = MongoConnection::get_attributes(uri)?;
         let current_db = if current_db.is_none() {
             attributes.remove("database")
@@ -54,11 +53,9 @@ impl MongoConnection {
             .unwrap_or_else(|| "admin".to_string());
 
         let mongo_uri = format!(
-            //"mongodb://{}:{}@{}/{}?ssl=true",
-            "mongodb://{}:{}@{}/{}",
+            "mongodb://{}:{}@{}/{}?ssl=true",
             user, pwd, server, auth_src
         );
-        println!("MONGO URI: {}", mongo_uri);
 
         // for now, assume server attribute is a mongodb uri
         let mut client_options = ClientOptions::parse(mongo_uri)?;
@@ -77,6 +74,7 @@ impl MongoConnection {
         let res = client
             .database(&auth_src)
             .run_command(doc! {"ping": 1}, None)?;
+        // TODO: remove this after local ADF is shown to work.
         println!("show ping output: {:?}", res);
         Ok(MongoConnection {
             client,

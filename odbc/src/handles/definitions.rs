@@ -33,7 +33,6 @@ impl MongoHandle {
 
     /// add_diag_info appends a new ODBCError object to the `errors` field.
     pub fn add_diag_info(&mut self, error: ODBCError) {
-        dbg!();
         match self {
             MongoHandle::Env(e) => {
                 let mut env_contents = (*e).write().unwrap();
