@@ -65,8 +65,6 @@ functions:
           if [ "Windows_NT" == "$OS" ]; then
               if [ 'windows-64' == '${build_variant}' ]; then
                   export HOST="x86_64-pc-windows-msvc"
-              elif [ 'windows-32' == '${build_variant}' ]; then
-                  export HOST="i686-pc-windows-msvc"
               else
                   echo 'unknown windows build variant ${build_variant}'
                   exit 1;
@@ -129,7 +127,6 @@ functions:
     - command: s3.put
       params:
         build_variants:
-          - windows-32
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
@@ -143,7 +140,6 @@ functions:
     - command: s3.get
       params:
         build_variants:
-          - windows-32
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
@@ -159,20 +155,12 @@ functions:
         script:  |
           ${prepare_shell}
           sed -i 's@%DRIVER_DLL_PATH%@'"$(echo "$(cygpath -w $(pwd))" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
-          if [ 'windows-32' == '${build_variant}' ]; then
-            sed -i 's@SOFTWARE@'"SOFTWARE\\\\Wow6432Node"'@' setup/setupDSN.reg
-          fi
           reg import "setup\setupDSN.reg"
           echo "----- Registry entries after setup ----"
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          if [ 'windows-32' == '${build_variant}' ]; then
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-          else
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-          fi
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
           echo "-------------------------"
 
   "clean-up driver on Windows":
@@ -189,13 +177,8 @@ functions:
           echo "----- Registry entries after clean-up----"
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          if [ 'windows-32' == '${build_variant}' ]; then
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-          else
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-          fi
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
           echo "-------------------------"
 
   "run rust tests":
@@ -302,13 +285,6 @@ buildvariants:
     tasks:
       - name: clippy
       - name: rustfmt
-
-  - name: windows-32
-    display_name: Windows (32-bit)
-    run_on: [ windows-64-vs2019-large ]
-    tasks:
-      - name: compile
-      - name: test-rust-group
 
   - name: windows-64
     display_name: Windows (64-bit)

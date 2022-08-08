@@ -48,8 +48,7 @@ impl MongoConnection {
             .unwrap_or_else(|| "admin".to_string());
 
         let mongo_uri = format!(
-            //"mongodb://{}:{}@{}/{}?ssl=true",
-            "mongodb://{}:{}@{}/{}",
+            "mongodb://{}:{}@{}/{}?ssl=true",
             user, pwd, server, auth_src
         );
         println!("MONGO URI: {}", mongo_uri);

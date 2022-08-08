@@ -792,8 +792,7 @@ pub extern "C" fn SQLGetDiagFieldW(
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     dbg!();
-    // TODO: implement me, this is stubbed for test
-    SqlReturn::SUCCESS
+    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagFieldW")
 }
 
 #[no_mangle]
