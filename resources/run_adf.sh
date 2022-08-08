@@ -297,7 +297,7 @@ else
     echo "Stopping $MONGOHOUSED, pid $MONGOHOUSED_PID"
 
     if [[ $OS =~ ^CYGWIN ]]; then
-      kill -9 ${MONGOHOUSED_PID}
+      ps -W | grep $MONGOHOUSED | sed 's/   */:/g' | cut -d: -f5 | xargs -l taskkill /F /PID
     else
       pkill -TERM -P ${MONGOHOUSED_PID}
     fi
