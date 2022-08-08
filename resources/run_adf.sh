@@ -119,12 +119,10 @@ get_jq() {
 }
 
 check_mongohoused() {
-  check_procname $MONGOHOUSED
-  process_check_result=$?
   check_port $MONGOHOUSED_PORT
   port_check_result=$?
 
-  if [[ $process_check_result -eq 0 ]] && [[ $port_check_result -eq 0 ]]; then
+  if [[ $port_check_result -eq 0 ]]; then
     return 0
   else
     return 1
@@ -297,7 +295,12 @@ else
   if [ $ARG = $STOP ]; then
     MONGOHOUSED_PID=$(< $TMP_DIR/${MONGOHOUSED}.pid)
     echo "Stopping $MONGOHOUSED, pid $MONGOHOUSED_PID"
-    pkill -TERM -P ${MONGOHOUSED_PID}
+
+    if [[ $OS =~ ^CYGWIN ]]; then
+      kill -9 ${MONGOHOUSED_PID}
+    else
+      pkill -TERM -P ${MONGOHOUSED_PID}
+    fi
     if [[ $HAVE_LOCAL_MONGOHOUSE -eq 1 && -d "$LOCAL_MONGOHOUSE_DIR" ]]; then
         echo "Restoring ${TENANT_CONFIG}"
         cd $LOCAL_MONGOHOUSE_DIR
@@ -314,4 +317,3 @@ else
     fi
   fi
 fi
-
