@@ -1,4 +1,5 @@
 use crate::err::{Error, Result};
+use bson::doc;
 use mongodb::{options::ClientOptions, sync::Client};
 use std::{collections::BTreeMap, time::Duration};
 
@@ -8,6 +9,10 @@ pub struct MongoConnection {
     pub client: Client,
     // The current database set for this client.
     // All new queries will be done on this DB.
+    // We stick with mongo terminalogy here and ODBC
+    // terminalogy in the odbc wrappers, hence
+    // current_db here and current_catalog in the
+    // odbc/handles code.
     pub current_db: Option<String>,
     // Number of seconds to wait for any request on the connection to complete before returning to
     // the application.
@@ -29,33 +34,34 @@ impl MongoConnection {
     // setting specified in the uri if any.
     pub fn connect(
         uri: &str,
-        current_db: Option<String>,
-        operation_timeout: Option<i32>,
-        login_timeout: Option<i32>,
+        current_db: &Option<String>,
+        operation_timeout: Option<u32>,
+        login_timeout: Option<u32>,
     ) -> Result<Self> {
         dbg!(uri);
         let mut attributes = MongoConnection::get_attributes(uri)?;
         let current_db = if current_db.is_none() {
             attributes.remove("database")
         } else {
-            current_db
+            current_db.clone()
         };
-        let (user, attributes) = MongoConnection::get_attribute(attributes, "user")?;
-        let (pwd, attributes) = MongoConnection::get_attribute(attributes, "pwd")?;
-        let (server, mut attributes) = MongoConnection::get_attribute(attributes, "server")?;
+        let (user, attributes) = MongoConnection::get_mandatory_attribute(attributes, "user")?;
+        let (pwd, attributes) = MongoConnection::get_mandatory_attribute(attributes, "pwd")?;
+        let (server, mut attributes) =
+            MongoConnection::get_mandatory_attribute(attributes, "server")?;
         let auth_src = attributes
             .remove("auth_src")
             .unwrap_or_else(|| "admin".to_string());
 
         let mongo_uri = format!(
-            "mongodb://{}:{}@{}/{}?ssl=true",
+            //"mongodb://{}:{}@{}/{}?ssl=true",
+            "mongodb://{}:{}@{}/{}",
             user, pwd, server, auth_src
         );
         println!("MONGO URI: {}", mongo_uri);
 
         // for now, assume server attribute is a mongodb uri
-        let client_options = ClientOptions::parse(mongo_uri);
-        let mut client_options = client_options?;
+        let mut client_options = ClientOptions::parse(mongo_uri)?;
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
         // set application name, note that users can set their own application name, or we default
         // to mongo-odbc-driver.
@@ -66,9 +72,12 @@ impl MongoConnection {
             client_options.app_name = Some("mongo-odbc-driver".to_string());
         }
         let client = Client::with_options(client_options)?;
-        // list databases to check connection
-        let d = client.list_database_names(None, None)?;
-        println!("show dbs to be sure this is working: {:?}", d);
+        // run the "ping" command on the `auth_src` database. We assume this requires the
+        // fewest permissions of anything we can do to verify a connection.
+        let res = client
+            .database(&auth_src)
+            .run_command(doc! {"ping": 1}, None)?;
+        println!("show ping output: {:?}", res);
         Ok(MongoConnection {
             client,
             current_db,
@@ -76,7 +85,7 @@ impl MongoConnection {
         })
     }
 
-    fn get_attribute(
+    fn get_mandatory_attribute(
         mut attributes: BTreeMap<String, String>,
         name: &str,
     ) -> Result<(String, BTreeMap<String, String>)> {
@@ -93,8 +102,7 @@ impl MongoConnection {
         if uri.is_empty() {
             return Err(Error::UriFormatError("uri must not be empty".to_string()));
         }
-        // TODO: handle DSN expansion here (i.e., lookup the DSN and add the resolved attributes).
-        // split the uri attributes on ';'
+        // TODO SQL-990
         uri.split(';')
             .filter(|attr| !attr.is_empty())
             .map(|attr| {
@@ -138,14 +146,8 @@ fn test_get_attributes() {
         expected,
         MongoConnection::get_attributes("Driver=Foo;SERVER=bAr").unwrap()
     );
-
     assert_eq!(
         expected,
-        MongoConnection::get_attributes("    Driver  =  Foo   ;    SERVER  =   bAr  ").unwrap()
-    );
-
-    assert_eq!(
-        expected,
-        MongoConnection::get_attributes("    Driver  =  Foo   ;    SERVER  =   bAr  ;").unwrap()
+        MongoConnection::get_attributes("Driver=Foo;SERVER=bAr;").unwrap()
     );
 }

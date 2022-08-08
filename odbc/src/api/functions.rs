@@ -13,7 +13,7 @@ use odbc_sys::{
     InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
     SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
-use std::{env, mem::size_of, sync::RwLock};
+use std::{mem::size_of, sync::RwLock};
 
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
@@ -425,7 +425,6 @@ pub extern "C" fn SQLDriverConnectW(
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     dbg!();
-    dbg!("!!!!");
     let conn_handle = MongoHandleRef::from(connection_handle);
     let conn = (*conn_handle).as_connection();
     if conn.is_none() {
@@ -433,30 +432,23 @@ pub extern "C" fn SQLDriverConnectW(
         return SqlReturn::ERROR;
     }
     let conn = conn.unwrap();
-    let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
-    let database = env::var("SQL_ATTR_CURRENT_CATALOG").ok();
-    let connect_result = mongo_odbc_core::MongoConnection::connect(
-        &uri,     // uri
-        database, // current_db
-        None,     // op timeout i32
-        None,     // login timeout i32
-    );
+    let connect_result = {
+        let conn_reader = conn.read().unwrap();
+        let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
+        let database = &conn_reader.attributes.current_catalog;
+        let connection_timeout = conn_reader.attributes.connection_timeout;
+        let login_timeout = conn_reader.attributes.login_timeout;
+        mongo_odbc_core::MongoConnection::connect(&uri, database, connection_timeout, login_timeout)
+    };
     match connect_result {
         Ok(mc) => {
             let mut conn_writer = conn.write().unwrap();
-            conn_writer.attributes.current_db = mc.current_db.clone();
+            conn_writer.attributes.current_catalog = mc.current_db.clone();
             conn_writer.mongo_connection = Some(mc);
             SqlReturn::SUCCESS
         }
         Err(error) => {
-            match error {
-                mongo_odbc_core::Error::MongoDriver(mdbe) => {
-                    conn_handle.add_diag_info(ODBCError::MongoError(mdbe));
-                }
-                mongo_odbc_core::Error::UriFormatError(s) => {
-                    conn_handle.add_diag_info(ODBCError::UriFormatError(s));
-                }
-            };
+            conn_handle.add_diag_info(error.into());
             SqlReturn::ERROR
         }
     }

@@ -163,7 +163,16 @@ pub struct Connection {
 
 #[derive(Debug, Default)]
 pub struct ConnectionAttributes {
-    pub current_db: Option<String>,
+    // SQL_ATTR_CURRENT_CATALOG: the current catalog/database
+    // for this Connection.
+    pub current_catalog: Option<String>,
+    // SQL_ATTR_LOGIN_TIMEOUT: SQLUINTEGER, timeout in seconds
+    // to wait for a login request to complete.
+    pub login_timeout: Option<u32>,
+    // SQL_ATTR_CONNECTION_TIMEOUT: SQLUINTER, timeout in seconds
+    // to wait for any operation on a connection to timeout (other than
+    // initial login).
+    pub connection_timeout: Option<u32>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
