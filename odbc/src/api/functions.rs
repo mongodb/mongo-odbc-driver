@@ -789,52 +789,32 @@ pub extern "C" fn SQLGetDiagRecW(
     let mongo_handle = handle as *mut MongoHandle;
     // Make the record number zero-indexed
     let rec_number = (rec_number - 1) as usize;
+
+    let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
+        match errors.get(rec_number) {
+            Some(odbc_err) => util::get_diag_rec(
+                odbc_err,
+                state,
+                message_text,
+                buffer_length,
+                text_length_ptr,
+                native_error_ptr,
+            ),
+            None => SqlReturn::NO_DATA,
+        }
+    };
     match handle_type {
         HandleType::Env => {
             let env = unsafe_must_be_env!(mongo_handle);
-            let env_contents = (*env).read().unwrap();
-            match env_contents.errors.get(rec_number) {
-                Some(odbc_err) => util::get_diag_rec(
-                    odbc_err,
-                    state,
-                    message_text,
-                    buffer_length,
-                    text_length_ptr,
-                    native_error_ptr,
-                ),
-                None => SqlReturn::NO_DATA,
-            }
+            get_error(&(*env).read().unwrap().errors)
         }
         HandleType::Dbc => {
             let dbc = unsafe_must_be_conn!(mongo_handle);
-            let dbc_contents = (*dbc).read().unwrap();
-            match dbc_contents.errors.get(rec_number) {
-                Some(odbc_err) => util::get_diag_rec(
-                    odbc_err,
-                    state,
-                    message_text,
-                    buffer_length,
-                    text_length_ptr,
-                    native_error_ptr,
-                ),
-                None => SqlReturn::NO_DATA,
-            }
+            get_error(&(*dbc).read().unwrap().errors)
         }
         HandleType::Stmt => {
-            let f = mongo_handle;
-            let stmt = unsafe_must_be_stmt!(f);
-            let stmt_contents = (*stmt).read().unwrap();
-            match stmt_contents.errors.get(rec_number) {
-                Some(odbc_err) => util::get_diag_rec(
-                    odbc_err,
-                    state,
-                    message_text,
-                    buffer_length,
-                    text_length_ptr,
-                    native_error_ptr,
-                ),
-                None => SqlReturn::NO_DATA,
-            }
+            let stmt = unsafe_must_be_stmt!(mongo_handle);
+            get_error(&(*stmt).read().unwrap().errors)
         }
         HandleType::Desc => unimplemented!(),
     }
