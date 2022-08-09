@@ -803,6 +803,7 @@ pub extern "C" fn SQLGetDiagRecW(
             None => SqlReturn::NO_DATA,
         }
     };
+
     match handle_type {
         HandleType::Env => {
             let env = unsafe_must_be_env!(mongo_handle);
