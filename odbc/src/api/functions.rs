@@ -15,12 +15,33 @@ use odbc_sys::{
 };
 use std::{mem::size_of, sync::RwLock};
 
-macro_rules! check_invalid {
+macro_rules! must_be_valid {
     ($maybe_handle:expr) => {{
         if $maybe_handle.is_none() {
             return SqlReturn::INVALID_HANDLE;
         }
         $maybe_handle.unwrap()
+    }};
+}
+
+macro_rules! unsafe_must_be_env {
+    ($handle:expr) => {{
+        let env = unsafe { (*$handle).as_env() };
+        must_be_valid!(env)
+    }};
+}
+
+macro_rules! unsafe_must_be_conn {
+    ($handle:expr) => {{
+        let conn = unsafe { (*$handle).as_connection() };
+        must_be_valid!(conn)
+    }};
+}
+
+macro_rules! unsafe_must_be_stmt {
+    ($handle:expr) => {{
+        let stmt = unsafe { (*$handle).as_statement() };
+        must_be_valid!(stmt)
     }};
 }
 
@@ -371,7 +392,7 @@ pub extern "C" fn SQLDescribeParam(
 #[no_mangle]
 pub extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
     let conn_handle = MongoHandleRef::from(connection_handle);
-    let conn = check_invalid!((*conn_handle).as_connection());
+    let conn = must_be_valid!((*conn_handle).as_connection());
     // set the mongo_connection to None. This will cause the previous mongo_connection
     // to drop and disconnect.
     conn.write().unwrap().mongo_connection = None;
@@ -404,7 +425,7 @@ pub extern "C" fn SQLDriverConnectW(
     _driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     let conn_handle = MongoHandleRef::from(connection_handle);
-    let conn = check_invalid!((*conn_handle).as_connection());
+    let conn = must_be_valid!((*conn_handle).as_connection());
     let connect_result = {
         let conn_reader = conn.read().unwrap();
         let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
@@ -770,7 +791,7 @@ pub extern "C" fn SQLGetDiagRecW(
     let rec_number = (rec_number - 1) as usize;
     match handle_type {
         HandleType::Env => {
-            let env = check_invalid! {unsafe { (*mongo_handle).as_env() }};
+            let env = unsafe_must_be_env!(mongo_handle);
             let env_contents = (*env).read().unwrap();
             match env_contents.errors.get(rec_number) {
                 Some(odbc_err) => util::get_diag_rec(
@@ -785,7 +806,7 @@ pub extern "C" fn SQLGetDiagRecW(
             }
         }
         HandleType::Dbc => {
-            let dbc = check_invalid! {unsafe { (*mongo_handle).as_connection() }};
+            let dbc = unsafe_must_be_conn!(mongo_handle);
             let dbc_contents = (*dbc).read().unwrap();
             match dbc_contents.errors.get(rec_number) {
                 Some(odbc_err) => util::get_diag_rec(
@@ -800,7 +821,8 @@ pub extern "C" fn SQLGetDiagRecW(
             }
         }
         HandleType::Stmt => {
-            let stmt = check_invalid! {unsafe { (*mongo_handle).as_statement() }};
+            let f = mongo_handle;
+            let stmt = unsafe_must_be_stmt!(f);
             let stmt_contents = (*stmt).read().unwrap();
             match stmt_contents.errors.get(rec_number) {
                 Some(odbc_err) => util::get_diag_rec(
@@ -839,7 +861,7 @@ pub extern "C" fn SQLGetEnvAttrW(
 ) -> SqlReturn {
     let env_handle = MongoHandleRef::from(environment_handle);
     env_handle.clear_diagnostics();
-    let env = check_invalid!(env_handle.as_env());
+    let env = must_be_valid!(env_handle.as_env());
     let env_contents = env.read().unwrap();
     if value_ptr.is_null() {
         set_str_length(string_length, 0);
@@ -906,7 +928,7 @@ pub extern "C" fn SQLGetStmtAttrW(
 ) -> SqlReturn {
     let stmt_handle = MongoHandleRef::from(handle);
     stmt_handle.clear_diagnostics();
-    let stmt = check_invalid!(stmt_handle.as_statement());
+    let stmt = must_be_valid!(stmt_handle.as_statement());
     if value_ptr.is_null() {
         return SqlReturn::SUCCESS;
     }
@@ -1304,7 +1326,7 @@ pub extern "C" fn SQLSetEnvAttrW(
 ) -> SqlReturn {
     let env_handle = MongoHandleRef::from(environment_handle);
     env_handle.clear_diagnostics();
-    let env = check_invalid!(env_handle.as_env());
+    let env = must_be_valid!(env_handle.as_env());
     match attribute {
         EnvironmentAttribute::OdbcVersion => match FromPrimitive::from_i32(value as i32) {
             Some(version) => {
@@ -1366,7 +1388,7 @@ pub extern "C" fn SQLSetStmtAttrW(
 ) -> SqlReturn {
     let stmt_handle = MongoHandleRef::from(hstmt);
     stmt_handle.clear_diagnostics();
-    let stmt = check_invalid!(stmt_handle.as_statement());
+    let stmt = must_be_valid!(stmt_handle.as_statement());
     match attr {
         StatementAttribute::AppRowDesc => {
             stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_APP_ROW_DESC"));
