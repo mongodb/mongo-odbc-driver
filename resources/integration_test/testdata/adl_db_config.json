@@ -12,7 +12,27 @@
         ]
       }
     ],
+    "views" : [
+      {
+        "name": "baz",
+        "source": "bar",
+        "pipeline": "[{\"$project\": {\"a\": \"$a\", \"a_type\": {\"$type\": \"$a\"}, \"a_string\": {\"$toString\": \"$a\"}}}]"
+      }
+    ]
+  },
+  {
+    "name" : "db2",
+    "collections" : [
+      {
+        "name": "*",
+        "dataSources" : [
+          {
+            "storeName" : "localmongo",
+            "database" : "db2"
+          }
+        ]
+      }
+    ],
     "views" : null
   }
 ]
-
