@@ -69,7 +69,7 @@ fn get_set_env_attr(
 // test_env_attr tests SQLGetEnvAttr and SQLSetEnvAttr with every
 // environment attribute value.
 #[test]
-fn test_env_attr() {
+fn unit_test_env_attr() {
     use crate::map;
     let env_handle: *mut _ =
         &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
@@ -147,7 +147,7 @@ fn test_env_attr() {
 // optional_value_changed tests functions that return the SQL state
 // 01S02: Optional value changed.
 #[test]
-fn optional_value_changed() {
+fn unit_optional_value_changed() {
     let handle: *mut _ = &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
     assert_eq!(
         SqlReturn::SUCCESS_WITH_INFO,

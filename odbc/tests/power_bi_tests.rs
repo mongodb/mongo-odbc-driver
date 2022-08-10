@@ -45,13 +45,13 @@ fn setup() -> odbc_sys::HEnv {
 
 /// Test PowerBI Setup flow
 #[test]
-fn test_setup() {
+fn integeration_test_setup() {
     setup();
 }
 
 /// Test PowerBi environment clean-up
 #[test]
-fn test_env_cleanup() {
+fn integration_test_env_cleanup() {
     // We need a handle to be able to test that freeing the handle work
     let env_handle: HEnv = setup();
 

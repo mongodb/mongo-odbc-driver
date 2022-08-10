@@ -113,7 +113,7 @@ fn get_set_ptr(
 // test_supported_attributes tests SQLGetStmtAttr and SQLSetStmtAttr with every
 // supported statement attribute value.
 #[test]
-fn test_supported_attributes() {
+fn unit_test_supported_attributes() {
     use crate::map;
     let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
         std::ptr::null_mut(),
@@ -244,7 +244,7 @@ fn test_supported_attributes() {
 // test_unsupported_attributes tests SQLGetStmtAttr and SQLSetStmtAttr with every
 // unsupported statement attribute value.
 #[test]
-fn test_unsupported_attributes() {
+fn unit_test_unsupported_attributes() {
     use crate::map;
     let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
         std::ptr::null_mut(),

@@ -5,7 +5,7 @@ use std::sync::RwLock;
 const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
 
 #[test]
-fn simple() {
+fn unit_simple() {
     fn validate_diag_rec(handle_type: HandleType, handle: *mut MongoHandle) {
         const ERROR_MESSAGE: &str = "[MongoDB][API] The feature SQLDrivers is not implemented\0";
 
@@ -59,7 +59,7 @@ fn simple() {
 }
 
 #[test]
-fn error_message() {
+fn unit_error_message() {
     let env_handle: *mut _ =
         &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
@@ -112,7 +112,7 @@ fn error_message() {
 }
 
 #[test]
-fn invalid_ops() {
+fn unit_invalid_ops() {
     let env_handle: *mut _ =
         &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 

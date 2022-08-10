@@ -17,7 +17,7 @@ pub use stmt::MongoStatement;
 #[cfg(test)]
 mod tests {
     #[test]
-    fn it_works() {
+    fn unit_it_works() {
         // no-op
     }
 }

@@ -45,9 +45,12 @@ functions:
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
             # TODO: remove these with local ADL. This isn't a real security issue because
             # we no longer actively use this cluster
-            export ADL_TEST_HOST="connectors-data-lake-2wn65.a.query.mongodb-dev.net"
-            export ADL_TEST_USER="evg-adl-jdbc-driver"
-            export ADL_TEST_PWD="gtQZrUoRi4SGJkGo"
+            export ADF_TEST_LOCAL_USER="mhuser"
+            export ADF_TEST_LOCAL_PWD="pencil"
+            export ADF_TEST_LOCAL_AUTH_DB="admin
+            export ADF_TEST_LOCAL_HOST="localhost"
+            export ADF_TEST_LOCAL_PORT="27017"
+            export MDB_TEST_LOCAL_PORT="28017"
           EOT
     - command: expansions.update
       params:
@@ -181,7 +184,7 @@ functions:
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
           echo "-------------------------"
 
-  "run rust tests":
+  "run unit tests":
     - command: shell.exec
       type: test
       params:
@@ -189,7 +192,17 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          RUST_BACKTRACE=1 cargo test
+          RUST_BACKTRACE=1 cargo test unit
+
+  "run integration tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          RUST_BACKTRACE=1 cargo test integration
 
   "install unix odbc":
     - command: shell.exec
@@ -230,7 +243,7 @@ functions:
           export LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
           export RUSTFLAGS="-Z sanitizer=address"
           # we only run asan on the unit tests for now
-          cargo test --target x86_64-unknown-linux-gnu --lib
+          cargo test --target x86_64-unknown-linux-gnu unit
 
 pre:
   - func: "fetch source"
@@ -252,12 +265,19 @@ tasks:
       - func: "compile release"
       - func: "upload artifact"
 
-  - name: test-rust
+  - name: unit-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
-      - func: "run rust tests"
+      - func: "run unit tests"
+
+  - name: integration-test
+    depends_on:
+      - name: compile
+    commands:
+      - func: "install rust toolchain"
+      - func: "run integration tests"
 
   - name: asan
     commands:
@@ -275,7 +295,8 @@ task_groups:
     teardown_group:
       - func: "clean-up driver on Windows"
     tasks:
-      - test-rust
+      - unit-test
+      - integration-test
 
 buildvariants:
 

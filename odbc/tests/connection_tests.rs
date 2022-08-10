@@ -3,7 +3,7 @@ mod common;
 use common::connect;
 
 #[test]
-fn test_invalid_connection() {
+fn integration_test_invalid_connection() {
     // Missing PWD
     let conn_str = "Driver=ADL_ODBC_DRIVER;USER=N_A;SERVER=N_A;AUTH_SRC=N_A";
     let result = connect(Some(conn_str));
@@ -14,6 +14,6 @@ fn test_invalid_connection() {
 }
 
 #[test]
-fn test_default_connection() {
+fn integration_test_default_connection() {
     connect(None).unwrap();
 }
