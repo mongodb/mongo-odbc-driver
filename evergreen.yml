@@ -83,6 +83,7 @@ functions:
           # rustup installs into C:\Users\$USER instead of
           # C:\home\$USER, so we symlink both .rustup and .cargo
           if [ "Windows_NT" == "$OS" ]; then
+              echo "sym linking rustup"
               ln -sf /cygdrive/c/Users/$USER/.rustup/ ~/.rustup
               ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
 
@@ -285,7 +286,15 @@ tasks:
       - func: "run asan tests"
 
 task_groups:
-  - name: test-rust-group
+  - name: test-unit-group
+    setup_group_can_fail_task: false
+    setup_group:
+      - func: "fetch source"
+      - func: "generate expansions"
+    tasks:
+      - unit-test
+
+  - name: test-integration-group
     setup_group_can_fail_task: false
     setup_group:
       - func: "fetch source"
@@ -295,7 +304,6 @@ task_groups:
     teardown_group:
       - func: "clean-up driver on Windows"
     tasks:
-      - unit-test
       - integration-test
 
 buildvariants:
@@ -312,7 +320,8 @@ buildvariants:
     run_on: [ windows-64-vs2019-large ]
     tasks:
       - name: compile
-      - name: test-rust-group
+      - name: test-unit-group
+      - name: test-integration-group
 
 
   - name: ubuntu2004
