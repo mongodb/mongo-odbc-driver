@@ -47,7 +47,7 @@ functions:
             # we no longer actively use this cluster
             export ADF_TEST_LOCAL_USER="mhuser"
             export ADF_TEST_LOCAL_PWD="pencil"
-            export ADF_TEST_LOCAL_AUTH_DB="admin
+            export ADF_TEST_LOCAL_AUTH_DB="admin"
             export ADF_TEST_LOCAL_HOST="localhost"
             export ADF_TEST_LOCAL_PORT="27017"
             export MDB_TEST_LOCAL_PORT="28017"
