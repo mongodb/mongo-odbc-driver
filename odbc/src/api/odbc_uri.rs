@@ -52,7 +52,7 @@ impl<'a> ODBCUri<'a> {
 
     // remove_or_else is the same as remove but with a default thunk.
     pub fn remove_or_else(&mut self, f: impl Fn() -> &'a str, names: &[&str]) -> &'a str {
-        self.remove(names).unwrap_or(f())
+        self.remove(names).unwrap_or_else(f)
     }
 
     // remove_mandatory_attribute will find an attribute that must exist and transfer ownership to
@@ -64,9 +64,9 @@ impl<'a> ODBCUri<'a> {
         let mut len = 0;
         for (i, name) in names.iter().enumerate() {
             len = i;
-            let ret = self.0.remove(&name.to_string());
-            if ret.is_some() {
-                return Ok(ret.unwrap());
+            let result = self.0.remove(&name.to_string());
+            if let Some(ret) = result {
+                return Ok(ret);
             }
         }
         if len == 1 {
@@ -82,9 +82,9 @@ impl<'a> ODBCUri<'a> {
         }
     }
 
-    // to_mongo_uri converts this ODBCUri to a mongo_uri String. It will
+    // remove_mongo_uri converts this ODBCUri to a mongo_uri String. It will
     // remove all the attributes necessary to make a mongo_uri. This is destructive!
-    pub fn to_mongo_uri(&mut self) -> Result<String> {
+    pub fn remove_mongo_uri(&mut self) -> Result<String> {
         let user = self.remove_mandatory_attribute(USER)?;
         let pwd = self.remove_mandatory_attribute(PWD)?;
         let server = self.remove_mandatory_attribute(SERVER)?;
@@ -122,66 +122,66 @@ fn test_new() {
 }
 
 #[test]
-fn test_to_mongo_uri() {
+fn test_remove_mongo_uri() {
     assert!(ODBCUri::new("USER=foo;PWD=bar")
         .unwrap()
-        .to_mongo_uri()
+        .remove_mongo_uri()
         .is_err());
     assert!(ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
         .unwrap()
-        .to_mongo_uri()
+        .remove_mongo_uri()
         .is_err());
     assert!(ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")
         .unwrap()
-        .to_mongo_uri()
+        .remove_mongo_uri()
         .is_err());
     assert_eq!(
         "mongodb://foo:bar@127.0.0.1:27017".to_string(),
         ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017")
             .unwrap()
-            .to_mongo_uri()
+            .remove_mongo_uri()
             .unwrap()
     );
     assert_eq!(
         "mongodb://foo:bar@127.0.0.1:27017".to_string(),
         ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017")
             .unwrap()
-            .to_mongo_uri()
+            .remove_mongo_uri()
             .unwrap()
     );
     assert_eq!(
         "mongodb://foo:bar@127.0.0.1:27017".to_string(),
         ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017")
             .unwrap()
-            .to_mongo_uri()
+            .remove_mongo_uri()
             .unwrap()
     );
     assert_eq!(
         "mongodb://foo:bar@127.0.0.1:27017".to_string(),
         ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
             .unwrap()
-            .to_mongo_uri()
+            .remove_mongo_uri()
             .unwrap()
     );
     assert_eq!(
         "mongodb://foo:bar@127.0.0.1:27017".to_string(),
         ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
             .unwrap()
-            .to_mongo_uri()
+            .remove_mongo_uri()
             .unwrap()
     );
     assert_eq!(
         "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
         ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
             .unwrap()
-            .to_mongo_uri()
+            .remove_mongo_uri()
             .unwrap()
     );
     assert_eq!(
         "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
         ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
             .unwrap()
-            .to_mongo_uri()
+            .remove_mongo_uri()
             .unwrap()
     );
 }
