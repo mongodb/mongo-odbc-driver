@@ -32,7 +32,7 @@ impl<'a> ODBCUri<'a> {
                     return Err(ODBCError::InvalidUriFormat(EQUAL_ERROR.to_string()));
                 }
                 // ODBC attribute keys are case insensitive, so we lowercase the keys
-                Ok((sp.remove(0).to_string(), sp.remove(0)))
+                Ok((sp.remove(0).to_lowercase(), sp.remove(0)))
             })
             .collect::<Result<BTreeMap<_, _>>>()
             .map(ODBCUri)

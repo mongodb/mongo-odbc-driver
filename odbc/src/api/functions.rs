@@ -24,10 +24,12 @@ const HANDLE_MUST_BE_STMT_ERROR: &str = "handle must be stmt";
 
 macro_rules! must_be_valid {
     ($maybe_handle:expr) => {{
-        if $maybe_handle.is_none() {
+        // force the expression
+        let maybe_handle = $maybe_handle;
+        if maybe_handle.is_none() {
             return SqlReturn::INVALID_HANDLE;
         }
-        $maybe_handle.unwrap()
+        maybe_handle.unwrap()
     }};
 }
 
@@ -54,11 +56,13 @@ macro_rules! unsafe_must_be_stmt {
 
 macro_rules! odbc_unwrap {
     ($value:expr, $handle:expr) => {{
-        if let Err(error) = $value {
+        // force the expression
+        let value = $value;
+        if let Err(error) = value {
             $handle.add_diag_info(error.into());
             return SqlReturn::ERROR;
         }
-        $value.unwrap()
+        value.unwrap()
     }};
 }
 

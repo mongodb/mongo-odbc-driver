@@ -52,11 +52,9 @@ impl MongoConnection {
         let client = Client::with_options(client_options)?;
         // run the "ping" command on the `auth_src` database. We assume this requires the
         // fewest permissions of anything we can do to verify a connection.
-        let res = client
+        client
             .database(auth_src)
             .run_command(doc! {"ping": 1}, None)?;
-        // TODO: remove this after local ADF is shown to work.
-        println!("show ping output: {:?}", res);
         Ok(MongoConnection {
             client,
             current_db: current_db.map(String::from),
