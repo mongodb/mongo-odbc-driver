@@ -1,9 +1,9 @@
+use crate::map;
 use crate::{
     api::definitions::*,
     handles::definitions::{Env, EnvState, MongoHandle},
     SQLGetDiagRecW, SQLGetEnvAttrW, SQLSetEnvAttrW,
 };
-use mongo_odbc_core::map;
 use odbc_sys::{EnvironmentAttribute, HEnv, HandleType, Integer, Pointer, SqlReturn};
 use std::{collections::BTreeMap, ffi::c_void, mem::size_of, sync::RwLock};
 
@@ -70,7 +70,7 @@ fn get_set_env_attr(
 // environment attribute value.
 #[test]
 fn test_env_attr() {
-    use mongo_odbc_core::map;
+    use crate::map;
     let env_handle: *mut _ =
         &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
 
