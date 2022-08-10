@@ -13,19 +13,19 @@ lazy_static! {
 /// The default driver is 'ADL_ODBC_DRIVER' if not specified.
 /// The default auth db is 'admin' if not specified.
 fn generate_default_connection_str() -> String {
-    let user_name = env::var("ADL_TEST_USER").expect("ADL_TEST_USER is not set");
-    let password = env::var("ADL_TEST_PWD").expect("ADL_TEST_PWD is not set");
-    let host = env::var("ADL_TEST_HOST").expect("ADL_TEST_HOST is not set");
+    let user_name = env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set");
+    let password = env::var("ADF_TEST_LOCAL_PWD").expect("ADF_TEST_LOCAL_PWD is not set");
+    let host = env::var("ADF_TEST_LOCAL_HOST").expect("ADF_TEST_LOCAL_HOST is not set");
 
-    let auth_db = match env::var("ADL_TEST_AUTH_DB") {
+    let auth_db = match env::var("ADF_TEST_LOCAL_AUTH_DB") {
         Ok(val) => val,
         Err(_e) => "admin".to_string(), //Default auth db
     };
 
-    let db = env::var("ADL_TEST_DB");
-    let driver = match env::var("ADL_TEST_DRIVER") {
+    let db = env::var("ADF_TEST_LOCAL_DB");
+    let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
         Ok(val) => val,
-        Err(_e) => "ADL_ODBC_DRIVER".to_string(), //Default driver name
+        Err(_e) => "ADF_ODBC_DRIVER".to_string(), //Default driver name
     };
 
     let mut connection_string = format!(

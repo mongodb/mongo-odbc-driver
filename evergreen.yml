@@ -45,12 +45,11 @@ functions:
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
             # TODO: remove these with local ADL. This isn't a real security issue because
             # we no longer actively use this cluster
-            export ADF_TEST_LOCAL_USER="mhuser"
-            export ADF_TEST_LOCAL_PWD="pencil"
-            export ADF_TEST_LOCAL_AUTH_DB="admin"
-            export ADF_TEST_LOCAL_HOST="localhost"
-            export ADF_TEST_LOCAL_PORT="27017"
-            export MDB_TEST_LOCAL_PORT="28017"
+            export ADF_TEST_LOCAL_USER="${adf_test_local_user}"
+            export ADF_TEST_LOCAL_PWD="${adf_test_local_pwd}"
+            export ADF_TEST_LOCAL_AUTH_DB="${adf_test_local_auth_db}"
+            export ADF_TEST_LOCAL_HOST="${adf_test_local_host}"
+            export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
           EOT
     - command: expansions.update
       params:
@@ -203,7 +202,12 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          RUST_BACKTRACE=1 cargo test integration
+          export RUST_BACKTRACE=1
+          ./resources/run_adf.sh start &&
+          cargo test integration
+          EXITCODE=$?
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
 
   "install unix odbc":
     - command: shell.exec
@@ -267,8 +271,6 @@ tasks:
       - func: "upload artifact"
 
   - name: unit-test
-    depends_on:
-      - name: compile
     commands:
       - func: "install rust toolchain"
       - func: "run unit tests"
