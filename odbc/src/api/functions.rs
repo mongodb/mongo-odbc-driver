@@ -1,11 +1,13 @@
 use crate::{
     api::{
         definitions::*,
-        errors::ODBCError,
+        errors::{ODBCError, Result},
         functions::util::{input_wtext_to_string, set_str_length, unsupported_function},
+        odbc_uri::ODBCUri,
     },
     handles::definitions::*,
 };
+use mongo_odbc_core::MongoConnection;
 use num_traits::FromPrimitive;
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -14,6 +16,11 @@ use odbc_sys::{
     SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
 use std::{mem::size_of, sync::RwLock};
+
+const NULL_HANDLE_ERROR: &str = "handle cannot be null";
+const HANDLE_MUST_BE_ENV_ERROR: &str = "handle must be env";
+const HANDLE_MUST_BE_CONN_ERROR: &str = "handle must be conn";
+const HANDLE_MUST_BE_STMT_ERROR: &str = "handle must be stmt";
 
 macro_rules! must_be_valid {
     ($maybe_handle:expr) => {{
@@ -45,6 +52,16 @@ macro_rules! unsafe_must_be_stmt {
     }};
 }
 
+macro_rules! odbc_unwrap {
+    ($value:expr, $handle:expr) => {{
+        if let Err(error) = $value {
+            $handle.add_diag_info(error.into());
+            return SqlReturn::ERROR;
+        }
+        $value.unwrap()
+    }};
+}
+
 #[no_mangle]
 pub extern "C" fn SQLAllocHandle(
     handle_type: HandleType,
@@ -61,7 +78,7 @@ fn sql_alloc_handle(
     handle_type: HandleType,
     input_handle: *mut MongoHandle,
     output_handle: *mut Handle,
-) -> Result<(), ()> {
+) -> Result<()> {
     match handle_type {
         HandleType::Env => {
             let env = RwLock::new(Env::with_state(EnvState::Allocated));
@@ -74,10 +91,14 @@ fn sql_alloc_handle(
         HandleType::Dbc => {
             // input handle cannot be NULL
             if input_handle.is_null() {
-                return Err(());
+                return Err(ODBCError::InvalidHandleType(NULL_HANDLE_ERROR));
             }
             // input handle must be an Env
-            let env = unsafe { (*input_handle).as_env().ok_or(())? };
+            let env = unsafe {
+                (*input_handle)
+                    .as_env()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_ENV_ERROR))?
+            };
             let conn = RwLock::new(Connection::with_state(
                 input_handle,
                 ConnectionState::Allocated,
@@ -93,10 +114,14 @@ fn sql_alloc_handle(
         HandleType::Stmt => {
             // input handle cannot be NULL
             if input_handle.is_null() {
-                return Err(());
+                return Err(ODBCError::InvalidHandleType(NULL_HANDLE_ERROR));
             }
             // input handle must be an Connection
-            let conn = unsafe { (*input_handle).as_connection().ok_or(())? };
+            let conn = unsafe {
+                (*input_handle)
+                    .as_connection()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_CONN_ERROR))?
+            };
             let stmt = RwLock::new(Statement::with_state(
                 input_handle,
                 StatementState::Allocated,
@@ -413,12 +438,46 @@ pub extern "C" fn SQLDriverConnect(
     unsupported_function(MongoHandleRef::from(connection_handle), "SQLDriverConnect")
 }
 
+fn sql_driver_connect(
+    conn_handle: &RwLock<Connection>,
+    odbc_uri_string: &str,
+) -> Result<MongoConnection> {
+    let conn_reader = conn_handle.read().unwrap();
+    let mut odbc_uri = ODBCUri::new(odbc_uri_string)?;
+    let mongo_uri = odbc_uri.to_mongo_uri()?;
+    let auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
+    let database = if conn_reader.attributes.current_catalog.is_some() {
+        conn_reader
+            .attributes
+            .current_catalog
+            .as_ref()
+            .map(|x| x.as_str())
+    } else {
+        odbc_uri.remove(&["database"])
+    };
+    let connection_timeout = conn_reader.attributes.connection_timeout;
+    let login_timeout = conn_reader.attributes.login_timeout;
+    let application_name = odbc_uri.remove(&["app_name", "application_name"]);
+    // ODBCError has an impl From mongo_odbc_core::Error, but that does not
+    // create an impl From Result<T, mongo_odbc_core::Error> to Result<T, ODBCError>
+    // hence this bizzare Ok(func?) pattern.
+    Ok(mongo_odbc_core::MongoConnection::connect(
+        &mongo_uri,
+        auth_src,
+        database,
+        connection_timeout,
+        login_timeout,
+        application_name,
+    )?)
+}
+
 #[no_mangle]
 pub extern "C" fn SQLDriverConnectW(
     connection_handle: HDbc,
     _window_handle: HWnd,
     in_connection_string: *const WChar,
     string_length_1: SmallInt,
+    // TODO SQL-991: use these parameters!
     _out_connection_string: *mut WChar,
     _buffer_length: SmallInt,
     _string_length_2: *mut SmallInt,
@@ -426,26 +485,10 @@ pub extern "C" fn SQLDriverConnectW(
 ) -> SqlReturn {
     let conn_handle = MongoHandleRef::from(connection_handle);
     let conn = must_be_valid!((*conn_handle).as_connection());
-    let connect_result = {
-        let conn_reader = conn.read().unwrap();
-        let uri = input_wtext_to_string(in_connection_string, string_length_1 as usize);
-        let database = &conn_reader.attributes.current_catalog;
-        let connection_timeout = conn_reader.attributes.connection_timeout;
-        let login_timeout = conn_reader.attributes.login_timeout;
-        mongo_odbc_core::MongoConnection::connect(&uri, database, connection_timeout, login_timeout)
-    };
-    match connect_result {
-        Ok(mc) => {
-            let mut conn_writer = conn.write().unwrap();
-            conn_writer.attributes.current_catalog = mc.current_db.clone();
-            conn_writer.mongo_connection = Some(mc);
-            SqlReturn::SUCCESS
-        }
-        Err(error) => {
-            conn_handle.add_diag_info(error.into());
-            SqlReturn::ERROR
-        }
-    }
+    let odbc_uri_string = input_wtext_to_string(in_connection_string, string_length_1 as usize);
+    let mongo_connection = odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
+    conn.write().unwrap().mongo_connection = Some(mongo_connection);
+    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
@@ -568,19 +611,27 @@ pub extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlR
     }
 }
 
-fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<(), ()> {
+fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<()> {
     match handle_type {
         // By making Boxes to the types and letting them go out of
         // scope, they will be dropped.
         HandleType::Env => {
-            let _ = unsafe { (*handle).as_env().ok_or(())? };
+            let _ = unsafe {
+                (*handle)
+                    .as_env()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_ENV_ERROR))?
+            };
         }
         HandleType::Dbc => {
-            let conn = unsafe { (*handle).as_connection().ok_or(())? };
+            let conn = unsafe {
+                (*handle)
+                    .as_connection()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_CONN_ERROR))?
+            };
             let mut env_contents = unsafe {
                 (*conn.write().unwrap().env)
                     .as_env()
-                    .ok_or(())?
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_ENV_ERROR))?
                     .write()
                     .unwrap()
             };
@@ -590,13 +641,17 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
             }
         }
         HandleType::Stmt => {
-            let stmt = unsafe { (*handle).as_statement().ok_or(())? };
+            let stmt = unsafe {
+                (*handle)
+                    .as_statement()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_STMT_ERROR))?
+            };
             // Actually reading this value would make ASAN fail, but this
             // is what the ODBC standard expects.
             let mut conn_contents = unsafe {
                 (*stmt.write().unwrap().connection)
                     .as_connection()
-                    .ok_or(())?
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_CONN_ERROR))?
                     .write()
                     .unwrap()
             };

@@ -12,10 +12,10 @@ lazy_static! {
 /// of the form 'Driver={};PWD={};USER={};SERVER={};AUTH_SRC={}'.
 /// The default driver is 'ADL_ODBC_DRIVER' if not specified.
 /// The default auth db is 'admin' if not specified.
-pub fn generate_default_connection_str() -> String {
-    let user_name = env::var("ADL_TEST_USER").unwrap_or("pmeredit".to_owned());
-    let password = env::var("ADL_TEST_PWD").unwrap_or("a".to_owned());
-    let host = env::var("ADL_TEST_HOST").unwrap_or("127.0.0.1:27006".to_owned());
+fn generate_default_connection_str() -> String {
+    let user_name = env::var("ADL_TEST_USER").expect("ADL_TEST_USER is not set");
+    let password = env::var("ADL_TEST_PWD").expect("ADL_TEST_PWD is not set");
+    let host = env::var("ADL_TEST_HOST").expect("ADL_TEST_HOST is not set");
 
     let auth_db = match env::var("ADL_TEST_AUTH_DB") {
         Ok(val) => val,
