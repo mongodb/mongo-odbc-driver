@@ -34,8 +34,10 @@ elif [ -d "C:\\golang\\$GO_VERSION" ]; then
   export GOCACHE=$(cygpath -m $HOME/gocache)
   export GOPATH=$(cygpath -m $HOME/go)
 else #local testing
-  GOBINDIR="/usr/bin"
+  GOBINDIR=/usr/bin
 fi
+
+GO="$GOBINDIR/go"
 
 PATH=$GOBINDIR:$PATH
 
@@ -209,7 +211,7 @@ check_mongohoused
 if [[ $? -ne 0 ]]; then
   if [ $ARG = $START ]; then
     echo "Starting $MONGOHOUSED"
-    $GOBINDIR/go version
+    $GO version
 
     if [[ $HAVE_LOCAL_MONGOHOUSE -eq 1 ]]; then
         if [ ! -d "$LOCAL_MONGOHOUSE_DIR" ]; then
@@ -234,7 +236,7 @@ if [[ $? -ne 0 ]]; then
         git pull $MONGOHOUSE_URI
 
         export GOPRIVATE=github.com/10gen
-        $GOBINDIR/go mod download
+        $GO mod download
     fi
 
     # Set relevant environment variables
@@ -257,9 +259,9 @@ if [[ $? -ne 0 ]]; then
         cp ${MONGOSQL_LIB} ${MONGOSQL_LIB}.orig
     fi
     rm -f $MONGOHOUSE_MQLRUN
-    $GOBINDIR/go run cmd/buildscript/build.go tools:download:mqlrun
+    $GO run cmd/buildscript/build.go tools:download:mqlrun
     rm -f $MONGOSQL_LIB
-    $GOBINDIR/go run cmd/buildscript/build.go tools:download:mongosql
+    $GO run cmd/buildscript/build.go tools:download:mongosql
 
     get_jq
     # Load tenant config into mongodb
@@ -275,12 +277,12 @@ if [[ $? -ne 0 ]]; then
     jq --argjson obj "$DATABASES" '.storage.databases += $obj' ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp\
                                                                && mv ${TENANT_CONFIG}.tmp ${TENANT_CONFIG}
 
-    $GOBINDIR/go run cmd/buildscript/build.go init:mongodb-tenant
+    $GO run cmd/buildscript/build.go init:mongodb-tenant
 
     mkdir -p $TMP_DIR
     mkdir -p $LOGS_PATH
     # Start mongohoused with appropriate config
-    nohup $GOBINDIR/go run -tags mongosql ./cmd/mongohoused/mongohoused.go \
+    nohup $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
       --config ./testdata/config/mongodb_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
     echo $! > $TMP_DIR/${MONGOHOUSED}.pid
 
