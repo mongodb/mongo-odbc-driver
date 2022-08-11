@@ -43,7 +43,10 @@ echo '~~~~~~~~~~~~~'
 ls "C:\\golang"
 echo '============'
 
-PATH=$GOBINDIR:$PATH
+export PATH=$GOBINDIR:$PATH
+
+echo "PATHPATHPATHPATH"
+echo "$PATH"
 
 LOCAL_INSTALL_DIR=$(pwd)/local_adf
 MONGOHOUSE_URI=git@github.com:10gen/mongohouse.git
@@ -220,7 +223,7 @@ check_mongohoused
 if [[ $? -ne 0 ]]; then
   if [ $ARG = $START ]; then
     echo "Starting $MONGOHOUSED"
-    go version
+    $GOBINDIR/go version
 
     if [[ $HAVE_LOCAL_MONGOHOUSE -eq 1 ]]; then
         if [ ! -d "$LOCAL_MONGOHOUSE_DIR" ]; then
@@ -245,11 +248,10 @@ if [[ $? -ne 0 ]]; then
         git pull $MONGOHOUSE_URI
 
         export GOPRIVATE=github.com/10gen
-	which go
-	echo 'ENVENV'
-	env
+	echo 'STATGOSTATGO'
+	stat $GOBINDIR/go
 	echo '$$$$$$$$$$$$'
-        go mod download
+        $GOBINDIR/go mod download
     fi
 
     # Set relevant environment variables
@@ -272,9 +274,9 @@ if [[ $? -ne 0 ]]; then
         cp ${MONGOSQL_LIB} ${MONGOSQL_LIB}.orig
     fi
     rm -f $MONGOHOUSE_MQLRUN
-    go run cmd/buildscript/build.go tools:download:mqlrun
+    $GOBINDIR/go run cmd/buildscript/build.go tools:download:mqlrun
     rm -f $MONGOSQL_LIB
-    go run cmd/buildscript/build.go tools:download:mongosql
+    $GOBINDIR/go run cmd/buildscript/build.go tools:download:mongosql
 
     get_jq
     # Load tenant config into mongodb
@@ -290,12 +292,12 @@ if [[ $? -ne 0 ]]; then
     jq --argjson obj "$DATABASES" '.storage.databases += $obj' ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp\
                                                                && mv ${TENANT_CONFIG}.tmp ${TENANT_CONFIG}
 
-    go run cmd/buildscript/build.go init:mongodb-tenant
+    $GOBINDIR/go run cmd/buildscript/build.go init:mongodb-tenant
 
     mkdir -p $TMP_DIR
     mkdir -p $LOGS_PATH
     # Start mongohoused with appropriate config
-    nohup go run -tags mongosql ./cmd/mongohoused/mongohoused.go \
+    nohup $GOBINDIR/go run -tags mongosql ./cmd/mongohoused/mongohoused.go \
       --config ./testdata/config/mongodb_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
     echo $! > $TMP_DIR/${MONGOHOUSED}.pid
 
