@@ -58,7 +58,7 @@ impl<'a> ODBCUri<'a> {
     // remove_mandatory_attribute will find an attribute that must exist and transfer ownership to
     // the caller. It accepts a slice of names that will be checked in order for names that are
     // synonyms (e.g., uid and user are both viable attribute names for a user). If both names
-    // exist it will only find the first.
+    // exist, it will only find the first.
     fn remove_mandatory_attribute(&mut self, names: &[&str]) -> Result<&'a str> {
         // len is used only for more informative error messages.
         let mut len = 0;
