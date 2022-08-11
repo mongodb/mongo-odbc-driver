@@ -33,20 +33,9 @@ elif [ -d "C:\\golang\\$GO_VERSION" ]; then
   GOBINDIR="$GOROOT"\\bin
   export GOCACHE=$(cygpath -m $HOME/gocache)
   export GOPATH=$(cygpath -m $HOME/go)
-  echo '-------'
-  echo $GOROOT
 fi
 
-echo 'CHECKING C:'
-ls "C:\\"
-echo '~~~~~~~~~~~~~'
-ls "C:\\golang"
-echo '============'
-
-export PATH=$GOBINDIR:$PATH
-
-echo "PATHPATHPATHPATH"
-echo "$PATH"
+PATH=$GOBINDIR:$PATH
 
 LOCAL_INSTALL_DIR=$(pwd)/local_adf
 MONGOHOUSE_URI=git@github.com:10gen/mongohouse.git
@@ -69,8 +58,6 @@ if [[ $OS =~ ^CYGWIN ]]; then
 else
     TMP_DIR="/tmp/run_adf/"
 fi
-echo "------------"
-echo $TMP_DIR
 TIMEOUT=120
 
 MONGO_DOWNLOAD_BASE=https://fastdl.mongodb.org
@@ -133,9 +120,6 @@ get_jq() {
     fi
     chmod +x $TMP_DIR/jq
     export PATH=$PATH:$TMP_DIR
-    echo --- should see jq now ---
-    which jq
-    echo -------------------------
   fi
 }
 
@@ -248,9 +232,6 @@ if [[ $? -ne 0 ]]; then
         git pull $MONGOHOUSE_URI
 
         export GOPRIVATE=github.com/10gen
-	echo 'STATGOSTATGO'
-	stat $GOBINDIR/go
-	echo '$$$$$$$$$$$$'
         $GOBINDIR/go mod download
     fi
 
