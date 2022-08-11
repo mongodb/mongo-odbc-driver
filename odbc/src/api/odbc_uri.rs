@@ -15,7 +15,7 @@ const SSL: &[&str] = &["ssl"];
 pub struct ODBCUri<'a>(BTreeMap<String, &'a str>);
 
 impl<'a> ODBCUri<'a> {
-    pub(crate) fn new(odbc_uri: &'a str) -> Result<ODBCUri<'a>> {
+    pub fn new(odbc_uri: &'a str) -> Result<ODBCUri<'a>> {
         if odbc_uri.is_empty() {
             return Err(ODBCError::InvalidUriFormat(NOT_EMPTY_ERROR.to_string()));
         }
