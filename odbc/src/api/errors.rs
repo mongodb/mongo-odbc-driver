@@ -32,7 +32,8 @@ impl ODBCError {
     pub fn get_sql_state(&self) -> &str {
         match self {
             ODBCError::Unimplemented(_) => HYC00,
-            ODBCError::CoreError(_) => HYC00,
+            // TODO: set the state based on the type of CoreError since they may differ
+            ODBCError::CoreError(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) | ODBCError::InvalidAttrValue(_) => HY024,
             ODBCError::InvalidHandleType(_) => HYC00,
             ODBCError::OptionValueChanged(_, _) => _01S02,

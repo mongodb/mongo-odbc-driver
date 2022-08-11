@@ -448,7 +448,7 @@ fn sql_driver_connect(
 ) -> Result<MongoConnection> {
     let conn_reader = conn_handle.read().unwrap();
     let mut odbc_uri = ODBCUri::new(odbc_uri_string)?;
-    let mongo_uri = odbc_uri.remove_mongo_uri()?;
+    let mongo_uri = odbc_uri.remove_to_mongo_uri()?;
     let auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
     let database = if conn_reader.attributes.current_catalog.is_some() {
         conn_reader.attributes.current_catalog.as_deref()

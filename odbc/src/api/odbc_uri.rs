@@ -75,9 +75,9 @@ impl<'a> ODBCUri<'a> {
         })
     }
 
-    // remove_mongo_uri converts this ODBCUri to a mongo_uri String. It will
+    // remove_to_mongo_uri converts this ODBCUri to a mongo_uri String. It will
     // remove all the attributes necessary to make a mongo_uri. This is destructive!
-    pub fn remove_mongo_uri(&mut self) -> Result<String> {
+    pub fn remove_to_mongo_uri(&mut self) -> Result<String> {
         let user = self.remove_mandatory_attribute(USER)?;
         let pwd = self.remove_mandatory_attribute(PWD)?;
         // TODO SQL-990: Support the PORT attribute, right now the only way to specify PORT is as
@@ -124,29 +124,29 @@ mod unit {
     }
 
     #[test]
-    fn test_remove_mongo_uri() {
+    fn test_remove_to_mongo_uri() {
         use super::*;
         // test missing SERVER
         assert!(ODBCUri::new("USER=foo;PWD=bar")
             .unwrap()
-            .remove_mongo_uri()
+            .remove_to_mongo_uri()
             .is_err());
         // test missing PWD
         assert!(ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
             .unwrap()
-            .remove_mongo_uri()
+            .remove_to_mongo_uri()
             .is_err());
         // test missing USER
         assert!(ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")
             .unwrap()
-            .remove_mongo_uri()
+            .remove_to_mongo_uri()
             .is_err());
         // simple working test
         assert_eq!(
             "mongodb://foo:bar@127.0.0.1:27017".to_string(),
             ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017")
                 .unwrap()
-                .remove_mongo_uri()
+                .remove_to_mongo_uri()
                 .unwrap()
         );
         // UID instead of USER should work
@@ -154,7 +154,7 @@ mod unit {
             "mongodb://foo:bar@127.0.0.1:27017".to_string(),
             ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017")
                 .unwrap()
-                .remove_mongo_uri()
+                .remove_to_mongo_uri()
                 .unwrap()
         );
         // PassworD instead of PWD should work
@@ -162,7 +162,7 @@ mod unit {
             "mongodb://foo:bar@127.0.0.1:27017".to_string(),
             ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017")
                 .unwrap()
-                .remove_mongo_uri()
+                .remove_to_mongo_uri()
                 .unwrap()
         );
         // SSL=faLse should not set SSL option
@@ -170,7 +170,7 @@ mod unit {
             "mongodb://foo:bar@127.0.0.1:27017".to_string(),
             ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
                 .unwrap()
-                .remove_mongo_uri()
+                .remove_to_mongo_uri()
                 .unwrap()
         );
         // SSL=0 should not set SSL option
@@ -178,7 +178,7 @@ mod unit {
             "mongodb://foo:bar@127.0.0.1:27017".to_string(),
             ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
                 .unwrap()
-                .remove_mongo_uri()
+                .remove_to_mongo_uri()
                 .unwrap()
         );
         // SSL=1 should set SSL option
@@ -186,7 +186,7 @@ mod unit {
             "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
             ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
                 .unwrap()
-                .remove_mongo_uri()
+                .remove_to_mongo_uri()
                 .unwrap()
         );
         // SSL=true shoudl set SSL option
@@ -194,7 +194,7 @@ mod unit {
             "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
             ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
                 .unwrap()
-                .remove_mongo_uri()
+                .remove_to_mongo_uri()
                 .unwrap()
         );
     }

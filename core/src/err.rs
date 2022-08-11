@@ -1,6 +1,9 @@
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
 
+// SQL states
+pub const HY024: &str = "HY024";
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
@@ -10,6 +13,14 @@ pub enum Error {
 }
 
 impl Error {
+    pub fn get_sql_state(&self) -> &'static str {
+        match self {
+            // TODO: for now we just return HY024 for all Mongo Errors.
+            // In the future this will change based on the type of error.
+            Error::MongoError(_) => HY024,
+        }
+    }
+
     pub fn code(&self) -> i32 {
         // using `match` instead of `if let` in case we add future variants
         match self {
