@@ -2,7 +2,7 @@
 mod collections;
 pub use collections::MongoCollections;
 mod conn;
-pub use crate::conn::MongoConnection;
+pub use conn::MongoConnection;
 mod databases;
 pub use databases::MongoDatabases;
 mod err;
