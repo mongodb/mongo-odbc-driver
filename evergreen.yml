@@ -82,7 +82,6 @@ functions:
           # rustup installs into C:\Users\$USER instead of
           # C:\home\$USER, so we symlink both .rustup and .cargo
           if [ "Windows_NT" == "$OS" ]; then
-              echo "sym linking rustup"
               ln -sf /cygdrive/c/Users/$USER/.rustup/ ~/.rustup
               ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
 
