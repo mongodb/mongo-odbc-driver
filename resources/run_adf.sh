@@ -33,7 +33,16 @@ elif [ -d "C:\\golang\\$GO_VERSION" ]; then
   GOBINDIR="$GOROOT"\\bin
   export GOCACHE=$(cygpath -m $HOME/gocache)
   export GOPATH=$(cygpath -m $HOME/go)
+  echo '-------'
+  echo $GOROOT
 fi
+
+echo 'CHECKING C:'
+ls "C:\\"
+echo '~~~~~~~~~~~~~'
+ls "C:\\golang"
+echo '============'
+
 PATH=$GOBINDIR:$PATH
 
 LOCAL_INSTALL_DIR=$(pwd)/local_adf
@@ -57,6 +66,8 @@ if [[ $OS =~ ^CYGWIN ]]; then
 else
     TMP_DIR="/tmp/run_adf/"
 fi
+echo "------------"
+echo $TMP_DIR
 TIMEOUT=120
 
 MONGO_DOWNLOAD_BASE=https://fastdl.mongodb.org
