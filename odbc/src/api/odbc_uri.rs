@@ -105,10 +105,10 @@ impl<'a> ODBCUri<'a> {
 }
 
 mod unit {
-    use super::*;
     // TODO SQL-990: Add more tests to cover the ODBC spec with regards to special characters.
     #[test]
     fn test_new() {
+        use super::*;
         use crate::map;
 
         assert!(ODBCUri::new("").is_err());
@@ -125,6 +125,7 @@ mod unit {
 
     #[test]
     fn test_remove_mongo_uri() {
+        use super::*;
         assert!(ODBCUri::new("USER=foo;PWD=bar")
             .unwrap()
             .remove_mongo_uri()
