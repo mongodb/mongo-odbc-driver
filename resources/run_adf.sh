@@ -245,6 +245,10 @@ if [[ $? -ne 0 ]]; then
         git pull $MONGOHOUSE_URI
 
         export GOPRIVATE=github.com/10gen
+	which go
+	echo 'ENVENV'
+	env
+	echo '$$$$$$$$$$$$'
         go mod download
     fi
 
