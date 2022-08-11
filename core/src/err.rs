@@ -2,7 +2,7 @@ use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
 
 // SQL states
-pub const HY024: &str = "HY024";
+pub const HYC00 &str = "HYC00";
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -17,7 +17,7 @@ impl Error {
         match self {
             // TODO: for now we just return HY024 for all Mongo Errors.
             // In the future this will change based on the type of error.
-            Error::MongoError(_) => HY024,
+            Error::MongoError(_) => HYC00,
         }
     }
 
