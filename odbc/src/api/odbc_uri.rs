@@ -87,9 +87,12 @@ impl<'a> ODBCUri<'a> {
     pub fn remove_mongo_uri(&mut self) -> Result<String> {
         let user = self.remove_mandatory_attribute(USER)?;
         let pwd = self.remove_mandatory_attribute(PWD)?;
+        // TODO SQL-990: Support the PORT attribute, right now the only way to specify PORT is as
+        // part of SERVER. If ports are specified in both SERVER and PORT and they do not match it
+        // should be an error (I think, check the spec if it says...).
         let server = self.remove_mandatory_attribute(SERVER)?;
         let ssl = self.remove(SSL);
-        // TODO: SQL-990: we may wish to support more attributes as options.
+        // TODO SQL-990: we may wish to support more attributes as options.
         // If we do, add more tests to cover them.
         let ssl_string =
             if ssl.is_some() && ssl.unwrap() != "0" && ssl.unwrap().to_lowercase() != "false" {
