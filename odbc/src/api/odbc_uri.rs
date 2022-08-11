@@ -60,26 +60,19 @@ impl<'a> ODBCUri<'a> {
     // synonyms (e.g., uid and user are both viable attribute names for a user). If both names
     // exist, it will only find the first.
     fn remove_mandatory_attribute(&mut self, names: &[&str]) -> Result<&'a str> {
-        // len is used only for more informative error messages.
-        let mut len = 0;
-        for (i, name) in names.iter().enumerate() {
-            len = i;
-            let result = self.0.remove(&name.to_string());
-            if let Some(ret) = result {
-                return Ok(ret);
+        self.remove(names).ok_or_else(|| {
+            if names.len() == 1 {
+                ODBCError::InvalidUriFormat(format!(
+                    "{} is required for a valid Mongo ODBC Uri",
+                    names[0]
+                ))
+            } else {
+                ODBCError::InvalidUriFormat(format!(
+                    "One of {:?} is required for a valid Mongo ODBC Uri",
+                    names
+                ))
             }
-        }
-        if len == 1 {
-            Err(ODBCError::InvalidUriFormat(format!(
-                "{} is required for a valid Mongo ODBC Uri",
-                names[0]
-            )))
-        } else {
-            Err(ODBCError::InvalidUriFormat(format!(
-                "One of {:?} is required for a valid Mongo ODBC Uri",
-                names
-            )))
-        }
+        })
     }
 
     // remove_mongo_uri converts this ODBCUri to a mongo_uri String. It will
