@@ -104,84 +104,87 @@ impl<'a> ODBCUri<'a> {
     }
 }
 
-// TODO SQL-990: Add more tests to cover the ODBC spec with regards to special characters.
-#[test]
-fn unit_new() {
-    use crate::map;
+mod unit {
+    use super::*;
+    // TODO SQL-990: Add more tests to cover the ODBC spec with regards to special characters.
+    #[test]
+    fn test_new() {
+        use crate::map;
 
-    assert!(ODBCUri::new("").is_err());
-    assert!(ODBCUri::new("Foo").is_err());
-    assert!(ODBCUri::new("driver=Foo;Bar").is_err());
+        assert!(ODBCUri::new("").is_err());
+        assert!(ODBCUri::new("Foo").is_err());
+        assert!(ODBCUri::new("driver=Foo;Bar").is_err());
 
-    let expected = ODBCUri(map! {"driver".to_string() => "Foo"});
-    assert_eq!(expected, ODBCUri::new("Driver=Foo").unwrap());
+        let expected = ODBCUri(map! {"driver".to_string() => "Foo"});
+        assert_eq!(expected, ODBCUri::new("Driver=Foo").unwrap());
 
-    let expected = ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
-    assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr").unwrap());
-    assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr;").unwrap());
-}
+        let expected = ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
+        assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr").unwrap());
+        assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr;").unwrap());
+    }
 
-#[test]
-fn unit_remove_mongo_uri() {
-    assert!(ODBCUri::new("USER=foo;PWD=bar")
-        .unwrap()
-        .remove_mongo_uri()
-        .is_err());
-    assert!(ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
-        .unwrap()
-        .remove_mongo_uri()
-        .is_err());
-    assert!(ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")
-        .unwrap()
-        .remove_mongo_uri()
-        .is_err());
-    assert_eq!(
-        "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-        ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017")
+    #[test]
+    fn test_remove_mongo_uri() {
+        assert!(ODBCUri::new("USER=foo;PWD=bar")
             .unwrap()
             .remove_mongo_uri()
-            .unwrap()
-    );
-    assert_eq!(
-        "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-        ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017")
+            .is_err());
+        assert!(ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
             .unwrap()
             .remove_mongo_uri()
-            .unwrap()
-    );
-    assert_eq!(
-        "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-        ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017")
+            .is_err());
+        assert!(ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")
             .unwrap()
             .remove_mongo_uri()
-            .unwrap()
-    );
-    assert_eq!(
-        "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-        ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
-            .unwrap()
-            .remove_mongo_uri()
-            .unwrap()
-    );
-    assert_eq!(
-        "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-        ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
-            .unwrap()
-            .remove_mongo_uri()
-            .unwrap()
-    );
-    assert_eq!(
-        "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
-        ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
-            .unwrap()
-            .remove_mongo_uri()
-            .unwrap()
-    );
-    assert_eq!(
-        "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
-        ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
-            .unwrap()
-            .remove_mongo_uri()
-            .unwrap()
-    );
+            .is_err());
+        assert_eq!(
+            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017")
+                .unwrap()
+                .remove_mongo_uri()
+                .unwrap()
+        );
+        assert_eq!(
+            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017")
+                .unwrap()
+                .remove_mongo_uri()
+                .unwrap()
+        );
+        assert_eq!(
+            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017")
+                .unwrap()
+                .remove_mongo_uri()
+                .unwrap()
+        );
+        assert_eq!(
+            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
+                .unwrap()
+                .remove_mongo_uri()
+                .unwrap()
+        );
+        assert_eq!(
+            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
+                .unwrap()
+                .remove_mongo_uri()
+                .unwrap()
+        );
+        assert_eq!(
+            "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
+            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
+                .unwrap()
+                .remove_mongo_uri()
+                .unwrap()
+        );
+        assert_eq!(
+            "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
+            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
+                .unwrap()
+                .remove_mongo_uri()
+                .unwrap()
+        );
+    }
 }
