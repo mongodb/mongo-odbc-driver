@@ -43,8 +43,6 @@ functions:
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
-            # TODO: remove these with local ADF. This isn't a real security issue because
-            # we no longer actively use this cluster
             export ADF_TEST_LOCAL_USER="${adf_test_local_user}"
             export ADF_TEST_LOCAL_PWD="${adf_test_local_pwd}"
             export ADF_TEST_LOCAL_AUTH_DB="${adf_test_local_auth_db}"
