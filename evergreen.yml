@@ -203,9 +203,6 @@ functions:
         script: |
           ${prepare_shell}
           export RUST_BACKTRACE=1
-          echo '^^^^^^^^^^^^^^^^'
-          env
-          echo 'vvvvvvvvvvvvvvvv'
           ./resources/run_adf.sh start &&
           cargo test integration
           EXITCODE=$?
