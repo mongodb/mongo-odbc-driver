@@ -803,14 +803,14 @@ pub extern "C" fn SQLGetDiagField(
 #[no_mangle]
 pub extern "C" fn SQLGetDiagFieldW(
     _handle_type: HandleType,
-    _handle: Handle,
+    handle: Handle,
     _record_rumber: SmallInt,
     _diag_identifier: SmallInt,
     _diag_info_ptr: Pointer,
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagFieldW")
 }
 
 #[no_mangle]
