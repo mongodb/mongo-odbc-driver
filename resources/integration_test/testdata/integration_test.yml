@@ -1,0 +1,14 @@
+dataset:
+  - db: integration_test
+    collection: foo
+    docs:
+      - {_id: 0, a: {$numberLong: "42"}, c: {$maxKey: 1}, d: {$minKey: 1}, e: {$oid: "000000000000000000000003"}}
+      - {_id: 1, a: {$numberLong: "13"}}
+      - {_id: 2, a: {$numberLong: "100"}}
+
+  - db: integration_test
+    collection: bar
+    docs:
+      - {_id: 0, b: "a"}
+      - {_id: 1, b: "b"}
+      - {_id: 2, b: "c"}
