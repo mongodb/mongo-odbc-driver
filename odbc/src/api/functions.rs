@@ -1817,7 +1817,7 @@ mod util {
         }
         set_sql_state(error.get_sql_state(), state);
         set_error_message(
-            error.get_error_message(),
+            format!("{}", error),
             message_text,
             buffer_length as usize,
             text_length_ptr,

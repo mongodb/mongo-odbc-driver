@@ -33,9 +33,7 @@ impl ODBCError {
             ODBCError::OptionValueChanged(_, _) => _01S02,
         }
     }
-    pub fn get_error_message(&self) -> String {
-        format!("{}", self)
-    }
+
     pub fn get_native_err_code(&self) -> i32 {
         match self {
             // Functions that return these errors don't interact with MongoDB,
