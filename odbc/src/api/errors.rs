@@ -1,11 +1,5 @@
+use constants::{HY024, HYC00, VENDOR_IDENTIFIER, _01S02};
 use thiserror::Error;
-
-const VENDOR_IDENTIFIER: &str = "MongoDB";
-
-// SQL states
-pub const HYC00: &str = "HYC00";
-pub const HY024: &str = "HY024";
-pub const _01S02: &str = "01S02";
 
 #[derive(Debug, Error)]
 pub enum ODBCError {

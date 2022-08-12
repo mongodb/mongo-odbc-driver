@@ -12,6 +12,7 @@ chrono = "0.4.11"
 lazy_static = "1.4.0"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
+constants = { path = "../constants" }
 mongo-odbc-core = { path = "../core" }
 
 [dependencies.mongodb]

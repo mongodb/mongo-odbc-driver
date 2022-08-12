@@ -1,8 +1,6 @@
+use constants::HYC00;
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
-
-// SQL states
-pub const HYC00 &str = "HYC00";
 
 pub type Result<T> = std::result::Result<T, Error>;
 

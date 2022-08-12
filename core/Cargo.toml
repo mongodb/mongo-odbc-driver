@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 bson = "2"
 thiserror = "1"
+constants = { path = "../constants" }
 
 [dependencies.mongodb]
 version = "2.1"
