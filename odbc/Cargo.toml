@@ -3,7 +3,8 @@ name = "mongo-odbc-driver"
 version = "0.1.0"
 authors = ["Ryan Chipman <ryan@ryanchipman.com>",
     "Natacha Bagnard <natacha.bagnard@mongodb.com>",
-    "Patrick Meredith <pmeredit@protonmail.com>"]
+    "Patrick Meredith <pmeredit@protonmail.com>",
+    "Varsha Subrahmanyam <varsha.subrahmanyam@mongodb.com>"]
 edition = "2021"
 
 [dependencies]
