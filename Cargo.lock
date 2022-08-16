@@ -833,6 +833,7 @@ dependencies = [
  "mongodb",
  "serde",
  "serde_yaml 0.9.4",
+ "thiserror",
 ]
 
 [[package]]
