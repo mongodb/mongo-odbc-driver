@@ -247,6 +247,17 @@ functions:
           export RUSTFLAGS="-Z sanitizer=address"
           cargo test --target x86_64-unknown-linux-gnu
 
+  "run integration test":
+    command: shell.exec
+    type: test
+    params:
+      working_dir: mongosql-odbc-driver
+      script: |
+        ${PREPARE_SHELL}
+        ./resources/run_adf.sh start
+        cargo test --manifest-path integration_test/Cargo.toml -- --ignored &&
+        ./resources/run_adf.sh stop
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -274,6 +285,10 @@ tasks:
       - func: "install rust toolchain"
       - func: "run rust tests"
 
+  - name: test-integration
+    commands:
+      - func: "run integration test"
+
   - name: asan
     commands:
       - func: "install unix odbc"
@@ -291,6 +306,7 @@ task_groups:
       - func: "clean-up driver on Windows"
     tasks:
       - test-rust
+      - test-integration
 
 buildvariants:
 
@@ -314,7 +330,6 @@ buildvariants:
     tasks:
       - name: compile
       - name: test-rust-group
-
 
   - name: ubuntu2004
     display_name: Ubuntu 20.04
