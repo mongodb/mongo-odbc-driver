@@ -17,7 +17,7 @@ pub enum ODBCError {
     )]
     OptionValueChanged(&'static str, &'static str),
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
-    CoreError(#[from] mongo_odbc_core::Error),
+    Core(#[from] mongo_odbc_core::Error),
 }
 
 pub type Result<T> = std::result::Result<T, ODBCError>;
@@ -26,8 +26,7 @@ impl ODBCError {
     pub fn get_sql_state(&self) -> &str {
         match self {
             ODBCError::Unimplemented(_) => HYC00,
-            // TODO: set the state based on the type of CoreError since they may differ
-            ODBCError::CoreError(c) => c.get_sql_state(),
+            ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) | ODBCError::InvalidAttrValue(_) => HY024,
             ODBCError::InvalidHandleType(_) => HYC00,
             ODBCError::OptionValueChanged(_, _) => _01S02,
@@ -44,7 +43,7 @@ impl ODBCError {
             | ODBCError::InvalidAttrValue(_)
             | ODBCError::InvalidHandleType(_)
             | ODBCError::OptionValueChanged(_, _) => 0,
-            ODBCError::CoreError(me) => me.code(),
+            ODBCError::Core(me) => me.code(),
         }
     }
 }

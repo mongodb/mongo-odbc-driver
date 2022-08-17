@@ -127,20 +127,38 @@ mod unit {
     fn test_remove_to_mongo_uri() {
         use super::*;
         // test missing SERVER
-        assert!(ODBCUri::new("USER=foo;PWD=bar")
-            .unwrap()
-            .remove_to_mongo_uri()
-            .is_err());
+        assert_eq!(
+            "[MongoDB][API] Invalid Uri server is required for a valid Mongo ODBC Uri",
+            format!(
+                "{}",
+                ODBCUri::new("USER=foo;PWD=bar")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap_err()
+            )
+        );
         // test missing PWD
-        assert!(ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
-            .unwrap()
-            .remove_to_mongo_uri()
-            .is_err());
+        assert_eq!(
+            "[MongoDB][API] Invalid Uri One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri",
+            format!(
+                "{}",
+                ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap_err()
+            )
+        );
         // test missing USER
-        assert!(ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")
-            .unwrap()
-            .remove_to_mongo_uri()
-            .is_err());
+        assert_eq!(
+            "[MongoDB][API] Invalid Uri One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri",
+            format!(
+                "{}",
+                ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap_err()
+            )
+        );
         // simple working test
         assert_eq!(
             "mongodb://foo:bar@127.0.0.1:27017".to_string(),

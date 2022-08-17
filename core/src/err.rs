@@ -1,4 +1,4 @@
-use constants::HYC00;
+use constants::HY000;
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
 
@@ -13,9 +13,11 @@ pub enum Error {
 impl Error {
     pub fn get_sql_state(&self) -> &'static str {
         match self {
-            // TODO: for now we just return HY024 for all Mongo Errors.
+            // TODO: for now we just return HY000 for all Mongo Errors.
             // In the future this will change based on the type of error.
-            Error::MongoError(_) => HYC00,
+            // This should be updated as we introduce features that can refine
+            // this.
+            Error::MongoError(_) => HY000,
         }
     }
 
