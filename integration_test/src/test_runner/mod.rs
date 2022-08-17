@@ -119,7 +119,7 @@ fn connect() -> Result<Connection<'static>, Error> {
     };
 
     let connection_string = format!(
-        "Driver={{{}}};PWD={};UID={};SERVER={};AUTH_SRC={};Database={}",
+        "Driver={};PWD={};USER={};SERVER={};AUTH_SRC={};Database={}",
         driver, password, user_name, host, auth_db, db
     );
     let connection = ODBC_ENV
