@@ -11,7 +11,7 @@ macro_rules! map {
 	};
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum SqlBool {
     False = 0,
     True,
@@ -19,13 +19,13 @@ pub enum SqlBool {
 
 // Environment attributes
 
-#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum OdbcVersion {
     Odbc3 = 3,
     Odbc3_80 = 380,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum ConnectionPooling {
     Off = 0,
     OnePerDriver,
@@ -33,7 +33,7 @@ pub enum ConnectionPooling {
     DriverAware,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum CpMatch {
     Strict = 0,
     Relaxed,

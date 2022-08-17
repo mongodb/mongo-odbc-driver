@@ -15,8 +15,7 @@ const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
 
 lazy_static! {
     pub static ref ODBC_ENV: Environment = {
-        let env = Environment::new().unwrap();
-        env
+        Environment::new().unwrap()
     };
 }
 
@@ -43,15 +42,15 @@ pub enum Error {
     #[error("missing query or function in test: {0}")]
     MissingQueryOrFunction(String),
     #[error("unsuccessful SQL return code encountered: {0}")]
-    SqlReturnError(String),
+    SqlReturn(String),
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IntegrationTest {
     pub tests: Vec<TestEntry>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TestEntry {
     pub description: String,
     pub db: String,
@@ -164,7 +163,7 @@ pub fn integration_test() -> Result<(), Error> {
 
 fn run_query_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> {
     let cursor = conn
-        .execute(&entry.query.as_ref().unwrap(), ())
+        .execute(entry.query.as_ref().unwrap(), ())
         .unwrap()
         .unwrap();
     validate_result_set(entry, cursor);
@@ -175,7 +174,7 @@ fn str_or_null(value: &Value) -> *const u8 {
     if value.is_null() {
         null_mut()
     } else {
-        odbc_api::handles::SqlText::new(&value.as_str().expect("Unable to cast value as string"))
+        odbc_api::handles::SqlText::new(value.as_str().expect("Unable to cast value as string"))
             .ptr()
     }
 }
@@ -289,7 +288,7 @@ fn run_function_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> 
 
     let sql_return_val = sql_return.unwrap();
     if (sql_return_val != SqlReturn::SUCCESS) && (sql_return_val != SqlReturn::SUCCESS_WITH_INFO) {
-        return Err(Error::SqlReturnError(format!("{:?}", sql_return_val)));
+        return Err(Error::SqlReturn(format!("{:?}", sql_return_val)));
     }
     unsafe {
         let cursor = CursorImpl::new(statement);
@@ -320,8 +319,7 @@ pub fn allocate_buffer(mut cursor: impl Cursor) -> RowSetCursor<impl Cursor, Col
         .collect::<Result<_, Error>>()
         .unwrap();
     let buffer = ColumnarAnyBuffer::from_description(5000, buffer_description.into_iter());
-    let row_set_cursor = cursor.bind_buffer(buffer).unwrap();
-    row_set_cursor
+    cursor.bind_buffer(buffer).unwrap()
 }
 
 fn validate_result_set(_entry: &TestEntry, cursor: impl Cursor) {
