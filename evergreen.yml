@@ -255,7 +255,7 @@ functions:
       script: |
         ${PREPARE_SHELL}
         ./resources/run_adf.sh start
-        cargo test --manifest-path integration_test/Cargo.toml -- --ignored &&
+        cargo test -- --ignored &&
         ./resources/run_adf.sh stop
 
 pre:
