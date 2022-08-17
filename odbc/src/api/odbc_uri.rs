@@ -1,5 +1,5 @@
 use crate::errors::{ODBCError, Result};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 // TODO SQL-990: These errors will probably change.
 const NOT_EMPTY_ERROR: &str = "uri must not be empty";
@@ -12,7 +12,7 @@ const SERVER: &[&str] = &["server"];
 const SSL: &[&str] = &["ssl"];
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct ODBCUri<'a>(BTreeMap<String, &'a str>);
+pub struct ODBCUri<'a>(HashMap<String, &'a str>);
 
 impl<'a> ODBCUri<'a> {
     pub fn new(odbc_uri: &'a str) -> Result<ODBCUri<'a>> {
@@ -34,7 +34,7 @@ impl<'a> ODBCUri<'a> {
                 // ODBC attribute keys are case insensitive, so we lowercase the keys
                 Ok((sp.remove(0).to_lowercase(), sp.remove(0)))
             })
-            .collect::<Result<BTreeMap<_, _>>>()
+            .collect::<Result<HashMap<_, _>>>()
             .map(ODBCUri)
     }
 
