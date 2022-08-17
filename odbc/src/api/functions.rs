@@ -966,7 +966,7 @@ pub extern "C" fn SQLGetStmtAttrW(
     stmt_handle.clear_diagnostics();
     let stmt = must_be_valid!(stmt_handle.as_statement());
     if value_ptr.is_null() {
-        return SqlReturn::SUCCESS;
+        return SqlReturn::ERROR;
     }
     let stmt_contents = stmt.read().unwrap();
     // Most attributes have type SQLULEN, so default to the size of that
@@ -1349,7 +1349,6 @@ pub extern "C" fn SQLSetEnvAttr(
     value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
-    //unsupported_function(MongoHandleRef::from(environment_handle), "SQLSetEnvAttr")
     SQLSetEnvAttrW(environment_handle, attribute, value, _string_length)
 }
 

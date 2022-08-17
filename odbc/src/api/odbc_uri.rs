@@ -102,43 +102,71 @@ impl<'a> ODBCUri<'a> {
 
 mod unit {
     // TODO SQL-990: Add more tests to cover the ODBC spec with regards to special characters.
-    #[test]
-    fn test_new() {
-        use super::*;
-        use crate::map;
+    mod new {
+        #[test]
+        fn empty_uri_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert!(ODBCUri::new("").is_err());
+        }
 
-        assert!(ODBCUri::new("").is_err());
-        assert!(ODBCUri::new("Foo").is_err());
-        assert!(ODBCUri::new("driver=Foo;Bar").is_err());
+        #[test]
+        fn string_foo_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert!(ODBCUri::new("Foo").is_err());
+        }
 
-        // test one attribute
-        let expected = ODBCUri(map! {"driver".to_string() => "Foo"});
-        assert_eq!(expected, ODBCUri::new("Driver=Foo").unwrap());
+        #[test]
+        fn missing_equals_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert!(ODBCUri::new("driver=Foo;Bar").is_err());
+        }
 
-        // test two attributes
-        let expected = ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
-        assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr").unwrap());
+        #[test]
+        fn one_attribute_works() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(map! {"driver".to_string() => "Foo"});
+            assert_eq!(expected, ODBCUri::new("Driver=Foo").unwrap());
+        }
 
-        // test that trailing ';' is not an issue
-        assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr;").unwrap());
+        #[test]
+        fn two_attributes_works() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected =
+                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
+            assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr").unwrap());
+        }
+
+        #[test]
+        fn two_attriubutes_with_trailing_semi_works() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected =
+                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
+            assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr;").unwrap());
+        }
     }
 
-    #[test]
-    fn test_remove_to_mongo_uri() {
-        use super::*;
-        // test missing SERVER
-        assert_eq!(
-            "[MongoDB][API] Invalid Uri server is required for a valid Mongo ODBC Uri",
-            format!(
-                "{}",
-                ODBCUri::new("USER=foo;PWD=bar")
-                    .unwrap()
-                    .remove_to_mongo_uri()
-                    .unwrap_err()
-            )
-        );
-        // test missing PWD
-        assert_eq!(
+    mod remove_to_mongo_uri {
+        #[test]
+        fn missing_server_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "[MongoDB][API] Invalid Uri server is required for a valid Mongo ODBC Uri",
+                format!(
+                    "{}",
+                    ODBCUri::new("USER=foo;PWD=bar")
+                        .unwrap()
+                        .remove_to_mongo_uri()
+                        .unwrap_err()
+                )
+            );
+        }
+        #[test]
+        fn missing_pwd_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
             "[MongoDB][API] Invalid Uri One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri",
             format!(
                 "{}",
@@ -148,8 +176,11 @@ mod unit {
                     .unwrap_err()
             )
         );
-        // test missing USER
-        assert_eq!(
+        }
+        #[test]
+        fn missing_user_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
             "[MongoDB][API] Invalid Uri One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri",
             format!(
                 "{}",
@@ -159,61 +190,90 @@ mod unit {
                     .unwrap_err()
             )
         );
-        // simple working test
-        assert_eq!(
-            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017")
-                .unwrap()
-                .remove_to_mongo_uri()
-                .unwrap()
-        );
-        // UID instead of USER should work
-        assert_eq!(
-            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-            ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017")
-                .unwrap()
-                .remove_to_mongo_uri()
-                .unwrap()
-        );
-        // PassworD instead of PWD should work
-        assert_eq!(
-            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-            ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017")
-                .unwrap()
-                .remove_to_mongo_uri()
-                .unwrap()
-        );
+        }
+
+        #[test]
+        fn use_pwd_server_works() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn uid_instead_of_user_works() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+                ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn password_instead_of_pwd_works() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+                ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap()
+            );
+        }
         // SSL=faLse should not set SSL option
-        assert_eq!(
-            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
-                .unwrap()
-                .remove_to_mongo_uri()
-                .unwrap()
-        );
-        // SSL=0 should not set SSL option
-        assert_eq!(
-            "mongodb://foo:bar@127.0.0.1:27017".to_string(),
-            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
-                .unwrap()
-                .remove_to_mongo_uri()
-                .unwrap()
-        );
-        // SSL=1 should set SSL option
-        assert_eq!(
-            "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
-            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
-                .unwrap()
-                .remove_to_mongo_uri()
-                .unwrap()
-        );
-        // SSL=true shoudl set SSL option
-        assert_eq!(
-            "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
-            ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
-                .unwrap()
-                .remove_to_mongo_uri()
-                .unwrap()
-        );
+        #[test]
+        fn ssl_eq_false_should_not_set_ssl() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn ssl_eq_0_should_not_set_ssl() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn ssl_eq_1_should_set_ssl_to_true() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn ssl_eq_true_should_set_ssl_to_true() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string(),
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
+                    .unwrap()
+                    .remove_to_mongo_uri()
+                    .unwrap()
+            );
+        }
     }
 }
