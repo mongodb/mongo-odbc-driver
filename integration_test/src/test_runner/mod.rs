@@ -14,9 +14,7 @@ use thiserror::Error;
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
 
 lazy_static! {
-    pub static ref ODBC_ENV: Environment = {
-        Environment::new().unwrap()
-    };
+    pub static ref ODBC_ENV: Environment = { Environment::new().unwrap() };
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

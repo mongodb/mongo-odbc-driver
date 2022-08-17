@@ -286,7 +286,10 @@ tasks:
       - func: "run rust tests"
 
   - name: test-integration
+    depends_on:
+      - name: compile
     commands:
+      - func: "install rust toolchain"
       - func: "run integration test"
 
   - name: asan
