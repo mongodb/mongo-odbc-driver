@@ -288,7 +288,7 @@ fn run_function_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> 
     };
 
     let sql_return_val = sql_return.unwrap();
-    if (sql_return_val != SqlReturn::SUCCESS) & (sql_return_val != SqlReturn::SUCCESS_WITH_INFO) {
+    if (sql_return_val != SqlReturn::SUCCESS) && (sql_return_val != SqlReturn::SUCCESS_WITH_INFO) {
         return Err(Error::SqlReturnError(format!("{:?}", sql_return_val)));
     }
     unsafe {

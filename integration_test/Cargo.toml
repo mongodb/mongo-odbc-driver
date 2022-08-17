@@ -11,3 +11,4 @@ thiserror = "1"
 odbc-api = { version = "0.45.1", features = ["narrow"] }
 lazy_static = "1"
 odbc-sys = { version = "0.21.2", default-features = false }
+
