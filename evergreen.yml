@@ -314,6 +314,17 @@ task_groups:
       - func: "clean-up driver on Windows"
     tasks:
       - test-rust
+
+  - name: test-result-set-group
+    setup_group_can_fail_task: false
+    setup_group:
+      - func: "fetch source"
+      - func: "generate expansions"
+      - func: "download artifact"
+      - func: "setup driver on Windows"
+    teardown_group:
+      - func: "clean-up driver on Windows"
+    tasks:
       - test-integration
 
 buildvariants:
@@ -338,6 +349,7 @@ buildvariants:
     tasks:
       - name: compile
       - name: test-rust-group
+      - name: test-result-set-group
 
   - name: ubuntu2004
     display_name: Ubuntu 20.04

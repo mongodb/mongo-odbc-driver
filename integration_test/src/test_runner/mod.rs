@@ -8,7 +8,7 @@ use odbc_sys::SqlReturn;
 use serde::{Deserialize, Serialize};
 use serde_json::value::Value;
 use std::ptr::null_mut;
-use std::{collections::BTreeMap, env, fs, io::Read, path::PathBuf};
+use std::{collections::BTreeMap, env, fs, path::PathBuf};
 use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
@@ -27,8 +27,6 @@ pub enum Error {
         actual: String,
     },
      */
-    #[error("unable to read file to string: {0}")]
-    CannotReadFileToString(String),
     #[error("failed to read file: {0}")]
     InvalidFile(String),
     #[error("failed to read directory: {0}")]
@@ -41,6 +39,8 @@ pub enum Error {
     MissingQueryOrFunction(String),
     #[error("unsuccessful SQL return code encountered: {0}")]
     SqlReturn(String),
+    #[error("not enough values in array expected: {0}, actual: {1}")]
+    NotEnoughArguments(usize, usize),
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -87,30 +87,27 @@ pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>, Error> {
 /// parse_test_file_yaml deserializes the given YAML file into a
 /// IntegrationTest struct.
 pub fn parse_test_file_yaml(path: &str) -> Result<IntegrationTest, Error> {
-    let mut f = fs::File::open(path).map_err(|e| Error::InvalidFile(format!("{:?}", e)))?;
-    let mut contents = String::new();
-    f.read_to_string(&mut contents)
-        .map_err(|e| Error::CannotReadFileToString(format!("{:?}", e)))?;
-    let yaml: IntegrationTest = serde_yaml::from_str(&contents)
-        .map_err(|e| Error::CannotDeserializeYaml(format!("{:?}", e)))?;
-    Ok(yaml)
+    let f = fs::File::open(path).map_err(|e| Error::InvalidFile(format!("{:?}", e)))?;
+    let integration_test: IntegrationTest =
+        serde_yaml::from_reader(f).map_err(|e| Error::CannotDeserializeYaml(format!("{:?}", e)))?;
+    Ok(integration_test)
 }
 
 /// connect obtains a connection to the local Atlas Data Federation instance and returns Connection
 /// it fetches environment variables to create the connection string
 fn connect() -> Result<Connection<'static>, Error> {
-    let user_name = env::var("ADL_TEST_USER").expect("ADL_TEST_USER is not set");
-    let password = env::var("ADL_TEST_PWD").expect("ADL_TEST_PWD is not set");
-    let host = env::var("ADL_TEST_HOST").expect("ADL_TEST_HOST is not set");
-    let auth_db = match env::var("ADL_TEST_AUTH_DB") {
+    let user_name = env::var("ADL_TEST_LOCAL_USER").expect("ADL_TEST_LOCAL_USER is not set");
+    let password = env::var("ADL_TEST_LOCAL_PWD").expect("ADL_TEST_LOCAL_PWD is not set");
+    let host = env::var("ADL_TEST_LOCAL_HOST").expect("ADL_TEST_LOCAL_HOST is not set");
+    let auth_db = match env::var("ADL_TEST_LOCAL_AUTH_DB") {
         Ok(val) => val,
         Err(_) => "admin".to_string(), //Default auth db
     };
-    let db = match env::var("ADL_TEST_DB") {
+    let db = match env::var("ADL_TEST_LOCAL_DB") {
         Ok(val) => val,
         Err(_) => "INTEGRATION_TEST".to_string(), //Default driver name
     };
-    let driver = match env::var("ADL_TEST_DRIVER") {
+    let driver = match env::var("ADL_TEST_LOCAL_DRIVER") {
         Ok(val) => val,
         Err(_) => "ADL_ODBC_DRIVER".to_string(), //Default driver name
     };
@@ -137,7 +134,7 @@ pub fn integration_test() -> Result<(), Error> {
 
         for test in yaml.tests {
             match test.skip_reason {
-                Some(_) => continue,
+                Some(sr) => println!("Skip Reason {}", sr),
                 None => {
                     let connection = connect().unwrap();
                     let test_result = match (&test.query, &test.function) {
@@ -181,25 +178,22 @@ fn to_i16(value: &Value) -> i16 {
     value.as_i64().expect("Unable to cast value as i64") as i16
 }
 
-fn check_array_length(array: &Vec<Value>, length: usize) {
+fn check_array_length(array: &Vec<Value>, length: usize) -> Result<(), Error> {
     if array.len() < length {
-        panic!(
-            "not enough values in array expected: {}, actual: {}",
-            length,
-            array.len()
-        )
+        return Err(Error::NotEnoughArguments(length, array.len()));
     }
+    Ok(())
 }
 
 fn run_function_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> {
     let function = entry.function.as_ref().unwrap();
     let preallocated = conn.preallocate().unwrap();
     let statement = preallocated.into_statement();
-    check_array_length(function, 1);
+    check_array_length(function, 1)?;
     let function_name = function[0].as_str().unwrap().to_lowercase();
     let sql_return = match function_name.as_str() {
         "sqlgettypeinfo" => {
-            check_array_length(function, 2);
+            check_array_length(function, 2)?;
             unsafe {
                 let data_type: odbc_sys::SqlDataType =
                     std::mem::transmute(function[1].as_i64().unwrap() as i16);
@@ -207,7 +201,7 @@ fn run_function_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> 
             }
         }
         "sqltables" => {
-            check_array_length(function, 9);
+            check_array_length(function, 9)?;
             unsafe {
                 Ok(odbc_sys::SQLTables(
                     statement.as_sys(),
