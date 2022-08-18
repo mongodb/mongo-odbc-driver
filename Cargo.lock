@@ -829,7 +829,6 @@ dependencies = [
 name = "integration-test"
 version = "0.1.0"
 dependencies = [
- "lazy_static",
  "mongodb",
  "serde",
  "serde_yaml 0.9.4",

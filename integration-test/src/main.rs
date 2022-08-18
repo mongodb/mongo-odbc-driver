@@ -1,4 +1,4 @@
-use mongodb::{bson::Bson, sync::Client};
+use mongodb::{bson::Bson, sync::Client, IndexModel};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, fs, io};
 use thiserror::Error;
@@ -12,12 +12,47 @@ struct TestData {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct TestDataEntry {
+    // db specifies the database for this test entry. Required.
     db: String,
+
+    // collection specifies the collection for this entry. Conditional.
+    // Exactly one of 'collection' or 'view' must be specified for every
+    // test entry.
     collection: Option<String>,
+
+    // view specifies the view for this test entry. Conditional.
+    // Exactly one of 'collection' or 'view' must be specified for every
+    // test entry. Note that ADF views are defined in ADF itself, not on
+    // the underlying datasource(s) -- in this case, not on the mongod.
+    // They are defined in integration_test/testdata/adl_db_config.json.
+    // This data loader does not create views on the mongod. It just
+    // ensures a schema is set for each view.
     view: Option<String>,
+
+    // docs specifies the docs to insert into the collection for this
+    // test entry. Conditional.
+    // This is required if 'collection' is specified. The documents can
+    // be specified in extended JSON format.
     docs: Option<Vec<Bson>>,
+
+    // schema specifies the schema for this test entry. Optional.
+    // If provided, this data loader sets the collection or view schema
+    // using the sqlSetSchema command. If not provided, this data loader
+    // sets the collection or view schema using the sqlGenerateSchema
+    // command.
     schema: Option<Bson>,
-    indexes: Option<Bson>,
+
+    // indexes specifies the indexes for this test entry. Optional.
+    // Can only be provided for collections, not views. These must be
+    // specified following the Rust driver's IndexModel format:
+    //   { key: <key document>, options: <options document> }
+    //
+    // Example:
+    //   indexes:
+    //     - { key: {b: 1, a: -1}}
+    //
+    // See the docs for more details on possible options.
+    indexes: Option<Vec<IndexModel>>,
 }
 
 type Result<T> = std::result::Result<T, DataLoaderError>;
@@ -34,40 +69,46 @@ pub enum DataLoaderError {
     MissingViewOrCollection(String),
 }
 
+// This is a standalone executable that loads test data for ODBC integration tests.
+// Test data should be specified in YAML files (using the .y[a]ml extension) in the
+// mongo-odbc-driver/resources/integration_test/testdata directory, following the
+// format described above by the TestData and TestDataEntry types. See those types
+// for more details.
 fn main() -> Result<()> {
     // Step 1: Read data files
-    let testdata = read_data_files(TEST_DATA_DIRECTORY)?;
+    let test_data = read_data_files(TEST_DATA_DIRECTORY)?;
 
     // Step 2: Delete existing data based on namespaces in data files
-    let client = Client::with_uri_str("mongodb://localhost:27017")?;
-    drop_collections(client.clone(), testdata.clone())?;
+    let mongod_client = Client::with_uri_str("mongodb://localhost:27017")?;
+    drop_collections(mongod_client.clone(), test_data.clone())?;
 
     // Step 3: Load data into mongod. Drop everything if an error occurs.
-    match load_test_data(client.clone(), testdata.clone()) {
+    match load_test_data(mongod_client.clone(), test_data.clone()) {
         Err(e) => {
             // Drop collections if loading fails
-            drop_collections(client, testdata)?;
+            drop_collections(mongod_client, test_data)?;
             return Err(e);
         }
         Ok(()) => (),
     };
 
-    // Step 4: Set schemas in ADL
-    // TODO
-
-    Ok(())
+    // Step 4: Set schemas in ADF
+    let adf_client = Client::with_uri_str("mongodb://localhost:27017")?; // TODO change to adf client
+    set_test_data_schemas(adf_client, test_data)
 }
 
 fn read_data_files(path: &str) -> Result<Vec<TestData>> {
     // Read the directory and iterate over each entry
     fs::read_dir(path)?
         .into_iter()
-        // Only retain paths to '.yml' files
+        // Only retain paths to '.y[a]ml' files
         .filter_map(|e| {
             let path = e.unwrap().path();
             if let Some(ext) = path.extension() {
-                if ext == "yml" {
+                if ext == "yml" || ext == "yaml" {
                     return Some(path);
+                } else {
+                    println!("Ignoring file without '.y[a]ml' extension: {:?}", path);
                 }
             }
             None
@@ -109,7 +150,7 @@ fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
                 })
                 .collect::<BTreeSet<(String, String)>>()
         })
-        .collect::<BTreeSet<(String, String)>>();
+        .collect::<BTreeSet<(String, String)>>().;
 
     for (db, c) in namespaces_to_drop {
         let database = client.database(db.as_str());
@@ -120,12 +161,35 @@ fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
     Ok(())
 }
 
-fn load_test_data(client: Client, datasets: Vec<TestData>) -> Result<()> {
-    // for e in test_data.dataset {
-    //     let db = client.database(e.db.as_str());
-    //     let collection = db.collection::<mongodb::bson::Bson>(e.collection.clone().unwrap().as_str());
-    //     let res = collection.insert_many(e.docs.unwrap(), None)?;
-    //     println!("insert result: {:?}", res);
-    // }
+fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
+    for td in test_data {
+        for e in td.dataset {
+            let db = client.database(e.db.as_str());
+
+            if let Some(c) = e.collection {
+                let collection = db.collection::<Bson>(c.as_str());
+
+                if let Some(docs) = e.docs {
+                    let res = collection.insert_many(docs, None)?;
+                    println!(
+                        "Inserted {} documents into {}.{}",
+                        res.inserted_ids.len(),
+                        e.db,
+                        c
+                    );
+                }
+
+                if let Some(indexes) = e.indexes {
+                    let res = collection.create_indexes(indexes, None)?;
+                    println!("Created indexes {:?} for {}.{}", res.index_names, e.db, c);
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()> {
     Ok(())
 }

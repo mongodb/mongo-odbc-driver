@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-lazy_static = "1.4.0"
 serde = "1.0.143"
 serde_yaml = "0.9.4"
 thiserror = "1"
