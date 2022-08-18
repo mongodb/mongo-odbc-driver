@@ -6,13 +6,13 @@
 # This script will start a local mongod and Atlas Data Federation instance, used for integration testing.
 # The supported platforms are windows, macos, ubuntu1804, and rhel7.
 #
-# - To skip the download of ADL, set the environment variable HAVE_LOCAL_MONGOHOUSE to 1
+# - To skip the download of ADF, set the environment variable HAVE_LOCAL_MONGOHOUSE to 1
 #   and set the environment variable LOCAL_MONGOHOUSE_DIR to the root directory of the
 #   mongohouse source tree.
-# - To skip the operations of this script, set the environment variable SKIP_RUN_ADL to 1.
+# - To skip the operations of this script, set the environment variable SKIP_RUN_ADF to 1.
 
 NAME=`basename "$0"`
-if [[ $SKIP_RUN_ADL -eq 1 ]]; then
+if [[ $SKIP_RUN_ADF -eq 1 ]]; then
   echo "Skipping $NAME"
   exit 0
 fi
@@ -28,20 +28,24 @@ GO_VERSION="go1.17"
 if [ -d "/opt/golang/$GO_VERSION" ]; then
   GOROOT="/opt/golang/$GO_VERSION"
   GOBINDIR="$GOROOT"/bin
-elif [ -d "C:\golang\\$GO_VERSION" ]; then
-  GOROOT="C:\golang\\$GO_VERSION"
+elif [ -d "C:\\golang\\$GO_VERSION" ]; then
+  GOROOT="C:\\golang\\$GO_VERSION"
   GOBINDIR="$GOROOT"\\bin
   export GOCACHE=$(cygpath -m $HOME/gocache)
   export GOPATH=$(cygpath -m $HOME/go)
+else #local testing
+  GOBINDIR=/usr/bin
 fi
+
+GO="$GOBINDIR/go"
+
 PATH=$GOBINDIR:$PATH
 
-TMP_DIR="/tmp/run_adl/"
-LOCAL_INSTALL_DIR=$(pwd)/local_adl
+LOCAL_INSTALL_DIR=$(pwd)/local_adf
 MONGOHOUSE_URI=git@github.com:10gen/mongohouse.git
 MONGO_DB_PATH=$LOCAL_INSTALL_DIR/test_db
 LOGS_PATH=$LOCAL_INSTALL_DIR/logs
-DB_CONFIG_PATH=$(pwd)/resources/integration_test/testdata/adl_db_config.json
+DB_CONFIG_PATH=$(pwd)/resources/integration_test/testdata/adf_db_config.json
 MONGOD_PORT=28017
 MONGOHOUSED_PORT=27017
 START="start"
@@ -53,6 +57,11 @@ MONGO_DOWNLOAD_LINK=
 MONGO_DOWNLOAD_DIR=
 MONGO_DOWNLOAD_FILE=
 OS=$(uname)
+if [[ $OS =~ ^CYGWIN ]]; then
+    TMP_DIR="C:\\temp\\run_adf"
+else
+    TMP_DIR="/tmp/run_adf/"
+fi
 TIMEOUT=120
 
 MONGO_DOWNLOAD_BASE=https://fastdl.mongodb.org
@@ -168,7 +177,7 @@ if [[ $? -ne 0 ]]; then
     # Install and start mongod
     (cd $LOCAL_INSTALL_DIR && curl -O $MONGO_DOWNLOAD_LINK)
 
-    # Note: ADL has a storage.json file that generates configs for us.
+    # Note: ADF has a storage.json file that generates configs for us.
     # The mongodb source is on port $MONGOD_PORT so we use that here.
     # Uncompress the archive
     if [[ $OS =~ ^CYGWIN ]]; then
@@ -202,7 +211,7 @@ check_mongohoused
 if [[ $? -ne 0 ]]; then
   if [ $ARG = $START ]; then
     echo "Starting $MONGOHOUSED"
-    go version
+    $GO version
 
     if [[ $HAVE_LOCAL_MONGOHOUSE -eq 1 ]]; then
         if [ ! -d "$LOCAL_MONGOHOUSE_DIR" ]; then
@@ -227,7 +236,7 @@ if [[ $? -ne 0 ]]; then
         git pull $MONGOHOUSE_URI
 
         export GOPRIVATE=github.com/10gen
-        go mod download
+        $GO mod download
     fi
 
     # Set relevant environment variables
@@ -250,9 +259,9 @@ if [[ $? -ne 0 ]]; then
         cp ${MONGOSQL_LIB} ${MONGOSQL_LIB}.orig
     fi
     rm -f $MONGOHOUSE_MQLRUN
-    go run cmd/buildscript/build.go tools:download:mqlrun
+    $GO run cmd/buildscript/build.go tools:download:mqlrun
     rm -f $MONGOSQL_LIB
-    go run cmd/buildscript/build.go tools:download:mongosql
+    $GO run cmd/buildscript/build.go tools:download:mongosql
 
     get_jq
     # Load tenant config into mongodb
@@ -268,12 +277,12 @@ if [[ $? -ne 0 ]]; then
     jq --argjson obj "$DATABASES" '.storage.databases += $obj' ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp\
                                                                && mv ${TENANT_CONFIG}.tmp ${TENANT_CONFIG}
 
-    go run cmd/buildscript/build.go init:mongodb-tenant
+    $GO run cmd/buildscript/build.go init:mongodb-tenant
 
     mkdir -p $TMP_DIR
     mkdir -p $LOGS_PATH
     # Start mongohoused with appropriate config
-    nohup go run -tags mongosql ./cmd/mongohoused/mongohoused.go \
+    nohup $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
       --config ./testdata/config/mongodb_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
     echo $! > $TMP_DIR/${MONGOHOUSED}.pid
 
@@ -284,7 +293,7 @@ if [[ $? -ne 0 ]]; then
             break
         fi
         if [[ "$waitCounter" -gt $TIMEOUT ]]; then
-            echo "ERROR: Local ADL did not start under $TIMEOUT seconds"
+            echo "ERROR: Local ADF did not start under $TIMEOUT seconds"
             exit 1
         fi
         let waitCounter=waitCounter+1

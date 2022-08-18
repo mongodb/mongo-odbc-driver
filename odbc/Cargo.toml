@@ -1,16 +1,22 @@
 [package]
 name = "mongo-odbc-driver"
 version = "0.1.0"
-authors = ["Ryan Chipman <ryan@ryanchipman.com>", "Patrick Meredith <pmeredit@protonmail.com>"]
+authors = ["Ryan Chipman <ryan@ryanchipman.com>",
+    "Natacha Bagnard <natacha.bagnard@mongodb.com>",
+    "Patrick Meredith <pmeredit@protonmail.com>",
+    "Varsha Subrahmanyam <varsha.subrahmanyam@mongodb.com>"]
 edition = "2021"
 
 [dependencies]
-odbc-sys = "0.18.4"
+odbc-sys = "0.21.2"
 bson = "2.0.1"
+thiserror = "1"
 chrono = "0.4.11"
 lazy_static = "1.4.0"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
+constants = { path = "../constants" }
+mongo-odbc-core = { path = "../core" }
 
 [dependencies.mongodb]
 version = "2.0.2"
@@ -19,7 +25,7 @@ features = ["sync"]
 
 
 [dev-dependencies]
-odbc-api = "0.30.1"
+odbc-api = "0.45.1"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.8.21"
 thiserror = "1"

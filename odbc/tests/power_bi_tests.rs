@@ -43,23 +43,26 @@ fn setup() -> odbc_sys::HEnv {
     env as HEnv
 }
 
-/// Test PowerBI Setup flow
-#[test]
-fn test_setup() {
-    setup();
-}
+mod integration {
+    use super::*;
+    /// Test PowerBI Setup flow
+    #[test]
+    fn test_setup() {
+        setup();
+    }
 
-/// Test PowerBi environment clean-up
-#[test]
-fn test_env_cleanup() {
-    // We need a handle to be able to test that freeing the handle work
-    let env_handle: HEnv = setup();
+    /// Test PowerBi environment clean-up
+    #[test]
+    fn test_env_cleanup() {
+        // We need a handle to be able to test that freeing the handle work
+        let env_handle: HEnv = setup();
 
-    unsafe {
-        // Verify that freeing the handle is working as expected
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLFreeHandle(HandleType::Env, env_handle as Handle)
-        );
+        unsafe {
+            // Verify that freeing the handle is working as expected
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLFreeHandle(HandleType::Env, env_handle as Handle)
+            );
+        }
     }
 }
