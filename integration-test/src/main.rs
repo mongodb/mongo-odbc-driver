@@ -1,12 +1,9 @@
-use lazy_static::lazy_static;
 use mongodb::{bson::Bson, sync::Client};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, fs, io};
 use thiserror::Error;
 
-lazy_static! {
-    pub static ref TEST_DATA_DIRECTORY: String = "resources/integration_test/testdata".to_string();
-}
+const TEST_DATA_DIRECTORY: &str = "resources/integration_test/testdata";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct TestData {
@@ -39,10 +36,33 @@ pub enum DataLoaderError {
 
 fn main() -> Result<()> {
     // Step 1: Read data files
-    let data_files = fs::read_dir(TEST_DATA_DIRECTORY.clone())?;
+    let testdata = read_data_files(TEST_DATA_DIRECTORY)?;
 
-    let datasets = data_files
+    // Step 2: Delete existing data based on namespaces in data files
+    let client = Client::with_uri_str("mongodb://localhost:27017")?;
+    drop_collections(client.clone(), testdata.clone())?;
+
+    // Step 3: Load data into mongod. Drop everything if an error occurs.
+    match load_test_data(client.clone(), testdata.clone()) {
+        Err(e) => {
+            // Drop collections if loading fails
+            drop_collections(client, testdata)?;
+            return Err(e);
+        }
+        Ok(()) => (),
+    };
+
+    // Step 4: Set schemas in ADL
+    // TODO
+
+    Ok(())
+}
+
+fn read_data_files(path: &str) -> Result<Vec<TestData>> {
+    // Read the directory and iterate over each entry
+    fs::read_dir(path)?
         .into_iter()
+        // Only retain paths to '.yml' files
         .filter_map(|e| {
             let path = e.unwrap().path();
             if let Some(ext) = path.extension() {
@@ -52,6 +72,7 @@ fn main() -> Result<()> {
             }
             None
         })
+        // Attempt to parse the yaml files into TestData structs
         .map(|p| {
             let f = fs::File::open(p.clone())?;
             let test_data: TestData = serde_yaml::from_reader(f)?;
@@ -73,26 +94,7 @@ fn main() -> Result<()> {
 
             Result::Ok(test_data)
         })
-        .collect::<Result<Vec<TestData>>>()?;
-
-    // Step 2: Delete existing data based on namespaces in data files
-    let client = Client::with_uri_str("mongodb://localhost:27017")?;
-    drop_collections(client.clone(), datasets.clone())?;
-
-    // Step 3: Load data into mongod
-    match load_test_data(client.clone(), datasets.clone()) {
-        Err(e) => {
-            // Drop collections if loading fails
-            drop_collections(client, datasets)?;
-            return Err(e)
-        },
-        Ok(()) => ()
-    };
-
-    // Step 4: set schemas in ADL
-    // TODO
-
-    Ok(())
+        .collect()
 }
 
 fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
@@ -119,8 +121,6 @@ fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
 }
 
 fn load_test_data(client: Client, datasets: Vec<TestData>) -> Result<()> {
-
-
     // for e in test_data.dataset {
     //     let db = client.database(e.db.as_str());
     //     let collection = db.collection::<mongodb::bson::Bson>(e.collection.clone().unwrap().as_str());
