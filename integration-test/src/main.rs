@@ -1,6 +1,10 @@
-use mongodb::{bson::Bson, sync::Client, IndexModel};
+use mongodb::{
+    bson::{doc, Bson},
+    sync::Client,
+    IndexModel,
+};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeSet, fs, io};
+use std::{collections::BTreeSet, env, fs, io};
 use thiserror::Error;
 
 const TEST_DATA_DIRECTORY: &str = "resources/integration_test/testdata";
@@ -8,6 +12,9 @@ const TEST_DATA_DIRECTORY: &str = "resources/integration_test/testdata";
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct TestData {
     dataset: Vec<TestDataEntry>,
+
+    #[serde(skip)]
+    file: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -75,11 +82,22 @@ pub enum DataLoaderError {
 // format described above by the TestData and TestDataEntry types. See those types
 // for more details.
 fn main() -> Result<()> {
+    // Step 0: Read environment variables and create Mongo URIs
+    let mdb_url = format!(
+        "mongodb://localhost:{}",
+        env::var("MDB_TEST_LOCAL_PORT").expect("MDB_TEST_LOCAL_PORT is not set")
+    );
+    let adf_url = format!(
+        "mongodb://{}:{}@localhost",
+        env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set"),
+        env::var("ADF_TEST_LOCAL_PWD").expect("ADF_TEST_LOCAL_PWD is not set")
+    );
+
     // Step 1: Read data files
     let test_data = read_data_files(TEST_DATA_DIRECTORY)?;
 
     // Step 2: Delete existing data based on namespaces in data files
-    let mongod_client = Client::with_uri_str("mongodb://localhost:27017")?;
+    let mongod_client = Client::with_uri_str(mdb_url)?;
     drop_collections(mongod_client.clone(), test_data.clone())?;
 
     // Step 3: Load data into mongod. Drop everything if an error occurs.
@@ -93,7 +111,7 @@ fn main() -> Result<()> {
     };
 
     // Step 4: Set schemas in ADF
-    let adf_client = Client::with_uri_str("mongodb://localhost:27017")?; // TODO change to adf client
+    let adf_client = Client::with_uri_str(adf_url)?;
     set_test_data_schemas(adf_client, test_data)
 }
 
@@ -116,7 +134,8 @@ fn read_data_files(path: &str) -> Result<Vec<TestData>> {
         // Attempt to parse the yaml files into TestData structs
         .map(|p| {
             let f = fs::File::open(p.clone())?;
-            let test_data: TestData = serde_yaml::from_reader(f)?;
+            let mut test_data: TestData = serde_yaml::from_reader(f)?;
+            test_data.file = p.into_os_string().into_string().unwrap();
 
             // Ensure the data files are valid. Each entry
             // must specify either a collection or a view.
@@ -150,7 +169,7 @@ fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
                 })
                 .collect::<BTreeSet<(String, String)>>()
         })
-        .collect::<BTreeSet<(String, String)>>().;
+        .collect::<BTreeSet<(String, String)>>();
 
     for (db, c) in namespaces_to_drop {
         let database = client.database(db.as_str());
@@ -191,5 +210,34 @@ fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
 }
 
 fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()> {
+    for td in test_data {
+        for e in td.dataset {
+            let db = client.database(e.db.as_str());
+            let datasource = match (e.collection, e.view) {
+                (Some(c), None) => Ok(c),
+                (None, Some(v)) => Ok(v),
+                _ => Err(DataLoaderError::MissingViewOrCollection(td.file.clone())),
+            }?;
+
+            let mut command_doc = doc! {};
+            let mut command_name = "";
+
+            if let Some(schema) = e.schema {
+                command_doc =
+                    doc! {"sqlSetSchema": datasource.clone(), "schema": schema, "version": 1};
+                command_name = "sqlSetSchema";
+            } else {
+                command_doc = doc! {"sqlGenerateSchema": 1, "setSchemas": true, "sampleNamespaces": vec![format!("{}.{}", e.db, datasource.clone())]};
+                command_name = "sqlGenerateSchema";
+            }
+
+            let res = db.run_command(command_doc, None)?;
+            println!(
+                "Set schema for {}.{} via {}; result: {:?}",
+                e.db, datasource, command_name, res
+            );
+        }
+    }
+
     Ok(())
 }
