@@ -1,3 +1,4 @@
+use mongodb::bson::Document;
 use mongodb::{
     bson::{doc, Bson},
     sync::Client,
@@ -135,7 +136,7 @@ fn read_data_files(path: &str) -> Result<Vec<TestData>> {
         .map(|p| {
             let f = fs::File::open(p.clone())?;
             let mut test_data: TestData = serde_yaml::from_reader(f)?;
-            test_data.file = p.into_os_string().into_string().unwrap();
+            test_data.file = p.clone().into_os_string().into_string().unwrap();
 
             // Ensure the data files are valid. Each entry
             // must specify either a collection or a view.
@@ -219,8 +220,8 @@ fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()>
                 _ => Err(DataLoaderError::MissingViewOrCollection(td.file.clone())),
             }?;
 
-            let mut command_doc = doc! {};
-            let mut command_name = "";
+            let command_doc: Document;
+            let command_name: &str;
 
             if let Some(schema) = e.schema {
                 command_doc =
