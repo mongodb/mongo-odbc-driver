@@ -170,6 +170,7 @@ fn run_query_test(query: &str, entry: &TestEntry, conn: &Connection) -> Result<(
     Ok(())
 }
 
+/// str_or_null converts value to a narrow string or null_mut() if null
 fn str_or_null(value: &Value) -> *const u8 {
     if value.is_null() {
         null_mut()
@@ -179,6 +180,7 @@ fn str_or_null(value: &Value) -> *const u8 {
     }
 }
 
+/// strw_or_null converts value to a wide string or null_mut() if null
 fn strw_or_null(value: &Value) -> *const u16 {
     if value.is_null() {
         null_mut()
