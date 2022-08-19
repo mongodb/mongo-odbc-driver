@@ -8,7 +8,7 @@ use odbc_sys::SqlReturn;
 use serde::{Deserialize, Serialize};
 use serde_json::value::Value;
 use std::ptr::null_mut;
-use std::{collections::BTreeMap, env, fs, path::PathBuf};
+use std::{collections::BTreeMap, env, fmt, fs, path::PathBuf};
 use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
@@ -35,12 +35,14 @@ pub enum Error {
     InvalidFilePath(String),
     #[error("unable to deserialize YAML file: {0}")]
     CannotDeserializeYaml(String),
-    #[error("missing query or function in test: {0}")]
-    MissingQueryOrFunction(String),
     #[error("unsuccessful SQL return code encountered: {0}")]
     SqlReturn(String),
     #[error("not enough values in array expected: {0}, actual: {1}")]
     NotEnoughArguments(usize, usize),
+    #[error("unsupported function {0}")]
+    UnsupportedFunction(String),
+    #[error("overflow caused by value {0}, err {1}")]
+    ValueOverflowI16(i64, String),
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,8 +54,7 @@ pub struct IntegrationTest {
 pub struct TestEntry {
     pub description: String,
     pub db: String,
-    pub query: Option<String>,
-    pub function: Option<Vec<Value>>,
+    pub test_definition: TestDef,
     pub expected_result: Option<Vec<BTreeMap<String, Value>>>,
     pub skip_reason: Option<String>,
     pub ordered: Option<bool>,
@@ -63,6 +64,19 @@ pub struct TestEntry {
     pub expected_precision: Option<Vec<i32>>,
     pub expected_scale: Option<Vec<i32>>,
     pub expected_nullability: Option<Vec<String>>,
+}
+
+#[derive(Debug, Error, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TestDef {
+    Query(String),
+    Function(Vec<Value>),
+}
+
+impl fmt::Display for TestDef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// load_file_paths reads the given directory and returns a list its file path
@@ -96,20 +110,20 @@ pub fn parse_test_file_yaml(path: &str) -> Result<IntegrationTest, Error> {
 /// connect obtains a connection to the local Atlas Data Federation instance and returns Connection
 /// it fetches environment variables to create the connection string
 fn connect() -> Result<Connection<'static>, Error> {
-    let user_name = env::var("ADL_TEST_LOCAL_USER").expect("ADL_TEST_LOCAL_USER is not set");
-    let password = env::var("ADL_TEST_LOCAL_PWD").expect("ADL_TEST_LOCAL_PWD is not set");
-    let host = env::var("ADL_TEST_LOCAL_HOST").expect("ADL_TEST_LOCAL_HOST is not set");
-    let auth_db = match env::var("ADL_TEST_LOCAL_AUTH_DB") {
+    let user_name = env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set");
+    let password = env::var("ADF_TEST_LOCAL_PWD").expect("ADF_TEST_LOCAL_PWD is not set");
+    let host = env::var("ADF_TEST_LOCAL_HOST").expect("ADF_TEST_LOCAL_HOST is not set");
+    let auth_db = match env::var("ADF_TEST_LOCAL_AUTH_DB") {
         Ok(val) => val,
         Err(_) => "admin".to_string(), //Default auth db
     };
-    let db = match env::var("ADL_TEST_LOCAL_DB") {
+    let db = match env::var("ADF_TEST_LOCAL_DB") {
         Ok(val) => val,
-        Err(_) => "INTEGRATION_TEST".to_string(), //Default driver name
+        Err(_) => "integration_test".to_string(), //Default DB name
     };
-    let driver = match env::var("ADL_TEST_LOCAL_DRIVER") {
+    let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
         Ok(val) => val,
-        Err(_) => "ADL_ODBC_DRIVER".to_string(), //Default driver name
+        Err(_) => "ADF_ODBC_DRIVER".to_string(), //Default driver name
     };
 
     let connection_string = format!(
@@ -134,18 +148,12 @@ pub fn integration_test() -> Result<(), Error> {
 
         for test in yaml.tests {
             match test.skip_reason {
-                Some(sr) => println!("Skip Reason {}", sr),
+                Some(sr) => println!("Skip Reason: {}", sr),
                 None => {
                     let connection = connect().unwrap();
-                    let test_result = match (&test.query, &test.function) {
-                        (Some(_), _) => run_query_test(&test, &connection),
-                        (None, Some(_)) => run_function_test(&test, &connection),
-                        (_, _) => {
-                            return Err(Error::MissingQueryOrFunction(format!(
-                                "{:?}",
-                                test.description
-                            )))
-                        }
+                    let test_result = match test.test_definition {
+                        TestDef::Query(ref q) => run_query_test(q, &test, &connection),
+                        TestDef::Function(ref f) => run_function_test(f, &test, &connection),
                     };
                     drop(connection);
                     return test_result;
@@ -156,11 +164,8 @@ pub fn integration_test() -> Result<(), Error> {
     Ok(())
 }
 
-fn run_query_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> {
-    let cursor = conn
-        .execute(entry.query.as_ref().unwrap(), ())
-        .unwrap()
-        .unwrap();
+fn run_query_test(query: &str, entry: &TestEntry, conn: &Connection) -> Result<(), Error> {
+    let cursor = conn.execute(query, ()).unwrap().unwrap();
     validate_result_set(entry, cursor);
     Ok(())
 }
@@ -174,8 +179,23 @@ fn str_or_null(value: &Value) -> *const u8 {
     }
 }
 
-fn to_i16(value: &Value) -> i16 {
-    value.as_i64().expect("Unable to cast value as i64") as i16
+fn strw_or_null(value: &Value) -> *const u16 {
+    if value.is_null() {
+        null_mut()
+    } else {
+        let mut v: Vec<u16> = value
+            .as_str()
+            .expect("Unable to cast value as string")
+            .encode_utf16()
+            .collect();
+        v.push(0);
+        v.as_ptr()
+    }
+}
+
+fn to_i16(value: &Value) -> Result<i16, Error> {
+    let val = value.as_i64().expect("Unable to cast value as i64");
+    i16::try_from(val).map_err(|e| Error::ValueOverflowI16(val, e.to_string()))
 }
 
 fn check_array_length(array: &Vec<Value>, length: usize) -> Result<(), Error> {
@@ -185,8 +205,11 @@ fn check_array_length(array: &Vec<Value>, length: usize) -> Result<(), Error> {
     Ok(())
 }
 
-fn run_function_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> {
-    let function = entry.function.as_ref().unwrap();
+fn run_function_test(
+    function: &Vec<Value>,
+    entry: &TestEntry,
+    conn: &Connection,
+) -> Result<(), Error> {
     let preallocated = conn.preallocate().unwrap();
     let statement = preallocated.into_statement();
     check_array_length(function, 1)?;
@@ -206,17 +229,39 @@ fn run_function_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> 
                 Ok(odbc_sys::SQLTables(
                     statement.as_sys(),
                     str_or_null(&function[1]),
-                    to_i16(&function[2]),
+                    to_i16(&function[2])?,
                     str_or_null(&function[3]),
-                    to_i16(&function[4]),
+                    to_i16(&function[4])?,
                     str_or_null(&function[5]),
-                    to_i16(&function[6]),
+                    to_i16(&function[6])?,
                     str_or_null(&function[7]),
-                    to_i16(&function[8]),
+                    to_i16(&function[8])?,
+                ))
+            }
+        }
+        "sqlforeignkeysw" => {
+            check_array_length(function, 13)?;
+            unsafe {
+                Ok(odbc_sys::SQLForeignKeysW(
+                    statement.as_sys(),
+                    strw_or_null(&function[1]),
+                    to_i16(&function[2])?,
+                    strw_or_null(&function[3]),
+                    to_i16(&function[4])?,
+                    strw_or_null(&function[5]),
+                    to_i16(&function[6])?,
+                    strw_or_null(&function[7]),
+                    to_i16(&function[8])?,
+                    strw_or_null(&function[7]),
+                    to_i16(&function[8])?,
+                    strw_or_null(&function[7]),
+                    to_i16(&function[8])?,
                 ))
             }
         }
         /*
+        // The following functions are not implemented in odbc-sys
+
         "sqlprimarykeys" => {
             unsafe {
                 Ok(odbc_sys::SQLPrimaryKeys(
@@ -275,11 +320,11 @@ fn run_function_test(entry: &TestEntry, conn: &Connection) -> Result<(), Error> 
             }
         }
          */
-        _ => Err(format!("unknown function {}", function_name)),
+        _ => Err(Error::UnsupportedFunction(function_name)),
     };
 
     let sql_return_val = sql_return.unwrap();
-    if (sql_return_val != SqlReturn::SUCCESS) && (sql_return_val != SqlReturn::SUCCESS_WITH_INFO) {
+    if sql_return_val != SqlReturn::SUCCESS {
         return Err(Error::SqlReturn(format!("{:?}", sql_return_val)));
     }
     unsafe {
