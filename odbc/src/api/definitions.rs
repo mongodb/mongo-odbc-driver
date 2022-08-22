@@ -1,16 +1,5 @@
 use num_derive::FromPrimitive;
 
-#[macro_export]
-macro_rules! map {
-	($($key:expr => $val:expr),* $(,)?) => {
-		std::iter::Iterator::collect([
-			$({
-				($key, $val)
-			},)*
-		].into_iter())
-	};
-}
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum SqlBool {
     False = 0,

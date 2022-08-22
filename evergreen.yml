@@ -65,8 +65,6 @@ functions:
           if [ "Windows_NT" == "$OS" ]; then
               if [ 'windows-64' == '${build_variant}' ]; then
                   export HOST="x86_64-pc-windows-msvc"
-              elif [ 'windows-32' == '${build_variant}' ]; then
-                  export HOST="i686-pc-windows-msvc"
               else
                   echo 'unknown windows build variant ${build_variant}'
                   exit 1;
@@ -129,7 +127,6 @@ functions:
     - command: s3.put
       params:
         build_variants:
-          - windows-32
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
@@ -143,7 +140,6 @@ functions:
     - command: s3.get
       params:
         build_variants:
-          - windows-32
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
@@ -159,20 +155,12 @@ functions:
         script:  |
           ${prepare_shell}
           sed -i 's@%DRIVER_DLL_PATH%@'"$(echo "$(cygpath -w $(pwd))" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
-          if [ 'windows-32' == '${build_variant}' ]; then
-            sed -i 's@SOFTWARE@'"SOFTWARE\\\\Wow6432Node"'@' setup/setupDSN.reg
-          fi
           reg import "setup\setupDSN.reg"
           echo "----- Registry entries after setup ----"
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          if [ 'windows-32' == '${build_variant}' ]; then
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-          else
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-          fi
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
           echo "-------------------------"
 
   "clean-up driver on Windows":
@@ -189,16 +177,11 @@ functions:
           echo "----- Registry entries after clean-up----"
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          if [ 'windows-32' == '${build_variant}' ]; then
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-          else
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADL_ODBC_DRIVER" -s 2> nul
-          fi
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
           echo "-------------------------"
 
-  "run rust tests":
+  "run unit tests":
     - command: shell.exec
       type: test
       params:
@@ -206,7 +189,22 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo test
+          RUST_BACKTRACE=1 cargo test unit
+
+  "run integration tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          export RUST_BACKTRACE=1
+          ./resources/run_adf.sh start &&
+          cargo test integration
+          EXITCODE=$?
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
 
   "install unix odbc":
     - command: shell.exec
@@ -246,9 +244,10 @@ functions:
           export LD_LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
           export LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
           export RUSTFLAGS="-Z sanitizer=address"
-          cargo test --target x86_64-unknown-linux-gnu
+          # we only run asan on the unit tests for now
+          cargo test --target x86_64-unknown-linux-gnu unit
 
-  "run integration test":
+  "run result set test":
     command: shell.exec
     type: test
     params:
@@ -283,19 +282,24 @@ tasks:
       - func: "compile release"
       - func: "upload artifact"
 
-  - name: test-rust
-    depends_on:
-      - name: compile
+  - name: unit-test
     commands:
       - func: "install rust toolchain"
-      - func: "run rust tests"
+      - func: "run unit tests"
 
-  - name: test-integration
+  - name: integration-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
-      - func: "run integration test"
+      - func: "run integration tests"
+
+  - name: result-set-test
+    depends_on:
+      - name: compile
+    commands:
+      - func: "install rust toolchain"
+      - func: "run result set test"
 
   - name: asan
     commands:
@@ -303,7 +307,15 @@ tasks:
       - func: "run asan tests"
 
 task_groups:
-  - name: test-rust-group
+  - name: test-unit-group
+    setup_group_can_fail_task: false
+    setup_group:
+      - func: "fetch source"
+      - func: "generate expansions"
+    tasks:
+      - unit-test
+
+  - name: test-integration-group
     setup_group_can_fail_task: false
     setup_group:
       - func: "fetch source"
@@ -313,7 +325,7 @@ task_groups:
     teardown_group:
       - func: "clean-up driver on Windows"
     tasks:
-      - test-rust
+      - integration-test
 
   - name: test-result-set-group
     setup_group_can_fail_task: false
@@ -325,7 +337,7 @@ task_groups:
     teardown_group:
       - func: "clean-up driver on Windows"
     tasks:
-      - test-integration
+      - result-set-test
 
 buildvariants:
 
@@ -336,19 +348,13 @@ buildvariants:
       - name: clippy
       - name: rustfmt
 
-  - name: windows-32
-    display_name: Windows (32-bit)
-    run_on: [ windows-64-vs2019-large ]
-    tasks:
-      - name: compile
-      - name: test-rust-group
-
   - name: windows-64
     display_name: Windows (64-bit)
     run_on: [ windows-64-vs2019-large ]
     tasks:
       - name: compile
-      - name: test-rust-group
+      - name: test-unit-group
+      - name: test-integration-group
       - name: test-result-set-group
 
   - name: ubuntu2004

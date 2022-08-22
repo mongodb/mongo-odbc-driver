@@ -146,8 +146,11 @@ pub struct Connection {
     // Pointer to the Env from which
     // this Connection was allocated
     pub env: *mut MongoHandle,
+    // mongo_connection is the actual connection to the mongo server
+    // it will be None when the Connection is closed.
+    pub mongo_connection: Option<mongo_odbc_core::MongoConnection>,
     // all the possible Connection settings
-    pub _attributes: Box<ConnectionAttributes>,
+    pub attributes: Box<ConnectionAttributes>,
     // state of this connection
     pub state: ConnectionState,
     // MongoDB Client for issuing commands
@@ -159,7 +162,16 @@ pub struct Connection {
 
 #[derive(Debug, Default)]
 pub struct ConnectionAttributes {
-    pub current_db: Option<String>,
+    // SQL_ATTR_CURRENT_CATALOG: the current catalog/database
+    // for this Connection.
+    pub current_catalog: Option<String>,
+    // SQL_ATTR_LOGIN_TIMEOUT: SQLUINTEGER, timeout in seconds
+    // to wait for a login request to complete.
+    pub login_timeout: Option<u32>,
+    // SQL_ATTR_CONNECTION_TIMEOUT: SQLUINTER, timeout in seconds
+    // to wait for any operation on a connection to timeout (other than
+    // initial login).
+    pub connection_timeout: Option<u32>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -175,7 +187,8 @@ impl Connection {
     pub fn with_state(env: *mut MongoHandle, state: ConnectionState) -> Self {
         Self {
             env,
-            _attributes: Box::new(ConnectionAttributes::default()),
+            mongo_connection: None,
+            attributes: Box::new(ConnectionAttributes::default()),
             state,
             statements: HashSet::new(),
             errors: vec![],

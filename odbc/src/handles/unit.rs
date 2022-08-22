@@ -3,7 +3,7 @@ use odbc_sys::{Handle, HandleType, SqlReturn};
 use std::sync::RwLock;
 
 #[test]
-fn env_alloc_free() {
+fn test_env_alloc_free() {
     unsafe {
         let mut handle: *mut _ =
             &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
@@ -31,7 +31,7 @@ fn env_alloc_free() {
 }
 
 #[test]
-fn connection_alloc_free() {
+fn test_connection_alloc_free() {
     unsafe {
         let env_handle: *mut _ =
             &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
@@ -92,7 +92,7 @@ fn connection_alloc_free() {
 }
 
 #[test]
-fn statement_alloc_free() {
+fn test_statement_alloc_free() {
     unsafe {
         let env_handle: *mut _ =
             &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
@@ -149,7 +149,7 @@ fn statement_alloc_free() {
 }
 
 #[test]
-fn invalid_free() {
+fn test_invalid_free() {
     unsafe {
         let mut env_handle: *mut _ =
             &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
@@ -237,7 +237,7 @@ fn invalid_free() {
 }
 
 #[test]
-fn invalid_alloc() {
+fn test_invalid_alloc() {
     unsafe {
         let mut handle: *mut _ =
             &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
