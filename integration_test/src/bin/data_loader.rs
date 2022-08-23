@@ -1,8 +1,6 @@
-use mongodb::bson::Document;
-use mongodb::sync::Database;
 use mongodb::{
-    bson::{doc, Bson},
-    sync::Client,
+    bson::{doc, Bson, Document},
+    sync::{Client, Database},
     IndexModel,
 };
 use serde::{Deserialize, Serialize};
@@ -103,14 +101,10 @@ fn main() -> Result<()> {
     drop_collections(mongod_client.clone(), test_data.clone())?;
 
     // Step 3: Load data into mongod. Drop everything if an error occurs.
-    match load_test_data(mongod_client.clone(), test_data.clone()) {
-        Err(e) => {
-            // Drop collections if loading fails
-            drop_collections(mongod_client, test_data)?;
-            return Err(e);
-        }
-        Ok(()) => (),
-    };
+    if let Err(e) = load_test_data(mongod_client.clone(), test_data.clone()) {
+        drop_collections(mongod_client, test_data)?;
+        return Err(e);
+    }
 
     // Step 4: Set schemas in ADF
     let adf_client = Client::with_uri_str(adf_url)?;
