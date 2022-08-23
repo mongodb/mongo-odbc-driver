@@ -826,7 +826,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "integration-test"
+name = "integration_test"
 version = "0.1.0"
 dependencies = [
  "mongodb",

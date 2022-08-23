@@ -4,5 +4,5 @@ members = [
   "constants",
   "odbc",
   "core",
-  "integration-test",
+  "integration_test",
 ]
