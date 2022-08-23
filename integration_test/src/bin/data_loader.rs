@@ -1,4 +1,5 @@
 use mongodb::bson::Document;
+use mongodb::sync::Database;
 use mongodb::{
     bson::{doc, Bson},
     sync::Client,
@@ -213,21 +214,22 @@ fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
 fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()> {
     for td in test_data {
         for e in td.dataset {
-            let db = client.database(e.db.as_str());
             let datasource = match (e.collection, e.view) {
                 (Some(c), None) => Ok(c),
                 (None, Some(v)) => Ok(v),
                 _ => Err(DataLoaderError::MissingViewOrCollection(td.file.clone())),
             }?;
 
+            let db: Database;
             let command_doc: Document;
             let command_name: &str;
 
             if let Some(schema) = e.schema {
-                command_doc =
-                    doc! {"sqlSetSchema": datasource.clone(), "schema": schema, "version": 1};
+                db = client.database(e.db.as_str());
+                command_doc = doc! {"sqlSetSchema": datasource.clone(), "schema": {"jsonSchema": schema, "version": 1}};
                 command_name = "sqlSetSchema";
             } else {
+                db = client.database("admin");
                 command_doc = doc! {"sqlGenerateSchema": 1, "setSchemas": true, "sampleNamespaces": vec![format!("{}.{}", e.db, datasource.clone())]};
                 command_name = "sqlGenerateSchema";
             }

@@ -7,8 +7,21 @@ dataset:
       - {_id: 2, a: {$numberLong: "100"}}
 
   - db: integration_test
-    collection: bar
+    collection: example
     docs:
       - {_id: 0, b: "a"}
       - {_id: 1, b: "b"}
       - {_id: 2, b: "c"}
+    indexes:
+      - {key: {b: 1}}
+    schema: {
+              "bsonType": ["object"],
+              "properties": {
+                              "_id": {
+                                       "bsonType": ["int"]
+                              },
+                              "b": {
+                                     "bsonType": ["string"]
+                              }
+              }
+    }
