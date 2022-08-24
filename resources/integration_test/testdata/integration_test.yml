@@ -1,0 +1,27 @@
+dataset:
+  - db: integration_test
+    collection: foo
+    docs:
+      - {_id: 0, a: {$numberLong: "42"}}
+      - {_id: 1, a: {$numberLong: "13"}}
+      - {_id: 2, a: {$numberLong: "100"}}
+
+  - db: integration_test
+    collection: example
+    docs:
+      - {_id: 0, b: "a"}
+      - {_id: 1, b: "b"}
+      - {_id: 2, b: "c"}
+    indexes:
+      - {key: {b: 1}}
+    schema: {
+              "bsonType": ["object"],
+              "properties": {
+                              "_id": {
+                                       "bsonType": ["int"]
+                              },
+                              "b": {
+                                     "bsonType": ["string"]
+                              }
+              }
+    }

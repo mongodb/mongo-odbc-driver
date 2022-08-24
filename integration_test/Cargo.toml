@@ -1,0 +1,15 @@
+[package]
+name = "integration_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1.0.143"
+serde_yaml = "0.9.4"
+thiserror = "1"
+
+
+[dependencies.mongodb]
+version = "2.3"
+default-features = false
+features = ["sync"]
