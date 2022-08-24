@@ -111,13 +111,13 @@ fn main() -> Result<()> {
     set_test_data_schemas(adf_client, test_data)
 }
 
-fn read_data_files(path: &str) -> Result<Vec<TestData>> {
+fn read_data_files(dir_path: &str) -> Result<Vec<TestData>> {
     // Read the directory and iterate over each entry
-    fs::read_dir(path)?
+    fs::read_dir(dir_path)?
         .into_iter()
         // Only retain paths to '.y[a]ml' files
-        .filter_map(|e| {
-            let path = e.unwrap().path();
+        .filter_map(|file| {
+            let path = file.unwrap().path();
             if let Some(ext) = path.extension() {
                 if ext == "yml" || ext == "yaml" {
                     return Some(path);
@@ -128,10 +128,10 @@ fn read_data_files(path: &str) -> Result<Vec<TestData>> {
             None
         })
         // Attempt to parse the yaml files into TestData structs
-        .map(|p| {
-            let f = fs::File::open(p.clone())?;
+        .map(|file_path| {
+            let f = fs::File::open(file_path.clone())?;
             let mut test_data: TestData = serde_yaml::from_reader(f)?;
-            test_data.file = p.clone().into_os_string().into_string().unwrap();
+            test_data.file = file_path.clone().into_os_string().into_string().unwrap();
 
             // Ensure the data files are valid. Each entry
             // must specify either a collection or a view.
@@ -139,12 +139,12 @@ fn read_data_files(path: &str) -> Result<Vec<TestData>> {
                 .clone()
                 .dataset
                 .into_iter()
-                .filter(|e| e.collection.is_some() == e.view.is_some())
+                .filter(|entry| entry.collection.is_some() == entry.view.is_some())
                 .count()
                 > 0
             {
                 return Err(DataLoaderError::MissingViewOrCollection(
-                    p.into_os_string().into_string().unwrap(),
+                    file_path.into_os_string().into_string().unwrap(),
                 ));
             }
 
@@ -159,8 +159,8 @@ fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
         .flat_map(|td| {
             td.dataset
                 .into_iter()
-                .filter_map(|e| match e.collection {
-                    Some(c) => Some((e.db, c)),
+                .filter_map(|entry| match entry.collection {
+                    Some(c) => Some((entry.db, c)),
                     None => None,
                 })
                 .collect::<BTreeSet<(String, String)>>()
@@ -178,25 +178,28 @@ fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
 
 fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
     for td in test_data {
-        for e in td.dataset {
-            let db = client.database(e.db.as_str());
+        for entry in td.dataset {
+            let db = client.database(entry.db.as_str());
 
-            if let Some(c) = e.collection {
+            if let Some(c) = entry.collection {
                 let collection = db.collection::<Bson>(c.as_str());
 
-                if let Some(docs) = e.docs {
+                if let Some(docs) = entry.docs {
                     let res = collection.insert_many(docs, None)?;
                     println!(
                         "Inserted {} documents into {}.{}",
                         res.inserted_ids.len(),
-                        e.db,
+                        entry.db,
                         c
                     );
                 }
 
-                if let Some(indexes) = e.indexes {
+                if let Some(indexes) = entry.indexes {
                     let res = collection.create_indexes(indexes, None)?;
-                    println!("Created indexes {:?} for {}.{}", res.index_names, e.db, c);
+                    println!(
+                        "Created indexes {:?} for {}.{}",
+                        res.index_names, entry.db, c
+                    );
                 }
             }
         }
@@ -207,8 +210,8 @@ fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
 
 fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()> {
     for td in test_data {
-        for e in td.dataset {
-            let datasource = match (e.collection, e.view) {
+        for entry in td.dataset {
+            let datasource = match (entry.collection, entry.view) {
                 (Some(c), None) => Ok(c),
                 (None, Some(v)) => Ok(v),
                 _ => Err(DataLoaderError::MissingViewOrCollection(td.file.clone())),
@@ -218,20 +221,20 @@ fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()>
             let command_doc: Document;
             let command_name: &str;
 
-            if let Some(schema) = e.schema {
-                db = client.database(e.db.as_str());
+            if let Some(schema) = entry.schema {
+                db = client.database(entry.db.as_str());
                 command_doc = doc! {"sqlSetSchema": datasource.clone(), "schema": {"jsonSchema": schema, "version": 1}};
                 command_name = "sqlSetSchema";
             } else {
                 db = client.database("admin");
-                command_doc = doc! {"sqlGenerateSchema": 1, "setSchemas": true, "sampleNamespaces": vec![format!("{}.{}", e.db, datasource.clone())]};
+                command_doc = doc! {"sqlGenerateSchema": 1, "setSchemas": true, "sampleNamespaces": vec![format!("{}.{}", entry.db, datasource.clone())]};
                 command_name = "sqlGenerateSchema";
             }
 
             let res = db.run_command(command_doc, None)?;
             println!(
                 "Set schema for {}.{} via {}; result: {:?}",
-                e.db, datasource, command_name, res
+                entry.db, datasource, command_name, res
             );
         }
     }
