@@ -257,6 +257,7 @@ functions:
         ${prepare_shell}
         export RUST_BACKTRACE=1
         ./resources/run_adf.sh start &&
+        cargo run --bin data_loader
         cargo test -- --ignored
         EXITCODE=$?
         ./resources/run_adf.sh stop

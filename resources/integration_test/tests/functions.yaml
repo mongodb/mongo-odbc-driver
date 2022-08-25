@@ -3,3 +3,4 @@ tests:
     skip_reason: "SQL-987: Create ODBC Result Set function tests"
     test_definition: [  ]
     db: integration_test
+
