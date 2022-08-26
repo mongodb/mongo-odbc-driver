@@ -1,0 +1,5 @@
+tests:
+  - description: stub query test
+    skip_reason: "SQL-986: Create ODBC Result Set query tests"
+    test_definition: ""
+    db: integration_test

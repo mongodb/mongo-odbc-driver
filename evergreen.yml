@@ -247,6 +247,22 @@ functions:
           # we only run asan on the unit tests for now
           cargo test --target x86_64-unknown-linux-gnu unit
 
+  "run result set test":
+    command: shell.exec
+    type: test
+    params:
+      shell: bash
+      working_dir: mongosql-odbc-driver
+      script: |
+        ${prepare_shell}
+        export RUST_BACKTRACE=1
+        ./resources/run_adf.sh start &&
+        cargo run --bin data_loader
+        cargo test -- --ignored
+        EXITCODE=$?
+        ./resources/run_adf.sh stop
+        exit $EXITCODE
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -279,6 +295,13 @@ tasks:
       - func: "install rust toolchain"
       - func: "run integration tests"
 
+  - name: result-set-test
+    depends_on:
+      - name: compile
+    commands:
+      - func: "install rust toolchain"
+      - func: "run result set test"
+
   - name: asan
     commands:
       - func: "install unix odbc"
@@ -305,6 +328,18 @@ task_groups:
     tasks:
       - integration-test
 
+  - name: test-result-set-group
+    setup_group_can_fail_task: false
+    setup_group:
+      - func: "fetch source"
+      - func: "generate expansions"
+      - func: "download artifact"
+      - func: "setup driver on Windows"
+    teardown_group:
+      - func: "clean-up driver on Windows"
+    tasks:
+      - result-set-test
+
 buildvariants:
 
   - name: static-analysis
@@ -321,7 +356,7 @@ buildvariants:
       - name: compile
       - name: test-unit-group
       - name: test-integration-group
-
+      - name: test-result-set-group
 
   - name: ubuntu2004
     display_name: Ubuntu 20.04

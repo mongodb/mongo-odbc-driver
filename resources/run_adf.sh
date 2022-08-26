@@ -60,9 +60,10 @@ OS=$(uname)
 if [[ $OS =~ ^CYGWIN ]]; then
     TMP_DIR="C:\\temp\\run_adf"
 else
-    TMP_DIR="/tmp/run_adf/"
+    TMP_DIR="/tmp/run_adf"
 fi
 TIMEOUT=120
+JQ=$TMP_DIR/jq
 
 MONGO_DOWNLOAD_BASE=https://fastdl.mongodb.org
 # Ubuntu 18.04
@@ -77,12 +78,12 @@ MONGO_DOWNLOAD_WIN=mongodb-windows-x86_64-5.0.4.zip
 mkdir -p $LOCAL_INSTALL_DIR
 
 check_procname() {
-  ps -ef 2>/dev/null | grep $1 | grep -v grep >/dev/null 
+  ps -ef 2>/dev/null | grep $1 | grep -v grep >/dev/null
   result=$?
-  
+
   if [[ result -eq 0 ]]; then
     return 0
-  else 
+  else
     return 1
   fi
 }
@@ -90,10 +91,10 @@ check_procname() {
 check_port() {
   netstat -van 2>/dev/null | grep LISTEN | grep $1 >/dev/null
   result=$?
-  
+
   if [[ result -eq 0 ]]; then
     return 0
-  else 
+  else
     return 1
   fi
 }
@@ -113,18 +114,14 @@ check_mongod() {
 
 # Check if jq exists.  If not, download and set path
 get_jq() {
-  which jq
-  if [[ $? -ne 0 ]]; then
-    if [ $OS = "Linux" ]; then
-      curl -L -o $TMP_DIR/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
-    elif [ $OS = "Darwin" ]; then
-      curl -L -o $TMP_DIR/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64
-    else
-      curl -L -o $TMP_DIR/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe
-    fi
-    chmod +x $TMP_DIR/jq
-    export PATH=$PATH:$TMP_DIR
+  if [ $OS = "Linux" ]; then
+    curl -L -o $JQ https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+  elif [ $OS = "Darwin" ]; then
+    curl -L -o $JQ https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64
+  else
+    curl -L -o $JQ https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe
   fi
+  chmod +x $JQ
 }
 
 check_mongohoused() {
@@ -271,10 +268,10 @@ if [[ $? -ne 0 ]]; then
 
     # Replace the existing storage config with a wildcard collection for the local mongodb
     cp ${TENANT_CONFIG} ${TENANT_CONFIG}.orig
-    jq "del(.storage)" ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp && mv ${TENANT_CONFIG}.tmp ${TENANT_CONFIG}
-    jq --argjson obj "$STORES" '.storage.stores += [$obj]' ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp\
+    $JQ "del(.storage)" ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp && mv ${TENANT_CONFIG}.tmp ${TENANT_CONFIG}
+    $JQ --argjson obj "$STORES" '.storage.stores += [$obj]' ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp\
                                                                && mv ${TENANT_CONFIG}.tmp ${TENANT_CONFIG}
-    jq --argjson obj "$DATABASES" '.storage.databases += $obj' ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp\
+    $JQ --argjson obj "$DATABASES" '.storage.databases += $obj' ${TENANT_CONFIG} > ${TENANT_CONFIG}.tmp\
                                                                && mv ${TENANT_CONFIG}.tmp ${TENANT_CONFIG}
 
     $GO run cmd/buildscript/build.go init:mongodb-tenant
