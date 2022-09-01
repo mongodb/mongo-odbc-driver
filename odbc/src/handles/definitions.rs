@@ -199,9 +199,10 @@ impl Connection {
 #[derive(Debug)]
 pub struct Statement {
     pub connection: *mut MongoHandle,
+    pub mongo_statement: Option<Box<dyn mongo_odbc_core::MongoStatement>>,
     pub attributes: Box<StatementAttributes>,
     pub state: StatementState,
-    //pub cursor: Option<Box<Peekable<Cursor>>>,
+    // pub cursor: Option<Box<Peekable<Cursor>>>,
     pub errors: Vec<ODBCError>,
 }
 
@@ -297,6 +298,7 @@ impl Statement {
                 use_bookmarks: UseBookmarks::Off,
             }),
             errors: vec![],
+            mongo_statement: None,
         }
     }
 }

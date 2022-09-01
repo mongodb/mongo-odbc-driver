@@ -7,7 +7,7 @@ use crate::{
     },
     handles::definitions::*,
 };
-use mongo_odbc_core::MongoConnection;
+use mongo_odbc_core::{MongoConnection, MongoDatabases, MongoStatement};
 use num_traits::FromPrimitive;
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -1702,19 +1702,56 @@ pub extern "C" fn SQLTables(
     unsupported_function(MongoHandleRef::from(statement_handle), "SQLTables")
 }
 
+fn sql_tables(
+    statement_handle: &RwLock<Statement>,
+    catalog: &str,
+    schema: &str,
+    table: &str,
+    _table_t: &str,
+) -> Result<Box<dyn MongoStatement>> {
+    let statement_reader = statement_handle.read().unwrap();
+    match (catalog, schema, table) {
+        ("SQL_ALL_CATALOGS", "", "") => unsafe {
+            Ok(Box::new(MongoDatabases::list_all_catalogs(
+                (*statement_reader.connection)
+                    .as_connection()
+                    .unwrap()
+                    .read()
+                    .unwrap()
+                    .mongo_connection
+                    .as_ref()
+                    .unwrap(),
+                Some(statement_reader.attributes.query_timeout as i32),
+            )))
+        },
+        (_, _, _) => Err(ODBCError::Unimplemented("sql_tables")),
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn SQLTablesW(
-    _statement_handle: HStmt,
-    _catalog_name: *const WChar,
-    _name_length_1: SmallInt,
-    _schema_name: *const WChar,
-    _name_length_2: SmallInt,
-    _table_name: *const WChar,
-    _name_length_3: SmallInt,
-    _table_type: *const WChar,
-    _name_length_4: SmallInt,
+    statement_handle: HStmt,
+    catalog_name: *const WChar,
+    name_length_1: SmallInt,
+    schema_name: *const WChar,
+    name_length_2: SmallInt,
+    table_name: *const WChar,
+    name_length_3: SmallInt,
+    table_type: *const WChar,
+    name_length_4: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    let stmt_handle = MongoHandleRef::from(statement_handle);
+    let stmt = must_be_valid!((*stmt_handle).as_statement());
+    let catalog = input_wtext_to_string(catalog_name, name_length_1 as usize);
+    let schema = input_wtext_to_string(schema_name, name_length_2 as usize);
+    let table = input_wtext_to_string(table_name, name_length_3 as usize);
+    let table_t = input_wtext_to_string(table_type, name_length_4 as usize);
+    let mongo_statement = odbc_unwrap!(
+        sql_tables(stmt, &catalog, &schema, &table, &table_t,),
+        stmt_handle
+    );
+    stmt.write().unwrap().mongo_statement = Some(mongo_statement);
+    SqlReturn::SUCCESS
 }
 
 mod util {
