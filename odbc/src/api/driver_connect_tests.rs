@@ -59,9 +59,11 @@ mod unit {
             );
             let actual_message_length = *text_length_ptr as usize;
             unsafe {
-                let output = String::from_utf16_lossy(&*(actual_message_text as *const [u16; 256]));
-                let substring = &output[0..actual_message_length];
-                assert_eq!(expected_error_message, substring);
+                assert_eq!(
+                    expected_error_message,
+                    &(String::from_utf16_lossy(&*(actual_message_text as *const [u16; 256])))
+                        [0..actual_message_length]
+                );
                 assert_eq!(
                     *(expected_sql_state_encoded.as_ptr() as *const [u16; 6]),
                     *(actual_sql_state as *const [u16; 6])
@@ -77,7 +79,7 @@ mod unit {
             DriverConnectOption::NoPrompt,
             INVALID_CONN_ATTRIB,
             SqlReturn::ERROR,
-            "[MongoDB][Core] Parse error An invalid argument was provided: illegal character in database name",
+            "[MongoDB][Core] Invalid connection string. Parse error: An invalid argument was provided: illegal character in database name",
         );
 
         // Missing Parameters in connection string
