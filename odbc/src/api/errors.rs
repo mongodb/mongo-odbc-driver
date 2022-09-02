@@ -1,6 +1,6 @@
 use constants::{
     INVALID_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED,
-    VENDOR_IDENTIFIER,
+    UNABLE_TO_CONNECT, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -20,7 +20,7 @@ pub enum ODBCError {
     #[error("[{}][API] Invalid value for attribute {0}", VENDOR_IDENTIFIER)]
     InvalidAttrValue(&'static str),
     #[error(
-        "[{}][API] Missing Driver or DSN property in connection string",
+        "[{}][API] Missing property \"Driver\" or \"DSN\" in connection string",
         VENDOR_IDENTIFIER
     )]
     MissingDriverOrDSNProperty,
@@ -47,7 +47,8 @@ impl ODBCError {
                 NOT_IMPLEMENTED
             }
             ODBCError::Core(c) => c.get_sql_state(),
-            ODBCError::InvalidUriFormat(_) | ODBCError::InvalidAttrValue(_) => INVALID_VALUE,
+            ODBCError::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
+            ODBCError::InvalidAttrValue(_) => INVALID_VALUE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,

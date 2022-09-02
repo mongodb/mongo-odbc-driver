@@ -1,5 +1,5 @@
 use crate::{handles::definitions::*, SQLDriverConnectW, SQLGetDiagRecW};
-use constants::{INVALID_CONN_ATTRIB, INVALID_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER};
+use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
 use odbc_sys::{DriverConnectOption, HandleType, SqlReturn};
 use std::sync::RwLock;
 
@@ -9,6 +9,7 @@ mod unit {
     #[test]
     fn connect_edge_cases() {
         fn driver_connect_check_diagnostics(
+            test_name: &str,
             in_connection_string: &str,
             driver_completion: DriverConnectOption,
             expected_sql_state: &str,
@@ -62,11 +63,15 @@ mod unit {
                 assert_eq!(
                     expected_error_message,
                     &(String::from_utf16_lossy(&*(actual_message_text as *const [u16; 256])))
-                        [0..actual_message_length]
+                        [0..actual_message_length],
+                    "Failed test: {}",
+                    test_name
                 );
                 assert_eq!(
                     *(expected_sql_state_encoded.as_ptr() as *const [u16; 6]),
-                    *(actual_sql_state as *const [u16; 6])
+                    *(actual_sql_state as *const [u16; 6]),
+                    "Failed test: {}",
+                    test_name
                 );
             }
         }
@@ -75,9 +80,10 @@ mod unit {
             "Driver=ADF_ODBC_DRIVER;USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A";
         // Parse error due to illegal character in SERVER field
         driver_connect_check_diagnostics(
+            "Illegal character in SERVER field",
             "PWD=N_A;Driver=ADF_ODBC_DRIVER;SERVER=//;AUTH_SRC=N_A;USER=N_A",
             DriverConnectOption::NoPrompt,
-            INVALID_CONN_ATTRIB,
+            UNABLE_TO_CONNECT,
             SqlReturn::ERROR,
             "[MongoDB][Core] Invalid connection string. Parse error: An invalid argument was provided: illegal character in database name",
         );
@@ -85,33 +91,37 @@ mod unit {
         // Missing Parameters in connection string
         // Missing 'USER'
         driver_connect_check_diagnostics(
+            "Missing 'USER' parameter in connection string",
             "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
             DriverConnectOption::NoPrompt,
-            INVALID_VALUE,
+            UNABLE_TO_CONNECT,
             SqlReturn::ERROR,
             "[MongoDB][API] Invalid Uri One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri",
         );
 
         // Missing 'PWD'
         driver_connect_check_diagnostics(
+            "Missing 'PWD' parameter in connection string",
             "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;USER=N_A",
             DriverConnectOption::NoPrompt,
-            INVALID_VALUE,
+            UNABLE_TO_CONNECT,
             SqlReturn::ERROR,
             "[MongoDB][API] Invalid Uri One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri",
         );
         // Missing 'DRIVER'
         driver_connect_check_diagnostics(
+            "Missing 'DRIVER' parameter in connection string",
             "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
             DriverConnectOption::NoPrompt,
             NO_DSN_OR_DRIVER,
             SqlReturn::ERROR,
-            "[MongoDB][API] Missing Driver or DSN property in connection string",
+            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string",
         );
 
         // Unsupported Driver Completion options
         // DriverConnectOption::Prompt
         driver_connect_check_diagnostics(
+            "Unsupported Driver Completion option: DriverConnectOption::Prompt",
             in_connection_string,
             DriverConnectOption::Prompt,
             NOT_IMPLEMENTED,
@@ -120,6 +130,7 @@ mod unit {
         );
         // DriverConnectOption::Complete
         driver_connect_check_diagnostics(
+            "Unsupported Driver Completion option: DriverConnectOption::Complete",
             in_connection_string,
             DriverConnectOption::Complete,
             NOT_IMPLEMENTED,
@@ -128,6 +139,7 @@ mod unit {
         );
         // DriverConnectOption::CompleteRequired
         driver_connect_check_diagnostics(
+            "Unsupported Driver Completion option: DriverConnectOption::CompleteRequired",
             in_connection_string,
             DriverConnectOption::CompleteRequired,
             NOT_IMPLEMENTED,

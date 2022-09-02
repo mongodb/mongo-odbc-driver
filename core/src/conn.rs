@@ -43,7 +43,8 @@ impl MongoConnection {
         login_timeout: Option<u32>,
         application_name: Option<&str>,
     ) -> Result<Self> {
-        let mut client_options = ClientOptions::parse(mongo_uri).map_err(Error::MongoParseError)?;
+        let mut client_options =
+            ClientOptions::parse(mongo_uri).map_err(Error::MongoParseConnectionStringError)?;
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
         // set application name, note that users can set their own application name, or we default
         // to mongo-odbc-driver.

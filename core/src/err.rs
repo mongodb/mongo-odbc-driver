@@ -1,4 +1,4 @@
-use constants::{GENERAL_ERROR, INVALID_CONN_ATTRIB, TIMEOUT_EXPIRED};
+use constants::{GENERAL_ERROR, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT};
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
 
@@ -7,7 +7,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Invalid connection string. Parse error: {0}")]
-    MongoParseError(mongodb::error::Error),
+    MongoParseConnectionStringError(mongodb::error::Error),
     #[error(transparent)]
     MongoError(#[from] mongodb::error::Error),
 }
@@ -22,14 +22,14 @@ impl Error {
                 }
                 GENERAL_ERROR
             }
-            Error::MongoParseError(_) => INVALID_CONN_ATTRIB,
+            Error::MongoParseConnectionStringError(_) => UNABLE_TO_CONNECT,
         }
     }
 
     pub fn code(&self) -> i32 {
         // using `match` instead of `if let` in case we add future variants
         match self {
-            Error::MongoError(m) | Error::MongoParseError(m) => {
+            Error::MongoError(m) | Error::MongoParseConnectionStringError(m) => {
                 match m.kind.as_ref() {
                     ErrorKind::Command(command_error) => command_error.code,
                     // errors other than command errors probably will not concern us, but
