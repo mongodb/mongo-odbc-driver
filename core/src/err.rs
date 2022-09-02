@@ -1,4 +1,4 @@
-use constants::{HY000, HYT00, _01S00};
+use constants::{GENERAL_ERROR, INVALID_CONN_ATTRIB, TIMEOUT_EXPIRED};
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
 
@@ -18,11 +18,11 @@ impl Error {
             Error::MongoError(err) => {
                 if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
-                    return HYT00;
+                    return TIMEOUT_EXPIRED;
                 }
-                HY000
+                GENERAL_ERROR
             }
-            Error::MongoParseError(_) => _01S00,
+            Error::MongoParseError(_) => INVALID_CONN_ATTRIB,
         }
     }
 

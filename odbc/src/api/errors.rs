@@ -1,4 +1,7 @@
-use constants::{HY024, HYC00, IM007, VENDOR_IDENTIFIER, _01004, _01S02};
+use constants::{
+    INVALID_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED,
+    VENDOR_IDENTIFIER,
+};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -40,13 +43,15 @@ pub type Result<T> = std::result::Result<T, ODBCError>;
 impl ODBCError {
     pub fn get_sql_state(&self) -> &str {
         match self {
-            ODBCError::Unimplemented(_) | ODBCError::UnsupportedDriverConnectOption(_) => HYC00,
+            ODBCError::Unimplemented(_) | ODBCError::UnsupportedDriverConnectOption(_) => {
+                NOT_IMPLEMENTED
+            }
             ODBCError::Core(c) => c.get_sql_state(),
-            ODBCError::InvalidUriFormat(_) | ODBCError::InvalidAttrValue(_) => HY024,
-            ODBCError::InvalidHandleType(_) => HYC00,
-            ODBCError::OptionValueChanged(_, _) => _01S02,
-            ODBCError::OutStringTruncated(_) => _01004,
-            ODBCError::MissingDriverProperty => IM007,
+            ODBCError::InvalidUriFormat(_) | ODBCError::InvalidAttrValue(_) => INVALID_VALUE,
+            ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
+            ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
+            ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
+            ODBCError::MissingDriverProperty => NO_DSN_OR_DRIVER,
         }
     }
 

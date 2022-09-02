@@ -1,5 +1,5 @@
 use crate::{handles::definitions::*, SQLDriverConnectW, SQLGetDiagRecW};
-use constants::{HY024, HYC00, IM007, _01S00};
+use constants::{INVALID_CONN_ATTRIB, INVALID_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER};
 use odbc_sys::{DriverConnectOption, HandleType, SqlReturn};
 use std::sync::RwLock;
 
@@ -75,7 +75,7 @@ mod unit {
         driver_connect_check_diagnostics(
             "PWD=N_A;Driver=ADF_ODBC_DRIVER;UID=N_A;SERVER=//;AUTH_SRC=N_A;USER=N_A",
             DriverConnectOption::NoPrompt,
-            _01S00,
+            INVALID_CONN_ATTRIB,
             SqlReturn::ERROR,
             "[MongoDB][Core] Parse error An invalid argument was provided: illegal character in database name",
         );
@@ -85,7 +85,7 @@ mod unit {
         driver_connect_check_diagnostics(
             "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
             DriverConnectOption::NoPrompt,
-            HY024,
+            INVALID_VALUE,
             SqlReturn::ERROR,
             "[MongoDB][API] Invalid Uri One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri",
         );
@@ -94,7 +94,7 @@ mod unit {
         driver_connect_check_diagnostics(
             "Driver=ADF_ODBC_DRIVER;UID=N_A;SERVER=N_A;AUTH_SRC=N_A;USER=N_A",
             DriverConnectOption::NoPrompt,
-            HY024,
+            INVALID_VALUE,
             SqlReturn::ERROR,
             "[MongoDB][API] Invalid Uri One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri",
         );
@@ -102,7 +102,7 @@ mod unit {
         driver_connect_check_diagnostics(
             "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
             DriverConnectOption::NoPrompt,
-            IM007,
+            NO_DSN_OR_DRIVER,
             SqlReturn::ERROR,
             "[MongoDB][API] Missing Driver property in connection string",
         );
@@ -112,7 +112,7 @@ mod unit {
         driver_connect_check_diagnostics(
             in_connection_string,
             DriverConnectOption::Prompt,
-            HYC00,
+            NOT_IMPLEMENTED,
             SqlReturn::ERROR,
             "[MongoDB][API] The driver connect option Prompt is not supported",
         );
@@ -120,7 +120,7 @@ mod unit {
         driver_connect_check_diagnostics(
             in_connection_string,
             DriverConnectOption::Complete,
-            HYC00,
+            NOT_IMPLEMENTED,
             SqlReturn::ERROR,
             "[MongoDB][API] The driver connect option Complete is not supported",
         );
@@ -128,7 +128,7 @@ mod unit {
         driver_connect_check_diagnostics(
             in_connection_string,
             DriverConnectOption::CompleteRequired,
-            HYC00,
+            NOT_IMPLEMENTED,
             SqlReturn::ERROR,
             "[MongoDB][API] The driver connect option CompleteRequired is not supported",
         );
