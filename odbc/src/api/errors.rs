@@ -20,10 +20,10 @@ pub enum ODBCError {
     #[error("[{}][API] Invalid value for attribute {0}", VENDOR_IDENTIFIER)]
     InvalidAttrValue(&'static str),
     #[error(
-        "[{}][API] Missing Driver property in connection string",
+        "[{}][API] Missing Driver or DSN property in connection string",
         VENDOR_IDENTIFIER
     )]
-    MissingDriverProperty,
+    MissingDriverOrDSNProperty,
     #[error(
         "[{}][API] Buffer size '{0}' not large enough for string",
         VENDOR_IDENTIFIER
@@ -51,7 +51,7 @@ impl ODBCError {
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
-            ODBCError::MissingDriverProperty => NO_DSN_OR_DRIVER,
+            ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
         }
     }
 
@@ -64,7 +64,7 @@ impl ODBCError {
             | ODBCError::InvalidUriFormat(_)
             | ODBCError::InvalidAttrValue(_)
             | ODBCError::InvalidHandleType(_)
-            | ODBCError::MissingDriverProperty
+            | ODBCError::MissingDriverOrDSNProperty
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::OptionValueChanged(_, _) => 0,

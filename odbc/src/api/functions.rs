@@ -453,7 +453,7 @@ fn sql_driver_connect(
     let auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
     odbc_uri
         .remove(&["driver", "dsn"])
-        .ok_or(ODBCError::MissingDriverProperty)?;
+        .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
     let database = if conn_reader.attributes.current_catalog.is_some() {
         conn_reader.attributes.current_catalog.as_deref()
     } else {

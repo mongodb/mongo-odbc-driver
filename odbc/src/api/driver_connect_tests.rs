@@ -75,7 +75,7 @@ mod unit {
             "Driver=ADF_ODBC_DRIVER;USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A";
         // Parse error due to illegal character in SERVER field
         driver_connect_check_diagnostics(
-            "PWD=N_A;Driver=ADF_ODBC_DRIVER;UID=N_A;SERVER=//;AUTH_SRC=N_A;USER=N_A",
+            "PWD=N_A;Driver=ADF_ODBC_DRIVER;SERVER=//;AUTH_SRC=N_A;USER=N_A",
             DriverConnectOption::NoPrompt,
             INVALID_CONN_ATTRIB,
             SqlReturn::ERROR,
@@ -94,7 +94,7 @@ mod unit {
 
         // Missing 'PWD'
         driver_connect_check_diagnostics(
-            "Driver=ADF_ODBC_DRIVER;UID=N_A;SERVER=N_A;AUTH_SRC=N_A;USER=N_A",
+            "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;USER=N_A",
             DriverConnectOption::NoPrompt,
             INVALID_VALUE,
             SqlReturn::ERROR,
@@ -106,7 +106,7 @@ mod unit {
             DriverConnectOption::NoPrompt,
             NO_DSN_OR_DRIVER,
             SqlReturn::ERROR,
-            "[MongoDB][API] Missing Driver property in connection string",
+            "[MongoDB][API] Missing Driver or DSN property in connection string",
         );
 
         // Unsupported Driver Completion options
