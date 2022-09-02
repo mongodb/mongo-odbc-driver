@@ -452,7 +452,7 @@ fn sql_driver_connect(
     let mongo_uri = odbc_uri.remove_to_mongo_uri()?;
     let auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
     odbc_uri
-        .remove(&["driver"])
+        .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverProperty)?;
     let database = if conn_reader.attributes.current_catalog.is_some() {
         conn_reader.attributes.current_catalog.as_deref()

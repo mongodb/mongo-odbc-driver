@@ -6,7 +6,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Parse error {0}")]
+    #[error("Invalid connection string. Parse error: {0}")]
     MongoParseError(mongodb::error::Error),
     #[error(transparent)]
     MongoError(#[from] mongodb::error::Error),
