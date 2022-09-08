@@ -153,7 +153,7 @@ mod unit {
         fn missing_server_is_err() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                "[MongoDB][API] Invalid Uri server is required for a valid Mongo ODBC Uri",
+                "[MongoDB][API] Invalid Uri: server is required for a valid Mongo ODBC Uri",
                 format!(
                     "{}",
                     ODBCUri::new("USER=foo;PWD=bar")
@@ -167,7 +167,7 @@ mod unit {
         fn missing_pwd_is_err() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-            "[MongoDB][API] Invalid Uri One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri",
+            "[MongoDB][API] Invalid Uri: One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri",
             format!(
                 "{}",
                 ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
@@ -181,7 +181,7 @@ mod unit {
         fn missing_user_is_err() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-            "[MongoDB][API] Invalid Uri One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri",
+            "[MongoDB][API] Invalid Uri: One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri",
             format!(
                 "{}",
                 ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")
