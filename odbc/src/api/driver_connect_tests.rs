@@ -81,7 +81,7 @@ mod unit {
     use std::sync::RwLock;
 
     test_connection_diagnostics! (
-            illegal_character_in_server_field,
+            invalid_connection_string_parse_error,
             in_connection_string = "PWD=N_A;Driver=ADF_ODBC_DRIVER;SERVER=//;AUTH_SRC=N_A;USER=N_A",
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
