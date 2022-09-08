@@ -1,5 +1,5 @@
 use constants::{
-    INVALID_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED,
+    INVALID_ATTR_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED,
     UNABLE_TO_CONNECT, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
@@ -13,7 +13,7 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     UnsupportedDriverConnectOption(String),
-    #[error("[{}][API] Invalid Uri {0}", VENDOR_IDENTIFIER)]
+    #[error("[{}][API] Invalid Uri: {0}", VENDOR_IDENTIFIER)]
     InvalidUriFormat(String),
     #[error("[{}][API] Invalid handle type, expected {0}", VENDOR_IDENTIFIER)]
     InvalidHandleType(&'static str),
@@ -48,7 +48,7 @@ impl ODBCError {
             }
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
-            ODBCError::InvalidAttrValue(_) => INVALID_VALUE,
+            ODBCError::InvalidAttrValue(_) => INVALID_ATTR_VALUE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,

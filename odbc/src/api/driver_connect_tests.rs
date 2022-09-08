@@ -1,21 +1,19 @@
-use crate::{handles::definitions::*, SQLDriverConnectW, SQLGetDiagRecW};
-use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
-use odbc_sys::{DriverConnectOption, HandleType, SqlReturn};
-use std::sync::RwLock;
+macro_rules! test_connection_diagnostics {
+    ($func_name:ident,
+    in_connection_string = $in_connection_string:expr,
+        driver_completion = $driver_completion:expr,
+        expected_sql_state = $expected_sql_state:expr,
+        expected_sql_return = $expected_sql_return:expr,
+        expected_error_message = $expected_error_message:expr) => {
+        #[test]
+        fn $func_name() {
+            use odbc_sys::SmallInt;
+            let in_connection_string = $in_connection_string;
+            let driver_completion = $driver_completion;
+            let expected_sql_state = $expected_sql_state;
+            let expected_sql_return = $expected_sql_return;
+            let expected_error_message = $expected_error_message;
 
-mod unit {
-    use super::*;
-    use odbc_sys::SmallInt;
-    #[test]
-    fn connect_edge_cases() {
-        fn driver_connect_check_diagnostics(
-            test_name: &str,
-            in_connection_string: &str,
-            driver_completion: DriverConnectOption,
-            expected_sql_state: &str,
-            expected_sql_return: SqlReturn,
-            expected_error_message: &str,
-        ) {
             let out_connection_string = &mut [0u16; 64] as *mut _;
             let string_length_2 = &mut 0;
             let buffer_length: SmallInt = 65;
@@ -64,87 +62,81 @@ mod unit {
                     expected_error_message,
                     &(String::from_utf16_lossy(&*(actual_message_text as *const [u16; 256])))
                         [0..actual_message_length],
-                    "Failed test: {}",
-                    test_name
                 );
                 assert_eq!(
-                    *(expected_sql_state_encoded.as_ptr() as *const [u16; 6]),
-                    *(actual_sql_state as *const [u16; 6]),
-                    "Failed test: {}",
-                    test_name
+                    String::from_utf16(&*(expected_sql_state_encoded.as_ptr() as *const [u16; 6]))
+                        .unwrap(),
+                    String::from_utf16(&*(actual_sql_state as *const [u16; 6])).unwrap()
                 );
             }
         }
+    };
+}
 
-        let in_connection_string =
-            "Driver=ADF_ODBC_DRIVER;USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A";
-        // Parse error due to illegal character in SERVER field
-        driver_connect_check_diagnostics(
-            "Illegal character in SERVER field",
-            "PWD=N_A;Driver=ADF_ODBC_DRIVER;SERVER=//;AUTH_SRC=N_A;USER=N_A",
-            DriverConnectOption::NoPrompt,
-            UNABLE_TO_CONNECT,
-            SqlReturn::ERROR,
-            "[MongoDB][Core] Invalid connection string. Parse error: An invalid argument was provided: illegal character in database name",
-        );
+mod unit {
+    use crate::{handles::definitions::*, SQLDriverConnectW, SQLGetDiagRecW};
+    use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
+    use odbc_sys::DriverConnectOption;
+    use odbc_sys::{HandleType, SqlReturn};
+    use std::sync::RwLock;
 
-        // Missing Parameters in connection string
-        // Missing 'USER'
-        driver_connect_check_diagnostics(
-            "Missing 'USER' parameter in connection string",
-            "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
-            DriverConnectOption::NoPrompt,
-            UNABLE_TO_CONNECT,
-            SqlReturn::ERROR,
-            "[MongoDB][API] Invalid Uri One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri",
+    test_connection_diagnostics! (
+            illegal_character_in_server_field,
+            in_connection_string = "PWD=N_A;Driver=ADF_ODBC_DRIVER;SERVER=//;AUTH_SRC=N_A;USER=N_A",
+            driver_completion = DriverConnectOption::NoPrompt,
+            expected_sql_state = UNABLE_TO_CONNECT,
+            expected_sql_return = SqlReturn::ERROR,
+            expected_error_message = "[MongoDB][Core] Invalid connection string. Parse error: An invalid argument was provided: illegal character in database name"
         );
-
-        // Missing 'PWD'
-        driver_connect_check_diagnostics(
-            "Missing 'PWD' parameter in connection string",
-            "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;USER=N_A",
-            DriverConnectOption::NoPrompt,
-            UNABLE_TO_CONNECT,
-            SqlReturn::ERROR,
-            "[MongoDB][API] Invalid Uri One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri",
+    test_connection_diagnostics! (
+            missing_user_in_connection_string,
+            in_connection_string = "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+            driver_completion = DriverConnectOption::NoPrompt,
+            expected_sql_state = UNABLE_TO_CONNECT,
+            expected_sql_return = SqlReturn::ERROR,
+            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri"
         );
-        // Missing 'DRIVER'
-        driver_connect_check_diagnostics(
-            "Missing 'DRIVER' parameter in connection string",
-            "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
-            DriverConnectOption::NoPrompt,
-            NO_DSN_OR_DRIVER,
-            SqlReturn::ERROR,
-            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string",
+    test_connection_diagnostics! (
+            missing_pwd_in_connection_string,
+            in_connection_string = "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;USER=N_A",
+            driver_completion = DriverConnectOption::NoPrompt,
+            expected_sql_state = UNABLE_TO_CONNECT,
+            expected_sql_return = SqlReturn::ERROR,
+            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri"
         );
-
-        // Unsupported Driver Completion options
-        // DriverConnectOption::Prompt
-        driver_connect_check_diagnostics(
-            "Unsupported Driver Completion option: DriverConnectOption::Prompt",
-            in_connection_string,
-            DriverConnectOption::Prompt,
-            NOT_IMPLEMENTED,
-            SqlReturn::ERROR,
-            "[MongoDB][API] The driver connect option Prompt is not supported",
-        );
-        // DriverConnectOption::Complete
-        driver_connect_check_diagnostics(
-            "Unsupported Driver Completion option: DriverConnectOption::Complete",
-            in_connection_string,
-            DriverConnectOption::Complete,
-            NOT_IMPLEMENTED,
-            SqlReturn::ERROR,
-            "[MongoDB][API] The driver connect option Complete is not supported",
-        );
-        // DriverConnectOption::CompleteRequired
-        driver_connect_check_diagnostics(
-            "Unsupported Driver Completion option: DriverConnectOption::CompleteRequired",
-            in_connection_string,
-            DriverConnectOption::CompleteRequired,
-            NOT_IMPLEMENTED,
-            SqlReturn::ERROR,
-            "[MongoDB][API] The driver connect option CompleteRequired is not supported",
-        );
-    }
+    test_connection_diagnostics!(
+        missing_driver_in_connection_string,
+        in_connection_string = "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+        driver_completion = DriverConnectOption::NoPrompt,
+        expected_sql_state = NO_DSN_OR_DRIVER,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message =
+            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
+    );
+    test_connection_diagnostics!(
+        unsupported_driver_connect_option_prompt,
+        in_connection_string = "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+        driver_completion = DriverConnectOption::Prompt,
+        expected_sql_state = NOT_IMPLEMENTED,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message = "[MongoDB][API] The driver connect option Prompt is not supported"
+    );
+    test_connection_diagnostics!(
+        unsupported_driver_connect_option_complete,
+        in_connection_string = "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+        driver_completion = DriverConnectOption::Complete,
+        expected_sql_state = NOT_IMPLEMENTED,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message =
+            "[MongoDB][API] The driver connect option Complete is not supported"
+    );
+    test_connection_diagnostics!(
+        unsupported_driver_connect_option_complete_required,
+        in_connection_string = "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+        driver_completion = DriverConnectOption::CompleteRequired,
+        expected_sql_state = NOT_IMPLEMENTED,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message =
+            "[MongoDB][API] The driver connect option CompleteRequired is not supported"
+    );
 }
