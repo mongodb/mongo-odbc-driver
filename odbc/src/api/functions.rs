@@ -1747,7 +1747,7 @@ pub extern "C" fn SQLTablesW(
     let table = input_wtext_to_string(table_name, name_length_3 as usize);
     let table_t = input_wtext_to_string(table_type, name_length_4 as usize);
     let mongo_statement = odbc_unwrap!(
-        sql_tables(stmt, &catalog, &schema, &table, &table_t,),
+        sql_tables(stmt, &catalog, &schema, &table, &table_t),
         stmt_handle
     );
     stmt.write().unwrap().mongo_statement = Some(mongo_statement);
