@@ -1,4 +1,4 @@
-use constants::{GENERAL_ERROR, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT};
+use constants::{GENERAL_ERROR, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT};
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
 
@@ -10,6 +10,8 @@ pub enum Error {
     MongoParseConnectionStringError(mongodb::error::Error),
     #[error(transparent)]
     MongoError(#[from] mongodb::error::Error),
+    #[error("No database provided for query")]
+    NoDatabase,
 }
 
 impl Error {
@@ -23,6 +25,7 @@ impl Error {
                 GENERAL_ERROR
             }
             Error::MongoParseConnectionStringError(_) => UNABLE_TO_CONNECT,
+            Error::NoDatabase => NO_DSN_OR_DRIVER,
         }
     }
 
@@ -42,6 +45,7 @@ impl Error {
                     _ => 0,
                 }
             }
+            Error::NoDatabase => 0,
         }
     }
 }

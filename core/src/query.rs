@@ -1,8 +1,7 @@
-use crate::conn::MongoConnection;
-use crate::err::Result;
-use crate::stmt::MongoStatement;
-use bson::{Bson, Document};
-use mongodb::sync::Cursor;
+use crate::{conn::MongoConnection, err::Result, stmt::MongoStatement, Error};
+use bson::{doc, Bson, Document};
+use mongodb::{options::AggregateOptions, sync::Cursor};
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct MongoQuery {
@@ -13,16 +12,43 @@ pub struct MongoQuery {
 }
 
 impl MongoQuery {
-    // Create a new MongoStatement with StmtKind::Query on the connection currentDB.
-    // Executes a $sql aggregation with the given query and initialize the Resultset cursor.
-    // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
-    // timeout, the query must finish before the timeout or an error is returned
+    // Create a new MongoQuery on the connection's current database. Execute a
+    // $sql aggregation with the given query and initialize the result set
+    // cursor. If there is a timeout, the query must finish before the timeout
+    // or an error is returned.
     pub fn execute(
-        _client: &MongoConnection,
-        _query_timeout: Option<i32>,
-        _query: &str,
+        client: &MongoConnection,
+        query_timeout: Option<i32>,
+        query: &str,
     ) -> Result<Self> {
-        unimplemented!()
+        match &client.current_db {
+            None => Err(Error::NoDatabase),
+            Some(current_db) => {
+                let pipeline = vec![doc! {"$sql": {
+                    "dialect": "mongosql",
+                    "format": "odbc",
+                    "statement": query,
+                }}];
+
+                let options = query_timeout.map(|i| {
+                    AggregateOptions::builder()
+                        .max_time(Duration::from_millis(i as u64)) // TODO: should timeout come from client if present?
+                        .build()
+                });
+
+                let c = client
+                    .client
+                    .database(current_db)
+                    .aggregate(pipeline, options)?;
+
+                // TODO: run sql result schema command and store resultset_metadata
+
+                Ok(MongoQuery {
+                    resultset_cursor: c,
+                    resultset_metadata: vec![],
+                })
+            }
+        }
     }
 
     // Return the number of fields/columns in the resultset
@@ -52,7 +78,7 @@ impl MongoStatement for MongoQuery {
 
 // Metadata information for a column of the result set.
 // The information is to be used when reporting columns information from
-// SQLColAtrribute or SQLDescibeCol and when converting the data to the targeted C type.
+// SQLColAttribute or SQLDescribeCol and when converting the data to the targeted C type.
 #[derive(Debug)]
 pub struct MongoColMetadata {
     pub base_col_name: String,
