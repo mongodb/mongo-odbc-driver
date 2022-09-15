@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use crate::{conn::MongoConnection, err::Result, stmt::MongoStatement, Error};
 use bson::{doc, Bson, Document};
 use mongodb::{options::AggregateOptions, sync::Cursor};
@@ -42,6 +43,7 @@ impl MongoQuery {
                     .aggregate(pipeline, options)?;
 
                 // TODO: run sql result schema command and store resultset_metadata
+                //  - also, sort the metadata alphabetically (by column_name)
 
                 Ok(MongoQuery {
                     resultset_cursor: c,
@@ -68,13 +70,31 @@ impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool> {
-        unimplemented!()
+        self.resultset_cursor.advance().map_err(Error::MongoError)
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
-        unimplemented!()
+    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+
+        // TODO:
+        //  - what should we do if the column index is out of bounds? Err or Ok(None) or panic?
+        //    - error makes most sense since this could be a user error
+        //    - Ok(None) isn't really clear
+        //    - panic is bad here since this isn't invalid state
+        //  - what should we do if the current doc does not contain the datasource? Err or Ok(None) or panic?
+        //    - error is always an option so we don't crash
+        //    - Ok(None) isn't really clear
+        //    - panic would make sense here since we really should not ever get a result document that does not include a datasource name described by the metadata
+        //  - what if it contains it but it isn't a document? Err or Ok(None) or panic?
+        //  - what if the datasource doc doesn't contain the field name?
+        //  - * Also, should we switch this to return Result<Option<Bson>>?
+        //    - there is no clear way to have this return a &Bson...
+
+        let md = self._get_col_metadata(col_index)?;
+        let datasource = self.resultset_cursor.current().get(md.table_name.clone())?.unwrap().as_document().unwrap();
+        let value: Bson = datasource.get(md.col_name.clone())?.unwrap().try_into()?;
+        Ok(Some(value))
     }
 }
 

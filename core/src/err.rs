@@ -8,6 +8,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error(transparent)]
+    BsonError(#[from] bson::raw::Error),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
     #[error("Invalid connection string. Parse error: {0}")]
@@ -31,6 +33,7 @@ impl Error {
             Error::MongoParseConnectionStringError(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => COLUMN_NOT_FOUND,
+            Error::BsonError(_) => GENERAL_ERROR, // TODO: might want to do invalid cursor state?
         }
     }
 
@@ -50,7 +53,7 @@ impl Error {
                     _ => 0,
                 }
             }
-            Error::NoDatabase | Error::ColIndexOutOfBounds(_) => 0,
+            Error::NoDatabase | Error::ColIndexOutOfBounds(_) | Error::BsonError(_) => 0,
         }
     }
 }
