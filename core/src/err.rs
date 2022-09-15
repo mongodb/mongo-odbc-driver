@@ -1,4 +1,6 @@
-use constants::{GENERAL_ERROR, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT};
+use constants::{
+    COLUMN_NOT_FOUND, GENERAL_ERROR, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
+};
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
 
@@ -6,6 +8,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Column index {0} out of bounds")]
+    ColIndexOutOfBounds(u16),
     #[error("Invalid connection string. Parse error: {0}")]
     MongoParseConnectionStringError(mongodb::error::Error),
     #[error(transparent)]
@@ -26,6 +30,7 @@ impl Error {
             }
             Error::MongoParseConnectionStringError(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
+            Error::ColIndexOutOfBounds(_) => COLUMN_NOT_FOUND,
         }
     }
 
@@ -45,7 +50,7 @@ impl Error {
                     _ => 0,
                 }
             }
-            Error::NoDatabase => 0,
+            Error::NoDatabase | Error::ColIndexOutOfBounds(_) => 0,
         }
     }
 }

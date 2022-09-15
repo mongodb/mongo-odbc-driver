@@ -53,12 +53,14 @@ impl MongoQuery {
 
     // Return the number of fields/columns in the resultset
     fn _get_col_count(&self) -> u32 {
-        unimplemented!()
+        self.resultset_metadata.len() as u32
     }
 
     // Get the metadata for the column with the given index.
-    fn _get_col_metadata(&self, _col_index: u16) -> Result<MongoColMetadata> {
-        unimplemented!()
+    fn _get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
+        self.resultset_metadata
+            .get(col_index as usize)
+            .map_or(Err(Error::ColIndexOutOfBounds(col_index)), |md| Ok(md))
     }
 }
 
@@ -79,7 +81,7 @@ impl MongoStatement for MongoQuery {
 // Metadata information for a column of the result set.
 // The information is to be used when reporting columns information from
 // SQLColAttribute or SQLDescribeCol and when converting the data to the targeted C type.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MongoColMetadata {
     pub base_col_name: String,
     pub base_table_name: String,
