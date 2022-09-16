@@ -76,25 +76,9 @@ impl MongoStatement for MongoQuery {
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
-
-        // TODO:
-        //  - what should we do if the column index is out of bounds? Err or Ok(None) or panic?
-        //    - error makes most sense since this could be a user error
-        //    - Ok(None) isn't really clear
-        //    - panic is bad here since this isn't invalid state
-        //  - what should we do if the current doc does not contain the datasource? Err or Ok(None) or panic?
-        //    - error is always an option so we don't crash
-        //    - Ok(None) isn't really clear
-        //    - panic would make sense here since we really should not ever get a result document that does not include a datasource name described by the metadata
-        //  - what if it contains it but it isn't a document? Err or Ok(None) or panic?
-        //  - what if the datasource doc doesn't contain the field name?
-        //  - * Also, should we switch this to return Result<Option<Bson>>?
-        //    - there is no clear way to have this return a &Bson...
-
         let md = self._get_col_metadata(col_index)?;
-        let datasource = self.resultset_cursor.current().get(md.table_name.clone())?.unwrap().as_document().unwrap();
-        let value: Bson = datasource.get(md.col_name.clone())?.unwrap().try_into()?;
-        Ok(Some(value))
+        let datasource = self.resultset_cursor.deserialize_current()?.get_document(md.table_name.clone()).map_err(Error::ValueAccess)?;
+        Ok(datasource.get(md.col_name.clone()))
     }
 }
 

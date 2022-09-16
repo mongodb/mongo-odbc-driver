@@ -18,6 +18,8 @@ pub enum Error {
     MongoError(#[from] mongodb::error::Error),
     #[error("No database provided for query")]
     NoDatabase,
+    #[error(transparent)]
+    ValueAccess(bson::document::ValueAccessError),
 }
 
 impl Error {
@@ -33,7 +35,7 @@ impl Error {
             Error::MongoParseConnectionStringError(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => COLUMN_NOT_FOUND,
-            Error::BsonError(_) => GENERAL_ERROR, // TODO: might want to do invalid cursor state?
+            Error::BsonError(_) | Error::ValueAccess(_) => GENERAL_ERROR, // TODO: might want to do invalid cursor state?
         }
     }
 
@@ -53,7 +55,10 @@ impl Error {
                     _ => 0,
                 }
             }
-            Error::NoDatabase | Error::ColIndexOutOfBounds(_) | Error::BsonError(_) => 0,
+            Error::NoDatabase
+            | Error::ColIndexOutOfBounds(_)
+            | Error::BsonError(_)
+            | Error::ValueAccess(_) => 0,
         }
     }
 }
