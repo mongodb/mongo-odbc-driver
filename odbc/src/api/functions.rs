@@ -1752,7 +1752,7 @@ pub extern "C" fn SQLTablesW(
             &catalog,
             &schema,
             &table,
-            &table_t
+            &table_t,
         )
     };
     let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
