@@ -9,6 +9,8 @@ mod err;
 pub use err::{Error, Result};
 mod fields;
 pub use fields::MongoFields;
+mod json_schema;
+pub use json_schema::{Schema, BsonType, BsonTypeName, Items};
 mod query;
 pub use query::{MongoColMetadata, MongoQuery};
 mod stmt;
