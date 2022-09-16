@@ -1703,27 +1703,18 @@ pub extern "C" fn SQLTables(
 }
 
 fn sql_tables(
-    statement_handle: &RwLock<Statement>,
+    mongo_connection: &MongoConnection,
+    query_timeout: i32,
     catalog: &str,
     schema: &str,
     table: &str,
     _table_t: &str,
 ) -> Result<Box<dyn MongoStatement>> {
-    let statement_reader = statement_handle.read().unwrap();
     match (catalog, schema, table) {
-        ("SQL_ALL_CATALOGS", "", "") => unsafe {
-            Ok(Box::new(MongoDatabases::list_all_catalogs(
-                (*statement_reader.connection)
-                    .as_connection()
-                    .unwrap()
-                    .read()
-                    .unwrap()
-                    .mongo_connection
-                    .as_ref()
-                    .unwrap(),
-                Some(statement_reader.attributes.query_timeout as i32),
-            )))
-        },
+        ("SQL_ALL_CATALOGS", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
+            mongo_connection,
+            Some(query_timeout),
+        ))),
         (_, _, _) => Err(ODBCError::Unimplemented("sql_tables")),
     }
 }
@@ -1740,16 +1731,31 @@ pub extern "C" fn SQLTablesW(
     table_type: *const WChar,
     name_length_4: SmallInt,
 ) -> SqlReturn {
-    let stmt_handle = MongoHandleRef::from(statement_handle);
-    let stmt = must_be_valid!((*stmt_handle).as_statement());
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    let stmt = must_be_valid!((*mongo_handle).as_statement());
     let catalog = input_wtext_to_string(catalog_name, name_length_1 as usize);
     let schema = input_wtext_to_string(schema_name, name_length_2 as usize);
     let table = input_wtext_to_string(table_name, name_length_3 as usize);
     let table_t = input_wtext_to_string(table_type, name_length_4 as usize);
-    let mongo_statement = odbc_unwrap!(
-        sql_tables(stmt, &catalog, &schema, &table, &table_t),
-        stmt_handle
-    );
+    let connection = (*(stmt.read().unwrap())).connection;
+    let mongo_statement = unsafe {
+        sql_tables(
+            (*connection)
+                .as_connection()
+                .unwrap()
+                .read()
+                .unwrap()
+                .mongo_connection
+                .as_ref()
+                .unwrap(),
+            (*(stmt.read().unwrap())).attributes.query_timeout as i32,
+            &catalog,
+            &schema,
+            &table,
+            &table_t
+        )
+    };
+    let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
     stmt.write().unwrap().mongo_statement = Some(mongo_statement);
     SqlReturn::SUCCESS
 }
