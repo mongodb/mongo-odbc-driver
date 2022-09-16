@@ -1,8 +1,8 @@
-use std::borrow::Borrow;
-use crate::{conn::MongoConnection, err::Result, stmt::MongoStatement, Error};
-use bson::{doc, Bson, Document};
+use crate::{conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, Error};
+use bson::{doc, Bson, Document, RawBson};
 use mongodb::{options::AggregateOptions, sync::Cursor};
-use std::time::Duration;
+use serde::{Deserialize, Serialize};
+use std::{collections::{BTreeSet, HashMap}, time::Duration};
 
 #[derive(Debug)]
 pub struct MongoQuery {
@@ -25,6 +25,9 @@ impl MongoQuery {
         match &client.current_db {
             None => Err(Error::NoDatabase),
             Some(current_db) => {
+                let db = client.client.database(current_db);
+
+                // 1. Run the $sql to get the result set cursor.
                 let pipeline = vec![doc! {"$sql": {
                     "dialect": "mongosql",
                     "format": "odbc",
@@ -37,16 +40,29 @@ impl MongoQuery {
                         .build()
                 });
 
-                let c = client
-                    .client
-                    .database(current_db)
-                    .aggregate(pipeline, options)?;
+                let cursor = db.aggregate(pipeline, options)?;
 
-                // TODO: run sql result schema command and store resultset_metadata
-                //  - also, sort the metadata alphabetically (by column_name)
+                // 2. Run the sqlGetResultSchema command to get the result set
+                // metadata. Sort the column metadata alphabetically (by column
+                // name).
+                let get_schema_cmd =
+                    doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
+                let get_result_schema_response: SqlGetResultSchemaResponse =
+                    bson::from_document(db.run_command(get_schema_cmd, None)?)
+                        .map_err(Error::BsonError)?;
+
+                // TODO:
+                //   - build metadata vec out of md_result
+                //   - md_result.schema.jsonSchema contains the json schema of the result set
+                //   1. simplify json schema such that bsonType is a single field and polymorphic types are properly represented as anyOfs
+                //   2. create metadata from simplified schema
+                //      a. sort datasources alphabetically
+                //      b. process each datasource:
+                //         - sort field alphabetically
+                //         - extract/calculate column info for each field
 
                 Ok(MongoQuery {
-                    resultset_cursor: c,
+                    resultset_cursor: cursor,
                     resultset_metadata: vec![],
                 })
             }
@@ -77,8 +93,12 @@ impl MongoStatement for MongoQuery {
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
         let md = self._get_col_metadata(col_index)?;
-        let datasource = self.resultset_cursor.deserialize_current()?.get_document(md.table_name.clone()).map_err(Error::ValueAccess)?;
-        Ok(datasource.get(md.col_name.clone()))
+        let datasource = self
+            .resultset_cursor
+            .deserialize_current()?
+            .get_document(md.table_name.clone())
+            .map_err(Error::ValueAccess)?;
+        Ok(datasource.get(md.col_name.clone())) // TODO: why is this an issue and how can we address it?
     }
 }
 
@@ -106,4 +126,25 @@ pub struct MongoColMetadata {
     pub type_name: String,
     pub is_unsigned: bool,
     pub is_updatable: bool,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
+pub struct SqlGetResultSchemaResponse {
+    pub ok: i32,
+    pub schema: VersionedJsonSchema,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
+pub struct VersionedJsonSchema {
+    pub version: i32,
+    pub json_schema: json_schema::Schema,
+}
+
+pub struct SimplifiedJsonSchema {
+    pub bson_type: String,
+    pub properties: HashMap<String, Box<SimplifiedJsonSchema>>,
+    pub any_of: Vec<Box<SimplifiedJsonSchema>>, // TODO: make set
+    pub required: BTreeSet<String>,
+    pub items: Box<SimplifiedJsonSchema>,
+    pub additional_properties: bool,
 }

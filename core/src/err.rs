@@ -9,7 +9,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    BsonError(#[from] bson::raw::Error),
+    BsonError(#[from] bson::de::Error),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
     #[error("Invalid connection string. Parse error: {0}")]
