@@ -46,7 +46,7 @@ impl MongoStatement for MongoFields {
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, _col_index: u16) -> Result<Option<&Bson>> {
+    fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
         unimplemented!()
     }
 }

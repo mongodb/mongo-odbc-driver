@@ -6,7 +6,7 @@ use bson::Bson;
 #[derive(Debug)]
 pub struct MongoDatabases {
     // The list of all the databases
-    database_names: Vec<Bson>,
+    database_names: Vec<String>,
     // The current database index.
     current_db_index: u32,
 }
@@ -26,12 +26,8 @@ impl MongoDatabases {
             .client
             .list_database_names(None, None)
             .unwrap();
-        let mut db_names: Vec<Bson> = Vec::new();
-        for name in database_names {
-            db_names.push(Bson::String(name));
-        }
         MongoDatabases {
-            database_names: db_names,
+            database_names,
             current_db_index: 0,
         }
     }
@@ -47,16 +43,17 @@ impl MongoStatement for MongoDatabases {
     }
 
     // Get the BSON value for the value at the given colIndex on the current row.
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>> {
+    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> databases_names[current_row_index]
         match col_index {
-            1 => Ok(Some(
+            1 => Ok(Some(Bson::String(
                 self.database_names
                     .get(self.current_db_index as usize)
-                    .unwrap(),
-            )),
-            _ => Ok(Some(&Bson::Null)),
+                    .unwrap()
+                    .to_string(),
+            ))),
+            _ => Ok(Some(Bson::Null)),
             // SQL-1031: Add database listing edge case handling
             // Col_or_Param_Num was greater than the number of columns in the result set
             // Or value specified for the argument Col_or_Param_Num was 0,

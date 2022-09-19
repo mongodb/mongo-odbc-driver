@@ -44,7 +44,7 @@ impl MongoStatement for MongoCollections {
 
     // Get the BSON value for the given colIndex on the current CollectionSpecification.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, _col_index: u16) -> Result<Option<&Bson>> {
+    fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> current_coll_list.0
         // 2 -> current_coll.name
