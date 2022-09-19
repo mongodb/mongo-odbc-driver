@@ -53,7 +53,7 @@ impl MongoStatement for MongoDatabases {
         match col_index {
             1 => Ok(Some(Bson::String(
                 self.database_names
-                    .get(self.current_db_index as usize)
+                    .get(usize::try_from(self.current_db_index).unwrap())
                     .unwrap()
                     .to_string(),
             ))),
