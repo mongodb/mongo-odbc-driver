@@ -9,6 +9,8 @@ pub struct MongoDatabases {
     database_names: Vec<String>,
     // The current database index.
     current_db_index: u32,
+    // The length of the database names vector
+    database_names_len: u32,
 }
 
 // Statement for SQLTables(SQL_ALL_CATALOGS, "","").
@@ -26,9 +28,11 @@ impl MongoDatabases {
             .client
             .list_database_names(None, None)
             .unwrap();
+        let database_names_len = u32::try_from(database_names.len()).unwrap();
         MongoDatabases {
             database_names,
             current_db_index: 0,
+            database_names_len,
         }
     }
 }
@@ -39,7 +43,7 @@ impl MongoStatement for MongoDatabases {
     fn next(&mut self) -> Result<bool> {
         let current = self.current_db_index;
         self.current_db_index += 1;
-        Ok(current < u32::try_from(self.database_names.len()).unwrap())
+        Ok(current < self.database_names_len)
     }
 
     // Get the BSON value for the value at the given colIndex on the current row.
