@@ -1,8 +1,12 @@
-use crate::{conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, Error};
+use crate::{conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, Error, Schema};
 use bson::{doc, Bson, Document, RawBson};
+use itertools::Itertools;
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use serde::{Deserialize, Serialize};
-use std::{collections::{BTreeSet, HashMap}, time::Duration};
+use std::{
+    collections::{BTreeSet, HashMap},
+    time::Duration,
+};
 
 #[derive(Debug)]
 pub struct MongoQuery {
@@ -27,7 +31,7 @@ impl MongoQuery {
             Some(current_db) => {
                 let db = client.client.database(current_db);
 
-                // 1. Run the $sql to get the result set cursor.
+                // 1. Run the $sql aggregation to get the result set cursor.
                 let pipeline = vec![doc! {"$sql": {
                     "dialect": "mongosql",
                     "format": "odbc",
@@ -43,27 +47,20 @@ impl MongoQuery {
                 let cursor = db.aggregate(pipeline, options)?;
 
                 // 2. Run the sqlGetResultSchema command to get the result set
-                // metadata. Sort the column metadata alphabetically (by column
-                // name).
-                let get_schema_cmd =
+                // metadata. Sort the column metadata alphabetically by column
+                // name.
+                let get_result_schema_cmd =
                     doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
-                let get_result_schema_response: SqlGetResultSchemaResponse =
-                    bson::from_document(db.run_command(get_schema_cmd, None)?)
-                        .map_err(Error::BsonError)?;
 
-                // TODO:
-                //   - build metadata vec out of md_result
-                //   - md_result.schema.jsonSchema contains the json schema of the result set
-                //   1. simplify json schema such that bsonType is a single field and polymorphic types are properly represented as anyOfs
-                //   2. create metadata from simplified schema
-                //      a. sort datasources alphabetically
-                //      b. process each datasource:
-                //         - sort field alphabetically
-                //         - extract/calculate column info for each field
+                let get_result_schema_response: SqlGetResultSchemaResponse =
+                    bson::from_document(db.run_command(get_result_schema_cmd, None)?)
+                        .map_err(Error::BsonDeserialization)?;
+
+                let metadata = MongoQuery::process_metadata(get_result_schema_response);
 
                 Ok(MongoQuery {
                     resultset_cursor: cursor,
-                    resultset_metadata: vec![],
+                    resultset_metadata: metadata,
                 })
             }
         }
@@ -79,6 +76,42 @@ impl MongoQuery {
         self.resultset_metadata
             .get(col_index as usize)
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), |md| Ok(md))
+    }
+
+    fn process_metadata(
+        get_result_schema_response: SqlGetResultSchemaResponse,
+    ) -> Vec<MongoColMetadata> {
+        let result_set_schema: SimplifiedJsonSchema =
+            get_result_schema_response.schema.json_schema.into();
+
+        // TODO: should we assert that result_set_schema is a Document schema since it must be?
+
+        let x = result_set_schema
+            .properties
+            .into_iter()
+            .sorted_by_key(|x| x.0);
+
+        let datasources = result_set_schema.properties.keys().sorted();
+
+        for ds in datasources {
+            let datasource_schema = result_set_schema.properties.get(ds).unwrap();
+
+            // TODO: should we assert that each datasource_schema is a Document schema sicne it must be?
+
+            let fields = datasource_schema.properties.keys().sorted();
+
+            for field in fields {
+                // now we can process each field and add it to the metadata vec
+            }
+        }
+
+        // TODO:
+        //   2. create metadata from simplified schema
+        //      a. sort datasources alphabetically
+        //      b. process each datasource:
+        //         - sort field alphabetically
+        //         - extract/calculate column info for each field
+        todo!()
     }
 }
 
@@ -96,9 +129,9 @@ impl MongoStatement for MongoQuery {
         let datasource = self
             .resultset_cursor
             .deserialize_current()?
-            .get_document(md.table_name.clone())
+            .get_document(&md.table_name)
             .map_err(Error::ValueAccess)?;
-        Ok(datasource.get(md.col_name.clone())) // TODO: why is this an issue and how can we address it?
+        Ok(datasource.get(&md.col_name))
     }
 }
 
@@ -143,8 +176,18 @@ pub struct VersionedJsonSchema {
 pub struct SimplifiedJsonSchema {
     pub bson_type: String,
     pub properties: HashMap<String, Box<SimplifiedJsonSchema>>,
-    pub any_of: Vec<Box<SimplifiedJsonSchema>>, // TODO: make set
+    pub any_of: Vec<Box<SimplifiedJsonSchema>>,
     pub required: BTreeSet<String>,
     pub items: Box<SimplifiedJsonSchema>,
     pub additional_properties: bool,
+}
+
+// Converts a deserialized json_schema::Schema into a SimplifiedJsonSchema. The
+// SimplifiedJsonSchema instance is semantically equivalent to the base schema,
+// but bson_type has to be a single type otherwise the types will get pushed
+// down in the any_of list.
+impl From<json_schema::Schema> for SimplifiedJsonSchema {
+    fn from(_: Schema) -> Self {
+        todo!()
+    }
 }
