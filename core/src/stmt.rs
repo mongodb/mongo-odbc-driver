@@ -1,7 +1,8 @@
 use crate::err::Result;
 use bson::Bson;
+use std::fmt::Debug;
 
-pub trait MongoStatement {
+pub trait MongoStatement: Debug {
     // Move the cursor to the next item.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool>;

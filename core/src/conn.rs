@@ -1,4 +1,5 @@
 use crate::err::Result;
+use crate::Error;
 use bson::doc;
 use mongodb::{options::ClientOptions, sync::Client};
 use std::time::Duration;
@@ -9,8 +10,8 @@ pub struct MongoConnection {
     pub client: Client,
     /// The current database set for this client.
     /// All new queries will be done on this DB.
-    /// We stick with mongo terminalogy here and ODBC
-    /// terminalogy in the odbc wrappers, hence
+    /// We stick with mongo terminology here and ODBC
+    /// terminology in the odbc wrappers, hence
     /// current_db here and current_catalog in the
     /// odbc/handles code.
     pub current_db: Option<String>,
@@ -42,7 +43,8 @@ impl MongoConnection {
         login_timeout: Option<u32>,
         application_name: Option<&str>,
     ) -> Result<Self> {
-        let mut client_options = ClientOptions::parse(mongo_uri)?;
+        let mut client_options =
+            ClientOptions::parse(mongo_uri).map_err(Error::MongoParseConnectionStringError)?;
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
         // set application name, note that users can set their own application name, or we default
         // to mongo-odbc-driver.

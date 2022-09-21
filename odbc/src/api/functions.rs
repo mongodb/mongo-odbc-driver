@@ -1,3 +1,4 @@
+use crate::api::functions::util::set_output_string;
 use crate::{
     api::{
         definitions::*,
@@ -7,7 +8,7 @@ use crate::{
     },
     handles::definitions::*,
 };
-use mongo_odbc_core::MongoConnection;
+use mongo_odbc_core::{MongoConnection, MongoDatabases, MongoStatement};
 use num_traits::FromPrimitive;
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -450,6 +451,9 @@ fn sql_driver_connect(
     let mut odbc_uri = ODBCUri::new(odbc_uri_string)?;
     let mongo_uri = odbc_uri.remove_to_mongo_uri()?;
     let auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
+    odbc_uri
+        .remove(&["driver", "dsn"])
+        .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
     let database = if conn_reader.attributes.current_catalog.is_some() {
         conn_reader.attributes.current_catalog.as_deref()
     } else {
@@ -460,7 +464,7 @@ fn sql_driver_connect(
     let application_name = odbc_uri.remove(&["app_name", "application_name"]);
     // ODBCError has an impl From mongo_odbc_core::Error, but that does not
     // create an impl From Result<T, mongo_odbc_core::Error> to Result<T, ODBCError>
-    // hence this bizzare Ok(func?) pattern.
+    // hence this bizarre Ok(func?) pattern.
     Ok(mongo_odbc_core::MongoConnection::connect(
         &mongo_uri,
         auth_src,
@@ -477,18 +481,35 @@ pub extern "C" fn SQLDriverConnectW(
     _window_handle: HWnd,
     in_connection_string: *const WChar,
     string_length_1: SmallInt,
-    // TODO SQL-991: use these parameters!
-    _out_connection_string: *mut WChar,
-    _buffer_length: SmallInt,
-    _string_length_2: *mut SmallInt,
-    _driver_completion: DriverConnectOption,
+    out_connection_string: *mut WChar,
+    buffer_length: SmallInt,
+    string_length_2: *mut SmallInt,
+    driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     let conn_handle = MongoHandleRef::from(connection_handle);
+    // SQL_NO_PROMPT is the only option supported for DriverCompletion
+    if driver_completion != DriverConnectOption::NoPrompt {
+        conn_handle.add_diag_info(ODBCError::UnsupportedDriverConnectOption(format!(
+            "{:?}",
+            driver_completion
+        )));
+        return SqlReturn::ERROR;
+    }
     let conn = must_be_valid!((*conn_handle).as_connection());
     let odbc_uri_string = input_wtext_to_string(in_connection_string, string_length_1 as usize);
     let mongo_connection = odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
     conn.write().unwrap().mongo_connection = Some(mongo_connection);
-    SqlReturn::SUCCESS
+    let buffer_len = usize::try_from(buffer_length).unwrap();
+    let sql_return = set_output_string(
+        odbc_uri_string,
+        out_connection_string,
+        buffer_len,
+        string_length_2,
+    );
+    if sql_return == SqlReturn::SUCCESS_WITH_INFO {
+        conn_handle.add_diag_info(ODBCError::OutStringTruncated(buffer_len));
+    }
+    sql_return
 }
 
 #[no_mangle]
@@ -1702,19 +1723,62 @@ pub extern "C" fn SQLTables(
     unsupported_function(MongoHandleRef::from(statement_handle), "SQLTables")
 }
 
+fn sql_tables(
+    mongo_connection: &MongoConnection,
+    query_timeout: i32,
+    catalog: &str,
+    schema: &str,
+    table: &str,
+    _table_t: &str,
+) -> Result<Box<dyn MongoStatement>> {
+    match (catalog, schema, table) {
+        ("SQL_ALL_CATALOGS", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
+            mongo_connection,
+            Some(query_timeout),
+        ))),
+        (_, _, _) => Err(ODBCError::Unimplemented("sql_tables")),
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn SQLTablesW(
-    _statement_handle: HStmt,
-    _catalog_name: *const WChar,
-    _name_length_1: SmallInt,
-    _schema_name: *const WChar,
-    _name_length_2: SmallInt,
-    _table_name: *const WChar,
-    _name_length_3: SmallInt,
-    _table_type: *const WChar,
-    _name_length_4: SmallInt,
+    statement_handle: HStmt,
+    catalog_name: *const WChar,
+    name_length_1: SmallInt,
+    schema_name: *const WChar,
+    name_length_2: SmallInt,
+    table_name: *const WChar,
+    name_length_3: SmallInt,
+    table_type: *const WChar,
+    name_length_4: SmallInt,
 ) -> SqlReturn {
-    unimplemented!()
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    let stmt = must_be_valid!((*mongo_handle).as_statement());
+    let catalog = input_wtext_to_string(catalog_name, name_length_1 as usize);
+    let schema = input_wtext_to_string(schema_name, name_length_2 as usize);
+    let table = input_wtext_to_string(table_name, name_length_3 as usize);
+    let table_t = input_wtext_to_string(table_type, name_length_4 as usize);
+    let connection = (*(stmt.read().unwrap())).connection;
+    let mongo_statement = unsafe {
+        sql_tables(
+            (*connection)
+                .as_connection()
+                .unwrap()
+                .read()
+                .unwrap()
+                .mongo_connection
+                .as_ref()
+                .unwrap(),
+            (*(stmt.read().unwrap())).attributes.query_timeout as i32,
+            &catalog,
+            &schema,
+            &table,
+            &table_t,
+        )
+    };
+    let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+    stmt.write().unwrap().mongo_statement = Some(mongo_statement);
+    SqlReturn::SUCCESS
 }
 
 mod util {
@@ -1758,17 +1822,17 @@ mod util {
         }
     }
 
-    /// set_error_message writes [`error_message`] to the [`output_ptr`]. [`buffer_len`] is the
-    /// length of the [`output_ptr`] buffer in characters; the error message should be truncated
+    /// set_output_string writes [`message`] to the [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
     /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
-    pub fn set_error_message(
-        error_message: String,
+    pub fn set_output_string(
+        message: String,
         output_ptr: *mut WChar,
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        assert!(!error_message.is_empty());
+        assert!(!message.is_empty());
         unsafe {
             if output_ptr.is_null() {
                 if !text_length_ptr.is_null() {
@@ -1776,9 +1840,9 @@ mod util {
                 }
                 return SqlReturn::SUCCESS_WITH_INFO;
             }
-            // Check if the entire error message plus a null terminator can fit in the buffer;
-            // we should truncate the error message if it's too long.
-            let mut message_u16 = error_message.encode_utf16().collect::<Vec<u16>>();
+            // Check if the entire message plus a null terminator can fit in the buffer;
+            // we should truncate the message if it's too long.
+            let mut message_u16 = message.encode_utf16().collect::<Vec<u16>>();
             let message_len = message_u16.len();
             let num_chars = min(message_len + 1, buffer_len);
             // It is possible that no buffer space has been allocated.
@@ -1788,7 +1852,7 @@ mod util {
             message_u16.resize(num_chars - 1, 0);
             message_u16.push('\u{0}' as u16);
             copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
-            // Store the number of characters in the error message string, excluding the
+            // Store the number of characters in the message string, excluding the
             // null terminator, in text_length_ptr
             if !text_length_ptr.is_null() {
                 *text_length_ptr = (num_chars - 1) as SmallInt;
@@ -1815,7 +1879,7 @@ mod util {
             unsafe { *native_error_ptr = error.get_native_err_code() };
         }
         set_sql_state(error.get_sql_state(), state);
-        set_error_message(
+        set_output_string(
             format!("{}", error),
             message_text,
             buffer_length as usize,
