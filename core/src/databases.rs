@@ -31,7 +31,7 @@ impl MongoStatement for MongoDatabases {
     }
 
     // Get the BSON value for the value at the given colIndex on the current row.
-    fn get_value(&self, _col_index: u16) -> Result<Option<&Bson>> {
+    fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> databases_names[current_row_index]
         unimplemented!()

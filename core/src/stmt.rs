@@ -7,5 +7,5 @@ pub trait MongoStatement {
     fn next(&mut self) -> Result<bool>;
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row has not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<&Bson>>;
+    fn get_value(&self, col_index: u16) -> Result<Option<Bson>>;
 }
