@@ -56,7 +56,7 @@ impl MongoQuery {
                     bson::from_document(db.run_command(get_result_schema_cmd, None)?)
                         .map_err(Error::BsonDeserialization)?;
 
-                let metadata = MongoQuery::process_metadata(get_result_schema_response);
+                let metadata = get_result_schema_response.process_metadata()?;
 
                 Ok(MongoQuery {
                     resultset_cursor: cursor,
@@ -76,42 +76,6 @@ impl MongoQuery {
         self.resultset_metadata
             .get(col_index as usize)
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), |md| Ok(md))
-    }
-
-    fn process_metadata(
-        get_result_schema_response: SqlGetResultSchemaResponse,
-    ) -> Vec<MongoColMetadata> {
-        let result_set_schema: SimplifiedJsonSchema =
-            get_result_schema_response.schema.json_schema.into();
-
-        // TODO: should we assert that result_set_schema is a Document schema since it must be?
-
-        let x = result_set_schema
-            .properties
-            .into_iter()
-            .sorted_by_key(|x| x.0);
-
-        let datasources = result_set_schema.properties.keys().sorted();
-
-        for ds in datasources {
-            let datasource_schema = result_set_schema.properties.get(ds).unwrap();
-
-            // TODO: should we assert that each datasource_schema is a Document schema sicne it must be?
-
-            let fields = datasource_schema.properties.keys().sorted();
-
-            for field in fields {
-                // now we can process each field and add it to the metadata vec
-            }
-        }
-
-        // TODO:
-        //   2. create metadata from simplified schema
-        //      a. sort datasources alphabetically
-        //      b. process each datasource:
-        //         - sort field alphabetically
-        //         - extract/calculate column info for each field
-        todo!()
     }
 }
 
@@ -161,25 +125,140 @@ pub struct MongoColMetadata {
     pub is_updatable: bool,
 }
 
+// Struct representing the response for a sqlGetResultSchema command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
-pub struct SqlGetResultSchemaResponse {
+struct SqlGetResultSchemaResponse {
     pub ok: i32,
     pub schema: VersionedJsonSchema,
 }
 
+// Auxiliary struct representing part of the response for a sqlGetResultSchema
+// command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
-pub struct VersionedJsonSchema {
+struct VersionedJsonSchema {
     pub version: i32,
     pub json_schema: json_schema::Schema,
 }
 
-pub struct SimplifiedJsonSchema {
-    pub bson_type: String,
-    pub properties: HashMap<String, Box<SimplifiedJsonSchema>>,
-    pub any_of: Vec<Box<SimplifiedJsonSchema>>,
-    pub required: BTreeSet<String>,
-    pub items: Box<SimplifiedJsonSchema>,
-    pub additional_properties: bool,
+// A simplified JSON Schema, relative to the json_schema::Schema struct.
+// An instance of SimplifiedJsonSchema is semantically equivalent to its
+// corresponding json_schema::Schema, but with two main simplifications.
+// 1. The bson_type has to be a single type. If the json_schema::Schema
+// contains multiple bson_types, they are pushed down into the any_of list.
+// 2. The any_of is flattened.
+struct SimplifiedJsonSchema {
+    pub bson_type: Option<String>,
+    pub properties: Option<HashMap<String, Box<SimplifiedJsonSchema>>>,
+    pub any_of: Option<Vec<Box<SimplifiedJsonSchema>>>,
+    pub required: Option<BTreeSet<String>>,
+    pub items: Option<Box<SimplifiedJsonSchema>>,
+    pub additional_properties: Option<bool>,
+}
+
+impl SqlGetResultSchemaResponse {
+    /// Converts a sqlGetResultSchema command response into a list of column
+    /// metadata. Ensures the top-level schema is an Object with properties,
+    /// and ensures the same for each top-level property -- which correspond
+    /// to datasources. The metadata is sorted alphabetically by datasource
+    /// name and then by field name. As in, a result set with schema:
+    ///
+    ///   {
+    ///     bsonType: "object",
+    ///     properties: {
+    ///       "foo": {
+    ///         bsonType: "object",
+    ///         properties: { "b": { bsonType: "int" }, "a": { bsonType: "string" } }
+    ///       },
+    ///       "bar": {
+    ///         bsonType: "object",
+    ///         properties: { "c": { bsonType: "int" } }
+    ///       }
+    ///   }
+    ///
+    /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
+    fn process_metadata(self) -> Result<Vec<MongoColMetadata>> {
+        let result_set_schema: SimplifiedJsonSchema = self.schema.json_schema.into();
+        result_set_schema.assert_datasource_schema()?;
+
+        result_set_schema
+            // 1. Access result_set_schema.properties and sort alphabetically.
+            //    This means we are sorting by datasource name.
+            .properties
+            .unwrap()
+            .into_iter()
+            .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
+            // 2. Flat-map fields for each datasource, sorting fields alphabetically.
+            .flat_map(|(datasource_name, datasource_schema)| {
+                datasource_schema
+                    .properties
+                    .unwrap()
+                    .into_iter()
+                    .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
+                    .map(|(field_name, field_schema)| {
+                        (datasource_name, datasource_schema, field_name, field_schema)
+                    })
+            })
+            // 3. Map each field into a MongoColMetadata.
+            .map(
+                |(datasource_name, datasource_schema, field_name, field_schema)| {
+                    datasource_schema.assert_datasource_schema()?;
+
+                    let field_nullability =
+                        datasource_schema.get_field_nullability(field_name.clone())?;
+
+                    Ok(Self::create_column_metadata(
+                        datasource_name,
+                        field_name,
+                        *field_schema,
+                        field_nullability,
+                    ))
+                },
+            )
+            // 4. Collect as a Vec.
+            .collect::<Result<Vec<MongoColMetadata>>>()
+    }
+
+    fn create_column_metadata(
+        datasource_name: String,
+        field_name: String,
+        field_schema: SimplifiedJsonSchema,
+        is_nullable: bool,
+    ) -> MongoColMetadata {
+        todo!()
+    }
+}
+
+impl SimplifiedJsonSchema {
+    /// A datasource schema must be an Object schema. Unlike Object schemata
+    /// in general, the properties field cannot be null.
+    fn assert_datasource_schema(self) -> Result<()> {
+        if self.bson_type == Some("object".to_string()) && self.properties.is_some() {
+            Ok(())
+        } else {
+            Err(Error::InvalidResultSetJsonSchema)
+        }
+    }
+
+    /// Gets the nullability of a field in this schema's properties.
+    /// Nullability is determined as follows:
+    ///   - If it is not present in the schema's list of properties:
+    ///     - If it is required or this schema allows additional_properties,
+    ///       it is unknown nullability
+    ///     - Otherwise, an error is returned
+    ///
+    ///   - If it is a scalar schema (i.e. not Any or AnyOf):
+    ///     - If its bson type is Null, it is considered nullable
+    ///     - Otherwise, its nullability depends on whether it is required
+    ///
+    ///   - If it is an Any schema, it is considered nullable
+    ///
+    ///   - If it is an AnyOf schema:
+    ///     - If one of the component schemas in the AnyOf list is Null, it
+    ///       is considered nullable
+    ///     - Otherwise, its nullability depends on whether it is required
+    fn get_field_nullability(self, _field_name: String) -> Result<bool> {
+        todo!()
+    }
 }
 
 // Converts a deserialized json_schema::Schema into a SimplifiedJsonSchema. The

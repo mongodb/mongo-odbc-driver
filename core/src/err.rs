@@ -12,6 +12,8 @@ pub enum Error {
     BsonDeserialization(#[from] bson::de::Error),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
+    #[error("Result set metadata JSON schema must be object with properties")]
+    InvalidResultSetJsonSchema,
     #[error("Invalid connection string. Parse error: {0}")]
     MongoParseConnectionStringError(mongodb::error::Error),
     #[error(transparent)]
@@ -35,7 +37,7 @@ impl Error {
             Error::MongoParseConnectionStringError(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => COLUMN_NOT_FOUND,
-            Error::BsonDeserialization(_) | Error::ValueAccess(_) => GENERAL_ERROR, // TODO: might want to do invalid cursor state?
+            Error::BsonDeserialization(_) | Error::ValueAccess(_)  | Error::InvalidResultSetJsonSchema => GENERAL_ERROR, // TODO: might want to do invalid cursor state?
         }
     }
 
@@ -56,6 +58,7 @@ impl Error {
                 }
             }
             Error::NoDatabase
+            | Error::InvalidResultSetJsonSchema,
             | Error::ColIndexOutOfBounds(_)
             | Error::BsonDeserialization(_)
             | Error::ValueAccess(_) => 0,
