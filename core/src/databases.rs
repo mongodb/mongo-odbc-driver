@@ -35,11 +35,10 @@ impl MongoDatabases {
 
 impl MongoStatement for MongoDatabases {
     // Increment current_db_index.
-    // Return true if current_db_index index is < for databases_names.length.
+    // Return true if current_db_index index is <= for databases_names.length.
     fn next(&mut self) -> Result<bool> {
-        let current = self.current_db_index;
         self.current_db_index += 1;
-        Ok(current < self.database_names.len())
+        Ok(self.current_db_index <= self.database_names.len())
     }
 
     // Get the BSON value for the value at the given colIndex on the current row.
