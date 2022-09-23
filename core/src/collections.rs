@@ -33,12 +33,11 @@ impl MongoCollections {
         db_name_filter: &str,
         collection_name_filter: &str,
     ) -> Self {
-        let mut databases: Vec<CollectionsForDb> = vec![];
-
         let names = mongo_connection
             .client
             .list_database_names(to_name_regex(db_name_filter), None)
             .unwrap();
+        let mut databases: Vec<CollectionsForDb> = Vec::with_capacity(names.len());
         for name in names {
             let db = mongo_connection.client.database(name.as_str());
             let collections = db
