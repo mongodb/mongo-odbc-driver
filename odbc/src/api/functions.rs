@@ -8,7 +8,7 @@ use crate::{
     },
     handles::definitions::*,
 };
-use mongo_odbc_core::{MongoConnection, MongoDatabases, MongoStatement};
+use mongo_odbc_core::{MongoCollections, MongoConnection, MongoDatabases, MongoStatement};
 use num_traits::FromPrimitive;
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -1736,7 +1736,12 @@ fn sql_tables(
             mongo_connection,
             Some(query_timeout),
         ))),
-        (_, _, _) => Err(ODBCError::Unimplemented("sql_tables")),
+        (_, _, _) => Ok(Box::new(MongoCollections::list_tables(
+            mongo_connection,
+            Some(query_timeout),
+            catalog,
+            table,
+        ))),
     }
 }
 

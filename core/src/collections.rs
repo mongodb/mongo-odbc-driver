@@ -1,6 +1,6 @@
-use crate::conn::MongoConnection;
 use crate::err::Result;
 use crate::stmt::MongoStatement;
+use crate::{conn::MongoConnection, Error};
 use bson::{doc, Bson, Document};
 use mongodb::results::CollectionSpecification;
 use mongodb::sync::Cursor;
@@ -75,7 +75,8 @@ impl MongoStatement for MongoCollections {
                 .as_mut()
                 .unwrap()
                 .collection_list
-                .advance()?
+                .advance()
+                .map_err(Error::MongoError)?
             {
                 // Cursor advance succeeded, update current CollectionSpecification
                 self.current_collection = Some(
@@ -84,7 +85,7 @@ impl MongoStatement for MongoCollections {
                         .unwrap()
                         .collection_list
                         .deserialize_current()
-                        .unwrap(),
+                        .map_err(Error::MongoError)?,
                 );
                 return Ok(true);
             }
