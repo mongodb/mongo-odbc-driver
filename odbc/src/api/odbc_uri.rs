@@ -62,7 +62,7 @@ impl<'a> ODBCUri<'a> {
         let (keyword, rest) = odbc_uri.split_at(
             odbc_uri
                 .find('=')
-                .ok_or(ODBCError::InvalidUriFormat(EQUAL_ERROR.to_string()))?,
+                .ok_or_else(|| ODBCError::InvalidUriFormat(EQUAL_ERROR.to_string()))?,
         );
         // remove the leading '=' sign.
         let rest = rest.get(1..).unwrap();
@@ -72,7 +72,7 @@ impl<'a> ODBCUri<'a> {
                 keyword
             )));
         }
-        let (value, rest) = if rest.chars().nth(0).unwrap() == '{' {
+        let (value, rest) = if rest.starts_with('{') {
             let rest = rest.get(1..).ok_or_else(|| {
                 ODBCError::InvalidUriFormat(MISSING_CLOSING_BRACE_ERROR.to_string())
             })?;
@@ -98,7 +98,7 @@ impl<'a> ODBCUri<'a> {
     }
 
     fn handle_unbraced_value(input: &'a str) -> Result<(&'a str, Option<&'a str>)> {
-        let index = input.find(";");
+        let index = input.find(';');
         if index.is_none() {
             return Ok((input, None));
         }
