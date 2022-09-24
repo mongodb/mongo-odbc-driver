@@ -3,12 +3,10 @@ use lazy_static::lazy_static;
 use regex::{RegexSet, RegexSetBuilder};
 use std::collections::HashMap;
 
-// TODO SQL-990: These errors will probably change.
 const NOT_EMPTY_ERROR: &str = "URI must not be empty";
 const EQUAL_ERROR: &str = "all URI attributes must be of the form keyword=value";
 const MISSING_CLOSING_BRACE_ERROR: &str = "attribute value beginning with '{' must end with '}'";
 
-// TODO SQL-990: Audit these mandatory attributes
 const USER: &[&str] = &["uid", "user"];
 const PWD: &[&str] = &["password", "pwd"];
 const SERVER: &[&str] = &["server"];
@@ -157,13 +155,8 @@ impl<'a> ODBCUri<'a> {
     pub fn remove_to_mongo_uri(&mut self) -> Result<String> {
         let user = self.remove_mandatory_attribute(USER)?;
         let pwd = self.remove_mandatory_attribute(PWD)?;
-        // TODO SQL-990: Support the PORT attribute, right now the only way to specify PORT is as
-        // part of SERVER. If ports are specified in both SERVER and PORT and they do not match it
-        // should be an error (I think, check the spec if it says...).
         let server = self.remove_mandatory_attribute(SERVER)?;
         let ssl = self.remove(SSL);
-        // TODO SQL-990: we may wish to support more attributes as options.
-        // If we do, add more tests to cover them.
         let ssl_string =
             if ssl.is_some() && ssl.unwrap() != "0" && ssl.unwrap().to_lowercase() != "false" {
                 "?ssl=true"
@@ -330,7 +323,7 @@ mod unit {
             );
         }
     }
-    // TODO SQL-990: Add more tests to cover the ODBC spec with regards to special characters.
+
     mod new {
         #[test]
         fn empty_uri_is_err() {
