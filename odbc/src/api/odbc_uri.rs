@@ -91,7 +91,6 @@ impl<'a> ODBCUri<'a> {
             input.split_at(input.find('}').ok_or_else(|| {
                 ODBCError::InvalidUriFormat(MISSING_CLOSING_BRACE_ERROR.to_string())
             })?);
-        println!("\t{}\n\t{}", value, rest);
         match rest.len() {
             0 => unreachable!(),
             1 => return Ok((value, None)),
