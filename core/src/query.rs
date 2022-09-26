@@ -83,7 +83,7 @@ impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool> {
-        self.resultset_cursor.advance().map_err(Error::MongoError)
+        self.resultset_cursor.advance().map_err(Error::Mongo)
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.

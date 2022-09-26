@@ -15,9 +15,9 @@ pub enum Error {
     #[error("Result set metadata JSON schema must be object with properties")]
     InvalidResultSetJsonSchema,
     #[error("Invalid connection string. Parse error: {0}")]
-    MongoParseConnectionStringError(mongodb::error::Error),
+    MongoParseConnectionString(mongodb::error::Error),
     #[error(transparent)]
-    MongoError(#[from] mongodb::error::Error),
+    Mongo(#[from] mongodb::error::Error),
     #[error("No database provided for query")]
     NoDatabase,
     #[error(transparent)]
@@ -27,14 +27,14 @@ pub enum Error {
 impl Error {
     pub fn get_sql_state(&self) -> &'static str {
         match self {
-            Error::MongoError(err) => {
+            Error::Mongo(err) => {
                 if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
                     return TIMEOUT_EXPIRED;
                 }
                 GENERAL_ERROR
             }
-            Error::MongoParseConnectionStringError(_) => UNABLE_TO_CONNECT,
+            Error::MongoParseConnectionString(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
             Error::BsonDeserialization(_)
@@ -46,7 +46,7 @@ impl Error {
     pub fn code(&self) -> i32 {
         // using `match` instead of `if let` in case we add future variants
         match self {
-            Error::MongoError(m) | Error::MongoParseConnectionStringError(m) => {
+            Error::Mongo(m) | Error::MongoParseConnectionString(m) => {
                 match m.kind.as_ref() {
                     ErrorKind::Command(command_error) => command_error.code,
                     // errors other than command errors probably will not concern us, but
