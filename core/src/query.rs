@@ -31,22 +31,7 @@ impl MongoQuery {
             Some(current_db) => {
                 let db = client.client.database(current_db);
 
-                // 1. Run the $sql aggregation to get the result set cursor.
-                let pipeline = vec![doc! {"$sql": {
-                    "dialect": "mongosql",
-                    "format": "odbc",
-                    "statement": query,
-                }}];
-
-                let options = query_timeout.map(|i| {
-                    AggregateOptions::builder()
-                        .max_time(Duration::from_millis(i as u64)) // TODO: should timeout come from client if present?
-                        .build()
-                });
-
-                let cursor = db.aggregate(pipeline, options)?;
-
-                // 2. Run the sqlGetResultSchema command to get the result set
+                // 1. Run the sqlGetResultSchema command to get the result set
                 // metadata. Sort the column metadata alphabetically by column
                 // name.
                 let get_result_schema_cmd =
@@ -57,6 +42,21 @@ impl MongoQuery {
                         .map_err(Error::BsonDeserialization)?;
 
                 let metadata = get_result_schema_response.process_metadata()?;
+
+                // 2. Run the $sql aggregation to get the result set cursor.
+                let pipeline = vec![doc! {"$sql": {
+                    "format": "odbc",
+                    "formatVersion": 1,
+                    "statement": query,
+                }}];
+
+                let options = query_timeout.map(|i| {
+                    AggregateOptions::builder()
+                        .max_time(Duration::from_millis(i as u64))
+                        .build()
+                });
+
+                let cursor = db.aggregate(pipeline, options)?;
 
                 Ok(MongoQuery {
                     resultset_cursor: cursor,

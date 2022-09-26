@@ -1,5 +1,5 @@
 use constants::{
-    COLUMN_NOT_FOUND, GENERAL_ERROR, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
+    GENERAL_ERROR, INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
 };
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
@@ -36,8 +36,10 @@ impl Error {
             }
             Error::MongoParseConnectionStringError(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
-            Error::ColIndexOutOfBounds(_) => COLUMN_NOT_FOUND,
-            Error::BsonDeserialization(_) | Error::ValueAccess(_)  | Error::InvalidResultSetJsonSchema => GENERAL_ERROR, // TODO: might want to do invalid cursor state?
+            Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
+            Error::BsonDeserialization(_)
+            | Error::ValueAccess(_)
+            | Error::InvalidResultSetJsonSchema => GENERAL_ERROR,
         }
     }
 
@@ -58,7 +60,7 @@ impl Error {
                 }
             }
             Error::NoDatabase
-            | Error::InvalidResultSetJsonSchema,
+            | Error::InvalidResultSetJsonSchema
             | Error::ColIndexOutOfBounds(_)
             | Error::BsonDeserialization(_)
             | Error::ValueAccess(_) => 0,
