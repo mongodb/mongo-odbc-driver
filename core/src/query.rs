@@ -14,6 +14,8 @@ pub struct MongoQuery {
     resultset_cursor: Cursor<Document>,
     // The result set metadata.
     resultset_metadata: Vec<MongoColMetadata>,
+    // The current deserialized "row".
+    current: Option<Document>,
 }
 
 impl MongoQuery {
@@ -61,6 +63,7 @@ impl MongoQuery {
                 Ok(MongoQuery {
                     resultset_cursor: cursor,
                     resultset_metadata: metadata,
+                    current: None,
                 })
             }
         }
@@ -72,7 +75,7 @@ impl MongoQuery {
     }
 
     // Get the metadata for the column with the given index.
-    fn _get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
+    fn get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
         self.resultset_metadata
             .get(col_index as usize)
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), |md| Ok(md))
@@ -83,19 +86,19 @@ impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool> {
-        self.resultset_cursor.advance().map_err(Error::Mongo)
+        let res = self.resultset_cursor.advance().map_err(Error::Mongo);
+        self.current = Some(self.resultset_cursor.deserialize_current()?);
+        res
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
-        let md = self._get_col_metadata(col_index)?;
-        let datasource = self
-            .resultset_cursor
-            .deserialize_current()?
-            .get_document(&md.table_name)
-            .map_err(Error::ValueAccess)?;
-        Ok(datasource.get(&md.col_name))
+        let c = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
+        let md = self.get_col_metadata(col_index)?;
+        let datasource = c.get_document(&md.table_name).map_err(Error::ValueAccess)?;
+        let column = datasource.get(&md.col_name);
+        Ok(column.cloned())
     }
 }
 
@@ -107,7 +110,6 @@ pub struct MongoColMetadata {
     pub base_col_name: String,
     pub base_table_name: String,
     pub catalog_name: String,
-    pub col_count: u16,
     pub display_size: u64,
     pub fixed_prec_scale: bool,
     pub label: String,
@@ -146,6 +148,7 @@ struct VersionedJsonSchema {
 // 1. The bson_type has to be a single type. If the json_schema::Schema
 // contains multiple bson_types, they are pushed down into the any_of list.
 // 2. The any_of is flattened.
+#[derive(Clone)]
 struct SimplifiedJsonSchema {
     pub bson_type: Option<String>,
     pub properties: Option<HashMap<String, Box<SimplifiedJsonSchema>>>,
@@ -176,8 +179,8 @@ impl SqlGetResultSchemaResponse {
     ///   }
     ///
     /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
-    fn process_metadata(self) -> Result<Vec<MongoColMetadata>> {
-        let result_set_schema: SimplifiedJsonSchema = self.schema.json_schema.into();
+    fn process_metadata(&self) -> Result<Vec<MongoColMetadata>> {
+        let result_set_schema: SimplifiedJsonSchema = self.schema.json_schema.clone().into();
         result_set_schema.assert_datasource_schema()?;
 
         result_set_schema
@@ -190,12 +193,18 @@ impl SqlGetResultSchemaResponse {
             // 2. Flat-map fields for each datasource, sorting fields alphabetically.
             .flat_map(|(datasource_name, datasource_schema)| {
                 datasource_schema
+                    .clone()
                     .properties
                     .unwrap()
                     .into_iter()
                     .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
-                    .map(|(field_name, field_schema)| {
-                        (datasource_name, datasource_schema, field_name, field_schema)
+                    .map(move |(field_name, field_schema)| {
+                        (
+                            datasource_name.clone(),
+                            datasource_schema.clone(),
+                            field_name.clone(),
+                            field_schema.clone(),
+                        )
                     })
             })
             // 3. Map each field into a MongoColMetadata.
@@ -231,7 +240,7 @@ impl SqlGetResultSchemaResponse {
 impl SimplifiedJsonSchema {
     /// A datasource schema must be an Object schema. Unlike Object schemata
     /// in general, the properties field cannot be null.
-    fn assert_datasource_schema(self) -> Result<()> {
+    fn assert_datasource_schema(&self) -> Result<()> {
         if self.bson_type == Some("object".to_string()) && self.properties.is_some() {
             Ok(())
         } else {

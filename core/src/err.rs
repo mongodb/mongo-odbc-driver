@@ -1,8 +1,7 @@
-use constants::{
-    GENERAL_ERROR, INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
-};
+use constants::{GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT};
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
+use crate::Error::InvalidCursorState;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -12,6 +11,8 @@ pub enum Error {
     BsonDeserialization(#[from] bson::de::Error),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
+    #[error("Invalid cursor state: cursor not advanced")]
+    InvalidCursorState,
     #[error("Result set metadata JSON schema must be object with properties")]
     InvalidResultSetJsonSchema,
     #[error("Invalid connection string. Parse error: {0}")]
@@ -37,6 +38,7 @@ impl Error {
             Error::MongoParseConnectionString(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
+            Error::InvalidCursorState => INVALID_CURSOR_STATE,
             Error::BsonDeserialization(_)
             | Error::ValueAccess(_)
             | Error::InvalidResultSetJsonSchema => GENERAL_ERROR,
@@ -60,6 +62,7 @@ impl Error {
                 }
             }
             Error::NoDatabase
+            | Error::InvalidCursorState
             | Error::InvalidResultSetJsonSchema
             | Error::ColIndexOutOfBounds(_)
             | Error::BsonDeserialization(_)
