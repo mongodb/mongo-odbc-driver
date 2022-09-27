@@ -12,7 +12,7 @@ use std::{
 pub struct MongoQuery {
     // The cursor on the result set.
     resultset_cursor: Cursor<Document>,
-    // The result set metadata.
+    // The result set metadata, sorted alphabetically by collection and field name.
     resultset_metadata: Vec<MongoColMetadata>,
     // The current deserialized "row".
     current: Option<Document>,
@@ -34,8 +34,8 @@ impl MongoQuery {
                 let db = client.client.database(current_db);
 
                 // 1. Run the sqlGetResultSchema command to get the result set
-                // metadata. Sort the column metadata alphabetically by column
-                // name.
+                // metadata. Column metadata is sorted alphabetically by table
+                // and column name.
                 let get_result_schema_cmd =
                     doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
@@ -85,6 +85,7 @@ impl MongoQuery {
 impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
+    // This method deserializes the current row and stores it in self.
     fn next(&mut self) -> Result<bool> {
         let res = self.resultset_cursor.advance().map_err(Error::Mongo);
         self.current = Some(self.resultset_cursor.deserialize_current()?);
@@ -94,9 +95,11 @@ impl MongoStatement for MongoQuery {
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
-        let c = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
+        let current = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
         let md = self.get_col_metadata(col_index)?;
-        let datasource = c.get_document(&md.table_name).map_err(Error::ValueAccess)?;
+        let datasource = current
+            .get_document(&md.table_name)
+            .map_err(Error::ValueAccess)?;
         let column = datasource.get(&md.col_name);
         Ok(column.cloned())
     }
@@ -195,7 +198,14 @@ impl SqlGetResultSchemaResponse {
                 datasource_schema
                     .clone()
                     .properties
-                    .unwrap()
+                    // Since we are flat-mapping, we cannot conveniently return
+                    // a Result from this closure.  Therefore, we do not assert
+                    // that the datasource_schema is valid at this time, saving
+                    // that for the follow-up map. We proceed by assuming there
+                    // are properties,  or by using an empty HashMap when there
+                    // are not.  This is equivalent to handling "no properties"
+                    // without the need to return an error at this stage.
+                    .unwrap_or_else(|| HashMap::default())
                     .into_iter()
                     .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
                     .map(move |(field_name, field_schema)| {
