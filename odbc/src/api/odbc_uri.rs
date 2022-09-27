@@ -90,7 +90,9 @@ impl<'a> ODBCUri<'a> {
             })?);
         match rest.len() {
             0 => unreachable!(),
+            // Just the "}" remaining
             1 => return Ok((value, None)),
+            // Just "};" remaining
             2 if rest.chars().nth(1).unwrap() == ';' => return Ok((value, None)),
             _ => (),
         }
