@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use regex::{RegexSet, RegexSetBuilder};
 use std::collections::HashMap;
 
-const NOT_EMPTY_ERROR: &str = "URI must not be empty";
+const EMPTY_URI_ERROR: &str = "URI must not be empty";
 const EQUAL_ERROR: &str = "all URI attributes must be of the form keyword=value";
 const MISSING_CLOSING_BRACE_ERROR: &str = "attribute value beginning with '{' must end with '}'";
 
