@@ -84,19 +84,31 @@ impl<'a> ODBCUri<'a> {
     }
 
     fn handle_braced_value(input: &'a str) -> Result<(&'a str, Option<&'a str>)> {
-        let (value, rest) =
-            input.split_at(input.find('}').ok_or_else(|| {
-                ODBCError::InvalidUriFormat(MISSING_CLOSING_BRACE_ERROR.to_string())
-            })?);
-        match rest.len() {
-            0 => unreachable!(),
-            // Just the "}" remaining
-            1 => return Ok((value, None)),
-            // Just "};" remaining
-            2 if rest.chars().nth(1).unwrap() == ';' => return Ok((value, None)),
-            _ => (),
+        let mut after_brace = false;
+        // This is a simple two state state machine. Either the previous character was '}'
+        // or it is not. When the previous character was '}' and we have reached the end
+        // of the input or the current character is ';', we have found the entire value for
+        // this attribute.
+        for (i, c) in input.chars().enumerate() {
+            if after_brace && c == ';' {
+                let mut rest = input.get(i + 1..);
+                if rest.unwrap() == "" {
+                    rest = None;
+                }
+                return Ok((input.get(0..i - 1).unwrap(), rest));
+            }
+            if c == '}' {
+                if i + 1 == input.len() {
+                    return Ok((input.get(0..i).unwrap(), None));
+                }
+                after_brace = true
+            } else {
+                after_brace = false
+            }
         }
-        Ok((value, rest.get(2..)))
+        Err(ODBCError::InvalidUriFormat(
+            MISSING_CLOSING_BRACE_ERROR.to_string(),
+        ))
     }
 
     fn handle_unbraced_value(input: &'a str) -> Result<(&'a str, Option<&'a str>)> {
@@ -269,8 +281,8 @@ mod unit {
         fn ends_with_brace_special_chars() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stu%=[]ff", None),
-                ODBCUri::handle_braced_value("stu%=[]ff}").unwrap()
+                ("stu%=[]}ff", None),
+                ODBCUri::handle_braced_value("stu%=[]}ff}").unwrap()
             );
         }
 
@@ -278,8 +290,8 @@ mod unit {
         fn ends_with_semi_special_chars() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stu%=[]ff", None),
-                ODBCUri::handle_braced_value("stu%=[]ff};").unwrap()
+                ("stu%=[]}ff", None),
+                ODBCUri::handle_braced_value("stu%=[]}ff};").unwrap()
             );
         }
 
@@ -287,8 +299,8 @@ mod unit {
         fn has_rest_special_chars() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stu%=[]ff", Some("DRIVER=foo")),
-                ODBCUri::handle_braced_value("stu%=[]ff};DRIVER=foo").unwrap()
+                ("stu%=[]}ff", Some("DRIVER=foo")),
+                ODBCUri::handle_braced_value("stu%=[]}ff};DRIVER=foo").unwrap()
             );
         }
     }
