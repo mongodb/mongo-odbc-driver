@@ -1,6 +1,9 @@
 use crate::bson_type_info::BsonTypeInfo;
-use crate::{conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, Error, Schema};
-use bson::{doc, Bson, Document, RawBson};
+use crate::{
+    conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, BsonTypeName, Error,
+    Schema,
+};
+use bson::{doc, Bson, Document};
 use itertools::Itertools;
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use serde::{Deserialize, Serialize};
@@ -154,7 +157,7 @@ struct VersionedJsonSchema {
 // 2. The any_of is flattened.
 #[derive(Clone)]
 struct SimplifiedJsonSchema {
-    pub bson_type: Option<String>,
+    pub bson_type: Option<BsonTypeName>,
     pub properties: Option<HashMap<String, Box<SimplifiedJsonSchema>>>,
     pub any_of: Option<Vec<Box<SimplifiedJsonSchema>>>,
     pub required: Option<BTreeSet<String>>,
@@ -246,7 +249,7 @@ impl SqlGetResultSchemaResponse {
         field_schema: SimplifiedJsonSchema,
         is_nullable: bool,
     ) -> Result<MongoColMetadata> {
-        let bson_type_info: BsonTypeInfo = field_schema.try_into()?;
+        let bson_type_info: BsonTypeInfo = (field_name.clone(), field_schema).try_into()?;
 
         Ok(MongoColMetadata {
             // For base_col_name and base_table_name, we do not have this
@@ -282,7 +285,7 @@ impl SimplifiedJsonSchema {
     /// A datasource schema must be an Object schema. Unlike Object schemata
     /// in general, the properties field cannot be null.
     fn assert_datasource_schema(&self) -> Result<()> {
-        if self.bson_type == Some("object".to_string()) && self.properties.is_some() {
+        if self.bson_type == Some(BsonTypeName::Object) && self.properties.is_some() {
             Ok(())
         } else {
             Err(Error::InvalidResultSetJsonSchema)
@@ -321,10 +324,37 @@ impl From<json_schema::Schema> for SimplifiedJsonSchema {
     }
 }
 
-impl TryFrom<SimplifiedJsonSchema> for BsonTypeInfo {
+impl TryFrom<(String, SimplifiedJsonSchema)> for BsonTypeInfo {
     type Error = Error;
 
-    fn try_from(value: SimplifiedJsonSchema) -> std::result::Result<Self, Self::Error> {
-        todo!()
+    fn try_from(
+        (field_name, field_schema): (String, SimplifiedJsonSchema),
+    ) -> std::result::Result<Self, Self::Error> {
+        if field_schema.bson_type.is_none() {
+            return Err(Error::MissingFieldBsonType(field_name));
+        }
+
+        Ok(match field_schema.bson_type.unwrap() {
+            BsonTypeName::Array => BsonTypeInfo::ARRAY,
+            BsonTypeName::Object => BsonTypeInfo::OBJECT,
+            BsonTypeName::Null => BsonTypeInfo::NULL,
+            BsonTypeName::String => BsonTypeInfo::STRING,
+            BsonTypeName::Int => BsonTypeInfo::INT,
+            BsonTypeName::Double => BsonTypeInfo::DOUBLE,
+            BsonTypeName::Long => BsonTypeInfo::LONG,
+            BsonTypeName::Decimal => BsonTypeInfo::DECIMAL,
+            BsonTypeName::BinData => BsonTypeInfo::BINDATA,
+            BsonTypeName::ObjectId => BsonTypeInfo::OBJECTID,
+            BsonTypeName::Bool => BsonTypeInfo::BOOL,
+            BsonTypeName::Date => BsonTypeInfo::DATE,
+            BsonTypeName::Regex => BsonTypeInfo::REGEX,
+            BsonTypeName::DbPointer => BsonTypeInfo::DBPOINTER,
+            BsonTypeName::Javascript => BsonTypeInfo::JAVASCRIPT,
+            BsonTypeName::Symbol => BsonTypeInfo::SYMBOL,
+            BsonTypeName::JavascriptWithScope => BsonTypeInfo::JAVASCRIPTWITHSCOPE,
+            BsonTypeName::Timestamp => BsonTypeInfo::TIMESTAMP,
+            BsonTypeName::MinKey => BsonTypeInfo::MINKEY,
+            BsonTypeName::MaxKey => BsonTypeInfo::MAXKEY,
+        })
     }
 }

@@ -1,7 +1,10 @@
-use constants::{GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT};
+use crate::Error::InvalidCursorState;
+use constants::{
+    GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER,
+    TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
+};
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
-use crate::Error::InvalidCursorState;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -15,6 +18,8 @@ pub enum Error {
     InvalidCursorState,
     #[error("Result set metadata JSON schema must be object with properties")]
     InvalidResultSetJsonSchema,
+    #[error("Field '{0}' schema missing BSON type")]
+    MissingFieldBsonType(String),
     #[error("Invalid connection string. Parse error: {0}")]
     MongoParseConnectionString(mongodb::error::Error),
     #[error(transparent)]
@@ -41,7 +46,8 @@ impl Error {
             Error::InvalidCursorState => INVALID_CURSOR_STATE,
             Error::BsonDeserialization(_)
             | Error::ValueAccess(_)
-            | Error::InvalidResultSetJsonSchema => GENERAL_ERROR,
+            | Error::InvalidResultSetJsonSchema
+            | Error::MissingFieldBsonType(_) => GENERAL_ERROR,
         }
     }
 
@@ -64,6 +70,7 @@ impl Error {
             Error::NoDatabase
             | Error::InvalidCursorState
             | Error::InvalidResultSetJsonSchema
+            | Error::MissingFieldBsonType(_)
             | Error::ColIndexOutOfBounds(_)
             | Error::BsonDeserialization(_)
             | Error::ValueAccess(_) => 0,
