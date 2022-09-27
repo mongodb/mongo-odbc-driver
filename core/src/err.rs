@@ -26,6 +26,8 @@ pub enum Error {
     Mongo(#[from] mongodb::error::Error),
     #[error("No database provided for query")]
     NoDatabase,
+    #[error("TODO")]
+    UnknownColumn(String), // todo
     #[error(transparent)]
     ValueAccess(bson::document::ValueAccessError),
 }

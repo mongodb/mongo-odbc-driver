@@ -122,7 +122,7 @@ pub struct MongoColMetadata {
     pub label: String,
     pub length: Option<u16>,
     pub col_name: String,
-    pub is_nullable: bool,
+    pub is_nullable: ColumnNullability,
     pub octet_length: Option<u16>,
     pub precision: Option<u16>,
     pub scale: Option<u16>,
@@ -132,6 +132,13 @@ pub struct MongoColMetadata {
     pub type_name: String,
     pub is_unsigned: bool,
     pub is_updatable: bool,
+}
+
+#[derive(Clone, Debug)]
+pub enum ColumnNullability {
+    Nullable,
+    NoNulls,
+    Unknown,
 }
 
 // Struct representing the response for a sqlGetResultSchema command.
@@ -162,7 +169,7 @@ struct SimplifiedJsonSchema {
     pub any_of: Option<Vec<Box<SimplifiedJsonSchema>>>,
     pub required: Option<BTreeSet<String>>,
     pub items: Option<Box<SimplifiedJsonSchema>>,
-    pub additional_properties: Option<bool>,
+    pub additional_properties: bool,
 }
 
 impl SqlGetResultSchemaResponse {
@@ -247,7 +254,7 @@ impl SqlGetResultSchemaResponse {
         datasource_name: String,
         field_name: String,
         field_schema: SimplifiedJsonSchema,
-        is_nullable: bool,
+        is_nullable: ColumnNullability,
     ) -> Result<MongoColMetadata> {
         let bson_type_info: BsonTypeInfo = (field_name.clone(), field_schema).try_into()?;
 
@@ -294,23 +301,79 @@ impl SimplifiedJsonSchema {
 
     /// Gets the nullability of a field in this schema's properties.
     /// Nullability is determined as follows:
-    ///   - If it is not present in the schema's list of properties:
+    ///   1. If it is not present in the schema's list of properties:
     ///     - If it is required or this schema allows additional_properties,
     ///       it is unknown nullability
     ///     - Otherwise, an error is returned
     ///
-    ///   - If it is a scalar schema (i.e. not Any or AnyOf):
+    ///   2. If it is an Any schema, it is considered nullable
+    ///
+    ///   3. If it is a scalar schema (i.e. not Any or AnyOf):
     ///     - If its bson type is Null, it is considered nullable
     ///     - Otherwise, its nullability depends on whether it is required
     ///
-    ///   - If it is an Any schema, it is considered nullable
-    ///
-    ///   - If it is an AnyOf schema:
+    ///   4. If it is an AnyOf schema:
     ///     - If one of the component schemas in the AnyOf list is Null, it
     ///       is considered nullable
     ///     - Otherwise, its nullability depends on whether it is required
-    fn get_field_nullability(self, _field_name: String) -> Result<bool> {
-        todo!()
+    fn get_field_nullability(&self, field_name: String) -> Result<ColumnNullability> {
+        let required =
+            self.required.is_some() && self.required.as_ref().unwrap().contains(&field_name);
+
+        let field_schema = self.properties.as_ref().unwrap().get(&field_name);
+
+        // Case 1: field not present in properties
+        if field_schema.is_none() {
+            if required || self.additional_properties {
+                return Ok(ColumnNullability::Unknown);
+            }
+
+            return Err(Error::UnknownColumn(field_name));
+        }
+
+        let field_schema = field_schema.unwrap();
+
+        // Case 2: field is Any schema
+        if field_schema.is_any() {
+            return Ok(ColumnNullability::Nullable);
+        }
+
+        let nullable = if required {
+            ColumnNullability::NoNulls
+        } else {
+            ColumnNullability::Nullable
+        };
+
+        // Case 3: field is scalar schema
+        if field_schema.bson_type.is_some() {
+            return Ok(if field_schema.bson_type == Some(BsonTypeName::Null) {
+                ColumnNullability::Nullable
+            } else {
+                nullable
+            });
+        }
+
+        // Case 4: field is AnyOf schema
+        if let Some(any_of) = self.any_of.as_ref() {
+            for any_of_schema in any_of {
+                if any_of_schema.bson_type == Some(BsonTypeName::Null) {
+                    return Ok(ColumnNullability::Nullable);
+                }
+            }
+        } else {
+            return Err(Error::InvalidResultSetJsonSchema);
+        }
+
+        Ok(nullable)
+    }
+
+    fn is_any(&self) -> bool {
+        return self.bson_type.is_none()
+            && self.properties.is_none()
+            && self.any_of.is_none()
+            && self.required.is_none()
+            && self.items.is_none()
+            && self.additional_properties;
     }
 }
 
