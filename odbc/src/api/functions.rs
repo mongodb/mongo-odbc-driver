@@ -8,6 +8,7 @@ use crate::{
     },
     handles::definitions::*,
 };
+use constants::{SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{MongoCollections, MongoConnection, MongoDatabases, MongoStatement};
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -1729,18 +1730,20 @@ fn sql_tables(
     catalog: &str,
     schema: &str,
     table: &str,
-    _table_t: &str,
+    table_t: &str,
 ) -> Result<Box<dyn MongoStatement>> {
-    match (catalog, schema, table) {
-        ("SQL_ALL_CATALOGS", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
+    match (catalog, schema, table, table_t) {
+        (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
         ))),
-        (_, _, _) => Ok(Box::new(MongoCollections::list_tables(
+        ("", SQL_ALL_SCHEMAS, "", "") | ("", "", "", SQL_ALL_TABLE_TYPES) => unimplemented!(),
+        (_, _, _, _) => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,
             Some(query_timeout),
             catalog,
             table,
+            table_t,
         ))),
     }
 }

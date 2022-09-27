@@ -2,8 +2,34 @@ use crate::err::Result;
 use crate::stmt::MongoStatement;
 use crate::{conn::MongoConnection, Error};
 use bson::{doc, Bson, Document};
+use constants::{SQL_ALL_CATALOGS, SQL_ALL_TABLE_TYPES};
+use lazy_static::lazy_static;
 use mongodb::results::CollectionSpecification;
 use mongodb::sync::Cursor;
+use regex::{RegexSet, RegexSetBuilder};
+
+const COLLECTION: &str = "collection";
+const TABLE: &str = "table";
+const VIEW: &str = "view";
+const TIMESERIES: &str = "timeseries";
+
+lazy_static! {
+    static ref TABLE_VALUES: RegexSet =
+        RegexSetBuilder::new(&["^table$", "^\'table\'$", "^\"table\"$",])
+            .case_insensitive(true)
+            .build()
+            .unwrap();
+    static ref VIEW_VALUES: RegexSet =
+        RegexSetBuilder::new(&["^view$", "^\'view\'$", "^\"view\"$",])
+            .case_insensitive(true)
+            .build()
+            .unwrap();
+    static ref TIMESERIES_VALUES: RegexSet =
+        RegexSetBuilder::new(&["^timeseries", "^\'timeseries\'$", "^\"timeseries\"$",])
+            .case_insensitive(true)
+            .build()
+            .unwrap();
+}
 
 #[derive(Debug)]
 struct CollectionsForDb {
@@ -15,10 +41,10 @@ struct CollectionsForDb {
 pub struct MongoCollections {
     // The current collection specification.
     current_collection: Option<CollectionSpecification>,
-    // The cursor on the collections specification for the db.
-    current_collection_list: Option<CollectionsForDb>,
+    // The index of the current db.
+    current_database_index: Option<usize>,
     // List of CollectionsForDb for each db.
-    collections_for_db_list: Option<Vec<CollectionsForDb>>,
+    collections_for_db_list: Vec<CollectionsForDb>,
 }
 
 // Statement related to a SQLColumns call.
@@ -32,16 +58,23 @@ impl MongoCollections {
         _query_timeout: Option<i32>,
         db_name_filter: &str,
         collection_name_filter: &str,
+        table_type: &str,
     ) -> Self {
+        let db_filter = if SQL_ALL_CATALOGS.to_string().eq(db_name_filter) {
+            "%"
+        } else {
+            db_name_filter
+        };
         let names = mongo_connection
             .client
-            .list_database_names(to_name_regex(db_name_filter), None)
+            .list_database_names(to_name_regex(db_filter), None)
             .unwrap();
         let mut databases: Vec<CollectionsForDb> = Vec::with_capacity(names.len());
         for name in names {
+            let list_coll_filter = to_name_regex(collection_name_filter);
             let db = mongo_connection.client.database(name.as_str());
             let collections = db
-                .list_collections(to_name_regex(collection_name_filter), None)
+                .list_collections(add_table_type_filter(table_type, list_coll_filter), None)
                 .unwrap();
             databases.push(CollectionsForDb {
                 database_name: name,
@@ -50,10 +83,36 @@ impl MongoCollections {
         }
         MongoCollections {
             current_collection: None,
-            current_collection_list: None,
-            collections_for_db_list: Some(databases),
+            current_database_index: None,
+            collections_for_db_list: databases,
         }
     }
+}
+
+// Iterates through the table types and adds the corresponding type to the filter document
+fn add_table_type_filter(table_type: &str, mut filter: Document) -> Document {
+    let mut table_type_filters: Vec<Bson> = Vec::new();
+    let table_type_entries = table_type
+        .split(',')
+        .map(|attr| attr.trim())
+        .collect::<Vec<&str>>();
+    for table_type_entry in &table_type_entries {
+        if TABLE_VALUES.is_match(table_type_entry) {
+            // collection type is mapped to table
+            table_type_filters.push(Bson::String(COLLECTION.to_string()));
+        } else if VIEW_VALUES.is_match(table_type_entry) {
+            table_type_filters.push(Bson::String(VIEW.to_string()));
+        } else if TIMESERIES_VALUES.is_match(table_type_entry) {
+            table_type_filters.push(Bson::String(TIMESERIES.to_string()));
+        } else if SQL_ALL_TABLE_TYPES.to_string().eq(table_type_entry) {
+            table_type_filters.push(Bson::String(COLLECTION.to_string()));
+            table_type_filters.push(Bson::String(VIEW.to_string()));
+            table_type_filters.push(Bson::String(TIMESERIES.to_string()));
+            break;
+        }
+    }
+    filter.insert("type", doc! {"$in": Bson::Array(table_type_filters) });
+    filter
 }
 
 impl MongoStatement for MongoCollections {
@@ -61,17 +120,16 @@ impl MongoStatement for MongoCollections {
     // When cursor is exhausted move to next database in list
     // Return true if moving was successful, false otherwise.
     fn next(&mut self) -> Result<bool> {
-        if self.current_collection_list.is_none() {
-            if self.collections_for_db_list.as_ref().unwrap().is_empty() {
+        if self.current_database_index.is_none() {
+            if self.collections_for_db_list.is_empty() {
                 return Ok(false);
             }
-            self.current_collection_list =
-                Some(self.collections_for_db_list.as_mut().unwrap().remove(0));
+            self.current_database_index = Some(0);
         }
         loop {
             if self
-                .current_collection_list
-                .as_mut()
+                .collections_for_db_list
+                .get_mut(self.current_database_index.unwrap())
                 .unwrap()
                 .collection_list
                 .advance()
@@ -79,8 +137,8 @@ impl MongoStatement for MongoCollections {
             {
                 // Cursor advance succeeded, update current CollectionSpecification
                 self.current_collection = Some(
-                    self.current_collection_list
-                        .as_ref()
+                    self.collections_for_db_list
+                        .get(self.current_database_index.unwrap())
                         .unwrap()
                         .collection_list
                         .deserialize_current()
@@ -88,12 +146,10 @@ impl MongoStatement for MongoCollections {
                 );
                 return Ok(true);
             }
-            if self.collections_for_db_list.as_ref().unwrap().is_empty() {
+            self.current_database_index = Some(self.current_database_index.unwrap() + 1);
+            if self.current_database_index.unwrap() >= self.collections_for_db_list.len() {
                 return Ok(false);
             }
-            // Current cursor exhausted, try next database in list
-            self.current_collection_list =
-                Some(self.collections_for_db_list.as_mut().unwrap().remove(0));
         }
     }
 
@@ -105,29 +161,37 @@ impl MongoStatement for MongoCollections {
         // 2-> Schema name; NULL as it is not applicable
         // 3 -> current_collection.name
         // 4 -> current_collection.collection_type
-        match col_index {
-            1 => Ok(Some(Bson::String(
-                self.current_collection_list
-                    .as_ref()
+        let return_val = match col_index {
+            1 => Bson::String(
+                self.collections_for_db_list
+                    .get(self.current_database_index.unwrap())
                     .unwrap()
                     .database_name
                     .clone(),
-            ))),
-            2 => Ok(Some(Bson::Null)),
-            3 => Ok(Some(Bson::String(
-                self.current_collection.as_ref().unwrap().name.clone(),
-            ))),
-            4 => Ok(Some(Bson::String(format!(
-                "{:?}",
-                self.current_collection.as_ref().unwrap().collection_type
-            )))),
-            _ => Ok(Some(Bson::Null)),
-        }
+            ),
+            2 => Bson::Null,
+            3 => Bson::String(self.current_collection.as_ref().unwrap().name.clone()),
+            4 => {
+                let coll_type = format!(
+                    "{:?}",
+                    self.current_collection.as_ref().unwrap().collection_type
+                )
+                .to_lowercase();
+                match coll_type.as_str() {
+                    // Mapping collection back to table
+                    COLLECTION => Bson::String(TABLE.to_string()),
+                    _ => Bson::String(coll_type),
+                }
+            }
+            _ => Bson::Null,
+        };
+        Ok(Some(return_val))
     }
 }
 
 // Replaces SQL wildcard characters with associated regex
 // Returns a doc applying filter to name
+// SQL-1060: Improve SQL-to-Rust regex pattern method
 fn to_name_regex(filter: &str) -> Document {
     let regex_filter = filter.replace('%', ".*").replace('_', ".");
     doc! { "name": { "$regex": regex_filter } }
