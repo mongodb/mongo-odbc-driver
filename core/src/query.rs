@@ -1,3 +1,4 @@
+use crate::bson_type_info::BsonTypeInfo;
 use crate::{conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, Error, Schema};
 use bson::{doc, Bson, Document, RawBson};
 use itertools::Itertools;
@@ -43,7 +44,7 @@ impl MongoQuery {
                     bson::from_document(db.run_command(get_result_schema_cmd, None)?)
                         .map_err(Error::BsonDeserialization)?;
 
-                let metadata = get_result_schema_response.process_metadata()?;
+                let metadata = get_result_schema_response.process_metadata(current_db)?;
 
                 // 2. Run the $sql aggregation to get the result set cursor.
                 let pipeline = vec![doc! {"$sql": {
@@ -113,15 +114,15 @@ pub struct MongoColMetadata {
     pub base_col_name: String,
     pub base_table_name: String,
     pub catalog_name: String,
-    pub display_size: u64,
+    pub display_size: Option<u16>,
     pub fixed_prec_scale: bool,
     pub label: String,
-    pub length: u128,
+    pub length: Option<u16>,
     pub col_name: String,
     pub is_nullable: bool,
-    pub octet_length: u128,
-    pub precision: u16,
-    pub scale: u16,
+    pub octet_length: Option<u16>,
+    pub precision: Option<u16>,
+    pub scale: Option<u16>,
     pub is_searchable: bool,
     pub table_name: String,
     // BSON type name
@@ -182,7 +183,7 @@ impl SqlGetResultSchemaResponse {
     ///   }
     ///
     /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
-    fn process_metadata(&self) -> Result<Vec<MongoColMetadata>> {
+    fn process_metadata(&self, current_db: &String) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: SimplifiedJsonSchema = self.schema.json_schema.clone().into();
         result_set_schema.assert_datasource_schema()?;
 
@@ -225,12 +226,13 @@ impl SqlGetResultSchemaResponse {
                     let field_nullability =
                         datasource_schema.get_field_nullability(field_name.clone())?;
 
-                    Ok(Self::create_column_metadata(
+                    Self::create_column_metadata(
+                        current_db,
                         datasource_name,
                         field_name,
                         *field_schema,
                         field_nullability,
-                    ))
+                    )
                 },
             )
             // 4. Collect as a Vec.
@@ -238,12 +240,41 @@ impl SqlGetResultSchemaResponse {
     }
 
     fn create_column_metadata(
+        current_db: &String,
         datasource_name: String,
         field_name: String,
         field_schema: SimplifiedJsonSchema,
         is_nullable: bool,
-    ) -> MongoColMetadata {
-        todo!()
+    ) -> Result<MongoColMetadata> {
+        let bson_type_info: BsonTypeInfo = field_schema.try_into()?;
+
+        Ok(MongoColMetadata {
+            // For base_col_name and base_table_name, we do not have this
+            // information in sqlGetResultSchema, so this will always be
+            // empty string.
+            base_col_name: "".to_string(),
+            base_table_name: "".to_string(),
+            // For catalog_name, we do not have this information in
+            // sqlGetResultSchema, so this will always be current_db. This
+            // is not correct for correct for fields from tables in other
+            // databases as part of cross-db lookups, but this is the best
+            // we can do for now.
+            catalog_name: current_db.clone(),
+            display_size: bson_type_info.fixed_bytes_length,
+            fixed_prec_scale: false,
+            label: field_name.clone(),
+            length: bson_type_info.fixed_bytes_length,
+            col_name: field_name,
+            is_nullable,
+            octet_length: bson_type_info.octet_length,
+            precision: bson_type_info.precision,
+            scale: bson_type_info.scale,
+            is_searchable: bson_type_info.searchable,
+            table_name: datasource_name.clone(),
+            type_name: bson_type_info.type_name.to_string(),
+            is_unsigned: false,
+            is_updatable: false,
+        })
     }
 }
 
@@ -286,6 +317,14 @@ impl SimplifiedJsonSchema {
 // down in the any_of list.
 impl From<json_schema::Schema> for SimplifiedJsonSchema {
     fn from(_: Schema) -> Self {
+        todo!()
+    }
+}
+
+impl TryFrom<SimplifiedJsonSchema> for BsonTypeInfo {
+    type Error = Error;
+
+    fn try_from(value: SimplifiedJsonSchema) -> std::result::Result<Self, Self::Error> {
         todo!()
     }
 }
