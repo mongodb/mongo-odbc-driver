@@ -42,10 +42,9 @@ impl<'a> ODBCUri<'a> {
         let mut ret = ODBCUri(HashMap::new());
         while let Some((keyword, value, rest)) = ODBCUri::get_next_attribute(input)? {
             // if attributes are repeated, the first is the one that is kept.
-            if ret.0.contains_key(&keyword) {
-                continue;
+            if !ret.0.contains_key(&keyword) {
+                ret.0.insert(keyword, value);
             }
-            ret.0.insert(keyword, value);
             if rest.is_none() {
                 return Ok(ret);
             }
@@ -372,6 +371,18 @@ mod unit {
             let expected =
                 ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
             assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr").unwrap());
+        }
+
+        #[test]
+        fn repeated_attribute_selects_first() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected =
+                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;SERVER=bAr;Driver=F").unwrap()
+            );
         }
 
         #[test]
