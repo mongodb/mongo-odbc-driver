@@ -36,7 +36,7 @@ pub struct ODBCUri<'a>(HashMap<String, &'a str>);
 impl<'a> ODBCUri<'a> {
     pub fn new(odbc_uri: &'a str) -> Result<ODBCUri<'a>> {
         if odbc_uri.is_empty() {
-            return Err(ODBCError::InvalidUriFormat(NOT_EMPTY_ERROR.to_string()));
+            return Err(ODBCError::InvalidUriFormat(EMPTY_URI_ERROR.to_string()));
         }
         let mut input = odbc_uri;
         let mut ret = ODBCUri(HashMap::new());
