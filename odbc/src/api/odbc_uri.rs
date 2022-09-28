@@ -4,7 +4,7 @@ use regex::{RegexSet, RegexSetBuilder};
 use std::collections::HashMap;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
-const EQUAL_ERROR: &str = "all URI attributes must be of the form keyword=value";
+const INVALID_ATTR_FORMAT_ERROR: &str = "all URI attributes must be of the form keyword=value";
 const MISSING_CLOSING_BRACE_ERROR: &str = "attribute value beginning with '{' must end with '}'";
 
 const USER: &[&str] = &["uid", "user"];
