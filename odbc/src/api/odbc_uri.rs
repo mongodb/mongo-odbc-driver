@@ -42,9 +42,7 @@ impl<'a> ODBCUri<'a> {
         let mut ret = ODBCUri(HashMap::new());
         while let Some((keyword, value, rest)) = ODBCUri::get_next_attribute(input)? {
             // if attributes are repeated, the first is the one that is kept.
-            if !ret.0.contains_key(&keyword) {
-                ret.0.insert(keyword, value);
-            }
+            ret.0.entry(keyword).or_insert(value);
             if rest.is_none() {
                 return Ok(ret);
             }
