@@ -1,7 +1,7 @@
 use crate::bson_type_info::BsonTypeInfo;
 use crate::{
-    conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, BsonTypeName, Error,
-    Schema,
+    conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, BsonType, BsonTypeName,
+    Error, Items, Schema,
 };
 use bson::{doc, Bson, Document};
 use itertools::Itertools;
@@ -162,11 +162,11 @@ struct VersionedJsonSchema {
 // 1. The bson_type has to be a single type. If the json_schema::Schema
 // contains multiple bson_types, they are pushed down into the any_of list.
 // 2. The any_of is flattened.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct SimplifiedJsonSchema {
     pub bson_type: Option<BsonTypeName>,
-    pub properties: Option<HashMap<String, Box<SimplifiedJsonSchema>>>,
-    pub any_of: Option<Vec<Box<SimplifiedJsonSchema>>>,
+    pub properties: Option<HashMap<String, SimplifiedJsonSchema>>,
+    pub any_of: Option<Vec<SimplifiedJsonSchema>>,
     pub required: Option<BTreeSet<String>>,
     pub items: Option<Box<SimplifiedJsonSchema>>,
     pub additional_properties: bool,
@@ -240,7 +240,7 @@ impl SqlGetResultSchemaResponse {
                         current_db,
                         datasource_name,
                         field_name,
-                        *field_schema,
+                        field_schema,
                         field_nullability,
                     )
                 },
@@ -289,6 +289,15 @@ impl SqlGetResultSchemaResponse {
 }
 
 impl SimplifiedJsonSchema {
+    const ANY: SimplifiedJsonSchema = SimplifiedJsonSchema {
+        bson_type: None,
+        properties: None,
+        any_of: None,
+        required: None,
+        items: None,
+        additional_properties: false,
+    };
+
     /// A datasource schema must be an Object schema. Unlike Object schemata
     /// in general, the properties field cannot be null.
     fn assert_datasource_schema(&self) -> Result<()> {
@@ -373,7 +382,7 @@ impl SimplifiedJsonSchema {
             && self.any_of.is_none()
             && self.required.is_none()
             && self.items.is_none()
-            && self.additional_properties;
+            && !self.additional_properties;
     }
 }
 
@@ -382,8 +391,127 @@ impl SimplifiedJsonSchema {
 // but bson_type has to be a single type otherwise the types will get pushed
 // down in the any_of list.
 impl From<json_schema::Schema> for SimplifiedJsonSchema {
-    fn from(_: Schema) -> Self {
-        todo!()
+    fn from(schema: Schema) -> Self {
+        let mut properties = schema.properties.map(|properties| {
+            properties
+                .into_iter()
+                .map(|(field_name, field_schema)| (field_name, field_schema.into()))
+                .collect::<HashMap<String, SimplifiedJsonSchema>>()
+        });
+
+        let mut any_of = schema.any_of.map(|any_of| {
+            any_of
+                .into_iter()
+                .map(|any_of_schema| any_of_schema.into())
+                .collect::<Vec<SimplifiedJsonSchema>>()
+        });
+
+        let mut required = schema
+            .required
+            .map(|required| required.into_iter().collect::<BTreeSet<String>>());
+
+        let mut items = schema.items.map(|items| {
+            match items {
+                // The single-schema variant of the `items`
+                // field constrains all elements of the array.
+                Items::Single(items_schema) => Box::new(SimplifiedJsonSchema::from(*items_schema)), // actually convert
+                // The multiple-schema variant of the `items` field only
+                // asserts the schemas for the array items at specified
+                // indexes, and imposes no constraint on items at larger
+                // indexes. As such, the only schema that can describe all
+                // elements of the array is `Any`.
+                Items::Multiple(items_schemas) => Box::new(SimplifiedJsonSchema::ANY),
+            }
+        });
+
+        let mut additional_properties = schema.additional_properties.unwrap_or(false);
+
+        // schema.bson_type requires special handling. If it is a Single type,
+        // then the new SimplifiedJsonSchema simply copies it over as its new
+        // bson_type. If it is a Multiple, then we push everything down into
+        // the any_of field.
+        let bson_type = match schema.bson_type {
+            None => None,
+            Some(BsonType::Single(t)) => Some(t),
+            Some(BsonType::Multiple(types)) => {
+                let mut additional_any_of_schemas = types
+                    .into_iter()
+                    .map(|t| {
+                        match t {
+                            // If one of the BSON types is Array, move the items
+                            // information into the schema that will be nested in
+                            // the top-level any_of and set the top-level items to
+                            // None.
+                            BsonTypeName::Array => {
+                                let nested_items = items.clone();
+                                items = None;
+                                SimplifiedJsonSchema {
+                                    bson_type: Some(t),
+                                    items: nested_items,
+                                    ..Default::default()
+                                }
+                            }
+                            // If one of the BSON types is Object, move the
+                            // properties, required, and additional_properties
+                            // information into the schema that will be nested
+                            // in the top-level any_of and set the top-level
+                            // fields to None.
+                            BsonTypeName::Object => {
+                                let nested_properties = properties.clone();
+                                let nested_required = required.clone();
+                                let nested_additional_properties = additional_properties;
+                                properties = None;
+                                required = None;
+                                additional_properties = false;
+                                SimplifiedJsonSchema {
+                                    bson_type: Some(t),
+                                    properties: nested_properties,
+                                    required: nested_required,
+                                    additional_properties: nested_additional_properties,
+                                    ..Default::default()
+                                }
+                            }
+                            // If we encounter any other BSON type, simply create
+                            // a SimplifiedJsonSchema with the relevant bson_type.
+                            t => SimplifiedJsonSchema {
+                                bson_type: Some(t),
+                                ..Default::default()
+                            },
+                        }
+                    })
+                    .collect::<Vec<SimplifiedJsonSchema>>();
+
+                // Extend the top-level any_of with the new, additional
+                // schemas created here from the Multiple BSON types.
+                any_of = match any_of {
+                    None => Some(additional_any_of_schemas),
+                    Some(mut v) => {
+                        v.append(&mut additional_any_of_schemas);
+                        Some(v)
+                    }
+                };
+
+                // Set the top-level bson_type to None when there are multiple
+                // BSON types.
+                None
+            }
+        };
+
+        // Flatten nested any_ofs
+        any_of = any_of.map(|v| {
+            v.into_iter()
+                .flat_map(|s| s.any_of.unwrap_or(vec![]))
+                .collect::<Vec<SimplifiedJsonSchema>>()
+        });
+
+        SimplifiedJsonSchema {
+            bson_type,
+            properties,
+            any_of,
+            required,
+            items,
+            additional_properties,
+        }
     }
 }
 
