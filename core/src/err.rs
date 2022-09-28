@@ -26,8 +26,8 @@ pub enum Error {
     Mongo(#[from] mongodb::error::Error),
     #[error("No database provided for query")]
     NoDatabase,
-    #[error("TODO")]
-    UnknownColumn(String), // todo
+    #[error("Unknown column '{0}' in result set schema")]
+    UnknownColumn(String),
     #[error(transparent)]
     ValueAccess(bson::document::ValueAccessError),
 }
@@ -47,6 +47,7 @@ impl Error {
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
             Error::InvalidCursorState => INVALID_CURSOR_STATE,
             Error::BsonDeserialization(_)
+            | Error::UnknownColumn(_)
             | Error::ValueAccess(_)
             | Error::InvalidResultSetJsonSchema
             | Error::MissingFieldBsonType(_) => GENERAL_ERROR,
@@ -72,6 +73,7 @@ impl Error {
             Error::NoDatabase
             | Error::InvalidCursorState
             | Error::InvalidResultSetJsonSchema
+            | Error::UnknownColumn(_)
             | Error::MissingFieldBsonType(_)
             | Error::ColIndexOutOfBounds(_)
             | Error::BsonDeserialization(_)
