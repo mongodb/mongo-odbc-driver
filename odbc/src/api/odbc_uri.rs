@@ -62,11 +62,10 @@ impl<'a> ODBCUri<'a> {
         }
         let odbc_uri = odbc_uri.get(index.unwrap()..).unwrap();
         // find the first '=' sign, '=' does not appear in any keywords, so this is safe.
-        let (keyword, rest) = odbc_uri.split_at(
-            odbc_uri
-                .find('=')
-                .ok_or_else(|| ODBCError::InvalidUriFormat(EQUAL_ERROR.to_string()))?,
-        );
+        let (keyword, rest) =
+            odbc_uri.split_at(odbc_uri.find('=').ok_or_else(|| {
+                ODBCError::InvalidUriFormat(INVALID_ATTR_FORMAT_ERROR.to_string())
+            })?);
         // remove the leading '=' sign.
         let rest = rest.get(1..).unwrap();
         if !KEYWORDS.is_match(keyword) {
