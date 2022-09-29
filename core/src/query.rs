@@ -84,7 +84,7 @@ impl MongoQuery {
     fn get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
         self.resultset_metadata
             .get(col_index as usize)
-            .map_or(Err(Error::ColIndexOutOfBounds(col_index)), |md| Ok(md))
+            .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)
     }
 }
 
@@ -204,8 +204,8 @@ impl SqlGetResultSchemaResponse {
                         (
                             datasource_name.clone(),
                             datasource_schema.clone(),
-                            field_name.clone(),
-                            field_schema.clone(),
+                            field_name,
+                            field_schema,
                         )
                     })
             })
@@ -229,7 +229,7 @@ impl SqlGetResultSchemaResponse {
     }
 
     fn create_column_metadata(
-        _current_db: &String,
+        _current_db: &str,
         datasource_name: String,
         field_name: String,
         field_schema: json_schema::simplified::Schema,
@@ -254,7 +254,7 @@ impl SqlGetResultSchemaResponse {
             precision: bson_type_info.precision,
             scale: bson_type_info.scale,
             is_searchable: bson_type_info.searchable,
-            table_name: datasource_name.clone(),
+            table_name: datasource_name,
             type_name: bson_type_info.type_name.to_string(),
             is_unsigned: false,
             is_updatable: false,
