@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+mod bson_type_info;
+use bson_type_info::BsonTypeInfo;
 mod collections;
 pub use collections::MongoCollections;
 mod conn;
@@ -9,6 +11,7 @@ mod err;
 pub use err::{Error, Result};
 mod fields;
 pub use fields::MongoFields;
+mod json_schema;
 mod query;
 pub use query::{MongoColMetadata, MongoQuery};
 mod stmt;
