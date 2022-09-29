@@ -35,45 +35,44 @@ impl MongoQuery {
         query_timeout: Option<i32>,
         query: &str,
     ) -> Result<Self> {
-        match &client.current_db {
-            None => Err(Error::NoDatabase),
-            Some(current_db) => {
-                let db = client.client.database(current_db);
+        let current_db = client
+            .current_db
+            .as_ref()
+            .ok_or_else(|| Error::NoDatabase)?;
+        let db = client.client.database(current_db);
 
-                // 1. Run the sqlGetResultSchema command to get the result set
-                // metadata. Column metadata is sorted alphabetically by table
-                // and column name.
-                let get_result_schema_cmd =
-                    doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
+        // 1. Run the sqlGetResultSchema command to get the result set
+        // metadata. Column metadata is sorted alphabetically by table
+        // and column name.
+        let get_result_schema_cmd =
+            doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
-                let get_result_schema_response: SqlGetResultSchemaResponse =
-                    bson::from_document(db.run_command(get_result_schema_cmd, None)?)
-                        .map_err(Error::BsonDeserialization)?;
+        let get_result_schema_response: SqlGetResultSchemaResponse =
+            bson::from_document(db.run_command(get_result_schema_cmd, None)?)
+                .map_err(Error::BsonDeserialization)?;
 
-                let metadata = get_result_schema_response.process_metadata(current_db)?;
+        let metadata = get_result_schema_response.process_metadata(current_db)?;
 
-                // 2. Run the $sql aggregation to get the result set cursor.
-                let pipeline = vec![doc! {"$sql": {
-                    "format": "odbc",
-                    "formatVersion": 1,
-                    "statement": query,
-                }}];
+        // 2. Run the $sql aggregation to get the result set cursor.
+        let pipeline = vec![doc! {"$sql": {
+            "format": "odbc",
+            "formatVersion": 1,
+            "statement": query,
+        }}];
 
-                let options = query_timeout.map(|i| {
-                    AggregateOptions::builder()
-                        .max_time(Duration::from_millis(i as u64))
-                        .build()
-                });
+        let options = query_timeout.map(|i| {
+            AggregateOptions::builder()
+                .max_time(Duration::from_millis(i as u64))
+                .build()
+        });
 
-                let cursor = db.aggregate(pipeline, options)?;
+        let cursor = db.aggregate(pipeline, options)?;
 
-                Ok(MongoQuery {
-                    resultset_cursor: cursor,
-                    resultset_metadata: metadata,
-                    current: None,
-                })
-            }
-        }
+        Ok(MongoQuery {
+            resultset_cursor: cursor,
+            resultset_metadata: metadata,
+            current: None,
+        })
     }
 
     // Return the number of fields/columns in the resultset
