@@ -34,6 +34,11 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     OptionValueChanged(&'static str, &'static str),
+    #[error(
+        "[{}][API] Attempted to retreive number of columns for unexecuted Statement",
+        VENDOR_IDENTIFIER
+    )]
+    NumColsOnUnexecutedStatement,
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
     Core(#[from] mongo_odbc_core::Error),
 }

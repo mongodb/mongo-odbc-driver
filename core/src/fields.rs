@@ -49,4 +49,9 @@ impl MongoStatement for MongoFields {
     fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
         unimplemented!()
     }
+
+    // Get the number of columns in the result set for this MongoFields Statement.
+    fn num_result_columns(&self) -> u16 {
+        18
+    }
 }

@@ -60,4 +60,9 @@ impl MongoStatement for MongoDatabases {
             // Throw error 07009
         }
     }
+
+    // Get the number of columns in the result set for this MongoDatabases Statement.
+    fn num_result_columns(&self) -> u16 {
+        1
+    }
 }

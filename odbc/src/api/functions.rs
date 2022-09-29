@@ -223,14 +223,24 @@ pub extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
 #[no_mangle]
 pub extern "C" fn SQLColAttribute(
     statement_handle: HStmt,
-    _column_number: USmallInt,
-    _field_identifier: Desc,
-    _character_attribute_ptr: Pointer,
-    _buffer_length: SmallInt,
-    _string_length_ptr: *mut SmallInt,
-    _numeric_attribute_ptr: *mut Len,
+    column_number: USmallInt,
+    field_identifier: Desc,
+    character_attribute_ptr: Pointer,
+    buffer_length: SmallInt,
+    string_length_ptr: *mut SmallInt,
+    numeric_attribute_ptr: *mut Len,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLColAttribute")
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    let stmt = must_be_valid!((*mongo_handle).as_statement());
+    match field_identifier {
+        Desc::AutoUniqueValue => unsafe {
+            *numeric_attribute_ptr = SqlBool::False as Len;
+        },
+        _ => {
+            return SqlReturn::ERROR;
+        }
+    }
+    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
@@ -1158,9 +1168,21 @@ pub extern "C" fn SQLNumParams(
 #[no_mangle]
 pub extern "C" fn SQLNumResultCols(
     statement_handle: HStmt,
-    _column_count_ptr: *mut SmallInt,
+    column_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLNumResultCols")
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    let stmt = must_be_valid!((*mongo_handle).as_statement());
+    let stmt_contents = stmt.read().unwrap();
+    let mongo_statement = stmt_contents.mongo_statement.as_ref();
+    if mongo_statement.is_none() {
+        MongoHandleRef::from(statement_handle)
+            .add_diag_info(ODBCError::NumColsOnUnexecutedStatement);
+        return SqlReturn::ERROR;
+    }
+    unsafe {
+        *column_count_ptr = mongo_statement.unwrap().num_result_columns() as SmallInt;
+    }
+    SqlReturn::SUCCESS
 }
 
 #[no_mangle]
@@ -1284,8 +1306,15 @@ pub extern "C" fn SQLPutData(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLRowCount(_statement_handle: HStmt, _row_count_ptr: *mut Len) -> SqlReturn {
-    unimplemented!()
+pub extern "C" fn SQLRowCount(statement_handle: HStmt, row_count_ptr: *mut Len) -> SqlReturn {
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    // even though we always return 0, we must still assert that the proper handle
+    // type is sent by the client.
+    let _ = must_be_valid!((*mongo_handle).as_statement());
+    unsafe {
+        *row_count_ptr = 0 as Len;
+    }
+    SqlReturn::SUCCESS
 }
 
 #[no_mangle]

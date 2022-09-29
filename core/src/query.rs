@@ -103,6 +103,11 @@ impl MongoStatement for MongoQuery {
         let column = datasource.get(&md.col_name);
         Ok(column.cloned())
     }
+
+    // Get the number of columns in the result set for this Query Statement.
+    fn num_result_columns(&self) -> u16 {
+        self.resultset_metadata.len() as u16
+    }
 }
 
 // Metadata information for a column of the result set.

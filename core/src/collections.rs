@@ -51,4 +51,9 @@ impl MongoStatement for MongoCollections {
         // 3 -> current_coll.CollectionType
         unimplemented!()
     }
+
+    // Get the number of columns in the result set for this MongoCollections Statement.
+    fn num_result_columns(&self) -> u16 {
+        3
+    }
 }
