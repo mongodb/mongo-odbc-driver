@@ -2,7 +2,7 @@ use crate::bson_type_info::BsonTypeInfo;
 use crate::{
     conn::MongoConnection,
     err::Result,
-    json_schema::{self, simplified::ObjectSchema, BsonType, BsonTypeName, Items},
+    json_schema::{self, simplified::ObjectSchema, BsonTypeName},
     stmt::MongoStatement,
     Error,
 };
@@ -10,10 +10,7 @@ use bson::{doc, Bson, Document};
 use itertools::Itertools;
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    time::Duration,
-};
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct MongoQuery {
@@ -35,10 +32,7 @@ impl MongoQuery {
         query_timeout: Option<i32>,
         query: &str,
     ) -> Result<Self> {
-        let current_db = client
-            .current_db
-            .as_ref()
-            .ok_or_else(|| Error::NoDatabase)?;
+        let current_db = client.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = client.client.database(current_db);
 
         // 1. Run the sqlGetResultSchema command to get the result set
@@ -172,7 +166,7 @@ impl SqlGetResultSchemaResponse {
     ///   }
     ///
     /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
-    fn process_metadata(&self, current_db: &String) -> Result<Vec<MongoColMetadata>> {
+    fn process_metadata(&self, current_db: &str) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
         let result_set_object_schema = result_set_schema.assert_datasource_schema()?;
