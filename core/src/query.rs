@@ -8,7 +8,7 @@ use itertools::Itertools;
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet},
     time::Duration,
 };
 
@@ -409,6 +409,13 @@ impl TryFrom<json_schema::Schema> for SingleJsonSchema {
                 BsonType::Single(BsonTypeName::Array) => {
                     Ok(SingleJsonSchema::Array(Box::new(match items {
                         Some(Items::Single(s)) => SimplifiedJsonSchema::try_from(*s)?,
+                        // The multiple-schema variant of the `items`
+                        // field only asserts the schemas for the
+                        // array items at specified indexes, and
+                        // imposes no constraint on items at larger
+                        // indexes. As such, the only schema that can
+                        // describe all elements of the array is
+                        // `Any`.
                         Some(Items::Multiple(_)) => {
                             SimplifiedJsonSchema::Single(SingleJsonSchema::Any)
                         }
@@ -429,7 +436,7 @@ impl TryFrom<json_schema::Schema> for SingleJsonSchema {
                     }))
                 }
                 BsonType::Single(t) => Ok(SingleJsonSchema::Scalar(t)),
-                BsonType::Multiple(types) => Err(Error::InvalidResultSetJsonSchema),
+                BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema),
             },
             _ => Err(Error::InvalidResultSetJsonSchema),
         }
@@ -444,7 +451,7 @@ impl TryFrom<json_schema::Schema> for SimplifiedJsonSchema {
     type Error = Error;
 
     fn try_from(schema: Schema) -> std::result::Result<Self, Self::Error> {
-        match schema {
+        match schema.clone() {
             json_schema::Schema {
                 bson_type: None,
                 properties: None,
@@ -454,63 +461,13 @@ impl TryFrom<json_schema::Schema> for SimplifiedJsonSchema {
                 any_of: None,
             } => Ok(SimplifiedJsonSchema::Single(SingleJsonSchema::Any)),
             json_schema::Schema {
-                bson_type: Some(bson_type),
-                properties,
-                required,
-                additional_properties,
-                items,
+                bson_type: _bson_type,
+                properties: _properties,
+                required: _required,
+                additional_properties: _additional_properties,
+                items: _items,
                 any_of: None,
-            } => match bson_type {
-                BsonType::Single(BsonTypeName::Array) => Ok(SimplifiedJsonSchema::Single(
-                    SingleJsonSchema::Array(Box::new(match items {
-                        Some(Items::Single(s)) => SimplifiedJsonSchema::try_from(*s)?,
-                        Some(Items::Multiple(_)) => {
-                            SimplifiedJsonSchema::Single(SingleJsonSchema::Any)
-                        }
-                        None => SimplifiedJsonSchema::Single(SingleJsonSchema::Any),
-                    })),
-                )),
-                BsonType::Single(BsonTypeName::Object) => Ok(SimplifiedJsonSchema::Single(
-                    SingleJsonSchema::Object(ObjectSchema {
-                        properties: properties
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|(prop, prop_schema)| {
-                                Ok((prop, SimplifiedJsonSchema::try_from(prop_schema)?))
-                            })
-                            .collect::<Result<_>>()?,
-                        required: required.unwrap_or_default().into_iter().collect(),
-                        additional_properties: additional_properties.unwrap_or(true),
-                    }),
-                )),
-                BsonType::Single(t) => {
-                    Ok(SimplifiedJsonSchema::Single(SingleJsonSchema::Scalar(t)))
-                }
-                BsonType::Multiple(types) => Ok(SimplifiedJsonSchema::AnyOf(
-                    types
-                        .into_iter()
-                        .map(|t| match t {
-                            BsonTypeName::Array => {
-                                SingleJsonSchema::try_from(json_schema::Schema {
-                                    bson_type: Some(BsonType::Single(BsonTypeName::Array)),
-                                    items: items.clone(),
-                                    ..Default::default()
-                                })
-                            }
-                            BsonTypeName::Object => {
-                                SingleJsonSchema::try_from(json_schema::Schema {
-                                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                    properties: properties.clone(),
-                                    required: required.clone(),
-                                    additional_properties: additional_properties.clone(),
-                                    ..Default::default()
-                                })
-                            }
-                            _ => Ok(SingleJsonSchema::Scalar(t)),
-                        })
-                        .collect::<Result<_>>()?,
-                )),
-            },
+            } => Ok(SimplifiedJsonSchema::Single(schema.try_into()?)),
             json_schema::Schema {
                 bson_type: None,
                 properties: None,
