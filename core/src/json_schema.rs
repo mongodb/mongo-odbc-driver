@@ -25,7 +25,7 @@ pub enum BsonType {
     Multiple(Vec<BsonTypeName>),
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum BsonTypeName {
     Object,

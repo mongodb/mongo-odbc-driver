@@ -8,7 +8,7 @@ use itertools::Itertools;
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     time::Duration,
 };
 
@@ -170,6 +170,27 @@ struct SimplifiedJsonSchema {
     pub required: Option<BTreeSet<String>>,
     pub items: Option<Box<SimplifiedJsonSchema>>,
     pub additional_properties: bool,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
+enum AlternativeWay {
+    Single(SingleJsonSchema),
+    AnyOf(BTreeSet<SingleJsonSchema>)
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
+enum SingleJsonSchema {
+    Any,
+    Scalar(BsonTypeName),
+    Object(ObjectSchema),
+    Array(Box<AlternativeWay>)
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
+struct ObjectSchema {
+    properties: BTreeMap<String, AlternativeWay>,
+    required: BTreeSet<String>,
+    additional_properties: bool,
 }
 
 impl SqlGetResultSchemaResponse {
@@ -386,6 +407,82 @@ impl SimplifiedJsonSchema {
     }
 }
 
+impl AlternativeWay {
+
+    /// A datasource schema must be an Object schema. Unlike Object schemata
+    /// in general, the properties field cannot be null.
+    fn assert_datasource_schema(&self) -> Result<&ObjectSchema> {
+        match self {
+            AlternativeWay::Single(SingleJsonSchema::Object(s)) => Ok(s),
+            _ => Err(Error::InvalidResultSetJsonSchema)
+        }
+    }
+
+    fn is_any(&self) -> bool {
+        match self {
+            AlternativeWay::Single(SingleJsonSchema::Any) => true,
+            _ => false
+        }
+    }
+}
+
+impl ObjectSchema {
+    /// Gets the nullability of a field in this schema's properties.
+    /// Nullability is determined as follows:
+    ///   1. If it is not present in the schema's list of properties:
+    ///     - If it is required or this schema allows additional_properties,
+    ///       it is unknown nullability
+    ///     - Otherwise, an error is returned
+    ///
+    ///   2. If it is an Any schema, it is considered nullable
+    ///
+    ///   3. If it is a scalar schema (i.e. not Any or AnyOf):
+    ///     - If its bson type is Null, it is considered nullable
+    ///     - Otherwise, its nullability depends on whether it is required
+    ///
+    ///   4. If it is an AnyOf schema:
+    ///     - If one of the component schemas in the AnyOf list is Null, it
+    ///       is considered nullable
+    ///     - Otherwise, its nullability depends on whether it is required
+    fn get_field_nullability(&self, field_name: String) -> Result<ColumnNullability> {
+        let required = self.required.contains(&field_name);
+
+        let field_schema = self.properties.get(&field_name);
+
+        // Case 1: field not present in properties
+        if field_schema.is_none() {
+            if required || self.additional_properties {
+                return Ok(ColumnNullability::Unknown);
+            }
+
+            return Err(Error::UnknownColumn(field_name));
+        }
+
+        let nullable = if required {
+            ColumnNullability::NoNulls
+        } else {
+            ColumnNullability::Nullable
+        };
+
+        match field_schema.unwrap() {
+            // Case 2: field is Any schema
+            AlternativeWay::Single(SingleJsonSchema::Any) => Ok(ColumnNullability::Nullable),
+            // Case 3: field is scalar/array/object schema
+            AlternativeWay::Single(SingleJsonSchema::Scalar(BsonTypeName::Null)) => Ok(ColumnNullability::Nullable),
+            AlternativeWay::Single(SingleJsonSchema::Scalar(_)) | AlternativeWay::Single(SingleJsonSchema::Array(_)) | AlternativeWay::Single(SingleJsonSchema::Object(_)) => Ok(nullable),
+            // Case 4: field is AnyOf schema
+            AlternativeWay::AnyOf(any_of) => {
+                for any_of_schema in any_of {
+                    if *any_of_schema == SingleJsonSchema::Scalar(BsonTypeName::Null) {
+                        return Ok(ColumnNullability::Nullable)
+                    }
+                }
+                Ok(nullable)
+            }
+        }
+    }
+}
+
 // Converts a deserialized json_schema::Schema into a SimplifiedJsonSchema. The
 // SimplifiedJsonSchema instance is semantically equivalent to the base schema,
 // but bson_type has to be a single type otherwise the types will get pushed
@@ -515,6 +612,130 @@ impl From<json_schema::Schema> for SimplifiedJsonSchema {
     }
 }
 
+impl TryFrom<json_schema::Schema> for SingleJsonSchema {
+    type Error = Error;
+
+    fn try_from(schema: Schema) -> std::result::Result<Self, Self::Error> {
+        match schema {
+            json_schema::Schema {
+                bson_type: None,
+                properties: None,
+                required: None,
+                additional_properties: None,
+                items: None,
+                any_of: None,
+            } => Ok(SingleJsonSchema::Any),
+            json_schema::Schema {
+                bson_type: Some(bson_type),
+                properties,
+                required,
+                additional_properties,
+                items,
+                any_of: None,
+            } => {
+                match bson_type {
+                    BsonType::Single(BsonTypeName::Array) => {
+                        Ok(SingleJsonSchema::Array(Box::new(match items {
+                            Some(Items::Single(s)) => AlternativeWay::try_from(*s)?,
+                            Some(Items::Multiple(_)) => AlternativeWay::Single(SingleJsonSchema::Any),
+                            None => AlternativeWay::Single(SingleJsonSchema::Any)
+                        })))
+                    },
+                    BsonType::Single(BsonTypeName::Object) => {
+                        Ok(SingleJsonSchema::Object(ObjectSchema {
+                            properties: properties.unwrap_or_default().into_iter().map(|(prop, prop_schema)| Ok((prop, AlternativeWay::try_from(prop_schema)?))).collect::<Result<_>>()?,
+                            required: required.unwrap_or_default().into_iter().collect(),
+                            additional_properties: additional_properties.unwrap_or(true),
+                        }))
+                    },
+                    BsonType::Single(t) => {
+                        Ok(SingleJsonSchema::Scalar(t))
+                    },
+                    BsonType::Multiple(types) => Err(Error::InvalidResultSetJsonSchema)
+                }
+            },
+            _ => Err(Error::InvalidResultSetJsonSchema)
+        }
+    }
+}
+
+impl TryFrom<json_schema::Schema> for AlternativeWay {
+    type Error = Error;
+
+    fn try_from(schema: Schema) -> std::result::Result<Self, Self::Error> {
+        match schema {
+            json_schema::Schema {
+                bson_type: None,
+                properties: None,
+                required: None,
+                additional_properties: None,
+                items: None,
+                any_of: None,
+            } => Ok(AlternativeWay::Single(SingleJsonSchema::Any)),
+            json_schema::Schema {
+                bson_type: Some(bson_type),
+                properties,
+                required,
+                additional_properties,
+                items,
+                any_of: None,
+            } => {
+                match bson_type {
+                    BsonType::Single(BsonTypeName::Array) => {
+                        Ok(AlternativeWay::Single(SingleJsonSchema::Array(Box::new(match items {
+                            Some(Items::Single(s)) => AlternativeWay::try_from(*s)?,
+                            Some(Items::Multiple(_)) => AlternativeWay::Single(SingleJsonSchema::Any),
+                            None => AlternativeWay::Single(SingleJsonSchema::Any)
+                        }))))
+                    },
+                    BsonType::Single(BsonTypeName::Object) => {
+                        Ok(AlternativeWay::Single(SingleJsonSchema::Object(ObjectSchema {
+                            properties: properties.unwrap_or_default().into_iter().map(|(prop, prop_schema)| Ok((prop, AlternativeWay::try_from(prop_schema)?))).collect::<Result<_>>()?,
+                            required: required.unwrap_or_default().into_iter().collect(),
+                            additional_properties: additional_properties.unwrap_or(true),
+                        })))
+                    },
+                    BsonType::Single(t) => {
+                        Ok(AlternativeWay::Single(SingleJsonSchema::Scalar(t)))
+                    },
+                    BsonType::Multiple(types) => {
+                        Ok(AlternativeWay::AnyOf(types.into_iter().map(|t| {
+                            match t {
+                                BsonTypeName::Array => {
+                                    SingleJsonSchema::try_from(json_schema::Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Array)),
+                                        items: items.clone(),
+                                        ..Default::default()
+                                    })
+                                },
+                                BsonTypeName::Object => {
+                                    SingleJsonSchema::try_from(json_schema::Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                        properties: properties.clone(),
+                                        required: required.clone(),
+                                        additional_properties: additional_properties.clone(),
+                                        ..Default::default()
+                                    })
+                                },
+                                _ => Ok(SingleJsonSchema::Scalar(t))
+                            }
+                        }).collect::<Result<_>>()?))
+                    }
+                }
+            },
+            json_schema::Schema {
+                bson_type: None,
+                properties: None,
+                required: None,
+                additional_properties: None,
+                items: None,
+                any_of: Some(any_of)
+            } => Ok(AlternativeWay::AnyOf(any_of.into_iter().map(SingleJsonSchema::try_from).collect::<Result<BTreeSet<SingleJsonSchema>>>()?)),
+            _ => Err(Error::InvalidResultSetJsonSchema)
+        }
+    }
+}
+
 impl TryFrom<(String, SimplifiedJsonSchema)> for BsonTypeInfo {
     type Error = Error;
 
@@ -547,5 +768,44 @@ impl TryFrom<(String, SimplifiedJsonSchema)> for BsonTypeInfo {
             BsonTypeName::MinKey => BsonTypeInfo::MINKEY,
             BsonTypeName::MaxKey => BsonTypeInfo::MAXKEY,
         })
+    }
+}
+
+impl From<AlternativeWay> for BsonTypeInfo {
+    fn from(v: AlternativeWay) -> Self {
+        match v {
+            AlternativeWay::Single(SingleJsonSchema::Any) => BsonTypeInfo::BSON,
+            AlternativeWay::Single(SingleJsonSchema::Scalar(t)) => t.into(),
+            AlternativeWay::Single(SingleJsonSchema::Object(_)) => BsonTypeInfo::OBJECT,
+            AlternativeWay::Single(SingleJsonSchema::Array(_)) => BsonTypeInfo::ARRAY,
+            AlternativeWay::AnyOf(_) => BsonTypeInfo::BSON,
+        }
+    }
+}
+
+impl From<BsonTypeName> for BsonTypeInfo {
+    fn from(v: BsonTypeName) -> Self {
+        match v {
+            BsonTypeName::Array => BsonTypeInfo::ARRAY,
+            BsonTypeName::Object => BsonTypeInfo::OBJECT,
+            BsonTypeName::Null => BsonTypeInfo::NULL,
+            BsonTypeName::String => BsonTypeInfo::STRING,
+            BsonTypeName::Int => BsonTypeInfo::INT,
+            BsonTypeName::Double => BsonTypeInfo::DOUBLE,
+            BsonTypeName::Long => BsonTypeInfo::LONG,
+            BsonTypeName::Decimal => BsonTypeInfo::DECIMAL,
+            BsonTypeName::BinData => BsonTypeInfo::BINDATA,
+            BsonTypeName::ObjectId => BsonTypeInfo::OBJECTID,
+            BsonTypeName::Bool => BsonTypeInfo::BOOL,
+            BsonTypeName::Date => BsonTypeInfo::DATE,
+            BsonTypeName::Regex => BsonTypeInfo::REGEX,
+            BsonTypeName::DbPointer => BsonTypeInfo::DBPOINTER,
+            BsonTypeName::Javascript => BsonTypeInfo::JAVASCRIPT,
+            BsonTypeName::Symbol => BsonTypeInfo::SYMBOL,
+            BsonTypeName::JavascriptWithScope => BsonTypeInfo::JAVASCRIPTWITHSCOPE,
+            BsonTypeName::Timestamp => BsonTypeInfo::TIMESTAMP,
+            BsonTypeName::MinKey => BsonTypeInfo::MINKEY,
+            BsonTypeName::MaxKey => BsonTypeInfo::MAXKEY,
+        }
     }
 }

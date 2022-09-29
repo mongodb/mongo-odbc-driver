@@ -177,4 +177,12 @@ impl BsonTypeInfo {
         octet_length: None,
         fixed_bytes_length: None,
     };
+    pub const BSON: BsonTypeInfo = BsonTypeInfo {
+        type_name: "bson",
+        searchable: true,
+        scale: None,
+        precision: None,
+        octet_length: None,
+        fixed_bytes_length: None,
+    };
 }
