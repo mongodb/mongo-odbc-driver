@@ -5,8 +5,6 @@ pub(crate) mod odbc_uri;
 pub use functions::*;
 
 #[cfg(test)]
-mod driver_connect_tests;
-#[cfg(test)]
 mod env_attr_tests;
 #[cfg(test)]
 mod get_diag_rec_tests;
