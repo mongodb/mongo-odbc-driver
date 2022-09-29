@@ -133,10 +133,7 @@ pub mod simplified {
         }
 
         pub fn is_any(&self) -> bool {
-            match self {
-                Schema::Atomic(Atomic::Any) => true,
-                _ => false,
-            }
+            matches!(self, Schema::Atomic(Atomic::Any))
         }
     }
 
