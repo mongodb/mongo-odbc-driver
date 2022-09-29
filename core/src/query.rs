@@ -263,7 +263,7 @@ impl SqlGetResultSchemaResponse {
     }
 
     fn create_column_metadata(
-        current_db: &String,
+        _current_db: &String,
         datasource_name: String,
         field_name: String,
         field_schema: SimplifiedJsonSchema,
@@ -272,17 +272,12 @@ impl SqlGetResultSchemaResponse {
         let bson_type_info: BsonTypeInfo = field_schema.into();
 
         MongoColMetadata {
-            // For base_col_name and base_table_name, we do not have this
-            // information in sqlGetResultSchema, so this will always be
-            // empty string.
+            // For base_col_name, base_table_name, and catalog_name, we do
+            // not have this information in sqlGetResultSchema, so these will
+            // always be empty string for now.
             base_col_name: "".to_string(),
             base_table_name: "".to_string(),
-            // For catalog_name, we do not have this information in
-            // sqlGetResultSchema, so this will always be current_db. This
-            // is not correct for correct for fields from tables in other
-            // databases as part of cross-db lookups, but this is the best
-            // we can do for now.
-            catalog_name: current_db.clone(),
+            catalog_name: "".to_string(),
             display_size: bson_type_info.fixed_bytes_length,
             fixed_prec_scale: false,
             label: field_name.clone(),
