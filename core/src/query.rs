@@ -1,7 +1,10 @@
 use crate::bson_type_info::BsonTypeInfo;
 use crate::{
-    conn::MongoConnection, err::Result, json_schema, stmt::MongoStatement, BsonType, BsonTypeName,
-    Error, Items, Schema,
+    conn::MongoConnection,
+    err::Result,
+    json_schema::{self, simplified::ObjectSchema, BsonType, BsonTypeName, Items},
+    stmt::MongoStatement,
+    Error,
 };
 use bson::{doc, Bson, Document};
 use itertools::Itertools;
@@ -134,13 +137,6 @@ pub struct MongoColMetadata {
     pub is_updatable: bool,
 }
 
-#[derive(Clone, Debug)]
-pub enum ColumnNullability {
-    Nullable,
-    NoNulls,
-    Unknown,
-}
-
 // Struct representing the response for a sqlGetResultSchema command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 struct SqlGetResultSchemaResponse {
@@ -154,36 +150,6 @@ struct SqlGetResultSchemaResponse {
 struct VersionedJsonSchema {
     pub version: i32,
     pub json_schema: json_schema::Schema,
-}
-
-// A simplified JSON Schema, relative to the json_schema::Schema struct.
-// An instance of SimplifiedJsonSchema is semantically equivalent to its
-// corresponding json_schema::Schema, but with two main simplifications.
-// 1. The bson_type has to be a single type. If the json_schema::Schema
-// contains multiple bson_types, it is represented as an AnyOf.
-// 2. There are no nested AnyOfs.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
-enum SimplifiedJsonSchema {
-    Single(SingleJsonSchema),
-    AnyOf(BTreeSet<SingleJsonSchema>),
-}
-
-// Any non-AnyOf JsonSchema. This type enables SimplifiedJsonSchema to
-// disallow nested AnyOfs.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
-enum SingleJsonSchema {
-    Any,
-    Scalar(BsonTypeName),
-    Object(ObjectSchema),
-    Array(Box<SimplifiedJsonSchema>),
-}
-
-// A schema that validates Object type JSON values.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
-struct ObjectSchema {
-    properties: BTreeMap<String, SimplifiedJsonSchema>,
-    required: BTreeSet<String>,
-    additional_properties: bool,
 }
 
 impl SqlGetResultSchemaResponse {
@@ -208,7 +174,8 @@ impl SqlGetResultSchemaResponse {
     ///
     /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
     fn process_metadata(&self, current_db: &String) -> Result<Vec<MongoColMetadata>> {
-        let result_set_schema: SimplifiedJsonSchema = self.schema.json_schema.clone().try_into()?;
+        let result_set_schema: json_schema::simplified::Schema =
+            self.schema.json_schema.clone().try_into()?;
         let result_set_object_schema = result_set_schema.assert_datasource_schema()?;
 
         let sorted_datasource_object_schemas = result_set_object_schema
@@ -266,7 +233,7 @@ impl SqlGetResultSchemaResponse {
         _current_db: &String,
         datasource_name: String,
         field_name: String,
-        field_schema: SimplifiedJsonSchema,
+        field_schema: json_schema::simplified::Schema,
         is_nullable: ColumnNullability,
     ) -> MongoColMetadata {
         let bson_type_info: BsonTypeInfo = field_schema.into();
@@ -296,22 +263,11 @@ impl SqlGetResultSchemaResponse {
     }
 }
 
-impl SimplifiedJsonSchema {
-    /// A datasource schema must be an Object schema. Unlike Object schemata
-    /// in general, the properties field cannot be null.
-    fn assert_datasource_schema(&self) -> Result<&ObjectSchema> {
-        match self {
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Object(s)) => Ok(s),
-            _ => Err(Error::InvalidResultSetJsonSchema),
-        }
-    }
-
-    fn is_any(&self) -> bool {
-        match self {
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Any) => true,
-            _ => false,
-        }
-    }
+#[derive(Clone, Debug)]
+pub enum ColumnNullability {
+    Nullable,
+    NoNulls,
+    Unknown,
 }
 
 impl ObjectSchema {
@@ -332,7 +288,9 @@ impl ObjectSchema {
     ///     - If one of the component schemas in the AnyOf list is Null, it
     ///       is considered nullable
     ///     - Otherwise, its nullability depends on whether it is required
-    fn get_field_nullability(&self, field_name: String) -> Result<ColumnNullability> {
+    pub fn get_field_nullability(&self, field_name: String) -> Result<ColumnNullability> {
+        use json_schema::simplified::{Atomic, Schema};
+
         let required = self.required.contains(&field_name);
 
         let field_schema = self.properties.get(&field_name);
@@ -354,168 +312,21 @@ impl ObjectSchema {
 
         match field_schema.unwrap() {
             // Case 2: field is Any schema
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Any) => Ok(ColumnNullability::Nullable),
+            Schema::Atomic(Atomic::Any) => Ok(ColumnNullability::Nullable),
             // Case 3: field is scalar/array/object schema
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Scalar(BsonTypeName::Null)) => {
-                Ok(ColumnNullability::Nullable)
-            }
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Scalar(_))
-            | SimplifiedJsonSchema::Single(SingleJsonSchema::Array(_))
-            | SimplifiedJsonSchema::Single(SingleJsonSchema::Object(_)) => Ok(nullable),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::Null)) => Ok(ColumnNullability::Nullable),
+            Schema::Atomic(Atomic::Scalar(_))
+            | Schema::Atomic(Atomic::Array(_))
+            | Schema::Atomic(Atomic::Object(_)) => Ok(nullable),
             // Case 4: field is AnyOf schema
-            SimplifiedJsonSchema::AnyOf(any_of) => {
+            Schema::AnyOf(any_of) => {
                 for any_of_schema in any_of {
-                    if *any_of_schema == SingleJsonSchema::Scalar(BsonTypeName::Null) {
+                    if *any_of_schema == Atomic::Scalar(BsonTypeName::Null) {
                         return Ok(ColumnNullability::Nullable);
                     }
                 }
                 Ok(nullable)
             }
-        }
-    }
-}
-
-// Converts a deserialized json_schema::Schema into a SingleJsonSchema. The
-// SingleJsonSchema instance is semantically equivalent to the base schema
-// when the base schema represents any valid schema other than an AnyOf.
-// To convert a possible AnyOf base schema, use the TryFrom implementation
-// for SimplifiedJsonSchema.
-impl TryFrom<json_schema::Schema> for SingleJsonSchema {
-    type Error = Error;
-
-    fn try_from(schema: Schema) -> std::result::Result<Self, Self::Error> {
-        match schema {
-            json_schema::Schema {
-                bson_type: None,
-                properties: None,
-                required: None,
-                additional_properties: None,
-                items: None,
-                any_of: None,
-            } => Ok(SingleJsonSchema::Any),
-            json_schema::Schema {
-                bson_type: Some(bson_type),
-                properties,
-                required,
-                additional_properties,
-                items,
-                any_of: None,
-            } => match bson_type {
-                BsonType::Single(BsonTypeName::Array) => {
-                    Ok(SingleJsonSchema::Array(Box::new(match items {
-                        Some(Items::Single(s)) => SimplifiedJsonSchema::try_from(*s)?,
-                        // The multiple-schema variant of the `items`
-                        // field only asserts the schemas for the
-                        // array items at specified indexes, and
-                        // imposes no constraint on items at larger
-                        // indexes. As such, the only schema that can
-                        // describe all elements of the array is
-                        // `Any`.
-                        Some(Items::Multiple(_)) => {
-                            SimplifiedJsonSchema::Single(SingleJsonSchema::Any)
-                        }
-                        None => SimplifiedJsonSchema::Single(SingleJsonSchema::Any),
-                    })))
-                }
-                BsonType::Single(BsonTypeName::Object) => {
-                    Ok(SingleJsonSchema::Object(ObjectSchema {
-                        properties: properties
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|(prop, prop_schema)| {
-                                Ok((prop, SimplifiedJsonSchema::try_from(prop_schema)?))
-                            })
-                            .collect::<Result<_>>()?,
-                        required: required.unwrap_or_default().into_iter().collect(),
-                        additional_properties: additional_properties.unwrap_or(true),
-                    }))
-                }
-                BsonType::Single(t) => Ok(SingleJsonSchema::Scalar(t)),
-                BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema),
-            },
-            _ => Err(Error::InvalidResultSetJsonSchema),
-        }
-    }
-}
-
-// Converts a deserialized json_schema::Schema into a SimplifiedJsonSchema. The
-// SimplifiedJsonSchema instance is semantically equivalent to the base schema,
-// but bson_type has to be a single type otherwise the schema is represented as
-// an AnyOf.
-impl TryFrom<json_schema::Schema> for SimplifiedJsonSchema {
-    type Error = Error;
-
-    fn try_from(schema: Schema) -> std::result::Result<Self, Self::Error> {
-        match schema.clone() {
-            json_schema::Schema {
-                bson_type: None,
-                properties: None,
-                required: None,
-                additional_properties: None,
-                items: None,
-                any_of: None,
-            } => Ok(SimplifiedJsonSchema::Single(SingleJsonSchema::Any)),
-            json_schema::Schema {
-                bson_type: _bson_type,
-                properties: _properties,
-                required: _required,
-                additional_properties: _additional_properties,
-                items: _items,
-                any_of: None,
-            } => Ok(SimplifiedJsonSchema::Single(schema.try_into()?)),
-            json_schema::Schema {
-                bson_type: None,
-                properties: None,
-                required: None,
-                additional_properties: None,
-                items: None,
-                any_of: Some(any_of),
-            } => Ok(SimplifiedJsonSchema::AnyOf(
-                any_of
-                    .into_iter()
-                    .map(SingleJsonSchema::try_from)
-                    .collect::<Result<BTreeSet<SingleJsonSchema>>>()?,
-            )),
-            _ => Err(Error::InvalidResultSetJsonSchema),
-        }
-    }
-}
-
-impl From<SimplifiedJsonSchema> for BsonTypeInfo {
-    fn from(v: SimplifiedJsonSchema) -> Self {
-        match v {
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Any) => BsonTypeInfo::BSON,
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Scalar(t)) => t.into(),
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Object(_)) => BsonTypeInfo::OBJECT,
-            SimplifiedJsonSchema::Single(SingleJsonSchema::Array(_)) => BsonTypeInfo::ARRAY,
-            SimplifiedJsonSchema::AnyOf(_) => BsonTypeInfo::BSON,
-        }
-    }
-}
-
-impl From<BsonTypeName> for BsonTypeInfo {
-    fn from(v: BsonTypeName) -> Self {
-        match v {
-            BsonTypeName::Array => BsonTypeInfo::ARRAY,
-            BsonTypeName::Object => BsonTypeInfo::OBJECT,
-            BsonTypeName::Null => BsonTypeInfo::NULL,
-            BsonTypeName::String => BsonTypeInfo::STRING,
-            BsonTypeName::Int => BsonTypeInfo::INT,
-            BsonTypeName::Double => BsonTypeInfo::DOUBLE,
-            BsonTypeName::Long => BsonTypeInfo::LONG,
-            BsonTypeName::Decimal => BsonTypeInfo::DECIMAL,
-            BsonTypeName::BinData => BsonTypeInfo::BINDATA,
-            BsonTypeName::ObjectId => BsonTypeInfo::OBJECTID,
-            BsonTypeName::Bool => BsonTypeInfo::BOOL,
-            BsonTypeName::Date => BsonTypeInfo::DATE,
-            BsonTypeName::Regex => BsonTypeInfo::REGEX,
-            BsonTypeName::DbPointer => BsonTypeInfo::DBPOINTER,
-            BsonTypeName::Javascript => BsonTypeInfo::JAVASCRIPT,
-            BsonTypeName::Symbol => BsonTypeInfo::SYMBOL,
-            BsonTypeName::JavascriptWithScope => BsonTypeInfo::JAVASCRIPTWITHSCOPE,
-            BsonTypeName::Timestamp => BsonTypeInfo::TIMESTAMP,
-            BsonTypeName::MinKey => BsonTypeInfo::MINKEY,
-            BsonTypeName::MaxKey => BsonTypeInfo::MAXKEY,
         }
     }
 }
