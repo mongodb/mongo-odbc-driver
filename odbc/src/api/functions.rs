@@ -260,6 +260,11 @@ pub extern "C" fn SQLColAttributeW(
                 .as_ref()
                 .unwrap()
                 .get_resultset_metadata();
+            if column_number as usize > rs_metadata.len() {
+                MongoHandleRef::from(statement_handle)
+                    .add_diag_info(ODBCError::InvalidDescriptorIndex(column_number as usize));
+                return SqlReturn::ERROR;
+            }
             set_output_string(
                 &(*f)(&rs_metadata[(column_number - 1) as usize]),
                 character_attribute_ptr as *mut WChar,
@@ -281,6 +286,11 @@ pub extern "C" fn SQLColAttributeW(
             .as_ref()
             .unwrap()
             .get_resultset_metadata();
+        if column_number as usize > rs_metadata.len() {
+            MongoHandleRef::from(statement_handle)
+                .add_diag_info(ODBCError::InvalidDescriptorIndex(column_number as usize));
+            return SqlReturn::ERROR;
+        }
         unsafe {
             *numeric_attribute_ptr = (*f)(&rs_metadata[(column_number - 1) as usize]);
         }
