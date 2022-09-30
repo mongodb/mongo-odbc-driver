@@ -1175,9 +1175,10 @@ pub extern "C" fn SQLNumResultCols(
     let stmt_contents = stmt.read().unwrap();
     let mongo_statement = stmt_contents.mongo_statement.as_ref();
     if mongo_statement.is_none() {
-        MongoHandleRef::from(statement_handle)
-            .add_diag_info(ODBCError::NumColsOnUnexecutedStatement);
-        return SqlReturn::ERROR;
+        unsafe {
+            *column_count_ptr = 0;
+        }
+        return SqlReturn::SUCCESS;
     }
     unsafe {
         *column_count_ptr = mongo_statement.unwrap().get_resultset_metadata().len() as SmallInt;

@@ -34,11 +34,6 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     OptionValueChanged(&'static str, &'static str),
-    #[error(
-        "[{}][API] Attempted to retreive number of columns for unexecuted Statement",
-        VENDOR_IDENTIFIER
-    )]
-    NumColsOnUnexecutedStatement,
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
     Core(#[from] mongo_odbc_core::Error),
 }
@@ -58,7 +53,6 @@ impl ODBCError {
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
-            ODBCError::NumColsOnUnexecutedStatement => FUNCTION_SEQUENCE_ERROR,
         }
     }
 
@@ -74,8 +68,7 @@ impl ODBCError {
             | ODBCError::MissingDriverOrDSNProperty
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
-            | ODBCError::OptionValueChanged(_, _)
-            | ODBCError::NumColsOnUnexecutedStatement => 0,
+            | ODBCError::OptionValueChanged(_, _) => 0,
             ODBCError::Core(me) => me.code(),
         }
     }
