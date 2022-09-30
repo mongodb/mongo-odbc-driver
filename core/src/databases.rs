@@ -12,6 +12,10 @@ use bson::Bson;
 use lazy_static::lazy_static;
 
 lazy_static! {
+    // TODO: It isn't currently clear what the difference between collections and databases is since
+    // the ODBC standard does not have a SQLDatabases (or SQLCatalogs) call, just SQLTables
+    // and SQLColumns.
+    // Do we actually need both of these?
     static ref DATABASES_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new(
             "",
@@ -44,11 +48,67 @@ lazy_static! {
         MongoColMetadata::new(
             "",
             "".to_string(),
-            "TABLE_REMARKS".to_string(),
+            "REMARKS".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
             ColumnNullability::Nullable
         ),
     ];
+}
+
+mod unit {
+    #[test]
+    fn metadata_size() {
+        assert_eq!(5, super::DATABASES_METADATA.len());
+    }
+
+    #[test]
+    fn metadata_column_names() {
+        // These were generated straight from the docs (hence the - 1). This
+        // gives us assurance that the column names are all correct.
+        assert_eq!("TABLE_CAT", super::DATABASES_METADATA[1 - 1].col_name);
+        assert_eq!("TABLE_SCHEM", super::DATABASES_METADATA[2 - 1].col_name);
+        assert_eq!("TABLE_NAME", super::DATABASES_METADATA[3 - 1].col_name);
+        assert_eq!("TABLE_TYPE", super::DATABASES_METADATA[4 - 1].col_name);
+        assert_eq!("REMARKS", super::DATABASES_METADATA[5 - 1].col_name);
+    }
+
+    #[test]
+    fn metadata_column_types() {
+        // These were generated straight from the docs (hence the - 1).
+        assert_eq!("string", super::DATABASES_METADATA[1 - 1].type_name);
+        assert_eq!("string", super::DATABASES_METADATA[2 - 1].type_name);
+        assert_eq!("string", super::DATABASES_METADATA[3 - 1].type_name);
+        assert_eq!("string", super::DATABASES_METADATA[4 - 1].type_name);
+        assert_eq!("string", super::DATABASES_METADATA[5 - 1].type_name);
+    }
+
+    fn metadata_column_nullability() {
+        use crate::col_metadata::ColumnNullability;
+        // These were generated straight from the docs (hence the - 1).
+        assert_eq!(
+            ColumnNullability::Nullable,
+            super::DATABASES_METADATA[1 - 1].is_nullable
+        );
+        assert_eq!(
+            ColumnNullability::Nullable,
+            super::DATABASES_METADATA[2 - 1].is_nullable
+        );
+        // Docs do not say NoNulls, but there is no way the tale name can be null.
+        assert_eq!(
+            ColumnNullability::NoNulls,
+            super::DATABASES_METADATA[3 - 1].is_nullable
+        );
+        // The docs also do not say NoNulls, but they enumerate every possible value and
+        // NULL is not one of them.
+        assert_eq!(
+            ColumnNullability::NoNulls,
+            super::DATABASES_METADATA[4 - 1].is_nullable
+        );
+        assert_eq!(
+            ColumnNullability::Nullable,
+            super::DATABASES_METADATA[5 - 1].is_nullable
+        );
+    }
 }
 
 #[derive(Debug)]
