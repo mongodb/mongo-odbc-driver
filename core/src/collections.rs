@@ -35,14 +35,14 @@ lazy_static! {
             "".to_string(),
             "TABLE_NAME".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            ColumnNullability::NoNulls
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
-            "TABLE_TYPE".to_string(),
+            "COLUMN_NAME".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            ColumnNullability::NoNulls
         ),
         MongoColMetadata::new(
             "",

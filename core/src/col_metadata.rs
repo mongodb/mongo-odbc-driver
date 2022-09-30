@@ -1,6 +1,6 @@
 use crate::{json_schema::simplified::Schema, BsonTypeInfo};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ColumnNullability {
     Nullable,
     NoNulls,
