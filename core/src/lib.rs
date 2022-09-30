@@ -13,7 +13,7 @@ mod fields;
 pub use fields::MongoFields;
 mod col_metadata;
 mod json_schema;
-pub use col_metadata::MongoColMetadata;
+pub use col_metadata::{ColumnNullability, MongoColMetadata};
 mod query;
 pub use query::MongoQuery;
 mod stmt;

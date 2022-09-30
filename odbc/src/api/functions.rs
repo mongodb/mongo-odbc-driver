@@ -8,7 +8,7 @@ use crate::{
     },
     handles::definitions::*,
 };
-use mongo_odbc_core::{MongoConnection, MongoDatabases, MongoStatement};
+use mongo_odbc_core::{MongoColMetadata, MongoConnection, MongoDatabases, MongoStatement};
 use num_traits::FromPrimitive;
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
@@ -223,6 +223,19 @@ pub extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
 #[no_mangle]
 pub extern "C" fn SQLColAttribute(
     statement_handle: HStmt,
+    _column_number: USmallInt,
+    _field_identifier: Desc,
+    _character_attribute_ptr: Pointer,
+    _buffer_length: SmallInt,
+    _string_length_ptr: *mut SmallInt,
+    _numeric_attribute_ptr: *mut Len,
+) -> SqlReturn {
+    unsupported_function(MongoHandleRef::from(statement_handle), "SQLColAttribute")
+}
+
+#[no_mangle]
+pub extern "C" fn SQLColAttributeW(
+    statement_handle: HStmt,
     column_number: USmallInt,
     field_identifier: Desc,
     character_attribute_ptr: Pointer,
@@ -232,28 +245,110 @@ pub extern "C" fn SQLColAttribute(
 ) -> SqlReturn {
     let mongo_handle = MongoHandleRef::from(statement_handle);
     let stmt = must_be_valid!((*mongo_handle).as_statement());
+    let string_col_attr = |f: &dyn Fn(&MongoColMetadata) -> &str| {
+        let stmt_contents = stmt.read().unwrap();
+        if stmt_contents.mongo_statement.is_none() {
+            set_output_string(
+                "",
+                character_attribute_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            )
+        } else {
+            let rs_metadata = &stmt_contents
+                .mongo_statement
+                .as_ref()
+                .unwrap()
+                .get_resultset_metadata();
+            set_output_string(
+                &(*f)(&rs_metadata[(column_number - 1) as usize]),
+                character_attribute_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            )
+        }
+    };
+    let numeric_col_attr = |f: &dyn Fn(&MongoColMetadata) -> Len| {
+        let stmt_contents = stmt.read().unwrap();
+        if stmt_contents.mongo_statement.is_none() {
+            unsafe {
+                *numeric_attribute_ptr = 0 as Len;
+            }
+            return SqlReturn::SUCCESS;
+        }
+        let rs_metadata = stmt_contents
+            .mongo_statement
+            .as_ref()
+            .unwrap()
+            .get_resultset_metadata();
+        unsafe {
+            *numeric_attribute_ptr = (*f)(&rs_metadata[(column_number - 1) as usize]);
+        }
+        return SqlReturn::SUCCESS;
+    };
     match field_identifier {
         Desc::AutoUniqueValue => unsafe {
             *numeric_attribute_ptr = SqlBool::False as Len;
+            return SqlReturn::SUCCESS;
         },
+        Desc::Unnamed | Desc::Updatable => unsafe {
+            *numeric_attribute_ptr = 0 as Len;
+            return SqlReturn::SUCCESS;
+        },
+        Desc::Count => unsafe {
+            let stmt_contents = stmt.read().unwrap();
+            if stmt_contents.mongo_statement.is_none() {
+                *numeric_attribute_ptr = 0 as Len;
+                return SqlReturn::SUCCESS;
+            }
+            *numeric_attribute_ptr = stmt_contents
+                .mongo_statement
+                .as_ref()
+                .unwrap()
+                .get_resultset_metadata()
+                .len() as Len;
+            return SqlReturn::SUCCESS;
+        },
+        Desc::CaseSensitive => numeric_col_attr(&|x: &MongoColMetadata| {
+            (if x.type_name == "string" {
+                SqlBool::True
+            } else {
+                SqlBool::False
+            }) as Len
+        }),
+        Desc::DisplaySize => {
+            numeric_col_attr(&|x: &MongoColMetadata| x.display_size.unwrap_or(0) as Len)
+        }
+        Desc::FixedPrecScale => numeric_col_attr(&|x: &MongoColMetadata| x.fixed_prec_scale as Len),
+        Desc::Length => numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len),
+        Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.is_nullable as Len),
+        Desc::Precision => {
+            numeric_col_attr(&|x: &MongoColMetadata| x.precision.unwrap_or(0) as Len)
+        }
+        Desc::Scale => numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len),
+        Desc::Unsigned => numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len),
+        Desc::BaseColumnName => string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref()),
+        Desc::BaseTableName => string_col_attr(&|x: &MongoColMetadata| x.base_table_name.as_ref()),
+        Desc::CatalogName => string_col_attr(&|x: &MongoColMetadata| x.catalog_name.as_ref()),
+        Desc::ConciseType | Desc::Type => unimplemented!(),
+        Desc::Label => string_col_attr(&|x: &MongoColMetadata| x.label.as_ref()),
+        Desc::LiteralPrefix | Desc::LiteralSuffix | Desc::LocalTypeName | Desc::SchemaName => {
+            string_col_attr(&|_| "")
+        }
+        Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
+        Desc::TableName => string_col_attr(&|x: &MongoColMetadata| &x.table_name.as_ref()),
+        Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| &x.type_name.as_ref()),
         _ => {
             return SqlReturn::ERROR;
         }
     }
-    SqlReturn::SUCCESS
-}
 
-#[no_mangle]
-pub extern "C" fn SQLColAttributeW(
-    _statement_handle: HStmt,
-    _column_number: USmallInt,
-    _field_identifier: Desc,
-    _character_attribute_ptr: Pointer,
-    _buffer_length: SmallInt,
-    _string_length_ptr: *mut SmallInt,
-    _numeric_attribute_ptr: *mut Len,
-) -> SqlReturn {
-    unimplemented!()
+    //    pub fn set_output_string(
+    //        message: String,
+    //        output_ptr: *mut WChar,
+    //        buffer_len: usize,
+    //        text_length_ptr: *mut SmallInt,
+    //    ) -> SqlReturn {
 }
 
 #[no_mangle]
@@ -511,7 +606,7 @@ pub extern "C" fn SQLDriverConnectW(
     conn.write().unwrap().mongo_connection = Some(mongo_connection);
     let buffer_len = usize::try_from(buffer_length).unwrap();
     let sql_return = set_output_string(
-        odbc_uri_string,
+        &odbc_uri_string,
         out_connection_string,
         buffer_len,
         string_length_2,
@@ -1857,7 +1952,7 @@ mod util {
     /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
     pub fn set_output_string(
-        message: String,
+        message: &str,
         output_ptr: *mut WChar,
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
@@ -1909,8 +2004,9 @@ mod util {
             unsafe { *native_error_ptr = error.get_native_err_code() };
         }
         set_sql_state(error.get_sql_state(), state);
+        let message = format!("{}", error);
         set_output_string(
-            format!("{}", error),
+            &message,
             message_text,
             buffer_length as usize,
             text_length_ptr,

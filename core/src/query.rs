@@ -1,4 +1,3 @@
-use crate::bson_type_info::BsonTypeInfo;
 use crate::{
     col_metadata::{ColumnNullability, MongoColMetadata},
     conn::MongoConnection,

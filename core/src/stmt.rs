@@ -1,6 +1,5 @@
 use crate::{err::Result, MongoColMetadata};
 use bson::Bson;
-use lazy_static::lazy_static;
 use std::fmt::Debug;
 
 pub trait MongoStatement: Debug {
