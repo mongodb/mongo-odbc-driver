@@ -12,6 +12,7 @@ thiserror = "1"
 constants = { path = "../constants" }
 serde = { version = "1", features = ["derive"] }
 itertools = "0.10.4"
+lazy_static = "1.4.0"
 
 [dependencies.mongodb]
 version = "2.1"

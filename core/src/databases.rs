@@ -1,7 +1,55 @@
-use crate::conn::MongoConnection;
-use crate::err::Result;
-use crate::stmt::MongoStatement;
+use crate::{
+    col_metadata::{ColumnNullability, MongoColMetadata},
+    conn::MongoConnection,
+    err::Result,
+    json_schema::{
+        simplified::{Atomic, Schema},
+        BsonTypeName,
+    },
+    stmt::MongoStatement,
+};
 use bson::Bson;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref DATABASES_METADATA: Vec<MongoColMetadata> = vec![
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_CAT".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_SCHEM".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_NAME".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_TYPE".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_REMARKS".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+    ];
+}
 
 #[derive(Debug)]
 pub struct MongoDatabases {
@@ -61,8 +109,7 @@ impl MongoStatement for MongoDatabases {
         }
     }
 
-    // Get the number of columns in the result set for this MongoDatabases Statement.
-    fn num_result_columns(&self) -> u16 {
-        1
+    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+        &*DATABASES_METADATA
     }
 }

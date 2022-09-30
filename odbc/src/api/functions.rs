@@ -1180,7 +1180,7 @@ pub extern "C" fn SQLNumResultCols(
         return SqlReturn::ERROR;
     }
     unsafe {
-        *column_count_ptr = mongo_statement.unwrap().num_result_columns() as SmallInt;
+        *column_count_ptr = mongo_statement.unwrap().get_resultset_metadata().len() as SmallInt;
     }
     SqlReturn::SUCCESS
 }

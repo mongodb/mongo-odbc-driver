@@ -11,3 +11,4 @@ pub const OPTION_CHANGED: &str = "01S02";
 pub const UNABLE_TO_CONNECT: &str = "08001";
 pub const INVALID_DESCRIPTOR_INDEX: &str = "07009";
 pub const INVALID_CURSOR_STATE: &str = "24000";
+pub const FUNCTION_SEQUENCE_ERROR: &str = "HY010";

@@ -1,4 +1,4 @@
-use crate::err::Result;
+use crate::{err::Result, MongoColMetadata};
 use bson::Bson;
 use std::fmt::Debug;
 
@@ -9,6 +9,6 @@ pub trait MongoStatement: Debug {
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row has not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>>;
-    // Return the number of columns in the result set for this Statement.
-    fn num_result_columns(&self) -> u16;
+    // Return a reference to the ResultSetMetadata for this Statement.
+    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata>;
 }

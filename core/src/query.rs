@@ -1,5 +1,6 @@
 use crate::bson_type_info::BsonTypeInfo;
 use crate::{
+    col_metadata::{ColumnNullability, MongoColMetadata},
     conn::MongoConnection,
     err::Result,
     json_schema::{self, simplified::ObjectSchema, BsonTypeName},
@@ -69,11 +70,6 @@ impl MongoQuery {
         })
     }
 
-    // Return the number of fields/columns in the resultset
-    fn _get_col_count(&self) -> u32 {
-        self.resultset_metadata.len() as u32
-    }
-
     // Get the metadata for the column with the given index.
     fn get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
         self.resultset_metadata
@@ -104,35 +100,9 @@ impl MongoStatement for MongoQuery {
         Ok(column.cloned())
     }
 
-    // Get the number of columns in the result set for this Query Statement.
-    fn num_result_columns(&self) -> u16 {
-        self.resultset_metadata.len() as u16
+    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+        &self.resultset_metadata
     }
-}
-
-// Metadata information for a column of the result set.
-// The information is to be used when reporting columns information from
-// SQLColAttribute or SQLDescribeCol and when converting the data to the targeted C type.
-#[derive(Clone, Debug)]
-pub struct MongoColMetadata {
-    pub base_col_name: String,
-    pub base_table_name: String,
-    pub catalog_name: String,
-    pub display_size: Option<u16>,
-    pub fixed_prec_scale: bool,
-    pub label: String,
-    pub length: Option<u16>,
-    pub col_name: String,
-    pub is_nullable: ColumnNullability,
-    pub octet_length: Option<u16>,
-    pub precision: Option<u16>,
-    pub scale: Option<u16>,
-    pub is_searchable: bool,
-    pub table_name: String,
-    // BSON type name
-    pub type_name: String,
-    pub is_unsigned: bool,
-    pub is_updatable: bool,
 }
 
 // Struct representing the response for a sqlGetResultSchema command.
@@ -214,7 +184,7 @@ impl SqlGetResultSchemaResponse {
                     let field_nullability =
                         datasource_schema.get_field_nullability(field_name.clone())?;
 
-                    Ok(Self::create_column_metadata(
+                    Ok(MongoColMetadata::new(
                         current_db,
                         datasource_name,
                         field_name,
@@ -226,46 +196,6 @@ impl SqlGetResultSchemaResponse {
             // 4. Collect as a Vec.
             .collect::<Result<Vec<MongoColMetadata>>>()
     }
-
-    fn create_column_metadata(
-        _current_db: &str,
-        datasource_name: String,
-        field_name: String,
-        field_schema: json_schema::simplified::Schema,
-        is_nullable: ColumnNullability,
-    ) -> MongoColMetadata {
-        let bson_type_info: BsonTypeInfo = field_schema.into();
-
-        MongoColMetadata {
-            // For base_col_name, base_table_name, and catalog_name, we do
-            // not have this information in sqlGetResultSchema, so these will
-            // always be empty string for now.
-            base_col_name: "".to_string(),
-            base_table_name: "".to_string(),
-            catalog_name: "".to_string(),
-            display_size: bson_type_info.fixed_bytes_length,
-            fixed_prec_scale: false,
-            label: field_name.clone(),
-            length: bson_type_info.fixed_bytes_length,
-            col_name: field_name,
-            is_nullable,
-            octet_length: bson_type_info.octet_length,
-            precision: bson_type_info.precision,
-            scale: bson_type_info.scale,
-            is_searchable: bson_type_info.searchable,
-            table_name: datasource_name,
-            type_name: bson_type_info.type_name.to_string(),
-            is_unsigned: false,
-            is_updatable: false,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum ColumnNullability {
-    Nullable,
-    NoNulls,
-    Unknown,
 }
 
 impl ObjectSchema {

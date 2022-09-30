@@ -1,9 +1,58 @@
-use crate::conn::MongoConnection;
-use crate::err::Result;
-use crate::stmt::MongoStatement;
+use crate::{
+    bson_type_info::BsonTypeInfo,
+    col_metadata::{self, ColumnNullability, MongoColMetadata},
+    conn::MongoConnection,
+    err::Result,
+    json_schema::{
+        simplified::{Atomic, Schema},
+        BsonTypeName,
+    },
+    stmt::MongoStatement,
+};
 use bson::Bson;
+use lazy_static::lazy_static;
 use mongodb::results::CollectionSpecification;
 use mongodb::sync::Cursor;
+
+lazy_static! {
+    static ref COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_CAT".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_SCHEM".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_NAME".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_TYPE".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_REMARKS".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+    ];
+}
 
 #[derive(Debug)]
 struct CollectionsForDb {
@@ -52,8 +101,7 @@ impl MongoStatement for MongoCollections {
         unimplemented!()
     }
 
-    // Get the number of columns in the result set for this MongoCollections Statement.
-    fn num_result_columns(&self) -> u16 {
-        3
+    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+        &*COLLECTIONS_METADATA
     }
 }
