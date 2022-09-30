@@ -1,6 +1,6 @@
 use constants::{
     INVALID_ATTR_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED,
-    UNABLE_TO_CONNECT, VENDOR_IDENTIFIER,
+    UNABLE_TO_CONNECT, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -13,6 +13,11 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     UnsupportedDriverConnectOption(String),
+    #[error(
+        "[{}][API] The field descriptor value {0} is not supported",
+        VENDOR_IDENTIFIER
+    )]
+    UnsupportedFieldDescriptor(String),
     #[error("[{}][API] Invalid Uri: {0}", VENDOR_IDENTIFIER)]
     InvalidUriFormat(String),
     #[error("[{}][API] Invalid handle type, expected {0}", VENDOR_IDENTIFIER)]
@@ -53,6 +58,7 @@ impl ODBCError {
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
+            ODBCError::UnsupportedFieldDescriptor(_) => UNSUPPORTED_FIELD_DESCRIPTOR,
         }
     }
 
@@ -68,7 +74,8 @@ impl ODBCError {
             | ODBCError::MissingDriverOrDSNProperty
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
-            | ODBCError::OptionValueChanged(_, _) => 0,
+            | ODBCError::OptionValueChanged(_, _)
+            | ODBCError::UnsupportedFieldDescriptor(_) => 0,
             ODBCError::Core(me) => me.code(),
         }
     }

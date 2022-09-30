@@ -316,39 +316,54 @@ pub extern "C" fn SQLColAttributeW(
                 SqlBool::False
             }) as Len
         }),
+        Desc::BaseColumnName => string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref()),
+        Desc::BaseTableName => string_col_attr(&|x: &MongoColMetadata| x.base_table_name.as_ref()),
+        Desc::CatalogName => string_col_attr(&|x: &MongoColMetadata| x.catalog_name.as_ref()),
         Desc::DisplaySize => {
             numeric_col_attr(&|x: &MongoColMetadata| x.display_size.unwrap_or(0) as Len)
         }
         Desc::FixedPrecScale => numeric_col_attr(&|x: &MongoColMetadata| x.fixed_prec_scale as Len),
-        Desc::Length => numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len),
-        Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.is_nullable as Len),
-        Desc::Precision => {
-            numeric_col_attr(&|x: &MongoColMetadata| x.precision.unwrap_or(0) as Len)
-        }
-        Desc::Scale => numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len),
-        Desc::Unsigned => numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len),
-        Desc::BaseColumnName => string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref()),
-        Desc::BaseTableName => string_col_attr(&|x: &MongoColMetadata| x.base_table_name.as_ref()),
-        Desc::CatalogName => string_col_attr(&|x: &MongoColMetadata| x.catalog_name.as_ref()),
-        Desc::ConciseType | Desc::Type => unimplemented!(),
         Desc::Label => string_col_attr(&|x: &MongoColMetadata| x.label.as_ref()),
+        Desc::Length => numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len),
         Desc::LiteralPrefix | Desc::LiteralSuffix | Desc::LocalTypeName | Desc::SchemaName => {
             string_col_attr(&|_| "")
         }
         Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
-        Desc::TableName => string_col_attr(&|x: &MongoColMetadata| &x.table_name.as_ref()),
-        Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| &x.type_name.as_ref()),
-        _ => {
+        Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.is_nullable as Len),
+        Desc::OctetLength => {
+            numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
+        }
+        Desc::Precision => {
+            numeric_col_attr(&|x: &MongoColMetadata| x.precision.unwrap_or(0) as Len)
+        }
+        Desc::Scale => numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len),
+        Desc::Searchable => numeric_col_attr(&|x: &MongoColMetadata| x.is_searchable as Len),
+        Desc::TableName => string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref()),
+        Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref()),
+        Desc::Unsigned => numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len),
+        desc @ (Desc::ConciseType
+        | Desc::Type
+        | Desc::OctetLengthPtr
+        | Desc::DatetimeIntervalCode
+        | Desc::IndicatorPtr
+        | Desc::DataPtr
+        | Desc::AllocType
+        | Desc::ArraySize
+        | Desc::ArrayStatusPtr
+        | Desc::BindOffsetPtr
+        | Desc::BindType
+        | Desc::DatetimeIntervalPrecision
+        | Desc::MaximumScale
+        | Desc::MinimumScale
+        | Desc::NumPrecRadix
+        | Desc::ParameterType
+        | Desc::RowsProcessedPtr
+        | Desc::RowVer) => {
+            mongo_handle
+                .add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!("{:?}", desc)));
             return SqlReturn::ERROR;
         }
     }
-
-    //    pub fn set_output_string(
-    //        message: String,
-    //        output_ptr: *mut WChar,
-    //        buffer_len: usize,
-    //        text_length_ptr: *mut SmallInt,
-    //    ) -> SqlReturn {
 }
 
 #[no_mangle]
