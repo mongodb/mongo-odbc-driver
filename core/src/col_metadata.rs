@@ -43,8 +43,7 @@ impl MongoColMetadata {
         field_schema: Schema,
         is_nullable: ColumnNullability,
     ) -> MongoColMetadata {
-        let bson_type_info: BsonTypeInfo = (&field_schema).into();
-        let sql_type: SqlDataType = (&field_schema).into();
+        let bson_type_info: BsonTypeInfo = field_schema.into();
 
         MongoColMetadata {
             // For base_col_name, base_table_name, and catalog_name, we do
@@ -65,7 +64,7 @@ impl MongoColMetadata {
             is_searchable: bson_type_info.searchable,
             table_name: datasource_name,
             type_name: bson_type_info.type_name.to_string(),
-            sql_type,
+            sql_type: bson_type_info.sql_type,
             is_unsigned: false,
             is_updatable: false,
         }
