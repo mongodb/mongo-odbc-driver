@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 mod bson_type_info;
-pub use bson_type_info::BsonTypeInfo;
+use bson_type_info::BsonTypeInfo;
 mod collections;
 pub use collections::MongoCollections;
 mod conn;
@@ -18,11 +18,3 @@ mod query;
 pub use query::MongoQuery;
 mod stmt;
 pub use stmt::MongoStatement;
-
-#[cfg(test)]
-mod unit {
-    #[test]
-    fn it_works() {
-        // no-op
-    }
-}

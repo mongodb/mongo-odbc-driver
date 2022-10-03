@@ -19,7 +19,7 @@ lazy_static! {
             "".to_string(),
             "TABLE_CAT".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            ColumnNullability::NoNulls
         ),
         MongoColMetadata::new(
             "",
@@ -149,135 +149,302 @@ lazy_static! {
 mod unit {
     #[test]
     fn metadata_size() {
-        assert_eq!(18, super::FIELDS_METADATA.len());
+        use crate::{fields::MongoFields, stmt::MongoStatement};
+        assert_eq!(18, MongoFields::empty().get_resultset_metadata().len());
     }
 
     #[test]
     fn metadata_column_names() {
+        use crate::{fields::MongoFields, stmt::MongoStatement};
         // These were generated straight from the docs (hence the - 1). This
         // gives us assurance that the column names are all correct.
-        assert_eq!("TABLE_CAT", super::FIELDS_METADATA[1 - 1].col_name);
-        assert_eq!("TABLE_SCHEM", super::FIELDS_METADATA[2 - 1].col_name);
-        assert_eq!("TABLE_NAME", super::FIELDS_METADATA[3 - 1].col_name);
-        assert_eq!("COLUMN_NAME", super::FIELDS_METADATA[4 - 1].col_name);
-        assert_eq!("DATA_TYPE", super::FIELDS_METADATA[5 - 1].col_name);
-        assert_eq!("TYPE_NAME", super::FIELDS_METADATA[6 - 1].col_name);
-        assert_eq!("COLUMN_SIZE", super::FIELDS_METADATA[7 - 1].col_name);
-        assert_eq!("BUFFER_LENGTH", super::FIELDS_METADATA[8 - 1].col_name);
-        assert_eq!("DECIMAL_DIGITS", super::FIELDS_METADATA[9 - 1].col_name);
-        assert_eq!("NUM_PREC_RADIX", super::FIELDS_METADATA[10 - 1].col_name);
-        assert_eq!("NULLABLE", super::FIELDS_METADATA[11 - 1].col_name);
-        assert_eq!("REMARKS", super::FIELDS_METADATA[12 - 1].col_name);
-        assert_eq!("COLUMN_DEF", super::FIELDS_METADATA[13 - 1].col_name);
-        assert_eq!("SQL_DATA_TYPE", super::FIELDS_METADATA[14 - 1].col_name);
-        assert_eq!("SQL_DATETIME_SUB", super::FIELDS_METADATA[15 - 1].col_name);
-        assert_eq!("CHAR_OCTET_LENGTH", super::FIELDS_METADATA[16 - 1].col_name);
-        assert_eq!("ORDINAL_POSITION", super::FIELDS_METADATA[17 - 1].col_name);
-        assert_eq!("IS_NULLABLE", super::FIELDS_METADATA[18 - 1].col_name);
+        assert_eq!(
+            "TABLE_CAT",
+            MongoFields::empty().get_col_metadata(1).unwrap().col_name
+        );
+        assert_eq!(
+            "TABLE_SCHEM",
+            MongoFields::empty().get_col_metadata(2).unwrap().col_name
+        );
+        assert_eq!(
+            "TABLE_NAME",
+            MongoFields::empty().get_col_metadata(3).unwrap().col_name
+        );
+        assert_eq!(
+            "COLUMN_NAME",
+            MongoFields::empty().get_col_metadata(4).unwrap().col_name
+        );
+        assert_eq!(
+            "DATA_TYPE",
+            MongoFields::empty().get_col_metadata(5).unwrap().col_name
+        );
+        assert_eq!(
+            "TYPE_NAME",
+            MongoFields::empty().get_col_metadata(6).unwrap().col_name
+        );
+        assert_eq!(
+            "COLUMN_SIZE",
+            MongoFields::empty().get_col_metadata(7).unwrap().col_name
+        );
+        assert_eq!(
+            "BUFFER_LENGTH",
+            MongoFields::empty().get_col_metadata(8).unwrap().col_name
+        );
+        assert_eq!(
+            "DECIMAL_DIGITS",
+            MongoFields::empty().get_col_metadata(9).unwrap().col_name
+        );
+        assert_eq!(
+            "NUM_PREC_RADIX",
+            MongoFields::empty().get_col_metadata(10).unwrap().col_name
+        );
+        assert_eq!(
+            "NULLABLE",
+            MongoFields::empty().get_col_metadata(11).unwrap().col_name
+        );
+        assert_eq!(
+            "REMARKS",
+            MongoFields::empty().get_col_metadata(12).unwrap().col_name
+        );
+        assert_eq!(
+            "COLUMN_DEF",
+            MongoFields::empty().get_col_metadata(13).unwrap().col_name
+        );
+        assert_eq!(
+            "SQL_DATA_TYPE",
+            MongoFields::empty().get_col_metadata(14).unwrap().col_name
+        );
+        assert_eq!(
+            "SQL_DATETIME_SUB",
+            MongoFields::empty().get_col_metadata(15).unwrap().col_name
+        );
+        assert_eq!(
+            "CHAR_OCTET_LENGTH",
+            MongoFields::empty().get_col_metadata(16).unwrap().col_name
+        );
+        assert_eq!(
+            "ORDINAL_POSITION",
+            MongoFields::empty().get_col_metadata(17).unwrap().col_name
+        );
+        assert_eq!(
+            "IS_NULLABLE",
+            MongoFields::empty().get_col_metadata(18).unwrap().col_name
+        );
     }
 
     #[test]
     fn metadata_column_types() {
+        use crate::{fields::MongoFields, stmt::MongoStatement};
         // These were generated straight from the docs (hence the - 1). This
         // gives us assurance that the types are all correct (note that we do not have smallint, so
         // we use int, however).
-        assert_eq!("string", super::FIELDS_METADATA[1 - 1].type_name);
-        assert_eq!("string", super::FIELDS_METADATA[2 - 1].type_name);
-        assert_eq!("string", super::FIELDS_METADATA[3 - 1].type_name);
-        assert_eq!("string", super::FIELDS_METADATA[4 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[5 - 1].type_name);
-        assert_eq!("string", super::FIELDS_METADATA[6 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[7 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[8 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[9 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[10 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[11 - 1].type_name);
-        assert_eq!("string", super::FIELDS_METADATA[12 - 1].type_name);
-        assert_eq!("string", super::FIELDS_METADATA[13 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[14 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[15 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[16 - 1].type_name);
-        assert_eq!("int", super::FIELDS_METADATA[17 - 1].type_name);
-        assert_eq!("string", super::FIELDS_METADATA[18 - 1].type_name);
+        assert_eq!(
+            "string",
+            MongoFields::empty().get_col_metadata(1).unwrap().type_name
+        );
+        assert_eq!(
+            "string",
+            MongoFields::empty().get_col_metadata(2).unwrap().type_name
+        );
+        assert_eq!(
+            "string",
+            MongoFields::empty().get_col_metadata(3).unwrap().type_name
+        );
+        assert_eq!(
+            "string",
+            MongoFields::empty().get_col_metadata(4).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(5).unwrap().type_name
+        );
+        assert_eq!(
+            "string",
+            MongoFields::empty().get_col_metadata(6).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(7).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(8).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(9).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(10).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(11).unwrap().type_name
+        );
+        assert_eq!(
+            "string",
+            MongoFields::empty().get_col_metadata(12).unwrap().type_name
+        );
+        assert_eq!(
+            "string",
+            MongoFields::empty().get_col_metadata(13).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(14).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(15).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(16).unwrap().type_name
+        );
+        assert_eq!(
+            "int",
+            MongoFields::empty().get_col_metadata(17).unwrap().type_name
+        );
+        assert_eq!(
+            "string",
+            MongoFields::empty().get_col_metadata(18).unwrap().type_name
+        );
     }
 
+    #[test]
     fn metadata_column_nullability() {
         use crate::col_metadata::ColumnNullability;
+        use crate::{fields::MongoFields, stmt::MongoStatement};
         // These were generated straight from the docs (hence the - 1). This
         // gives us assurance that the types are all correct (note that we do not have smallint, so
         // we use int, however).
         assert_eq!(
-            ColumnNullability::Nullable,
-            super::FIELDS_METADATA[1 - 1].is_nullable
+            ColumnNullability::NoNulls,
+            MongoFields::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[2 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::FIELDS_METADATA[3 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::FIELDS_METADATA[4 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::FIELDS_METADATA[5 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::FIELDS_METADATA[6 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(6)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[7 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(7)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[8 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(8)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[9 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(9)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[10 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(10)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::FIELDS_METADATA[11 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(11)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[12 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(12)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[13 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(13)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::FIELDS_METADATA[14 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(14)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[15 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(15)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::FIELDS_METADATA[16 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(16)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::FIELDS_METADATA[17 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(17)
+                .unwrap()
+                .is_nullable
         );
         // This one deviates from the docs as mentioned.
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::FIELDS_METADATA[18 - 1].is_nullable
+            MongoFields::empty()
+                .get_col_metadata(18)
+                .unwrap()
+                .is_nullable
         );
     }
 }
@@ -312,6 +479,12 @@ impl MongoFields {
         _collection_name_filter: &str,
     ) -> Self {
         unimplemented!()
+    }
+
+    fn empty() -> MongoFields {
+        MongoFields {
+            current_field_list: None,
+        }
     }
 }
 

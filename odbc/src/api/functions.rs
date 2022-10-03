@@ -248,30 +248,27 @@ pub extern "C" fn SQLColAttributeW(
     let string_col_attr = |f: &dyn Fn(&MongoColMetadata) -> &str| {
         let stmt_contents = stmt.read().unwrap();
         if stmt_contents.mongo_statement.is_none() {
-            set_output_string(
+            return set_output_string(
                 "",
                 character_attribute_ptr as *mut WChar,
                 buffer_length as usize,
                 string_length_ptr,
-            )
-        } else {
-            let rs_metadata = &stmt_contents
-                .mongo_statement
-                .as_ref()
-                .unwrap()
-                .get_resultset_metadata();
-            if column_number as usize > rs_metadata.len() {
-                MongoHandleRef::from(statement_handle)
-                    .add_diag_info(ODBCError::InvalidDescriptorIndex(column_number as usize));
-                return SqlReturn::ERROR;
-            }
-            set_output_string(
-                &(*f)(&rs_metadata[(column_number - 1) as usize]),
-                character_attribute_ptr as *mut WChar,
-                buffer_length as usize,
-                string_length_ptr,
-            )
+            );
         }
+        let col_metadata = stmt_contents
+            .mongo_statement
+            .as_ref()
+            .unwrap()
+            .get_col_metadata(column_number);
+        set_output_string(
+            &(*f)(odbc_unwrap!(
+                col_metadata,
+                MongoHandleRef::from(statement_handle)
+            )),
+            character_attribute_ptr as *mut WChar,
+            buffer_length as usize,
+            string_length_ptr,
+        )
     };
     let numeric_col_attr = |f: &dyn Fn(&MongoColMetadata) -> Len| {
         let stmt_contents = stmt.read().unwrap();
@@ -281,18 +278,16 @@ pub extern "C" fn SQLColAttributeW(
             }
             return SqlReturn::SUCCESS;
         }
-        let rs_metadata = stmt_contents
+        let col_metadata = stmt_contents
             .mongo_statement
             .as_ref()
             .unwrap()
-            .get_resultset_metadata();
-        if column_number as usize > rs_metadata.len() {
-            MongoHandleRef::from(statement_handle)
-                .add_diag_info(ODBCError::InvalidDescriptorIndex(column_number as usize));
-            return SqlReturn::ERROR;
-        }
+            .get_col_metadata(column_number);
         unsafe {
-            *numeric_attribute_ptr = (*f)(&rs_metadata[(column_number - 1) as usize]);
+            *numeric_attribute_ptr = (*f)(odbc_unwrap!(
+                col_metadata,
+                MongoHandleRef::from(statement_handle)
+            ));
         }
         return SqlReturn::SUCCESS;
     };
@@ -350,8 +345,9 @@ pub extern "C" fn SQLColAttributeW(
         Desc::Searchable => numeric_col_attr(&|x: &MongoColMetadata| x.is_searchable as Len),
         Desc::TableName => string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref()),
         Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref()),
-        Desc::Type => numeric_col_attr(&|x: &MongoColMetadata| x.sql_type.0 as Len),
-        Desc::ConciseType => numeric_col_attr(&|x: &MongoColMetadata| x.sql_type.0 as Len),
+        Desc::Type | Desc::ConciseType => {
+            numeric_col_attr(&|x: &MongoColMetadata| x.sql_type.0 as Len)
+        }
         Desc::Unsigned => numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len),
         desc @ (Desc::OctetLengthPtr
         | Desc::DatetimeIntervalCode

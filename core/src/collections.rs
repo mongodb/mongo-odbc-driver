@@ -20,7 +20,7 @@ lazy_static! {
             "".to_string(),
             "TABLE_CAT".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            ColumnNullability::NoNulls
         ),
         MongoColMetadata::new(
             "",
@@ -56,55 +56,135 @@ lazy_static! {
 mod unit {
     #[test]
     fn metadata_size() {
-        assert_eq!(5, super::COLLECTIONS_METADATA.len());
+        use crate::{collections::MongoCollections, stmt::MongoStatement};
+        assert_eq!(5, MongoCollections::empty().get_resultset_metadata().len());
     }
 
     #[test]
     fn metadata_column_names() {
+        use crate::{collections::MongoCollections, stmt::MongoStatement};
         // These were generated straight from the docs (hence the - 1). This
         // gives us assurance that the column names are all correct.
-        assert_eq!("TABLE_CAT", super::COLLECTIONS_METADATA[1 - 1].col_name);
-        assert_eq!("TABLE_SCHEM", super::COLLECTIONS_METADATA[2 - 1].col_name);
-        assert_eq!("TABLE_NAME", super::COLLECTIONS_METADATA[3 - 1].col_name);
-        assert_eq!("TABLE_TYPE", super::COLLECTIONS_METADATA[4 - 1].col_name);
-        assert_eq!("REMARKS", super::COLLECTIONS_METADATA[5 - 1].col_name);
+        assert_eq!(
+            "TABLE_CAT",
+            MongoCollections::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_SCHEM",
+            MongoCollections::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_NAME",
+            MongoCollections::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_TYPE",
+            MongoCollections::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "REMARKS",
+            MongoCollections::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .col_name
+        );
     }
 
     #[test]
     fn metadata_column_types() {
-        // These were generated straight from the docs (hence the - 1).
-        assert_eq!("string", super::COLLECTIONS_METADATA[1 - 1].type_name);
-        assert_eq!("string", super::COLLECTIONS_METADATA[2 - 1].type_name);
-        assert_eq!("string", super::COLLECTIONS_METADATA[3 - 1].type_name);
-        assert_eq!("string", super::COLLECTIONS_METADATA[4 - 1].type_name);
-        assert_eq!("string", super::COLLECTIONS_METADATA[5 - 1].type_name);
-    }
-
-    fn metadata_column_nullability() {
-        use crate::col_metadata::ColumnNullability;
+        use crate::{collections::MongoCollections, stmt::MongoStatement};
         // These were generated straight from the docs (hence the - 1).
         assert_eq!(
-            ColumnNullability::Nullable,
-            super::COLLECTIONS_METADATA[1 - 1].is_nullable
+            "string",
+            MongoCollections::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoCollections::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoCollections::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoCollections::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoCollections::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .type_name
+        );
+    }
+
+    #[test]
+    fn metadata_column_nullability() {
+        use crate::col_metadata::ColumnNullability;
+        use crate::{collections::MongoCollections, stmt::MongoStatement};
+        // These were generated straight from the docs (hence the - 1).
+        assert_eq!(
+            ColumnNullability::NoNulls,
+            MongoCollections::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::COLLECTIONS_METADATA[2 - 1].is_nullable
+            MongoCollections::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .is_nullable
         );
         // Docs do not say NoNulls, but there is no way the tale name can be null.
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::COLLECTIONS_METADATA[3 - 1].is_nullable
+            MongoCollections::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .is_nullable
         );
         // The docs also do not say NoNulls, but they enumerate every possible value and
         // NULL is not one of them.
         assert_eq!(
             ColumnNullability::NoNulls,
-            super::COLLECTIONS_METADATA[4 - 1].is_nullable
+            MongoCollections::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .is_nullable
         );
         assert_eq!(
             ColumnNullability::Nullable,
-            super::COLLECTIONS_METADATA[5 - 1].is_nullable
+            MongoCollections::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .is_nullable
         );
     }
 }
@@ -136,6 +216,13 @@ impl MongoCollections {
         _collection_name_filter: &str,
     ) -> Self {
         unimplemented!()
+    }
+
+    fn empty() -> MongoCollections {
+        MongoCollections {
+            current_collection: None,
+            current_collection_list: None,
+        }
     }
 }
 

@@ -68,13 +68,6 @@ impl MongoQuery {
             current: None,
         })
     }
-
-    // Get the metadata for the column with the given index.
-    fn get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
-        self.resultset_metadata
-            .get(col_index as usize)
-            .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)
-    }
 }
 
 impl MongoStatement for MongoQuery {

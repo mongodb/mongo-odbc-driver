@@ -5,7 +5,7 @@ use constants::{
 };
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum ODBCError {
     #[error("[{}][API] The feature {0} is not implemented", VENDOR_IDENTIFIER)]
     Unimplemented(&'static str),
@@ -20,7 +20,7 @@ pub enum ODBCError {
     )]
     UnsupportedFieldDescriptor(String),
     #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
-    InvalidDescriptorIndex(usize),
+    InvalidDescriptorIndex(u16),
     #[error("[{}][API] Invalid Uri: {0}", VENDOR_IDENTIFIER)]
     InvalidUriFormat(String),
     #[error("[{}][API] Invalid handle type, expected {0}", VENDOR_IDENTIFIER)]
@@ -43,7 +43,7 @@ pub enum ODBCError {
     )]
     OptionValueChanged(&'static str, &'static str),
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
-    Core(#[from] mongo_odbc_core::Error),
+    Core(mongo_odbc_core::Error),
 }
 
 pub type Result<T> = std::result::Result<T, ODBCError>;
@@ -82,6 +82,24 @@ impl ODBCError {
             | ODBCError::InvalidDescriptorIndex(_)
             | ODBCError::UnsupportedFieldDescriptor(_) => 0,
             ODBCError::Core(me) => me.code(),
+        }
+    }
+}
+
+impl From<mongo_odbc_core::Error> for ODBCError {
+    fn from(err: mongo_odbc_core::Error) -> Self {
+        match err {
+            mongo_odbc_core::Error::ColIndexOutOfBounds(u) => ODBCError::InvalidDescriptorIndex(u),
+            e => ODBCError::Core(e),
+        }
+    }
+}
+
+impl From<&mongo_odbc_core::Error> for ODBCError {
+    fn from(err: &mongo_odbc_core::Error) -> Self {
+        match err {
+            mongo_odbc_core::Error::ColIndexOutOfBounds(u) => ODBCError::InvalidDescriptorIndex(*u),
+            e => ODBCError::Core(e.clone()),
         }
     }
 }
