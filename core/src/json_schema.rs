@@ -1,4 +1,5 @@
 use crate::BsonTypeInfo;
+use odbc_sys::SqlDataType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -58,8 +59,8 @@ pub enum Items {
     Multiple(Vec<Schema>),
 }
 
-impl From<BsonTypeName> for BsonTypeInfo {
-    fn from(v: BsonTypeName) -> Self {
+impl From<&BsonTypeName> for BsonTypeInfo {
+    fn from(v: &BsonTypeName) -> Self {
         match v {
             BsonTypeName::Array => BsonTypeInfo::ARRAY,
             BsonTypeName::Object => BsonTypeInfo::OBJECT,
@@ -85,7 +86,36 @@ impl From<BsonTypeName> for BsonTypeInfo {
     }
 }
 
+impl From<&BsonTypeName> for SqlDataType {
+    fn from(v: &BsonTypeName) -> Self {
+        match v {
+            BsonTypeName::Array
+            | BsonTypeName::Object
+            | BsonTypeName::Null
+            | BsonTypeName::ObjectId
+            | BsonTypeName::Regex
+            | BsonTypeName::DbPointer
+            | BsonTypeName::Javascript
+            | BsonTypeName::JavascriptWithScope
+            | BsonTypeName::Symbol
+            | BsonTypeName::Timestamp
+            | BsonTypeName::MinKey
+            | BsonTypeName::MaxKey => SqlDataType::UNKNOWN_TYPE,
+            BsonTypeName::String => SqlDataType::VARCHAR,
+            BsonTypeName::Int => SqlDataType::INTEGER,
+            BsonTypeName::Double => SqlDataType::DOUBLE,
+            BsonTypeName::Long => SqlDataType::EXT_BIG_INT,
+            BsonTypeName::Decimal => SqlDataType::DECIMAL,
+            BsonTypeName::BinData => SqlDataType::EXT_VAR_BINARY,
+            BsonTypeName::Bool => SqlDataType::EXT_BIT,
+            BsonTypeName::Date => SqlDataType::TIMESTAMP,
+        }
+    }
+}
+
 pub mod simplified {
+    use odbc_sys::SqlDataType;
+
     use crate::{
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
@@ -237,14 +267,26 @@ pub mod simplified {
         }
     }
 
-    impl From<Schema> for BsonTypeInfo {
-        fn from(v: Schema) -> Self {
+    impl From<&Schema> for BsonTypeInfo {
+        fn from(v: &Schema) -> Self {
             match v {
                 Schema::Atomic(Atomic::Any) => BsonTypeInfo::BSON,
                 Schema::Atomic(Atomic::Scalar(t)) => t.into(),
                 Schema::Atomic(Atomic::Object(_)) => BsonTypeInfo::OBJECT,
                 Schema::Atomic(Atomic::Array(_)) => BsonTypeInfo::ARRAY,
                 Schema::AnyOf(_) => BsonTypeInfo::BSON,
+            }
+        }
+    }
+
+    impl From<&Schema> for SqlDataType {
+        fn from(v: &Schema) -> Self {
+            match v {
+                Schema::Atomic(Atomic::Scalar(t)) => t.into(),
+                Schema::Atomic(Atomic::Any) => SqlDataType::UNKNOWN_TYPE,
+                Schema::Atomic(Atomic::Object(_)) => SqlDataType::UNKNOWN_TYPE,
+                Schema::Atomic(Atomic::Array(_)) => SqlDataType::UNKNOWN_TYPE,
+                Schema::AnyOf(_) => SqlDataType::UNKNOWN_TYPE,
             }
         }
     }

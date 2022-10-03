@@ -1,4 +1,5 @@
 use crate::{json_schema::simplified::Schema, BsonTypeInfo};
+use odbc_sys::SqlDataType;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ColumnNullability {
@@ -28,6 +29,8 @@ pub struct MongoColMetadata {
     pub table_name: String,
     // BSON type name
     pub type_name: String,
+    // Sql type integer
+    pub sql_type: SqlDataType,
     pub is_unsigned: bool,
     pub is_updatable: bool,
 }
@@ -40,7 +43,8 @@ impl MongoColMetadata {
         field_schema: Schema,
         is_nullable: ColumnNullability,
     ) -> MongoColMetadata {
-        let bson_type_info: BsonTypeInfo = field_schema.into();
+        let bson_type_info: BsonTypeInfo = (&field_schema).into();
+        let sql_type: SqlDataType = (&field_schema).into();
 
         MongoColMetadata {
             // For base_col_name, base_table_name, and catalog_name, we do
@@ -61,6 +65,7 @@ impl MongoColMetadata {
             is_searchable: bson_type_info.searchable,
             table_name: datasource_name,
             type_name: bson_type_info.type_name.to_string(),
+            sql_type,
             is_unsigned: false,
             is_updatable: false,
         }

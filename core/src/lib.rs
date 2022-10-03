@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 mod bson_type_info;
-use bson_type_info::BsonTypeInfo;
+pub use bson_type_info::BsonTypeInfo;
 mod collections;
 pub use collections::MongoCollections;
 mod conn;

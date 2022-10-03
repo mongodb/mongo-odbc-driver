@@ -350,10 +350,10 @@ pub extern "C" fn SQLColAttributeW(
         Desc::Searchable => numeric_col_attr(&|x: &MongoColMetadata| x.is_searchable as Len),
         Desc::TableName => string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref()),
         Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref()),
+        Desc::Type => numeric_col_attr(&|x: &MongoColMetadata| x.sql_type.0 as Len),
+        Desc::ConciseType => numeric_col_attr(&|x: &MongoColMetadata| x.sql_type.0 as Len),
         Desc::Unsigned => numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len),
-        desc @ (Desc::ConciseType
-        | Desc::Type
-        | Desc::OctetLengthPtr
+        desc @ (Desc::OctetLengthPtr
         | Desc::DatetimeIntervalCode
         | Desc::IndicatorPtr
         | Desc::DataPtr
