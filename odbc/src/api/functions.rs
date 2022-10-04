@@ -270,6 +270,7 @@ pub extern "C" fn SQLColAttributeW(
                 );
             }
         }
+        // unfortunately, we cannot use odbc_unwrap! on the value because it causes a deadlock.
         mongo_handle.add_diag_info(ODBCError::InvalidDescriptorIndex(column_number));
         SqlReturn::ERROR
     };
@@ -296,6 +297,7 @@ pub extern "C" fn SQLColAttributeW(
                 return SqlReturn::SUCCESS;
             }
         }
+        // unfortunately, we cannot use odbc_unwrap! on the value because it causes a deadlock.
         mongo_handle.add_diag_info(ODBCError::InvalidDescriptorIndex(column_number));
         SqlReturn::ERROR
     };
@@ -1939,7 +1941,7 @@ pub extern "C" fn SQLTablesW(
     SqlReturn::SUCCESS
 }
 
-mod util {
+pub mod util {
     use crate::{api::errors::ODBCError, handles::definitions::MongoHandle};
     use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
     use std::{cmp::min, ptr::copy_nonoverlapping};

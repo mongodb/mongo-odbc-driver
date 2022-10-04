@@ -210,10 +210,47 @@ mod unit {
     // test_supported_attributes tests SQLColAttributeW with every
     // supported col attribute value.
     #[test]
-    fn test_supported_attributes() {}
-
-    // test_unsupported_attributes tests SQLColAttributeW with every
-    // unsupported col attribute value.
-    #[test]
-    fn test_unsupported_attributes() {}
+    fn test_string_field_attributes() {
+        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
+        let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        let col_index = 3; //TABLE_NAME
+        for (desc, expected) in [
+            (Desc::BaseColumnName, ""),
+            (Desc::BaseTableName, ""),
+            (Desc::CatalogName, ""),
+            (Desc::Label, "TABLE_NAME"),
+            (Desc::LiteralPrefix, ""),
+            (Desc::LiteralSuffix, ""),
+            (Desc::Name, "TABLE_NAME"),
+            (Desc::TableName, ""),
+            (Desc::TypeName, "string"),
+        ] {
+            let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
+            let buffer_length: SmallInt = 100;
+            let out_length = &mut 10;
+            let numeric_attr_ptr = &mut 10;
+            // test string attributes
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLColAttributeW(
+                    mongo_handle as *mut _,
+                    col_index,
+                    desc,
+                    char_buffer,
+                    buffer_length,
+                    out_length,
+                    numeric_attr_ptr,
+                )
+            );
+            assert_eq!(expected.len() as i16, *out_length);
+            assert_eq!(
+                expected,
+                crate::api::functions::util::input_wtext_to_string(
+                    char_buffer as *const _,
+                    *out_length as usize
+                )
+            );
+        }
+    }
 }
