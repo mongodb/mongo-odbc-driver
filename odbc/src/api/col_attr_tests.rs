@@ -155,14 +155,15 @@ mod unit {
     fn test_index_out_of_bounds() {
         let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
         stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        let mut i = 0;
         for desc in [
             // string descriptor
             Desc::TypeName,
             // numeric descriptor
             Desc::Type,
         ] {
-            for col_index in [0, 20] {
+            for col_index in [0, 30] {
                 let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
                 let buffer_length: SmallInt = 100;
                 let out_length = &mut 10;
@@ -171,7 +172,7 @@ mod unit {
                 assert_eq!(
                     SqlReturn::ERROR,
                     SQLColAttributeW(
-                        stmt_handle as *mut _,
+                        mongo_handle as *mut _,
                         col_index,
                         desc,
                         char_buffer,
@@ -184,6 +185,24 @@ mod unit {
                 assert_eq!(10, *out_length);
                 // numeric_attr_ptr should still be 10 since no numeric value was requested.
                 assert_eq!(10, *numeric_attr_ptr);
+                unsafe {
+                    assert_eq!(
+                        format!(
+                            "[MongoDB][API] The field index {} is out of bounds",
+                            col_index,
+                        ),
+                        format!(
+                            "{}",
+                            (*mongo_handle)
+                                .as_statement()
+                                .unwrap()
+                                .read()
+                                .unwrap()
+                                .errors[i]
+                        )
+                    );
+                }
+                i += 1;
             }
         }
     }
