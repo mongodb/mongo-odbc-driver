@@ -16,6 +16,9 @@ pub trait MongoStatement: Debug {
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata>;
     // get_col_metadata gets the metadata for a given column, 1-indexed as per the ODBC spec.
     fn get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
+        if col_index == 0 {
+            return Err(Error::ColIndexOutOfBounds(0));
+        }
         self.get_resultset_metadata()
             .get((col_index - 1) as usize)
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)

@@ -217,7 +217,7 @@ impl MongoDatabases {
         }
     }
 
-    fn empty() -> MongoDatabases {
+    pub fn empty() -> MongoDatabases {
         MongoDatabases {
             database_names: vec![],
             current_db_index: 0,

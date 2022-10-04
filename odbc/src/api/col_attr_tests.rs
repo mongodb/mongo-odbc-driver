@@ -2,6 +2,7 @@ use crate::{
     handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW,
 };
+use mongo_odbc_core::MongoFields;
 use odbc_sys::{Desc, SmallInt, SqlReturn};
 use std::sync::RwLock;
 
@@ -17,7 +18,7 @@ mod unit {
             StatementState::Allocated,
         )));
 
-        for desc in &[
+        for desc in [
             Desc::BaseColumnName,
             Desc::BaseTableName,
             Desc::CatalogName,
@@ -38,7 +39,7 @@ mod unit {
                 SQLColAttributeW(
                     stmt_handle as *mut _,
                     0,
-                    *desc,
+                    desc,
                     char_buffer,
                     buffer_length,
                     out_length,
@@ -59,8 +60,10 @@ mod unit {
             StatementState::Allocated,
         )));
 
-        for desc in &[
+        for desc in [
+            Desc::AutoUniqueValue,
             Desc::CaseSensitive,
+            Desc::Count,
             Desc::DisplaySize,
             Desc::FixedPrecScale,
             Desc::Length,
@@ -71,6 +74,8 @@ mod unit {
             Desc::Searchable,
             Desc::Type,
             Desc::ConciseType,
+            Desc::Unnamed,
+            Desc::Updatable,
             Desc::Unsigned,
         ] {
             let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
@@ -83,7 +88,7 @@ mod unit {
                 SQLColAttributeW(
                     stmt_handle as *mut _,
                     0,
-                    *desc,
+                    desc,
                     char_buffer,
                     buffer_length,
                     out_length,
@@ -104,7 +109,7 @@ mod unit {
             StatementState::Allocated,
         )));
 
-        for desc in &[
+        for desc in [
             Desc::OctetLengthPtr,
             Desc::DatetimeIntervalCode,
             Desc::IndicatorPtr,
@@ -132,7 +137,7 @@ mod unit {
                 SQLColAttributeW(
                     stmt_handle as *mut _,
                     0,
-                    *desc,
+                    desc,
                     char_buffer,
                     buffer_length,
                     out_length,
@@ -147,7 +152,41 @@ mod unit {
     }
 
     #[test]
-    fn test_index_out_of_bounds() {}
+    fn test_index_out_of_bounds() {
+        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        for desc in [
+            // string descriptor
+            Desc::TypeName,
+            // numeric descriptor
+            Desc::Type,
+        ] {
+            for col_index in [0, 1] {
+                let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
+                let buffer_length: SmallInt = 100;
+                let out_length = &mut 10;
+                let numeric_attr_ptr = &mut 10;
+                // test string attributes
+                assert_eq!(
+                    SqlReturn::ERROR,
+                    SQLColAttributeW(
+                        stmt_handle as *mut _,
+                        col_index,
+                        desc,
+                        char_buffer,
+                        buffer_length,
+                        out_length,
+                        numeric_attr_ptr,
+                    )
+                );
+                // out_length should still be 10 since no string value was requested.
+                assert_eq!(10, *out_length);
+                // numeric_attr_ptr should still be 10 since no numeric value was requested.
+                assert_eq!(10, *numeric_attr_ptr);
+            }
+        }
+    }
 
     // test_supported_attributes tests SQLColAttributeW with every
     // supported col attribute value.

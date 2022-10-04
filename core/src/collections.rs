@@ -218,7 +218,7 @@ impl MongoCollections {
         unimplemented!()
     }
 
-    fn empty() -> MongoCollections {
+    pub fn empty() -> MongoCollections {
         MongoCollections {
             current_collection: None,
             current_collection_list: None,

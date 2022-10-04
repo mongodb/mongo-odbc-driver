@@ -481,7 +481,7 @@ impl MongoFields {
         unimplemented!()
     }
 
-    fn empty() -> MongoFields {
+    pub fn empty() -> MongoFields {
         MongoFields {
             current_field_list: None,
         }

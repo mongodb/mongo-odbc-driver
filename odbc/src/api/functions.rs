@@ -1009,15 +1009,15 @@ pub extern "C" fn SQLGetDiagRecW(
     match handle_type {
         HandleType::Env => {
             let env = unsafe_must_be_env!(mongo_handle);
-            get_error(&(*env).read().unwrap().errors)
+            get_error(&(*env).read().unwrap().errors.read().unwrap())
         }
         HandleType::Dbc => {
             let dbc = unsafe_must_be_conn!(mongo_handle);
-            get_error(&(*dbc).read().unwrap().errors)
+            get_error(&(*dbc).read().unwrap().errors.read().unwrap())
         }
         HandleType::Stmt => {
             let stmt = unsafe_must_be_stmt!(mongo_handle);
-            get_error(&(*stmt).read().unwrap().errors)
+            get_error(&(*stmt).read().unwrap().errors.read().unwrap())
         }
         HandleType::Desc => unimplemented!(),
     }
