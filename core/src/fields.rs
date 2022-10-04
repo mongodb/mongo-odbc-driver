@@ -314,9 +314,8 @@ mod unit {
     fn metadata_column_nullability() {
         use crate::col_metadata::ColumnNullability;
         use crate::{fields::MongoFields, stmt::MongoStatement};
-        // These were generated straight from the docs (hence the - 1). This
-        // gives us assurance that the types are all correct (note that we do not have smallint, so
-        // we use int, however).
+        // This gives us assurance that the types are all correct (note
+        // that we do not have smallint, so we use int, however).
         assert_eq!(
             ColumnNullability::NoNulls,
             MongoFields::empty()
