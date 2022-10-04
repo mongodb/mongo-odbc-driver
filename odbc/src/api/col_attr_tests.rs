@@ -7,6 +7,8 @@ use odbc_sys::{Desc, SmallInt, SqlReturn};
 use std::sync::RwLock;
 
 mod unit {
+    use odbc_sys::SqlDataType;
+
     use super::*;
     // test unallocated_statement tests SQLColAttributeW when the mongo_statement inside
     // of the statement handle has not been allocated (before an execute or tables function
@@ -207,8 +209,7 @@ mod unit {
         }
     }
 
-    // test_supported_attributes tests SQLColAttributeW with every
-    // supported col attribute value.
+    // check the fields column for all the string attributes
     #[test]
     fn test_string_field_attributes() {
         let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
@@ -251,6 +252,52 @@ mod unit {
                     *out_length as usize
                 )
             );
+        }
+    }
+
+    // check the fields column for all the numeric attributes
+    #[test]
+    fn test_numeric_field_attributes() {
+        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
+        let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        let col_index = 3; //TABLE_NAME
+        for (desc, expected) in [
+            (Desc::AutoUniqueValue, 0isize),
+            (Desc::Unnamed, 0),
+            (Desc::Updatable, 0),
+            (Desc::Count, 18),
+            (Desc::CaseSensitive, 1),
+            (Desc::DisplaySize, 0),
+            (Desc::FixedPrecScale, 0),
+            (Desc::Length, 0),
+            (Desc::Nullable, 1),
+            (Desc::OctetLength, 0),
+            (Desc::Precision, 0),
+            (Desc::Scale, 0),
+            (Desc::Searchable, 1),
+            (Desc::Type, SqlDataType::VARCHAR.0 as isize),
+            (Desc::ConciseType, SqlDataType::VARCHAR.0 as isize),
+            (Desc::Unsigned, 0),
+        ] {
+            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+            let buffer_length: SmallInt = 20;
+            let out_length = &mut 10;
+            let numeric_attr_ptr = &mut 10;
+            // test string attributes
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLColAttributeW(
+                    mongo_handle as *mut _,
+                    col_index,
+                    desc,
+                    char_buffer,
+                    buffer_length,
+                    out_length,
+                    numeric_attr_ptr,
+                )
+            );
+            assert_eq!(expected, *numeric_attr_ptr);
         }
     }
 }
