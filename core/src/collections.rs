@@ -104,7 +104,6 @@ mod unit {
     #[test]
     fn metadata_column_types() {
         use crate::{collections::MongoCollections, stmt::MongoStatement};
-        // These were generated straight from the docs (hence the - 1).
         assert_eq!(
             "string",
             MongoCollections::empty()
