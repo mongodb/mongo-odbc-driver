@@ -226,8 +226,8 @@ mod unit {
             (Desc::TableName, ""),
             (Desc::TypeName, "string"),
         ] {
-            let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
-            let buffer_length: SmallInt = 100;
+            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 100])) as *mut _;
+            let buffer_length: SmallInt = 50;
             let out_length = &mut 10;
             let numeric_attr_ptr = &mut 10;
             // test string attributes
