@@ -234,9 +234,8 @@ mod unit {
     #[test]
     fn metadata_column_types() {
         use crate::{fields::MongoFields, stmt::MongoStatement};
-        // These were generated straight from the docs (hence the - 1). This
-        // gives us assurance that the types are all correct (note that we do not have smallint, so
-        // we use int, however).
+        // This gives us assurance that the types are all correct (note
+        // that we do not have smallint, so we use int, however).
         assert_eq!(
             "string",
             MongoFields::empty().get_col_metadata(1).unwrap().type_name
