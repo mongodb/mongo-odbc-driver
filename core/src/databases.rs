@@ -1,7 +1,189 @@
-use crate::conn::MongoConnection;
-use crate::err::Result;
-use crate::stmt::MongoStatement;
+use crate::{
+    col_metadata::{ColumnNullability, MongoColMetadata},
+    conn::MongoConnection,
+    err::Result,
+    json_schema::{
+        simplified::{Atomic, Schema},
+        BsonTypeName,
+    },
+    stmt::MongoStatement,
+};
 use bson::Bson;
+
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref DATABASES_METADATA: Vec<MongoColMetadata> = vec![
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_CAT".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::NoNulls
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_SCHEM".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_NAME".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_TYPE".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "REMARKS".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            ColumnNullability::Nullable
+        ),
+    ];
+}
+
+mod unit {
+    #[test]
+    fn metadata_size() {
+        use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        assert_eq!(5, MongoDatabases::empty().get_resultset_metadata().len());
+    }
+
+    #[test]
+    fn metadata_column_names() {
+        use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        // This gives us assurance that the column names are all correct.
+        assert_eq!(
+            "TABLE_CAT",
+            MongoDatabases::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_SCHEM",
+            MongoDatabases::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_NAME",
+            MongoDatabases::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_TYPE",
+            MongoDatabases::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "REMARKS",
+            MongoDatabases::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .col_name
+        );
+    }
+
+    #[test]
+    fn metadata_column_types() {
+        use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .type_name
+        );
+    }
+
+    #[test]
+    fn metadata_column_nullability() {
+        use crate::col_metadata::ColumnNullability;
+        use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        assert_eq!(
+            ColumnNullability::NoNulls,
+            MongoDatabases::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .is_nullable
+        );
+        assert_eq!(
+            ColumnNullability::Nullable,
+            MongoDatabases::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .is_nullable
+        );
+        // Docs do not say NoNulls, but there is no way the tale name can be null.
+        assert_eq!(
+            ColumnNullability::Nullable,
+            MongoDatabases::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .is_nullable
+        );
+        // The docs also do not say NoNulls, but they enumerate every possible value and
+        // NULL is not one of them.
+        assert_eq!(
+            ColumnNullability::Nullable,
+            MongoDatabases::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .is_nullable
+        );
+        assert_eq!(
+            ColumnNullability::Nullable,
+            MongoDatabases::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .is_nullable
+        );
+    }
+}
 
 #[derive(Debug)]
 pub struct MongoDatabases {
@@ -28,6 +210,13 @@ impl MongoDatabases {
             .unwrap();
         MongoDatabases {
             database_names,
+            current_db_index: 0,
+        }
+    }
+
+    pub fn empty() -> MongoDatabases {
+        MongoDatabases {
+            database_names: vec![],
             current_db_index: 0,
         }
     }
@@ -59,5 +248,9 @@ impl MongoStatement for MongoDatabases {
             // and the SQL_ATTR_USE_BOOKMARKS statement attribute was set to SQL_UB_OFF
             // Throw error 07009
         }
+    }
+
+    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+        &*DATABASES_METADATA
     }
 }

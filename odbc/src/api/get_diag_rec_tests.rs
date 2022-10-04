@@ -19,29 +19,33 @@ mod unit {
             let text_length_ptr = &mut 0;
             let native_err_ptr = &mut 0;
 
-            unsafe { (*handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers")) }
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetDiagRecW(
-                    handle_type,
-                    handle as *mut _,
-                    1,
-                    sql_state,
-                    native_err_ptr,
-                    message_text,
-                    60, // Some number >= 57
-                    text_length_ptr,
-                )
-            );
-            assert_eq!(UNIMPLEMENTED_FUNC, unsafe {
-                String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
-            });
-            assert_eq!(ERROR_MESSAGE, unsafe {
-                String::from_utf16(&*(message_text as *const [u16; 57])).unwrap()
-            });
-            // Exclude the number of characters required for the null terminator
-            assert_eq!(56, *text_length_ptr);
-            assert_eq!(0, *native_err_ptr);
+            unsafe {
+                (*handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers"));
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLGetDiagRecW(
+                        handle_type,
+                        handle as *mut _,
+                        1,
+                        sql_state,
+                        native_err_ptr,
+                        message_text,
+                        60, // Some number >= 57
+                        text_length_ptr,
+                    )
+                );
+                assert_eq!(
+                    UNIMPLEMENTED_FUNC,
+                    String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
+                );
+                assert_eq!(
+                    ERROR_MESSAGE,
+                    String::from_utf16(&*(message_text as *const [u16; 57])).unwrap()
+                );
+                // Exclude the number of characters required for the null terminator
+                assert_eq!(56, *text_length_ptr);
+                assert_eq!(0, *native_err_ptr);
+            }
         }
 
         let env_handle: *mut _ =
@@ -71,46 +75,48 @@ mod unit {
         let text_length_ptr = &mut 0;
         let native_err_ptr = &mut 0;
 
-        unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers")) }
-        // Buffer is too small to hold the entire error message and the null terminator
-        // (0 < length < 57)
-        assert_eq!(
-            SqlReturn::SUCCESS_WITH_INFO,
-            SQLGetDiagRecW(
-                HandleType::Env,
-                env_handle as *mut _,
-                1,
-                sql_state,
-                native_err_ptr,
-                message_text,
-                15,
-                text_length_ptr
-            )
-        );
-        assert_eq!(
-            "[MongoDB][API]\0",
-            String::from_utf16(unsafe { &*(message_text as *const [u16; 15]) }).unwrap()
-        );
-        // Error message string where some characters are composed of more than one byte.
-        // 1 < RecNumber =< number of diagnostic records.
-        unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDriv✐𑜲")) }
-        assert_eq!(
-            SqlReturn::SUCCESS,
-            SQLGetDiagRecW(
-                HandleType::Env,
-                env_handle as *mut _,
-                2,
-                sql_state,
-                native_err_ptr,
-                message_text,
-                57,
-                text_length_ptr
-            )
-        );
-        assert_eq!(
-            "[MongoDB][API] The feature SQLDriv✐𑜲 is not implemented\0",
-            String::from_utf16(unsafe { &*(message_text as *const [u16; 57]) }).unwrap()
-        );
+        unsafe {
+            (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers"));
+            // Buffer is too small to hold the entire error message and the null terminator
+            // (0 < length < 57)
+            assert_eq!(
+                SqlReturn::SUCCESS_WITH_INFO,
+                SQLGetDiagRecW(
+                    HandleType::Env,
+                    env_handle as *mut _,
+                    1,
+                    sql_state,
+                    native_err_ptr,
+                    message_text,
+                    15,
+                    text_length_ptr
+                )
+            );
+            assert_eq!(
+                "[MongoDB][API]\0",
+                String::from_utf16(&*(message_text as *const [u16; 15])).unwrap()
+            );
+            // Error message string where some characters are composed of more than one byte.
+            // 1 < RecNumber =< number of diagnostic records.
+            (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDriv✐𑜲"));
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetDiagRecW(
+                    HandleType::Env,
+                    env_handle as *mut _,
+                    2,
+                    sql_state,
+                    native_err_ptr,
+                    message_text,
+                    57,
+                    text_length_ptr
+                )
+            );
+            assert_eq!(
+                "[MongoDB][API] The feature SQLDriv✐𑜲 is not implemented\0",
+                String::from_utf16(&*(message_text as *const [u16; 57])).unwrap()
+            );
+        }
     }
 
     #[test]
@@ -124,48 +130,50 @@ mod unit {
         let text_length_ptr = &mut 0;
         let native_err_ptr = &mut 0;
 
-        unsafe { (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers")) }
-        // Buffer length < 0
-        assert_eq!(
-            SqlReturn::ERROR,
-            SQLGetDiagRecW(
-                HandleType::Env,
-                env_handle as *mut _,
-                1,
-                sql_state,
-                native_err_ptr,
-                message_text,
-                -1,
-                text_length_ptr
-            )
-        );
-        // Record number <= 0
-        assert_eq!(
-            SqlReturn::ERROR,
-            SQLGetDiagRecW(
-                HandleType::Env,
-                env_handle as *mut _,
-                0,
-                sql_state,
-                native_err_ptr,
-                message_text,
-                57,
-                text_length_ptr
-            )
-        );
-        // Record number > number of diagnostic records
-        assert_eq!(
-            SqlReturn::NO_DATA,
-            SQLGetDiagRecW(
-                HandleType::Env,
-                env_handle as *mut _,
-                3,
-                sql_state,
-                native_err_ptr,
-                message_text,
-                5,
-                text_length_ptr
-            )
-        );
+        unsafe {
+            (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers"));
+            // Buffer length < 0
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLGetDiagRecW(
+                    HandleType::Env,
+                    env_handle as *mut _,
+                    1,
+                    sql_state,
+                    native_err_ptr,
+                    message_text,
+                    -1,
+                    text_length_ptr
+                )
+            );
+            // Record number <= 0
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLGetDiagRecW(
+                    HandleType::Env,
+                    env_handle as *mut _,
+                    0,
+                    sql_state,
+                    native_err_ptr,
+                    message_text,
+                    57,
+                    text_length_ptr
+                )
+            );
+            // Record number > number of diagnostic records
+            assert_eq!(
+                SqlReturn::NO_DATA,
+                SQLGetDiagRecW(
+                    HandleType::Env,
+                    env_handle as *mut _,
+                    3,
+                    sql_state,
+                    native_err_ptr,
+                    message_text,
+                    5,
+                    text_length_ptr
+                )
+            );
+        }
     }
 }

@@ -1072,7 +1072,9 @@ dependencies = [
  "bson",
  "constants",
  "itertools",
+ "lazy_static",
  "mongodb",
+ "odbc-sys",
  "serde",
  "thiserror",
 ]

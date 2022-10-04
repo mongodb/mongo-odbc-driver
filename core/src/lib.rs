@@ -11,16 +11,10 @@ mod err;
 pub use err::{Error, Result};
 mod fields;
 pub use fields::MongoFields;
+mod col_metadata;
 mod json_schema;
+pub use col_metadata::{ColumnNullability, MongoColMetadata};
 mod query;
-pub use query::{MongoColMetadata, MongoQuery};
+pub use query::MongoQuery;
 mod stmt;
 pub use stmt::MongoStatement;
-
-#[cfg(test)]
-mod unit {
-    #[test]
-    fn it_works() {
-        // no-op
-    }
-}
