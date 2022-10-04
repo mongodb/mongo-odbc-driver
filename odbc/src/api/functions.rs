@@ -1978,11 +1978,14 @@ mod util {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        assert!(!message.is_empty());
         unsafe {
             if output_ptr.is_null() {
                 if !text_length_ptr.is_null() {
                     *text_length_ptr = 0 as SmallInt;
+                } else {
+                    // If the output_ptr is NULL, we should still return the length of the message.
+                    let message_u16 = message.encode_utf16().collect::<Vec<u16>>();
+                    *text_length_ptr = message_u16.len() as SmallInt;
                 }
                 return SqlReturn::SUCCESS_WITH_INFO;
             }
