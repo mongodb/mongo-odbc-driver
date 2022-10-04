@@ -243,53 +243,61 @@ pub extern "C" fn SQLColAttributeW(
     string_length_ptr: *mut SmallInt,
     numeric_attribute_ptr: *mut Len,
 ) -> SqlReturn {
-    let mongo_handle = MongoHandleRef::from(statement_handle);
-    let stmt = must_be_valid!((*mongo_handle).as_statement());
     let string_col_attr = |f: &dyn Fn(&MongoColMetadata) -> &str| {
-        let stmt_contents = stmt.read().unwrap();
-        if stmt_contents.mongo_statement.is_none() {
-            return set_output_string(
-                "",
-                character_attribute_ptr as *mut WChar,
-                buffer_length as usize,
-                string_length_ptr,
-            );
+        let mongo_handle = MongoHandleRef::from(statement_handle);
+        let stmt = must_be_valid!((*mongo_handle).as_statement());
+        {
+            let stmt_contents = stmt.read().unwrap();
+            if stmt_contents.mongo_statement.is_none() {
+                return set_output_string(
+                    "",
+                    character_attribute_ptr as *mut WChar,
+                    buffer_length as usize,
+                    string_length_ptr,
+                );
+            }
+            let col_metadata = stmt_contents
+                .mongo_statement
+                .as_ref()
+                .unwrap()
+                .get_col_metadata(column_number);
+            if col_metadata.is_ok() {
+                return set_output_string(
+                    &(*f)(col_metadata.unwrap()),
+                    character_attribute_ptr as *mut WChar,
+                    buffer_length as usize,
+                    string_length_ptr,
+                );
+            }
         }
-        let col_metadata = stmt_contents
-            .mongo_statement
-            .as_ref()
-            .unwrap()
-            .get_col_metadata(column_number);
-        set_output_string(
-            &(*f)(odbc_unwrap!(
-                col_metadata,
-                MongoHandleRef::from(statement_handle)
-            )),
-            character_attribute_ptr as *mut WChar,
-            buffer_length as usize,
-            string_length_ptr,
-        )
+        mongo_handle.add_diag_info(ODBCError::InvalidDescriptorIndex(column_number));
+        SqlReturn::ERROR
     };
     let numeric_col_attr = |f: &dyn Fn(&MongoColMetadata) -> Len| {
-        let stmt_contents = stmt.read().unwrap();
-        if stmt_contents.mongo_statement.is_none() {
-            unsafe {
-                *numeric_attribute_ptr = 0 as Len;
+        let mongo_handle = MongoHandleRef::from(statement_handle);
+        let stmt = must_be_valid!((*mongo_handle).as_statement());
+        {
+            let stmt_contents = stmt.read().unwrap();
+            if stmt_contents.mongo_statement.is_none() {
+                unsafe {
+                    *numeric_attribute_ptr = 0 as Len;
+                }
+                return SqlReturn::SUCCESS;
             }
-            return SqlReturn::SUCCESS;
+            let col_metadata = stmt_contents
+                .mongo_statement
+                .as_ref()
+                .unwrap()
+                .get_col_metadata(column_number);
+            if col_metadata.is_ok() {
+                unsafe {
+                    *numeric_attribute_ptr = (*f)(col_metadata.unwrap());
+                }
+                return SqlReturn::SUCCESS;
+            }
         }
-        let col_metadata = stmt_contents
-            .mongo_statement
-            .as_ref()
-            .unwrap()
-            .get_col_metadata(column_number);
-        unsafe {
-            *numeric_attribute_ptr = (*f)(odbc_unwrap!(
-                col_metadata,
-                MongoHandleRef::from(statement_handle)
-            ));
-        }
-        return SqlReturn::SUCCESS;
+        mongo_handle.add_diag_info(ODBCError::InvalidDescriptorIndex(column_number));
+        SqlReturn::ERROR
     };
     match field_identifier {
         Desc::AutoUniqueValue => unsafe {
@@ -301,6 +309,8 @@ pub extern "C" fn SQLColAttributeW(
             return SqlReturn::SUCCESS;
         },
         Desc::Count => unsafe {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
             let stmt_contents = stmt.read().unwrap();
             if stmt_contents.mongo_statement.is_none() {
                 *numeric_attribute_ptr = 0 as Len;
@@ -365,6 +375,8 @@ pub extern "C" fn SQLColAttributeW(
         | Desc::ParameterType
         | Desc::RowsProcessedPtr
         | Desc::RowVer) => {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let _ = must_be_valid!((*mongo_handle).as_statement());
             mongo_handle
                 .add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!("{:?}", desc)));
             return SqlReturn::ERROR;
@@ -1009,15 +1021,15 @@ pub extern "C" fn SQLGetDiagRecW(
     match handle_type {
         HandleType::Env => {
             let env = unsafe_must_be_env!(mongo_handle);
-            get_error(&(*env).read().unwrap().errors.read().unwrap())
+            get_error(&(*env).read().unwrap().errors)
         }
         HandleType::Dbc => {
             let dbc = unsafe_must_be_conn!(mongo_handle);
-            get_error(&(*dbc).read().unwrap().errors.read().unwrap())
+            get_error(&(*dbc).read().unwrap().errors)
         }
         HandleType::Stmt => {
             let stmt = unsafe_must_be_stmt!(mongo_handle);
-            get_error(&(*stmt).read().unwrap().errors.read().unwrap())
+            get_error(&(*stmt).read().unwrap().errors)
         }
         HandleType::Desc => unimplemented!(),
     }

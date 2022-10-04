@@ -162,7 +162,7 @@ mod unit {
             // numeric descriptor
             Desc::Type,
         ] {
-            for col_index in [0, 1] {
+            for col_index in [0, 20] {
                 let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
                 let buffer_length: SmallInt = 100;
                 let out_length = &mut 10;
