@@ -31,8 +31,8 @@ mod unit {
             Desc::TableName,
             Desc::TypeName,
         ] {
-            let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
-            let buffer_length: SmallInt = 100;
+            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+            let buffer_length: SmallInt = 20;
             let out_length = &mut 10;
             let numeric_attr_ptr = &mut 10;
             // test string attributes
@@ -79,8 +79,8 @@ mod unit {
             Desc::Updatable,
             Desc::Unsigned,
         ] {
-            let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
-            let buffer_length: SmallInt = 100;
+            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+            let buffer_length: SmallInt = 20;
             let out_length = &mut 10;
             let numeric_attr_ptr = &mut 10;
             // test string attributes
@@ -127,8 +127,8 @@ mod unit {
             Desc::RowsProcessedPtr,
             Desc::RowVer,
         ] {
-            let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
-            let buffer_length: SmallInt = 100;
+            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+            let buffer_length: SmallInt = 20;
             let out_length = &mut 10;
             let numeric_attr_ptr = &mut 10;
             // test string attributes
@@ -163,8 +163,9 @@ mod unit {
             Desc::Type,
         ] {
             for col_index in [0, 30] {
-                let char_buffer: *mut std::ffi::c_void = Vec::with_capacity(100).as_mut_ptr();
-                let buffer_length: SmallInt = 100;
+                let char_buffer: *mut std::ffi::c_void =
+                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                let buffer_length: SmallInt = 20;
                 let out_length = &mut 10;
                 let numeric_attr_ptr = &mut 10;
                 // test string attributes
