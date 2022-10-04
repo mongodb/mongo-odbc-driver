@@ -145,7 +145,6 @@ mod unit {
     fn metadata_column_nullability() {
         use crate::col_metadata::ColumnNullability;
         use crate::{collections::MongoCollections, stmt::MongoStatement};
-        // These were generated straight from the docs (hence the - 1).
         assert_eq!(
             ColumnNullability::NoNulls,
             MongoCollections::empty()
