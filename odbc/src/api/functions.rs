@@ -261,9 +261,9 @@ pub extern "C" fn SQLColAttributeW(
                 .as_ref()
                 .unwrap()
                 .get_col_metadata(column_number);
-            if col_metadata.is_ok() {
+            if let Ok(col_metadata) = col_metadata {
                 return set_output_string(
-                    &(*f)(col_metadata.unwrap()),
+                    (*f)(col_metadata),
                     character_attribute_ptr as *mut WChar,
                     buffer_length as usize,
                     string_length_ptr,
@@ -290,9 +290,9 @@ pub extern "C" fn SQLColAttributeW(
                 .as_ref()
                 .unwrap()
                 .get_col_metadata(column_number);
-            if col_metadata.is_ok() {
+            if let Ok(col_metadata) = col_metadata {
                 unsafe {
-                    *numeric_attribute_ptr = (*f)(col_metadata.unwrap());
+                    *numeric_attribute_ptr = (*f)(col_metadata);
                 }
                 return SqlReturn::SUCCESS;
             }
@@ -304,11 +304,11 @@ pub extern "C" fn SQLColAttributeW(
     match field_identifier {
         Desc::AutoUniqueValue => unsafe {
             *numeric_attribute_ptr = SqlBool::False as Len;
-            return SqlReturn::SUCCESS;
+            SqlReturn::SUCCESS
         },
         Desc::Unnamed | Desc::Updatable => unsafe {
             *numeric_attribute_ptr = 0 as Len;
-            return SqlReturn::SUCCESS;
+            SqlReturn::SUCCESS
         },
         Desc::Count => unsafe {
             let mongo_handle = MongoHandleRef::from(statement_handle);
@@ -324,7 +324,7 @@ pub extern "C" fn SQLColAttributeW(
                 .unwrap()
                 .get_resultset_metadata()
                 .len() as Len;
-            return SqlReturn::SUCCESS;
+            SqlReturn::SUCCESS
         },
         Desc::CaseSensitive => numeric_col_attr(&|x: &MongoColMetadata| {
             (if x.type_name == "string" {
@@ -381,7 +381,7 @@ pub extern "C" fn SQLColAttributeW(
             let _ = must_be_valid!((*mongo_handle).as_statement());
             mongo_handle
                 .add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!("{:?}", desc)));
-            return SqlReturn::ERROR;
+            SqlReturn::ERROR
         }
     }
 }
@@ -1998,8 +1998,7 @@ pub mod util {
                     *text_length_ptr = 0 as SmallInt;
                 } else {
                     // If the output_ptr is NULL, we should still return the length of the message.
-                    let message_u16 = message.encode_utf16().collect::<Vec<u16>>();
-                    *text_length_ptr = message_u16.len() as SmallInt;
+                    *text_length_ptr = message.encode_utf16().count() as i16;
                 }
                 return SqlReturn::SUCCESS_WITH_INFO;
             }
