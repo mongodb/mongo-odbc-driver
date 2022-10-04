@@ -156,8 +156,7 @@ mod unit {
     #[test]
     fn metadata_column_names() {
         use crate::{fields::MongoFields, stmt::MongoStatement};
-        // These were generated straight from the docs (hence the - 1). This
-        // gives us assurance that the column names are all correct.
+        // This gives us assurance that the column names are all correct.
         assert_eq!(
             "TABLE_CAT",
             MongoFields::empty().get_col_metadata(1).unwrap().col_name
