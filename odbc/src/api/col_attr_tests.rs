@@ -36,8 +36,7 @@ mod unit {
             let out_length = &mut 10;
             let numeric_attr_ptr = &mut 10;
             // test string attributes
-            assert_eq!(
-                SqlReturn::SUCCESS,
+            assert_eq!(SqlReturn::SUCCESS, unsafe {
                 SQLColAttributeW(
                     stmt_handle as *mut _,
                     0,
@@ -47,7 +46,7 @@ mod unit {
                     out_length,
                     numeric_attr_ptr,
                 )
-            );
+            });
             // out_length was 10 should get changed to 0, denoting an empty output
             assert_eq!(0, *out_length);
             // numeric_attr_ptr should still be 10 since no numeric value was requested.
@@ -85,8 +84,7 @@ mod unit {
             let out_length = &mut 10;
             let numeric_attr_ptr = &mut 10;
             // test string attributes
-            assert_eq!(
-                SqlReturn::SUCCESS,
+            assert_eq!(SqlReturn::SUCCESS, unsafe {
                 SQLColAttributeW(
                     stmt_handle as *mut _,
                     0,
@@ -96,7 +94,7 @@ mod unit {
                     out_length,
                     numeric_attr_ptr,
                 )
-            );
+            });
             // out_length was 10 should stay 10, because a numeric attribute was selected
             assert_eq!(10, *out_length);
             // numeric_attr_ptr should change to 0 since a numeric attribute was requested.
@@ -134,8 +132,7 @@ mod unit {
             let out_length = &mut 10;
             let numeric_attr_ptr = &mut 10;
             // test string attributes
-            assert_eq!(
-                SqlReturn::ERROR,
+            assert_eq!(SqlReturn::ERROR, unsafe {
                 SQLColAttributeW(
                     stmt_handle as *mut _,
                     0,
@@ -145,7 +142,7 @@ mod unit {
                     out_length,
                     numeric_attr_ptr,
                 )
-            );
+            });
             // out_length should still be 10 since no string value was requested.
             assert_eq!(10, *out_length);
             // numeric_attr_ptr should still be 10 since no numeric value was requested.
@@ -171,8 +168,7 @@ mod unit {
                 let out_length = &mut 10;
                 let numeric_attr_ptr = &mut 10;
                 // test string attributes
-                assert_eq!(
-                    SqlReturn::ERROR,
+                assert_eq!(SqlReturn::ERROR, unsafe {
                     SQLColAttributeW(
                         mongo_handle as *mut _,
                         col_index,
@@ -182,7 +178,7 @@ mod unit {
                         out_length,
                         numeric_attr_ptr,
                     )
-                );
+                });
                 // out_length should still be 10 since no string value was requested.
                 assert_eq!(10, *out_length);
                 // numeric_attr_ptr should still be 10 since no numeric value was requested.
@@ -212,46 +208,49 @@ mod unit {
     // check the fields column for all the string attributes
     #[test]
     fn test_string_field_attributes() {
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
-        let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
-        let col_index = 3; //TABLE_NAME
-        for (desc, expected) in [
-            (Desc::BaseColumnName, ""),
-            (Desc::BaseTableName, ""),
-            (Desc::CatalogName, ""),
-            (Desc::Label, "TABLE_NAME"),
-            (Desc::LiteralPrefix, ""),
-            (Desc::LiteralSuffix, ""),
-            (Desc::Name, "TABLE_NAME"),
-            (Desc::TableName, ""),
-            (Desc::TypeName, "string"),
-        ] {
-            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let buffer_length: SmallInt = 20;
-            let out_length = &mut 10;
-            let numeric_attr_ptr = &mut 10;
-            // test string attributes
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLColAttributeW(
-                    mongo_handle as *mut _,
-                    col_index,
-                    desc,
-                    char_buffer,
-                    buffer_length,
-                    out_length,
-                    numeric_attr_ptr,
-                )
-            );
-            assert_eq!(expected.len() as i16, *out_length);
-            assert_eq!(
-                expected,
-                crate::api::functions::util::input_wtext_to_string(
-                    char_buffer as *const _,
-                    *out_length as usize
-                )
-            );
+        unsafe {
+            let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+            stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
+            let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+            let col_index = 3; //TABLE_NAME
+            for (desc, expected) in [
+                (Desc::BaseColumnName, ""),
+                (Desc::BaseTableName, ""),
+                (Desc::CatalogName, ""),
+                (Desc::Label, "TABLE_NAME"),
+                (Desc::LiteralPrefix, ""),
+                (Desc::LiteralSuffix, ""),
+                (Desc::Name, "TABLE_NAME"),
+                (Desc::TableName, ""),
+                (Desc::TypeName, "string"),
+            ] {
+                let char_buffer: *mut std::ffi::c_void =
+                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                let buffer_length: SmallInt = 20;
+                let out_length = &mut 10;
+                let numeric_attr_ptr = &mut 10;
+                // test string attributes
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLColAttributeW(
+                        mongo_handle as *mut _,
+                        col_index,
+                        desc,
+                        char_buffer,
+                        buffer_length,
+                        out_length,
+                        numeric_attr_ptr,
+                    )
+                );
+                assert_eq!(expected.len() as i16, *out_length);
+                assert_eq!(
+                    expected,
+                    crate::api::functions::util::input_wtext_to_string(
+                        char_buffer as *const _,
+                        *out_length as usize
+                    )
+                );
+            }
         }
     }
 
@@ -285,8 +284,7 @@ mod unit {
             let out_length = &mut 10;
             let numeric_attr_ptr = &mut 10;
             // test string attributes
-            assert_eq!(
-                SqlReturn::SUCCESS,
+            assert_eq!(SqlReturn::SUCCESS, unsafe {
                 SQLColAttributeW(
                     mongo_handle as *mut _,
                     col_index,
@@ -296,7 +294,7 @@ mod unit {
                     out_length,
                     numeric_attr_ptr,
                 )
-            );
+            });
             assert_eq!(expected, *numeric_attr_ptr);
         }
     }

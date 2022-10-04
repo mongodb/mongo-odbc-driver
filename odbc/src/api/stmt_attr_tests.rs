@@ -12,52 +12,54 @@ fn get_set_stmt_attr(
     value_map: BTreeMap<i32, SqlReturn>,
     default_value: usize,
 ) {
-    let attr_buffer = Box::into_raw(Box::new(0_usize));
-    let string_length_ptr = &mut 0;
+    unsafe {
+        let attr_buffer = Box::into_raw(Box::new(0_usize));
+        let string_length_ptr = &mut 0;
 
-    // Test the statement attribute's default value
-    assert_eq!(
-        SqlReturn::SUCCESS,
-        SQLGetStmtAttrW(
-            handle as *mut _,
-            attribute,
-            attr_buffer as Pointer,
-            0,
-            string_length_ptr
-        )
-    );
+        // Test the statement attribute's default value
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetStmtAttrW(
+                handle as *mut _,
+                attribute,
+                attr_buffer as Pointer,
+                0,
+                string_length_ptr
+            )
+        );
 
-    assert_eq!(default_value, unsafe { *attr_buffer });
+        assert_eq!(default_value, { *attr_buffer });
 
-    value_map
-        .into_iter()
-        .for_each(|(discriminant, expected_return)| {
-            let value = discriminant as Pointer;
-            assert_eq!(
-                expected_return,
-                SQLSetStmtAttrW(handle as HStmt, attribute, value, 0)
-            );
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetStmtAttrW(
-                    handle as *mut _,
-                    attribute,
-                    attr_buffer as Pointer,
-                    0,
-                    string_length_ptr
-                )
-            );
-            match expected_return {
-                SqlReturn::SUCCESS => {
-                    assert_eq!(discriminant, unsafe { *attr_buffer } as i32)
-                }
-                _ => {
-                    assert_eq!(default_value, unsafe { *attr_buffer })
-                }
-            };
-        });
+        value_map
+            .into_iter()
+            .for_each(|(discriminant, expected_return)| {
+                let value = discriminant as Pointer;
+                assert_eq!(
+                    expected_return,
+                    SQLSetStmtAttrW(handle as HStmt, attribute, value, 0)
+                );
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLGetStmtAttrW(
+                        handle as *mut _,
+                        attribute,
+                        attr_buffer as Pointer,
+                        0,
+                        string_length_ptr
+                    )
+                );
+                match expected_return {
+                    SqlReturn::SUCCESS => {
+                        assert_eq!(discriminant, { *attr_buffer } as i32)
+                    }
+                    _ => {
+                        assert_eq!(default_value, { *attr_buffer })
+                    }
+                };
+            });
 
-    unsafe { Box::from_raw(attr_buffer) };
+        let _ = Box::from_raw(attr_buffer);
+    }
 }
 
 fn get_set_ptr(
@@ -66,48 +68,50 @@ fn get_set_ptr(
     is_attr_supported: bool,
     str_len: usize,
 ) {
-    let attr_buffer = Box::into_raw(Box::new(0_usize));
-    let string_length_ptr = &mut 0;
+    unsafe {
+        let attr_buffer = Box::into_raw(Box::new(0_usize));
+        let string_length_ptr = &mut 0;
 
-    // Test the statement attribute's default value
-    assert_eq!(
-        SqlReturn::SUCCESS,
-        SQLGetStmtAttrW(
-            handle as *mut _,
-            attribute,
-            attr_buffer as Pointer,
-            0,
-            string_length_ptr
-        )
-    );
+        // Test the statement attribute's default value
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetStmtAttrW(
+                handle as *mut _,
+                attribute,
+                attr_buffer as Pointer,
+                0,
+                string_length_ptr
+            )
+        );
 
-    assert_eq!(0, unsafe { *attr_buffer });
+        assert_eq!(0, { *attr_buffer });
 
-    // attr_value can be any non-zero number.
-    let attr_value = 10_usize;
-    // All pointer attributes have a default value of zero.
-    let (expected_value, expected_return) = match is_attr_supported {
-        true => (attr_value, SqlReturn::SUCCESS),
-        false => (0_usize, SqlReturn::ERROR),
-    };
-    assert_eq!(
-        expected_return,
-        SQLSetStmtAttrW(handle as HStmt, attribute, attr_value as Pointer, 0)
-    );
-    assert_eq!(
-        SqlReturn::SUCCESS,
-        SQLGetStmtAttrW(
-            handle as *mut _,
-            attribute,
-            attr_buffer as Pointer,
-            0,
-            string_length_ptr
-        )
-    );
-    assert_eq!(expected_value, unsafe { *attr_buffer });
-    assert_eq!(str_len as Integer, *string_length_ptr);
+        // attr_value can be any non-zero number.
+        let attr_value = 10_usize;
+        // All pointer attributes have a default value of zero.
+        let (expected_value, expected_return) = match is_attr_supported {
+            true => (attr_value, SqlReturn::SUCCESS),
+            false => (0_usize, SqlReturn::ERROR),
+        };
+        assert_eq!(
+            expected_return,
+            SQLSetStmtAttrW(handle as HStmt, attribute, attr_value as Pointer, 0)
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLGetStmtAttrW(
+                handle as *mut _,
+                attribute,
+                attr_buffer as Pointer,
+                0,
+                string_length_ptr
+            )
+        );
+        assert_eq!(expected_value, { *attr_buffer });
+        assert_eq!(str_len as Integer, *string_length_ptr);
 
-    unsafe { Box::from_raw(attr_buffer) };
+        let _ = Box::from_raw(attr_buffer);
+    }
 }
 
 mod unit {

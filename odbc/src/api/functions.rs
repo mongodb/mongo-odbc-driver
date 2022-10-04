@@ -34,23 +34,23 @@ macro_rules! must_be_valid {
     }};
 }
 
-macro_rules! unsafe_must_be_env {
+macro_rules! must_be_env {
     ($handle:expr) => {{
-        let env = unsafe { (*$handle).as_env() };
+        let env = (*$handle).as_env();
         must_be_valid!(env)
     }};
 }
 
-macro_rules! unsafe_must_be_conn {
+macro_rules! must_be_conn {
     ($handle:expr) => {{
-        let conn = unsafe { (*$handle).as_connection() };
+        let conn = (*$handle).as_connection();
         must_be_valid!(conn)
     }};
 }
 
-macro_rules! unsafe_must_be_stmt {
+macro_rules! must_be_stmt {
     ($handle:expr) => {{
-        let stmt = unsafe { (*$handle).as_statement() };
+        let stmt = (*$handle).as_statement();
         must_be_valid!(stmt)
     }};
 }
@@ -234,7 +234,7 @@ pub extern "C" fn SQLColAttribute(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLColAttributeW(
+pub unsafe extern "C" fn SQLColAttributeW(
     statement_handle: HStmt,
     column_number: USmallInt,
     field_identifier: Desc,
@@ -280,9 +280,7 @@ pub extern "C" fn SQLColAttributeW(
         {
             let stmt_contents = stmt.read().unwrap();
             if stmt_contents.mongo_statement.is_none() {
-                unsafe {
-                    *numeric_attribute_ptr = 0 as Len;
-                }
+                *numeric_attribute_ptr = 0 as Len;
                 return SqlReturn::SUCCESS;
             }
             let col_metadata = stmt_contents
@@ -291,9 +289,7 @@ pub extern "C" fn SQLColAttributeW(
                 .unwrap()
                 .get_col_metadata(column_number);
             if let Ok(col_metadata) = col_metadata {
-                unsafe {
-                    *numeric_attribute_ptr = (*f)(col_metadata);
-                }
+                *numeric_attribute_ptr = (*f)(col_metadata);
                 return SqlReturn::SUCCESS;
             }
         }
@@ -302,15 +298,15 @@ pub extern "C" fn SQLColAttributeW(
         SqlReturn::ERROR
     };
     match field_identifier {
-        Desc::AutoUniqueValue => unsafe {
+        Desc::AutoUniqueValue => {
             *numeric_attribute_ptr = SqlBool::False as Len;
             SqlReturn::SUCCESS
-        },
-        Desc::Unnamed | Desc::Updatable => unsafe {
+        }
+        Desc::Unnamed | Desc::Updatable => {
             *numeric_attribute_ptr = 0 as Len;
             SqlReturn::SUCCESS
-        },
-        Desc::Count => unsafe {
+        }
+        Desc::Count => {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let stmt_contents = stmt.read().unwrap();
@@ -325,7 +321,7 @@ pub extern "C" fn SQLColAttributeW(
                 .get_resultset_metadata()
                 .len() as Len;
             SqlReturn::SUCCESS
-        },
+        }
         Desc::CaseSensitive => numeric_col_attr(&|x: &MongoColMetadata| {
             (if x.type_name == "string" {
                 SqlBool::True
@@ -616,7 +612,7 @@ fn sql_driver_connect(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLDriverConnectW(
+pub unsafe extern "C" fn SQLDriverConnectW(
     connection_handle: HDbc,
     _window_handle: HWnd,
     in_connection_string: *const WChar,
@@ -989,7 +985,7 @@ pub extern "C" fn SQLGetDiagRec(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLGetDiagRecW(
+pub unsafe extern "C" fn SQLGetDiagRecW(
     handle_type: HandleType,
     handle: Handle,
     rec_number: SmallInt,
@@ -1022,15 +1018,15 @@ pub extern "C" fn SQLGetDiagRecW(
 
     match handle_type {
         HandleType::Env => {
-            let env = unsafe_must_be_env!(mongo_handle);
+            let env = must_be_env!(mongo_handle);
             get_error(&(*env).read().unwrap().errors)
         }
         HandleType::Dbc => {
-            let dbc = unsafe_must_be_conn!(mongo_handle);
+            let dbc = must_be_conn!(mongo_handle);
             get_error(&(*dbc).read().unwrap().errors)
         }
         HandleType::Stmt => {
-            let stmt = unsafe_must_be_stmt!(mongo_handle);
+            let stmt = must_be_stmt!(mongo_handle);
             get_error(&(*stmt).read().unwrap().errors)
         }
         HandleType::Desc => unimplemented!(),
@@ -1049,7 +1045,7 @@ pub extern "C" fn SQLGetEnvAttr(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLGetEnvAttrW(
+pub unsafe extern "C" fn SQLGetEnvAttrW(
     environment_handle: HEnv,
     attribute: EnvironmentAttribute,
     value_ptr: Pointer,
@@ -1065,18 +1061,18 @@ pub extern "C" fn SQLGetEnvAttrW(
     } else {
         set_str_length(string_length, size_of::<Integer>() as Integer);
         match attribute {
-            EnvironmentAttribute::OdbcVersion => unsafe {
+            EnvironmentAttribute::OdbcVersion => {
                 *(value_ptr as *mut OdbcVersion) = env_contents.attributes.odbc_ver;
-            },
-            EnvironmentAttribute::OutputNts => unsafe {
+            }
+            EnvironmentAttribute::OutputNts => {
                 *(value_ptr as *mut SqlBool) = env_contents.attributes.output_nts;
-            },
-            EnvironmentAttribute::ConnectionPooling => unsafe {
+            }
+            EnvironmentAttribute::ConnectionPooling => {
                 *(value_ptr as *mut ConnectionPooling) = env_contents.attributes.connection_pooling;
-            },
-            EnvironmentAttribute::CpMatch => unsafe {
+            }
+            EnvironmentAttribute::CpMatch => {
                 *(value_ptr as *mut CpMatch) = env_contents.attributes.cp_match;
-            },
+            }
         }
     }
     SqlReturn::SUCCESS
@@ -1116,7 +1112,7 @@ pub extern "C" fn SQLGetStmtAttr(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLGetStmtAttrW(
+pub unsafe extern "C" fn SQLGetStmtAttrW(
     handle: HStmt,
     attribute: StatementAttribute,
     value_ptr: Pointer,
@@ -1134,118 +1130,118 @@ pub extern "C" fn SQLGetStmtAttrW(
     // type.
     set_str_length(string_length_ptr, size_of::<ULen>() as Integer);
     match attribute {
-        StatementAttribute::AppRowDesc => unsafe {
+        StatementAttribute::AppRowDesc => {
             *(value_ptr as *mut Pointer) = stmt_contents.attributes.app_row_desc;
             set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
-        },
-        StatementAttribute::AppParamDesc => unsafe {
+        }
+        StatementAttribute::AppParamDesc => {
             *(value_ptr as *mut Pointer) = stmt_contents.attributes.app_param_desc;
             set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
-        },
-        StatementAttribute::ImpRowDesc => unsafe {
+        }
+        StatementAttribute::ImpRowDesc => {
             *(value_ptr as *mut Pointer) = stmt_contents.attributes.imp_row_desc;
             set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
-        },
-        StatementAttribute::ImpParamDesc => unsafe {
+        }
+        StatementAttribute::ImpParamDesc => {
             *(value_ptr as *mut Pointer) = stmt_contents.attributes.imp_param_desc;
             set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
-        },
-        StatementAttribute::FetchBookmarkPtr => unsafe {
+        }
+        StatementAttribute::FetchBookmarkPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.fetch_bookmark_ptr;
             set_str_length(string_length_ptr, size_of::<*mut Len>() as Integer);
-        },
-        StatementAttribute::CursorScrollable => unsafe {
+        }
+        StatementAttribute::CursorScrollable => {
             *(value_ptr as *mut CursorScrollable) = stmt_contents.attributes.cursor_scrollable;
-        },
-        StatementAttribute::CursorSensitivity => unsafe {
+        }
+        StatementAttribute::CursorSensitivity => {
             *(value_ptr as *mut CursorSensitivity) = stmt_contents.attributes.cursor_sensitivity;
-        },
-        StatementAttribute::AsyncEnable => unsafe {
+        }
+        StatementAttribute::AsyncEnable => {
             *(value_ptr as *mut AsyncEnable) = stmt_contents.attributes.async_enable;
-        },
-        StatementAttribute::Concurrency => unsafe {
+        }
+        StatementAttribute::Concurrency => {
             *(value_ptr as *mut Concurrency) = stmt_contents.attributes.concurrency;
-        },
-        StatementAttribute::CursorType => unsafe {
+        }
+        StatementAttribute::CursorType => {
             *(value_ptr as *mut CursorType) = stmt_contents.attributes.cursor_type;
-        },
-        StatementAttribute::EnableAutoIpd => unsafe {
+        }
+        StatementAttribute::EnableAutoIpd => {
             *(value_ptr as *mut SqlBool) = stmt_contents.attributes.enable_auto_ipd;
-        },
-        StatementAttribute::KeysetSize => unsafe {
+        }
+        StatementAttribute::KeysetSize => {
             *(value_ptr as *mut ULen) = 0;
-        },
-        StatementAttribute::MaxLength => unsafe {
+        }
+        StatementAttribute::MaxLength => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.max_length;
-        },
-        StatementAttribute::MaxRows => unsafe {
+        }
+        StatementAttribute::MaxRows => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.max_rows;
-        },
-        StatementAttribute::NoScan => unsafe {
+        }
+        StatementAttribute::NoScan => {
             *(value_ptr as *mut NoScan) = stmt_contents.attributes.no_scan;
-        },
-        StatementAttribute::ParamBindOffsetPtr => unsafe {
+        }
+        StatementAttribute::ParamBindOffsetPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.param_bind_offset_ptr;
             set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer)
-        },
-        StatementAttribute::ParamBindType => unsafe {
+        }
+        StatementAttribute::ParamBindType => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.param_bind_type;
-        },
-        StatementAttribute::ParamOpterationPtr => unsafe {
+        }
+        StatementAttribute::ParamOpterationPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.param_operation_ptr;
             set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer)
-        },
-        StatementAttribute::ParamStatusPtr => unsafe {
+        }
+        StatementAttribute::ParamStatusPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.param_status_ptr;
             set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer)
-        },
-        StatementAttribute::ParamsProcessedPtr => unsafe {
+        }
+        StatementAttribute::ParamsProcessedPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.param_processed_ptr;
             set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer)
-        },
-        StatementAttribute::ParamsetSize => unsafe {
+        }
+        StatementAttribute::ParamsetSize => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.paramset_size;
-        },
-        StatementAttribute::QueryTimeout => unsafe {
+        }
+        StatementAttribute::QueryTimeout => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.query_timeout;
-        },
-        StatementAttribute::RetrieveData => unsafe {
+        }
+        StatementAttribute::RetrieveData => {
             *(value_ptr as *mut RetrieveData) = stmt_contents.attributes.retrieve_data;
-        },
-        StatementAttribute::RowBindOffsetPtr => unsafe {
+        }
+        StatementAttribute::RowBindOffsetPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.row_bind_offset_ptr;
             set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer)
-        },
-        StatementAttribute::RowBindType => unsafe {
+        }
+        StatementAttribute::RowBindType => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.row_bind_type;
-        },
-        StatementAttribute::RowNumber => unsafe {
+        }
+        StatementAttribute::RowNumber => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.row_number;
-        },
-        StatementAttribute::RowOperationPtr => unsafe {
+        }
+        StatementAttribute::RowOperationPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.row_operation_ptr;
             set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer)
-        },
-        StatementAttribute::RowStatusPtr => unsafe {
+        }
+        StatementAttribute::RowStatusPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.row_status_ptr;
             set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer)
-        },
-        StatementAttribute::RowsFetchedPtr => unsafe {
+        }
+        StatementAttribute::RowsFetchedPtr => {
             *(value_ptr as *mut _) = stmt_contents.attributes.rows_fetched_ptr;
             set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer)
-        },
-        StatementAttribute::RowArraySize => unsafe {
+        }
+        StatementAttribute::RowArraySize => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.row_array_size;
-        },
-        StatementAttribute::SimulateCursor => unsafe {
+        }
+        StatementAttribute::SimulateCursor => {
             *(value_ptr as *mut ULen) = stmt_contents.attributes.simulate_cursor;
-        },
-        StatementAttribute::UseBookmarks => unsafe {
+        }
+        StatementAttribute::UseBookmarks => {
             *(value_ptr as *mut UseBookmarks) = stmt_contents.attributes.use_bookmarks;
-        },
-        StatementAttribute::AsyncStmtEvent => unsafe {
+        }
+        StatementAttribute::AsyncStmtEvent => {
             *(value_ptr as *mut _) = stmt_contents.attributes.async_stmt_event;
-        },
+        }
         StatementAttribute::MetadataId => {
             todo!();
         }
@@ -1296,7 +1292,7 @@ pub extern "C" fn SQLNumParams(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLNumResultCols(
+pub unsafe extern "C" fn SQLNumResultCols(
     statement_handle: HStmt,
     column_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
@@ -1305,14 +1301,10 @@ pub extern "C" fn SQLNumResultCols(
     let stmt_contents = stmt.read().unwrap();
     let mongo_statement = stmt_contents.mongo_statement.as_ref();
     if mongo_statement.is_none() {
-        unsafe {
-            *column_count_ptr = 0;
-        }
+        *column_count_ptr = 0;
         return SqlReturn::SUCCESS;
     }
-    unsafe {
-        *column_count_ptr = mongo_statement.unwrap().get_resultset_metadata().len() as SmallInt;
-    }
+    *column_count_ptr = mongo_statement.unwrap().get_resultset_metadata().len() as SmallInt;
     SqlReturn::SUCCESS
 }
 
@@ -1437,14 +1429,15 @@ pub extern "C" fn SQLPutData(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLRowCount(statement_handle: HStmt, row_count_ptr: *mut Len) -> SqlReturn {
+pub unsafe extern "C" fn SQLRowCount(
+    statement_handle: HStmt,
+    row_count_ptr: *mut Len,
+) -> SqlReturn {
     let mongo_handle = MongoHandleRef::from(statement_handle);
     // even though we always return 0, we must still assert that the proper handle
     // type is sent by the client.
     let _ = must_be_valid!((*mongo_handle).as_statement());
-    unsafe {
-        *row_count_ptr = 0 as Len;
-    }
+    *row_count_ptr = 0 as Len;
     SqlReturn::SUCCESS
 }
 
@@ -1901,7 +1894,7 @@ fn sql_tables(
 }
 
 #[no_mangle]
-pub extern "C" fn SQLTablesW(
+pub unsafe extern "C" fn SQLTablesW(
     statement_handle: HStmt,
     catalog_name: *const WChar,
     name_length_1: SmallInt,
@@ -1919,23 +1912,21 @@ pub extern "C" fn SQLTablesW(
     let table = input_wtext_to_string(table_name, name_length_3 as usize);
     let table_t = input_wtext_to_string(table_type, name_length_4 as usize);
     let connection = (*(stmt.read().unwrap())).connection;
-    let mongo_statement = unsafe {
-        sql_tables(
-            (*connection)
-                .as_connection()
-                .unwrap()
-                .read()
-                .unwrap()
-                .mongo_connection
-                .as_ref()
-                .unwrap(),
-            (*(stmt.read().unwrap())).attributes.query_timeout as i32,
-            &catalog,
-            &schema,
-            &table,
-            &table_t,
-        )
-    };
+    let mongo_statement = sql_tables(
+        (*connection)
+            .as_connection()
+            .unwrap()
+            .read()
+            .unwrap()
+            .mongo_connection
+            .as_ref()
+            .unwrap(),
+        (*(stmt.read().unwrap())).attributes.query_timeout as i32,
+        &catalog,
+        &schema,
+        &table,
+        &table_t,
+    );
     let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
     stmt.write().unwrap().mongo_statement = Some(mongo_statement);
     SqlReturn::SUCCESS
@@ -1949,11 +1940,11 @@ pub mod util {
     /// input_wtext_to_string converts an input cstring to a rust String.
     /// It assumes nul termination if the supplied length is negative.
     #[allow(clippy::uninit_vec)]
-    pub fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
+    pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
         if (len as isize) < 0 {
             let mut dst = Vec::new();
             let mut itr = text;
-            unsafe {
+            {
                 while *itr != 0 {
                     dst.push(*itr);
                     itr = itr.offset(1);
@@ -1963,73 +1954,67 @@ pub mod util {
         }
 
         let mut dst = Vec::with_capacity(len);
-        unsafe {
-            dst.set_len(len);
-            copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-        }
+        dst.set_len(len);
+        copy_nonoverlapping(text, dst.as_mut_ptr(), len);
         String::from_utf16_lossy(&dst)
     }
 
     /// set_sql_state writes the given sql state to the [`output_ptr`].
-    pub fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
+    pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
         if output_ptr.is_null() {
             return;
         }
         let sql_state = &format!("{}\0", sql_state);
         let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>();
-        unsafe {
-            copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
-        }
+        copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
     }
 
     /// set_output_string writes [`message`] to the [`output_ptr`]. [`buffer_len`] is the
     /// length of the [`output_ptr`] buffer in characters; the message should be truncated
     /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
-    pub fn set_output_string(
+    pub unsafe fn set_output_string(
         message: &str,
         output_ptr: *mut WChar,
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        unsafe {
-            if output_ptr.is_null() {
-                if !text_length_ptr.is_null() {
-                    *text_length_ptr = 0 as SmallInt;
-                } else {
-                    // If the output_ptr is NULL, we should still return the length of the message.
-                    *text_length_ptr = message.encode_utf16().count() as i16;
-                }
-                return SqlReturn::SUCCESS_WITH_INFO;
-            }
-            // Check if the entire message plus a null terminator can fit in the buffer;
-            // we should truncate the message if it's too long.
-            let mut message_u16 = message.encode_utf16().collect::<Vec<u16>>();
-            let message_len = message_u16.len();
-            let num_chars = min(message_len + 1, buffer_len);
-            // It is possible that no buffer space has been allocated.
-            if num_chars == 0 {
-                return SqlReturn::SUCCESS_WITH_INFO;
-            }
-            message_u16.resize(num_chars - 1, 0);
-            message_u16.push('\u{0}' as u16);
-            copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
-            // Store the number of characters in the message string, excluding the
-            // null terminator, in text_length_ptr
+        if output_ptr.is_null() {
             if !text_length_ptr.is_null() {
-                *text_length_ptr = (num_chars - 1) as SmallInt;
-            }
-            if num_chars < message_len {
-                SqlReturn::SUCCESS_WITH_INFO
+                *text_length_ptr = 0 as SmallInt;
             } else {
-                SqlReturn::SUCCESS
+                // If the output_ptr is NULL, we should still return the length of the message.
+                *text_length_ptr = message.encode_utf16().count() as i16;
             }
+            return SqlReturn::SUCCESS_WITH_INFO;
+        }
+        // Check if the entire message plus a null terminator can fit in the buffer;
+        // we should truncate the message if it's too long.
+        let mut message_u16 = message.encode_utf16().collect::<Vec<u16>>();
+        let message_len = message_u16.len();
+        let num_chars = min(message_len + 1, buffer_len);
+        // It is possible that no buffer space has been allocated.
+        if num_chars == 0 {
+            return SqlReturn::SUCCESS_WITH_INFO;
+        }
+        message_u16.resize(num_chars - 1, 0);
+        message_u16.push('\u{0}' as u16);
+        copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
+        // Store the number of characters in the message string, excluding the
+        // null terminator, in text_length_ptr
+        if !text_length_ptr.is_null() {
+            *text_length_ptr = (num_chars - 1) as SmallInt;
+        }
+        if num_chars < message_len {
+            SqlReturn::SUCCESS_WITH_INFO
+        } else {
+            SqlReturn::SUCCESS
         }
     }
 
     /// get_diag_rec copies the given ODBC error's diagnostic information
     /// into the provided pointers.
-    pub fn get_diag_rec(
+    pub unsafe fn get_diag_rec(
         error: &ODBCError,
         state: *mut WChar,
         message_text: *mut WChar,
@@ -2038,7 +2023,7 @@ pub mod util {
         native_error_ptr: *mut Integer,
     ) -> SqlReturn {
         if !native_error_ptr.is_null() {
-            unsafe { *native_error_ptr = error.get_native_err_code() };
+            *native_error_ptr = error.get_native_err_code();
         }
         set_sql_state(error.get_sql_state(), state);
         let message = format!("{}", error);
@@ -2057,9 +2042,9 @@ pub mod util {
     }
 
     /// set_str_length writes the given length to [`string_length_ptr`].
-    pub fn set_str_length(string_length_ptr: *mut Integer, length: Integer) {
+    pub unsafe fn set_str_length(string_length_ptr: *mut Integer, length: Integer) {
         if !string_length_ptr.is_null() {
-            unsafe { *string_length_ptr = length }
+            *string_length_ptr = length
         }
     }
 }
