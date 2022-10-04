@@ -31,26 +31,31 @@ mod unit {
             Desc::TableName,
             Desc::TypeName,
         ] {
-            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let buffer_length: SmallInt = 20;
-            let out_length = &mut 10;
-            let numeric_attr_ptr = &mut 10;
-            // test string attributes
-            assert_eq!(SqlReturn::SUCCESS, unsafe {
-                SQLColAttributeW(
-                    stmt_handle as *mut _,
-                    0,
-                    desc,
-                    char_buffer,
-                    buffer_length,
-                    out_length,
-                    numeric_attr_ptr,
-                )
-            });
-            // out_length was 10 should get changed to 0, denoting an empty output
-            assert_eq!(0, *out_length);
-            // numeric_attr_ptr should still be 10 since no numeric value was requested.
-            assert_eq!(10, *numeric_attr_ptr);
+            unsafe {
+                let char_buffer: *mut std::ffi::c_void =
+                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                let buffer_length: SmallInt = 20;
+                let out_length = &mut 10;
+                let numeric_attr_ptr = &mut 10;
+                // test string attributes
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLColAttributeW(
+                        stmt_handle as *mut _,
+                        0,
+                        desc,
+                        char_buffer,
+                        buffer_length,
+                        out_length,
+                        numeric_attr_ptr,
+                    )
+                );
+                // out_length was 10 should get changed to 0, denoting an empty output
+                assert_eq!(0, *out_length);
+                // numeric_attr_ptr should still be 10 since no numeric value was requested.
+                assert_eq!(10, *numeric_attr_ptr);
+                let _ = Box::from_raw(char_buffer);
+            }
         }
     }
 
@@ -79,26 +84,31 @@ mod unit {
             Desc::Updatable,
             Desc::Unsigned,
         ] {
-            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let buffer_length: SmallInt = 20;
-            let out_length = &mut 10;
-            let numeric_attr_ptr = &mut 10;
-            // test string attributes
-            assert_eq!(SqlReturn::SUCCESS, unsafe {
-                SQLColAttributeW(
-                    stmt_handle as *mut _,
-                    0,
-                    desc,
-                    char_buffer,
-                    buffer_length,
-                    out_length,
-                    numeric_attr_ptr,
-                )
-            });
-            // out_length was 10 should stay 10, because a numeric attribute was selected
-            assert_eq!(10, *out_length);
-            // numeric_attr_ptr should change to 0 since a numeric attribute was requested.
-            assert_eq!(0, *numeric_attr_ptr);
+            unsafe {
+                let char_buffer: *mut std::ffi::c_void =
+                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                let buffer_length: SmallInt = 20;
+                let out_length = &mut 10;
+                let numeric_attr_ptr = &mut 10;
+                // test string attributes
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLColAttributeW(
+                        stmt_handle as *mut _,
+                        0,
+                        desc,
+                        char_buffer,
+                        buffer_length,
+                        out_length,
+                        numeric_attr_ptr,
+                    )
+                );
+                // out_length was 10 should stay 10, because a numeric attribute was selected
+                assert_eq!(10, *out_length);
+                // numeric_attr_ptr should change to 0 since a numeric attribute was requested.
+                assert_eq!(0, *numeric_attr_ptr);
+                let _ = Box::from_raw(char_buffer);
+            }
         }
     }
 
@@ -127,26 +137,31 @@ mod unit {
             Desc::RowsProcessedPtr,
             Desc::RowVer,
         ] {
-            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let buffer_length: SmallInt = 20;
-            let out_length = &mut 10;
-            let numeric_attr_ptr = &mut 10;
-            // test string attributes
-            assert_eq!(SqlReturn::ERROR, unsafe {
-                SQLColAttributeW(
-                    stmt_handle as *mut _,
-                    0,
-                    desc,
-                    char_buffer,
-                    buffer_length,
-                    out_length,
-                    numeric_attr_ptr,
-                )
-            });
-            // out_length should still be 10 since no string value was requested.
-            assert_eq!(10, *out_length);
-            // numeric_attr_ptr should still be 10 since no numeric value was requested.
-            assert_eq!(10, *numeric_attr_ptr);
+            unsafe {
+                let char_buffer: *mut std::ffi::c_void =
+                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                let buffer_length: SmallInt = 20;
+                let out_length = &mut 10;
+                let numeric_attr_ptr = &mut 10;
+                // test string attributes
+                assert_eq!(
+                    SqlReturn::ERROR,
+                    SQLColAttributeW(
+                        stmt_handle as *mut _,
+                        0,
+                        desc,
+                        char_buffer,
+                        buffer_length,
+                        out_length,
+                        numeric_attr_ptr,
+                    )
+                );
+                // out_length should still be 10 since no string value was requested.
+                assert_eq!(10, *out_length);
+                // numeric_attr_ptr should still be 10 since no numeric value was requested.
+                assert_eq!(10, *numeric_attr_ptr);
+                let _ = Box::from_raw(char_buffer);
+            }
         }
     }
 
@@ -162,29 +177,30 @@ mod unit {
             // numeric descriptor
             Desc::Type,
         ] {
-            for col_index in [0, 30] {
-                let char_buffer: *mut std::ffi::c_void =
-                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
-                let buffer_length: SmallInt = 20;
-                let out_length = &mut 10;
-                let numeric_attr_ptr = &mut 10;
-                // test string attributes
-                assert_eq!(SqlReturn::ERROR, unsafe {
-                    SQLColAttributeW(
-                        mongo_handle as *mut _,
-                        col_index,
-                        desc,
-                        char_buffer,
-                        buffer_length,
-                        out_length,
-                        numeric_attr_ptr,
-                    )
-                });
-                // out_length should still be 10 since no string value was requested.
-                assert_eq!(10, *out_length);
-                // numeric_attr_ptr should still be 10 since no numeric value was requested.
-                assert_eq!(10, *numeric_attr_ptr);
-                unsafe {
+            unsafe {
+                for col_index in [0, 30] {
+                    let char_buffer: *mut std::ffi::c_void =
+                        Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                    let buffer_length: SmallInt = 20;
+                    let out_length = &mut 10;
+                    let numeric_attr_ptr = &mut 10;
+                    // test string attributes
+                    assert_eq!(
+                        SqlReturn::ERROR,
+                        SQLColAttributeW(
+                            mongo_handle as *mut _,
+                            col_index,
+                            desc,
+                            char_buffer,
+                            buffer_length,
+                            out_length,
+                            numeric_attr_ptr,
+                        )
+                    );
+                    // out_length should still be 10 since no string value was requested.
+                    assert_eq!(10, *out_length);
+                    // numeric_attr_ptr should still be 10 since no numeric value was requested.
+                    assert_eq!(10, *numeric_attr_ptr);
                     assert_eq!(
                         format!(
                             "[MongoDB][API] The field index {} is out of bounds",
@@ -200,8 +216,9 @@ mod unit {
                                 .errors[i]
                         )
                     );
+                    let _ = Box::from_raw(char_buffer);
+                    i += 1;
                 }
-                i += 1;
             }
         }
     }
@@ -251,6 +268,7 @@ mod unit {
                         *out_length as usize
                     )
                 );
+                let _ = Box::from_raw(char_buffer);
             }
         }
     }
@@ -280,23 +298,28 @@ mod unit {
             (Desc::ConciseType, SqlDataType::VARCHAR.0 as isize),
             (Desc::Unsigned, 0),
         ] {
-            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let buffer_length: SmallInt = 20;
-            let out_length = &mut 10;
-            let numeric_attr_ptr = &mut 10;
-            // test string attributes
-            assert_eq!(SqlReturn::SUCCESS, unsafe {
-                SQLColAttributeW(
-                    mongo_handle as *mut _,
-                    col_index,
-                    desc,
-                    char_buffer,
-                    buffer_length,
-                    out_length,
-                    numeric_attr_ptr,
-                )
-            });
-            assert_eq!(expected, *numeric_attr_ptr);
+            unsafe {
+                let char_buffer: *mut std::ffi::c_void =
+                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                let buffer_length: SmallInt = 20;
+                let out_length = &mut 10;
+                let numeric_attr_ptr = &mut 10;
+                // test string attributes
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLColAttributeW(
+                        mongo_handle as *mut _,
+                        col_index,
+                        desc,
+                        char_buffer,
+                        buffer_length,
+                        out_length,
+                        numeric_attr_ptr,
+                    )
+                );
+                assert_eq!(expected, *numeric_attr_ptr);
+                let _ = Box::from_raw(char_buffer);
+            }
         }
     }
 }
