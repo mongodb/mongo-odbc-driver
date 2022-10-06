@@ -249,6 +249,7 @@ pub mod simplified {
     }
 }
 
+#[cfg(test)]
 mod unit {
     macro_rules! try_from_test {
         ($func_name:ident, variant = $variant:ident, expected = $expected:expr, input = $input:expr) => {

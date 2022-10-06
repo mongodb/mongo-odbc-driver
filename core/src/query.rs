@@ -251,6 +251,7 @@ impl ObjectSchema {
     }
 }
 
+#[cfg(test)]
 mod unit {
     mod process_metadata {
         use crate::{
