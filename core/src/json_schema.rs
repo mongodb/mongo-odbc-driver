@@ -211,14 +211,6 @@ pub mod simplified {
         fn try_from(schema: json_schema::Schema) -> std::result::Result<Self, Self::Error> {
             match schema.clone() {
                 json_schema::Schema {
-                    bson_type: None,
-                    properties: None,
-                    required: None,
-                    additional_properties: None,
-                    items: None,
-                    any_of: None,
-                } => Ok(Schema::Atomic(Atomic::Any)),
-                json_schema::Schema {
                     bson_type: _bson_type,
                     properties: _properties,
                     required: _required,
@@ -317,14 +309,14 @@ mod unit {
         };
 
         try_from_test!(
-            all_json_schema_fields_set_to_none_is_any_schema,
+            any_schema,
             variant = Atomic,
             expected = Ok(Atomic::Any),
             input = json_schema::Schema::default()
         );
 
         try_from_test!(
-            invalid_if_any_of_is_some,
+            invalid_if_any_of_is_set,
             variant = Atomic,
             expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema),
             input = json_schema::Schema {
@@ -346,7 +338,7 @@ mod unit {
         );
 
         try_from_test!(
-            bson_type_must_contain_multiple_types,
+            bson_type_must_not_contain_multiple_types,
             variant = Atomic,
             expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema),
             input = json_schema::Schema {
@@ -379,7 +371,7 @@ mod unit {
         );
 
         try_from_test!(
-            array_with_no_items_set_simplifies_to_array_of_any,
+            array_with_no_items_simplifies_to_array_of_any,
             variant = Atomic,
             expected = Ok(Atomic::Array(Box::new(simplified::Schema::Atomic(
                 Atomic::Any
@@ -391,7 +383,7 @@ mod unit {
         );
 
         try_from_test!(
-            array_with_multiple_items_set_simplifies_to_array_of_any,
+            array_with_multiple_items_simplifies_to_array_of_any,
             variant = Atomic,
             expected = Ok(Atomic::Array(Box::new(simplified::Schema::Atomic(
                 Atomic::Any
@@ -404,7 +396,7 @@ mod unit {
         );
 
         try_from_test!(
-            array_with_single_items_set_simplifies_to_array_of_that_single_type,
+            array_with_single_items_simplifies_to_array_of_that_single_type,
             variant = Atomic,
             expected = Ok(Atomic::Array(Box::new(simplified::Schema::Atomic(
                 Atomic::Scalar(BsonTypeName::Int)
@@ -420,7 +412,7 @@ mod unit {
         );
 
         try_from_test!(
-            object_defaults_to_empty_properties_empty_required_and_additional_properties_true,
+            default_object,
             variant = Atomic,
             expected = Ok(Atomic::Object(ObjectSchema {
                 properties: map! {},
@@ -434,7 +426,7 @@ mod unit {
         );
 
         try_from_test!(
-            object_retains_simplified_properteies_required_and_additional_properties,
+            object_retains_simplified_input_values,
             variant = Atomic,
             expected = Ok(Atomic::Object(ObjectSchema {
                 properties: map! {
@@ -471,7 +463,7 @@ mod unit {
         };
 
         try_from_test!(
-            all_json_schema_fields_set_to_none_is_any_schema,
+            any_schema,
             variant = Schema,
             expected = Ok(Schema::Atomic(Atomic::Any)),
             input = json_schema::Schema::default()
@@ -498,7 +490,7 @@ mod unit {
         );
 
         try_from_test!(
-            missing_any_of_and_bson_type_with_other_fields_is_invalid,
+            missing_bson_type_with_other_fields_is_invalid,
             variant = Schema,
             expected = Err::<Schema, Error>(Error::InvalidResultSetJsonSchema),
             input = json_schema::Schema {
@@ -508,7 +500,7 @@ mod unit {
         );
 
         try_from_test!(
-            valid,
+            valid_schema,
             variant = Schema,
             expected = Ok(Schema::AnyOf(
                 set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::String)}
