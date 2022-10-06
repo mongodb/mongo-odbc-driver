@@ -250,3 +250,275 @@ impl ObjectSchema {
         }
     }
 }
+
+#[cfg(test)]
+mod unit {
+    mod process_metadata {
+        use crate::{
+            json_schema::{BsonType, BsonTypeName, Schema},
+            map,
+            query::{SqlGetResultSchemaResponse, VersionedJsonSchema},
+            Error,
+        };
+
+        #[test]
+        fn top_level_schema_not_object() {
+            let input = SqlGetResultSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                        ..Default::default()
+                    },
+                },
+            };
+
+            let actual = input.process_metadata("test_db");
+
+            match actual {
+                Err(Error::InvalidResultSetJsonSchema) => (),
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(ok) => panic!("unexpected result: {:?}", ok),
+            }
+        }
+
+        #[test]
+        fn property_schema_not_object() {
+            let input = SqlGetResultSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                        properties: Some(map! {
+                            "a".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                ..Default::default()
+                            }
+                        }),
+                        ..Default::default()
+                    },
+                },
+            };
+
+            let actual = input.process_metadata("test_db");
+
+            match actual {
+                Err(Error::InvalidResultSetJsonSchema) => (),
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(ok) => panic!("unexpected result: {:?}", ok),
+            }
+        }
+
+        #[test]
+        fn fields_sorted_alphabetically() {
+            let input = SqlGetResultSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                        properties: Some(map! {
+                            "foo".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                properties: Some(map! {
+                                    "b".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    },
+                                    "a".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    }
+                                }),
+                                ..Default::default()
+                            },
+                            "bar".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                properties: Some(map! {
+                                    "c".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    }
+                                }),
+                                ..Default::default()
+                            }
+                        }),
+                        ..Default::default()
+                    },
+                },
+            };
+
+            let res = input.process_metadata("test_db");
+
+            match res {
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(actual) => {
+                    // There should be 3 fields
+                    assert_eq!(3, actual.len());
+
+                    for (idx, table_name, col_name) in
+                        [(0, "bar", "c"), (1, "foo", "a"), (2, "foo", "b")]
+                    {
+                        let md = &actual[idx];
+                        assert_eq!(
+                            (table_name, col_name),
+                            (md.table_name.as_str(), md.col_name.as_str())
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    mod object_schema {
+        use crate::{
+            col_metadata::ColumnNullability,
+            json_schema::{
+                simplified::{Atomic, ObjectSchema, Schema},
+                BsonTypeName,
+            },
+            map, set, Error,
+        };
+
+        macro_rules! get_field_nullability_test {
+            ($func_name:ident, expected = $expected:expr, input_schema = $input_schema:expr, input_field = $input_field:expr) => {
+                #[test]
+                fn $func_name() {
+                    let actual = $input_schema.get_field_nullability($input_field).unwrap();
+                    assert_eq!($expected, actual)
+                }
+            };
+        }
+
+        get_field_nullability_test!(
+            field_not_in_properties_but_is_required,
+            expected = ColumnNullability::Unknown,
+            input_schema = ObjectSchema {
+                properties: map! {},
+                required: set! {"a".to_string()},
+                additional_properties: false,
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            field_not_in_properties_but_additional_properties_allowed,
+            expected = ColumnNullability::Unknown,
+            input_schema = ObjectSchema {
+                properties: map! {},
+                required: set! {},
+                additional_properties: true,
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            any_schema,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::Atomic(Atomic::Any)
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            scalar_null_schema,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Null))
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            nonrequired_scalar_nonnull_schema,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Int))
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            required_scalar_nonnull_schema,
+            expected = ColumnNullability::NoNulls,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Int))
+                },
+                required: set! {"a".to_string()},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            any_of_schema_with_null,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::Null)})
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            nonrequired_any_of_schema_without_null,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::String)})
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            required_any_of_schema_without_null,
+            expected = ColumnNullability::NoNulls,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::String)})
+                },
+                required: set! {"a".to_string()},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        #[test]
+        fn invalid_object_schema() {
+            let input_schema = ObjectSchema {
+                properties: map! {},
+                required: set! {},
+                additional_properties: false,
+            };
+
+            let nullability = input_schema.get_field_nullability("a".to_string());
+            match nullability {
+                Err(Error::UnknownColumn(_)) => (),
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(ok) => panic!("unexpected result: {:?}", ok),
+            }
+        }
+    }
+}

@@ -187,6 +187,8 @@ pub mod simplified {
                         additional_properties: additional_properties.unwrap_or(true),
                     })),
                     BsonType::Single(t) => Ok(Atomic::Scalar(t)),
+                    // If there is a "Multiple" that contains a single type, we can simplify it.
+                    BsonType::Multiple(types) if types.len() == 1 => Ok(Atomic::Scalar(types[0])),
                     BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema),
                 },
                 _ => Err(Error::InvalidResultSetJsonSchema),
@@ -203,14 +205,6 @@ pub mod simplified {
 
         fn try_from(schema: json_schema::Schema) -> std::result::Result<Self, Self::Error> {
             match schema.clone() {
-                json_schema::Schema {
-                    bson_type: None,
-                    properties: None,
-                    required: None,
-                    additional_properties: None,
-                    items: None,
-                    any_of: None,
-                } => Ok(Schema::Atomic(Atomic::Any)),
                 json_schema::Schema {
                     bson_type: _bson_type,
                     properties: _properties,
@@ -247,5 +241,259 @@ pub mod simplified {
                 Schema::AnyOf(_) => BsonTypeInfo::BSON,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod unit {
+    macro_rules! try_from_test {
+        ($func_name:ident, variant = $variant:ident, expected = $expected:expr, input = $input:expr) => {
+            #[test]
+            fn $func_name() {
+                let res = $variant::try_from($input);
+
+                // crate::Error cannot properly derive or implement PartialEq,
+                // so we instead manually assert the expected Result.
+                match (res, $expected) {
+                    (Ok(actual), Ok(expected)) => assert_eq!(expected, actual),
+                    (Ok(actual), Err(_)) => {
+                        panic!("expected error but got result: {:?}", actual)
+                    }
+                    (Err(e), Ok(_)) => panic!("expected result but got error: {:?}", e),
+                    (
+                        Err(Error::InvalidResultSetJsonSchema),
+                        Err(Error::InvalidResultSetJsonSchema),
+                    ) => (),
+                    (Err(e_actual), Err(e_expected)) => panic!(
+                        "unexpected error: actual = {:?}, expected = {:?}",
+                        e_actual, e_expected
+                    ),
+                }
+            }
+        };
+    }
+
+    // Testing TryFrom<json_schema::Schema> for json_schema::simplified::Atomic
+    mod atomic {
+        use crate::{
+            json_schema::{
+                self,
+                simplified::{self, Atomic, ObjectSchema},
+                BsonType, BsonTypeName, Items,
+            },
+            map, set, Error,
+        };
+
+        try_from_test!(
+            any_schema,
+            variant = Atomic,
+            expected = Ok(Atomic::Any),
+            input = json_schema::Schema::default()
+        );
+
+        try_from_test!(
+            invalid_if_any_of_is_set,
+            variant = Atomic,
+            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema),
+            input = json_schema::Schema {
+                any_of: Some(vec![json_schema::Schema::default()]),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            bson_type_must_not_be_none,
+            variant = Atomic,
+            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema),
+            input = json_schema::Schema {
+                bson_type: None,
+                required: Some(vec!["a".to_string()]),
+                additional_properties: Some(true),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            bson_type_must_not_contain_multiple_types,
+            variant = Atomic,
+            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Multiple(vec![
+                    BsonTypeName::Bool,
+                    BsonTypeName::Int
+                ])),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            bson_type_may_be_single_type_in_list,
+            variant = Atomic,
+            expected = Ok(Atomic::Scalar(BsonTypeName::Bool)),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Multiple(vec![BsonTypeName::Bool])),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            bson_type_may_be_single_type,
+            variant = Atomic,
+            expected = Ok(Atomic::Scalar(BsonTypeName::Bool)),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Single(BsonTypeName::Bool)),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            array_with_no_items_simplifies_to_array_of_any,
+            variant = Atomic,
+            expected = Ok(Atomic::Array(Box::new(simplified::Schema::Atomic(
+                Atomic::Any
+            )))),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Single(BsonTypeName::Array)),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            array_with_multiple_items_simplifies_to_array_of_any,
+            variant = Atomic,
+            expected = Ok(Atomic::Array(Box::new(simplified::Schema::Atomic(
+                Atomic::Any
+            )))),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Single(BsonTypeName::Array)),
+                items: Some(Items::Multiple(vec![])),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            array_with_single_items_simplifies_to_array_of_that_single_type,
+            variant = Atomic,
+            expected = Ok(Atomic::Array(Box::new(simplified::Schema::Atomic(
+                Atomic::Scalar(BsonTypeName::Int)
+            )))),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Single(BsonTypeName::Array)),
+                items: Some(Items::Single(Box::new(json_schema::Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                    ..Default::default()
+                }))),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            default_object,
+            variant = Atomic,
+            expected = Ok(Atomic::Object(ObjectSchema {
+                properties: map! {},
+                required: set! {},
+                additional_properties: true
+            })),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            object_retains_simplified_input_values,
+            variant = Atomic,
+            expected = Ok(Atomic::Object(ObjectSchema {
+                properties: map! {
+                    "a".to_string() => simplified::Schema::Atomic(Atomic::Scalar(BsonTypeName::Int))
+                },
+                required: set! {"a".to_string()},
+                additional_properties: false
+            })),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                properties: Some(map! {
+                    "a".to_string() => json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                        ..Default::default()
+                    }
+                }),
+                required: Some(set! {"a".to_string()}),
+                additional_properties: Some(false),
+                ..Default::default()
+            }
+        );
+    }
+
+    // Testing TryFrom<json_schema::Schema> for json_schema::simplified::Schema
+    // omitting Atomic variants in favor of the unit tests above
+    mod schema {
+        use crate::{
+            json_schema::{
+                self,
+                simplified::{Atomic, Schema},
+                BsonType, BsonTypeName,
+            },
+            set, Error,
+        };
+
+        try_from_test!(
+            any_schema,
+            variant = Schema,
+            expected = Ok(Schema::Atomic(Atomic::Any)),
+            input = json_schema::Schema::default()
+        );
+
+        try_from_test!(
+            mixing_any_of_and_other_fields_is_invalid,
+            variant = Schema,
+            expected = Err::<Schema, Error>(Error::InvalidResultSetJsonSchema),
+            input = json_schema::Schema {
+                bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                any_of: Some(vec![
+                    json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Bool)),
+                        ..Default::default()
+                    },
+                    json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::String)),
+                        ..Default::default()
+                    }
+                ]),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            missing_bson_type_with_other_fields_is_invalid,
+            variant = Schema,
+            expected = Err::<Schema, Error>(Error::InvalidResultSetJsonSchema),
+            input = json_schema::Schema {
+                additional_properties: Some(true),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            valid_schema,
+            variant = Schema,
+            expected = Ok(Schema::AnyOf(
+                set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::String)}
+            )),
+            input = json_schema::Schema {
+                any_of: Some(vec![
+                    json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                        ..Default::default()
+                    },
+                    json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::String)),
+                        ..Default::default()
+                    }
+                ]),
+                ..Default::default()
+            }
+        );
     }
 }
