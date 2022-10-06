@@ -187,14 +187,9 @@ pub mod simplified {
                         additional_properties: additional_properties.unwrap_or(true),
                     })),
                     BsonType::Single(t) => Ok(Atomic::Scalar(t)),
-                    BsonType::Multiple(types) => {
-                        match types[..] {
-                            // If there is a "Multiple" that contains a
-                            // single type, we can simplify it.
-                            [t] => Ok(Atomic::Scalar(t)),
-                            _ => Err(Error::InvalidResultSetJsonSchema),
-                        }
-                    }
+                    // If there is a "Multiple" that contains a single type, we can simplify it.
+                    BsonType::Multiple(types) if types.len() == 1 => Ok(Atomic::Scalar(types[0])),
+                    BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema),
                 },
                 _ => Err(Error::InvalidResultSetJsonSchema),
             }
