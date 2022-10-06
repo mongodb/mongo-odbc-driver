@@ -285,8 +285,7 @@ mod unit {
                 simplified::{self, Atomic, ObjectSchema},
                 BsonType, BsonTypeName, Items,
             },
-            map, set,
-            Error,
+            map, set, Error,
         };
 
         try_from_test!(
@@ -440,8 +439,7 @@ mod unit {
                 simplified::{Atomic, Schema},
                 BsonType, BsonTypeName,
             },
-            set,
-            Error,
+            set, Error,
         };
 
         try_from_test!(

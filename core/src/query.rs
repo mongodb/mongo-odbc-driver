@@ -369,11 +369,6 @@ mod unit {
                 }
             }
         }
-
-        // TODO:
-        //  - top-level not Object => error
-        //  - prop not Object => error
-        //  - output sorted alphabetically
     }
 
     mod object_schema {
