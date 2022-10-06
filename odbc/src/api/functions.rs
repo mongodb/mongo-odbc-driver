@@ -1,13 +1,16 @@
-use crate::api::functions::util::set_output_string;
 use crate::{
     api::{
+        data::{
+            get_diag_rec, input_wtext_to_string, set_output_wstring, set_str_length,
+            unsupported_function,
+        },
         definitions::*,
         errors::{ODBCError, Result},
-        functions::util::{input_wtext_to_string, set_str_length, unsupported_function},
         odbc_uri::ODBCUri,
     },
     handles::definitions::*,
 };
+use bson::Bson;
 use constants::{SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
     MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoStatement,
@@ -322,7 +325,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
         {
             let stmt_contents = stmt.read().unwrap();
             if stmt_contents.mongo_statement.is_none() {
-                return set_output_string(
+                return set_output_wstring(
                     "",
                     character_attribute_ptr as *mut WChar,
                     buffer_length as usize,
@@ -335,7 +338,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 .unwrap()
                 .get_col_metadata(column_number);
             if let Ok(col_metadata) = col_metadata {
-                return set_output_string(
+                return set_output_wstring(
                     (*f)(col_metadata),
                     character_attribute_ptr as *mut WChar,
                     buffer_length as usize,
@@ -820,7 +823,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
     let mongo_connection = odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
     conn.write().unwrap().mongo_connection = Some(mongo_connection);
     let buffer_len = usize::try_from(buffer_length).unwrap();
-    let sql_return = set_output_string(
+    let sql_return = set_output_wstring(
         &odbc_uri_string,
         out_connection_string,
         buffer_len,
@@ -939,8 +942,36 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 /// Because this is a C-infereface, this is necessarily unsafe
 ///
 #[no_mangle]
-pub unsafe extern "C" fn SQLFetch(_statement_handle: HStmt) -> SqlReturn {
-    unimplemented!()
+pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
+    let mut error = None;
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    // This scope is introduced to make the RWLock Guard expire before we write
+    // any error values via add_diag_info as RWLock::write is not reentrant on
+    // all operating systems, and the docs say it can panic.
+    {
+        let stmt = must_be_valid!((*mongo_handle).as_statement());
+        let mut guard = stmt.write().unwrap();
+        let mongo_stmt = guard.mongo_statement.as_mut();
+        match mongo_stmt {
+            None => error = Some(ODBCError::InvalidCursorState),
+            Some(mongo_stmt) => {
+                let res = mongo_stmt.next();
+                match res {
+                    Err(e) => error = Some(e.into()),
+                    Ok(b) => {
+                        if !b {
+                            return SqlReturn::NO_DATA;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if let Some(e) = error {
+        mongo_handle.add_diag_info(e);
+        return SqlReturn::ERROR;
+    }
+    SqlReturn::SUCCESS
 }
 
 ///
@@ -1172,14 +1203,44 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetData(
-    _statement_handle: HStmt,
-    _col_or_param_num: USmallInt,
-    _target_type: CDataType,
-    _target_value_ptr: Pointer,
-    _buffer_length: Len,
-    _str_len_or_ind_ptr: *mut Len,
+    statement_handle: HStmt,
+    col_or_param_num: USmallInt,
+    target_type: CDataType,
+    target_value_ptr: Pointer,
+    buffer_length: Len,
+    str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
-    unimplemented!()
+    let mut error = None;
+    let mut ret = Bson::Null;
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    {
+        let stmt = must_be_valid!((*mongo_handle).as_statement());
+        let mut guard = stmt.write().unwrap();
+        let mongo_stmt = guard.mongo_statement.as_mut();
+        match mongo_stmt {
+            None => error = Some(ODBCError::InvalidCursorState),
+            Some(mongo_stmt) => {
+                let data = mongo_stmt.get_value(col_or_param_num);
+                match data {
+                    Err(e) => error = Some(e.into()),
+                    Ok(None) => error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num)),
+                    Ok(Some(d)) => ret = d,
+                }
+            }
+        }
+    }
+    if let Some(e) = error {
+        mongo_handle.add_diag_info(e);
+        return SqlReturn::ERROR;
+    }
+    crate::api::data::format_and_return_bson(
+        mongo_handle,
+        target_type,
+        target_value_ptr,
+        buffer_length,
+        str_len_or_ind_ptr,
+        ret,
+    )
 }
 
 ///
@@ -1356,7 +1417,7 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
 
     let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
         match errors.get(rec_number) {
-            Some(odbc_err) => util::get_diag_rec(
+            Some(odbc_err) => get_diag_rec(
                 odbc_err,
                 state,
                 message_text,
@@ -1662,7 +1723,9 @@ pub unsafe extern "C" fn SQLGetTypeInfo(_handle: HStmt, _data_type: SqlDataType)
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLMoreResults(_handle: HStmt) -> SqlReturn {
-    unimplemented!()
+    // For now, we never allow more than one result from a query (i.e., we only support one query
+    // at a time).
+    SqlReturn::NO_DATA
 }
 
 ///
@@ -2565,150 +2628,4 @@ pub unsafe extern "C" fn SQLTablesW(
     let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
     stmt.write().unwrap().mongo_statement = Some(mongo_statement);
     SqlReturn::SUCCESS
-}
-
-pub mod util {
-    use crate::{api::errors::ODBCError, handles::definitions::MongoHandle};
-    use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
-    use std::{cmp::min, ptr::copy_nonoverlapping};
-
-    ///
-    /// input_wtext_to_string converts an input cstring to a rust String.
-    /// It assumes nul termination if the supplied length is negative.
-    ///
-    /// # Safety
-    /// This converts raw C-pointers to rust Strings, which requires unsafe operations
-    ///
-    #[allow(clippy::uninit_vec)]
-    pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
-        if (len as isize) < 0 {
-            let mut dst = Vec::new();
-            let mut itr = text;
-            {
-                while *itr != 0 {
-                    dst.push(*itr);
-                    itr = itr.offset(1);
-                }
-            }
-            return String::from_utf16_lossy(&dst);
-        }
-
-        let mut dst = Vec::with_capacity(len);
-        dst.set_len(len);
-        copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-        String::from_utf16_lossy(&dst)
-    }
-
-    ///
-    /// set_sql_state writes the given sql state to the [`output_ptr`].
-    ///
-    /// # Safety
-    /// This writes to a raw C-pointer
-    ///
-    pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
-        if output_ptr.is_null() {
-            return;
-        }
-        let sql_state = &format!("{}\0", sql_state);
-        let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>();
-        copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
-    }
-
-    ///
-    /// set_output_string writes [`message`] to the [`output_ptr`]. [`buffer_len`] is the
-    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
-    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
-    /// should be stored in [`text_length_ptr`].
-    ///
-    /// # Safety
-    /// This writes to multiple raw C-pointers
-    ///
-    pub unsafe fn set_output_string(
-        message: &str,
-        output_ptr: *mut WChar,
-        buffer_len: usize,
-        text_length_ptr: *mut SmallInt,
-    ) -> SqlReturn {
-        if output_ptr.is_null() {
-            if !text_length_ptr.is_null() {
-                *text_length_ptr = 0 as SmallInt;
-            } else {
-                // If the output_ptr is NULL, we should still return the length of the message.
-                *text_length_ptr = message.encode_utf16().count() as i16;
-            }
-            return SqlReturn::SUCCESS_WITH_INFO;
-        }
-        // Check if the entire message plus a null terminator can fit in the buffer;
-        // we should truncate the message if it's too long.
-        let mut message_u16 = message.encode_utf16().collect::<Vec<u16>>();
-        let message_len = message_u16.len();
-        let num_chars = min(message_len + 1, buffer_len);
-        // It is possible that no buffer space has been allocated.
-        if num_chars == 0 {
-            return SqlReturn::SUCCESS_WITH_INFO;
-        }
-        message_u16.resize(num_chars - 1, 0);
-        message_u16.push('\u{0}' as u16);
-        copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
-        // Store the number of characters in the message string, excluding the
-        // null terminator, in text_length_ptr
-        if !text_length_ptr.is_null() {
-            *text_length_ptr = (num_chars - 1) as SmallInt;
-        }
-        if num_chars < message_len {
-            SqlReturn::SUCCESS_WITH_INFO
-        } else {
-            SqlReturn::SUCCESS
-        }
-    }
-
-    ///
-    /// get_diag_rec copies the given ODBC error's diagnostic information
-    /// into the provided pointers.
-    ///
-    /// # Safety
-    /// This writes to multiple raw C-pointers
-    ///
-    pub unsafe fn get_diag_rec(
-        error: &ODBCError,
-        state: *mut WChar,
-        message_text: *mut WChar,
-        buffer_length: SmallInt,
-        text_length_ptr: *mut SmallInt,
-        native_error_ptr: *mut Integer,
-    ) -> SqlReturn {
-        if !native_error_ptr.is_null() {
-            *native_error_ptr = error.get_native_err_code();
-        }
-        set_sql_state(error.get_sql_state(), state);
-        let message = format!("{}", error);
-        set_output_string(
-            &message,
-            message_text,
-            buffer_length as usize,
-            text_length_ptr,
-        )
-    }
-
-    ///
-    /// unsupported_function is a helper function for correctly setting the state for
-    /// unsupported functions.
-    ///
-    pub fn unsupported_function(handle: &mut MongoHandle, name: &'static str) -> SqlReturn {
-        handle.clear_diagnostics();
-        handle.add_diag_info(ODBCError::Unimplemented(name));
-        SqlReturn::ERROR
-    }
-
-    ///
-    /// set_str_length writes the given length to [`string_length_ptr`].
-    ///
-    /// # Safety
-    /// This writes to a raw C-pointers
-    ///
-    pub unsafe fn set_str_length(string_length_ptr: *mut Integer, length: Integer) {
-        if !string_length_ptr.is_null() {
-            *string_length_ptr = length
-        }
-    }
 }

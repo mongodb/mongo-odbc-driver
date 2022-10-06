@@ -263,7 +263,7 @@ mod unit {
                 assert_eq!(expected.len() as i16, *out_length);
                 assert_eq!(
                     expected,
-                    crate::api::functions::util::input_wtext_to_string(
+                    crate::api::data::input_wtext_to_string(
                         char_buffer as *const _,
                         *out_length as usize
                     )

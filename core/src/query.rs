@@ -234,7 +234,10 @@ impl ObjectSchema {
             // Case 2: field is Any schema
             Schema::Atomic(Atomic::Any) => Ok(ColumnNullability::Nullable),
             // Case 3: field is scalar/array/object schema
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Null)) => Ok(ColumnNullability::Nullable),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::Null))
+            | Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)) => {
+                Ok(ColumnNullability::Nullable)
+            }
             Schema::Atomic(Atomic::Scalar(_))
             | Schema::Atomic(Atomic::Array(_))
             | Schema::Atomic(Atomic::Object(_)) => Ok(nullable),

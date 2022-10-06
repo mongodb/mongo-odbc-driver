@@ -49,6 +49,7 @@ pub enum BsonTypeName {
     Timestamp,
     MinKey,
     MaxKey,
+    Undefined,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
@@ -81,6 +82,7 @@ impl From<BsonTypeName> for BsonTypeInfo {
             BsonTypeName::Timestamp => BsonTypeInfo::TIMESTAMP,
             BsonTypeName::MinKey => BsonTypeInfo::MINKEY,
             BsonTypeName::MaxKey => BsonTypeInfo::MAXKEY,
+            BsonTypeName::Undefined => BsonTypeInfo::UNDEFINED,
         }
     }
 }
