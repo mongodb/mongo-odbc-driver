@@ -250,3 +250,156 @@ impl ObjectSchema {
         }
     }
 }
+
+mod unit {
+
+    mod object_schema {
+        use crate::{
+            col_metadata::ColumnNullability,
+            json_schema::{
+                simplified::{Atomic, ObjectSchema, Schema},
+                BsonTypeName,
+            },
+            map, set, Error,
+        };
+
+        macro_rules! get_field_nullability_test {
+            ($func_name:ident, expected = $expected:expr, input_schema = $input_schema:expr, input_field = $input_field:expr) => {
+                #[test]
+                fn $func_name() {
+                    let actual = $input_schema.get_field_nullability($input_field).unwrap();
+                    assert_eq!($expected, actual)
+                }
+            };
+        }
+
+        get_field_nullability_test!(
+            field_not_in_properties_but_is_required,
+            expected = ColumnNullability::Unknown,
+            input_schema = ObjectSchema {
+                properties: map! {},
+                required: set! {"a".to_string()},
+                additional_properties: false,
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            field_not_in_properties_but_additional_properties_allowed,
+            expected = ColumnNullability::Unknown,
+            input_schema = ObjectSchema {
+                properties: map! {},
+                required: set! {},
+                additional_properties: true,
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            any_schema,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::Atomic(Atomic::Any)
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            scalar_null_schema,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Null))
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            nonrequired_scalar_nonnull_schema,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Int))
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            required_scalar_nonnull_schema,
+            expected = ColumnNullability::NoNulls,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Int))
+                },
+                required: set! {"a".to_string()},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            any_of_schema_with_null,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::Null)})
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            nonrequired_any_of_schema_without_null,
+            expected = ColumnNullability::Nullable,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::String)})
+                },
+                required: set! {},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        get_field_nullability_test!(
+            required_any_of_schema_without_null,
+            expected = ColumnNullability::NoNulls,
+            input_schema = ObjectSchema {
+                properties: map! {
+                    "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::String)})
+                },
+                required: set! {"a".to_string()},
+                additional_properties: false
+            },
+            input_field = "a".to_string()
+        );
+
+        #[test]
+        fn invalid_object_schema() {
+            let input_schema = ObjectSchema {
+                properties: map! {},
+                required: set! {},
+                additional_properties: false,
+            };
+
+            let nullability = input_schema.get_field_nullability("a".to_string());
+            match nullability {
+                Err(Error::UnknownColumn(_)) => (),
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(ok) => panic!("unexpected result: {:?}", ok),
+            }
+        }
+    }
+}

@@ -250,26 +250,6 @@ pub mod simplified {
 }
 
 mod unit {
-    macro_rules! map {
-        ($($key:expr => $val:expr),* $(,)?) => {
-            std::iter::Iterator::collect([
-                $({
-                    ($key, $val)
-                },)*
-            ].into_iter())
-        };
-    }
-
-    macro_rules! set {
-        ($($val:expr),* $(,)?) => {
-            std::iter::Iterator::collect([
-                $({
-                    ($val)
-                },)*
-            ].into_iter())
-        };
-    }
-
     macro_rules! try_from_test {
         ($func_name:ident, variant = $variant:ident, expected = $expected:expr, input = $input:expr) => {
             #[test]
@@ -305,6 +285,7 @@ mod unit {
                 simplified::{self, Atomic, ObjectSchema},
                 BsonType, BsonTypeName, Items,
             },
+            map, set,
             Error,
         };
 
@@ -459,6 +440,7 @@ mod unit {
                 simplified::{Atomic, Schema},
                 BsonType, BsonTypeName,
             },
+            set,
             Error,
         };
 

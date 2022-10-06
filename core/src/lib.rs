@@ -18,3 +18,4 @@ mod query;
 pub use query::MongoQuery;
 mod stmt;
 pub use stmt::MongoStatement;
+mod util;
