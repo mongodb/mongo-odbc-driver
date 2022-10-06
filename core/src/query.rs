@@ -252,6 +252,129 @@ impl ObjectSchema {
 }
 
 mod unit {
+    mod process_metadata {
+        use crate::{
+            json_schema::{BsonType, BsonTypeName, Schema},
+            map,
+            query::{SqlGetResultSchemaResponse, VersionedJsonSchema},
+            Error,
+        };
+
+        #[test]
+        fn top_level_schema_not_object() {
+            let input = SqlGetResultSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                        ..Default::default()
+                    },
+                },
+            };
+
+            let actual = input.process_metadata("test_db");
+
+            match actual {
+                Err(Error::InvalidResultSetJsonSchema) => (),
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(ok) => panic!("unexpected result: {:?}", ok),
+            }
+        }
+
+        #[test]
+        fn property_schema_not_object() {
+            let input = SqlGetResultSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                        properties: Some(map! {
+                            "a".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                ..Default::default()
+                            }
+                        }),
+                        ..Default::default()
+                    },
+                },
+            };
+
+            let actual = input.process_metadata("test_db");
+
+            match actual {
+                Err(Error::InvalidResultSetJsonSchema) => (),
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(ok) => panic!("unexpected result: {:?}", ok),
+            }
+        }
+
+        #[test]
+        fn fields_sorted_alphabetically() {
+            let input = SqlGetResultSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                        properties: Some(map! {
+                            "foo".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                properties: Some(map! {
+                                    "b".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    },
+                                    "a".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    }
+                                }),
+                                ..Default::default()
+                            },
+                            "bar".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                properties: Some(map! {
+                                    "c".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    }
+                                }),
+                                ..Default::default()
+                            }
+                        }),
+                        ..Default::default()
+                    },
+                },
+            };
+
+            let res = input.process_metadata("test_db");
+
+            match res {
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(actual) => {
+                    // There should be 3 fields
+                    assert_eq!(3, actual.len());
+
+                    for (idx, table_name, col_name) in
+                        [(0, "bar", "c"), (1, "foo", "a"), (2, "foo", "b")]
+                    {
+                        let md = &actual[idx];
+                        assert_eq!(
+                            (table_name, col_name),
+                            (md.table_name.as_str(), md.col_name.as_str())
+                        )
+                    }
+                }
+            }
+        }
+
+        // TODO:
+        //  - top-level not Object => error
+        //  - prop not Object => error
+        //  - output sorted alphabetically
+    }
 
     mod object_schema {
         use crate::{
