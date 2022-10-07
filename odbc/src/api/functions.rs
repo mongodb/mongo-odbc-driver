@@ -71,7 +71,7 @@ macro_rules! odbc_unwrap {
 /// [`SQLAllocHandle`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLAllocHandle-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLAllocHandle(
@@ -155,7 +155,7 @@ fn sql_alloc_handle(
 /// [`SQLBindCol`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLBindCol-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLBindCol(
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn SQLBindCol(
 /// [`SQLBindParameter`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLBindParameter-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLBindParameter(
@@ -195,7 +195,7 @@ pub unsafe extern "C" fn SQLBindParameter(
 /// [`SQLBrowseConnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLBrowseConnect-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLBrowseConnect(
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn SQLBrowseConnect(
 /// This is the WChar version of the SQLBrowseConnect function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLBrowseConnectW(
@@ -233,7 +233,7 @@ pub unsafe extern "C" fn SQLBrowseConnectW(
 /// [`SQLBulkOperations`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLBulkOperations-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLBulkOperations(
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn SQLBulkOperations(
 /// [`SQLCancel`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLCancel-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancel(_statement_handle: HStmt) -> SqlReturn {
@@ -258,7 +258,7 @@ pub unsafe extern "C" fn SQLCancel(_statement_handle: HStmt) -> SqlReturn {
 /// [`SQLCancelHandle`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLCancelHandle-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, _handle: Handle) -> SqlReturn {
@@ -269,7 +269,7 @@ pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, _handle: Hand
 /// [`SQLCloseCursor`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLCloseCursor-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
@@ -280,7 +280,7 @@ pub unsafe extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
 /// [`SQLColAttribute`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLColAttribute-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLColAttribute(
@@ -301,7 +301,7 @@ pub unsafe extern "C" fn SQLColAttribute(
 /// This is the WChar version of the SQLColAttribute function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLColAttributeW(
@@ -456,7 +456,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
 /// [`SQLColumnPrivileges`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLColumnPrivileges-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnPrivileges(
@@ -482,7 +482,7 @@ pub unsafe extern "C" fn SQLColumnPrivileges(
 /// This is the WChar version of the SQLColumnPrivileges function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnPrivilegesW(
@@ -503,7 +503,7 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
 /// [`SQLColumns`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLColumns-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumns(
@@ -526,7 +526,7 @@ pub unsafe extern "C" fn SQLColumns(
 /// This is the WChar version of the SQLColumns function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnsW(
@@ -547,7 +547,7 @@ pub unsafe extern "C" fn SQLColumnsW(
 /// [`SQLCompleteAsync`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLCompleteAsync-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCompleteAsync(
@@ -562,7 +562,7 @@ pub unsafe extern "C" fn SQLCompleteAsync(
 /// [`SQLConnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLConnect-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLConnect(
@@ -583,7 +583,7 @@ pub unsafe extern "C" fn SQLConnect(
 /// This is the WChar version of the SQLConnect function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLConnectW(
@@ -602,7 +602,7 @@ pub unsafe extern "C" fn SQLConnectW(
 /// [`SQLCopyDesc`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLCopyDesc-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCopyDesc(
@@ -616,7 +616,7 @@ pub unsafe extern "C" fn SQLCopyDesc(
 /// [`SQLDataSources`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDataSources-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDataSources(
@@ -638,7 +638,7 @@ pub unsafe extern "C" fn SQLDataSources(
 /// This is the WChar version of the SQLDataSources function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDataSourcesW(
@@ -658,7 +658,7 @@ pub unsafe extern "C" fn SQLDataSourcesW(
 /// [`SQLDescribeCol`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDescribeCol-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDescribeCol(
@@ -681,7 +681,7 @@ pub unsafe extern "C" fn SQLDescribeCol(
 /// This is the WChar version of the SQLDescribeCol function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDescribeColW(
@@ -702,7 +702,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
 /// [`SQLDescribeParam`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDescribeParam-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDescribeParam(
@@ -720,7 +720,7 @@ pub unsafe extern "C" fn SQLDescribeParam(
 /// [`SQLDisconnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDisconnect-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
@@ -736,7 +736,7 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 /// [`SQLDriverConnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDriverConnect-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriverConnect(
@@ -790,7 +790,7 @@ fn sql_driver_connect(
 /// This is the WChar version of the SQLDriverConnect function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriverConnectW(
@@ -833,7 +833,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
 /// [`SQLDrivers`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDrivers-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDrivers(
@@ -855,7 +855,7 @@ pub unsafe extern "C" fn SQLDrivers(
 /// This is the WChar version of the SQLDrivers function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriversW(
@@ -875,7 +875,7 @@ pub unsafe extern "C" fn SQLDriversW(
 /// [`SQLEndTran`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLEndTran-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLEndTran(
@@ -890,7 +890,7 @@ pub unsafe extern "C" fn SQLEndTran(
 /// [`SQLExecDirect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLExecDirect-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecDirect(
@@ -907,7 +907,7 @@ pub unsafe extern "C" fn SQLExecDirect(
 /// This is the WChar version of the SQLExecDirect function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecDirectW(
@@ -922,7 +922,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
 /// [`SQLExecute`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLExecute-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
@@ -933,7 +933,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 /// [`SQLFetch`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLFetch-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetch(_statement_handle: HStmt) -> SqlReturn {
@@ -944,7 +944,7 @@ pub unsafe extern "C" fn SQLFetch(_statement_handle: HStmt) -> SqlReturn {
 /// [`SQLFetchScroll`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLFetchScroll-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetchScroll(
@@ -959,7 +959,7 @@ pub unsafe extern "C" fn SQLFetchScroll(
 /// [`SQLForeignKeys`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLForeignKeys-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLForeignKeys(
@@ -986,7 +986,7 @@ pub unsafe extern "C" fn SQLForeignKeys(
 /// This is the WChar version of the SQLForeignKeys function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLForeignKeysW(
@@ -1011,7 +1011,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 /// [`SQLFreeHandle`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLFreeHandle-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
@@ -1084,7 +1084,7 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 /// [`SQLFreeStmt`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLFreeStmt-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeStmt(_statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
@@ -1095,7 +1095,7 @@ pub unsafe extern "C" fn SQLFreeStmt(_statement_handle: HStmt, _option: SmallInt
 /// [`SQLGetConnectAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetConnectAttr-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttr(
@@ -1114,7 +1114,7 @@ pub unsafe extern "C" fn SQLGetConnectAttr(
 /// This is the WChar version of the SQLGetConnectAttr function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttrW(
@@ -1131,7 +1131,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
 /// [`SQLGetCursorName`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetCursorName-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetCursorName(
@@ -1149,7 +1149,7 @@ pub unsafe extern "C" fn SQLGetCursorName(
 /// This is the WChar version of the SQLGetCursorName function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetCursorNameW(
@@ -1165,7 +1165,7 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
 /// [`SQLGetData`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetData-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetData(
@@ -1183,7 +1183,7 @@ pub unsafe extern "C" fn SQLGetData(
 /// [`SQLGetDescField`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDescField-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDescField(
@@ -1203,7 +1203,7 @@ pub unsafe extern "C" fn SQLGetDescField(
 /// This is the WChar version of the SQLGetDescField function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDescFieldW(
@@ -1221,7 +1221,7 @@ pub unsafe extern "C" fn SQLGetDescFieldW(
 /// [`SQLGetDescRec`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDescRec-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDescRec(
@@ -1246,7 +1246,7 @@ pub unsafe extern "C" fn SQLGetDescRec(
 /// This is the WChar version of the SQLGetDescRec function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDescRecW(
@@ -1269,7 +1269,7 @@ pub unsafe extern "C" fn SQLGetDescRecW(
 /// [`SQLGetDiagField`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDiagField-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagField(
@@ -1290,7 +1290,7 @@ pub unsafe extern "C" fn SQLGetDiagField(
 /// This is the WChar version of the SQLGetDiagField function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagFieldW(
@@ -1309,7 +1309,7 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
 /// [`SQLGetDiagRec`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDiagRec-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagRec(
@@ -1331,7 +1331,7 @@ pub unsafe extern "C" fn SQLGetDiagRec(
 /// This is the WChar version of the SQLGetDiagRec function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagRecW(
@@ -1386,7 +1386,7 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
 /// [`SQLGetEnvAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetEnvAttr-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetEnvAttr(
@@ -1405,7 +1405,7 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
 /// This is the WChar version of the SQLGetEnvAttr function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetEnvAttrW(
@@ -1445,7 +1445,7 @@ pub unsafe extern "C" fn SQLGetEnvAttrW(
 /// [`SQLGetInfo`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetInfo-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetInfo(
@@ -1464,7 +1464,7 @@ pub unsafe extern "C" fn SQLGetInfo(
 /// This is the WChar version of the SQLGetInfo function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetInfoW(
@@ -1481,7 +1481,7 @@ pub unsafe extern "C" fn SQLGetInfoW(
 /// [`SQLGetStmtAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetStmtAttr-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetStmtAttr(
@@ -1500,7 +1500,7 @@ pub unsafe extern "C" fn SQLGetStmtAttr(
 /// This is the WChar version of the SQLGetStmtAttr function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetStmtAttrW(
@@ -1644,7 +1644,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 /// [`SQLGetTypeInfo`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetTypeInfo-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(_handle: HStmt, _data_type: SqlDataType) -> SqlReturn {
@@ -1655,7 +1655,7 @@ pub unsafe extern "C" fn SQLGetTypeInfo(_handle: HStmt, _data_type: SqlDataType)
 /// [`SQLMoreResults`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLMoreResults-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLMoreResults(_handle: HStmt) -> SqlReturn {
@@ -1666,7 +1666,7 @@ pub unsafe extern "C" fn SQLMoreResults(_handle: HStmt) -> SqlReturn {
 /// [`SQLNativeSql`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLNativeSql-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLNativeSql(
@@ -1686,7 +1686,7 @@ pub unsafe extern "C" fn SQLNativeSql(
 /// This is the WChar version of the SQLNativeSql function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLNativeSqlW(
@@ -1704,7 +1704,7 @@ pub unsafe extern "C" fn SQLNativeSqlW(
 /// [`SQLNumParams`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLNumParams-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLNumParams(
@@ -1718,7 +1718,7 @@ pub unsafe extern "C" fn SQLNumParams(
 /// [`SQLNumResultCols`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLNumResultCols-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLNumResultCols(
@@ -1741,7 +1741,7 @@ pub unsafe extern "C" fn SQLNumResultCols(
 /// [`SQLParamData`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLParamData-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> SqlReturn {
@@ -1752,7 +1752,7 @@ pub unsafe extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer
 /// [`SQLPrepare`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLPrepare-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLPrepare(
@@ -1769,7 +1769,7 @@ pub unsafe extern "C" fn SQLPrepare(
 /// This is the WChar version of the SQLPrepare function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLPrepareW(
@@ -1784,7 +1784,7 @@ pub unsafe extern "C" fn SQLPrepareW(
 /// [`SQLPrimaryKeys`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLPrimaryKeys-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLPrimaryKeys(
@@ -1805,7 +1805,7 @@ pub unsafe extern "C" fn SQLPrimaryKeys(
 /// This is the WChar version of the SQLPrimaryKeys function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLPrimaryKeysW(
@@ -1824,7 +1824,7 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
 /// [`SQLProcedureColumns`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLProcedureColumns-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLProcedureColumns(
@@ -1850,7 +1850,7 @@ pub unsafe extern "C" fn SQLProcedureColumns(
 /// This is the WChar version of the SQLProcedureColumns function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLProcedureColumnsW(
@@ -1874,7 +1874,7 @@ pub unsafe extern "C" fn SQLProcedureColumnsW(
 /// [`SQLProcedures`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLProcedures-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLProcedures(
@@ -1895,7 +1895,7 @@ pub unsafe extern "C" fn SQLProcedures(
 /// This is the WChar version of the SQLProcedures function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLProceduresW(
@@ -1914,7 +1914,7 @@ pub unsafe extern "C" fn SQLProceduresW(
 /// [`SQLPutData`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLPutData-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLPutData(
@@ -1929,7 +1929,7 @@ pub unsafe extern "C" fn SQLPutData(
 /// [`SQLRowCount`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLRowCount-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLRowCount(
@@ -1948,7 +1948,7 @@ pub unsafe extern "C" fn SQLRowCount(
 /// [`SQLSetConnectAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetConnectAttr-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttr(
@@ -1966,7 +1966,7 @@ pub unsafe extern "C" fn SQLSetConnectAttr(
 /// This is the WChar version of the SQLSetConnectAttr function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttrW(
@@ -1982,7 +1982,7 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
 /// [`SQLSetCursorName`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetCursorName-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetCursorName(
@@ -1999,7 +1999,7 @@ pub unsafe extern "C" fn SQLSetCursorName(
 /// This is the WChar version of the SQLSetCursorName function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetCursorNameW(
@@ -2014,7 +2014,7 @@ pub unsafe extern "C" fn SQLSetCursorNameW(
 /// [`SQLSetDescField`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetDescField-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetDescField(
@@ -2031,7 +2031,7 @@ pub unsafe extern "C" fn SQLSetDescField(
 /// [`SQLSetDescRec`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetDescRec-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetDescRec(
@@ -2053,7 +2053,7 @@ pub unsafe extern "C" fn SQLSetDescRec(
 /// [`SQLSetPos`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetPos-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetPos(
@@ -2069,7 +2069,7 @@ pub unsafe extern "C" fn SQLSetPos(
 /// [`SQLSetEnvAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetEnvAttr-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetEnvAttr(
@@ -2087,7 +2087,7 @@ pub unsafe extern "C" fn SQLSetEnvAttr(
 /// This is the WChar version of the SQLSetEnvAttr function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetEnvAttrW(
@@ -2145,7 +2145,7 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
 /// [`SQLSetStmtAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetStmtAttr-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetStmtAttr(
@@ -2163,7 +2163,7 @@ pub unsafe extern "C" fn SQLSetStmtAttr(
 /// This is the WChar version of the SQLSetStmtAttr function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetStmtAttrW(
@@ -2369,7 +2369,7 @@ pub unsafe extern "C" fn SQLSetStmtAttrW(
 /// [`SQLSpecialColumns`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSpecialColumns-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSpecialColumns(
@@ -2393,7 +2393,7 @@ pub unsafe extern "C" fn SQLSpecialColumns(
 /// This is the WChar version of the SQLSpecialColumns function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSpecialColumnsW(
@@ -2415,7 +2415,7 @@ pub unsafe extern "C" fn SQLSpecialColumnsW(
 /// [`SQLStatistics`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLStatistics-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLStatistics(
@@ -2436,7 +2436,7 @@ pub unsafe extern "C" fn SQLStatistics(
 /// [`SQLTablePrivileges`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLTablePrivileges-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLTablePrivileges(
@@ -2457,7 +2457,7 @@ pub unsafe extern "C" fn SQLTablePrivileges(
 /// This is the WChar version of the SQLTablesPrivileges function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLTablesPrivilegesW(
@@ -2476,7 +2476,7 @@ pub unsafe extern "C" fn SQLTablesPrivilegesW(
 /// [`SQLTables`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLTables-function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLTables(
@@ -2516,7 +2516,7 @@ fn sql_tables(
 /// This is the WChar version of the SQLTables function
 ///
 /// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
+/// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLTablesW(
