@@ -1996,11 +1996,34 @@ pub unsafe extern "C" fn SQLRowCount(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttr(
     hdbc: HDbc,
-    _attr: ConnectionAttribute,
-    _value: Pointer,
+    attr: ConnectionAttribute,
+    value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(hdbc), "SQLSetConnectAttr")
+    let conn_handle = MongoHandleRef::from(hdbc);
+    let conn = must_be_valid!((*conn_handle).as_connection());
+
+    match attr {
+        ConnectionAttribute::LoginTimeout => match FromPrimitive::from_u32(value as u32) {
+            Some(login_timeout) => {
+                let mut c = conn.write().unwrap();
+                c.attributes.login_timeout = Some(login_timeout);
+                SqlReturn::SUCCESS
+            }
+            None => {
+                env_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_LOGIN_TIMEOUT"));
+                SqlReturn::ERROR
+            }
+        },
+        // For now, since PowerBI does not use these we omit setting them
+        ConnectionAttribute::ConnectionTimeout | ConnectionAttribute::CurrentCatalog => {
+            SqlReturn::SUCCESS
+        }
+        _ => {
+            conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+            SqlReturn::ERROR
+        }
+    }
 }
 
 ///
