@@ -1,9 +1,10 @@
-use crate::api::functions::util::set_output_string;
 use crate::{
     api::{
         definitions::*,
         errors::{ODBCError, Result},
-        functions::util::{input_wtext_to_string, set_str_length, unsupported_function},
+        functions::util::{
+            input_wtext_to_string, set_output_string, set_str_length, unsupported_function,
+        },
         odbc_uri::ODBCUri,
     },
     handles::definitions::*,
@@ -14,7 +15,7 @@ use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
     EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
     InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
-    SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
+    SqlReturn, StatementAttribute, UInteger, ULen, USmallInt, WChar,
 };
 use std::{mem::size_of, sync::RwLock};
 
@@ -1100,12 +1101,54 @@ pub unsafe extern "C" fn SQLFreeStmt(_statement_handle: HStmt, _option: SmallInt
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttr(
     connection_handle: HDbc,
-    _attribute: ConnectionAttribute,
-    _value_ptr: Pointer,
-    _buffer_length: Integer,
-    _string_length_ptr: *mut Integer,
+    attribute: ConnectionAttribute,
+    value_ptr: Pointer,
+    buffer_length: Integer,
+    string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetConnectAttr")
+    let conn_handle = MongoHandleRef::from(connection_handle);
+    let conn = must_be_valid!((*conn_handle).as_connection());
+
+    match attribute {
+        ConnectionAttribute::CurrentCatalog => {
+            let current_catalog = conn
+                .read()
+                .unwrap()
+                .attributes
+                .current_catalog
+                .map(|s| s.as_str());
+            match current_catalog {
+                None => SqlReturn::NO_DATA,
+                Some(cc) => set_output_string(
+                    cc,
+                    value_ptr as *mut WChar,
+                    buffer_length as usize,
+                    string_length_ptr as *mut SmallInt,
+                ),
+            }
+        }
+        ConnectionAttribute::LoginTimeout => {
+            let output_ptr = value_ptr as *mut UInteger;
+            let login_timeout = conn.read().unwrap().attributes.login_timeout.unwrap_or(0);
+            output_ptr.write(login_timeout);
+            SqlReturn::SUCCESS
+        }
+        ConnectionAttribute::ConnectionTimeout => {
+            let output_ptr = value_ptr as *mut UInteger;
+            let connection_timeout = conn
+                .read()
+                .unwrap()
+                .attributes
+                .connection_timeout
+                .unwrap_or(0);
+            output_ptr.write(connection_timeout);
+            SqlReturn::SUCCESS
+        }
+        _ => {
+            conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+            SqlReturn::ERROR
+        }
+    }
 }
 
 ///

@@ -1,8 +1,9 @@
 use constants::{
-    INVALID_ATTR_VALUE, INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER,
-    OPTION_CHANGED, RIGHT_TRUNCATED, UNABLE_TO_CONNECT, UNSUPPORTED_FIELD_DESCRIPTOR,
-    VENDOR_IDENTIFIER,
+    INVALID_ATTR_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED,
+    NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED, UNABLE_TO_CONNECT,
+    UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
+use odbc_sys::ConnectionAttribute;
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
@@ -25,6 +26,8 @@ pub enum ODBCError {
     InvalidUriFormat(String),
     #[error("[{}][API] Invalid handle type, expected {0}", VENDOR_IDENTIFIER)]
     InvalidHandleType(&'static str),
+    #[error("[{}][API] Invalid value for attribute {0:?}", VENDOR_IDENTIFIER)]
+    InvalidAttrIdentifier(ConnectionAttribute),
     #[error("[{}][API] Invalid value for attribute {0}", VENDOR_IDENTIFIER)]
     InvalidAttrValue(&'static str),
     #[error(
@@ -56,6 +59,7 @@ impl ODBCError {
             }
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
+            ODBCError::InvalidAttrIdentifier(_) => INVALID_ATTR_IDENTIFIER,
             ODBCError::InvalidAttrValue(_) => INVALID_ATTR_VALUE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
@@ -73,6 +77,7 @@ impl ODBCError {
             // code to propagate.
             ODBCError::Unimplemented(_)
             | ODBCError::InvalidUriFormat(_)
+            | ODBCError::InvalidAttrIdentifier(_)
             | ODBCError::InvalidAttrValue(_)
             | ODBCError::InvalidHandleType(_)
             | ODBCError::MissingDriverOrDSNProperty
