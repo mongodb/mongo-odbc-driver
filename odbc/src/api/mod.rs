@@ -7,6 +7,8 @@ pub use functions::*;
 #[cfg(test)]
 mod col_attr_tests;
 #[cfg(test)]
+mod connect_attr_tests;
+#[cfg(test)]
 mod driver_connect_tests;
 #[cfg(test)]
 mod env_attr_tests;

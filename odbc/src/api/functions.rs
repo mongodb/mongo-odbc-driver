@@ -1132,7 +1132,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
 
     match attribute {
         ConnectionAttribute::CurrentCatalog => {
-            let current_catalog = attributes.current_catalog.map(|s| s.as_str());
+            let current_catalog = attributes.current_catalog.as_ref().map(|s| s.as_str());
             match current_catalog {
                 None => SqlReturn::NO_DATA,
                 Some(cc) => set_output_string(
@@ -1156,7 +1156,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
             )
         }
         _ => {
-            conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+            // conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
             SqlReturn::ERROR
         }
     }
@@ -2021,20 +2021,21 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
             conn_guard.attributes.current_catalog = Some(current_catalog);
             SqlReturn::SUCCESS
         }
-        ConnectionAttribute::LoginTimeout => match FromPrimitive::from_u32(value as u32) {
+        ConnectionAttribute::LoginTimeout => match FromPrimitive::from_u32(value_ptr as u32) {
             Some(login_timeout) => {
                 conn_guard.attributes.login_timeout = Some(login_timeout);
                 SqlReturn::SUCCESS
             }
             None => {
-                env_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_LOGIN_TIMEOUT"));
+                // conn_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_LOGIN_TIMEOUT"));
                 SqlReturn::ERROR
             }
         },
         // For now, since PowerBI does not use this attribute we omit setting it.
         ConnectionAttribute::ConnectionTimeout => SqlReturn::SUCCESS,
         _ => {
-            conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+            // TODO: how to do this without compiler error (throughout file)
+            // conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
             SqlReturn::ERROR
         }
     }
