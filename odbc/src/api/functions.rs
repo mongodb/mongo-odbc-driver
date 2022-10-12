@@ -1,3 +1,4 @@
+use crate::util::set_output_fixed_data;
 use crate::{
     api::{
         definitions::*,
@@ -1101,54 +1102,12 @@ pub unsafe extern "C" fn SQLFreeStmt(_statement_handle: HStmt, _option: SmallInt
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttr(
     connection_handle: HDbc,
-    attribute: ConnectionAttribute,
-    value_ptr: Pointer,
-    buffer_length: Integer,
-    string_length_ptr: *mut Integer,
+    _attribute: ConnectionAttribute,
+    _value_ptr: Pointer,
+    _buffer_length: Integer,
+    _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    let conn_handle = MongoHandleRef::from(connection_handle);
-    let conn = must_be_valid!((*conn_handle).as_connection());
-
-    match attribute {
-        ConnectionAttribute::CurrentCatalog => {
-            let current_catalog = conn
-                .read()
-                .unwrap()
-                .attributes
-                .current_catalog
-                .map(|s| s.as_str());
-            match current_catalog {
-                None => SqlReturn::NO_DATA,
-                Some(cc) => set_output_string(
-                    cc,
-                    value_ptr as *mut WChar,
-                    buffer_length as usize,
-                    string_length_ptr as *mut SmallInt,
-                ),
-            }
-        }
-        ConnectionAttribute::LoginTimeout => {
-            let output_ptr = value_ptr as *mut UInteger;
-            let login_timeout = conn.read().unwrap().attributes.login_timeout.unwrap_or(0);
-            output_ptr.write(login_timeout);
-            SqlReturn::SUCCESS
-        }
-        ConnectionAttribute::ConnectionTimeout => {
-            let output_ptr = value_ptr as *mut UInteger;
-            let connection_timeout = conn
-                .read()
-                .unwrap()
-                .attributes
-                .connection_timeout
-                .unwrap_or(0);
-            output_ptr.write(connection_timeout);
-            SqlReturn::SUCCESS
-        }
-        _ => {
-            conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
-            SqlReturn::ERROR
-        }
-    }
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetConnectAttr")
 }
 
 ///
@@ -1161,13 +1120,46 @@ pub unsafe extern "C" fn SQLGetConnectAttr(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttrW(
-    _connection_handle: HDbc,
-    _attribute: ConnectionAttribute,
-    _value_ptr: Pointer,
-    _buffer_length: Integer,
-    _string_length_ptr: *mut Integer,
+    connection_handle: HDbc,
+    attribute: ConnectionAttribute,
+    value_ptr: Pointer,
+    buffer_length: Integer,
+    string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    let conn_handle = MongoHandleRef::from(connection_handle);
+    let conn = must_be_valid!((*conn_handle).as_connection());
+    let attributes = &conn.read().unwrap().attributes;
+
+    match attribute {
+        ConnectionAttribute::CurrentCatalog => {
+            let current_catalog = attributes.current_catalog.map(|s| s.as_str());
+            match current_catalog {
+                None => SqlReturn::NO_DATA,
+                Some(cc) => set_output_string(
+                    cc,
+                    value_ptr as *mut WChar,
+                    buffer_length as usize,
+                    string_length_ptr as *mut SmallInt,
+                ),
+            }
+        }
+        ConnectionAttribute::LoginTimeout => {
+            let login_timeout = attributes.login_timeout.unwrap_or(0);
+            set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr as *mut Len)
+        }
+        ConnectionAttribute::ConnectionTimeout => {
+            let connection_timeout = attributes.connection_timeout.unwrap_or(0);
+            set_output_fixed_data(
+                &connection_timeout,
+                value_ptr,
+                string_length_ptr as *mut Len,
+            )
+        }
+        _ => {
+            conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+            SqlReturn::ERROR
+        }
+    }
 }
 
 ///
@@ -2625,8 +2617,8 @@ pub unsafe extern "C" fn SQLTablesW(
 
 pub mod util {
     use crate::{api::errors::ODBCError, handles::definitions::MongoHandle};
-    use odbc_sys::{Integer, SmallInt, SqlReturn, WChar};
-    use std::{cmp::min, ptr::copy_nonoverlapping};
+    use odbc_sys::{Integer, Len, Pointer, SmallInt, SqlReturn, WChar};
+    use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping};
 
     ///
     /// input_wtext_to_string converts an input cstring to a rust String.
@@ -2716,6 +2708,30 @@ pub mod util {
         } else {
             SqlReturn::SUCCESS
         }
+    }
+
+    ///
+    /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
+    /// ODBC drivers assume the output buffer is large enough for fixed types, and are allowed to
+    /// overwrite the buffer if too small a buffer is passed.
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_fixed_data<T: core::fmt::Debug>(
+        data: &T,
+        output_ptr: Pointer,
+        data_len_ptr: *mut Len,
+    ) -> SqlReturn {
+        if !data_len_ptr.is_null() {
+            // If the output_ptr is NULL, we should still return the length of the message.
+            *data_len_ptr = size_of::<T>() as isize;
+        }
+        if output_ptr.is_null() {
+            return SqlReturn::SUCCESS_WITH_INFO;
+        }
+        copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
+        SqlReturn::SUCCESS
     }
 
     ///
