@@ -10,6 +10,6 @@ pub const RIGHT_TRUNCATED: &str = "01004";
 pub const OPTION_CHANGED: &str = "01S02";
 pub const UNABLE_TO_CONNECT: &str = "08001";
 
-pub const SQL_ALL_TABLE_TYPES: &str = "SQL_ALL_TABLE_TYPES";
-pub const SQL_ALL_CATALOGS: &str = "SQL_ALL_CATALOGS";
-pub const SQL_ALL_SCHEMAS: &str = "SQL_ALL_SCHEMAS";
+pub const SQL_ALL_TABLE_TYPES: &str = "%";
+pub const SQL_ALL_CATALOGS: &str = "%";
+pub const SQL_ALL_SCHEMAS: &str = "%";

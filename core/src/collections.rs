@@ -2,33 +2,26 @@ use crate::err::Result;
 use crate::stmt::MongoStatement;
 use crate::{conn::MongoConnection, Error};
 use bson::{doc, Bson, Document};
-use constants::{SQL_ALL_CATALOGS, SQL_ALL_TABLE_TYPES};
+use constants::SQL_ALL_TABLE_TYPES;
 use lazy_static::lazy_static;
 use mongodb::results::CollectionSpecification;
 use mongodb::sync::Cursor;
 use regex::{RegexSet, RegexSetBuilder};
 
+const TABLE: &str = "TABLE";
 const COLLECTION: &str = "collection";
-const TABLE: &str = "table";
-const VIEW: &str = "view";
 const TIMESERIES: &str = "timeseries";
+const VIEW: &str = "view";
 
 lazy_static! {
-    static ref TABLE_VALUES: RegexSet =
-        RegexSetBuilder::new(&["^table$", "^\'table\'$", "^\"table\"$",])
-            .case_insensitive(true)
-            .build()
-            .unwrap();
-    static ref VIEW_VALUES: RegexSet =
-        RegexSetBuilder::new(&["^view$", "^\'view\'$", "^\"view\"$",])
-            .case_insensitive(true)
-            .build()
-            .unwrap();
-    static ref TIMESERIES_VALUES: RegexSet =
-        RegexSetBuilder::new(&["^timeseries", "^\'timeseries\'$", "^\"timeseries\"$",])
-            .case_insensitive(true)
-            .build()
-            .unwrap();
+    static ref TABLE_VALUES: RegexSet = RegexSetBuilder::new(&["^table$", "^\'table\'$"])
+        .case_insensitive(true)
+        .build()
+        .unwrap();
+    static ref VIEW_VALUES: RegexSet = RegexSetBuilder::new(&["^view$", "^\'view\'$"])
+        .case_insensitive(true)
+        .build()
+        .unwrap();
 }
 
 #[derive(Debug)]
@@ -60,21 +53,19 @@ impl MongoCollections {
         collection_name_filter: &str,
         table_type: &str,
     ) -> Self {
-        let db_filter = if SQL_ALL_CATALOGS.to_string().eq(db_name_filter) {
-            "%"
-        } else {
-            db_name_filter
-        };
         let names = mongo_connection
             .client
-            .list_database_names(to_name_regex(db_filter), None)
+            .list_database_names(to_name_regex(db_name_filter), None)
             .unwrap();
         let mut databases: Vec<CollectionsForDb> = Vec::with_capacity(names.len());
         for name in names {
-            let list_coll_filter = to_name_regex(collection_name_filter);
+            let list_coll_name_filter = to_name_regex(collection_name_filter);
             let db = mongo_connection.client.database(name.as_str());
             let collections = db
-                .list_collections(add_table_type_filter(table_type, list_coll_filter), None)
+                .list_collections(
+                    add_table_type_filter(table_type, list_coll_name_filter),
+                    None,
+                )
                 .unwrap();
             databases.push(CollectionsForDb {
                 database_name: name,
@@ -89,7 +80,7 @@ impl MongoCollections {
     }
 }
 
-// Iterates through the table types and adds the corresponding type to the filter document
+// Iterates through the table types and adds the corresponding type to the filter document.
 fn add_table_type_filter(table_type: &str, mut filter: Document) -> Document {
     let mut table_type_filters: Vec<Bson> = Vec::new();
     let table_type_entries = table_type
@@ -97,18 +88,15 @@ fn add_table_type_filter(table_type: &str, mut filter: Document) -> Document {
         .map(|attr| attr.trim())
         .collect::<Vec<&str>>();
     for table_type_entry in &table_type_entries {
-        if TABLE_VALUES.is_match(table_type_entry) {
-            // collection type is mapped to table
+        if SQL_ALL_TABLE_TYPES.to_string().eq(table_type_entry) {
+            // No need to add a 'type' filter
+            return filter;
+        } else if TABLE_VALUES.is_match(table_type_entry) {
+            // Collection and Timeseries types are mapped to table
             table_type_filters.push(Bson::String(COLLECTION.to_string()));
+            table_type_filters.push(Bson::String(TIMESERIES.to_string()));
         } else if VIEW_VALUES.is_match(table_type_entry) {
             table_type_filters.push(Bson::String(VIEW.to_string()));
-        } else if TIMESERIES_VALUES.is_match(table_type_entry) {
-            table_type_filters.push(Bson::String(TIMESERIES.to_string()));
-        } else if SQL_ALL_TABLE_TYPES.to_string().eq(table_type_entry) {
-            table_type_filters.push(Bson::String(COLLECTION.to_string()));
-            table_type_filters.push(Bson::String(VIEW.to_string()));
-            table_type_filters.push(Bson::String(TIMESERIES.to_string()));
-            break;
         }
     }
     filter.insert("type", doc! {"$in": Bson::Array(table_type_filters) });
@@ -178,9 +166,9 @@ impl MongoStatement for MongoCollections {
                 )
                 .to_lowercase();
                 match coll_type.as_str() {
-                    // Mapping collection back to table
-                    COLLECTION => Bson::String(TABLE.to_string()),
-                    _ => Bson::String(coll_type),
+                    // Mapping 'collection' or 'timeseries' to 'TABLE'
+                    COLLECTION | TIMESERIES => Bson::String(TABLE.to_string()),
+                    _ => Bson::String(coll_type.to_uppercase()),
                 }
             }
             _ => Bson::Null,
@@ -195,4 +183,69 @@ impl MongoStatement for MongoCollections {
 fn to_name_regex(filter: &str) -> Document {
     let regex_filter = filter.replace('%', ".*").replace('_', ".");
     doc! { "name": { "$regex": regex_filter } }
+}
+
+mod unit {
+    mod table_type {
+        #[test]
+        fn all_types() {
+            use crate::collections::add_table_type_filter;
+            use bson::doc;
+            use constants::SQL_ALL_TABLE_TYPES;
+            let filter = doc! {};
+            assert_eq!(doc! {}, add_table_type_filter(SQL_ALL_TABLE_TYPES, filter));
+        }
+        #[test]
+        fn view() {
+            use crate::collections::add_table_type_filter;
+            use bson::{
+                doc,
+                Bson::{Array, String},
+            };
+            let filter = doc! {};
+            assert_eq!(
+                doc! {"type":doc!{"$in": Array([String("view".to_string())].to_vec())}},
+                add_table_type_filter("'view'", filter)
+            );
+        }
+        #[test]
+        fn table() {
+            use crate::collections::add_table_type_filter;
+            use bson::{
+                doc,
+                Bson::{Array, String},
+            };
+            let filter = doc! {};
+            assert_eq!(
+                doc! {"type":doc!{"$in": Array([String("collection".to_string()),
+                String("timeseries".to_string())].to_vec())}},
+                add_table_type_filter("TABLE", filter)
+            );
+        }
+        #[test]
+        fn view_table() {
+            use crate::collections::add_table_type_filter;
+            use bson::{
+                doc,
+                Bson::{Array, String},
+            };
+            let filter = doc! {};
+            assert_eq!(
+                doc! {"type":doc!{"$in": Array([String("view".to_string()),
+                String("collection".to_string()),
+                String("timeseries".to_string())].to_vec())}},
+                add_table_type_filter("View,'table'", filter)
+            );
+        }
+        #[test]
+        fn not_supported() {
+            use crate::collections::add_table_type_filter;
+            use bson::{doc, Bson::Array};
+            let filter = doc! {};
+            assert_eq!(
+                doc! {"type":doc!{"$in": Array([].to_vec())}},
+                add_table_type_filter("GLOBAL TEMPORARY", filter)
+            );
+        }
+    }
 }
