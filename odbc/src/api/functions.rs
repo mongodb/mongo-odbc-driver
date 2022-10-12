@@ -1987,35 +1987,12 @@ pub unsafe extern "C" fn SQLRowCount(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttr(
-    hdbc: HDbc,
-    attr: ConnectionAttribute,
-    value: Pointer,
+    connection_handle: HDbc,
+    _attribute: ConnectionAttribute,
+    _value_ptr: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    let conn_handle = MongoHandleRef::from(hdbc);
-    let conn = must_be_valid!((*conn_handle).as_connection());
-
-    match attr {
-        ConnectionAttribute::LoginTimeout => match FromPrimitive::from_u32(value as u32) {
-            Some(login_timeout) => {
-                let mut c = conn.write().unwrap();
-                c.attributes.login_timeout = Some(login_timeout);
-                SqlReturn::SUCCESS
-            }
-            None => {
-                env_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_LOGIN_TIMEOUT"));
-                SqlReturn::ERROR
-            }
-        },
-        // For now, since PowerBI does not use these we omit setting them
-        ConnectionAttribute::ConnectionTimeout | ConnectionAttribute::CurrentCatalog => {
-            SqlReturn::SUCCESS
-        }
-        _ => {
-            conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
-            SqlReturn::ERROR
-        }
-    }
+    unsupported_function(MongoHandleRef::from(connection_handle), "SQLSetConnectAttr")
 }
 
 ///
@@ -2028,12 +2005,39 @@ pub unsafe extern "C" fn SQLSetConnectAttr(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttrW(
-    _hdbc: HDbc,
-    _attr: ConnectionAttribute,
-    _value: Pointer,
-    _str_length: Integer,
+    connection_handle: HDbc,
+    attribute: ConnectionAttribute,
+    value_ptr: Pointer,
+    str_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    let conn_handle = MongoHandleRef::from(connection_handle);
+    let conn = must_be_valid!((*conn_handle).as_connection());
+    let mut conn_guard = conn.write().unwrap();
+
+    match attribute {
+        ConnectionAttribute::CurrentCatalog => {
+            let current_catalog =
+                input_wtext_to_string(value_ptr as *const WChar, str_length as usize);
+            conn_guard.attributes.current_catalog = Some(current_catalog);
+            SqlReturn::SUCCESS
+        }
+        ConnectionAttribute::LoginTimeout => match FromPrimitive::from_u32(value as u32) {
+            Some(login_timeout) => {
+                conn_guard.attributes.login_timeout = Some(login_timeout);
+                SqlReturn::SUCCESS
+            }
+            None => {
+                env_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_LOGIN_TIMEOUT"));
+                SqlReturn::ERROR
+            }
+        },
+        // For now, since PowerBI does not use this attribute we omit setting it.
+        ConnectionAttribute::ConnectionTimeout => SqlReturn::SUCCESS,
+        _ => {
+            conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+            SqlReturn::ERROR
+        }
+    }
 }
 
 ///
