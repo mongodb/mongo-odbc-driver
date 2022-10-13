@@ -1,6 +1,6 @@
 mod unit {
     use std::sync::RwLock;
-    use odbc_sys::{ConnectionAttribute, HDbc, Integer, Pointer, SqlReturn};
+    use odbc_sys::{ConnectionAttribute, Integer, SqlReturn, UInteger};
     use crate::handles::definitions::{Connection, ConnectionState, MongoHandle};
     use crate::SQLGetConnectAttrW;
     use crate::util::input_wtext_to_string;
@@ -10,7 +10,7 @@ mod unit {
     #[test]
     fn get_string_attrs_default() {
         unsafe {
-            let mut conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
             let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
 
             let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
@@ -63,7 +63,7 @@ mod unit {
     #[test]
     fn get_numeric_attrs_default() {
         unsafe {
-            let mut conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
             let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
 
             let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
@@ -83,7 +83,7 @@ mod unit {
                         out_length
                     )
                 );
-                assert_eq!(expected, *value_ptr) // TODO: how to compare this as an int
+                assert_eq!(expected, *(value_ptr as *mut UInteger))
             }
         }
     }
@@ -115,7 +115,7 @@ mod unit {
                         out_length
                     )
                 );
-                assert_eq!(expected, *value_ptr) // TODO: how to compare this as an int
+                assert_eq!(expected, *(value_ptr as *mut UInteger))
             }
         }
     }

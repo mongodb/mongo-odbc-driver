@@ -16,7 +16,7 @@ use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
     EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
     InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
-    SqlReturn, StatementAttribute, UInteger, ULen, USmallInt, WChar,
+    SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
 };
 use std::{mem::size_of, sync::RwLock};
 
