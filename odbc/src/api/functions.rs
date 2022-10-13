@@ -1126,40 +1126,52 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
     buffer_length: Integer,
     string_length_ptr: *mut Integer,
 ) -> SqlReturn {
+    let mut err = None;
     let conn_handle = MongoHandleRef::from(connection_handle);
-    let conn = must_be_valid!((*conn_handle).as_connection());
-    let attributes = &conn.read().unwrap().attributes;
 
-    match attribute {
-        ConnectionAttribute::CurrentCatalog => {
-            let current_catalog = attributes.current_catalog.as_ref().map(|s| s.as_str());
-            match current_catalog {
-                None => SqlReturn::NO_DATA,
-                Some(cc) => set_output_string(
-                    cc,
-                    value_ptr as *mut WChar,
-                    buffer_length as usize,
-                    string_length_ptr as *mut SmallInt,
-                ),
+    // This scope is introduced to make the RWLock Guard expire before we write
+    // any error values via add_diag_info as RWLock::write is not reentrant on
+    // all operating systems, and the docs say it can panic.
+    let sql_return = {
+        let conn = must_be_valid!((*conn_handle).as_connection());
+        let attributes = &conn.read().unwrap().attributes;
+
+        match attribute {
+            ConnectionAttribute::CurrentCatalog => {
+                let current_catalog = attributes.current_catalog.as_ref().map(|s| s.as_str());
+                match current_catalog {
+                    None => SqlReturn::NO_DATA,
+                    Some(cc) => set_output_string(
+                        cc,
+                        value_ptr as *mut WChar,
+                        buffer_length as usize,
+                        string_length_ptr as *mut SmallInt,
+                    ),
+                }
+            }
+            ConnectionAttribute::LoginTimeout => {
+                let login_timeout = attributes.login_timeout.unwrap_or(0);
+                set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr as *mut Len)
+            }
+            ConnectionAttribute::ConnectionTimeout => {
+                let connection_timeout = attributes.connection_timeout.unwrap_or(0);
+                set_output_fixed_data(
+                    &connection_timeout,
+                    value_ptr,
+                    string_length_ptr as *mut Len,
+                )
+            }
+            _ => {
+                err = Some(ODBCError::InvalidAttrIdentifier(attribute));
+                SqlReturn::ERROR
             }
         }
-        ConnectionAttribute::LoginTimeout => {
-            let login_timeout = attributes.login_timeout.unwrap_or(0);
-            set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr as *mut Len)
-        }
-        ConnectionAttribute::ConnectionTimeout => {
-            let connection_timeout = attributes.connection_timeout.unwrap_or(0);
-            set_output_fixed_data(
-                &connection_timeout,
-                value_ptr,
-                string_length_ptr as *mut Len,
-            )
-        }
-        _ => {
-            // conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
-            SqlReturn::ERROR
-        }
+    };
+
+    if let Some(error) = err {
+        conn_handle.add_diag_info(error);
     }
+    sql_return
 }
 
 ///
@@ -2010,35 +2022,46 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
     value_ptr: Pointer,
     str_length: Integer,
 ) -> SqlReturn {
+    let mut err = None;
     let conn_handle = MongoHandleRef::from(connection_handle);
-    let conn = must_be_valid!((*conn_handle).as_connection());
-    let mut conn_guard = conn.write().unwrap();
 
-    match attribute {
-        ConnectionAttribute::CurrentCatalog => {
-            let current_catalog =
-                input_wtext_to_string(value_ptr as *const WChar, str_length as usize);
-            conn_guard.attributes.current_catalog = Some(current_catalog);
-            SqlReturn::SUCCESS
-        }
-        ConnectionAttribute::LoginTimeout => match FromPrimitive::from_u32(value_ptr as u32) {
-            Some(login_timeout) => {
-                conn_guard.attributes.login_timeout = Some(login_timeout);
+    // This scope is introduced to make the RWLock Guard expire before we write
+    // any error values via add_diag_info as RWLock::write is not reentrant on
+    // all operating systems, and the docs say it can panic.
+    let sql_return = {
+        let conn = must_be_valid!((*conn_handle).as_connection());
+        let mut conn_guard = conn.write().unwrap();
+
+        match attribute {
+            ConnectionAttribute::CurrentCatalog => {
+                let current_catalog =
+                    input_wtext_to_string(value_ptr as *const WChar, str_length as usize);
+                conn_guard.attributes.current_catalog = Some(current_catalog);
                 SqlReturn::SUCCESS
             }
-            None => {
-                // conn_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_LOGIN_TIMEOUT"));
+            ConnectionAttribute::LoginTimeout => match FromPrimitive::from_u32(value_ptr as u32) {
+                Some(login_timeout) => {
+                    conn_guard.attributes.login_timeout = Some(login_timeout);
+                    SqlReturn::SUCCESS
+                }
+                None => {
+                    err = Some(ODBCError::InvalidAttrValue("SQL_ATTR_LOGIN_TIMEOUT"));
+                    SqlReturn::ERROR
+                }
+            },
+            // For now, since PowerBI does not use this attribute we omit setting it.
+            ConnectionAttribute::ConnectionTimeout => SqlReturn::SUCCESS,
+            _ => {
+                err = Some(ODBCError::InvalidAttrIdentifier(attribute));
                 SqlReturn::ERROR
             }
-        },
-        // For now, since PowerBI does not use this attribute we omit setting it.
-        ConnectionAttribute::ConnectionTimeout => SqlReturn::SUCCESS,
-        _ => {
-            // TODO: how to do this without compiler error (throughout file)
-            // conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
-            SqlReturn::ERROR
         }
+    };
+
+    if let Some(error) = err {
+        conn_handle.add_diag_info(error);
     }
+    sql_return
 }
 
 ///
