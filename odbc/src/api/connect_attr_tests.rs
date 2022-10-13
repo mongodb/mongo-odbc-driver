@@ -1,9 +1,12 @@
 mod unit {
-    use std::sync::RwLock;
+    use crate::{
+        errors::ODBCError,
+        handles::definitions::{Connection, ConnectionState, MongoHandle},
+        util::input_wtext_to_string,
+        SQLGetConnectAttrW,
+    };
     use odbc_sys::{ConnectionAttribute, Integer, SqlReturn, UInteger};
-    use crate::handles::definitions::{Connection, ConnectionState, MongoHandle};
-    use crate::SQLGetConnectAttrW;
-    use crate::util::input_wtext_to_string;
+    use std::sync::RwLock;
 
     // Test getting CurrentCatalog attribute from the Connection
     // when none of the attributes are explicitly set.
@@ -54,7 +57,10 @@ mod unit {
                 )
             );
             assert_eq!("test".len() as i32, *out_length);
-            assert_eq!("test".to_string(), input_wtext_to_string(value_ptr as *const _, *out_length as usize))
+            assert_eq!(
+                "test".to_string(),
+                input_wtext_to_string(value_ptr as *const _, *out_length as usize)
+            )
         }
     }
 
@@ -71,17 +77,11 @@ mod unit {
 
             for (attr, expected) in [
                 (ConnectionAttribute::LoginTimeout, 0),
-                (ConnectionAttribute::ConnectionTimeout, 0)
+                (ConnectionAttribute::ConnectionTimeout, 0),
             ] {
                 assert_eq!(
                     SqlReturn::SUCCESS,
-                    SQLGetConnectAttrW(
-                        mongo_handle as *mut _,
-                        attr,
-                        value_ptr,
-                        0,
-                        out_length
-                    )
+                    SQLGetConnectAttrW(mongo_handle as *mut _, attr, value_ptr, 0, out_length)
                 );
                 assert_eq!(expected, *(value_ptr as *mut UInteger))
             }
@@ -103,23 +103,67 @@ mod unit {
 
             for (attr, expected) in [
                 (ConnectionAttribute::LoginTimeout, 42u32),
-                (ConnectionAttribute::ConnectionTimeout, 24u32)
+                (ConnectionAttribute::ConnectionTimeout, 24u32),
             ] {
                 assert_eq!(
                     SqlReturn::SUCCESS,
-                    SQLGetConnectAttrW(
-                        mongo_handle as *mut _,
-                        attr,
-                        value_ptr,
-                        0,
-                        out_length
-                    )
+                    SQLGetConnectAttrW(mongo_handle as *mut _, attr, value_ptr, 0, out_length)
                 );
                 assert_eq!(expected, *(value_ptr as *mut UInteger))
             }
         }
     }
 
-    // TODO: test invalid attribute
+    #[test]
+    fn get_invalid_attr() {
+        unsafe {
+            let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+            let out_length = &mut 10;
+
+            for attr in [
+                ConnectionAttribute::AsyncEnable,
+                ConnectionAttribute::AccessMode,
+                ConnectionAttribute::AutoCommit,
+                ConnectionAttribute::Trace,
+                ConnectionAttribute::TraceFile,
+                ConnectionAttribute::TranslateLib,
+                ConnectionAttribute::TranslateOption,
+                ConnectionAttribute::TxnIsolation,
+                ConnectionAttribute::OdbcCursors,
+                ConnectionAttribute::QuietMode,
+                ConnectionAttribute::PacketSize,
+                ConnectionAttribute::DisconnectBehaviour,
+                ConnectionAttribute::AsyncDbcFunctionsEnable,
+                ConnectionAttribute::AsyncDbcEvent,
+                ConnectionAttribute::EnlistInDtc,
+                ConnectionAttribute::EnlistInXa,
+                ConnectionAttribute::ConnectionDead,
+                ConnectionAttribute::AutoIpd,
+                ConnectionAttribute::MetadataId,
+            ] {
+                let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+                let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
+                assert_eq!(
+                    SqlReturn::ERROR,
+                    SQLGetConnectAttrW(mongo_handle as *mut _, attr, value_ptr, 0, out_length)
+                );
+                // Check the actual
+                let conn_handle = (*mongo_handle).as_connection().unwrap();
+                let errors = &conn_handle.read().unwrap().errors;
+                assert_eq!(1, errors.len());
+                let actual_err = errors.last().unwrap();
+                match actual_err {
+                    ODBCError::InvalidAttrIdentifier(actual_attr) => assert_eq!(attr, *actual_attr),
+                    _ => panic!("unexpected err: {:?}", actual_err),
+                }
+            }
+        }
+    }
+
     // TODO: test setting
+    //   - errors:
+    //     - set invalid attribute
+    //     - set invalid value (for login_timeout only)
+    //   - set catalog
+    //   - set login_timeout
 }
