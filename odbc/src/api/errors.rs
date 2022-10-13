@@ -1,10 +1,11 @@
 use constants::{
-    INVALID_ATTR_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED,
-    UNABLE_TO_CONNECT, VENDOR_IDENTIFIER,
+    INVALID_ATTR_VALUE, INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER,
+    OPTION_CHANGED, RIGHT_TRUNCATED, UNABLE_TO_CONNECT, UNSUPPORTED_FIELD_DESCRIPTOR,
+    VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum ODBCError {
     #[error("[{}][API] The feature {0} is not implemented", VENDOR_IDENTIFIER)]
     Unimplemented(&'static str),
@@ -13,6 +14,13 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     UnsupportedDriverConnectOption(String),
+    #[error(
+        "[{}][API] The field descriptor value {0} is not supported",
+        VENDOR_IDENTIFIER
+    )]
+    UnsupportedFieldDescriptor(String),
+    #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
+    InvalidDescriptorIndex(u16),
     #[error("[{}][API] Invalid Uri: {0}", VENDOR_IDENTIFIER)]
     InvalidUriFormat(String),
     #[error("[{}][API] Invalid handle type, expected {0}", VENDOR_IDENTIFIER)]
@@ -35,7 +43,7 @@ pub enum ODBCError {
     )]
     OptionValueChanged(&'static str, &'static str),
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
-    Core(#[from] mongo_odbc_core::Error),
+    Core(mongo_odbc_core::Error),
 }
 
 pub type Result<T> = std::result::Result<T, ODBCError>;
@@ -53,6 +61,8 @@ impl ODBCError {
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
+            ODBCError::UnsupportedFieldDescriptor(_) => UNSUPPORTED_FIELD_DESCRIPTOR,
+            ODBCError::InvalidDescriptorIndex(_) => INVALID_DESCRIPTOR_INDEX,
         }
     }
 
@@ -68,8 +78,28 @@ impl ODBCError {
             | ODBCError::MissingDriverOrDSNProperty
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
-            | ODBCError::OptionValueChanged(_, _) => 0,
+            | ODBCError::OptionValueChanged(_, _)
+            | ODBCError::InvalidDescriptorIndex(_)
+            | ODBCError::UnsupportedFieldDescriptor(_) => 0,
             ODBCError::Core(me) => me.code(),
+        }
+    }
+}
+
+impl From<mongo_odbc_core::Error> for ODBCError {
+    fn from(err: mongo_odbc_core::Error) -> Self {
+        match err {
+            mongo_odbc_core::Error::ColIndexOutOfBounds(u) => ODBCError::InvalidDescriptorIndex(u),
+            e => ODBCError::Core(e),
+        }
+    }
+}
+
+impl From<&mongo_odbc_core::Error> for ODBCError {
+    fn from(err: &mongo_odbc_core::Error) -> Self {
+        match err {
+            mongo_odbc_core::Error::ColIndexOutOfBounds(u) => ODBCError::InvalidDescriptorIndex(*u),
+            e => ODBCError::Core(e.clone()),
         }
     }
 }
