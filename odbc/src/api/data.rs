@@ -154,18 +154,19 @@ pub unsafe fn format_and_return_bson(
         }
         _ => {}
     }
+    use i32_len::*;
     match target_type {
         CDataType::Char | CDataType::Binary => set_output_string(
             &data.to_string(),
             target_value_ptr as *mut _,
             buffer_len as usize,
-            str_len_or_ind_ptr as *mut _,
+            str_len_or_ind_ptr,
         ),
         CDataType::WChar => set_output_wstring(
             &data.to_string(),
             target_value_ptr as *mut _,
             buffer_len as usize,
-            str_len_or_ind_ptr as *mut _,
+            str_len_or_ind_ptr,
         ),
         CDataType::Bit => {
             set_output_fixed_data(&data.to_bool(), target_value_ptr, str_len_or_ind_ptr)
@@ -227,10 +228,7 @@ pub unsafe fn format_and_return_bson(
 /// # Safety
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
-/// for now this is cfg(test), when/if we decide to provide an ascii driver this will
-/// see use in actual code.
 #[allow(clippy::uninit_vec)]
-#[cfg(test)]
 pub unsafe fn input_text_to_string(text: *const Char, len: usize) -> String {
     if (len as isize) < 0 {
         let mut dst = Vec::new();
@@ -293,26 +291,20 @@ pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
 }
 
 ///
-/// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+/// set_output_wstring_helper writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
 /// length of the [`output_ptr`] buffer in characters; the message should be truncated
-/// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
-/// should be stored in [`text_length_ptr`].
+/// if it is longer than the buffer length.
 ///
 /// # Safety
 /// This writes to multiple raw C-pointers
 ///
-pub unsafe fn set_output_wstring(
+unsafe fn set_output_wstring_helper(
     message: &str,
     output_ptr: *mut WChar,
     buffer_len: usize,
-    text_length_ptr: *mut SmallInt,
-) -> SqlReturn {
+) -> (usize, SqlReturn) {
     if output_ptr.is_null() {
-        if !text_length_ptr.is_null() {
-            // If the output_ptr is NULL, we should still return the length of the message.
-            *text_length_ptr = message.encode_utf16().count() as i16;
-        }
-        return SqlReturn::SUCCESS_WITH_INFO;
+        return (message.encode_utf16().count(), SqlReturn::SUCCESS_WITH_INFO);
     }
     // Check if the entire message plus a null terminator can fit in the buffer;
     // we should truncate the message if it's too long.
@@ -321,20 +313,143 @@ pub unsafe fn set_output_wstring(
     let num_chars = min(message_len + 1, buffer_len);
     // It is possible that no buffer space has been allocated.
     if num_chars == 0 {
-        return SqlReturn::SUCCESS_WITH_INFO;
+        return (0, SqlReturn::SUCCESS_WITH_INFO);
     }
     message_u16.resize(num_chars - 1, 0);
     message_u16.push('\u{0}' as u16);
     copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
-    // Store the number of characters in the message string, excluding the
-    // null terminator, in text_length_ptr
-    if !text_length_ptr.is_null() {
-        *text_length_ptr = (num_chars - 1) as SmallInt;
-    }
+    // return the number of characters in the message string, excluding the
+    // null terminator
     if num_chars < message_len {
-        SqlReturn::SUCCESS_WITH_INFO
+        (num_chars, SqlReturn::SUCCESS_WITH_INFO)
     } else {
-        SqlReturn::SUCCESS
+        (num_chars - 1, SqlReturn::SUCCESS)
+    }
+}
+
+///
+/// set_output_string_helper writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
+/// length of the [`output_ptr`] buffer in characters; the message should be truncated
+/// if it is longer than the buffer length.
+///
+/// # Safety
+/// This writes to multiple raw C-pointers
+///
+unsafe fn set_output_string_helper(
+    message: &str,
+    output_ptr: *mut Char,
+    buffer_len: usize,
+) -> (usize, SqlReturn) {
+    if output_ptr.is_null() {
+        return (message.len(), SqlReturn::SUCCESS_WITH_INFO);
+    }
+    // Check if the entire message plus a null terminator can fit in the buffer;
+    // we should truncate the message if it's too long.
+    // Note, we also assume this is valid ascii
+    let mut message_u8 = message.bytes().collect::<Vec<u8>>();
+    let message_len = message_u8.len();
+    let num_chars = min(message_len + 1, buffer_len);
+    // It is possible that no buffer space has been allocated.
+    if num_chars == 0 {
+        return (0, SqlReturn::SUCCESS_WITH_INFO);
+    }
+    message_u8.resize(num_chars - 1, 0);
+    message_u8.push(0u8);
+    copy_nonoverlapping(message_u8.as_ptr(), output_ptr, num_chars);
+    // return the number of characters in the message string, excluding the
+    // null terminator
+    if num_chars < message_len {
+        (num_chars, SqlReturn::SUCCESS_WITH_INFO)
+    } else {
+        (num_chars - 1, SqlReturn::SUCCESS)
+    }
+}
+
+pub mod i16_len {
+    use super::*;
+    ///
+    /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_wstring(
+        message: &str,
+        output_ptr: *mut WChar,
+        buffer_len: usize,
+        text_length_ptr: *mut SmallInt,
+    ) -> SqlReturn {
+        let (len, ret) = set_output_wstring_helper(message, output_ptr, buffer_len);
+        *text_length_ptr = len as SmallInt;
+        ret
+    }
+
+    ///
+    /// set_output_string writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    /// This will be used when we create an ASCII driver
+    #[allow(dead_code)]
+    pub unsafe fn set_output_string(
+        message: &str,
+        output_ptr: *mut Char,
+        buffer_len: usize,
+        text_length_ptr: *mut SmallInt,
+    ) -> SqlReturn {
+        let (len, ret) = set_output_string_helper(message, output_ptr, buffer_len);
+        *text_length_ptr = len as SmallInt;
+        ret
+    }
+}
+
+mod i32_len {
+    use super::*;
+    ///
+    /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_wstring(
+        message: &str,
+        output_ptr: *mut WChar,
+        buffer_len: usize,
+        text_length_ptr: *mut Len,
+    ) -> SqlReturn {
+        let (len, ret) = set_output_wstring_helper(message, output_ptr, buffer_len);
+        *text_length_ptr = len as Len;
+        ret
+    }
+
+    ///
+    /// set_output_string writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_string(
+        message: &str,
+        output_ptr: *mut Char,
+        buffer_len: usize,
+        text_length_ptr: *mut Len,
+    ) -> SqlReturn {
+        let (len, ret) = set_output_string_helper(message, output_ptr, buffer_len);
+        *text_length_ptr = len as Len;
+        ret
     }
 }
 
@@ -363,53 +478,6 @@ pub unsafe fn set_output_fixed_data<T: core::fmt::Debug>(
 }
 
 ///
-/// set_output_wstring writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
-/// length of the [`output_ptr`] buffer in characters; the message should be truncated
-/// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
-/// should be stored in [`text_length_ptr`].
-///
-/// # Safety
-/// This writes to multiple raw C-pointers
-///
-pub unsafe fn set_output_string(
-    message: &str,
-    output_ptr: *mut Char,
-    buffer_len: usize,
-    text_length_ptr: *mut SmallInt,
-) -> SqlReturn {
-    if output_ptr.is_null() {
-        if !text_length_ptr.is_null() {
-            // If the output_ptr is NULL, we should still return the length of the message.
-            *text_length_ptr = message.len() as i16;
-        }
-        return SqlReturn::SUCCESS_WITH_INFO;
-    }
-    // Check if the entire message plus a null terminator can fit in the buffer;
-    // we should truncate the message if it's too long.
-    // Note, we also assume this is valid ascii
-    let mut message_u8 = message.bytes().collect::<Vec<u8>>();
-    let message_len = message_u8.len();
-    let num_chars = min(message_len + 1, buffer_len);
-    // It is possible that no buffer space has been allocated.
-    if num_chars == 0 {
-        return SqlReturn::SUCCESS_WITH_INFO;
-    }
-    message_u8.resize(num_chars - 1, 0);
-    message_u8.push(0u8);
-    copy_nonoverlapping(message_u8.as_ptr(), output_ptr, num_chars);
-    // Store the number of characters in the message string, excluding the
-    // null terminator, in text_length_ptr
-    if !text_length_ptr.is_null() {
-        *text_length_ptr = (num_chars - 1) as SmallInt;
-    }
-    if num_chars < message_len {
-        SqlReturn::SUCCESS_WITH_INFO
-    } else {
-        SqlReturn::SUCCESS
-    }
-}
-
-///
 /// get_diag_rec copies the given ODBC error's diagnostic information
 /// into the provided pointers.
 ///
@@ -429,7 +497,7 @@ pub unsafe fn get_diag_rec(
     }
     set_sql_state(error.get_sql_state(), state);
     let message = format!("{}", error);
-    set_output_wstring(
+    i16_len::set_output_wstring(
         &message,
         message_text,
         buffer_length as usize,

@@ -2,7 +2,11 @@ use crate::{
     col_metadata::{ColumnNullability, MongoColMetadata},
     conn::MongoConnection,
     err::Result,
-    json_schema::{self, simplified::ObjectSchema, BsonTypeName},
+    json_schema::{
+        self,
+        simplified::{Atomic, ObjectSchema, Schema},
+        BsonTypeName,
+    },
     stmt::MongoStatement,
     Error,
 };
@@ -29,7 +33,7 @@ impl MongoQuery {
     // or an error is returned.
     pub fn execute(
         client: &MongoConnection,
-        query_timeout: Option<i32>,
+        query_timeout: Option<u32>,
         query: &str,
     ) -> Result<Self> {
         let current_db = client.current_db.as_ref().ok_or(Error::NoDatabase)?;
@@ -61,7 +65,6 @@ impl MongoQuery {
         });
 
         let cursor = db.aggregate(pipeline, options)?;
-
         Ok(MongoQuery {
             resultset_cursor: cursor,
             resultset_metadata: metadata,
@@ -76,6 +79,11 @@ impl MongoStatement for MongoQuery {
     // This method deserializes the current row and stores it in self.
     fn next(&mut self) -> Result<bool> {
         let res = self.resultset_cursor.advance().map_err(Error::Mongo);
+        if let Ok(false) = res {
+            // deserialize_current unwraps None if we do not check the value of advance.
+            self.current = None;
+            return res;
+        }
         self.current = Some(self.resultset_cursor.deserialize_current()?);
         res
     }
@@ -109,6 +117,7 @@ struct SqlGetResultSchemaResponse {
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 struct VersionedJsonSchema {
     pub version: i32,
+    #[serde(rename = "jsonSchema")]
     pub json_schema: json_schema::Schema,
 }
 
@@ -209,8 +218,6 @@ impl ObjectSchema {
     ///       is considered nullable
     ///     - Otherwise, its nullability depends on whether it is required
     pub fn get_field_nullability(&self, field_name: String) -> Result<ColumnNullability> {
-        use json_schema::simplified::{Atomic, Schema};
-
         let required = self.required.contains(&field_name);
 
         let field_schema = self.properties.get(&field_name);
