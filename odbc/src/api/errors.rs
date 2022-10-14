@@ -1,5 +1,5 @@
 use constants::{
-    INVALID_ATTR_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED,
+    INVALID_ATTR_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED,
     NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED, UNABLE_TO_CONNECT,
     UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
@@ -10,6 +10,8 @@ use thiserror::Error;
 pub enum ODBCError {
     #[error("[{}][API] The feature {0} is not implemented", VENDOR_IDENTIFIER)]
     Unimplemented(&'static str),
+    #[error("[{}][API] The data type {0} is not implemented", VENDOR_IDENTIFIER)]
+    UnimplementedDataType(String),
     #[error(
         "[{}][API] The driver connect option {0} is not supported",
         VENDOR_IDENTIFIER
@@ -22,6 +24,8 @@ pub enum ODBCError {
     UnsupportedFieldDescriptor(String),
     #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
     InvalidDescriptorIndex(u16),
+    #[error("[{}][API] No ResultSet", VENDOR_IDENTIFIER)]
+    InvalidCursorState,
     #[error("[{}][API] Invalid Uri: {0}", VENDOR_IDENTIFIER)]
     InvalidUriFormat(String),
     #[error("[{}][API] Invalid handle type, expected {0}", VENDOR_IDENTIFIER)]
@@ -54,13 +58,14 @@ pub type Result<T> = std::result::Result<T, ODBCError>;
 impl ODBCError {
     pub fn get_sql_state(&self) -> &str {
         match self {
-            ODBCError::Unimplemented(_) | ODBCError::UnsupportedDriverConnectOption(_) => {
-                NOT_IMPLEMENTED
-            }
+            ODBCError::Unimplemented(_)
+            | ODBCError::UnimplementedDataType(_)
+            | ODBCError::UnsupportedDriverConnectOption(_) => NOT_IMPLEMENTED,
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
             ODBCError::InvalidAttrIdentifier(_) => INVALID_ATTR_IDENTIFIER,
             ODBCError::InvalidAttrValue(_) => INVALID_ATTR_VALUE,
+            ODBCError::InvalidCursorState => INVALID_CURSOR_STATE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
@@ -76,9 +81,11 @@ impl ODBCError {
             // and so the driver returns 0 since it doesn't have a native error
             // code to propagate.
             ODBCError::Unimplemented(_)
+            | ODBCError::UnimplementedDataType(_)
             | ODBCError::InvalidUriFormat(_)
             | ODBCError::InvalidAttrIdentifier(_)
             | ODBCError::InvalidAttrValue(_)
+            | ODBCError::InvalidCursorState
             | ODBCError::InvalidHandleType(_)
             | ODBCError::MissingDriverOrDSNProperty
             | ODBCError::OutStringTruncated(_)
