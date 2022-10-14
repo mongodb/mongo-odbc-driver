@@ -1,8 +1,8 @@
 use crate::{
     api::{
         data::{
-            get_diag_rec, input_wtext_to_string, set_output_fixed_data, set_output_wstring, set_str_length,
-            unsupported_function,
+            get_diag_rec, input_wtext_to_string, set_output_fixed_data, set_output_wstring,
+            set_str_length, unsupported_function,
         },
         definitions::*,
         errors::{ODBCError, Result},

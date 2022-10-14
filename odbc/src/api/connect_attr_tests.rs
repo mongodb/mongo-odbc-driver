@@ -1,8 +1,8 @@
 mod unit {
     use crate::{
+        api::data::input_wtext_to_string,
         errors::ODBCError,
         handles::definitions::{Connection, ConnectionState, MongoHandle},
-        util::input_wtext_to_string,
         SQLGetConnectAttrW, SQLSetConnectAttrW,
     };
     use odbc_sys::{ConnectionAttribute, Integer, Pointer, SqlReturn, UInteger};
