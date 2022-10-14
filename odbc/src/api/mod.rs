@@ -3,9 +3,12 @@ pub(crate) mod errors;
 mod functions;
 pub(crate) mod odbc_uri;
 pub use functions::*;
+mod data;
 
 #[cfg(test)]
 mod col_attr_tests;
+#[cfg(test)]
+mod data_tests;
 #[cfg(test)]
 mod driver_connect_tests;
 #[cfg(test)]
@@ -21,6 +24,17 @@ macro_rules! map {
 		std::iter::Iterator::collect([
 			$({
 				($key, $val)
+			},)*
+		].into_iter())
+	};
+}
+
+#[macro_export]
+macro_rules! set {
+	($($val:expr),* $(,)?) => {
+		std::iter::Iterator::collect([
+			$({
+				$val
 			},)*
 		].into_iter())
 	};
