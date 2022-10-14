@@ -1138,7 +1138,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
 
         match attribute {
             ConnectionAttribute::CurrentCatalog => {
-                let current_catalog = attributes.current_catalog.as_ref().map(|s| s.as_str());
+                let current_catalog = attributes.current_catalog.as_deref();
                 match current_catalog {
                     None => SqlReturn::NO_DATA,
                     Some(cc) => set_output_string(
