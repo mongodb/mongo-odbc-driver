@@ -60,27 +60,11 @@ macro_rules! test_connection_diagnostics {
 }
 
 mod integration {
-    use crate::common::{connect, verify_sql_diagnostics};
+    use crate::common::verify_sql_diagnostics;
     use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
     use mongoodbc::{SQLAllocHandle, SQLDriverConnectW};
     use odbc_sys::{DriverConnectOption, Handle, HandleType, SqlReturn};
     use std::ptr::null_mut;
-
-    #[test]
-    fn test_invalid_connection() {
-        // Missing PWD
-        let conn_str = "Driver=ADF_ODBC_DRIVER;USER=N_A;SERVER=N_A;AUTH_SRC=N_A";
-        let result = connect(Some(conn_str));
-        assert!(
-            result.is_err(),
-            "The connection should have failed, but it was successful."
-        );
-    }
-
-    #[test]
-    fn test_default_connection() {
-        connect(None).unwrap();
-    }
 
     test_connection_diagnostics! (
             invalid_connection_string_parse_error,
