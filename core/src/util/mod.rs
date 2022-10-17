@@ -1,3 +1,6 @@
+mod decimal128;
+pub use decimal128::Decimal128Plus;
+
 #[macro_export]
 macro_rules! map {
         ($($key:expr => $val:expr),* $(,)?) => {

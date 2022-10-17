@@ -13,3 +13,7 @@ pub const INVALID_DESCRIPTOR_INDEX: &str = "07009";
 pub const INVALID_CURSOR_STATE: &str = "24000";
 pub const FUNCTION_SEQUENCE_ERROR: &str = "HY010";
 pub const UNSUPPORTED_FIELD_DESCRIPTOR: &str = "HY091";
+
+pub const SQL_ALL_TABLE_TYPES: &str = "%";
+pub const SQL_ALL_CATALOGS: &str = "%";
+pub const SQL_ALL_SCHEMAS: &str = "%";
