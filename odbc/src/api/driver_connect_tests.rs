@@ -1,5 +1,3 @@
-mod common;
-
 macro_rules! test_connection_diagnostics {
     ($func_name:ident,
     in_connection_string = $in_connection_string:expr,
@@ -9,35 +7,31 @@ macro_rules! test_connection_diagnostics {
         expected_error_message = $expected_error_message:expr) => {
         #[test]
         fn $func_name() {
-            use odbc_sys::SmallInt;
-            let in_connection_string = $in_connection_string;
-            let driver_completion = $driver_completion;
-            let expected_sql_state = $expected_sql_state;
-            let expected_sql_return = $expected_sql_return;
-            let expected_error_message = $expected_error_message;
-
-            let out_connection_string = &mut [0u16; 64] as *mut _;
-            let string_length_2 = &mut 0;
-            let buffer_length: SmallInt = 65;
-            let mut env_handl: Handle = null_mut();
-            let mut conn_handl: Handle = null_mut();
-
-            let mut expected_sql_state_encoded: Vec<u16> =
-                expected_sql_state.encode_utf16().collect();
-            expected_sql_state_encoded.push(0);
-            let mut in_connection_string_encoded: Vec<u16> =
-                in_connection_string.encode_utf16().collect();
-            in_connection_string_encoded.push(0);
-
             unsafe {
-                let _ = SQLAllocHandle(
-                    HandleType::Env,
-                    std::ptr::null_mut(),
-                    &mut env_handl as *mut Handle,
-                );
-                let _ = SQLAllocHandle(HandleType::Dbc, env_handl, &mut conn_handl as *mut Handle);
+                use odbc_sys::SmallInt;
+                let in_connection_string = $in_connection_string;
+                let driver_completion = $driver_completion;
+                let expected_sql_state = $expected_sql_state;
+                let expected_sql_return = $expected_sql_return;
+                let expected_error_message = $expected_error_message;
+
+                let out_connection_string = &mut [0u16; 64] as *mut _;
+                let string_length_2 = &mut 0;
+                let buffer_length: SmallInt = 65;
+                let env_handle: *mut MongoHandle =
+                    &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+                let conn_handle: *mut MongoHandle = &mut MongoHandle::Connection(RwLock::new(
+                    Connection::with_state(env_handle, ConnectionState::Allocated),
+                ));
+                let mut expected_sql_state_encoded: Vec<u16> =
+                    expected_sql_state.encode_utf16().collect();
+                expected_sql_state_encoded.push(0);
+                let mut in_connection_string_encoded: Vec<u16> =
+                    in_connection_string.encode_utf16().collect();
+                in_connection_string_encoded.push(0);
+
                 let actual_return_val = SQLDriverConnectW(
-                    conn_handl as *mut _,
+                    conn_handle as *mut _,
                     std::ptr::null_mut(),
                     in_connection_string_encoded.as_ptr(),
                     in_connection_string.len().try_into().unwrap(),
@@ -47,26 +41,44 @@ macro_rules! test_connection_diagnostics {
                     driver_completion,
                 );
                 assert_eq!(expected_sql_return, actual_return_val);
-            };
 
-            verify_sql_diagnostics(
-                HandleType::Dbc,
-                conn_handl as *mut _,
-                1,
-                expected_sql_state,
-                expected_error_message,
-                0,
-            );
+                let text_length_ptr = &mut 0;
+                let actual_sql_state = &mut [0u16; 6] as *mut _;
+                let actual_message_text = &mut [0u16; 512] as *mut _;
+                // Using SQLGetDiagRecW to get the sql state and error message
+                // from the connection handle
+                let _ = SQLGetDiagRecW(
+                    HandleType::Dbc,
+                    conn_handle as *mut _,
+                    1,
+                    actual_sql_state,
+                    &mut 0,
+                    actual_message_text,
+                    512,
+                    text_length_ptr,
+                );
+                let actual_message_length = *text_length_ptr as usize;
+                assert_eq!(
+                    expected_error_message,
+                    &(String::from_utf16_lossy(&*(actual_message_text as *const [u16; 256])))
+                        [0..actual_message_length],
+                );
+                assert_eq!(
+                    String::from_utf16(&*(expected_sql_state_encoded.as_ptr() as *const [u16; 6]))
+                        .unwrap(),
+                    String::from_utf16(&*(actual_sql_state as *const [u16; 6])).unwrap()
+                );
+            }
         }
     };
 }
 
-mod integration {
-    use crate::common::verify_sql_diagnostics;
+mod unit {
+    use crate::{handles::definitions::*, SQLDriverConnectW, SQLGetDiagRecW};
     use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
-    use mongoodbc::{SQLAllocHandle, SQLDriverConnectW};
-    use odbc_sys::{DriverConnectOption, Handle, HandleType, SqlReturn};
-    use std::ptr::null_mut;
+    use odbc_sys::DriverConnectOption;
+    use odbc_sys::{HandleType, SqlReturn};
+    use std::sync::RwLock;
 
     test_connection_diagnostics! (
             invalid_connection_string_parse_error,
@@ -82,7 +94,7 @@ mod integration {
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri"
+            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri"
         );
     test_connection_diagnostics! (
             missing_pwd_in_connection_string,
@@ -90,7 +102,7 @@ mod integration {
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri"
+            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri"
         );
     test_connection_diagnostics!(
         missing_driver_in_connection_string,

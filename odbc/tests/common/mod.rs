@@ -15,16 +15,18 @@ pub fn verify_sql_diagnostics(
     let actual_sql_state = &mut [0u16; 6] as *mut _;
     let actual_message_text = &mut [0u16; 512] as *mut _;
     let actual_native_error = &mut 0;
-    let _ = SQLGetDiagRecW(
-        handle_type,
-        handle as *mut _,
-        record_number,
-        actual_sql_state,
-        actual_native_error,
-        actual_message_text,
-        1024,
-        text_length_ptr,
-    );
+    unsafe {
+        let _ = SQLGetDiagRecW(
+            handle_type,
+            handle as *mut _,
+            record_number,
+            actual_sql_state,
+            actual_native_error,
+            actual_message_text,
+            1024,
+            text_length_ptr,
+        );
+    };
     let mut expected_sql_state_encoded: Vec<u16> = expected_sql_state.encode_utf16().collect();
     expected_sql_state_encoded.push(0);
     let actual_message_length = *text_length_ptr as usize;

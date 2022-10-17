@@ -1,15 +1,34 @@
 use crate::errors::{ODBCError, Result};
+use lazy_static::lazy_static;
+use regex::{RegexSet, RegexSetBuilder};
 use std::collections::HashMap;
 
-// TODO SQL-990: These errors will probably change.
-const NOT_EMPTY_ERROR: &str = "uri must not be empty";
-const EQUAL_ERROR: &str = "all uri atttributes must be of the form key=value";
+const EMPTY_URI_ERROR: &str = "URI must not be empty";
+const INVALID_ATTR_FORMAT_ERROR: &str = "all URI attributes must be of the form keyword=value";
+const MISSING_CLOSING_BRACE_ERROR: &str = "attribute value beginning with '{' must end with '}'";
 
-// TODO SQL-990: Audit these mandatory attributes
-const USER: &[&str] = &["user", "uid"];
-const PWD: &[&str] = &["pwd", "password"];
+const USER: &[&str] = &["uid", "user"];
+const PWD: &[&str] = &["password", "pwd"];
 const SERVER: &[&str] = &["server"];
-const SSL: &[&str] = &["ssl"];
+const SSL: &[&str] = &["ssl", "tls"];
+
+lazy_static! {
+    static ref KEYWORDS: RegexSet = RegexSetBuilder::new(&[
+        "^AUTH_SRC$",
+        "^DRIVER$",
+        "^DSN$",
+        "^PASSWORD$",
+        "^PWD$",
+        "^SERVER$",
+        "^SSL$",
+        "^TLS$",
+        "^USER$",
+        "^UID$",
+    ])
+    .case_insensitive(true)
+    .build()
+    .unwrap();
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ODBCUri<'a>(HashMap<String, &'a str>);
@@ -17,25 +36,91 @@ pub struct ODBCUri<'a>(HashMap<String, &'a str>);
 impl<'a> ODBCUri<'a> {
     pub fn new(odbc_uri: &'a str) -> Result<ODBCUri<'a>> {
         if odbc_uri.is_empty() {
-            return Err(ODBCError::InvalidUriFormat(NOT_EMPTY_ERROR.to_string()));
+            return Err(ODBCError::InvalidUriFormat(EMPTY_URI_ERROR.to_string()));
         }
-        // TODO SQL-990: Support the actual ODBC spec with regards to special characters in attributes
-        // the algorithm will most likely need to be a state machine over each character in the
-        // odbc_uri string.
-        odbc_uri
-            .split(';')
-            .filter(|attr| !attr.is_empty())
-            .map(|attr| {
-                // now split each attribute pair on '='
-                let mut sp = attr.split('=').collect::<Vec<_>>();
-                if sp.len() != 2 {
-                    return Err(ODBCError::InvalidUriFormat(EQUAL_ERROR.to_string()));
+        let mut input = odbc_uri;
+        let mut ret = ODBCUri(HashMap::new());
+        while let Some((keyword, value, rest)) = ODBCUri::get_next_attribute(input)? {
+            // if attributes are repeated, the first is the one that is kept.
+            ret.0.entry(keyword).or_insert(value);
+            if rest.is_none() {
+                return Ok(ret);
+            }
+            input = rest.unwrap();
+        }
+        Ok(ret)
+    }
+
+    fn get_next_attribute(odbc_uri: &'a str) -> Result<Option<(String, &'a str, Option<&'a str>)>> {
+        // clean up any extra semi-colons
+        let index = odbc_uri.find(|c| c != ';');
+        // these are just trailing semis on the URI
+        if index.is_none() {
+            return Ok(None);
+        }
+        let odbc_uri = odbc_uri.get(index.unwrap()..).unwrap();
+        // find the first '=' sign, '=' does not appear in any keywords, so this is safe.
+        let (keyword, rest) =
+            odbc_uri.split_at(odbc_uri.find('=').ok_or_else(|| {
+                ODBCError::InvalidUriFormat(INVALID_ATTR_FORMAT_ERROR.to_string())
+            })?);
+        // remove the leading '=' sign.
+        let rest = rest.get(1..).unwrap();
+        if !KEYWORDS.is_match(keyword) {
+            return Err(ODBCError::InvalidUriFormat(format!(
+                "'{}' is not a valid URI keyword",
+                keyword
+            )));
+        }
+        let (value, rest) = if rest.starts_with('{') {
+            let rest = rest.get(1..).ok_or_else(|| {
+                ODBCError::InvalidUriFormat(MISSING_CLOSING_BRACE_ERROR.to_string())
+            })?;
+            ODBCUri::handle_braced_value(rest)?
+        } else {
+            ODBCUri::handle_unbraced_value(rest)?
+        };
+        Ok(Some((keyword.to_lowercase(), value, rest)))
+    }
+
+    fn handle_braced_value(input: &'a str) -> Result<(&'a str, Option<&'a str>)> {
+        let mut after_brace = false;
+        // This is a simple two state state machine. Either the previous character was '}'
+        // or it is not. When the previous character was '}' and we have reached the end
+        // of the input or the current character is ';', we have found the entire value for
+        // this attribute.
+        for (i, c) in input.chars().enumerate() {
+            if after_brace && c == ';' {
+                let mut rest = input.get(i + 1..);
+                if rest.unwrap() == "" {
+                    rest = None;
                 }
-                // ODBC attribute keys are case insensitive, so we lowercase the keys
-                Ok((sp.remove(0).to_lowercase(), sp.remove(0)))
-            })
-            .collect::<Result<HashMap<_, _>>>()
-            .map(ODBCUri)
+                return Ok((input.get(0..i - 1).unwrap(), rest));
+            }
+            if c == '}' {
+                if i + 1 == input.len() {
+                    return Ok((input.get(0..i).unwrap(), None));
+                }
+                after_brace = true
+            } else {
+                after_brace = false
+            }
+        }
+        Err(ODBCError::InvalidUriFormat(
+            MISSING_CLOSING_BRACE_ERROR.to_string(),
+        ))
+    }
+
+    fn handle_unbraced_value(input: &'a str) -> Result<(&'a str, Option<&'a str>)> {
+        let index = input.find(';');
+        if index.is_none() {
+            return Ok((input, None));
+        }
+        let (value, rest) = input.split_at(index.unwrap());
+        if rest.len() == 1 {
+            return Ok((value, None));
+        }
+        Ok((value, rest.get(1..)))
     }
 
     // remove will remove the first value with a given one of the names passed, assuming all names
@@ -80,13 +165,8 @@ impl<'a> ODBCUri<'a> {
     pub fn remove_to_mongo_uri(&mut self) -> Result<String> {
         let user = self.remove_mandatory_attribute(USER)?;
         let pwd = self.remove_mandatory_attribute(PWD)?;
-        // TODO SQL-990: Support the PORT attribute, right now the only way to specify PORT is as
-        // part of SERVER. If ports are specified in both SERVER and PORT and they do not match it
-        // should be an error (I think, check the spec if it says...).
         let server = self.remove_mandatory_attribute(SERVER)?;
         let ssl = self.remove(SSL);
-        // TODO SQL-990: we may wish to support more attributes as options.
-        // If we do, add more tests to cover them.
         let ssl_string =
             if ssl.is_some() && ssl.unwrap() != "0" && ssl.unwrap().to_lowercase() != "false" {
                 "?ssl=true"
@@ -101,7 +181,159 @@ impl<'a> ODBCUri<'a> {
 }
 
 mod unit {
-    // TODO SQL-990: Add more tests to cover the ODBC spec with regards to special characters.
+    mod get_next_attribute {
+        #[test]
+        fn get_unbraced() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("driver".to_string(), "foo", None),
+                ODBCUri::get_next_attribute("DRIVER=foo").unwrap().unwrap(),
+            );
+        }
+
+        #[test]
+        fn get_braced() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("driver".to_string(), "fo[]=o", None),
+                ODBCUri::get_next_attribute("DRIVER={fo[]=o}")
+                    .unwrap()
+                    .unwrap(),
+            );
+        }
+
+        #[test]
+        fn get_unbraced_with_rest() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("driver".to_string(), "foo", Some("UID=stuff")),
+                ODBCUri::get_next_attribute("DRIVER=foo;UID=stuff")
+                    .unwrap()
+                    .unwrap(),
+            );
+        }
+
+        #[test]
+        fn get_braced_with_rest() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("driver".to_string(), "fo[]=o", Some("UID=stuff")),
+                ODBCUri::get_next_attribute("DRIVER={fo[]=o};UID=stuff")
+                    .unwrap()
+                    .unwrap(),
+            );
+        }
+
+        #[test]
+        fn get_with_non_keyword_in_keyword_position_is_error() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "[MongoDB][API] Invalid Uri: 'stuff' is not a valid URI keyword",
+                format!(
+                    "{}",
+                    ODBCUri::get_next_attribute("stuff=stuff;").unwrap_err()
+                )
+            );
+        }
+    }
+
+    mod handle_braced_value {
+        #[test]
+        fn no_closing_brace_is_error() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "[MongoDB][API] Invalid Uri: attribute value beginning with '{' must end with '}'",
+                format!(
+                    "{}",
+                    ODBCUri::handle_braced_value("stuff;stuff").unwrap_err()
+                )
+            );
+        }
+
+        #[test]
+        fn ends_with_brace() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stuff", None),
+                ODBCUri::handle_braced_value("stuff}").unwrap()
+            );
+        }
+
+        #[test]
+        fn ends_with_semi() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stuff", None),
+                ODBCUri::handle_braced_value("stuff};").unwrap()
+            );
+        }
+
+        #[test]
+        fn has_rest() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stuff", Some("DRIVER=foo")),
+                ODBCUri::handle_braced_value("stuff};DRIVER=foo").unwrap()
+            );
+        }
+
+        #[test]
+        fn ends_with_brace_special_chars() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stu%=[]}ff", None),
+                ODBCUri::handle_braced_value("stu%=[]}ff}").unwrap()
+            );
+        }
+
+        #[test]
+        fn ends_with_semi_special_chars() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stu%=[]}ff", None),
+                ODBCUri::handle_braced_value("stu%=[]}ff};").unwrap()
+            );
+        }
+
+        #[test]
+        fn has_rest_special_chars() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stu%=[]}ff", Some("DRIVER=foo")),
+                ODBCUri::handle_braced_value("stu%=[]}ff};DRIVER=foo").unwrap()
+            );
+        }
+    }
+
+    mod handle_unbraced_value {
+        #[test]
+        fn ends_with_empty() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stuff", None),
+                ODBCUri::handle_unbraced_value("stuff").unwrap()
+            );
+        }
+
+        #[test]
+        fn ends_with_semi() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stuff", None),
+                ODBCUri::handle_unbraced_value("stuff;").unwrap()
+            );
+        }
+
+        #[test]
+        fn has_rest() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ("stuff", Some("DRIVER=foo")),
+                ODBCUri::handle_unbraced_value("stuff;DRIVER=foo").unwrap()
+            );
+        }
+    }
+
     mod new {
         #[test]
         fn empty_uri_is_err() {
@@ -139,12 +371,36 @@ mod unit {
         }
 
         #[test]
-        fn two_attriubutes_with_trailing_semi_works() {
+        fn repeated_attribute_selects_first() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected =
+                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;SERVER=bAr;Driver=F").unwrap()
+            );
+        }
+
+        #[test]
+        fn two_attributes_with_trailing_semi_works() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
             let expected =
                 ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
             assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr;").unwrap());
+        }
+
+        #[test]
+        fn two_attributes_with_triple_trailing_semis_works() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected =
+                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;;;SERVER=bAr;;;").unwrap()
+            );
         }
     }
 
@@ -167,7 +423,7 @@ mod unit {
         fn missing_pwd_is_err() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-            "[MongoDB][API] Invalid Uri: One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri",
+            "[MongoDB][API] Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri",
             format!(
                 "{}",
                 ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
@@ -181,7 +437,7 @@ mod unit {
         fn missing_user_is_err() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-            "[MongoDB][API] Invalid Uri: One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri",
+            "[MongoDB][API] Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri",
             format!(
                 "{}",
                 ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")

@@ -7,9 +7,13 @@ authors = ["Ryan Chipman <ryan@ryanchipman.com>",
 edition = "2021"
 
 [dependencies]
+odbc-sys = "0.21.2"
 bson = "2"
 thiserror = "1"
 constants = { path = "../constants" }
+serde = { version = "1", features = ["derive"] }
+itertools = "0.10.4"
+lazy_static = "1.4.0"
 
 [dependencies.mongodb]
 version = "2.1"
