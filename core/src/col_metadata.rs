@@ -1,7 +1,7 @@
 use crate::{json_schema::simplified::Schema, BsonTypeInfo};
 use odbc_sys::SqlDataType;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ColumnNullability {
     Nullable,
     NoNulls,
