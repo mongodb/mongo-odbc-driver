@@ -9,8 +9,6 @@ mod integration {
         let mut conn_string = crate::common::generate_default_connection_str();
         conn_string.push_str("DATABASE=integration_test");
 
-        println!("{}", conn_string);
-
         let conn = env.connect_with_connection_string(&conn_string);
 
         let conn = conn.unwrap();
