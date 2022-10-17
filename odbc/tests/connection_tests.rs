@@ -82,7 +82,7 @@ mod integration {
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"user\", \"uid\"] is required for a valid Mongo ODBC Uri"
+            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri"
         );
     test_connection_diagnostics! (
             missing_pwd_in_connection_string,
@@ -90,7 +90,7 @@ mod integration {
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"pwd\", \"password\"] is required for a valid Mongo ODBC Uri"
+            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri"
         );
     test_connection_diagnostics!(
         missing_driver_in_connection_string,
