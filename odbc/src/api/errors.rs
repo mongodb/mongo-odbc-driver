@@ -1,13 +1,15 @@
 use constants::{
-    INVALID_ATTR_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX,
-    NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED, UNABLE_TO_CONNECT,
-    UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    GENERAL_ERROR, INVALID_ATTR_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CURSOR_STATE,
+    INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED,
+    UNABLE_TO_CONNECT, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use odbc_sys::ConnectionAttribute;
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
 pub enum ODBCError {
+    #[error("[{}][API] {0}", VENDOR_IDENTIFIER)]
+    General(&'static str),
     #[error("[{}][API] The feature {0} is not implemented", VENDOR_IDENTIFIER)]
     Unimplemented(&'static str),
     #[error("[{}][API] The data type {0} is not implemented", VENDOR_IDENTIFIER)]
@@ -61,6 +63,7 @@ impl ODBCError {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::UnsupportedDriverConnectOption(_) => NOT_IMPLEMENTED,
+            ODBCError::General(_) => GENERAL_ERROR,
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
             ODBCError::InvalidAttrIdentifier(_) => INVALID_ATTR_IDENTIFIER,
@@ -81,6 +84,7 @@ impl ODBCError {
             // and so the driver returns 0 since it doesn't have a native error
             // code to propagate.
             ODBCError::Unimplemented(_)
+            | ODBCError::General(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::InvalidUriFormat(_)
             | ODBCError::InvalidAttrIdentifier(_)

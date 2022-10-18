@@ -1,8 +1,8 @@
 use crate::{
     api::{
         data::{
-            get_diag_rec, input_wtext_to_string, set_output_fixed_data, set_output_wstring,
-            set_str_length, unsupported_function,
+            get_diag_rec, i16_len, input_text_to_string, input_wtext_to_string, set_str_length,
+            unsupported_function,
         },
         definitions::*,
         errors::{ODBCError, Result},
@@ -13,7 +13,7 @@ use crate::{
 use bson::Bson;
 use constants::{SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
-    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoStatement,
+    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery, MongoStatement,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -279,7 +279,8 @@ pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, _handle: Hand
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
-    unimplemented!()
+    // We never need to do anything to close a cusor, so this is safe.
+    SqlReturn::SUCCESS
 }
 
 ///
@@ -325,7 +326,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
         {
             let stmt_contents = stmt.read().unwrap();
             if stmt_contents.mongo_statement.is_none() {
-                return set_output_wstring(
+                return i16_len::set_output_wstring(
                     "",
                     character_attribute_ptr as *mut WChar,
                     buffer_length as usize,
@@ -338,7 +339,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 .unwrap()
                 .get_col_metadata(column_number);
             if let Ok(col_metadata) = col_metadata {
-                return set_output_wstring(
+                return i16_len::set_output_wstring(
                     (*f)(col_metadata),
                     character_attribute_ptr as *mut WChar,
                     buffer_length as usize,
@@ -738,26 +739,6 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
     SqlReturn::SUCCESS
 }
 
-///
-/// [`SQLDriverConnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDriverConnect-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-pub unsafe extern "C" fn SQLDriverConnect(
-    connection_handle: HDbc,
-    _window_handle: HWnd,
-    _in_connection_string: *const Char,
-    _string_length_1: SmallInt,
-    _out_connection_string: *mut Char,
-    _buffer_length: SmallInt,
-    _string_length_2: *mut SmallInt,
-    _drive_completion: DriverConnectOption,
-) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(connection_handle), "SQLDriverConnect")
-}
-
 fn sql_driver_connect(
     conn_handle: &RwLock<Connection>,
     odbc_uri_string: &str,
@@ -788,6 +769,49 @@ fn sql_driver_connect(
         login_timeout,
         application_name,
     )?)
+}
+
+///
+/// [`SQLDriverConnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDriverConnect-function
+///
+/// # Safety
+/// Because this is a C-infereface, this is necessarily unsafe
+///
+#[no_mangle]
+pub unsafe extern "C" fn SQLDriverConnect(
+    connection_handle: HDbc,
+    _window_handle: HWnd,
+    in_connection_string: *const Char,
+    string_length_1: SmallInt,
+    out_connection_string: *mut Char,
+    buffer_length: SmallInt,
+    string_length_2: *mut SmallInt,
+    driver_completion: DriverConnectOption,
+) -> SqlReturn {
+    let conn_handle = MongoHandleRef::from(connection_handle);
+    // SQL_NO_PROMPT is the only option supported for DriverCompletion
+    if driver_completion != DriverConnectOption::NoPrompt {
+        conn_handle.add_diag_info(ODBCError::UnsupportedDriverConnectOption(format!(
+            "{:?}",
+            driver_completion
+        )));
+        return SqlReturn::ERROR;
+    }
+    let conn = must_be_valid!((*conn_handle).as_connection());
+    let odbc_uri_string = input_text_to_string(in_connection_string, string_length_1 as usize);
+    let mongo_connection = odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
+    conn.write().unwrap().mongo_connection = Some(mongo_connection);
+    let buffer_len = usize::try_from(buffer_length).unwrap();
+    let sql_return = i16_len::set_output_string(
+        &odbc_uri_string,
+        out_connection_string,
+        buffer_len,
+        string_length_2,
+    );
+    if sql_return == SqlReturn::SUCCESS_WITH_INFO {
+        conn_handle.add_diag_info(ODBCError::OutStringTruncated(buffer_len));
+    }
+    sql_return
 }
 
 ///
@@ -823,7 +847,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
     let mongo_connection = odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
     conn.write().unwrap().mongo_connection = Some(mongo_connection);
     let buffer_len = usize::try_from(buffer_length).unwrap();
-    let sql_return = set_output_wstring(
+    let sql_return = i16_len::set_output_wstring(
         &odbc_uri_string,
         out_connection_string,
         buffer_len,
@@ -901,10 +925,30 @@ pub unsafe extern "C" fn SQLEndTran(
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecDirect(
     statement_handle: HStmt,
-    _statement_text: *const Char,
-    _text_length: Integer,
+    statement_text: *const Char,
+    text_length: Integer,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLExecDirect")
+    let query = input_text_to_string(statement_text, text_length as usize);
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    let stmt = must_be_valid!(mongo_handle.as_statement());
+    let mongo_statement = {
+        let stmt_guard = stmt.read().unwrap();
+        let connection = must_be_valid!((*stmt_guard.connection).as_connection());
+        let connection_guard = connection.read().unwrap();
+        let timeout = connection_guard.attributes.connection_timeout;
+        if let Some(ref mongo_connection) = connection_guard.mongo_connection {
+            MongoQuery::execute(mongo_connection, timeout, &query).map_err(|e| e.into())
+        } else {
+            Err(ODBCError::General("Statement has no parent Connection"))
+        }
+    };
+    if let Ok(statement) = mongo_statement {
+        let mut stmt_guard = stmt.write().unwrap();
+        stmt_guard.mongo_statement = Some(Box::new(statement));
+        return SqlReturn::SUCCESS;
+    }
+    mongo_handle.add_diag_info(mongo_statement.unwrap_err());
+    SqlReturn::ERROR
 }
 
 ///
@@ -918,10 +962,30 @@ pub unsafe extern "C" fn SQLExecDirect(
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecDirectW(
     statement_handle: HStmt,
-    _statement_text: *const WChar,
-    _text_length: Integer,
+    statement_text: *const WChar,
+    text_length: Integer,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLExecDirectW")
+    let query = input_wtext_to_string(statement_text, text_length as usize);
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    let stmt = must_be_valid!(mongo_handle.as_statement());
+    let mongo_statement = {
+        let stmt_guard = stmt.read().unwrap();
+        let connection = must_be_valid!((*stmt_guard.connection).as_connection());
+        let connection_guard = connection.read().unwrap();
+        let timeout = connection_guard.attributes.connection_timeout;
+        if let Some(ref mongo_connection) = connection_guard.mongo_connection {
+            MongoQuery::execute(mongo_connection, timeout, &query).map_err(|e| e.into())
+        } else {
+            Err(ODBCError::InvalidCursorState)
+        }
+    };
+    if let Ok(statement) = mongo_statement {
+        let mut stmt_guard = stmt.write().unwrap();
+        stmt_guard.mongo_statement = Some(Box::new(statement));
+        return SqlReturn::SUCCESS;
+    }
+    mongo_handle.add_diag_info(mongo_statement.unwrap_err());
+    SqlReturn::ERROR
 }
 
 ///
@@ -1122,7 +1186,7 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeStmt(_statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
-    unimplemented!()
+    unimplemented!();
 }
 
 ///
@@ -2226,9 +2290,9 @@ pub unsafe extern "C" fn SQLSetEnvAttr(
     environment_handle: HEnv,
     attribute: EnvironmentAttribute,
     value: Pointer,
-    _string_length: Integer,
+    string_length: Integer,
 ) -> SqlReturn {
-    SQLSetEnvAttrW(environment_handle, attribute, value, _string_length)
+    SQLSetEnvAttrW(environment_handle, attribute, value, string_length)
 }
 
 ///

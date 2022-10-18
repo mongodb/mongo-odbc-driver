@@ -29,11 +29,11 @@ features = ["chrono-0_4"]
 
 
 [dev-dependencies]
-odbc-api = "0.45.1"
+odbc = "0.17.0"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.8.21"
 thiserror = "1"
 
 [lib]
 name = "mongoodbc"
-crate-type = ["cdylib"]
+crate-type = ["cdylib","lib"]
