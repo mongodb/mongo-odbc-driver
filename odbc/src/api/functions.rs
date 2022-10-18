@@ -1,8 +1,8 @@
 use crate::{
     api::{
         data::{
-            get_diag_rec, i16_len, input_text_to_string, input_wtext_to_string, set_str_length,
-            unsupported_function,
+            get_diag_rec, i16_len, i32_len, input_text_to_string, input_wtext_to_string,
+            set_output_fixed_data, set_str_length, unsupported_function,
         },
         definitions::*,
         errors::{ODBCError, Result},
@@ -1237,11 +1237,11 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                 let current_catalog = attributes.current_catalog.as_deref();
                 match current_catalog {
                     None => SqlReturn::NO_DATA,
-                    Some(cc) => set_output_wstring(
+                    Some(cc) => i32_len::set_output_wstring(
                         cc,
                         value_ptr as *mut WChar,
                         buffer_length as usize,
-                        string_length_ptr as *mut SmallInt,
+                        string_length_ptr as *mut Len,
                     ),
                 }
             }

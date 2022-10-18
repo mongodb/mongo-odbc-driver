@@ -410,7 +410,7 @@ pub mod i16_len {
     }
 }
 
-mod i32_len {
+pub mod i32_len {
     use super::*;
     ///
     /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
