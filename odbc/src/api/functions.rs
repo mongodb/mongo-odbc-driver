@@ -112,6 +112,13 @@ macro_rules! panic_safe_exec {
 }
 pub(crate) use panic_safe_exec;
 
+macro_rules! unimpl {
+    ($handle:expr) => {{
+        let handle = $handle;
+        panic_safe_exec! (|| { unimplemented!() }, handle);
+    }}
+}
+
 ///
 /// [`SQLAllocHandle`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLAllocHandle-function
 ///
@@ -216,7 +223,7 @@ pub unsafe extern "C" fn SQLBindCol(
     _buffer_length: Len,
     _length_or_indicatior: *mut Len,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, hstmt);
+    unimpl!(hstmt);
 }
 
 ///
@@ -276,7 +283,7 @@ pub unsafe extern "C" fn SQLBrowseConnectW(
     _buffer_length: SmallInt,
     _out_buffer_length: *mut SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, connection_handle);
+    unimpl!(connection_handle);
 }
 
 ///
@@ -301,7 +308,7 @@ pub unsafe extern "C" fn SQLBulkOperations(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -312,7 +319,7 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, handle: Handle) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, handle);
+    unimpl!(handle);
 }
 
 ///
@@ -569,7 +576,7 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
     _column_name: *const WChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -613,7 +620,7 @@ pub unsafe extern "C" fn SQLColumnsW(
     _column_name: *const WChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!( statement_handle);
 }
 
 ///
@@ -768,7 +775,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
     _decimal_digits: *mut SmallInt,
     _nullable: *mut Nullability,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, hstmt);
+    unimpl!(hstmt);
 }
 
 ///
@@ -998,7 +1005,7 @@ pub unsafe extern "C" fn SQLEndTran(
     handle: Handle,
     _completion_type: CompletionType,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, handle);
+    unimpl!(handle);
 }
 
 ///
@@ -1150,7 +1157,7 @@ pub unsafe extern "C" fn SQLFetchScroll(
     _fetch_orientation: FetchOrientation,
     _fetch_offset: Len,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -1202,7 +1209,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
     _fk_table_name: *const WChar,
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -1332,7 +1339,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, connection_handle);
+    unimpl!(connection_handle);
 }
 
 ///
@@ -1366,7 +1373,7 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
     _buffer_length: SmallInt,
     _name_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -1911,7 +1918,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SqlDataType) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, handle);
+    unimpl!(handle);
 }
 
 ///
@@ -1962,7 +1969,7 @@ pub unsafe extern "C" fn SQLNativeSqlW(
     _buffer_len: Integer,
     _out_statement_len: *mut Integer,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, connection_handle);
+    unimpl!(connection_handle);
 }
 
 ///
@@ -2087,7 +2094,7 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
     _table_name: *const WChar,
     _table_name_length: SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -2250,7 +2257,7 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
     _value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, hdbc);
+    unimpl!(hdbc);
 }
 
 ///
@@ -2282,7 +2289,7 @@ pub unsafe extern "C" fn SQLSetCursorNameW(
     _cursor_name: *const WChar,
     _name_length: SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -2714,7 +2721,7 @@ pub unsafe extern "C" fn SQLSpecialColumnsW(
     _scope: SmallInt,
     _nullable: Nullability,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -2735,7 +2742,7 @@ pub unsafe extern "C" fn SQLStatistics(
     _unique: SmallInt,
     _reserved: SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
@@ -2775,7 +2782,7 @@ pub unsafe extern "C" fn SQLTablesPrivilegesW(
     _table_name: *const WChar,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(|| { unimplemented!() }, statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
