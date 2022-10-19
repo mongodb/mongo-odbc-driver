@@ -60,9 +60,8 @@ mod unit {
             // and to not depend on line number.
             assert_eq!(
                 format!("Panic(\"panic test\\nOk(\\\"in file '"),
-                &actual_error.to_string()[0..33]
-                )
-
+                &actual_error[0..33]
+            )
         }
     }
 }
