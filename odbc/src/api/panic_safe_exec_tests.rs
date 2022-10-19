@@ -47,18 +47,22 @@ mod unit {
         let sql_return = panic_fn(stmt_handle as *mut _);
         assert_eq!(SqlReturn::ERROR, sql_return);
         unsafe {
+            let actual_error = format!(
+                "{:?}",
+                (*stmt_handle)
+                    .as_statement()
+                    .unwrap()
+                    .read()
+                    .unwrap()
+                    .errors[0]
+            );
+            // Using a substring of the error because directory format differs for windows and linux
+            // and to not depend on line number.
             assert_eq!(
-                format!("Panic(\"panic test\\nOk(\\\"in file 'odbc/src/api/panic_safe_exec_tests.rs' at line 19\\\")\")"),
-                format!(
-                    "{:?}",
-                    (*stmt_handle)
-                        .as_statement()
-                        .unwrap()
-                        .read()
-                        .unwrap()
-                        .errors[0]
-                ),
-            )
+                format!("Panic(\"panic test\\nOk(\\\"in file '"),
+                &actual_error.to_string()[0..33]
+                )
+
         }
     }
 }
