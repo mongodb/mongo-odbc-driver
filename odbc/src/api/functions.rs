@@ -1258,7 +1258,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                 )
             }
             _ => {
-                err = Some(ODBCError::InvalidAttrIdentifier(attribute));
+                err = Some(ODBCError::UnsupportedConnectionAttribute(attribute));
                 SqlReturn::ERROR
             }
         }
@@ -2148,7 +2148,7 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
     connection_handle: HDbc,
     attribute: ConnectionAttribute,
     value_ptr: Pointer,
-    str_length: Integer,
+    _str_length: Integer,
 ) -> SqlReturn {
     let mut err = None;
     let conn_handle = MongoHandleRef::from(connection_handle);
@@ -2161,12 +2161,6 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
         let mut conn_guard = conn.write().unwrap();
 
         match attribute {
-            ConnectionAttribute::CurrentCatalog => {
-                let current_catalog =
-                    input_wtext_to_string(value_ptr as *const WChar, str_length as usize);
-                conn_guard.attributes.current_catalog = Some(current_catalog);
-                SqlReturn::SUCCESS
-            }
             ConnectionAttribute::LoginTimeout => match FromPrimitive::from_u32(value_ptr as u32) {
                 Some(login_timeout) => {
                     conn_guard.attributes.login_timeout = Some(login_timeout);
@@ -2177,10 +2171,8 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
                     SqlReturn::ERROR
                 }
             },
-            // For now, since PowerBI does not use this attribute we omit setting it.
-            ConnectionAttribute::ConnectionTimeout => SqlReturn::SUCCESS,
             _ => {
-                err = Some(ODBCError::InvalidAttrIdentifier(attribute));
+                err = Some(ODBCError::UnsupportedConnectionAttribute(attribute));
                 SqlReturn::ERROR
             }
         }

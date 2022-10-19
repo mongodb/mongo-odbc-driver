@@ -114,9 +114,9 @@ mod unit {
         }
     }
 
-    // Test getting invalid attributes.
+    // Test getting unsupported attributes.
     #[test]
-    fn get_invalid_attr() {
+    fn get_unsupported_attr() {
         unsafe {
             let out_length = &mut 10;
 
@@ -159,48 +159,23 @@ mod unit {
                 assert_eq!(1, errors.len());
                 let actual_err = errors.first().unwrap();
                 match actual_err {
-                    ODBCError::InvalidAttrIdentifier(actual_attr) => assert_eq!(attr, *actual_attr),
+                    ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
+                        assert_eq!(attr, *actual_attr)
+                    }
                     _ => panic!("unexpected err: {:?}", actual_err),
                 }
             }
         }
     }
 
-    // Test setting CurrentCatalog attribute.
+    // Test setting LoginTimeout attribute.
     #[test]
-    fn set_string_attrs() {
-        unsafe {
-            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-            let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
-
-            let mut value = "test".encode_utf16().collect::<Vec<u16>>();
-            value.push('\u{0}' as u16);
-            let buffer_length: Integer = 4;
-
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLSetConnectAttrW(
-                    mongo_handle as *mut _,
-                    ConnectionAttribute::CurrentCatalog,
-                    value.as_ptr() as Pointer,
-                    buffer_length,
-                )
-            );
-            let conn_handle = (*mongo_handle).as_connection().unwrap();
-            let attributes = &conn_handle.read().unwrap().attributes;
-            assert_eq!(attributes.current_catalog, Some("test".to_string()));
-        }
-    }
-
-    // Test setting LoginTimeout and ConnectionTimeout attributes.
-    #[test]
-    fn set_numeric_attrs() {
+    fn set_login_timeout() {
         unsafe {
             let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
             let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
 
             let login_timeout_value: UInteger = 42u32;
-            let connection_timeout_value: UInteger = 24u32;
 
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -211,21 +186,10 @@ mod unit {
                     0,
                 )
             );
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLSetConnectAttrW(
-                    mongo_handle as *mut _,
-                    ConnectionAttribute::ConnectionTimeout,
-                    connection_timeout_value as Pointer,
-                    0,
-                )
-            );
             let conn_handle = (*mongo_handle).as_connection().unwrap();
             let attributes = &conn_handle.read().unwrap().attributes;
             // We do support setting LoginTimeout
             assert_eq!(attributes.login_timeout, Some(42));
-            // We do not support setting ConnectionTimeout
-            assert_eq!(attributes.connection_timeout, None);
         }
     }
 
@@ -242,9 +206,11 @@ mod unit {
                 ConnectionAttribute::TranslateLib,
                 ConnectionAttribute::TranslateOption,
                 ConnectionAttribute::TxnIsolation,
+                ConnectionAttribute::CurrentCatalog,
                 ConnectionAttribute::OdbcCursors,
                 ConnectionAttribute::QuietMode,
                 ConnectionAttribute::PacketSize,
+                ConnectionAttribute::ConnectionTimeout,
                 ConnectionAttribute::DisconnectBehaviour,
                 ConnectionAttribute::AsyncDbcFunctionsEnable,
                 ConnectionAttribute::AsyncDbcEvent,
@@ -272,7 +238,9 @@ mod unit {
                 assert_eq!(1, errors.len());
                 let actual_err = errors.first().unwrap();
                 match actual_err {
-                    ODBCError::InvalidAttrIdentifier(actual_attr) => assert_eq!(attr, *actual_attr),
+                    ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
+                        assert_eq!(attr, *actual_attr)
+                    }
                     _ => panic!("unexpected err: {:?}", actual_err),
                 }
             }
