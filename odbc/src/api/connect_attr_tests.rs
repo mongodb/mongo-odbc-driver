@@ -161,27 +161,8 @@ mod unit {
                         std::ptr::null_mut()
                     )
                 );
-
-                // pub fn verify_sql_diagnostics(
-                //     handle_type: HandleType,
-                //     handle: Handle,
-                //     record_number: i16,
-                //     expected_sql_state: &str,
-                //     expected_message_text: &str,
-                //     mut expected_native_err: i32,
-                // )
-
-                // Check the actual
-                let conn_handle = (*mongo_handle).as_connection().unwrap();
-                let errors = &conn_handle.read().unwrap().errors;
-                assert_eq!(1, errors.len());
-                let actual_err = errors.first().unwrap();
-                match actual_err {
-                    ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
-                        assert_eq!(attr, *actual_attr)
-                    }
-                    _ => panic!("unexpected err: {:?}", actual_err),
-                }
+                // Check the actual error
+                assert_unsupported_connection_attr_error(mongo_handle, attr)
             }
         }
     }
@@ -206,7 +187,6 @@ mod unit {
             );
             let conn_handle = (*mongo_handle).as_connection().unwrap();
             let attributes = &conn_handle.read().unwrap().attributes;
-            // We do support setting LoginTimeout
             assert_eq!(attributes.login_timeout, Some(42));
         }
     }
@@ -250,18 +230,25 @@ mod unit {
                         0
                     )
                 );
-                // Check the actual
-                let conn_handle = (*mongo_handle).as_connection().unwrap();
-                let errors = &conn_handle.read().unwrap().errors;
-                assert_eq!(1, errors.len());
-                let actual_err = errors.first().unwrap();
-                match actual_err {
-                    ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
-                        assert_eq!(attr, *actual_attr)
-                    }
-                    _ => panic!("unexpected err: {:?}", actual_err),
-                }
+                assert_unsupported_connection_attr_error(mongo_handle, attr)
             }
+        }
+    }
+
+    // helper to assert actual error returned by Set/GetAttr
+    unsafe fn assert_unsupported_connection_attr_error(
+        mongo_handle: *mut MongoHandle,
+        attr: ConnectionAttribute,
+    ) {
+        let conn_handle = (*mongo_handle).as_connection().unwrap();
+        let errors = &conn_handle.read().unwrap().errors;
+        assert_eq!(1, errors.len());
+        let actual_err = errors.first().unwrap();
+        match actual_err {
+            ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
+                assert_eq!(attr, *actual_attr)
+            }
+            _ => panic!("unexpected err: {:?}", actual_err),
         }
     }
 }
