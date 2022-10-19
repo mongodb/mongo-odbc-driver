@@ -10,11 +10,11 @@ mod col_attr_tests;
 #[cfg(test)]
 mod data_tests;
 #[cfg(test)]
-mod driver_connect_tests;
-#[cfg(test)]
 mod env_attr_tests;
 #[cfg(test)]
 mod get_diag_rec_tests;
+#[cfg(test)]
+mod panic_safe_exec_tests;
 #[cfg(test)]
 mod stmt_attr_tests;
 
