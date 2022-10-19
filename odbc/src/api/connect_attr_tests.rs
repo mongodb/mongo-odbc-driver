@@ -1,4 +1,5 @@
 mod unit {
+    use crate::handles::definitions::ConnectionAttributes;
     use crate::{
         api::data::input_wtext_to_string,
         errors::ODBCError,
@@ -8,118 +9,125 @@ mod unit {
     use odbc_sys::{ConnectionAttribute, Integer, Pointer, SqlReturn, UInteger};
     use std::sync::RwLock;
 
-    // Test getting CurrentCatalog attribute from the Connection
-    // when none of the attributes are set.
-    #[test]
-    fn get_string_attrs_default() {
-        unsafe {
-            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-            let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
+    macro_rules! test_get_attr {
+        ($func_name:ident,
+        attribute = $attribute:expr,
+        expected_sql_return = $expected_sql_return:expr,
+        $(initial_attrs = $initial_attrs:expr,)?
+        $(buffer_length = $buffer_length:expr,)?
+        $(expected_length = $expected_length:expr,)?
+        $(expected_value = $expected_value:expr,)?
+        $(actual_value_modifier = $actual_value_modifier:ident,)?
+        ) => {
+            #[test]
+            fn $func_name() {
+                unsafe {
+                    let attribute = $attribute;
 
-            let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let buffer_length: Integer = 20;
-            let out_length = &mut 10;
+                    #[allow(unused_mut, unused_assignments)]
+                    let mut conn =
+                        Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+                    $(conn.attributes = $initial_attrs;)?
+                    let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
 
-            assert_eq!(
-                SqlReturn::NO_DATA,
-                SQLGetConnectAttrW(
-                    mongo_handle as *mut _,
-                    ConnectionAttribute::CurrentCatalog,
-                    value_ptr,
-                    buffer_length,
-                    out_length,
-                )
-            );
-        }
-    }
+                    let value_ptr: *mut std::ffi::c_void =
+                        Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                    let out_length = &mut 10;
 
-    // Test getting CurrentCatalog attribute from the Connection
-    // when it is explicitly set.
-    #[test]
-    fn get_string_attrs() {
-        unsafe {
-            let mut conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-            conn.attributes.current_catalog = Some("test".to_string());
-            let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
+                    #[allow(unused_mut, unused_assignments)]
+                    let mut buffer_length: Integer = 0;
+                    $(buffer_length = $buffer_length;)?
 
-            let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let buffer_length: Integer = 20;
-            let out_length = &mut 10;
+                    assert_eq!(
+                        $expected_sql_return,
+                        SQLGetConnectAttrW(
+                            mongo_handle as *mut _,
+                            attribute,
+                            value_ptr,
+                            buffer_length,
+                            out_length,
+                        )
+                    );
 
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetConnectAttrW(
-                    mongo_handle as *mut _,
-                    ConnectionAttribute::CurrentCatalog,
-                    value_ptr,
-                    buffer_length,
-                    out_length,
-                )
-            );
-            assert_eq!("test".len() as i32, *out_length);
-            assert_eq!(
-                "test".to_string(),
-                input_wtext_to_string(value_ptr as *const _, *out_length as usize)
-            )
-        }
-    }
-
-    // Test getting numeric attributes from the Connection
-    // when none of the attributes are set.
-    #[test]
-    fn get_numeric_attrs_default() {
-        unsafe {
-            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-            let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
-
-            let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let out_length = &mut 10;
-
-            for (attr, expected) in [
-                (ConnectionAttribute::LoginTimeout, 0),
-                (ConnectionAttribute::ConnectionTimeout, 0),
-            ] {
-                assert_eq!(
-                    SqlReturn::SUCCESS,
-                    SQLGetConnectAttrW(mongo_handle as *mut _, attr, value_ptr, 0, out_length)
-                );
-                assert_eq!(expected, *(value_ptr as *mut UInteger))
+                    $(assert_eq!($expected_length, *out_length);)?
+                    $(assert_eq!($expected_value, $actual_value_modifier(value_ptr, *out_length as usize));)?
+                }
             }
-        }
+        };
     }
 
-    // Test getting numeric attributes from the Connection
-    // when they are explicitly set.
-    #[test]
-    fn get_numeric_attrs() {
-        unsafe {
-            let mut conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-            conn.attributes.login_timeout = Some(42);
-            conn.attributes.connection_timeout = Some(24);
-            let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
-
-            let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-            let out_length = &mut 10;
-
-            for (attr, expected) in [
-                (ConnectionAttribute::LoginTimeout, 42u32),
-                (ConnectionAttribute::ConnectionTimeout, 24u32),
-            ] {
-                assert_eq!(
-                    SqlReturn::SUCCESS,
-                    SQLGetConnectAttrW(mongo_handle as *mut _, attr, value_ptr, 0, out_length)
-                );
-                assert_eq!(expected, *(value_ptr as *mut UInteger))
-            }
-        }
+    unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String {
+        input_wtext_to_string(value_ptr as *const _, out_length)
     }
+
+    unsafe fn modify_numeric_attr(value_ptr: Pointer, _: usize) -> u32 {
+        *(value_ptr as *mut UInteger)
+    }
+
+    test_get_attr!(
+        current_catalog_default,
+        attribute = ConnectionAttribute::CurrentCatalog,
+        expected_sql_return = SqlReturn::NO_DATA,
+    );
+
+    test_get_attr!(
+        current_catalog,
+        attribute = ConnectionAttribute::CurrentCatalog,
+        expected_sql_return = SqlReturn::SUCCESS,
+        initial_attrs = Box::new(ConnectionAttributes {
+            current_catalog: Some("test".to_string()),
+            ..Default::default()
+        }),
+        buffer_length = 5,
+        expected_length = 4,
+        expected_value = "test".to_string(),
+        actual_value_modifier = modify_string_attr,
+    );
+
+    test_get_attr!(
+        connection_timeout_default,
+        attribute = ConnectionAttribute::ConnectionTimeout,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_value = 0u32,
+        actual_value_modifier = modify_numeric_attr,
+    );
+
+    test_get_attr!(
+        connection_timeout,
+        attribute = ConnectionAttribute::ConnectionTimeout,
+        expected_sql_return = SqlReturn::SUCCESS,
+        initial_attrs = Box::new(ConnectionAttributes {
+            connection_timeout: Some(42),
+            ..Default::default()
+        }),
+        expected_value = 42u32,
+        actual_value_modifier = modify_numeric_attr,
+    );
+
+    test_get_attr!(
+        login_timeout_default,
+        attribute = ConnectionAttribute::LoginTimeout,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_value = 0u32,
+        actual_value_modifier = modify_numeric_attr,
+    );
+
+    test_get_attr!(
+        login_timeout,
+        attribute = ConnectionAttribute::LoginTimeout,
+        expected_sql_return = SqlReturn::SUCCESS,
+        initial_attrs = Box::new(ConnectionAttributes {
+            login_timeout: Some(42),
+            ..Default::default()
+        }),
+        expected_value = 42u32,
+        actual_value_modifier = modify_numeric_attr,
+    );
 
     // Test getting unsupported attributes.
     #[test]
     fn get_unsupported_attr() {
         unsafe {
-            let out_length = &mut 10;
-
             for attr in [
                 ConnectionAttribute::AsyncEnable,
                 ConnectionAttribute::AccessMode,
@@ -150,9 +158,19 @@ mod unit {
                         attr,
                         std::ptr::null_mut() as Pointer,
                         0,
-                        out_length
+                        std::ptr::null_mut()
                     )
                 );
+
+                // pub fn verify_sql_diagnostics(
+                //     handle_type: HandleType,
+                //     handle: Handle,
+                //     record_number: i16,
+                //     expected_sql_state: &str,
+                //     expected_message_text: &str,
+                //     mut expected_native_err: i32,
+                // )
+
                 // Check the actual
                 let conn_handle = (*mongo_handle).as_connection().unwrap();
                 let errors = &conn_handle.read().unwrap().errors;
