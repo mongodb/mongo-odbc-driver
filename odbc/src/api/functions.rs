@@ -115,8 +115,8 @@ pub(crate) use panic_safe_exec;
 macro_rules! unimpl {
     ($handle:expr) => {{
         let handle = $handle;
-        panic_safe_exec! (|| { unimplemented!() }, handle);
-    }}
+        panic_safe_exec!(|| { unimplemented!() }, handle);
+    }};
 }
 
 ///
@@ -620,7 +620,7 @@ pub unsafe extern "C" fn SQLColumnsW(
     _column_name: *const WChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unimpl!( statement_handle);
+    unimpl!(statement_handle);
 }
 
 ///
