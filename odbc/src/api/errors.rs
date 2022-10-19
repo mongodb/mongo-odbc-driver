@@ -1,7 +1,9 @@
 use constants::{
-    GENERAL_ERROR, INVALID_ATTR_VALUE, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX,
-    NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED, UNABLE_TO_CONNECT,
-    UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    FRACTIONAL_TRUNCATION, GENERAL_ERROR, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
+    INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
+    INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED,
+    RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNABLE_TO_CONNECT, UNSUPPORTED_FIELD_DESCRIPTOR,
+    VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -30,6 +32,11 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     UnsupportedFieldDescriptor(String),
+    #[error(
+        "[{}][API] Indicator variable was null when null data was accessed",
+        VENDOR_IDENTIFIER
+    )]
+    IndicatorVariableRequiredButNotSupplied,
     #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
     InvalidDescriptorIndex(u16),
     #[error("[{}][API] No ResultSet", VENDOR_IDENTIFIER)]
@@ -46,15 +53,37 @@ pub enum ODBCError {
     )]
     MissingDriverOrDSNProperty,
     #[error(
-        "[{}][API] Buffer size '{0}' not large enough for string",
+        "[{}][API] Buffer size \"{0}\" not large enough for data",
         VENDOR_IDENTIFIER
     )]
     OutStringTruncated(usize),
+    #[error(
+        "[{}][API] floating point data \"{0}\" was truncated to fixed point",
+        VENDOR_IDENTIFIER
+    )]
+    FractionalTruncation(String),
+    #[error(
+        "[{}][API] integral data \"{0}\" was truncated due to overflow",
+        VENDOR_IDENTIFIER
+    )]
+    IntegralTruncation(String),
+    #[error("[{}][API] invalid datetime format: \"{0}\"", VENDOR_IDENTIFIER)]
+    InvalidDatetimeFormat(String),
+    #[error(
+        "[{}][API] invalid character value: \"{0}\" for cast to type: {1}",
+        VENDOR_IDENTIFIER
+    )]
+    InvalidCharacterValue(String, &'static str),
     #[error(
         "[{}][API] Invalid value for attribute {0}, changed to {1}",
         VENDOR_IDENTIFIER
     )]
     OptionValueChanged(&'static str, &'static str),
+    #[error(
+        "[{}][API] BSON type {0} cannot be converted to ODBC type {1}",
+        VENDOR_IDENTIFIER
+    )]
+    RestrictedDataType(&'static str, &'static str),
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
     Core(mongo_odbc_core::Error),
 }
@@ -79,6 +108,12 @@ impl ODBCError {
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
             ODBCError::UnsupportedFieldDescriptor(_) => UNSUPPORTED_FIELD_DESCRIPTOR,
             ODBCError::InvalidDescriptorIndex(_) => INVALID_DESCRIPTOR_INDEX,
+            ODBCError::RestrictedDataType(_, _) => RESTRICTED_DATATYPE,
+            ODBCError::FractionalTruncation(_) => FRACTIONAL_TRUNCATION,
+            ODBCError::IntegralTruncation(_) => INTEGRAL_TRUNCATION,
+            ODBCError::InvalidDatetimeFormat(_) => INVALID_DATETIME_FORMAT,
+            ODBCError::InvalidCharacterValue(_, _) => INVALID_CHARACTER_VALUE,
+            ODBCError::IndicatorVariableRequiredButNotSupplied => INDICATOR_VARIABLE_REQUIRED,
         }
     }
 
@@ -101,7 +136,13 @@ impl ODBCError {
             | ODBCError::UnsupportedConnectionAttribute(_)
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)
-            | ODBCError::UnsupportedFieldDescriptor(_) => 0,
+            | ODBCError::RestrictedDataType(_, _)
+            | ODBCError::IndicatorVariableRequiredButNotSupplied
+            | ODBCError::FractionalTruncation(_)
+            | ODBCError::IntegralTruncation(_)
+            | ODBCError::InvalidDatetimeFormat(_)
+            | ODBCError::UnsupportedFieldDescriptor(_)
+            | ODBCError::InvalidCharacterValue(_, _) => 0,
             ODBCError::Core(me) => me.code(),
         }
     }

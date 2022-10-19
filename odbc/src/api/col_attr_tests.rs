@@ -50,7 +50,7 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                // out_length was 10 should get changed to 0, denoting an empty output
+                // out_length was 10 should get changed to 0, denoting an empty output.
                 assert_eq!(0, *out_length);
                 // numeric_attr_ptr should still be 10 since no numeric value was requested.
                 assert_eq!(10, *numeric_attr_ptr);
