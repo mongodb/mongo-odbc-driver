@@ -3,7 +3,6 @@ use constants::{
     NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED, RIGHT_TRUNCATED, UNABLE_TO_CONNECT,
     UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
-use odbc_sys::ConnectionAttribute;
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
@@ -22,10 +21,10 @@ pub enum ODBCError {
     )]
     UnsupportedDriverConnectOption(String),
     #[error(
-        "[{}][API] The connection attribute {0:?} is not supported",
+        "[{}][API] The connection attribute {0} is not supported",
         VENDOR_IDENTIFIER
     )]
-    UnsupportedConnectionAttribute(ConnectionAttribute),
+    UnsupportedConnectionAttribute(String),
     #[error(
         "[{}][API] The field descriptor value {0} is not supported",
         VENDOR_IDENTIFIER

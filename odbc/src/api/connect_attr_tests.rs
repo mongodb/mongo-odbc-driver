@@ -1,9 +1,9 @@
 mod unit {
-    use crate::handles::definitions::ConnectionAttributes;
     use crate::{
         api::data::input_wtext_to_string,
         errors::ODBCError,
-        handles::definitions::{Connection, ConnectionState, MongoHandle},
+        handles::definitions::{Connection, ConnectionAttributes, ConnectionState, MongoHandle},
+        util::connection_attribute_to_string,
         SQLGetConnectAttrW, SQLSetConnectAttrW,
     };
     use odbc_sys::{ConnectionAttribute, Integer, Pointer, SqlReturn, UInteger};
@@ -244,7 +244,7 @@ mod unit {
         let actual_err = errors.first().unwrap();
         match actual_err {
             ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
-                assert_eq!(attr, *actual_attr)
+                assert_eq!(connection_attribute_to_string(attr), *actual_attr)
             }
             _ => panic!("unexpected err: {:?}", actual_err),
         }

@@ -7,6 +7,7 @@ use crate::{
         definitions::*,
         errors::{ODBCError, Result},
         odbc_uri::ODBCUri,
+        util::connection_attribute_to_string,
     },
     handles::definitions::*,
 };
@@ -1377,7 +1378,9 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                         )
                     }
                     _ => {
-                        err = Some(ODBCError::UnsupportedConnectionAttribute(attribute));
+                        err = Some(ODBCError::UnsupportedConnectionAttribute(
+                            connection_attribute_to_string(attribute),
+                        ));
                         SqlReturn::ERROR
                     }
                 }
@@ -2325,7 +2328,9 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
                         SqlReturn::SUCCESS
                     }
                     _ => {
-                        err = Some(ODBCError::UnsupportedConnectionAttribute(attribute));
+                        err = Some(ODBCError::UnsupportedConnectionAttribute(
+                            connection_attribute_to_string(attribute),
+                        ));
                         SqlReturn::ERROR
                     }
                 }
