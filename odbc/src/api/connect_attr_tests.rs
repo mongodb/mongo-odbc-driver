@@ -54,6 +54,8 @@ mod unit {
 
                     $(assert_eq!($expected_length, *out_length);)?
                     $(assert_eq!($expected_value, $actual_value_modifier(value_ptr, *out_length as usize));)?
+
+                    let _ = Box::from_raw(value_ptr);
                 }
             }
         };
@@ -91,6 +93,7 @@ mod unit {
             connection_timeout_default,
             attribute = ConnectionAttribute::ConnectionTimeout,
             expected_sql_return = SqlReturn::SUCCESS,
+            expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 0u32,
             actual_value_modifier = modify_numeric_attr,
         );
@@ -103,6 +106,7 @@ mod unit {
                 connection_timeout: Some(42),
                 ..Default::default()
             }),
+            expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 42u32,
             actual_value_modifier = modify_numeric_attr,
         );
@@ -111,6 +115,7 @@ mod unit {
             login_timeout_default,
             attribute = ConnectionAttribute::LoginTimeout,
             expected_sql_return = SqlReturn::SUCCESS,
+            expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 0u32,
             actual_value_modifier = modify_numeric_attr,
         );
@@ -123,6 +128,7 @@ mod unit {
                 login_timeout: Some(42),
                 ..Default::default()
             }),
+            expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 42u32,
             actual_value_modifier = modify_numeric_attr,
         );
