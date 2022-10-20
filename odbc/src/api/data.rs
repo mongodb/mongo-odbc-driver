@@ -143,13 +143,13 @@ pub unsafe fn format_and_return_bson(
     target_type: CDataType,
     target_value_ptr: Pointer,
     buffer_len: Len,
-    str_len_or_ind_ptr: *mut Len,
+    str_len_or_ind_ptr: *mut Integer,
     data: Bson,
 ) -> SqlReturn {
     // If the data is null or undefined we immediately return NULL_DATA indicator.
     match data {
         Bson::Null | Bson::Undefined => {
-            *str_len_or_ind_ptr = odbc_sys::NULL_DATA;
+            *str_len_or_ind_ptr = odbc_sys::NULL_DATA as Integer;
             return SqlReturn::SUCCESS;
         }
         _ => {}
@@ -425,10 +425,10 @@ pub mod i32_len {
         message: &str,
         output_ptr: *mut WChar,
         buffer_len: usize,
-        text_length_ptr: *mut Len,
+        text_length_ptr: *mut Integer,
     ) -> SqlReturn {
         let (len, ret) = set_output_wstring_helper(message, output_ptr, buffer_len);
-        *text_length_ptr = len as Len;
+        *text_length_ptr = len as Integer;
         ret
     }
 
@@ -445,10 +445,10 @@ pub mod i32_len {
         message: &str,
         output_ptr: *mut Char,
         buffer_len: usize,
-        text_length_ptr: *mut Len,
+        text_length_ptr: *mut Integer,
     ) -> SqlReturn {
         let (len, ret) = set_output_string_helper(message, output_ptr, buffer_len);
-        *text_length_ptr = len as Len;
+        *text_length_ptr = len as Integer;
         ret
     }
 }
@@ -464,11 +464,11 @@ pub mod i32_len {
 pub unsafe fn set_output_fixed_data<T: core::fmt::Debug>(
     data: &T,
     output_ptr: Pointer,
-    data_len_ptr: *mut Len,
+    data_len_ptr: *mut Integer,
 ) -> SqlReturn {
     if !data_len_ptr.is_null() {
         // If the output_ptr is NULL, we should still return the length of the message.
-        *data_len_ptr = size_of::<T>() as isize;
+        *data_len_ptr = size_of::<T>() as i32;
     }
     if output_ptr.is_null() {
         return SqlReturn::SUCCESS_WITH_INFO;

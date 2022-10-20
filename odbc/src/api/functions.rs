@@ -1360,25 +1360,17 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                                 cc,
                                 value_ptr as *mut WChar,
                                 buffer_length as usize,
-                                string_length_ptr as *mut Len,
+                                string_length_ptr,
                             ),
                         }
                     }
                     ConnectionAttribute::LoginTimeout => {
                         let login_timeout = attributes.login_timeout.unwrap_or(0);
-                        set_output_fixed_data(
-                            &login_timeout,
-                            value_ptr,
-                            string_length_ptr as *mut Len,
-                        )
+                        set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
                     }
                     ConnectionAttribute::ConnectionTimeout => {
                         let connection_timeout = attributes.connection_timeout.unwrap_or(0);
-                        set_output_fixed_data(
-                            &connection_timeout,
-                            value_ptr,
-                            string_length_ptr as *mut Len,
-                        )
+                        set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
                     }
                     _ => {
                         err = Some(ODBCError::UnsupportedConnectionAttribute(attribute));
@@ -1477,7 +1469,7 @@ pub unsafe extern "C" fn SQLGetData(
                 target_type,
                 target_value_ptr,
                 buffer_length,
-                str_len_or_ind_ptr,
+                str_len_or_ind_ptr as *mut Integer,
                 ret,
             )
         },
