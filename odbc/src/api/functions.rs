@@ -2321,16 +2321,8 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
 
                 match attribute {
                     ConnectionAttribute::LoginTimeout => {
-                        match FromPrimitive::from_u32(value_ptr as u32) {
-                            Some(login_timeout) => {
-                                conn_guard.attributes.login_timeout = Some(login_timeout);
-                                SqlReturn::SUCCESS
-                            }
-                            None => {
-                                err = Some(ODBCError::InvalidAttrValue("SQL_ATTR_LOGIN_TIMEOUT"));
-                                SqlReturn::ERROR
-                            }
-                        }
+                        conn_guard.attributes.login_timeout = Some(value_ptr as u32);
+                        SqlReturn::SUCCESS
                     }
                     _ => {
                         err = Some(ODBCError::UnsupportedConnectionAttribute(attribute));
