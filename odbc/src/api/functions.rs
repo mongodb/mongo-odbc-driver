@@ -2,7 +2,7 @@ use crate::{
     api::{
         data::{
             get_diag_rec, i16_len, i32_len, input_text_to_string, input_wtext_to_string,
-            set_output_fixed_data, set_str_length, unsupported_function,
+            set_str_length, unsupported_function,
         },
         definitions::*,
         errors::{ODBCError, Result},
@@ -1366,11 +1366,15 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                     }
                     ConnectionAttribute::LoginTimeout => {
                         let login_timeout = attributes.login_timeout.unwrap_or(0);
-                        set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
+                        i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
                     }
                     ConnectionAttribute::ConnectionTimeout => {
                         let connection_timeout = attributes.connection_timeout.unwrap_or(0);
-                        set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
+                        i32_len::set_output_fixed_data(
+                            &connection_timeout,
+                            value_ptr,
+                            string_length_ptr,
+                        )
                     }
                     _ => {
                         err = Some(ODBCError::UnsupportedConnectionAttribute(attribute));
@@ -1469,7 +1473,7 @@ pub unsafe extern "C" fn SQLGetData(
                 target_type,
                 target_value_ptr,
                 buffer_length,
-                str_len_or_ind_ptr as *mut Integer,
+                str_len_or_ind_ptr,
                 ret,
             )
         },
