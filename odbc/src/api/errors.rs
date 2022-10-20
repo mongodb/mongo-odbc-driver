@@ -10,6 +10,8 @@ use thiserror::Error;
 pub enum ODBCError {
     #[error("[{}][API] {0}", VENDOR_IDENTIFIER)]
     General(&'static str),
+    #[error("[{}][API] Caught panic: {0}", VENDOR_IDENTIFIER)]
+    Panic(String),
     #[error("[{}][API] The feature {0} is not implemented", VENDOR_IDENTIFIER)]
     Unimplemented(&'static str),
     #[error("[{}][API] The data type {0} is not implemented", VENDOR_IDENTIFIER)]
@@ -67,7 +69,7 @@ impl ODBCError {
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::UnsupportedConnectionAttribute(_) => NOT_IMPLEMENTED,
-            ODBCError::General(_) => GENERAL_ERROR,
+            ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
             ODBCError::InvalidAttrValue(_) => INVALID_ATTR_VALUE,
@@ -88,6 +90,7 @@ impl ODBCError {
             // code to propagate.
             ODBCError::Unimplemented(_)
             | ODBCError::General(_)
+            | ODBCError::Panic(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::InvalidUriFormat(_)
             | ODBCError::InvalidAttrValue(_)
