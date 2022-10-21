@@ -4,9 +4,12 @@ mod functions;
 pub(crate) mod odbc_uri;
 pub use functions::*;
 mod data;
+pub(crate) mod util;
 
 #[cfg(test)]
 mod col_attr_tests;
+#[cfg(test)]
+mod connect_attr_tests;
 #[cfg(test)]
 mod data_tests;
 #[cfg(test)]

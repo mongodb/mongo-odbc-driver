@@ -21,6 +21,11 @@ pub enum ODBCError {
     )]
     UnsupportedDriverConnectOption(String),
     #[error(
+        "[{}][API] The connection attribute {0} is not supported",
+        VENDOR_IDENTIFIER
+    )]
+    UnsupportedConnectionAttribute(String),
+    #[error(
         "[{}][API] The field descriptor value {0} is not supported",
         VENDOR_IDENTIFIER
     )]
@@ -61,7 +66,8 @@ impl ODBCError {
         match self {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
-            | ODBCError::UnsupportedDriverConnectOption(_) => NOT_IMPLEMENTED,
+            | ODBCError::UnsupportedDriverConnectOption(_)
+            | ODBCError::UnsupportedConnectionAttribute(_) => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
@@ -92,6 +98,7 @@ impl ODBCError {
             | ODBCError::MissingDriverOrDSNProperty
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
+            | ODBCError::UnsupportedConnectionAttribute(_)
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)
             | ODBCError::UnsupportedFieldDescriptor(_) => 0,

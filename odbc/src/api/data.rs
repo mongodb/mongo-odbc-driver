@@ -154,7 +154,7 @@ pub unsafe fn format_and_return_bson(
         }
         _ => {}
     }
-    use i32_len::*;
+    use isize_len::*;
     match target_type {
         CDataType::Char | CDataType::Binary => set_output_string(
             &data.to_string(),
@@ -410,7 +410,75 @@ pub mod i16_len {
     }
 }
 
-mod i32_len {
+pub mod i32_len {
+    use super::*;
+    ///
+    /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_wstring(
+        message: &str,
+        output_ptr: *mut WChar,
+        buffer_len: usize,
+        text_length_ptr: *mut Integer,
+    ) -> SqlReturn {
+        let (len, ret) = set_output_wstring_helper(message, output_ptr, buffer_len);
+        *text_length_ptr = len as Integer;
+        ret
+    }
+
+    ///
+    /// set_output_string writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    #[allow(dead_code)]
+    pub unsafe fn set_output_string(
+        message: &str,
+        output_ptr: *mut Char,
+        buffer_len: usize,
+        text_length_ptr: *mut Integer,
+    ) -> SqlReturn {
+        let (len, ret) = set_output_string_helper(message, output_ptr, buffer_len);
+        *text_length_ptr = len as Integer;
+        ret
+    }
+
+    ///
+    /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
+    /// ODBC drivers assume the output buffer is large enough for fixed types, and are allowed to
+    /// overwrite the buffer if too small a buffer is passed.
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_fixed_data<T: core::fmt::Debug>(
+        data: &T,
+        output_ptr: Pointer,
+        data_len_ptr: *mut Integer,
+    ) -> SqlReturn {
+        if !data_len_ptr.is_null() {
+            // If the output_ptr is NULL, we should still return the length of the message.
+            *data_len_ptr = size_of::<T>() as i32;
+        }
+        if output_ptr.is_null() {
+            return SqlReturn::SUCCESS_WITH_INFO;
+        }
+        copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
+        SqlReturn::SUCCESS
+    }
+}
+
+pub mod isize_len {
     use super::*;
     ///
     /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
@@ -451,30 +519,30 @@ mod i32_len {
         *text_length_ptr = len as Len;
         ret
     }
-}
 
-///
-/// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
-/// ODBC drivers assume the output buffer is large enough for fixed types, and are allowed to
-/// overwrite the buffer if too small a buffer is passed.
-///
-/// # Safety
-/// This writes to multiple raw C-pointers
-///
-pub unsafe fn set_output_fixed_data<T: core::fmt::Debug>(
-    data: &T,
-    output_ptr: Pointer,
-    data_len_ptr: *mut Len,
-) -> SqlReturn {
-    if !data_len_ptr.is_null() {
-        // If the output_ptr is NULL, we should still return the length of the message.
-        *data_len_ptr = size_of::<T>() as isize;
+    ///
+    /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
+    /// ODBC drivers assume the output buffer is large enough for fixed types, and are allowed to
+    /// overwrite the buffer if too small a buffer is passed.
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_fixed_data<T: core::fmt::Debug>(
+        data: &T,
+        output_ptr: Pointer,
+        data_len_ptr: *mut Len,
+    ) -> SqlReturn {
+        if !data_len_ptr.is_null() {
+            // If the output_ptr is NULL, we should still return the length of the message.
+            *data_len_ptr = size_of::<T>() as isize;
+        }
+        if output_ptr.is_null() {
+            return SqlReturn::SUCCESS_WITH_INFO;
+        }
+        copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
+        SqlReturn::SUCCESS
     }
-    if output_ptr.is_null() {
-        return SqlReturn::SUCCESS_WITH_INFO;
-    }
-    copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
-    SqlReturn::SUCCESS
 }
 
 ///
