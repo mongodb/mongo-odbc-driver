@@ -232,7 +232,7 @@ impl MongoStatement for MongoCollections {
                     _ => Bson::String(coll_type.to_uppercase()),
                 }
             }
-            _ => Bson::Null,
+            _ => return Err(Error::ColIndexOutOfBounds(col_index)),
         };
         Ok(Some(return_val))
     }
