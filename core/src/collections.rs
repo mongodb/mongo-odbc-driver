@@ -210,6 +210,7 @@ impl MongoStatement for MongoCollections {
         // 2-> Schema name; NULL as it is not applicable
         // 3 -> current_collection.name
         // 4 -> current_collection.collection_type
+        // 5 -> Remarks; NULL
         let return_val = match col_index {
             1 => Bson::String(
                 self.collections_for_db_list
@@ -218,7 +219,7 @@ impl MongoStatement for MongoCollections {
                     .database_name
                     .clone(),
             ),
-            2 => Bson::Null,
+            2 | 5 => Bson::Null,
             3 => Bson::String(self.current_collection.as_ref().unwrap().name.clone()),
             4 => {
                 let coll_type = format!(
