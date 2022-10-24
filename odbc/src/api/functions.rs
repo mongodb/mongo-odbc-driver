@@ -14,7 +14,8 @@ use crate::{
 use bson::Bson;
 use constants::{SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
-    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery, MongoStatement,
+    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery,
+    MongoStatement, MongoTableTypes,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -2904,8 +2905,9 @@ fn sql_tables(
             mongo_connection,
             Some(query_timeout),
         ))),
-        ("", SQL_ALL_SCHEMAS, "", "") | ("", "", "", SQL_ALL_TABLE_TYPES) => unimplemented!(),
-        (_, _, _, _) => Ok(Box::new(MongoCollections::list_tables(
+        ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas())),
+        ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),
+        _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,
             Some(query_timeout),
             catalog,

@@ -127,6 +127,11 @@ impl MongoCollections {
         }
     }
 
+    // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
+    pub fn all_schemas() -> MongoCollections {
+        MongoCollections::empty()
+    }
+
     pub fn empty() -> MongoCollections {
         MongoCollections {
             current_collection: None,
