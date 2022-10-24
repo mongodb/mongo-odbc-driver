@@ -10,7 +10,7 @@ pub struct MongoTableTypes {
 }
 
 impl MongoTableTypes {
-    // Statement for SQLTables("", "", SQL_ALL_TABLE_TYPES ).
+    // Statement for SQLTables("", "", "", SQL_ALL_TABLE_TYPES ).
     pub fn all_table_types() -> MongoTableTypes {
         MongoTableTypes {
             table_type: vec!["TABLE".to_string(), "VIEW".to_string()],
