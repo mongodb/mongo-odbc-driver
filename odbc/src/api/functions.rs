@@ -20,8 +20,8 @@ use num_traits::FromPrimitive;
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
     EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
-    InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType,
-    SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
+    Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn,
+    StatementAttribute, ULen, USmallInt, WChar,
 };
 use std::{
     mem::size_of,
@@ -1774,6 +1774,12 @@ pub unsafe extern "C" fn SQLGetInfo(
     unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetInfo")
 }
 
+#[test]
+fn temp() {
+    let v = env!("CARGO_PKG_VERSION");
+    println!("Version is: {}", v)
+}
+
 ///
 /// [`SQLGetInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetInfo-function
 ///
@@ -1785,11 +1791,319 @@ pub unsafe extern "C" fn SQLGetInfo(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetInfoW(
     connection_handle: HDbc,
-    _info_type: InfoType,
-    _info_value_ptr: Pointer,
-    _buffer_length: SmallInt,
-    _string_length_ptr: *mut SmallInt,
+    info_type: InfoType,
+    info_value_ptr: Pointer,
+    buffer_length: SmallInt,
+    string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    match info_type {
+        // SQL_DRIVER_NAME
+        InfoType::DriverName => {
+            // A character string with the file name of the driver used to access the data source.
+            // TODO: use set_output_wstring to write this value, return SUCCESS
+            //   - ask what the file name should be :sweat-smile:
+        }
+        // SQL_DRIVER_VER
+        InfoType::DriverVer => {
+            // TODO: is it ok this isn't of the form ##.##.####?
+            let version = env!("CARGO_PKG_VERSION");
+            return i16_len::set_output_wstring(
+                version,
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
+        }
+        // SQL_DRIVER_ODBC_VER
+        InfoType::DriverOdbcVer => {
+            // TODO: might want to use env.odbc_version for this
+        }
+        // SQL_SEARCH_PATTERN_ESCAPE
+        InfoType::SearchPatternEscape => {
+            // This value does not apply to LIKE, which is the only operator/function
+            // MongoSQL supports that could accept a search pattern. Therefore, the
+            // empty string is always returned.
+            return i16_len::set_output_wstring(
+                "",
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
+        }
+        // SQL_DBMS_NAME
+        InfoType::DbmsName => {
+            // TODO: what "name of the DBMS product accessed by the driver" do we want to use? MongoDB? Atlas Data Federation? Atlas SQL?
+        }
+        // SQL_DBMS_VER
+        InfoType::DbmsVer => {
+            // TODO: depending on answer above, we may need to make a network call to get this information (i.e. ADF.getVersion() or the like, or we can hardcode this...)
+        }
+        // SQL_CONCAT_NULL_BEHAVIOR
+        InfoType::ConcatNullBehavior => {
+            // If a NULL valued operand is used in a string concatenation,
+            // the result is NULL. The return value indicates that.
+            return i16_len::set_output_fixed_data(&SQL_CB_NULL, info_value_ptr, string_length_ptr);
+        }
+        // SQL_IDENTIFIER_QUOTE_CHAR
+        InfoType::IdentifierQuoteChar => {
+            // MongoSQL supports ` and " as identifier delimiters. The "
+            // character is the SQL-92 standard, so it is always returned.
+            return i16_len::set_output_wstring(
+                "\"",
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
+        }
+        // SQL_OWNER_TERM
+        InfoType::OwnerTerm => {
+            // TODO: new name is SQL_SCHEMA_TERM -- check that the enum value is the same
+            //   - return the name we use for "schema", which in SQL-92 world I _believe_ means database... The docs imply we should always return "schema"
+            //   - we may not actually have any concept of a "schema" since it might be "catalog" that means database. todo
+        }
+        // SQL_CATALOG_NAME_SEPARATOR
+        InfoType::CatalogNameSeparator => {
+            // The name separator used by MongoSQL is '.'.
+            return i16_len::set_output_wstring(
+                ".",
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
+        }
+        // SQL_CATALOG_TERM
+        InfoType::CatalogTerm => {
+            // TODO:
+            //   - return the name we use for "catalog", which in SQL-92 world I _believe_ means database... The docs imply we should always return "catalog" though
+        }
+        // SQL_CONVERT_FUNCTIONS
+        InfoType::ConvertFunctions => {
+            // TODO: bitmask enumerating which conversion functions we support (we should support most of them!)
+        }
+        // SQL_NUMERIC_FUNCTIONS
+        InfoType::NumericFunctions => {
+            // TODO: bitmask enumerating which numeric functions we support
+        }
+        // SQL_STRING_FUNCTIONS
+        InfoType::StringFunctions => {
+            // TODO: bitmask enumerating which string functions we support
+        }
+        // SQL_SYSTEM_FUNCTIONS
+        InfoType::SystemFunctions => {
+            // TODO: bitmask enumerating which system functions we support
+        }
+        // SQL_TIMEDATE_FUNCTIONS
+        InfoType::TimedateFunctions => {
+            // TODO: bitmask enumerating which datetime functions we support
+        }
+        // SQL_CONVERT_BIGINT
+        InfoType::ConvertBigInt => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_BINARY
+        InfoType::ConvertBinary => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_BIT
+        InfoType::ConvertBit => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_CHAR
+        InfoType::ConvertChar => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_DATE
+        InfoType::ConvertDate => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_DECIMAL
+        InfoType::ConvertDecimal => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_DOUBLE
+        InfoType::ConvertDouble => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_FLOAT
+        InfoType::ConvertFloat => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_INTEGER
+        InfoType::ConvertInteger => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_LONGVARCHAR
+        InfoType::ConvertLongVarChar => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_NUMERIC
+        InfoType::ConvertNumeric => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_REAL
+        InfoType::ConvertReal => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_SMALLINT
+        InfoType::ConvertSmallInt => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_TIME
+        InfoType::ConvertTime => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_TIMESTAMP
+        InfoType::ConvertTimestamp => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_TINYINT
+        InfoType::ConvertTinyInt => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_VARBINARY
+        InfoType::ConvertVarBinary => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_VARCHAR
+        InfoType::ConvertVarChar => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_CONVERT_LONGVARBINARY
+        InfoType::ConvertLongVarBinary => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_GETDATA_EXTENSIONS
+        InfoType::GetDataExtensions => {}
+        // SQL_COLUMN_ALIAS
+        InfoType::ColumnAlias => {
+            // MongoSQL does support column aliases.
+            return i16_len::set_output_wstring(
+                SQL_INFO_Y,
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
+        }
+        // SQL_GROUP_BY
+        InfoType::GroupBy => {}
+        // SQL_ORDER_BY_COLUMNS_IN_SELECT
+        InfoType::OrderByColumnsInSelect => {
+            // MongoSQL does require ORDER BY columns to be in the SELECT list.
+            return i16_len::set_output_wstring(
+                SQL_INFO_Y,
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
+        }
+        // SQL_OWNER_USAGE
+        InfoType::OwnerUsage => {
+            // TODO: bitmask showing how schemas are used. We'll need to figure out how to indicate read-only
+        }
+        // SQL_CATALOG_USAGE
+        InfoType::CatalogUsage => {
+            // TODO: bitmask showing how catalogs are used. We'll need to figure out how to indicate read-only
+        }
+        // SQL_SPECIAL_CHARACTERS
+        InfoType::SpecialCharacters => {
+            // TODO:
+            //  - "A character string that contains all special characters (that is,
+            //     all characters except a through z, A through Z, 0 through 9, and
+            //     underscore) that can be used in an identifier name, such as a table
+            //     name, column name, or index name, on the data source. For example,
+            //     "#$^". If an identifier contains one or more of these characters, the
+            //     identifier must be a delimited identifier."
+            //  - Arguably, this means we just return the characters that require identifiers... BUT the first sentence implies it should include _all_ non-[a-zA-Z0-9_] chars, which is insane...
+        }
+        // SQL_MAX_COLUMNS_IN_GROUP_BY
+        InfoType::MaxColumnsInGroupBy => {
+            // MongoSQL does not have an explicit maximum number of
+            // columns allowed in a GROUP BY clause.
+            return i16_len::set_output_fixed_data(&0u16, info_value_ptr, string_length_ptr);
+        }
+        // SQL_MAX_COLUMNS_IN_ORDER_BY
+        InfoType::MaxColumnsInOrderBy => {
+            // MongoSQL does not have an explicit maximum number of
+            // columns allowed in a ORDER BY clause.
+            return i16_len::set_output_fixed_data(&0u16, info_value_ptr, string_length_ptr);
+        }
+        // SQL_MAX_COLUMNS_IN_SELECT
+        InfoType::MaxColumnsInSelect => {
+            // MongoSQL does not have an explicit maximum number of
+            // columns allowed in a SELECT clause.
+            return i16_len::set_output_fixed_data(&0u16, info_value_ptr, string_length_ptr);
+        }
+        // SQL_TIMEDATE_ADD_INTERVALS
+        InfoType::TimedateAddIntervals => {
+            // TODO: bitmask for which datetime intervals can be used for date add/diff (year, month, quarter, etc. -- check tableau connector, maybe)
+        }
+        // SQL_TIMEDATE_DIFF_INTERVALS
+        InfoType::TimedateDiffIntervals => {
+            // TODO: bitmask for which datetime intervals can be used for date add/diff (year, month, quarter, etc. -- check tableau connector, maybe)
+        }
+        // SQL_CATALOG_LOCATION
+        InfoType::CatalogLocation => {}
+        // SQL_SQL_CONFORMANCE
+        InfoType::SqlConformance => {
+            // MongoSQL is SQL-92 Entry level compliant.
+            return i16_len::set_output_fixed_data(
+                &SQL_SC_SQL92_ENTRY,
+                info_value_ptr,
+                string_length_ptr,
+            );
+        }
+        // SQL_CONVERT_WCHAR
+        InfoType::ConvertWChar => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+            //   - note: these 3 are not documented
+        }
+        // SQL_CONVERT_WLONGVARCHAR
+        InfoType::ConvertWLongVarChar => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+            //   - note: these 3 are not documented
+        }
+        // SQL_CONVERT_WVARCHAR
+        InfoType::ConvertWVarChar => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+            //   - note: these 3 are not documented
+        }
+        // SQL_ODBC_INTERFACE_CONFORMANCE
+        InfoType::OdbcInterfaceConformance => {}
+        // SQL_SQL92_PREDICATES
+        InfoType::Sql92Predicates => {}
+        // SQL_SQL92_RELATIONAL_JOIN_OPERATORS
+        InfoType::Sql92RelationalJoinOperators => {}
+        // SQL_AGGREGATE_FUNCTIONS
+        InfoType::AggregateFunctions => {}
+        // SQL_CONVERT_GUID
+        InfoType::ConvertGuid => {
+            // TODO: bitmask that indicates the data types this type can be converted into (i.e. if you want to know if you can convert INT to BIGINT, you'd call SQLGetInfo(Int) and then AND the result with the BIGINT mask)
+        }
+        // SQL_RETURN_ESCAPE_CLAUSE
+        InfoType::ReturnEscapeClause => {
+            // TODO: not documented...not sure what this is
+        }
+        // SQL_API_SQLFETCHSCROLL
+        InfoType::ApiSqlFetchScroll => {
+            // TODO: not documented...not sure what this is
+        }
+        // SQL_CATALOG_NAME
+        InfoType::CatalogName => {
+            // MongoSQL does support catalog (database) names.
+            return i16_len::set_output_wstring(
+                &SQL_INFO_Y,
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
+        }
+        // SQL_MAX_IDENTIFIER_LEN
+        InfoType::MaxIdentifierLen => {
+            // MongoSQL does not have a maximum identifier length.
+            return i16_len::set_output_fixed_data(&0u16, info_value_ptr, string_length_ptr);
+        }
+    }
+
     unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetInfoW")
 }
 

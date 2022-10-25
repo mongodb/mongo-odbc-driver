@@ -237,3 +237,8 @@ pub enum InfoType {
     // SQL_MAX_IDENTIFIER_LEN
     MaxIdentifierLen = 10005,
 }
+
+pub const SQL_CB_NULL: u16 = 0x0000;
+pub const SQL_INFO_Y: &str = "Y";
+pub const SQL_INFO_N: &str = "N";
+pub const SQL_SC_SQL92_ENTRY: u32 = 0x00000001;
