@@ -239,6 +239,49 @@ pub enum InfoType {
 }
 
 pub const SQL_CB_NULL: u16 = 0x0000;
+pub const SQL_U16_ZERO: u16 = SQL_CB_NULL;
+pub const SQL_U32_ZERO: u32 = 0;
 pub const SQL_INFO_Y: &str = "Y";
-pub const SQL_INFO_N: &str = "N";
 pub const SQL_SC_SQL92_ENTRY: u32 = 0x00000001;
+
+// SQL_CONVERT_* return value bitmasks
+pub const SQL_CVT_CHAR: u32 = 0x00000001;
+pub const SQL_CVT_NUMERIC: u32 = 0x00000002;
+pub const SQL_CVT_DECIMAL: u32 = 0x00000004;
+pub const SQL_CVT_INTEGER: u32 = 0x00000008;
+pub const SQL_CVT_SMALLINT: u32 = 0x00000010;
+pub const SQL_CVT_FLOAT: u32 = 0x00000020;
+pub const SQL_CVT_REAL: u32 = 0x00000040;
+pub const SQL_CVT_DOUBLE: u32 = 0x00000080;
+pub const SQL_CVT_VARCHAR: u32 = 0x00000100;
+pub const SQL_CVT_LONGVARCHAR: u32 = 0x00000200;
+pub const SQL_CVT_BIT: u32 = 0x00001000;
+pub const SQL_CVT_TINYINT: u32 = 0x00002000;
+pub const SQL_CVT_BIGINT: u32 = 0x00004000;
+pub const SQL_CVT_TIMESTAMP: u32 = 0x00020000;
+pub const SQL_CVT_WCHAR: u32 = 0x00200000;
+pub const SQL_CVT_WLONGVARCHAR: u32 = 0x00400000;
+pub const SQL_CVT_WVARCHAR: u32 = 0x00800000;
+
+// All string and numeric types can be converted into any numeric type,
+// bool (bit), string (char/varchar/etc), and datetime (timestamp). We
+// consider this the "Full MongoSQL Conversion Target Mask" since this
+// is the maximal set of conversion target types any ODBC source type can
+// achieve.
+pub const FULL_MONGOSQL_CONVERSION_TARGET_MASK: u32 = SQL_CVT_CHAR
+    | SQL_CVT_NUMERIC
+    | SQL_CVT_DECIMAL
+    | SQL_CVT_INTEGER
+    | SQL_CVT_SMALLINT
+    | SQL_CVT_FLOAT
+    | SQL_CVT_REAL
+    | SQL_CVT_DOUBLE
+    | SQL_CVT_VARCHAR
+    | SQL_CVT_LONGVARCHAR
+    | SQL_CVT_BIT
+    | SQL_CVT_TINYINT
+    | SQL_CVT_BIGINT
+    | SQL_CVT_TIMESTAMP
+    | SQL_CVT_WCHAR
+    | SQL_CVT_WLONGVARCHAR
+    | SQL_CVT_WVARCHAR;
