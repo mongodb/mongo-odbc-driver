@@ -1861,6 +1861,9 @@ pub unsafe extern "C" fn SQLGetInfoW(
         }
         // SQL_OWNER_TERM
         InfoType::OwnerTerm => {
+            // SQL_OWNER_TERM is replaced by SQL_SCHEMA_TERM in newer ODBC
+            // versions. They use the same numeric value.
+            //
             // MongoSQL does not have a concept of a "schema" which is a
             // level above "catalog" (or "database") in the data hierarchy.
             return i16_len::set_output_wstring(
@@ -2065,11 +2068,19 @@ pub unsafe extern "C" fn SQLGetInfoW(
         }
         // SQL_OWNER_USAGE
         InfoType::OwnerUsage => {
-            // TODO: bitmask showing how schemas are used. We'll need to figure out how to indicate read-only
+            // SQL_OWNER_USAGE is replaced by SQL_SCHEMA_USAGE in newer
+            // ODBC versions. They use the same numeric value.
+            //
+            // MongoSQL does not have a concept of a "schema" which is a
+            // level above "catalog" (or "database") in the data hierarchy.
+            return i16_len::set_output_fixed_data(&SQL_U32_ZERO, info_value_ptr, string_length_ptr);
         }
         // SQL_CATALOG_USAGE
         InfoType::CatalogUsage => {
-            // TODO: bitmask showing how catalogs are used. We'll need to figure out how to indicate read-only
+            // TODO: (code review) there is no way to indicate this is read-only. The entire DML bitmask
+            //       must be used to indicate we support SELECT. However, that also includes INSERT,
+            //       UPDATE, and DELETE.
+            return i16_len::set_output_fixed_data(&SQL_CU_DML_STATEMENTS, info_value_ptr, string_length_ptr);
         }
         // SQL_SPECIAL_CHARACTERS
         InfoType::SpecialCharacters => {
@@ -2102,15 +2113,26 @@ pub unsafe extern "C" fn SQLGetInfoW(
             return i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr);
         }
         // SQL_TIMEDATE_ADD_INTERVALS
-        InfoType::TimedateAddIntervals => {
-            // TODO: bitmask for which datetime intervals can be used for date add/diff (year, month, quarter, etc. -- check tableau connector, maybe)
-        }
+        InfoType::TimedateAddIntervals
         // SQL_TIMEDATE_DIFF_INTERVALS
-        InfoType::TimedateDiffIntervals => {
-            // TODO: bitmask for which datetime intervals can be used for date add/diff (year, month, quarter, etc. -- check tableau connector, maybe)
+        | InfoType::TimedateDiffIntervals => {
+            // MongoSQL DATEADD and DATEDIFF support the following intervals.
+            const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_SECOND
+            | SQL_FN_TSI_MINUTE
+            | SQL_FN_TSI_HOUR
+            | SQL_FN_TSI_DAY
+            | SQL_FN_TSI_WEEK
+            | SQL_FN_TSI_MONTH
+            | SQL_FN_TSI_QUARTER
+            | SQL_FN_TSI_YEAR;
+            return i16_len::set_output_fixed_data(&TIMEDATE_INTERVALS, info_value_ptr, string_length_ptr);
         }
         // SQL_CATALOG_LOCATION
-        InfoType::CatalogLocation => {}
+        InfoType::CatalogLocation => {
+            // MongoSQL puts the catalog (database) at the start of a qualified
+            // table name. As in, db.table.
+            return i16_len::set_output_fixed_data(&SQL_CL_START, info_value_ptr, string_length_ptr);
+        }
         // SQL_SQL_CONFORMANCE
         InfoType::SqlConformance => {
             // MongoSQL is SQL-92 Entry level compliant.
@@ -2121,13 +2143,44 @@ pub unsafe extern "C" fn SQLGetInfoW(
             );
         }
         // SQL_ODBC_INTERFACE_CONFORMANCE
-        InfoType::OdbcInterfaceConformance => {}
+        InfoType::OdbcInterfaceConformance => {
+            // The MongoSQL ODBC Driver is currently meets the minimum compliance level.
+            return i16_len::set_output_fixed_data(&SQL_OIC_CORE, info_value_ptr, string_length_ptr);
+        }
         // SQL_SQL92_PREDICATES
-        InfoType::Sql92Predicates => {}
+        InfoType::Sql92Predicates => {
+            // MongoSQL supports the following SQL-92 predicate operators.
+            const PREDICATES: u32 = SQL_SP_EXISTS
+            | SQL_SP_ISNOTNULL
+            | SQL_SP_ISNULL
+            | SQL_SP_LIKE
+            | SQL_SP_IN
+            | SQL_SP_BETWEEN
+            | SQL_SP_COMPARISON
+            | SQL_SP_QUANTIFIED_COMPARISON;
+            return i16_len::set_output_fixed_data(&PREDICATES, info_value_ptr, string_length_ptr);
+        }
         // SQL_SQL92_RELATIONAL_JOIN_OPERATORS
-        InfoType::Sql92RelationalJoinOperators => {}
+        InfoType::Sql92RelationalJoinOperators => {
+            // MongoSQL supports the following SQL-92 JOIN operators.
+            const JOIN_OPS: u32 = SQL_SRJO_CROSS_JOIN
+            | SQL_SRJO_INNER_JOIN
+            | SQL_SRJO_LEFT_OUTER_JOIN
+            | SQL_SRJO_RIGHT_OUTER_JOIN;
+            return i16_len::set_output_fixed_data(&JOIN_OPS, info_value_ptr, string_length_ptr);
+        }
         // SQL_AGGREGATE_FUNCTIONS
-        InfoType::AggregateFunctions => {}
+        InfoType::AggregateFunctions => {
+            // MongoSQL supports the following aggregate functions.
+            const AGG_FUNCTIONS: u32 = SQL_AF_AVG
+            | SQL_AF_COUNT
+            | SQL_AF_MAX
+            | SQL_AF_MIN
+            | SQL_AF_SUM
+            | SQL_AF_DISTINCT
+            | SQL_AF_ALL;
+            return i16_len::set_output_fixed_data(&AGG_FUNCTIONS, info_value_ptr, string_length_ptr);
+        }
         // SQL_RETURN_ESCAPE_CLAUSE
         InfoType::ReturnEscapeClause => {
             // MongoSQL has not support for the return escape clause since it is read-only.

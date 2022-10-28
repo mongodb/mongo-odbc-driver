@@ -240,9 +240,11 @@ pub enum InfoType {
 
 pub const SQL_CB_NULL: u16 = 0x0000;
 pub const SQL_U16_ZERO: u16 = SQL_CB_NULL;
+pub const SQL_CL_START: u16 = 0x0001;
 pub const SQL_U32_ZERO: u32 = 0;
-pub const SQL_INFO_Y: &str = "Y";
+pub const SQL_OIC_CORE: u32 = 0x00000001;
 pub const SQL_SC_SQL92_ENTRY: u32 = 0x00000001;
+pub const SQL_INFO_Y: &str = "Y";
 
 // SQL_CONVERT_FUNCTIONS bitmask
 pub const SQL_FN_CVT_CAST: u32 = 0x00000002;
@@ -281,6 +283,44 @@ pub const SQL_FN_TD_TIMESTAMPADD: u32 = 0x00002000;
 pub const SQL_FN_TD_TIMESTAMPDIFF: u32 = 0x00004000;
 pub const SQL_FN_TD_CURRENT_TIMESTAMP: u32 = 0x00080000;
 pub const SQL_FN_TD_EXTRACT: u32 = 0x00100000;
+
+// SQL_CATALOG_USAGE bitmasks
+pub const SQL_CU_DML_STATEMENTS: u32 = 0x00000001;
+
+// SQL_TIMEDATE_ADD_INTERVALS and SQL_TIMEDATE_DIFF_INTERVALS functions
+pub const SQL_FN_TSI_SECOND: u32 = 0x00000002;
+pub const SQL_FN_TSI_MINUTE: u32 = 0x00000004;
+pub const SQL_FN_TSI_HOUR: u32 = 0x00000008;
+pub const SQL_FN_TSI_DAY: u32 = 0x00000010;
+pub const SQL_FN_TSI_WEEK: u32 = 0x00000020;
+pub const SQL_FN_TSI_MONTH: u32 = 0x00000040;
+pub const SQL_FN_TSI_QUARTER: u32 = 0x00000080;
+pub const SQL_FN_TSI_YEAR: u32 = 0x00000100;
+
+// SQL_SQL92_PREDICATES bitmasks
+pub const SQL_SP_EXISTS: u32 = 0x00000001;
+pub const SQL_SP_ISNOTNULL: u32 = 0x00000002;
+pub const SQL_SP_ISNULL: u32 = 0x00000004;
+pub const SQL_SP_LIKE: u32 = 0x00000200;
+pub const SQL_SP_IN: u32 = 0x00000400;
+pub const SQL_SP_BETWEEN: u32 = 0x00000800;
+pub const SQL_SP_COMPARISON: u32 = 0x00001000;
+pub const SQL_SP_QUANTIFIED_COMPARISON: u32 = 0x00002000;
+
+// SQL_SQL92_RELATIONAL_JOIN_OPERATORS bitmasks
+pub const SQL_SRJO_CROSS_JOIN: u32 = 0x00000002;
+pub const SQL_SRJO_INNER_JOIN: u32 = 0x00000010;
+pub const SQL_SRJO_LEFT_OUTER_JOIN: u32 = 0x00000040;
+pub const SQL_SRJO_RIGHT_OUTER_JOIN: u32 = 0x00000100;
+
+// SQL_AGGREGATE_FUNCTIONS bitmasks
+pub const SQL_AF_AVG: u32 = 0x00000001;
+pub const SQL_AF_COUNT: u32 = 0x00000002;
+pub const SQL_AF_MAX: u32 = 0x00000004;
+pub const SQL_AF_MIN: u32 = 0x00000008;
+pub const SQL_AF_SUM: u32 = 0x00000010;
+pub const SQL_AF_DISTINCT: u32 = 0x00000020;
+pub const SQL_AF_ALL: u32 = 0x00000040;
 
 // SQL_CONVERT_* return value bitmasks
 pub const SQL_CVT_CHAR: u32 = 0x00000001;
