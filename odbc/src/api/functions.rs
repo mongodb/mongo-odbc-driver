@@ -1774,12 +1774,6 @@ pub unsafe extern "C" fn SQLGetInfo(
     unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetInfo")
 }
 
-#[test]
-fn temp() {
-    let v = env!("CARGO_PKG_VERSION");
-    println!("Version is: {}", v)
-}
-
 ///
 /// [`SQLGetInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetInfo-function
 ///
@@ -1790,6 +1784,25 @@ fn temp() {
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetInfoW(
+    connection_handle: HDbc,
+    info_type: InfoType,
+    info_value_ptr: Pointer,
+    buffer_length: SmallInt,
+    string_length_ptr: *mut SmallInt,
+) -> SqlReturn {
+    panic_safe_exec!(
+        || sql_get_infow_helper(
+            connection_handle,
+            info_type,
+            info_value_ptr,
+            buffer_length,
+            string_length_ptr
+        ),
+        connection_handle
+    )
+}
+
+unsafe fn sql_get_infow_helper(
     connection_handle: HDbc,
     info_type: InfoType,
     info_value_ptr: Pointer,
@@ -1906,35 +1919,35 @@ pub unsafe extern "C" fn SQLGetInfoW(
         InfoType::NumericFunctions => {
             // MongoSQL supports the following numeric functions.
             const NUMERIC_FUNCTIONS: u32 = SQL_FN_NUM_ABS
-            | SQL_FN_NUM_CEILING
-            | SQL_FN_NUM_COS
-            | SQL_FN_NUM_FLOOR
-            | SQL_FN_NUM_LOG
-            | SQL_FN_NUM_MOD
-            | SQL_FN_NUM_SIN
-            | SQL_FN_NUM_SQRT
-            | SQL_FN_NUM_TAN
-            | SQL_FN_NUM_DEGREES
-            | SQL_FN_NUM_POWER
-            | SQL_FN_NUM_RADIANS
-            | SQL_FN_NUM_ROUND;
+                | SQL_FN_NUM_CEILING
+                | SQL_FN_NUM_COS
+                | SQL_FN_NUM_FLOOR
+                | SQL_FN_NUM_LOG
+                | SQL_FN_NUM_MOD
+                | SQL_FN_NUM_SIN
+                | SQL_FN_NUM_SQRT
+                | SQL_FN_NUM_TAN
+                | SQL_FN_NUM_DEGREES
+                | SQL_FN_NUM_POWER
+                | SQL_FN_NUM_RADIANS
+                | SQL_FN_NUM_ROUND;
             return i16_len::set_output_fixed_data(&NUMERIC_FUNCTIONS, info_value_ptr, string_length_ptr);
         }
         // SQL_STRING_FUNCTIONS
         InfoType::StringFunctions => {
             // MongoSQL supports the following string functions.
             const STRING_FUNCTIONS: u32 = SQL_FN_STR_CONCAT
-            | SQL_FN_STR_LTRIM // we actually only support TRIM
-            | SQL_FN_STR_LENGTH
-            | SQL_FN_STR_LCASE // we call it LOWER since that is the SQL-92 name
-            | SQL_FN_STR_RTRIM // we actually support TRIM
-            | SQL_FN_STR_SUBSTRING
-            | SQL_FN_STR_UCASE // we call it UPPER since that is the SQL-92 name
-            | SQL_FN_STR_BIT_LENGTH
-            | SQL_FN_STR_CHAR_LENGTH
-            | SQL_FN_STR_CHARACTER_LENGTH
-            | SQL_FN_STR_OCTET_LENGTH
-            | SQL_FN_STR_POSITION;
+                | SQL_FN_STR_LTRIM // we actually only support TRIM
+                | SQL_FN_STR_LENGTH
+                | SQL_FN_STR_LCASE // we call it LOWER since that is the SQL-92 name
+                | SQL_FN_STR_RTRIM // we actually support TRIM
+                | SQL_FN_STR_SUBSTRING
+                | SQL_FN_STR_UCASE // we call it UPPER since that is the SQL-92 name
+                | SQL_FN_STR_BIT_LENGTH
+                | SQL_FN_STR_CHAR_LENGTH
+                | SQL_FN_STR_CHARACTER_LENGTH
+                | SQL_FN_STR_OCTET_LENGTH
+                | SQL_FN_STR_POSITION;
             return i16_len::set_output_fixed_data(&STRING_FUNCTIONS, info_value_ptr, string_length_ptr);
         }
         // SQL_SYSTEM_FUNCTIONS
@@ -1946,9 +1959,9 @@ pub unsafe extern "C" fn SQLGetInfoW(
         InfoType::TimedateFunctions => {
             // MongoSQL supports the following timedate functions.
             const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_TIMESTAMPADD // we call it DATEADD
-            | SQL_FN_TD_TIMESTAMPDIFF // we call it DATEDIFF
-            | SQL_FN_TD_CURRENT_TIMESTAMP
-            | SQL_FN_TD_EXTRACT;
+                | SQL_FN_TD_TIMESTAMPDIFF // we call it DATEDIFF
+                | SQL_FN_TD_CURRENT_TIMESTAMP
+                | SQL_FN_TD_EXTRACT;
             return i16_len::set_output_fixed_data(&TIMEDATE_FUNCTIONS, info_value_ptr, string_length_ptr);
         }
         // SQL_CONVERT_BIGINT
@@ -2118,13 +2131,13 @@ pub unsafe extern "C" fn SQLGetInfoW(
         | InfoType::TimedateDiffIntervals => {
             // MongoSQL DATEADD and DATEDIFF support the following intervals.
             const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_SECOND
-            | SQL_FN_TSI_MINUTE
-            | SQL_FN_TSI_HOUR
-            | SQL_FN_TSI_DAY
-            | SQL_FN_TSI_WEEK
-            | SQL_FN_TSI_MONTH
-            | SQL_FN_TSI_QUARTER
-            | SQL_FN_TSI_YEAR;
+                | SQL_FN_TSI_MINUTE
+                | SQL_FN_TSI_HOUR
+                | SQL_FN_TSI_DAY
+                | SQL_FN_TSI_WEEK
+                | SQL_FN_TSI_MONTH
+                | SQL_FN_TSI_QUARTER
+                | SQL_FN_TSI_YEAR;
             return i16_len::set_output_fixed_data(&TIMEDATE_INTERVALS, info_value_ptr, string_length_ptr);
         }
         // SQL_CATALOG_LOCATION
@@ -2151,34 +2164,34 @@ pub unsafe extern "C" fn SQLGetInfoW(
         InfoType::Sql92Predicates => {
             // MongoSQL supports the following SQL-92 predicate operators.
             const PREDICATES: u32 = SQL_SP_EXISTS
-            | SQL_SP_ISNOTNULL
-            | SQL_SP_ISNULL
-            | SQL_SP_LIKE
-            | SQL_SP_IN
-            | SQL_SP_BETWEEN
-            | SQL_SP_COMPARISON
-            | SQL_SP_QUANTIFIED_COMPARISON;
+                | SQL_SP_ISNOTNULL
+                | SQL_SP_ISNULL
+                | SQL_SP_LIKE
+                | SQL_SP_IN
+                | SQL_SP_BETWEEN
+                | SQL_SP_COMPARISON
+                | SQL_SP_QUANTIFIED_COMPARISON;
             return i16_len::set_output_fixed_data(&PREDICATES, info_value_ptr, string_length_ptr);
         }
         // SQL_SQL92_RELATIONAL_JOIN_OPERATORS
         InfoType::Sql92RelationalJoinOperators => {
             // MongoSQL supports the following SQL-92 JOIN operators.
             const JOIN_OPS: u32 = SQL_SRJO_CROSS_JOIN
-            | SQL_SRJO_INNER_JOIN
-            | SQL_SRJO_LEFT_OUTER_JOIN
-            | SQL_SRJO_RIGHT_OUTER_JOIN;
+                | SQL_SRJO_INNER_JOIN
+                | SQL_SRJO_LEFT_OUTER_JOIN
+                | SQL_SRJO_RIGHT_OUTER_JOIN;
             return i16_len::set_output_fixed_data(&JOIN_OPS, info_value_ptr, string_length_ptr);
         }
         // SQL_AGGREGATE_FUNCTIONS
         InfoType::AggregateFunctions => {
             // MongoSQL supports the following aggregate functions.
             const AGG_FUNCTIONS: u32 = SQL_AF_AVG
-            | SQL_AF_COUNT
-            | SQL_AF_MAX
-            | SQL_AF_MIN
-            | SQL_AF_SUM
-            | SQL_AF_DISTINCT
-            | SQL_AF_ALL;
+                | SQL_AF_COUNT
+                | SQL_AF_MAX
+                | SQL_AF_MIN
+                | SQL_AF_SUM
+                | SQL_AF_DISTINCT
+                | SQL_AF_ALL;
             return i16_len::set_output_fixed_data(&AGG_FUNCTIONS, info_value_ptr, string_length_ptr);
         }
         // SQL_RETURN_ESCAPE_CLAUSE
