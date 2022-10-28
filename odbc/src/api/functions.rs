@@ -1130,8 +1130,10 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
                             Err(e) => error = Some(e.into()),
                             Ok(b) => {
                                 if !b {
+                                    guard.attributes.row_index_is_valid = false;
                                     return SqlReturn::NO_DATA;
                                 }
+                                guard.attributes.row_index_is_valid = true;
                             }
                         }
                     }
@@ -1457,13 +1459,18 @@ pub unsafe extern "C" fn SQLGetData(
                 match mongo_stmt {
                     None => error = Some(ODBCError::InvalidCursorState),
                     Some(mongo_stmt) => {
-                        let data = mongo_stmt.get_value(col_or_param_num);
-                        match data {
-                            Err(e) => error = Some(e.into()),
-                            Ok(None) => {
-                                error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num))
+                        if stmt.read().unwrap().attributes.row_index_is_valid {
+                            let data = mongo_stmt.get_value(col_or_param_num);
+                            match data {
+                                Err(e) => error = Some(e.into()),
+                                Ok(None) => {
+                                    error =
+                                        Some(ODBCError::InvalidDescriptorIndex(col_or_param_num))
+                                }
+                                Ok(Some(d)) => ret = d,
                             }
-                            Ok(Some(d)) => ret = d,
+                        } else {
+                            error = Some(ODBCError::InvalidCursorState);
                         }
                     }
                 }

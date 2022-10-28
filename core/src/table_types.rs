@@ -1,10 +1,12 @@
 use crate::{databases::DATABASES_METADATA, err::Result, Error, MongoColMetadata, MongoStatement};
 use bson::Bson;
 
+const TABLE_TYPES: [&str; 2] = ["TABLE", "VIEW"];
+
 #[derive(Debug)]
 pub struct MongoTableTypes {
     // The list of all the table types
-    table_type: Vec<String>,
+    table_type: Vec<&'static str>,
     // The current table type index
     current_table_type_index: usize,
 }
@@ -13,7 +15,7 @@ impl MongoTableTypes {
     // Statement for SQLTables("", "", "", SQL_ALL_TABLE_TYPES ).
     pub fn all_table_types() -> MongoTableTypes {
         MongoTableTypes {
-            table_type: vec!["TABLE".to_string(), "VIEW".to_string()],
+            table_type: Vec::from(TABLE_TYPES),
             current_table_type_index: 0,
         }
     }
