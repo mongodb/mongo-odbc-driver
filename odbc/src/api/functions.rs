@@ -1454,12 +1454,13 @@ pub unsafe extern "C" fn SQLGetData(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             {
                 let stmt = must_be_valid!((*mongo_handle).as_statement());
+                let row_is_valid = stmt.read().unwrap().attributes.row_index_is_valid;
                 let mut guard = stmt.write().unwrap();
                 let mongo_stmt = guard.mongo_statement.as_mut();
                 match mongo_stmt {
                     None => error = Some(ODBCError::InvalidCursorState),
                     Some(mongo_stmt) => {
-                        if stmt.read().unwrap().attributes.row_index_is_valid {
+                        if row_is_valid {
                             let data = mongo_stmt.get_value(col_or_param_num);
                             match data {
                                 Err(e) => error = Some(e.into()),
