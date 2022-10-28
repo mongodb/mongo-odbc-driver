@@ -1861,9 +1861,14 @@ pub unsafe extern "C" fn SQLGetInfoW(
         }
         // SQL_OWNER_TERM
         InfoType::OwnerTerm => {
-            // TODO: new name is SQL_SCHEMA_TERM -- check that the enum value is the same
-            //   - return the name we use for "schema", which in SQL-92 world I _believe_ means database... The docs imply we should always return "schema"
-            //   - we may not actually have any concept of a "schema" since it might be "catalog" that means database. todo
+            // MongoSQL does not have a concept of a "schema" which is a
+            // level above "catalog" (or "database") in the data hierarchy.
+            return i16_len::set_output_wstring(
+                "",
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
         }
         // SQL_CATALOG_NAME_SEPARATOR
         InfoType::CatalogNameSeparator => {
@@ -1877,28 +1882,71 @@ pub unsafe extern "C" fn SQLGetInfoW(
         }
         // SQL_CATALOG_TERM
         InfoType::CatalogTerm => {
-            // TODO:
-            //   - return the name we use for "catalog", which in SQL-92 world I _believe_ means database... The docs imply we should always return "catalog" though
+            // TODO: (code review) the docs imply we should always return "catalog" if we intend to be SQL-92 compliant, but our actual term for this is "database"
+            // MongoSQL technically uses the term "database" to describe the
+            // entity described by ODBC's "catalog" term. However, the ODBC
+            // documentation suggests SQL-92 compliant drivers always return
+            // "catalog" for this, so that is what is returned here.
+            return i16_len::set_output_wstring(
+                "catalog",
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
         }
         // SQL_CONVERT_FUNCTIONS
         InfoType::ConvertFunctions => {
-            // TODO: bitmask enumerating which conversion functions we support (we should support most of them!)
+            // MongoSQL only supports the CAST type conversion function.
+            return i16_len::set_output_fixed_data(&SQL_FN_CVT_CAST, info_value_ptr, string_length_ptr);
         }
         // SQL_NUMERIC_FUNCTIONS
         InfoType::NumericFunctions => {
-            // TODO: bitmask enumerating which numeric functions we support
+            // MongoSQL supports the following numeric functions.
+            const NUMERIC_FUNCTIONS: u32 = SQL_FN_NUM_ABS
+            | SQL_FN_NUM_CEILING
+            | SQL_FN_NUM_COS
+            | SQL_FN_NUM_FLOOR
+            | SQL_FN_NUM_LOG
+            | SQL_FN_NUM_MOD
+            | SQL_FN_NUM_SIN
+            | SQL_FN_NUM_SQRT
+            | SQL_FN_NUM_TAN
+            | SQL_FN_NUM_DEGREES
+            | SQL_FN_NUM_POWER
+            | SQL_FN_NUM_RADIANS
+            | SQL_FN_NUM_ROUND;
+            return i16_len::set_output_fixed_data(&NUMERIC_FUNCTIONS, info_value_ptr, string_length_ptr);
         }
         // SQL_STRING_FUNCTIONS
         InfoType::StringFunctions => {
-            // TODO: bitmask enumerating which string functions we support
+            // MongoSQL supports the following string functions.
+            const STRING_FUNCTIONS: u32 = SQL_FN_STR_CONCAT
+            | SQL_FN_STR_LTRIM // we actually only support TRIM
+            | SQL_FN_STR_LENGTH
+            | SQL_FN_STR_LCASE // we call it LOWER since that is the SQL-92 name
+            | SQL_FN_STR_RTRIM // we actually support TRIM
+            | SQL_FN_STR_SUBSTRING
+            | SQL_FN_STR_UCASE // we call it UPPER since that is the SQL-92 name
+            | SQL_FN_STR_BIT_LENGTH
+            | SQL_FN_STR_CHAR_LENGTH
+            | SQL_FN_STR_CHARACTER_LENGTH
+            | SQL_FN_STR_OCTET_LENGTH
+            | SQL_FN_STR_POSITION;
+            return i16_len::set_output_fixed_data(&STRING_FUNCTIONS, info_value_ptr, string_length_ptr);
         }
         // SQL_SYSTEM_FUNCTIONS
         InfoType::SystemFunctions => {
-            // TODO: bitmask enumerating which system functions we support
+            // MongoSQL does not support any of the ODBC system functions.
+            return i16_len::set_output_fixed_data(&SQL_U32_ZERO, info_value_ptr, string_length_ptr);
         }
         // SQL_TIMEDATE_FUNCTIONS
         InfoType::TimedateFunctions => {
-            // TODO: bitmask enumerating which datetime functions we support
+            // MongoSQL supports the following timedate functions.
+            const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_TIMESTAMPADD // we call it DATEADD
+            | SQL_FN_TD_TIMESTAMPDIFF // we call it DATEDIFF
+            | SQL_FN_TD_CURRENT_TIMESTAMP
+            | SQL_FN_TD_EXTRACT;
+            return i16_len::set_output_fixed_data(&TIMEDATE_FUNCTIONS, info_value_ptr, string_length_ptr);
         }
         // SQL_CONVERT_BIGINT
         InfoType::ConvertBigInt
