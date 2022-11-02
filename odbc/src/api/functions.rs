@@ -23,6 +23,7 @@ use odbc_sys::{
     Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn,
     StatementAttribute, ULen, USmallInt, WChar,
 };
+use std::cmp::min;
 use std::{
     mem::size_of,
     panic,
@@ -1812,19 +1813,27 @@ unsafe fn sql_get_infow_helper(
     match info_type {
         // SQL_DRIVER_NAME
         InfoType::DriverName => {
-            // A character string with the file name of the driver used to access the data source.
-            // TODO: (code review) What file name should be used here? Is this something that
-            //       will need to be dynamically determined or is it something we can hardcode? 
+            // This Driver Name is consistent with the name used for our JDBC driver.
+            return i16_len::set_output_wstring(
+                "MongoDB Atlas SQL interface ODBC Driver",
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
         }
         // SQL_DRIVER_VER
         InfoType::DriverVer => {
-            // TODO: (code review) is it ok this isn't of the form ##.##.####?
             // The driver version can be obtained from the Cargo.toml file.
             // The env! macro call below gets the version from the Cargo file
             // at compile time.
-            let version = env!("CARGO_PKG_VERSION");
+            let version_major = env!("CARGO_PKG_VERSION_MAJOR");
+            let version_minor = env!("CARGO_PKG_VERSION_MINOR");
+            let version_patch = env!("CARGO_PKG_VERSION_PATCH");
+
+            let version = format_version(version_major, version_minor, version_patch);
+
             return i16_len::set_output_wstring(
-                version,
+                version.as_str(),
                 info_value_ptr as *mut WChar,
                 buffer_length as usize,
                 string_length_ptr,
@@ -1832,13 +1841,17 @@ unsafe fn sql_get_infow_helper(
         }
         // SQL_DRIVER_ODBC_VER
         InfoType::DriverOdbcVer => {
-            // TODO: (code review) should we use env.odbc_version for this?
+            // This driver supports version 3.8.
+            return i16_len::set_output_wstring(
+                "03.08",
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
         }
         // SQL_SEARCH_PATTERN_ESCAPE
         InfoType::SearchPatternEscape => {
-            // This value does not apply to LIKE, which is the only operator/function
-            // MongoSQL supports that could accept a search pattern. Therefore, the
-            // empty string is always returned.
+            // TODO: SQL-1060: improve sql-to-rust regex pattern method and report escape character here
             return i16_len::set_output_wstring(
                 "",
                 info_value_ptr as *mut WChar,
@@ -1848,12 +1861,19 @@ unsafe fn sql_get_infow_helper(
         }
         // SQL_DBMS_NAME
         InfoType::DbmsName => {
-            // TODO: (code review) what "name of the DBMS product accessed by the driver" do we want to use?
-            //       - MongoDB? Atlas Data Federation? Atlas SQL?
+            // The underlying DBMS is MongoDB Atlas.
+            return i16_len::set_output_wstring(
+                "MongoDB Atlas",
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
         }
         // SQL_DBMS_VER
         InfoType::DbmsVer => {
-            // TODO: (code review) depending on answer above, we may need to make a network call to get this information (i.e. ADF.getVersion() or similar). Doesn't seem like this can be hardcoded.
+            // TODO:
+            //  - make network call to determine version of ADL
+            //  - consider adding method to core package for getting version
         }
         // SQL_CONCAT_NULL_BEHAVIOR
         InfoType::ConcatNullBehavior => {
@@ -1864,9 +1884,10 @@ unsafe fn sql_get_infow_helper(
         // SQL_IDENTIFIER_QUOTE_CHAR
         InfoType::IdentifierQuoteChar => {
             // MongoSQL supports ` and " as identifier delimiters. The "
-            // character is the SQL-92 standard, so it is always returned.
+            // character is the SQL-92 standard, but we instead return `
+            // to be consistent with our JDBC driver.
             return i16_len::set_output_wstring(
-                "\"",
+                "`",
                 info_value_ptr as *mut WChar,
                 buffer_length as usize,
                 string_length_ptr,
@@ -1877,8 +1898,13 @@ unsafe fn sql_get_infow_helper(
             // SQL_OWNER_TERM is replaced by SQL_SCHEMA_TERM in newer ODBC
             // versions. They use the same numeric value.
             //
-            // MongoSQL does not have a concept of a "schema" which is a
-            // level above "catalog" (or "database") in the data hierarchy.
+            // SQL has two concepts in the data hierarchy above "table":
+            // "catalog" and "schema". MongoSQL only has "database" and
+            // "collection" (which is equivalent to "table"). A "catalog"
+            // contains many "schemas" and a "schema" contains many tables.
+            // Therefore, a "schema" may map to MongoSQL's "database".
+            // However, we choose to use "catalog" to represent MongoSQL
+            // databases, and we omit support for "schema".
             return i16_len::set_output_wstring(
                 "",
                 info_value_ptr as *mut WChar,
@@ -1898,13 +1924,9 @@ unsafe fn sql_get_infow_helper(
         }
         // SQL_CATALOG_TERM
         InfoType::CatalogTerm => {
-            // TODO: (code review) the docs imply we should always return "catalog" if we intend to be SQL-92 compliant, but our actual term for this is "database"
-            // MongoSQL technically uses the term "database" to describe the
-            // entity described by ODBC's "catalog" term. However, the ODBC
-            // documentation suggests SQL-92 compliant drivers always return
-            // "catalog" for this, so that is what is returned here.
+            // MongoSQL uses the term "database".
             return i16_len::set_output_wstring(
-                "catalog",
+                "database",
                 info_value_ptr as *mut WChar,
                 buffer_length as usize,
                 string_length_ptr,
@@ -1937,12 +1959,8 @@ unsafe fn sql_get_infow_helper(
         InfoType::StringFunctions => {
             // MongoSQL supports the following string functions.
             const STRING_FUNCTIONS: u32 = SQL_FN_STR_CONCAT
-                | SQL_FN_STR_LTRIM // we actually only support TRIM
                 | SQL_FN_STR_LENGTH
-                | SQL_FN_STR_LCASE // we call it LOWER since that is the SQL-92 name
-                | SQL_FN_STR_RTRIM // we actually support TRIM
                 | SQL_FN_STR_SUBSTRING
-                | SQL_FN_STR_UCASE // we call it UPPER since that is the SQL-92 name
                 | SQL_FN_STR_BIT_LENGTH
                 | SQL_FN_STR_CHAR_LENGTH
                 | SQL_FN_STR_CHARACTER_LENGTH
@@ -1958,9 +1976,7 @@ unsafe fn sql_get_infow_helper(
         // SQL_TIMEDATE_FUNCTIONS
         InfoType::TimedateFunctions => {
             // MongoSQL supports the following timedate functions.
-            const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_TIMESTAMPADD // we call it DATEADD
-                | SQL_FN_TD_TIMESTAMPDIFF // we call it DATEDIFF
-                | SQL_FN_TD_CURRENT_TIMESTAMP
+            const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP
                 | SQL_FN_TD_EXTRACT;
             return i16_len::set_output_fixed_data(&TIMEDATE_FUNCTIONS, info_value_ptr, string_length_ptr);
         }
@@ -1981,27 +1997,11 @@ unsafe fn sql_get_infow_helper(
         // SQL_CONVERT_SMALLINT
         | InfoType::ConvertSmallInt
         // SQL_CONVERT_TINYINT
-        | InfoType::ConvertTinyInt => {
-            // TODO: (code review) MongoSQL doesn't support some of these types as independent types. Example: FLOAT is an alias for DOUBLE. Should they return 0 instead of a result?
-            // All numeric types can be converted into any other numeric type,
-            // bool (bit), string (varchar), or datetime (timestamp).
-            return i16_len::set_output_fixed_data(
-                &FULL_MONGOSQL_CONVERSION_TARGET_MASK,
-                info_value_ptr,
-                string_length_ptr,
-            );
-        }
+        | InfoType::ConvertTinyInt
         // SQL_CONVERT_BIT
-        InfoType::ConvertBit => {
-            // Bit (bool) can be converted into any numeric type,
-            // bool (bit), or string (varchar). Here, remove the
-            // SQL_CVT_TIMESTAMP bit (via bitwise XOR) from the
-            // FULL_MONGOSQL_CONVERSION_TARGET_MASK.
-            const BIT_BITMASK: u32 = FULL_MONGOSQL_CONVERSION_TARGET_MASK ^ SQL_CVT_TIMESTAMP;
-            return i16_len::set_output_fixed_data(&BIT_BITMASK, info_value_ptr, string_length_ptr);
-        }
+        | InfoType::ConvertBit
         // SQL_CONVERT_CHAR
-        InfoType::ConvertChar
+        | InfoType::ConvertChar
         // SQL_CONVERT_VARCHAR
         | InfoType::ConvertVarChar
         // SQL_CONVERT_LONGVARCHAR
@@ -2011,36 +2011,11 @@ unsafe fn sql_get_infow_helper(
         // SQL_CONVERT_WVARCHAR
         | InfoType::ConvertWVarChar
         // SQL_CONVERT_WLONGVARCHAR
-        | InfoType::ConvertWLongVarChar => {
-            // TODO: (code review) MongoSQL doesn't support the type alias "W*" for string, so should those return 0 instead of a result?
-            //       - Also, MongoSQL treats CHAR as an alias for the String type, so I did the same here.
-            // All string types can be converted into any numeric type,
-            // bool (bit), string (varchar), or datetime (timestamp).
-            return i16_len::set_output_fixed_data(
-                &FULL_MONGOSQL_CONVERSION_TARGET_MASK,
-                info_value_ptr,
-                string_length_ptr,
-            );
-        }
+        | InfoType::ConvertWLongVarChar
         // SQL_CONVERT_TIMESTAMP
-        InfoType::ConvertTimestamp => {
-            // Timestamp (datetime) can be converted into long, double/float,
-            // decimal/numeric/real, bool (bit), string (varchar), or datetime
-            // (timestamp). Here, remove the SQL_CVT_INTEGER, SMALLINT, and
-            // TINYINT bits from FULL_MONGOSQL_CONVERSION_TARGET_MASK via
-            // bitwise XOR.
-            const TIMESTAMP_BITMASK: u32 = FULL_MONGOSQL_CONVERSION_TARGET_MASK
-                ^ SQL_CVT_INTEGER
-                ^ SQL_CVT_SMALLINT
-                ^ SQL_CVT_TINYINT;
-            return i16_len::set_output_fixed_data(
-                &TIMESTAMP_BITMASK,
-                info_value_ptr,
-                string_length_ptr,
-            );
-        }
+        | InfoType::ConvertTimestamp
         // SQL_CONVERT_BINARY
-        InfoType::ConvertBinary
+        | InfoType::ConvertBinary
         // SQL_CONVERT_DATE
         | InfoType::ConvertDate
         // SQL_CONVERT_TIME
@@ -2051,12 +2026,15 @@ unsafe fn sql_get_infow_helper(
         | InfoType::ConvertLongVarBinary
         // SQL_CONVERT_GUID
         | InfoType::ConvertGuid => {
-            // Binary, Date, Time, VarBinary, LongVarBinary, and GUID
-            // are invalid CAST source types.
+            // MongoSQL does not support CONVERT.
             return i16_len::set_output_fixed_data(&SQL_U32_ZERO, info_value_ptr, string_length_ptr);
         }
         // SQL_GETDATA_EXTENSIONS
-        InfoType::GetDataExtensions => {}
+        InfoType::GetDataExtensions => {
+            // GetData can be called on any column in any order.
+            const GETDATA_EXTENSIONS: u32 = SQL_GD_ANY_COLUMN | SQL_GD_ANY_ORDER;
+            return i16_len::set_output_fixed_data(&GETDATA_EXTENSIONS, info_value_ptr, string_length_ptr);
+        }
         // SQL_COLUMN_ALIAS
         InfoType::ColumnAlias => {
             // MongoSQL does support column aliases.
@@ -2068,7 +2046,16 @@ unsafe fn sql_get_infow_helper(
             );
         }
         // SQL_GROUP_BY
-        InfoType::GroupBy => {}
+        InfoType::GroupBy => {
+            // The GROUP BY clause must contain all nonaggregated columns
+            // in the select list. It can contain columns that are not in
+            // the select list.
+            return i16_len::set_output_fixed_data(
+                &SQL_GB_GROUP_BY_CONTAINS_SELECT,
+                info_value_ptr,
+                string_length_ptr,
+            );
+        }
         // SQL_ORDER_BY_COLUMNS_IN_SELECT
         InfoType::OrderByColumnsInSelect => {
             // MongoSQL does require ORDER BY columns to be in the SELECT list.
@@ -2084,16 +2071,27 @@ unsafe fn sql_get_infow_helper(
             // SQL_OWNER_USAGE is replaced by SQL_SCHEMA_USAGE in newer
             // ODBC versions. They use the same numeric value.
             //
-            // MongoSQL does not have a concept of a "schema" which is a
-            // level above "catalog" (or "database") in the data hierarchy.
+            // As noted for InfoType::OwnerTerm, the MongoSQL ODBC driver
+            // does not support "schema" in the data hierarchy.
             return i16_len::set_output_fixed_data(&SQL_U32_ZERO, info_value_ptr, string_length_ptr);
         }
         // SQL_CATALOG_USAGE
         InfoType::CatalogUsage => {
-            // TODO: (code review) there is no way to indicate this is read-only. The entire DML bitmask
-            //       must be used to indicate we support SELECT. However, that also includes INSERT,
-            //       UPDATE, and DELETE.
+            // This return value indicates support for SELECT as well as
+            // INSERT, UPDATE, and DELETE. In conjunction with the following
+            // InfoType, SQL_DATA_SOURCE_READ_ONLY, this return value is
+            // valid.
             return i16_len::set_output_fixed_data(&SQL_CU_DML_STATEMENTS, info_value_ptr, string_length_ptr);
+        }
+        // SQL_DATA_SOURCE_READ_ONLY
+        InfoType::DataSourceReadOnly => {
+            // MongoSQL is read-only.
+            return i16_len::set_output_wstring(
+                SQL_INFO_Y,
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            );
         }
         // SQL_SPECIAL_CHARACTERS
         InfoType::SpecialCharacters => {
@@ -2108,28 +2106,23 @@ unsafe fn sql_get_infow_helper(
             //    Surely we aren't meant to return a "special characters" string that contains every character, are we?
         }
         // SQL_MAX_COLUMNS_IN_GROUP_BY
-        InfoType::MaxColumnsInGroupBy => {
-            // MongoSQL does not have an explicit maximum number of
-            // columns allowed in a GROUP BY clause.
-            return i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr);
-        }
+        InfoType::MaxColumnsInGroupBy
         // SQL_MAX_COLUMNS_IN_ORDER_BY
-        InfoType::MaxColumnsInOrderBy => {
-            // MongoSQL does not have an explicit maximum number of
-            // columns allowed in a ORDER BY clause.
-            return i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr);
-        }
+        | InfoType::MaxColumnsInOrderBy
         // SQL_MAX_COLUMNS_IN_SELECT
-        InfoType::MaxColumnsInSelect => {
+        | InfoType::MaxColumnsInSelect => {
             // MongoSQL does not have an explicit maximum number of
-            // columns allowed in a SELECT clause.
+            // columns allowed in a GROUP BY, ORDER BY, or SELECT clause.
             return i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr);
         }
         // SQL_TIMEDATE_ADD_INTERVALS
         InfoType::TimedateAddIntervals
         // SQL_TIMEDATE_DIFF_INTERVALS
         | InfoType::TimedateDiffIntervals => {
-            // MongoSQL DATEADD and DATEDIFF support the following intervals.
+            // Note that MongoSQL does not support TIMEDATE_ADD or
+            // TIMEDATE_DIFF, so this value will not be used. For the
+            // MongoSQL DATEADD and DATEDIFF functions, we support the
+            // following intervals.
             const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_SECOND
                 | SQL_FN_TSI_MINUTE
                 | SQL_FN_TSI_HOUR
@@ -2157,7 +2150,7 @@ unsafe fn sql_get_infow_helper(
         }
         // SQL_ODBC_INTERFACE_CONFORMANCE
         InfoType::OdbcInterfaceConformance => {
-            // The MongoSQL ODBC Driver is currently meets the minimum compliance level.
+            // The MongoSQL ODBC Driver currently meets the minimum compliance level.
             return i16_len::set_output_fixed_data(&SQL_OIC_CORE, info_value_ptr, string_length_ptr);
         }
         // SQL_SQL92_PREDICATES
@@ -2199,10 +2192,6 @@ unsafe fn sql_get_infow_helper(
             // MongoSQL has not support for the return escape clause since it is read-only.
             return i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr);
         }
-        // SQL_API_SQLFETCHSCROLL
-        InfoType::ApiSqlFetchScroll => {
-            // TODO: (code review) This one is not documented so it is unclear what it is or what it should do.
-        }
         // SQL_CATALOG_NAME
         InfoType::CatalogName => {
             // MongoSQL does support catalog (database) names.
@@ -2221,6 +2210,20 @@ unsafe fn sql_get_infow_helper(
     }
 
     unsupported_function(MongoHandleRef::from(connection_handle), "SQLGetInfoW")
+}
+
+// TODO: unit test
+fn format_version(major: &str, minor: &str, patch: &str) -> String {
+    format!(
+        "{}.{}.{}",
+        format_version_part(major, 2),
+        format_version_part(minor, 2),
+        format_version_part(patch, 4)
+    )
+}
+
+fn format_version_part(part: &str, len: usize) -> String {
+    format!("{}{}", "0".repeat(len - part.len()), part)
 }
 
 ///

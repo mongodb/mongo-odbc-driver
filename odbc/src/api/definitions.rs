@@ -128,6 +128,8 @@ pub enum InfoType {
     DbmsVer = 18,
     // SQL_CONCAT_NULL_BEHAVIOR
     ConcatNullBehavior = 22,
+    // SQL_DATA_SOURCE_READ_ONLY
+    DataSourceReadOnly = 25,
     // SQL_IDENTIFIER_QUOTE_CHAR
     IdentifierQuoteChar = 29,
     // SQL_OWNER_TERM
@@ -245,6 +247,7 @@ pub const SQL_U32_ZERO: u32 = 0;
 pub const SQL_OIC_CORE: u32 = 0x00000001;
 pub const SQL_SC_SQL92_ENTRY: u32 = 0x00000001;
 pub const SQL_INFO_Y: &str = "Y";
+pub const SQL_GB_GROUP_BY_CONTAINS_SELECT: u16 = 0x0002;
 
 // SQL_CONVERT_FUNCTIONS bitmask
 pub const SQL_FN_CVT_CAST: u32 = 0x00000002;
@@ -266,12 +269,8 @@ pub const SQL_FN_NUM_ROUND: u32 = 0x00400000;
 
 // SQL_STRING_FUNCTIONS bitmasks
 pub const SQL_FN_STR_CONCAT: u32 = 0x00000001;
-pub const SQL_FN_STR_LTRIM: u32 = 0x00000008;
 pub const SQL_FN_STR_LENGTH: u32 = 0x00000010;
-pub const SQL_FN_STR_LCASE: u32 = 0x00000040;
-pub const SQL_FN_STR_RTRIM: u32 = 0x00000400;
 pub const SQL_FN_STR_SUBSTRING: u32 = 0x00000800;
-pub const SQL_FN_STR_UCASE: u32 = 0x00001000;
 pub const SQL_FN_STR_BIT_LENGTH: u32 = 0x00080000;
 pub const SQL_FN_STR_CHAR_LENGTH: u32 = 0x00100000;
 pub const SQL_FN_STR_CHARACTER_LENGTH: u32 = 0x00200000;
@@ -279,13 +278,15 @@ pub const SQL_FN_STR_OCTET_LENGTH: u32 = 0x00400000;
 pub const SQL_FN_STR_POSITION: u32 = 0x00800000;
 
 // SQL_TIMEDATE_FUNCTIONS functions
-pub const SQL_FN_TD_TIMESTAMPADD: u32 = 0x00002000;
-pub const SQL_FN_TD_TIMESTAMPDIFF: u32 = 0x00004000;
 pub const SQL_FN_TD_CURRENT_TIMESTAMP: u32 = 0x00080000;
 pub const SQL_FN_TD_EXTRACT: u32 = 0x00100000;
 
 // SQL_CATALOG_USAGE bitmasks
 pub const SQL_CU_DML_STATEMENTS: u32 = 0x00000001;
+
+// SQL_GETDATA_EXTENSIONS bitmasks
+pub const SQL_GD_ANY_COLUMN: u32 = 0x00000001;
+pub const SQL_GD_ANY_ORDER: u32 = 0x00000002;
 
 // SQL_TIMEDATE_ADD_INTERVALS and SQL_TIMEDATE_DIFF_INTERVALS functions
 pub const SQL_FN_TSI_SECOND: u32 = 0x00000002;
@@ -321,45 +322,3 @@ pub const SQL_AF_MIN: u32 = 0x00000008;
 pub const SQL_AF_SUM: u32 = 0x00000010;
 pub const SQL_AF_DISTINCT: u32 = 0x00000020;
 pub const SQL_AF_ALL: u32 = 0x00000040;
-
-// SQL_CONVERT_* return value bitmasks
-pub const SQL_CVT_CHAR: u32 = 0x00000001;
-pub const SQL_CVT_NUMERIC: u32 = 0x00000002;
-pub const SQL_CVT_DECIMAL: u32 = 0x00000004;
-pub const SQL_CVT_INTEGER: u32 = 0x00000008;
-pub const SQL_CVT_SMALLINT: u32 = 0x00000010;
-pub const SQL_CVT_FLOAT: u32 = 0x00000020;
-pub const SQL_CVT_REAL: u32 = 0x00000040;
-pub const SQL_CVT_DOUBLE: u32 = 0x00000080;
-pub const SQL_CVT_VARCHAR: u32 = 0x00000100;
-pub const SQL_CVT_LONGVARCHAR: u32 = 0x00000200;
-pub const SQL_CVT_BIT: u32 = 0x00001000;
-pub const SQL_CVT_TINYINT: u32 = 0x00002000;
-pub const SQL_CVT_BIGINT: u32 = 0x00004000;
-pub const SQL_CVT_TIMESTAMP: u32 = 0x00020000;
-pub const SQL_CVT_WCHAR: u32 = 0x00200000;
-pub const SQL_CVT_WLONGVARCHAR: u32 = 0x00400000;
-pub const SQL_CVT_WVARCHAR: u32 = 0x00800000;
-
-// All string and numeric types can be converted into any numeric type,
-// bool (bit), string (char/varchar/etc), and datetime (timestamp). We
-// consider this the "Full MongoSQL Conversion Target Mask" since this
-// is the maximal set of conversion target types any ODBC source type can
-// achieve.
-pub const FULL_MONGOSQL_CONVERSION_TARGET_MASK: u32 = SQL_CVT_CHAR
-    | SQL_CVT_NUMERIC
-    | SQL_CVT_DECIMAL
-    | SQL_CVT_INTEGER
-    | SQL_CVT_SMALLINT
-    | SQL_CVT_FLOAT
-    | SQL_CVT_REAL
-    | SQL_CVT_DOUBLE
-    | SQL_CVT_VARCHAR
-    | SQL_CVT_LONGVARCHAR
-    | SQL_CVT_BIT
-    | SQL_CVT_TINYINT
-    | SQL_CVT_BIGINT
-    | SQL_CVT_TIMESTAMP
-    | SQL_CVT_WCHAR
-    | SQL_CVT_WLONGVARCHAR
-    | SQL_CVT_WVARCHAR;
