@@ -7,7 +7,7 @@ use crate::{
         definitions::*,
         errors::{ODBCError, Result},
         odbc_uri::ODBCUri,
-        util::connection_attribute_to_string,
+        util::{connection_attribute_to_string, format_version},
     },
     handles::definitions::*,
 };
@@ -2256,20 +2256,6 @@ unsafe fn sql_get_infow_helper(
             i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr)
         }
     }
-}
-
-// TODO: unit test
-fn format_version(major: &str, minor: &str, patch: &str) -> String {
-    format!(
-        "{}.{}.{}",
-        format_version_part(major, 2),
-        format_version_part(minor, 2),
-        format_version_part(patch, 4)
-    )
-}
-
-fn format_version_part(part: &str, len: usize) -> String {
-    format!("{}{}", "0".repeat(len - part.len()), part)
 }
 
 ///
