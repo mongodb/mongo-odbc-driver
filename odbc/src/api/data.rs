@@ -118,7 +118,7 @@ impl IntoCData for Bson {
                 i64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), INT64))?,
                 None,
             )),
-            Bson::Boolean(b) => Ok((if *b { 1 } else { 0 }, None)),
+            Bson::Boolean(b) => Ok((i64::from(*b), None)),
             Bson::Int32(i) => Ok((*i as i64, None)),
             Bson::Int64(i) => Ok((*i, None)),
             // Note that this isn't perfect because there are some 64bit integer values that are
@@ -182,7 +182,7 @@ impl IntoCData for Bson {
                     _ => Err(ODBCError::InvalidCharacterValue(s.clone(), BIT)),
                 }
             }
-            Bson::Boolean(b) => Ok((if *b { 1u8 } else { 0u8 }, None)),
+            Bson::Boolean(b) => Ok((u8::from(*b), None)),
             Bson::Int32(i) => i64_to_bit(*i as i64),
             Bson::Int64(i) => i64_to_bit(*i),
             Bson::Decimal128(_) => {

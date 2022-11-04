@@ -2967,7 +2967,7 @@ pub unsafe extern "C" fn SQLTablesW(
             let schema = input_wtext_to_string(schema_name, name_length_2 as usize);
             let table = input_wtext_to_string(table_name, name_length_3 as usize);
             let table_t = input_wtext_to_string(table_type, name_length_4 as usize);
-            let connection = (*(stmt.read().unwrap())).connection;
+            let connection = stmt.read().unwrap().connection;
             let mongo_statement = sql_tables(
                 (*connection)
                     .as_connection()
@@ -2977,7 +2977,7 @@ pub unsafe extern "C" fn SQLTablesW(
                     .mongo_connection
                     .as_ref()
                     .unwrap(),
-                (*(stmt.read().unwrap())).attributes.query_timeout as i32,
+                stmt.read().unwrap().attributes.query_timeout as i32,
                 &catalog,
                 &schema,
                 &table,

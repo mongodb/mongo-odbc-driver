@@ -22,11 +22,11 @@ const TIMESERIES: &str = "timeseries";
 const VIEW: &str = "view";
 
 lazy_static! {
-    static ref TABLE_VALUES: RegexSet = RegexSetBuilder::new(&["^table$", "^\'table\'$"])
+    static ref TABLE_VALUES: RegexSet = RegexSetBuilder::new(["^table$", "^\'table\'$"])
         .case_insensitive(true)
         .build()
         .unwrap();
-    static ref VIEW_VALUES: RegexSet = RegexSetBuilder::new(&["^view$", "^\'view\'$"])
+    static ref VIEW_VALUES: RegexSet = RegexSetBuilder::new(["^view$", "^\'view\'$"])
         .case_insensitive(true)
         .build()
         .unwrap();
@@ -239,7 +239,7 @@ impl MongoStatement for MongoCollections {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &*COLLECTIONS_METADATA
+        &COLLECTIONS_METADATA
     }
 }
 
