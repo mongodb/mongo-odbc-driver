@@ -7,6 +7,8 @@ mod conn;
 pub use conn::MongoConnection;
 mod databases;
 pub use databases::MongoDatabases;
+mod table_types;
+pub use table_types::MongoTableTypes;
 mod err;
 pub use err::{Error, Result};
 mod fields;

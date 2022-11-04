@@ -14,7 +14,8 @@ use crate::{
 use bson::Bson;
 use constants::{SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
-    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery, MongoStatement,
+    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery,
+    MongoStatement, MongoTableTypes,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -1129,8 +1130,10 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
                             Err(e) => error = Some(e.into()),
                             Ok(b) => {
                                 if !b {
+                                    guard.attributes.row_index_is_valid = false;
                                     return SqlReturn::NO_DATA;
                                 }
+                                guard.attributes.row_index_is_valid = true;
                             }
                         }
                     }
@@ -1451,18 +1454,24 @@ pub unsafe extern "C" fn SQLGetData(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             {
                 let stmt = must_be_valid!((*mongo_handle).as_statement());
+                let row_is_valid = stmt.read().unwrap().attributes.row_index_is_valid;
                 let mut guard = stmt.write().unwrap();
                 let mongo_stmt = guard.mongo_statement.as_mut();
                 match mongo_stmt {
                     None => error = Some(ODBCError::InvalidCursorState),
                     Some(mongo_stmt) => {
-                        let data = mongo_stmt.get_value(col_or_param_num);
-                        match data {
-                            Err(e) => error = Some(e.into()),
-                            Ok(None) => {
-                                error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num))
+                        if row_is_valid {
+                            let data = mongo_stmt.get_value(col_or_param_num);
+                            match data {
+                                Err(e) => error = Some(e.into()),
+                                Ok(None) => {
+                                    error =
+                                        Some(ODBCError::InvalidDescriptorIndex(col_or_param_num))
+                                }
+                                Ok(Some(d)) => ret = d,
                             }
-                            Ok(Some(d)) => ret = d,
+                        } else {
+                            error = Some(ODBCError::InvalidCursorState);
                         }
                     }
                 }
@@ -3370,12 +3379,13 @@ fn sql_tables(
     table_t: &str,
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
-        (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
+        (SQL_ALL_CATALOGS, "", "", _) => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
         ))),
-        ("", SQL_ALL_SCHEMAS, "", "") | ("", "", "", SQL_ALL_TABLE_TYPES) => unimplemented!(),
-        (_, _, _, _) => Ok(Box::new(MongoCollections::list_tables(
+        ("", SQL_ALL_SCHEMAS, "", _) => Ok(Box::new(MongoCollections::all_schemas())),
+        ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),
+        _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,
             Some(query_timeout),
             catalog,

@@ -7,13 +7,14 @@ use crate::{
         BsonTypeName,
     },
     stmt::MongoStatement,
+    Error,
 };
 use bson::Bson;
 
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref DATABASES_METADATA: Vec<MongoColMetadata> = vec![
+    pub static ref DATABASES_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new(
             "",
             "".to_string(),
@@ -234,6 +235,7 @@ impl MongoStatement for MongoDatabases {
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> databases_names[current_row_index]
+        // 2..5 -> Null
         match col_index {
             1 => Ok(Some(Bson::String(
                 self.database_names
@@ -241,12 +243,8 @@ impl MongoStatement for MongoDatabases {
                     .unwrap()
                     .to_string(),
             ))),
-            _ => Ok(Some(Bson::Null)),
-            // SQL-1031: Add database listing edge case handling
-            // Col_or_Param_Num was greater than the number of columns in the result set
-            // Or value specified for the argument Col_or_Param_Num was 0,
-            // and the SQL_ATTR_USE_BOOKMARKS statement attribute was set to SQL_UB_OFF
-            // Throw error 07009
+            2..=5 => Ok(Some(Bson::Null)),
+            _ => Err(Error::ColIndexOutOfBounds(col_index)),
         }
     }
 
