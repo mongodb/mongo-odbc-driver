@@ -232,8 +232,6 @@ pub enum InfoType {
     ConvertGuid = 173,
     // SQL_RETURN_ESCAPE_CLAUSE
     ReturnEscapeClause = 180,
-    // SQL_API_SQLFETCHSCROLL
-    ApiSqlFetchScroll = 1021,
     // SQL_CATALOG_NAME
     CatalogName = 10003,
     // SQL_MAX_IDENTIFIER_LEN

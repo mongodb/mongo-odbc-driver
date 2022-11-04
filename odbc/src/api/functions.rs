@@ -23,7 +23,6 @@ use odbc_sys::{
     Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn,
     StatementAttribute, ULen, USmallInt, WChar,
 };
-use std::cmp::min;
 use std::{
     mem::size_of,
     panic,
