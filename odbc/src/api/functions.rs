@@ -1870,10 +1870,32 @@ unsafe fn sql_get_infow_helper(
         }
         // SQL_DBMS_VER
         InfoType::DbmsVer => {
-            // TODO:
-            //  - make network call to determine version of ADL
-            //  - consider adding method to core package for getting version
-            SqlReturn::SUCCESS
+            // Return the ADF version.
+            let mut err = None;
+            let conn_handle = MongoHandleRef::from(connection_handle);
+            let res = {
+                let conn = must_be_valid!((*conn_handle).as_connection());
+                let c = conn.read().unwrap();
+                let version = c.mongo_connection.as_ref().unwrap().get_adf_version();
+                match version {
+                    Ok(version) => i16_len::set_output_wstring(
+                        version.as_str(),
+                        info_value_ptr as *mut WChar,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    ),
+                    Err(e) => {
+                        err = Some(e);
+                        SqlReturn::ERROR
+                    }
+                }
+            };
+
+            if let Some(e) = err {
+                conn_handle.add_diag_info(ODBCError::Core(e));
+            }
+
+            res
         }
         // SQL_CONCAT_NULL_BEHAVIOR
         InfoType::ConcatNullBehavior => {
