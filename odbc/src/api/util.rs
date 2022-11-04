@@ -44,6 +44,7 @@ fn format_version_part(part: &str, len: usize) -> String {
 }
 
 mod unit {
+    #[cfg(test)]
     use super::format_version;
 
     macro_rules! format_version_test {
