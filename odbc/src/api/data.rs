@@ -1,27 +1,65 @@
-use crate::{errors::ODBCError, handles::definitions::MongoHandle};
+use crate::{
+    errors::ODBCError,
+    handles::definitions::{CachedData, MongoHandle},
+};
 use bson::Bson;
 use chrono::{
     offset::{TimeZone, Utc},
     DateTime, Datelike, Timelike,
 };
 use mongo_odbc_core::util::Decimal128Plus;
-use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp};
+use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp, USmallInt};
 use odbc_sys::{Char, Integer, SmallInt, SqlReturn, WChar};
-use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
+use std::{cmp::min, collections::HashMap, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
+
+const BINARY: &str = "Binary";
+const DOUBLE: &str = "Double";
+const INT32: &str = "Int32";
+const INT64: &str = "Int64";
+const BIT: &str = "Bit";
+const DATETIME: &str = "DateTime";
+
+type Result<T> = std::result::Result<T, ODBCError>;
 
 /// IntoCData is just used for adding methods to bson::Bson.
 trait IntoCData {
-    fn to_string(self) -> String;
-    fn to_f64(self) -> f64;
-    fn to_f32(self) -> f32;
-    fn to_i64(self) -> i64;
-    fn to_i32(self) -> i32;
-    fn to_bool(self) -> bool;
-    fn to_date(self) -> DateTime<Utc>;
+    fn to_json(self) -> String;
+    fn to_binary(self) -> Result<Vec<u8>>;
+    fn to_f64(&self) -> Result<f64>;
+    fn to_f32(&self) -> Result<f32>;
+    fn to_i64(&self) -> Result<(i64, Option<ODBCError>)>;
+    fn to_i32(&self) -> Result<(i32, Option<ODBCError>)>;
+    fn to_u64(&self) -> Result<(u64, Option<ODBCError>)>;
+    fn to_u32(&self) -> Result<(u32, Option<ODBCError>)>;
+    fn to_bit(&self) -> Result<(u8, Option<ODBCError>)>;
+    fn to_datetime(&self) -> Result<DateTime<Utc>>;
+    fn to_type_str(&self) -> &'static str;
+}
+
+fn f64_to_bit(f: f64) -> Result<(u8, Option<ODBCError>)> {
+    if f == 0.0 {
+        Ok((0u8, None))
+    } else if f == 1.0 {
+        Ok((1u8, None))
+    } else if f > 0.0 && f < 1.0 {
+        Ok((0u8, Some(ODBCError::FractionalTruncation(f.to_string()))))
+    } else if f > 1.0 && f < 2.0 {
+        Ok((1u8, Some(ODBCError::FractionalTruncation(f.to_string()))))
+    } else {
+        Err(ODBCError::IntegralTruncation(f.to_string()))
+    }
+}
+
+fn i64_to_bit(i: i64) -> Result<(u8, Option<ODBCError>)> {
+    match i {
+        0 => Ok((0u8, None)),
+        1 => Ok((1u8, None)),
+        _ => Err(ODBCError::IntegralTruncation(i.to_string())),
+    }
 }
 
 impl IntoCData for Bson {
-    fn to_string(self) -> String {
+    fn to_json(self) -> String {
         match self {
             Bson::String(s) => s,
             // TODO SQL-1068 :we will have to test this manually because there is no way to create a Decimal128
@@ -30,161 +68,274 @@ impl IntoCData for Bson {
             Bson::Decimal128(d) => {
                 format!("{{$numberDecimal: \"{}\"}}", d.to_formatted_string())
             }
-            Bson::Array(_)
-            | Bson::Binary(_)
-            | Bson::Boolean(_)
-            | Bson::Double(_)
-            | Bson::DateTime(_)
-            | Bson::DbPointer(_)
-            | Bson::Document(_)
-            | Bson::JavaScriptCode(_)
-            | Bson::JavaScriptCodeWithScope(_)
-            | Bson::Int32(_)
-            | Bson::Int64(_)
-            | Bson::MaxKey
-            | Bson::MinKey
-            | Bson::ObjectId(_)
-            | Bson::RegularExpression(_)
-            | Bson::Symbol(_)
-            | Bson::Timestamp(_) => self.into_canonical_extjson().to_string(),
-            // This is unreachable because we return NULL_DATA for null or undefined values without
-            // ever calling this interface. A break to the code will cause this panic.
-            Bson::Null | Bson::Undefined => unreachable!(),
+            _ => self.into_canonical_extjson().to_string(),
         }
     }
 
-    fn to_f64(self) -> f64 {
+    fn to_binary(self) -> Result<Vec<u8>> {
         match self {
-            Bson::DateTime(d) => d.timestamp_millis() as f64,
-            Bson::Double(f) => f,
-            Bson::String(s) => f64::from_str(&s).unwrap_or(0.0),
-            Bson::Boolean(b) => {
-                if b {
-                    1.0
-                } else {
-                    0.0
-                }
-            }
-            Bson::Int32(i) => i as f64,
-            Bson::Int64(i) => i as f64,
-            Bson::Decimal128(d) => f64::from_str(&d.to_formatted_string()).unwrap_or(0.0),
-            _ => 0.0,
+            Bson::Binary(b) => Ok(b.bytes),
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BINARY)),
         }
     }
 
-    fn to_f32(self) -> f32 {
+    fn to_f64(&self) -> Result<f64> {
+        match self {
+            Bson::Double(f) => Ok(*f),
+            Bson::String(s) => {
+                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), DOUBLE))
+            }
+            Bson::Boolean(b) => Ok(if *b { 1.0 } else { 0.0 }),
+            Bson::Int32(i) => Ok(*i as f64),
+            Bson::Int64(i) => Ok(*i as f64),
+            Bson::Decimal128(d) => {
+                let d_str = d.to_formatted_string();
+                f64::from_str(&d_str).map_err(|_| ODBCError::InvalidCharacterValue(d_str, DOUBLE))
+            }
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
+        }
+    }
+
+    fn to_f32(&self) -> Result<f32> {
         // this is mildly inefficient, unlike converting to i64 and then i32 which is essentially
         // free (on x86_64 you can literally just change the register address from e.g., RAX to EAX,
         // so it's literally a no-op), but since mongodb does not actually support 32 bit floats, we would need to do this
         // conversion somewhere, anyway.
-        self.to_f64() as f32
+        Ok(self.to_f64()? as f32)
     }
 
-    fn to_i64(self) -> i64 {
+    fn to_i64(&self) -> Result<(i64, Option<ODBCError>)> {
         match self {
-            Bson::DateTime(d) => d.timestamp_millis(),
-            Bson::Double(f) => f as i64,
-            Bson::String(s) => i64::from_str(&s).unwrap_or(0),
-            Bson::Boolean(b) => {
-                if b {
-                    1
+            Bson::Double(f) => Ok((
+                *f as i64,
+                if f.floor() != *f {
+                    Some(ODBCError::FractionalTruncation(f.to_string()))
                 } else {
-                    0
-                }
-            }
-            Bson::Int32(i) => i as i64,
-            Bson::Int64(i) => i,
+                    None
+                },
+            )),
+            Bson::String(s) => Ok((
+                i64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), INT64))?,
+                None,
+            )),
+            Bson::Boolean(b) => Ok((i64::from(*b), None)),
+            Bson::Int32(i) => Ok((*i as i64, None)),
+            Bson::Int64(i) => Ok((*i, None)),
             // Note that this isn't perfect because there are some 64bit integer values that are
             // not representable as doubles. There *could* be a specific value where we will get a
             // different result here than if we had a conversion from Decimal128 to i64 directly.
             // We should update this when the bson crate supports Decimal128 entirely.
-            Bson::Decimal128(d) => f64::from_str(&d.to_formatted_string()).unwrap_or(0.0) as i64,
-            _ => 0,
-        }
-    }
-
-    fn to_i32(self) -> i32 {
-        self.to_i64() as i32
-    }
-
-    fn to_bool(self) -> bool {
-        match self {
-            Bson::Double(f) => f != 0.0,
-            // MongoDB $convert returns true for all strings
-            Bson::String(_) => true,
-            Bson::Boolean(b) => b,
-            Bson::Int32(i) => i != 0,
-            Bson::Int64(i) => i != 0,
-            Bson::Decimal128(d) => d.not_zero(),
-            Bson::DateTime(_) => self.to_i64() != 0,
-            _ => false,
-        }
-    }
-
-    fn to_date(self) -> DateTime<Utc> {
-        match self {
-            Bson::DateTime(d) => d.into(),
-            Bson::Decimal128(d) => {
-                Utc.timestamp_millis(f64::from_str(&d.to_formatted_string()).unwrap_or(0.0) as i64)
+            Bson::Decimal128(_) => {
+                let out = self.to_f64()?;
+                Ok((
+                    out as i64,
+                    if out.floor() != out {
+                        Some(ODBCError::FractionalTruncation(out.to_string()))
+                    } else {
+                        None
+                    },
+                ))
             }
-            Bson::Double(d) => Utc.timestamp_millis(d as i64),
-            Bson::Int32(i) => Utc.timestamp_millis(i as i64),
-            Bson::Int64(i) => Utc.timestamp_millis(i),
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), INT64)),
+        }
+    }
+
+    fn to_u64(&self) -> Result<(u64, Option<ODBCError>)> {
+        self.to_i64().map(|(i, w)| (i as u64, w))
+    }
+
+    fn to_i32(&self) -> Result<(i32, Option<ODBCError>)> {
+        let (out_64, warning) = self.to_i64().map_err(|e| match e {
+            ODBCError::RestrictedDataType(s, _) => ODBCError::RestrictedDataType(s, INT32),
+            ODBCError::InvalidCharacterValue(s, _) => ODBCError::InvalidCharacterValue(s, INT32),
+            _ => e,
+        })?;
+        let out = out_64 as i32;
+        Ok((
+            out,
+            warning.or(if out as i64 != out_64 {
+                Some(ODBCError::IntegralTruncation(self.to_string()))
+            } else {
+                None
+            }),
+        ))
+    }
+
+    fn to_u32(&self) -> Result<(u32, Option<ODBCError>)> {
+        self.to_i32().map(|(i, w)| (i as u32, w))
+    }
+
+    fn to_bit(&self) -> Result<(u8, Option<ODBCError>)> {
+        match self {
+            Bson::Double(f) => f64_to_bit(*f),
+            Bson::String(s) => {
+                let (i, warning) = self.to_i64().map_err(|e| {
+                    if let ODBCError::InvalidCharacterValue(s, _) = e {
+                        ODBCError::InvalidCharacterValue(s, BIT)
+                    } else {
+                        e
+                    }
+                })?;
+                match i {
+                    0 => Ok((0u8, warning)),
+                    1 => Ok((1u8, warning)),
+                    _ => Err(ODBCError::InvalidCharacterValue(s.clone(), BIT)),
+                }
+            }
+            Bson::Boolean(b) => Ok((u8::from(*b), None)),
+            Bson::Int32(i) => i64_to_bit(*i as i64),
+            Bson::Int64(i) => i64_to_bit(*i),
+            Bson::Decimal128(_) => {
+                let f = self.to_f64()?;
+                f64_to_bit(f)
+            }
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BIT)),
+        }
+    }
+
+    fn to_datetime(&self) -> Result<DateTime<Utc>> {
+        match self {
+            Bson::DateTime(d) => Ok((*d).into()),
             Bson::String(s) => Utc
-                .datetime_from_str(&s, "%FT%H:%M:%S%.3fZ")
-                .unwrap_or_else(|_| Utc.timestamp(0, 0)),
-            _ => Utc.timestamp(0, 0),
+                .datetime_from_str(s, "%FT%H:%M:%S%.3fZ")
+                .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone())),
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
+        }
+    }
+
+    fn to_type_str(&self) -> &'static str {
+        match self {
+            Bson::Double(_) => "double",
+            Bson::String(_) => "string",
+            Bson::Document(_) => "object",
+            Bson::Array(_) => "array",
+            Bson::Binary(_) => "binData",
+            Bson::Undefined => "undefined",
+            Bson::ObjectId(_) => "objectId",
+            Bson::Boolean(_) => "bool",
+            Bson::DateTime(_) => "date",
+            Bson::Null => "null",
+            Bson::RegularExpression(_) => "regex",
+            Bson::DbPointer(_) => "dbPointer",
+            Bson::JavaScriptCode(_) => "javascript",
+            Bson::JavaScriptCodeWithScope(_) => "javascriptWithScope",
+            Bson::Symbol(_) => "symbol",
+            Bson::Int32(_) => "int",
+            Bson::Timestamp(_) => "timestamp",
+            Bson::Int64(_) => "long",
+            Bson::Decimal128(_) => "decimal",
+            Bson::MinKey => "minKey",
+            Bson::MaxKey => "maxKey",
         }
     }
 }
 
-pub unsafe fn format_and_return_bson(
+pub unsafe fn format_binary(
     mongo_handle: &mut MongoHandle,
-    target_type: CDataType,
+    col_num: USmallInt,
+    index: usize,
     target_value_ptr: Pointer,
     buffer_len: Len,
     str_len_or_ind_ptr: *mut Len,
+    data: Vec<u8>,
+) -> SqlReturn {
+    let sql_return = {
+        let stmt = (*mongo_handle).as_statement().unwrap();
+        let mut guard = stmt.write().unwrap();
+        isize_len::set_output_binary(
+            data,
+            col_num,
+            index,
+            guard.var_data_cache.as_mut().unwrap(),
+            target_value_ptr as *mut _,
+            buffer_len as usize,
+            str_len_or_ind_ptr,
+        )
+    };
+    if sql_return == SqlReturn::SUCCESS_WITH_INFO {
+        mongo_handle.add_diag_info(ODBCError::OutStringTruncated(buffer_len as usize));
+    }
+    sql_return
+}
+
+macro_rules! char_data {
+    ($mongo_handle:expr, $col_num:expr, $index:expr, $target_value_ptr:expr, $buffer_len:expr, $str_len_or_ind_ptr:expr, $data:expr, $func:path) => {{
+        // force expressions used more than once.
+        let (mongo_handle, buffer_len) = ($mongo_handle, $buffer_len);
+        let sql_return = {
+            let stmt = (*mongo_handle).as_statement().unwrap();
+            let mut guard = stmt.write().unwrap();
+            $func(
+                $data,
+                $col_num,
+                $index,
+                guard.var_data_cache.as_mut().unwrap(),
+                $target_value_ptr as *mut _,
+                $buffer_len as usize,
+                $str_len_or_ind_ptr,
+            )
+        };
+        if sql_return == SqlReturn::SUCCESS_WITH_INFO {
+            mongo_handle.add_diag_info(ODBCError::OutStringTruncated(buffer_len as usize));
+        }
+        sql_return
+    }};
+}
+
+macro_rules! fixed_data {
+    ($mongo_handle:expr, $col_num:expr, $data:expr, $target_value_ptr:expr, $str_len_or_ind_ptr:expr) => {{
+        let stmt = (*$mongo_handle).as_statement().unwrap();
+        let mut guard = stmt.write().unwrap();
+        let indices = guard.var_data_cache.as_mut().unwrap();
+        indices.insert($col_num, CachedData::Fixed);
+        match $data {
+            Ok(f) => isize_len::set_output_fixed_data(&f, $target_value_ptr, $str_len_or_ind_ptr),
+            Err(e) => {
+                guard.errors.push(e);
+                SqlReturn::ERROR
+            }
+        }
+    }};
+}
+
+macro_rules! fixed_data_with_warnings {
+    ($mongo_handle:expr, $col_num:expr, $data:expr, $target_value_ptr:expr, $str_len_or_ind_ptr:expr) => {{
+        let stmt = (*$mongo_handle).as_statement().unwrap();
+        let mut guard = stmt.write().unwrap();
+        let indices = guard.var_data_cache.as_mut().unwrap();
+        indices.insert($col_num, CachedData::Fixed);
+        match $data {
+            Ok((u, warning)) => {
+                let sqlreturn =
+                    isize_len::set_output_fixed_data(&u, $target_value_ptr, $str_len_or_ind_ptr);
+                if let Some(warning) = warning {
+                    guard.errors.push(warning);
+                    return SqlReturn::SUCCESS_WITH_INFO;
+                }
+                sqlreturn
+            }
+            Err(e) => {
+                guard.errors.push(e);
+                SqlReturn::ERROR
+            }
+        }
+    }};
+}
+
+pub unsafe fn format_datetime(
+    mongo_handle: &mut MongoHandle,
+    col_num: USmallInt,
+    target_value_ptr: Pointer,
+    str_len_or_ind_ptr: *mut Len,
     data: Bson,
 ) -> SqlReturn {
-    // If the data is null or undefined we immediately return NULL_DATA indicator.
-    match data {
-        Bson::Null | Bson::Undefined => {
-            *str_len_or_ind_ptr = odbc_sys::NULL_DATA;
-            return SqlReturn::SUCCESS;
-        }
-        _ => {}
-    }
-    use isize_len::*;
-    match target_type {
-        CDataType::Char | CDataType::Binary => set_output_string(
-            &data.to_string(),
-            target_value_ptr as *mut _,
-            buffer_len as usize,
-            str_len_or_ind_ptr,
-        ),
-        CDataType::WChar => set_output_wstring(
-            &data.to_string(),
-            target_value_ptr as *mut _,
-            buffer_len as usize,
-            str_len_or_ind_ptr,
-        ),
-        CDataType::Bit => {
-            set_output_fixed_data(&data.to_bool(), target_value_ptr, str_len_or_ind_ptr)
-        }
-        CDataType::Double => {
-            set_output_fixed_data(&data.to_f64(), target_value_ptr, str_len_or_ind_ptr)
-        }
-        CDataType::Float => {
-            set_output_fixed_data(&data.to_f32(), target_value_ptr, str_len_or_ind_ptr)
-        }
-        CDataType::SBigInt | CDataType::Numeric => {
-            set_output_fixed_data(&data.to_i64(), target_value_ptr, str_len_or_ind_ptr)
-        }
-        CDataType::SLong => {
-            set_output_fixed_data(&data.to_i32(), target_value_ptr, str_len_or_ind_ptr)
-        }
-        CDataType::TimeStamp | CDataType::TypeTimestamp => {
-            let dt = data.to_date();
+    let stmt = (*mongo_handle).as_statement().unwrap();
+    let mut guard = stmt.write().unwrap();
+    let indices = guard.var_data_cache.as_mut().unwrap();
+    indices.insert(col_num, CachedData::Fixed);
+    let dt = data.to_datetime();
+    match dt {
+        Ok(dt) => {
             let data = Timestamp {
                 year: dt.year() as i16,
                 month: dt.month() as u16,
@@ -194,26 +345,308 @@ pub unsafe fn format_and_return_bson(
                 second: dt.second() as u16,
                 fraction: (dt.nanosecond() as f32 * 0.000001) as u32,
             };
-            set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
+            isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
-        CDataType::Time | CDataType::TypeTime => {
-            let dt = data.to_date();
+        Err(e) => {
+            guard.errors.push(e);
+            SqlReturn::ERROR
+        }
+    }
+}
+
+pub unsafe fn format_time(
+    mongo_handle: &mut MongoHandle,
+    col_num: USmallInt,
+    target_value_ptr: Pointer,
+    str_len_or_ind_ptr: *mut Len,
+    data: Bson,
+) -> SqlReturn {
+    let stmt = (*mongo_handle).as_statement().unwrap();
+    let mut guard = stmt.write().unwrap();
+    let dt = data.to_datetime();
+    let indices = guard.var_data_cache.as_mut().unwrap();
+    indices.insert(col_num, CachedData::Fixed);
+    match dt {
+        Ok(dt) => {
             let data = Time {
                 hour: dt.hour() as u16,
                 minute: dt.minute() as u16,
                 second: dt.second() as u16,
             };
-            set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
+            isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
-        CDataType::Date | CDataType::TypeDate => {
-            let dt = data.to_date();
+        Err(e) => {
+            guard.errors.push(e);
+            SqlReturn::ERROR
+        }
+    }
+}
+
+pub unsafe fn format_date(
+    mongo_handle: &mut MongoHandle,
+    col_num: USmallInt,
+    target_value_ptr: Pointer,
+    str_len_or_ind_ptr: *mut Len,
+    data: Bson,
+) -> SqlReturn {
+    let stmt = (*mongo_handle).as_statement().unwrap();
+    let mut guard = stmt.write().unwrap();
+    let indices = guard.var_data_cache.as_mut().unwrap();
+    indices.insert(col_num, CachedData::Fixed);
+    let dt = data.to_datetime();
+    match dt {
+        Ok(dt) => {
             let data = Date {
                 year: dt.year() as i16,
                 month: dt.month() as u16,
                 day: dt.day() as u16,
             };
-            set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
+            isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
+        Err(e) => {
+            guard.errors.push(e);
+            SqlReturn::ERROR
+        }
+    }
+}
+
+pub unsafe fn format_cached_data(
+    mongo_handle: &mut MongoHandle,
+    cached_data: CachedData,
+    col_or_param_num: USmallInt,
+    target_type: CDataType,
+    target_value_ptr: Pointer,
+    buffer_len: Len,
+    str_len_or_ind_ptr: *mut Len,
+) -> SqlReturn {
+    match cached_data {
+        // Fixed cannot be streamed, and this data has already been retrived before.
+        a @ CachedData::Fixed => {
+            let stmt = (*mongo_handle).as_statement().unwrap();
+            let mut guard = stmt.write().unwrap();
+            let indices = guard.var_data_cache.as_mut().unwrap();
+            // we need to insert Fixed so that we can return SqlReturn::NO_DATA if this is
+            // called again.
+            indices.insert(col_or_param_num, a);
+            SqlReturn::NO_DATA
+        }
+        CachedData::Char(index, data) => {
+            if target_type != CDataType::Char {
+                let stmt = (*mongo_handle).as_statement().unwrap();
+                let mut guard = stmt.write().unwrap();
+                let indices = guard.var_data_cache.as_mut().unwrap();
+                indices.insert(col_or_param_num, CachedData::Char(index, data));
+                return SqlReturn::NO_DATA;
+            }
+            char_data!(
+                mongo_handle,
+                col_or_param_num,
+                index,
+                target_value_ptr,
+                buffer_len,
+                str_len_or_ind_ptr,
+                data,
+                isize_len::set_output_string
+            )
+        }
+        CachedData::WChar(index, data) => {
+            if target_type != CDataType::WChar {
+                let stmt = (*mongo_handle).as_statement().unwrap();
+                let mut guard = stmt.write().unwrap();
+                let indices = guard.var_data_cache.as_mut().unwrap();
+                indices.insert(col_or_param_num, CachedData::WChar(index, data));
+                return SqlReturn::NO_DATA;
+            }
+            char_data!(
+                mongo_handle,
+                col_or_param_num,
+                index,
+                target_value_ptr,
+                buffer_len,
+                str_len_or_ind_ptr,
+                data,
+                isize_len::set_output_wstring
+            )
+        }
+        CachedData::Bin(index, data) => {
+            if target_type != CDataType::Binary {
+                let stmt = (*mongo_handle).as_statement().unwrap();
+                let mut guard = stmt.write().unwrap();
+                let indices = guard.var_data_cache.as_mut().unwrap();
+                indices.insert(col_or_param_num, CachedData::Bin(index, data));
+                return SqlReturn::NO_DATA;
+            }
+            crate::api::data::format_binary(
+                mongo_handle,
+                col_or_param_num,
+                index,
+                target_value_ptr,
+                buffer_len,
+                str_len_or_ind_ptr,
+                data,
+            )
+        }
+    }
+}
+
+pub unsafe fn format_bson_data(
+    mongo_handle: &mut MongoHandle,
+    col_num: USmallInt,
+    target_type: CDataType,
+    target_value_ptr: Pointer,
+    buffer_len: Len,
+    str_len_or_ind_ptr: *mut Len,
+    data: Bson,
+) -> SqlReturn {
+    // If the data is null or undefined we immediately return NULL_DATA indicator.
+    match data {
+        Bson::Null | Bson::Undefined => {
+            let stmt = (*mongo_handle).as_statement().unwrap();
+            let mut guard = stmt.write().unwrap();
+            let indices = guard.var_data_cache.as_mut().unwrap();
+            if str_len_or_ind_ptr.is_null() {
+                guard
+                    .errors
+                    .push(ODBCError::IndicatorVariableRequiredButNotSupplied);
+                return SqlReturn::SUCCESS_WITH_INFO;
+            }
+            *str_len_or_ind_ptr = odbc_sys::NULL_DATA;
+            indices.insert(col_num, CachedData::Fixed);
+            return SqlReturn::SUCCESS;
+        }
+        _ => {}
+    }
+    match target_type {
+        CDataType::Binary => {
+            let data = data.to_binary();
+            match data {
+                Ok(data) => format_binary(
+                    mongo_handle,
+                    col_num,
+                    0usize,
+                    target_value_ptr,
+                    buffer_len,
+                    str_len_or_ind_ptr,
+                    data,
+                ),
+                Err(e) => {
+                    let stmt = (*mongo_handle).as_statement().unwrap();
+                    let mut guard = stmt.write().unwrap();
+                    guard.errors.push(e);
+                    SqlReturn::ERROR
+                }
+            }
+        }
+        CDataType::Char => {
+            let data = data.to_json().bytes().collect::<Vec<u8>>();
+            char_data!(
+                mongo_handle,
+                col_num,
+                0usize,
+                target_value_ptr,
+                buffer_len,
+                str_len_or_ind_ptr,
+                data,
+                isize_len::set_output_string
+            )
+        }
+        CDataType::WChar => {
+            let data = data.to_json().encode_utf16().collect::<Vec<u16>>();
+            char_data!(
+                mongo_handle,
+                col_num,
+                0usize,
+                target_value_ptr,
+                buffer_len,
+                str_len_or_ind_ptr,
+                data,
+                isize_len::set_output_wstring
+            )
+        }
+        CDataType::Bit => {
+            fixed_data_with_warnings!(
+                mongo_handle,
+                col_num,
+                data.to_bit(),
+                target_value_ptr,
+                str_len_or_ind_ptr
+            )
+        }
+        CDataType::Double => {
+            fixed_data!(
+                mongo_handle,
+                col_num,
+                data.to_f64(),
+                target_value_ptr,
+                str_len_or_ind_ptr
+            )
+        }
+        CDataType::Float => {
+            fixed_data!(
+                mongo_handle,
+                col_num,
+                data.to_f32(),
+                target_value_ptr,
+                str_len_or_ind_ptr
+            )
+        }
+        CDataType::SBigInt | CDataType::Numeric => {
+            fixed_data_with_warnings!(
+                mongo_handle,
+                col_num,
+                data.to_i64(),
+                target_value_ptr,
+                str_len_or_ind_ptr
+            )
+        }
+        CDataType::UBigInt => {
+            fixed_data_with_warnings!(
+                mongo_handle,
+                col_num,
+                data.to_u64(),
+                target_value_ptr,
+                str_len_or_ind_ptr
+            )
+        }
+        CDataType::SLong => {
+            fixed_data_with_warnings!(
+                mongo_handle,
+                col_num,
+                data.to_i32(),
+                target_value_ptr,
+                str_len_or_ind_ptr
+            )
+        }
+        CDataType::ULong => {
+            fixed_data_with_warnings!(
+                mongo_handle,
+                col_num,
+                data.to_u32(),
+                target_value_ptr,
+                str_len_or_ind_ptr
+            )
+        }
+        CDataType::TimeStamp | CDataType::TypeTimestamp => format_datetime(
+            mongo_handle,
+            col_num,
+            target_value_ptr,
+            str_len_or_ind_ptr,
+            data,
+        ),
+        CDataType::Time | CDataType::TypeTime => format_time(
+            mongo_handle,
+            col_num,
+            target_value_ptr,
+            str_len_or_ind_ptr,
+            data,
+        ),
+        CDataType::Date | CDataType::TypeDate => format_date(
+            mongo_handle,
+            col_num,
+            target_value_ptr,
+            str_len_or_ind_ptr,
+            data,
+        ),
         other => {
             mongo_handle.add_diag_info(ODBCError::UnimplementedDataType(format!("{:?}", other)));
             SqlReturn::ERROR
@@ -299,31 +732,30 @@ pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
 /// This writes to multiple raw C-pointers
 ///
 unsafe fn set_output_wstring_helper(
-    message: &str,
+    message: &[u16],
     output_ptr: *mut WChar,
     buffer_len: usize,
 ) -> (usize, SqlReturn) {
-    if output_ptr.is_null() {
-        return (message.encode_utf16().count(), SqlReturn::SUCCESS_WITH_INFO);
+    // If the output_ptr is null or no buffer space has been allocated, we need
+    // to return SUCCESS_WITH_INFO.
+    if output_ptr.is_null() || buffer_len == 0 {
+        return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
     // Check if the entire message plus a null terminator can fit in the buffer;
     // we should truncate the message if it's too long.
-    let mut message_u16 = message.encode_utf16().collect::<Vec<u16>>();
-    let message_len = message_u16.len();
-    let num_chars = min(message_len + 1, buffer_len);
-    // It is possible that no buffer space has been allocated.
-    if num_chars == 0 {
-        return (0, SqlReturn::SUCCESS_WITH_INFO);
-    }
-    message_u16.resize(num_chars - 1, 0);
-    message_u16.push('\u{0}' as u16);
-    copy_nonoverlapping(message_u16.as_ptr(), output_ptr, num_chars);
+    let num_chars = min(message.len() + 1, buffer_len);
+    // TODO SQL-1084: This will currently not work when we need to truncate data that takes more than
+    // two bytes, such as emojis because it's assuming every character is 2 bytes.
+    // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
+    // reassemble parts.
+    copy_nonoverlapping(message.as_ptr(), output_ptr, num_chars - 1);
+    *output_ptr.add(num_chars - 1) = 0u16;
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars < message_len {
-        (num_chars, SqlReturn::SUCCESS_WITH_INFO)
+    if num_chars < message.len() {
+        (num_chars - 1, SqlReturn::SUCCESS_WITH_INFO)
     } else {
-        (num_chars - 1, SqlReturn::SUCCESS)
+        (message.len(), SqlReturn::SUCCESS)
     }
 }
 
@@ -336,32 +768,59 @@ unsafe fn set_output_wstring_helper(
 /// This writes to multiple raw C-pointers
 ///
 unsafe fn set_output_string_helper(
-    message: &str,
+    message: &[u8],
+    output_ptr: *mut Char,
+    buffer_len: usize,
+) -> (usize, SqlReturn) {
+    // If the output_ptr is null or no buffer space has been allocated, we need
+    // to return SUCCESS_WITH_INFO.
+    if output_ptr.is_null() || buffer_len == 0 {
+        return (0usize, SqlReturn::SUCCESS_WITH_INFO);
+    }
+    // Check if the entire message plus a null terminator can fit in the buffer;
+    // we should truncate the message if it's too long.
+    let num_chars = min(message.len() + 1, buffer_len);
+    copy_nonoverlapping(message.as_ptr(), output_ptr, num_chars - 1);
+    *output_ptr.add(num_chars - 1) = 0u8;
+    // return the number of characters in the message string, excluding the
+    // null terminator
+    if num_chars < message.len() {
+        (num_chars - 1, SqlReturn::SUCCESS_WITH_INFO)
+    } else {
+        (message.len(), SqlReturn::SUCCESS)
+    }
+}
+
+///
+/// set_output_binary_helper writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
+/// length of the [`output_ptr`] buffer in characters; the message should be truncated
+/// if it is longer than the buffer length.
+///
+/// # Safety
+/// This writes to multiple raw C-pointers
+///
+unsafe fn set_output_binary_helper(
+    data: &[u8],
     output_ptr: *mut Char,
     buffer_len: usize,
 ) -> (usize, SqlReturn) {
     if output_ptr.is_null() {
-        return (message.len(), SqlReturn::SUCCESS_WITH_INFO);
+        return (data.len(), SqlReturn::SUCCESS_WITH_INFO);
     }
-    // Check if the entire message plus a null terminator can fit in the buffer;
+    // Check if the entire message can fit in the buffer;
     // we should truncate the message if it's too long.
-    // Note, we also assume this is valid ascii
-    let mut message_u8 = message.bytes().collect::<Vec<u8>>();
-    let message_len = message_u8.len();
-    let num_chars = min(message_len + 1, buffer_len);
+    let data_len = data.len();
+    let num_bytes = min(data_len, buffer_len);
     // It is possible that no buffer space has been allocated.
-    if num_chars == 0 {
+    if num_bytes == 0 {
         return (0, SqlReturn::SUCCESS_WITH_INFO);
     }
-    message_u8.resize(num_chars - 1, 0);
-    message_u8.push(0u8);
-    copy_nonoverlapping(message_u8.as_ptr(), output_ptr, num_chars);
-    // return the number of characters in the message string, excluding the
-    // null terminator
-    if num_chars < message_len {
-        (num_chars, SqlReturn::SUCCESS_WITH_INFO)
+    copy_nonoverlapping(data.as_ptr(), output_ptr as *mut _, num_bytes);
+    // return the number of characters in the binary
+    if num_bytes < data_len {
+        (num_bytes, SqlReturn::SUCCESS_WITH_INFO)
     } else {
-        (num_chars - 1, SqlReturn::SUCCESS)
+        (num_bytes, SqlReturn::SUCCESS)
     }
 }
 
@@ -382,7 +841,8 @@ pub mod i16_len {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let (len, ret) = set_output_wstring_helper(message, output_ptr, buffer_len);
+        let message = message.encode_utf16().collect::<Vec<u16>>();
+        let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len);
         *text_length_ptr = len as SmallInt;
         ret
     }
@@ -396,15 +856,15 @@ pub mod i16_len {
     /// # Safety
     /// This writes to multiple raw C-pointers
     ///
-    /// This will be used when we create an ASCII driver
-    #[allow(dead_code)]
     pub unsafe fn set_output_string(
         message: &str,
         output_ptr: *mut Char,
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let (len, ret) = set_output_string_helper(message, output_ptr, buffer_len);
+        // TODO SQL-1087: consider encoding utf-8 using the encoding crate. This allows for somewhat
+        // sensible output for characters in unicode - ascii.:writes
+        let (len, ret) = set_output_string_helper(message.as_bytes(), output_ptr, buffer_len);
         *text_length_ptr = len as SmallInt;
         ret
     }
@@ -427,7 +887,11 @@ pub mod i32_len {
         buffer_len: usize,
         text_length_ptr: *mut Integer,
     ) -> SqlReturn {
-        let (len, ret) = set_output_wstring_helper(message, output_ptr, buffer_len);
+        let (len, ret) = set_output_wstring_helper(
+            &message.encode_utf16().collect::<Vec<_>>(),
+            output_ptr,
+            buffer_len,
+        );
         *text_length_ptr = len as Integer;
         ret
     }
@@ -448,7 +912,7 @@ pub mod i32_len {
         buffer_len: usize,
         text_length_ptr: *mut Integer,
     ) -> SqlReturn {
-        let (len, ret) = set_output_string_helper(message, output_ptr, buffer_len);
+        let (len, ret) = set_output_string_helper(message.as_bytes(), output_ptr, buffer_len);
         *text_length_ptr = len as Integer;
         ret
     }
@@ -490,13 +954,29 @@ pub mod isize_len {
     /// This writes to multiple raw C-pointers
     ///
     pub unsafe fn set_output_wstring(
-        message: &str,
+        message: Vec<u16>,
+        col_num: USmallInt,
+        index: usize,
+        var_data_cache: &mut HashMap<USmallInt, CachedData>,
         output_ptr: *mut WChar,
         buffer_len: usize,
         text_length_ptr: *mut Len,
     ) -> SqlReturn {
-        let (len, ret) = set_output_wstring_helper(message, output_ptr, buffer_len);
-        *text_length_ptr = len as Len;
+        // This should be impossible per the DM.
+        if output_ptr.is_null() {
+            return SqlReturn::ERROR;
+        }
+        // TODO Power BI: This will return NO_DATA if the string is size 0 to begin with, not just
+        // when the data runs out. Check to see if this is correct behavior.
+        if index >= message.len() {
+            *text_length_ptr = 0;
+            return SqlReturn::NO_DATA;
+        }
+        let (len, ret) =
+            set_output_wstring_helper(message.get(index..).unwrap(), output_ptr, buffer_len);
+        // the returned length should always be the total length of the data.
+        *text_length_ptr = (message.len() - index) as Len;
+        var_data_cache.insert(col_num, CachedData::WChar(index + len, message));
         ret
     }
 
@@ -510,13 +990,66 @@ pub mod isize_len {
     /// This writes to multiple raw C-pointers
     ///
     pub unsafe fn set_output_string(
-        message: &str,
+        message: Vec<u8>,
+        col_num: USmallInt,
+        index: usize,
+        var_data_cache: &mut HashMap<USmallInt, CachedData>,
         output_ptr: *mut Char,
         buffer_len: usize,
         text_length_ptr: *mut Len,
     ) -> SqlReturn {
-        let (len, ret) = set_output_string_helper(message, output_ptr, buffer_len);
-        *text_length_ptr = len as Len;
+        // This should be impossible per the DM.
+        if output_ptr.is_null() {
+            return SqlReturn::ERROR;
+        }
+        // TODO Power BI: This will return NO_DATA if the string is size 0 to begin with, not just
+        // when the data runs out. Check to see if this is correct behavior.
+        if index >= message.len() {
+            *text_length_ptr = 0;
+            return SqlReturn::NO_DATA;
+        }
+        let (len, ret) =
+            set_output_string_helper(message.get(index..).unwrap(), output_ptr, buffer_len);
+        // the returned length should always be the total length of the data.
+        *text_length_ptr = (message.len() - index) as Len;
+        // The lenth parameter does not matter because character data uses 8bit words and
+        // we can obtain it from message.chars().count() above.
+        var_data_cache.insert(col_num, CachedData::Char(len + index, message));
+        ret
+    }
+
+    ///
+    /// set_output_binary writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_binary(
+        data: Vec<u8>,
+        col_num: USmallInt,
+        index: usize,
+        var_data_cache: &mut HashMap<USmallInt, CachedData>,
+        output_ptr: *mut Char,
+        buffer_len: usize,
+        text_length_ptr: *mut Len,
+    ) -> SqlReturn {
+        // This should be impossible per the DM.
+        if output_ptr.is_null() {
+            return SqlReturn::ERROR;
+        }
+        // TODO Power BI: This will return NO_DATA if the data is size 0 to begin with, not just
+        // when the data runs out. Check to see if this is correct behavior.
+        if index >= data.len() {
+            *text_length_ptr = 0;
+            return SqlReturn::NO_DATA;
+        }
+        let (len, ret) =
+            set_output_binary_helper(data.get(index..).unwrap(), output_ptr, buffer_len);
+        *text_length_ptr = (data.len() - index) as Len;
+        var_data_cache.insert(col_num, CachedData::Bin(len + index, data));
         ret
     }
 
@@ -533,12 +1066,13 @@ pub mod isize_len {
         output_ptr: Pointer,
         data_len_ptr: *mut Len,
     ) -> SqlReturn {
+        // This should be impossible per the DM.
+        if output_ptr.is_null() {
+            return SqlReturn::ERROR;
+        }
         if !data_len_ptr.is_null() {
             // If the output_ptr is NULL, we should still return the length of the message.
             *data_len_ptr = size_of::<T>() as isize;
-        }
-        if output_ptr.is_null() {
-            return SqlReturn::SUCCESS_WITH_INFO;
         }
         copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
         SqlReturn::SUCCESS
@@ -603,7 +1137,7 @@ mod unit {
     fn date_format() {
         assert_eq!(
             Utc.timestamp(1003483404, 123000000),
-            bson!("2001-10-19T09:23:24.123Z").to_date()
+            bson!("2001-10-19T09:23:24.123Z").to_datetime().unwrap()
         );
     }
 

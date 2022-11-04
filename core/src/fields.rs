@@ -499,6 +499,6 @@ impl MongoStatement for MongoFields {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<crate::MongoColMetadata> {
-        &*FIELDS_METADATA
+        &FIELDS_METADATA
     }
 }

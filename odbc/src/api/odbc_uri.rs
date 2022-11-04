@@ -13,7 +13,7 @@ const SERVER: &[&str] = &["server"];
 const SSL: &[&str] = &["ssl", "tls"];
 
 lazy_static! {
-    static ref KEYWORDS: RegexSet = RegexSetBuilder::new(&[
+    static ref KEYWORDS: RegexSet = RegexSetBuilder::new([
         "^AUTH_SRC$",
         "^DATABASE$",
         "^DRIVER$",

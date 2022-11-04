@@ -1,6 +1,11 @@
 use crate::api::{definitions::*, errors::ODBCError};
 use odbc_sys::{HDbc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
-use std::{borrow::BorrowMut, collections::HashSet, ptr::null_mut, sync::RwLock};
+use std::{
+    borrow::BorrowMut,
+    collections::{HashMap, HashSet},
+    ptr::null_mut,
+    sync::RwLock,
+};
 
 #[derive(Debug)]
 pub enum MongoHandle {
@@ -197,9 +202,19 @@ impl Connection {
 }
 
 #[derive(Debug)]
+pub enum CachedData {
+    // we do not need an index into fixed data. Attempting to stream fixed data always fails.
+    Fixed,
+    Char(usize, Vec<u8>),
+    Bin(usize, Vec<u8>),
+    WChar(usize, Vec<u16>),
+}
+
+#[derive(Debug)]
 pub struct Statement {
     pub connection: *mut MongoHandle,
     pub mongo_statement: Option<Box<dyn mongo_odbc_core::MongoStatement>>,
+    pub var_data_cache: Option<HashMap<USmallInt, CachedData>>,
     pub attributes: Box<StatementAttributes>,
     pub state: StatementState,
     // pub cursor: Option<Box<Peekable<Cursor>>>,
@@ -264,6 +279,7 @@ impl Statement {
         Self {
             connection,
             state,
+            var_data_cache: None,
             attributes: Box::new(StatementAttributes {
                 app_row_desc: null_mut(),
                 app_param_desc: null_mut(),
