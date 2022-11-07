@@ -141,7 +141,15 @@ impl IntoCData for Bson {
     }
 
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)> {
-        self.to_i64().map(|(i, w)| (i as u64, w))
+        match self {
+            Bson::Double(x) if *x < 0f64 => Err(ODBCError::IntegralTruncation(x.to_string())),
+            Bson::Int32(x) if *x < 0i32 => Err(ODBCError::IntegralTruncation(x.to_string())),
+            Bson::Int64(x) if *x < 0i64 => Err(ODBCError::IntegralTruncation(x.to_string())),
+            Bson::Decimal128(x) if self.to_f64()? < 0f64 => {
+                Err(ODBCError::IntegralTruncation(x.to_string()))
+            }
+            _ => self.to_i64().map(|(i, w)| (i as u64, w)),
+        }
     }
 
     fn to_i32(&self) -> Result<(i32, Option<ODBCError>)> {
@@ -162,7 +170,8 @@ impl IntoCData for Bson {
     }
 
     fn to_u32(&self) -> Result<(u32, Option<ODBCError>)> {
-        self.to_i32().map(|(i, w)| (i as u32, w))
+        self.to_u64()
+            .and_then(|_| self.to_i32().map(|(i, w)| (i as u32, w)))
     }
 
     fn to_bit(&self) -> Result<(u8, Option<ODBCError>)> {
@@ -1139,6 +1148,54 @@ mod unit {
             Utc.timestamp(1003483404, 123000000),
             bson!("2001-10-19T09:23:24.123Z").to_datetime().unwrap()
         );
+    }
+
+    mod conversion {
+        use crate::api::data::IntoCData;
+        use bson::Bson;
+        #[test]
+        fn positive_values_to_u64_succeed() {
+            let double = Bson::Double(42.);
+            let int32 = Bson::Int32(42);
+            let int64 = Bson::Int64(42);
+
+            assert!(double.to_u64().is_ok());
+            assert!(int32.to_u64().is_ok());
+            assert!(int64.to_u64().is_ok());
+        }
+
+        #[test]
+        fn negative_values_to_u64_fail() {
+            let double = bson::Bson::Double(-42.);
+            let int32 = bson::Bson::Int32(-42);
+            let int64 = bson::Bson::Int64(-42);
+
+            assert!(double.to_u64().is_err());
+            assert!(int32.to_u64().is_err());
+            assert!(int64.to_u64().is_err());
+        }
+
+        #[test]
+        fn positive_values_to_u32_succeed() {
+            let double = bson::Bson::Double(42.);
+            let int32 = bson::Bson::Int32(42);
+            let int64 = bson::Bson::Int64(42);
+
+            assert!(double.to_u32().is_ok());
+            assert!(int32.to_u32().is_ok());
+            assert!(int64.to_u32().is_ok());
+        }
+
+        #[test]
+        fn negative_values_to_u32_fail() {
+            let double = bson::Bson::Double(-42.);
+            let int32 = bson::Bson::Int32(-42);
+            let int64 = bson::Bson::Int64(-42);
+
+            assert!(double.to_u32().is_err());
+            assert!(int32.to_u32().is_err());
+            assert!(int64.to_u32().is_err());
+        }
     }
 
     // This just checks that f64 parsing can handle our output Decimal128 strings.
