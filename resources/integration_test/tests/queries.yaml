@@ -1,5 +1,9 @@
 tests:
-  - description: stub query test
-    skip_reason: "SQL-986: Create ODBC Result Set query tests"
-    test_definition: ""
+  - description: simple query test
+    skip_reason: "SQL-987: Create ODBC Result Set function tests"
+    test_definition: "select * from integration_test.example"
     db: integration_test
+    expected_result:
+      - ['{"$numberInt":"0"}', "a"]
+      - ['{"$numberInt":"1"}', "b"]
+      - ['{"$numberInt":"2"}', "c"]
