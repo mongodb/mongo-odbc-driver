@@ -343,7 +343,10 @@ fn run_function_test(
 
     let sql_return_val = sql_return.unwrap();
     if sql_return_val != SqlReturn::SUCCESS {
-        return Err(Error::OdbcFunctionFailed(function_name, format!("{:?}", sql_return_val)));
+        return Err(Error::OdbcFunctionFailed(
+            function_name,
+            format!("{:?}", sql_return_val),
+        ));
     }
     validate_result_set(entry, statement)
 }
