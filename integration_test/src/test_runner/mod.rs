@@ -3,6 +3,7 @@ use odbc_sys::{CDataType, HStmt, SqlReturn, USmallInt};
 
 use odbc::safe::AutocommitOn;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use serde_json::value::Value;
 use std::ptr::null_mut;
 use std::{fmt, fs, path::PathBuf};
@@ -14,19 +15,19 @@ const SQL_NULL_DATA: isize = -1;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
-    #[error("test runner failed for test {test}: expected {expected:?}, actual {actual:?}")]
+    #[error("test runner failed for test {test}: expected {expected}, actual {actual}")]
     IntegrationTest {
         test: String,
         expected: String,
         actual: String,
     },
-    #[error("mismatch in row counts for test {test}: expected {expected:?}, actual {actual:?}")]
+    #[error("mismatch in row counts for test {test}: expected {expected}, actual {actual}")]
     RowCount {
         test: String,
         expected: usize,
         actual: usize,
     },
-    #[error("mismatch in column counts for test {test}: expected {expected:?}, actual {actual:?}")]
+    #[error("mismatch in column counts for test {test}: expected {expected}, actual {actual}")]
     ColumnCount {
         test: String,
         expected: usize,
@@ -60,7 +61,7 @@ pub struct TestEntry {
     pub description: String,
     pub db: String,
     pub test_definition: TestDef,
-    pub expected_result: Option<Vec<Vec<String>>>,
+    pub expected_result: Option<Vec<Vec<Value>>>,
     pub skip_reason: Option<String>,
     pub ordered: Option<bool>,
     pub expected_column_name: Option<Vec<String>>,
@@ -371,13 +372,19 @@ fn validate_result_set(
                 }
 
                 for i in 1..(columns + 1) {
-                    let expected_field = expected_row.get(i - 1);
-                    let data = get_data_as_string(&stmt, i as USmallInt)?;
-                    if *expected_field.unwrap() != data {
+                    let expected_field = expected_row.get(i - 1).unwrap();
+                    let expected_data_type = if expected_field.is_number() {
+                        CDataType::Numeric
+                    } else {
+                        CDataType::Char
+                    };
+                    let actual_field = get_data(&stmt, i as USmallInt, expected_data_type)?;
+
+                    if *expected_field != actual_field {
                         return Err(Error::IntegrationTest {
                             test: entry.description.clone(),
-                            expected: (*expected_field.unwrap().to_string()).parse().unwrap(),
-                            actual: data,
+                            expected: expected_field.to_string(),
+                            actual: actual_field.to_string(),
                         });
                     }
                 }
@@ -395,21 +402,21 @@ fn validate_result_set(
     Ok(())
 }
 
-fn get_data_as_string(
+fn get_data(
     stmt: &Statement<Allocated, NoResult, AutocommitOn>,
     column: USmallInt,
-) -> Result<String, Error> {
+    data_type: CDataType,
+) -> Result<Value, Error> {
     const BUFFER_LENGTH: usize = 200;
     let out_len_or_ind = &mut 0;
-    let char_buffer: *mut std::ffi::c_void =
-        Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
-    let data: String;
+    let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
+    let mut data: Value = Default::default();
     unsafe {
         match odbc_sys::SQLGetData(
             stmt.handle() as *mut _,
             column,
-            CDataType::Char,
-            char_buffer as *mut _,
+            data_type,
+            buffer as *mut _,
             BUFFER_LENGTH as isize,
             out_len_or_ind,
         ) {
@@ -423,13 +430,13 @@ fn get_data_as_string(
         }
 
         if *out_len_or_ind == SQL_NULL_DATA {
-            // Mapping `null` data type to string "NULL"
-            // Make sure not to have "NULL" string values in dataset
-            data = "NULL".to_string();
-        } else {
-            data = (String::from_utf8_lossy(&*(char_buffer as *const [u8; 256])))
+            data = json!(null);
+        } else if data_type == CDataType::Char {
+            data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
                 [0..*out_len_or_ind as usize]
-                .to_string();
+                .to_string());
+        } else if data_type == CDataType::Numeric {
+            data = json!(buffer as i64);
         }
     }
     Ok(data)

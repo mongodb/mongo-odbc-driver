@@ -1,9 +1,8 @@
 tests:
   - description: simple query test
-    skip_reason: "SQL-986: Create ODBC Result Set query tests"
     test_definition: "select * from example"
     db: integration_test
     expected_result:
-      - ['{"$numberInt":"0"}', "a"]
+      - ['{"$numberInt":"0"}', "a" ]
       - ['{"$numberInt":"1"}', "b"]
       - ['{"$numberInt":"2"}', "c"]
