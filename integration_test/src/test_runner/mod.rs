@@ -126,7 +126,7 @@ pub fn integration_test() -> Result<(), Error> {
                 Some(sr) => println!("Skip Reason: {}", sr),
                 None => {
                     let mut conn_str = crate::common::generate_default_connection_str();
-                    conn_str.push_str(&(";DATABASE=".to_owned() + &test.db));
+                    conn_str.push_str(&("DATABASE=".to_owned() + &test.db));
                     let connection = env
                         .connect_with_connection_string(conn_str.as_str())
                         .unwrap();

@@ -1,7 +1,7 @@
 tests:
   - description: simple query test
     skip_reason: "SQL-986: Create ODBC Result Set query tests"
-    test_definition: "select * from integration_test.example"
+    test_definition: "select * from example"
     db: integration_test
     expected_result:
       - ['{"$numberInt":"0"}', "a"]
