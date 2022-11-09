@@ -47,6 +47,6 @@ impl MongoStatement for MongoTableTypes {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &*DATABASES_METADATA
+        &DATABASES_METADATA
     }
 }

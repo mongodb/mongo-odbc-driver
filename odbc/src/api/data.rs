@@ -85,13 +85,7 @@ impl IntoCData for Bson {
             Bson::DateTime(d) => d.timestamp_millis(),
             Bson::Double(f) => f as i64,
             Bson::String(s) => i64::from_str(&s).unwrap_or(0),
-            Bson::Boolean(b) => {
-                if b {
-                    1
-                } else {
-                    0
-                }
-            }
+            Bson::Boolean(b) => i64::from(b),
             Bson::Int32(i) => i as i64,
             Bson::Int64(i) => i,
             // Note that this isn't perfect because there are some 64bit integer values that are
