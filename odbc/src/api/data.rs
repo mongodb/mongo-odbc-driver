@@ -74,11 +74,7 @@ impl IntoCData for Bson {
 
     fn to_binary(self) -> Result<Vec<u8>> {
         match self {
-            Bson::Double(f) => {
-                let mut ret = Vec::with_capacity(8);
-                ret.extend(f.to_le_bytes());
-                Ok(ret)
-            }
+            Bson::Double(f) => Ok(f.to_le_bytes().to_vec()),
             Bson::String(s) => Ok(s.into_bytes()),
             Bson::Boolean(b) => Ok(if b { vec![1u8] } else { vec![0u8] }),
             Bson::DateTime(d) => {
@@ -94,22 +90,10 @@ impl IntoCData for Bson {
                 ret.extend(fraction.to_le_bytes());
                 Ok(ret)
             }
-            Bson::Int32(i) => {
-                let mut ret = Vec::with_capacity(4);
-                ret.extend(i.to_le_bytes());
-                Ok(ret)
-            }
-            Bson::Int64(i) => {
-                let mut ret = Vec::with_capacity(8);
-                ret.extend(i.to_le_bytes());
-                Ok(ret)
-            }
+            Bson::Int32(i) => Ok(i.to_le_bytes().to_vec()),
+            Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Binary(b) => Ok(b.bytes),
-            Bson::Decimal128(d) => {
-                let mut ret = Vec::with_capacity(16);
-                ret.extend(d.bytes());
-                Ok(ret)
-            }
+            Bson::Decimal128(d) => Ok(d.bytes().to_vec()),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BINARY)),
         }
     }
