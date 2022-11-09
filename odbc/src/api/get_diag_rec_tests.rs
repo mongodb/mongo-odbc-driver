@@ -42,7 +42,7 @@ mod unit {
                     ERROR_MESSAGE,
                     String::from_utf16(&*(message_text as *const [u16; 57])).unwrap()
                 );
-                // Exclude the number of characters required for the null terminator
+                // text_length_ptr includes a byte for null termination.
                 assert_eq!(56, *text_length_ptr);
                 assert_eq!(0, *native_err_ptr);
             }

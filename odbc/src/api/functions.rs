@@ -25,6 +25,7 @@ use odbc_sys::{
     StatementAttribute, ULen, USmallInt, WChar,
 };
 use std::{
+    collections::HashMap,
     mem::size_of,
     panic,
     sync::{mpsc, RwLock},
@@ -1136,6 +1137,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
                                 guard.attributes.row_index_is_valid = true;
                             }
                         }
+                        guard.var_data_cache = Some(HashMap::new());
                     }
                 }
             }
@@ -1453,26 +1455,37 @@ pub unsafe extern "C" fn SQLGetData(
             let mut ret = Bson::Null;
             let mongo_handle = MongoHandleRef::from(statement_handle);
             {
-                let stmt = must_be_valid!((*mongo_handle).as_statement());
-                let row_is_valid = stmt.read().unwrap().attributes.row_index_is_valid;
+                let res = {
+                    let stmt = must_be_valid!((*mongo_handle).as_statement());
+                    let mut guard = stmt.write().unwrap();
+                    let indices = guard.var_data_cache.as_mut().unwrap();
+                    indices.remove(&col_or_param_num)
+                };
+                if let Some(cached_data) = res {
+                    return crate::api::data::format_cached_data(
+                        mongo_handle,
+                        cached_data,
+                        col_or_param_num,
+                        target_type,
+                        target_value_ptr,
+                        buffer_length,
+                        str_len_or_ind_ptr,
+                    );
+                }
+                let stmt = (*mongo_handle).as_statement().unwrap();
                 let mut guard = stmt.write().unwrap();
                 let mongo_stmt = guard.mongo_statement.as_mut();
-                match mongo_stmt {
-                    None => error = Some(ODBCError::InvalidCursorState),
-                    Some(mongo_stmt) => {
-                        if row_is_valid {
-                            let data = mongo_stmt.get_value(col_or_param_num);
-                            match data {
-                                Err(e) => error = Some(e.into()),
-                                Ok(None) => {
-                                    error =
-                                        Some(ODBCError::InvalidDescriptorIndex(col_or_param_num))
-                                }
-                                Ok(Some(d)) => ret = d,
-                            }
-                        } else {
-                            error = Some(ODBCError::InvalidCursorState);
-                        }
+                let bson = match mongo_stmt {
+                    None => Err(ODBCError::InvalidCursorState),
+                    Some(mongo_stmt) => mongo_stmt
+                        .get_value(col_or_param_num)
+                        .map_err(ODBCError::Core),
+                };
+                match bson {
+                    Err(e) => error = Some(e),
+                    Ok(None) => error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num)),
+                    Ok(Some(d)) => {
+                        ret = d;
                     }
                 }
             }
@@ -1480,8 +1493,9 @@ pub unsafe extern "C" fn SQLGetData(
                 mongo_handle.add_diag_info(e);
                 return SqlReturn::ERROR;
             }
-            crate::api::data::format_and_return_bson(
+            crate::api::data::format_bson_data(
                 mongo_handle,
+                col_or_param_num,
                 target_type,
                 target_value_ptr,
                 buffer_length,
@@ -1490,7 +1504,7 @@ pub unsafe extern "C" fn SQLGetData(
             )
         },
         statement_handle
-    );
+    )
 }
 
 ///
@@ -3409,7 +3423,7 @@ pub unsafe extern "C" fn SQLTablesW(
             let schema = input_wtext_to_string(schema_name, name_length_2 as usize);
             let table = input_wtext_to_string(table_name, name_length_3 as usize);
             let table_t = input_wtext_to_string(table_type, name_length_4 as usize);
-            let connection = (stmt.read().unwrap()).connection;
+            let connection = stmt.read().unwrap().connection;
             let mongo_statement = sql_tables(
                 (*connection)
                     .as_connection()
@@ -3419,7 +3433,7 @@ pub unsafe extern "C" fn SQLTablesW(
                     .mongo_connection
                     .as_ref()
                     .unwrap(),
-                (stmt.read().unwrap()).attributes.query_timeout as i32,
+                stmt.read().unwrap().attributes.query_timeout as i32,
                 &catalog,
                 &schema,
                 &table,
