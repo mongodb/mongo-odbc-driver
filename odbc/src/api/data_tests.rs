@@ -552,6 +552,90 @@ mod unit {
     }
 
     #[test]
+    fn sql_get_binary_data() {
+        use crate::api::functions::SQLGetData;
+        use odbc_sys::CDataType;
+        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        unsafe {
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
+            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
+            let buffer_length: isize = 100;
+            let out_len_or_ind = &mut 0;
+            {
+                let mut bin_val_test = |col: u16, expected: &[u8]| {
+                    assert_eq!(
+                        SqlReturn::SUCCESS,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::Binary,
+                            buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+                    //assert_eq!(expected.len() as isize, *out_len_or_ind);
+                    assert_eq!(
+                        expected,
+                        std::slice::from_raw_parts(buffer as *const u8, expected.len())
+                    );
+                };
+
+                bin_val_test(ARRAY_COL, &[]);
+                bin_val_test(BIN_COL, &[]);
+                bin_val_test(BOOL_COL, &[1u8]);
+                bin_val_test(DATETIME_COL, &[]);
+                bin_val_test(DOC_COL, &[]);
+                bin_val_test(DOUBLE_COL, &[]);
+                bin_val_test(I32_COL, &[]);
+                bin_val_test(I64_COL, &[]);
+                bin_val_test(JS_COL, &[]);
+                bin_val_test(JS_W_S_COL, &[]);
+                bin_val_test(MAXKEY_COL, &[]);
+                bin_val_test(MINKEY_COL, &[]);
+                bin_val_test(OID_COL, &[]);
+                bin_val_test(REGEX_COL, &[]);
+                bin_val_test(STRING_COL, &[]);
+                bin_val_test(UNIT_STR_COL, &[]);
+            }
+
+            {
+                let mut null_val_test = |col: u16| {
+                    assert_eq!(
+                        SqlReturn::SUCCESS,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::Binary,
+                            buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+                    assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                    assert_eq!(
+                        SqlReturn::NO_DATA,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::Binary,
+                            buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+                };
+
+                null_val_test(NULL_COL);
+                null_val_test(UNDEFINED_COL);
+            }
+            let _ = Box::from_raw(buffer);
+        }
+    }
+
+    #[test]
     fn sql_get_binary_data_by_pieces() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
