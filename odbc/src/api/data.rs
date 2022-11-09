@@ -143,11 +143,6 @@ impl IntoCData for Bson {
     }
 
     fn to_i32(&self) -> Result<(i32, Option<ODBCError>)> {
-        self.to_i64().map_err(|e| match e {
-            ODBCError::RestrictedDataType(s, _) => ODBCError::RestrictedDataType(s, INT32),
-            ODBCError::InvalidCharacterValue(s, _) => ODBCError::InvalidCharacterValue(s, INT32),
-            _ => e,
-        })?;
         match self {
             Bson::Double(x) if *x > i32::MAX as f64 => {
                 Err(ODBCError::IntegralTruncation(x.to_string()))
@@ -158,7 +153,18 @@ impl IntoCData for Bson {
             Bson::Decimal128(x) if self.to_f64()? > i32::MAX as f64 => {
                 Err(ODBCError::IntegralTruncation(x.to_string()))
             }
-            _ => self.to_i64().map(|(u, w)| (u as i32, w)),
+            _ => self.to_i64().map_or_else(
+                |e| match e {
+                    ODBCError::RestrictedDataType(s, _) => {
+                        Err(ODBCError::RestrictedDataType(s, INT32))
+                    }
+                    ODBCError::InvalidCharacterValue(s, _) => {
+                        Err(ODBCError::InvalidCharacterValue(s, INT32))
+                    }
+                    _ => Err(e),
+                },
+                |(u, w)| Ok((u as i32, w)),
+            ),
         }
     }
 
@@ -207,11 +213,6 @@ impl IntoCData for Bson {
     }
 
     fn to_u32(&self) -> Result<(u32, Option<ODBCError>)> {
-        self.to_u64().map_err(|e| match e {
-            ODBCError::RestrictedDataType(s, _) => ODBCError::RestrictedDataType(s, UINT32),
-            ODBCError::InvalidCharacterValue(s, _) => ODBCError::InvalidCharacterValue(s, UINT32),
-            _ => e,
-        })?;
         match self {
             Bson::Double(x) if *x > u32::MAX as f64 || *x < 0f64 => {
                 Err(ODBCError::IntegralTruncation(x.to_string()))
@@ -223,7 +224,18 @@ impl IntoCData for Bson {
                 Err(ODBCError::IntegralTruncation(x.to_string()))
             }
             Bson::Int32(x) if *x < 0i32 => Err(ODBCError::IntegralTruncation(x.to_string())),
-            _ => self.to_u64().map(|(u, w)| (u as u32, w)),
+            _ => self.to_i64().map_or_else(
+                |e| match e {
+                    ODBCError::RestrictedDataType(s, _) => {
+                        Err(ODBCError::RestrictedDataType(s, UINT32))
+                    }
+                    ODBCError::InvalidCharacterValue(s, _) => {
+                        Err(ODBCError::InvalidCharacterValue(s, UINT32))
+                    }
+                    _ => Err(e),
+                },
+                |(u, w)| Ok((u as u32, w)),
+            ),
         }
     }
 
