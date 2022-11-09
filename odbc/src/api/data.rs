@@ -8,7 +8,7 @@ use chrono::{
     DateTime, Datelike, Timelike,
 };
 use mongo_odbc_core::util::Decimal128Plus;
-use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp, UInteger, USmallInt};
+use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp, USmallInt};
 use odbc_sys::{Char, Integer, SmallInt, SqlReturn, WChar};
 use std::{cmp::min, collections::HashMap, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
 
@@ -143,20 +143,23 @@ impl IntoCData for Bson {
     }
 
     fn to_i32(&self) -> Result<(i32, Option<ODBCError>)> {
-        let (out_64, warning) = self.to_i64().map_err(|e| match e {
+        self.to_i64().map_err(|e| match e {
             ODBCError::RestrictedDataType(s, _) => ODBCError::RestrictedDataType(s, INT32),
             ODBCError::InvalidCharacterValue(s, _) => ODBCError::InvalidCharacterValue(s, INT32),
             _ => e,
         })?;
-        let out = out_64 as i32;
-        Ok((
-            out,
-            warning.or(if out as i64 != out_64 {
-                Some(ODBCError::IntegralTruncation(self.to_string()))
-            } else {
-                None
-            }),
-        ))
+        match self {
+            Bson::Double(x) if *x > i32::MAX as f64 => {
+                Err(ODBCError::IntegralTruncation(x.to_string()))
+            }
+            Bson::Int64(x) if *x > i32::MAX as i64 => {
+                Err(ODBCError::IntegralTruncation(x.to_string()))
+            }
+            Bson::Decimal128(x) if self.to_f64()? > i32::MAX as f64 => {
+                Err(ODBCError::IntegralTruncation(x.to_string()))
+            }
+            _ => self.to_i64().map(|(u, w)| (u as i32, w)),
+        }
     }
 
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)> {
@@ -204,7 +207,7 @@ impl IntoCData for Bson {
     }
 
     fn to_u32(&self) -> Result<(u32, Option<ODBCError>)> {
-        self.to_i64().map_err(|e| match e {
+        self.to_u64().map_err(|e| match e {
             ODBCError::RestrictedDataType(s, _) => ODBCError::RestrictedDataType(s, UINT32),
             ODBCError::InvalidCharacterValue(s, _) => ODBCError::InvalidCharacterValue(s, UINT32),
             _ => e,
@@ -1264,13 +1267,31 @@ mod unit {
             assert_eq!(
                 bson_double_to_u32.unwrap_err().get_sql_state(),
                 INTEGRAL_TRUNCATION,
-                "expected integral truncation"
+                "expected integral truncation error"
             );
 
             assert_eq!(
                 bson_int64_to_u32.unwrap_err().get_sql_state(),
                 INTEGRAL_TRUNCATION,
-                "expected integral truncation"
+                "expected integral truncation error"
+            );
+        }
+
+        #[test]
+        fn values_with_integral_truncation_to_i32_fail() {
+            let bson_double_to_i32 = Bson::Double(f64::MAX - 0.1).to_i32();
+            let bson_int64_to_i32 = Bson::Int64(i64::MAX).to_i32();
+
+            assert_eq!(
+                bson_double_to_i32.unwrap_err().get_sql_state(),
+                INTEGRAL_TRUNCATION,
+                "expected integral truncation error"
+            );
+
+            assert_eq!(
+                bson_int64_to_i32.unwrap_err().get_sql_state(),
+                INTEGRAL_TRUNCATION,
+                "expected integral truncation error"
             );
         }
 
@@ -1296,14 +1317,6 @@ mod unit {
                 bson_int32_to_u32.unwrap_err().get_sql_state(),
                 INTEGRAL_TRUNCATION
             );
-        }
-
-        #[test]
-        fn conversion_to_i32_with_truncation() {
-            let bson_double_max_to_i32_with_fractional = Bson::Double(f64::MAX - 0.1).to_i32();
-            let bosn_double_min_to_i32_with_fractional = Bson::Double(f64::MIN + 0.1).to_i32();
-            let bson_int64_max_to_i32 = Bson::Int64(i64::MAX).to_i32();
-            let bson_int64_min_to_i32 = Bson::Int64(i64::MIN).to_i32();
         }
     }
 
