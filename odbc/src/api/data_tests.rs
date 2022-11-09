@@ -564,9 +564,9 @@ mod unit {
             let buffer_length: isize = 100;
             let out_len_or_ind = &mut 0;
             {
-                let mut bin_val_test = |col: u16, expected: &[u8]| {
+                let mut bin_val_test = |col: u16, expected: &[u8], code: SqlReturn| {
                     assert_eq!(
-                        SqlReturn::SUCCESS,
+                        code,
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
@@ -576,29 +576,69 @@ mod unit {
                             out_len_or_ind,
                         )
                     );
-                    //assert_eq!(expected.len() as isize, *out_len_or_ind);
-                    assert_eq!(
-                        expected,
-                        std::slice::from_raw_parts(buffer as *const u8, expected.len())
-                    );
+                    match code {
+                        SqlReturn::SUCCESS => {
+                            assert_eq!(expected.len() as isize, *out_len_or_ind);
+                            assert_eq!(
+                                expected,
+                                std::slice::from_raw_parts(buffer as *const u8, expected.len())
+                            );
+                        }
+                        _ => (),
+                    }
                 };
 
-                bin_val_test(ARRAY_COL, &[]);
-                bin_val_test(BIN_COL, &[]);
-                bin_val_test(BOOL_COL, &[1u8]);
-                bin_val_test(DATETIME_COL, &[]);
-                bin_val_test(DOC_COL, &[]);
-                bin_val_test(DOUBLE_COL, &[]);
-                bin_val_test(I32_COL, &[]);
-                bin_val_test(I64_COL, &[]);
-                bin_val_test(JS_COL, &[]);
-                bin_val_test(JS_W_S_COL, &[]);
-                bin_val_test(MAXKEY_COL, &[]);
-                bin_val_test(MINKEY_COL, &[]);
-                bin_val_test(OID_COL, &[]);
-                bin_val_test(REGEX_COL, &[]);
-                bin_val_test(STRING_COL, &[]);
-                bin_val_test(UNIT_STR_COL, &[]);
+                bin_val_test(ARRAY_COL, &[], SqlReturn::ERROR);
+                bin_val_test(BIN_COL, &[5, 6, 42], SqlReturn::SUCCESS);
+                bin_val_test(BOOL_COL, &[1u8], SqlReturn::SUCCESS);
+                bin_val_test(
+                    DATETIME_COL,
+                    &[
+                        222, 7, 0, 0, 11, 0, 0, 0, 28, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0,
+                        0, 0, 0, 0, 0,
+                    ],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(DOC_COL, &[], SqlReturn::ERROR);
+                let errors_len = (*stmt_handle)
+                    .as_statement()
+                    .unwrap()
+                    .read()
+                    .unwrap()
+                    .errors
+                    .len();
+                assert_eq!(
+                    "[MongoDB][API] BSON type object cannot be converted to ODBC type Binary"
+                        .to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[errors_len - 1]
+                    ),
+                );
+                bin_val_test(
+                    DOUBLE_COL,
+                    &[205, 204, 204, 204, 204, 204, 244, 63],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(I32_COL, &[1, 0, 0, 0], SqlReturn::SUCCESS);
+                bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0], SqlReturn::SUCCESS);
+                bin_val_test(JS_COL, &[], SqlReturn::ERROR);
+                bin_val_test(JS_W_S_COL, &[], SqlReturn::ERROR);
+                bin_val_test(MAXKEY_COL, &[], SqlReturn::ERROR);
+                bin_val_test(MINKEY_COL, &[], SqlReturn::ERROR);
+                bin_val_test(OID_COL, &[], SqlReturn::ERROR);
+                bin_val_test(REGEX_COL, &[], SqlReturn::ERROR);
+                bin_val_test(
+                    STRING_COL,
+                    &[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(UNIT_STR_COL, &[97], SqlReturn::SUCCESS);
             }
 
             {
@@ -631,6 +671,7 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
+
             let _ = Box::from_raw(buffer);
         }
     }
@@ -661,11 +702,16 @@ mod unit {
                                 out_len_or_ind,
                             )
                         );
-                        assert_eq!(expected_out_len, *out_len_or_ind);
-                        assert_eq!(
-                            expected,
-                            std::slice::from_raw_parts(buffer as *const u8, expected.len()),
-                        );
+                        match code {
+                            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => {
+                                assert_eq!(expected_out_len, *out_len_or_ind);
+                                assert_eq!(
+                                    expected,
+                                    std::slice::from_raw_parts(buffer as *const u8, expected.len())
+                                );
+                            }
+                            _ => (),
+                        }
                     };
 
                 bin_val_test(BIN_COL, 3, &[5u8, 6u8], SqlReturn::SUCCESS_WITH_INFO);
@@ -683,31 +729,6 @@ mod unit {
                 );
                 bin_val_test(BIN_COL, 1, &[42u8], SqlReturn::SUCCESS);
                 bin_val_test(BIN_COL, 0, &[], SqlReturn::NO_DATA);
-
-                assert_eq!(
-                    SqlReturn::ERROR,
-                    SQLGetData(
-                        stmt_handle as *mut _,
-                        UNICODE_COL,
-                        CDataType::Binary,
-                        buffer,
-                        buffer_length,
-                        out_len_or_ind,
-                    )
-                );
-                assert_eq!(
-                    "[MongoDB][API] BSON type string cannot be converted to ODBC type Binary"
-                        .to_string(),
-                    format!(
-                        "{}",
-                        (*stmt_handle)
-                            .as_statement()
-                            .unwrap()
-                            .read()
-                            .unwrap()
-                            .errors[1]
-                    ),
-                );
             }
             let _ = Box::from_raw(buffer);
         }
