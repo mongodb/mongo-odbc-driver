@@ -576,15 +576,12 @@ mod unit {
                             out_len_or_ind,
                         )
                     );
-                    match code {
-                        SqlReturn::SUCCESS => {
-                            assert_eq!(expected.len() as isize, *out_len_or_ind);
-                            assert_eq!(
-                                expected,
-                                std::slice::from_raw_parts(buffer as *const u8, expected.len())
-                            );
-                        }
-                        _ => (),
+                    if code == SqlReturn::SUCCESS {
+                        assert_eq!(expected.len() as isize, *out_len_or_ind);
+                        assert_eq!(
+                            expected,
+                            std::slice::from_raw_parts(buffer as *const u8, expected.len())
+                        );
                     }
                 };
 
