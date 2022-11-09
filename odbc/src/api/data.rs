@@ -29,8 +29,8 @@ trait IntoCData {
     fn to_json(self) -> String;
     fn to_binary(self) -> Result<Vec<u8>>;
     fn to_guid(self) -> Result<Vec<u8>>;
-    fn to_f64(&self) -> Result<f64>;
-    fn to_f32(&self) -> Result<f32>;
+    fn to_f64(&self) -> Result<(f64, Option<ODBCError>)>;
+    fn to_f32(&self) -> Result<(f32, Option<ODBCError>)>;
     fn to_i64(&self) -> Result<(i64, Option<ODBCError>)>;
     fn to_i32(&self) -> Result<(i32, Option<ODBCError>)>;
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)>;
@@ -60,6 +60,11 @@ fn i64_to_bit(i: i64) -> Result<(u8, Option<ODBCError>)> {
         1 => Ok((1u8, None)),
         _ => Err(ODBCError::IntegralTruncation(i.to_string())),
     }
+}
+
+fn from_string(s: &str, conversion_error_type: &'static str) -> Result<f64> {
+    f64::from_str(s)
+        .map_err(|_| ODBCError::InvalidCharacterValue(s.to_string(), conversion_error_type))
 }
 
 impl IntoCData for Bson {
@@ -118,29 +123,46 @@ impl IntoCData for Bson {
         }
     }
 
-    fn to_f64(&self) -> Result<f64> {
+    fn to_f64(&self) -> Result<(f64, Option<ODBCError>)> {
         match self {
-            Bson::Double(f) => Ok(*f),
-            Bson::String(s) => {
-                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), DOUBLE))
-            }
-            Bson::Boolean(b) => Ok(if *b { 1.0 } else { 0.0 }),
-            Bson::Int32(i) => Ok(*i as f64),
-            Bson::Int64(i) => Ok(*i as f64),
+            Bson::Double(f) => Ok((*f, None)),
+            Bson::String(s) => Bson::Double(from_string(s, DOUBLE)?).to_f64(),
+            Bson::Boolean(b) => Ok((if *b { 1.0 } else { 0.0 }, None)),
+            Bson::Int32(i) => Ok((*i as f64, None)),
+            Bson::Int64(i) => Ok((*i as f64, None)),
             Bson::Decimal128(d) => {
                 let d_str = d.to_formatted_string();
-                f64::from_str(&d_str).map_err(|_| ODBCError::InvalidCharacterValue(d_str, DOUBLE))
+                Bson::Double(from_string(&d_str, DOUBLE)?).to_f64()
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
         }
     }
 
-    fn to_f32(&self) -> Result<f32> {
-        // this is mildly inefficient, unlike converting to i64 and then i32 which is essentially
-        // free (on x86_64 you can literally just change the register address from e.g., RAX to EAX,
-        // so it's literally a no-op), but since mongodb does not actually support 32 bit floats, we would need to do this
-        // conversion somewhere, anyway.
-        Ok(self.to_f64()? as f32)
+    fn to_f32(&self) -> Result<(f32, Option<ODBCError>)> {
+        match self {
+            Bson::Double(f) => {
+                if *f > f32::MAX as f64 || *f < f32::MIN as f64 {
+                    Err(ODBCError::IntegralTruncation(f.to_string()))
+                } else if f.fract() != (*f as f32).fract() as f64 {
+                    Ok((
+                        *f as f32,
+                        Some(ODBCError::FractionalTruncation(f.to_string())),
+                    ))
+                } else {
+                    Ok((*f as f32, None))
+                }
+            }
+            Bson::String(s) => Bson::Double(from_string(s, DOUBLE)?).to_f32(),
+
+            Bson::Boolean(b) => Ok((if *b { 1.0 } else { 0.0 }, None)),
+            Bson::Int32(i) => Ok((*i as f32, None)),
+            Bson::Int64(i) => Ok((*i as f32, None)),
+            Bson::Decimal128(d) => {
+                let d_str = d.to_formatted_string();
+                Bson::Double(from_string(&d_str, DOUBLE)?).to_f32()
+            }
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
+        }
     }
 
     fn to_i64(&self) -> Result<(i64, Option<ODBCError>)> {
@@ -169,7 +191,7 @@ impl IntoCData for Bson {
             // different result here than if we had a conversion from Decimal128 to i64 directly.
             // We should update this when the bson crate supports Decimal128 entirely.
             Bson::Decimal128(_) => {
-                let out = self.to_f64()?;
+                let (out, _) = self.to_f64()?;
                 if out > i64::MAX as f64 || out < i64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
@@ -195,10 +217,20 @@ impl IntoCData for Bson {
             Bson::Int64(i) if *i > i32::MAX as i64 || *i < i32::MIN as i64 => {
                 Err(ODBCError::IntegralTruncation(i.to_string()))
             }
-            Bson::Decimal128(d)
-                if self.to_f64()? > i32::MAX as f64 || self.to_f64()? < i32::MIN as f64 =>
-            {
-                Err(ODBCError::IntegralTruncation(d.to_string()))
+            Bson::Decimal128(_) => {
+                let (out, _) = self.to_f64()?;
+                if out > i32::MAX as f64 || out < i32::MIN as f64 {
+                    Err(ODBCError::IntegralTruncation(out.to_string()))
+                } else {
+                    Ok((
+                        out as i32,
+                        if out.floor() != out {
+                            Some(ODBCError::FractionalTruncation(out.to_string()))
+                        } else {
+                            None
+                        },
+                    ))
+                }
             }
             Bson::String(s) => Bson::Double(
                 f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), INT32))?,
@@ -262,8 +294,8 @@ impl IntoCData for Bson {
             // different result here than if we had a conversion from Decimal128 to i64 directly.
             // We should update this when the bson crate supports Decimal128 entirely.
             Bson::Decimal128(_) => {
-                let out = self.to_f64()?;
-                if out < 0f64 {
+                let (out, _) = self.to_f64()?;
+                if out > u64::MAX as f64 || out < u64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
                     Ok((
@@ -288,8 +320,20 @@ impl IntoCData for Bson {
             Bson::Int64(i) if *i > u32::MAX as i64 || *i < 0i64 => {
                 Err(ODBCError::IntegralTruncation(i.to_string()))
             }
-            Bson::Decimal128(d) if self.to_f64()? > u32::MAX as f64 || self.to_f64()? < 0f64 => {
-                Err(ODBCError::IntegralTruncation(d.to_string()))
+            Bson::Decimal128(_) => {
+                let (out, _) = self.to_f64()?;
+                if out > u32::MAX as f64 || out < u32::MIN as f64 {
+                    Err(ODBCError::IntegralTruncation(out.to_string()))
+                } else {
+                    Ok((
+                        out as u32,
+                        if out.floor() != out {
+                            Some(ODBCError::FractionalTruncation(out.to_string()))
+                        } else {
+                            None
+                        },
+                    ))
+                }
             }
             Bson::Int32(i) if *i < 0i32 => Err(ODBCError::IntegralTruncation(i.to_string())),
             Bson::String(s) => Bson::Double(
@@ -335,7 +379,7 @@ impl IntoCData for Bson {
             Bson::Int32(i) => i64_to_bit(*i as i64),
             Bson::Int64(i) => i64_to_bit(*i),
             Bson::Decimal128(_) => {
-                let f = self.to_f64()?;
+                let (f, _) = self.to_f64()?;
                 f64_to_bit(f)
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BIT)),
@@ -1328,38 +1372,51 @@ mod unit {
         macro_rules! test_conversion_ok {
             (input = $input:expr, method = $method:tt, expected = $expected:expr, info = $info:expr) => {
                 let actual = $input.$method();
-                assert!(actual.is_ok(), "{:?}", actual);
                 match actual {
                     Ok(r) => {
-                        assert_eq!($expected, r.0, "expected {}, got {}", $expected, r.0);
+                        assert_eq!(
+                            $expected,
+                            r.0,
+                            "expected {:?}, got {:?} calling method {} with {}",
+                            $expected,
+                            r.0,
+                            stringify!($method),
+                            $input
+                        );
                         if r.1.is_some() {
                             let odbc_info = r.1.unwrap().get_sql_state().to_string();
                             assert_eq!(
                                 $info, odbc_info,
-                                "expected success with info {}, got {}",
-                                $info, odbc_info
+                                "expected success with info {:?}, got {:?} calling method {} with {}",
+                                $info, odbc_info, stringify!($method), $input
                             );
                         }
                     }
-                    Err(e) => unreachable!("should not have had an err {:?}", e),
+                    Err(e) => unreachable!("should not have had an err {:?} calling method {} with {}", e, stringify!($method), $input),
                 }
             };
         }
         macro_rules! test_conversion_err {
             (input = $input:expr, method = $method:tt, expected = $expected:expr, info = $info:expr) => {
                 let actual = $input.$method();
-                assert!(actual.is_err(), "{:?}", actual);
                 match actual {
                     Err(e) => {
                         assert_eq!(
                             $info,
                             e.get_sql_state(),
-                            "expected {}, got {}",
+                            "expected {:?}, got {:?} calling method {:?} on {}",
                             $info,
-                            e.get_sql_state()
+                            e.get_sql_state(),
+                            stringify!($method),
+                            $input
                         );
                     }
-                    Ok(r) => unreachable!("should not have had an Ok {:?}", r),
+                    Ok(r) => unreachable!(
+                        "should not have had an Ok {:?} calling method {} with {}",
+                        r,
+                        stringify!($method),
+                        $input
+                    ),
                 }
             };
         }
@@ -1432,6 +1489,38 @@ mod unit {
                                 info = info.unwrap_or_default()
                             );
                         }
+                        (&"f64", Ok(()), info) => {
+                            test_conversion_ok!(
+                                input = $bson,
+                                method = to_f64,
+                                expected = *expected as f64,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"f64", Err(()), info) => {
+                            test_conversion_err!(
+                                input = $bson,
+                                method = to_f64,
+                                expected = *expected as f64,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"f32", Ok(()), info) => {
+                            test_conversion_ok!(
+                                input = $bson,
+                                method = to_f32,
+                                expected = *expected as f32,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"f32", Err(()), info) => {
+                            test_conversion_err!(
+                                input = $bson,
+                                method = to_f32,
+                                expected = *expected as f32,
+                                info = info.unwrap_or_default()
+                            );
+                        }
                         _ => unimplemented!(),
                     },
                 );
@@ -1449,7 +1538,7 @@ mod unit {
                     ("i64", -3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
                     ("i32", -3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
                     ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION))
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
                 ],
                 PI.to_string() => vec![
                     ("i64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
@@ -1480,6 +1569,32 @@ mod unit {
                     ("i32", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
                     ("u64", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
                     ("u32", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
+                ],
+            };
+            strings.iter().for_each(|(k, v)| {
+                let bson = Bson::String(k.to_string());
+                test_it!(bson, v);
+            });
+        }
+        #[test]
+        fn string_conversions_to_floats() {
+            type V = Vec<(&'static str, f64, Result<(), ()>, Option<&'static str>)>;
+            let strings: HashMap<String, V> = map! {
+                (-PI).to_string() => vec![
+                    ("f64", -PI, Ok(()), None),
+                    ("f32", -PI, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                ],
+                PI.to_string() => vec![
+                    ("f64", PI, Ok(()), None),
+                    ("f32", PI, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                ],
+                f64::MAX.to_string() => vec![
+                    ("f64", f64::MAX, Ok(()), None),
+                    ("f32", 0., Err(()), Some(INTEGRAL_TRUNCATION)),
+                ],
+                "foo".to_string() => vec![
+                    ("f64", 0., Err(()), Some(INVALID_CHARACTER_VALUE)),
+                    ("f32", 0., Err(()), Some(INVALID_CHARACTER_VALUE)),
                 ],
             };
             strings.iter().for_each(|(k, v)| {
