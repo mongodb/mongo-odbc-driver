@@ -1219,7 +1219,40 @@ mod unit {
         }
 
         #[test]
-        fn positive_values_with_truncation_to_u64_succeed_with_info() {
+        fn positive_values_without_truncation_to_i64_succeed() {
+            let bson_double_to_i64 = Bson::Double(42.).to_i64();
+            let bson_int64_to_i64 = Bson::Int64(42).to_i64();
+            let bson_int32_to_i64 = Bson::Int32(42).to_i64();
+
+            assert_eq!(bson_double_to_i64.unwrap().0, 42);
+            assert_eq!(bson_int64_to_i64.unwrap().0, 42);
+            assert_eq!(bson_int32_to_i64.unwrap().0, 42);
+        }
+
+        #[test]
+        fn positive_values_without_truncation_to_u32_succeed() {
+            let bson_double_to_u32 = Bson::Double(42.).to_u32();
+            let bson_int64_to_u32 = Bson::Int64(42).to_u32();
+            let bson_int32_to_u32 = Bson::Int32(42).to_u32();
+
+            assert_eq!(bson_double_to_u32.unwrap().0, 42);
+            assert_eq!(bson_int64_to_u32.unwrap().0, 42);
+            assert_eq!(bson_int32_to_u32.unwrap().0, 42);
+        }
+
+        #[test]
+        fn positive_values_without_truncation_to_i32_succeed() {
+            let bson_double_to_i32 = Bson::Double(42.).to_u32();
+            let bson_int64_to_i32 = Bson::Int64(42).to_u32();
+            let bson_int32_to_i32 = Bson::Int32(42).to_u32();
+
+            assert_eq!(bson_double_to_i32.unwrap().0, 42);
+            assert_eq!(bson_int64_to_i32.unwrap().0, 42);
+            assert_eq!(bson_int32_to_i32.unwrap().0, 42);
+        }
+
+        #[test]
+        fn positive_values_with_fractional_truncation_to_u64_succeed_with_info() {
             let bson_double_to_u64 = Bson::Double(42.05).to_u64();
 
             assert_eq!(bson_double_to_u64.as_ref().unwrap().0, 42);
@@ -1228,35 +1261,38 @@ mod unit {
                 FRACTIONAL_TRUNCATION
             );
         }
-        #[test]
-        fn negative_values_to_u64_fail() {
-            let bson_double_to_u64 = Bson::Double(-42.).to_u64();
-            let bson_int64_to_u64 = Bson::Int64(-42).to_u64();
-            let bson_int32_to_u64 = Bson::Int32(-42).to_u64();
 
+        #[test]
+        fn positive_values_with_fractional_truncation_to_i64_succeed_with_info() {
+            let bson_double_to_i64 = Bson::Double(42.05).to_i64();
+
+            assert_eq!(bson_double_to_i64.as_ref().unwrap().0, 42);
             assert_eq!(
-                bson_double_to_u64.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
-            );
-            assert_eq!(
-                bson_int64_to_u64.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
-            );
-            assert_eq!(
-                bson_int32_to_u64.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
+                bson_double_to_i64.unwrap().1.unwrap().get_sql_state(),
+                FRACTIONAL_TRUNCATION
             );
         }
 
         #[test]
-        fn positive_values_without_truncation_to_u32_succeed() {
-            let bson_double_to_u32 = Bson::Double(u32::MAX as f64).to_u32();
-            let bson_int64_to_u32 = Bson::Int64(u32::MAX as i64).to_u32();
-            let bson_int32_to_u32 = Bson::Int32(i32::MAX as i32).to_u32();
+        fn positive_values_with_fractional_truncation_to_u32_succeed_with_info() {
+            let bson_double_to_u32 = Bson::Double(42.05).to_i64();
 
-            assert_eq!(bson_double_to_u32.unwrap().0, u32::MAX as u32,);
-            assert_eq!(bson_int64_to_u32.unwrap().0, u32::MAX as u32);
-            assert_eq!(bson_int32_to_u32.unwrap().0, i32::MAX as u32);
+            assert_eq!(bson_double_to_u32.as_ref().unwrap().0, 42);
+            assert_eq!(
+                bson_double_to_u32.unwrap().1.unwrap().get_sql_state(),
+                FRACTIONAL_TRUNCATION
+            );
+        }
+
+        #[test]
+        fn positive_values_with_fractional_truncation_to_i32_succeed_with_info() {
+            let bson_double_to_i32 = Bson::Double(42.05).to_i64();
+
+            assert_eq!(bson_double_to_i32.as_ref().unwrap().0, 42);
+            assert_eq!(
+                bson_double_to_i32.unwrap().1.unwrap().get_sql_state(),
+                FRACTIONAL_TRUNCATION
+            );
         }
 
         #[test]
@@ -1315,6 +1351,30 @@ mod unit {
             );
             assert_eq!(
                 bson_int32_to_u32.unwrap_err().get_sql_state(),
+                INTEGRAL_TRUNCATION
+            );
+        }
+
+        #[test]
+        fn negative_values_to_u64_fail() {
+            let bson_double_to_u64 = Bson::Double(-42.).to_u32();
+            let bson_int64_to_u64 = Bson::Int64(-42).to_u32();
+            let bson_int32_to_u64 = Bson::Int32(-42).to_u32();
+
+            assert!(bson_double_to_u64.is_err());
+            assert!(bson_int64_to_u64.is_err());
+            assert!(bson_int32_to_u64.is_err());
+
+            assert_eq!(
+                bson_double_to_u64.unwrap_err().get_sql_state(),
+                INTEGRAL_TRUNCATION
+            );
+            assert_eq!(
+                bson_int64_to_u64.unwrap_err().get_sql_state(),
+                INTEGRAL_TRUNCATION
+            );
+            assert_eq!(
+                bson_int32_to_u64.unwrap_err().get_sql_state(),
                 INTEGRAL_TRUNCATION
             );
         }
