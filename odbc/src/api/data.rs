@@ -1425,9 +1425,9 @@ mod unit {
 
         #[test]
         fn negative_values_to_u64_fail() {
-            let bson_double_to_u64 = Bson::Double(-42.).to_u32();
-            let bson_int64_to_u64 = Bson::Int64(-42).to_u32();
-            let bson_int32_to_u64 = Bson::Int32(-42).to_u32();
+            let bson_double_to_u64 = Bson::Double(-42.).to_u64();
+            let bson_int64_to_u64 = Bson::Int64(-42).to_u64();
+            let bson_int32_to_u64 = Bson::Int32(-42).to_u64();
 
             assert!(bson_double_to_u64.is_err());
             assert!(bson_int64_to_u64.is_err());
