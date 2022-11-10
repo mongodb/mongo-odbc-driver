@@ -161,14 +161,16 @@ impl IntoCData for Bson {
                 Err(ODBCError::IntegralTruncation(x.to_string()))
             }
             _ => self.to_i64().map_or_else(
-                |e| match e {
-                    ODBCError::RestrictedDataType(s, _) => {
-                        Err(ODBCError::RestrictedDataType(s, INT32))
-                    }
-                    ODBCError::InvalidCharacterValue(s, _) => {
-                        Err(ODBCError::InvalidCharacterValue(s, INT32))
-                    }
-                    _ => Err(e),
+                |e| {
+                    Err(match e {
+                        ODBCError::RestrictedDataType(s, _) => {
+                            ODBCError::RestrictedDataType(s, INT32)
+                        }
+                        ODBCError::InvalidCharacterValue(s, _) => {
+                            ODBCError::InvalidCharacterValue(s, INT32)
+                        }
+                        _ => e,
+                    })
                 },
                 |(u, w)| Ok((u as i32, w)),
             ),
@@ -232,14 +234,16 @@ impl IntoCData for Bson {
             }
             Bson::Int32(x) if *x < 0i32 => Err(ODBCError::IntegralTruncation(x.to_string())),
             _ => self.to_i64().map_or_else(
-                |e| match e {
-                    ODBCError::RestrictedDataType(s, _) => {
-                        Err(ODBCError::RestrictedDataType(s, UINT32))
-                    }
-                    ODBCError::InvalidCharacterValue(s, _) => {
-                        Err(ODBCError::InvalidCharacterValue(s, UINT32))
-                    }
-                    _ => Err(e),
+                |e| {
+                    Err(match e {
+                        ODBCError::RestrictedDataType(s, _) => {
+                            ODBCError::RestrictedDataType(s, UINT32)
+                        }
+                        ODBCError::InvalidCharacterValue(s, _) => {
+                            ODBCError::InvalidCharacterValue(s, UINT32)
+                        }
+                        _ => e,
+                    })
                 },
                 |(u, w)| Ok((u as u32, w)),
             ),
