@@ -39,6 +39,7 @@ const UNDEFINED_COL: u16 = 17;
 const UNICODE_COL: u16 = 18;
 const NEGATIVE_COL: u16 = 19;
 const UNIT_STR_COL: u16 = 20;
+const GUID_COL: u16 = 21;
 
 lazy_static! {
     static ref CHRONO_TIME: chrono::DateTime<Utc> = "2014-11-28T12:00:09Z".parse().unwrap();
@@ -77,6 +78,10 @@ lazy_static! {
                 "unicode": "你好，世界，这是一个中文句子",
                 "negative_long": -1i64,
                 "unit_str": "a",
+                "guid": Bson::Binary(Binary {
+                    subtype: BinarySubtype::Uuid,
+                    bytes: vec![0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8, 15u8],
+                }),
             }}],
             vec![
                 MongoColMetadata::new(
@@ -226,6 +231,13 @@ lazy_static! {
                     "test".to_string(),
                     "unit_str".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+                    ColumnNullability::NoNulls,
+                ),
+                MongoColMetadata::new(
+                    "",
+                    "test".to_string(),
+                    "guid".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
                     ColumnNullability::NoNulls,
                 ),
             ],
@@ -502,6 +514,79 @@ mod unit {
                 str_val_test(UNICODE_COL, 0, "", SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(char_buffer);
+        }
+    }
+
+    #[test]
+    fn sql_get_guid_data() {
+        use crate::api::functions::SQLGetData;
+        use odbc_sys::CDataType;
+        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        unsafe {
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
+            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
+            let buffer_length: isize = 100;
+            let out_len_or_ind = &mut 0;
+            {
+                let mut guid_val_test = |col: u16, expected: &[u8], code: SqlReturn| {
+                    assert_eq!(
+                        code,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::Guid,
+                            buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+
+                    assert_eq!(
+                        expected,
+                        std::slice::from_raw_parts(buffer as *const u8, expected.len()),
+                    );
+                };
+
+                guid_val_test(BIN_COL, &[], SqlReturn::ERROR);
+                assert_eq!(
+                    "[MongoDB][API] BSON type binary with non-uuid subtype cannot be converted to ODBC type GUID"
+                        .to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[0]
+                    ),
+                );
+                guid_val_test(STRING_COL, &[], SqlReturn::ERROR);
+                assert_eq!(
+                    "[MongoDB][API] BSON type string cannot be converted to ODBC type GUID"
+                        .to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[1]
+                    ),
+                );
+                guid_val_test(
+                    GUID_COL,
+                    &[
+                        0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8,
+                        15u8,
+                    ],
+                    SqlReturn::SUCCESS,
+                );
+            }
+            let _ = Box::from_raw(buffer);
         }
     }
 

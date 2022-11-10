@@ -2,7 +2,7 @@ use crate::{
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle},
 };
-use bson::{spec::BinarySubtype, Binary, Bson};
+use bson::{spec::BinarySubtype, Bson};
 use chrono::{
     offset::{TimeZone, Utc},
     DateTime, Datelike, Timelike,
@@ -93,7 +93,7 @@ impl IntoCData for Bson {
                     Ok(b.bytes)
                 }
             }
-            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BINARY)),
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), GUID)),
         }
     }
 
