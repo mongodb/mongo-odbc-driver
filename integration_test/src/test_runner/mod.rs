@@ -367,7 +367,6 @@ fn validate_result_set(
                         actual: columns,
                     });
                 }
-
                 for i in 0..(columns) {
                     let expected_field = expected_row.get(i).unwrap();
                     let expected_data_type = if expected_field.is_number() {
@@ -418,41 +417,36 @@ fn get_data(
             BUFFER_LENGTH as isize,
             out_len_or_ind,
         ) {
-            SqlReturn::SUCCESS => {}
-            sql_return => {
-                return Err(Error::OdbcFunctionFailed(
-                    "SQLGetData".to_string(),
-                    format!("{:?}", sql_return),
-                ))
+            SqlReturn::SUCCESS => {
+                if *out_len_or_ind == SQL_NULL_DATA {
+                    data = json!(null);
+                } else if data_type == CDataType::Char {
+                    data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
+                        [0..*out_len_or_ind as usize]
+                        .to_string());
+                } else if data_type == CDataType::SLong {
+                    data = json!(*(buffer as *const i64));
+                }
+                Ok(data)
             }
-        }
-
-        if *out_len_or_ind == SQL_NULL_DATA {
-            data = json!(null);
-        } else if data_type == CDataType::Char {
-            data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
-                [0..*out_len_or_ind as usize]
-                .to_string());
-        } else if data_type == CDataType::SLong {
-            data = json!(*(buffer as *const i64));
+            sql_return => Err(Error::OdbcFunctionFailed(
+                "SQLGetData".to_string(),
+                format!("{:?}", sql_return),
+            )),
         }
     }
-    Ok(data)
 }
 
 fn get_column_count(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<usize, Error> {
     unsafe {
         let columns = &mut 0;
         match odbc_sys::SQLNumResultCols(stmt.handle() as HStmt, columns) {
-            SqlReturn::SUCCESS => {}
-            sql_return => {
-                return Err(Error::OdbcFunctionFailed(
-                    "SQLNumResultCols".to_string(),
-                    format!("{:?}", sql_return),
-                ))
-            }
+            SqlReturn::SUCCESS => Ok(*columns as usize),
+            sql_return => Err(Error::OdbcFunctionFailed(
+                "SQLNumResultCols".to_string(),
+                format!("{:?}", sql_return),
+            )),
         }
-        Ok(*columns as usize)
     }
 }
 
