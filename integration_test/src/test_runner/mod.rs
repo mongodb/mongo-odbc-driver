@@ -193,15 +193,12 @@ fn run_query_test(
             to_wstr_ptr(query),
             query.len() as i32,
         ) {
-            SqlReturn::SUCCESS => {}
-            sql_return => {
-                return Err(Error::OdbcFunctionFailed(
-                    "SQLExecDirectW".to_string(),
-                    format!("{:?}", sql_return),
-                ))
-            }
+            SqlReturn::SUCCESS => validate_result_set(entry, stmt),
+            sql_return => Err(Error::OdbcFunctionFailed(
+                "SQLExecDirectW".to_string(),
+                format!("{:?}", sql_return),
+            )),
         }
-        validate_result_set(entry, stmt)
     }
 }
 
@@ -371,8 +368,8 @@ fn validate_result_set(
                     });
                 }
 
-                for i in 1..(columns + 1) {
-                    let expected_field = expected_row.get(i - 1).unwrap();
+                for i in 0..(columns) {
+                    let expected_field = expected_row.get(i).unwrap();
                     let expected_data_type = if expected_field.is_number() {
                         CDataType::SLong
                     } else {
@@ -414,7 +411,8 @@ fn get_data(
     unsafe {
         match odbc_sys::SQLGetData(
             stmt.handle() as *mut _,
-            column,
+            // Result set columns start at 1, the column input parameter is 0-indexed
+            column + 1,
             data_type,
             buffer as *mut _,
             BUFFER_LENGTH as isize,
