@@ -27,7 +27,7 @@ pub fn generate_default_connection_str() -> String {
 
     // If a db is specified add it to the connection string
     match db {
-        Ok(val) => connection_string.push_str(&("DATABASE=".to_owned() + &val)),
+        Ok(val) => connection_string.push_str(&("DATABASE=".to_owned() + &val + ";")),
         Err(_e) => (), // Do nothing
     };
 

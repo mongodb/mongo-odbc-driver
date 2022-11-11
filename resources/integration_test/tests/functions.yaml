@@ -1,6 +1,9 @@
 tests:
-  - description: stub function test
-    skip_reason: "SQL-987: Create ODBC Result Set function tests"
-    test_definition: [  ]
+  - description: SQLTablesW function get all catalogs
+    test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "", 0 ]
     db: integration_test
+    expected_result:
+      - ["db2", null, null, null, null]
+      - ["integration_test", null, null, null, null]
+
 
