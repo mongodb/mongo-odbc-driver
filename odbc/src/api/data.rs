@@ -5,7 +5,7 @@ use crate::{
 use bson::Bson;
 use chrono::{
     offset::{TimeZone, Utc},
-    DateTime, Datelike, Timelike, NaiveTime, NaiveDate
+    DateTime, Datelike, Timelike, NaiveTime, NaiveDate, NaiveDateTime
 };
 use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp, USmallInt};
@@ -198,9 +198,19 @@ impl IntoCData for Bson {
     fn to_datetime(&self) -> Result<DateTime<Utc>> {
         match self {
             Bson::DateTime(d) => Ok((*d).into()),
-            Bson::String(s) => Utc
-                .datetime_from_str(s, "%FT%H:%M:%S%.3fZ")
-                .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone())),
+            Bson::String(s) => {
+                if s.contains("T") { // received a valid datetime string
+                    return Utc
+                    .datetime_from_str(s, "%FT%H:%M:%S%.3fZ")
+                    .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()));
+                } else if s.contains("-") { // received a valid date string
+                    let date = NaiveDate::parse_from_str(s, "%F").map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                    return Ok(DateTime::<Utc>::from_utc(date.and_hms(0, 0, 0), Utc))
+                } else { // received a time string -- should return utc today + time
+                    let time = NaiveTime::parse_from_str(s, "%H:%M:%S%.3f").map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                    return Ok(DateTime::<Utc>::from_utc(NaiveDateTime::new(Utc::today().naive_utc(), time), Utc))
+                }
+            },
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
         }
     }
@@ -1461,6 +1471,87 @@ mod unit {
             assert_eq!(
                 bson_date_from_datetime.unwrap(),
                 NaiveDate::from_ymd(2014, 11, 28)
+            )
+        }
+    }
+
+    mod convert_to_datetime {
+        use crate::api::data::IntoCData;
+        use bson::Bson;
+        use chrono::{Utc, Timelike};
+        use constants::INVALID_DATETIME_FORMAT;
+
+        #[test]
+        fn valid_timestamp_string_success() {
+            let datetime_from_valid_string = Bson::String("2022-10-04T05:10:15.123Z".to_string()).to_datetime();
+            let expectation: chrono::DateTime<Utc> = "2022-10-04T05:10:15.123Z".parse().unwrap();
+            assert_eq!(
+                datetime_from_valid_string.unwrap(),
+                expectation
+            )
+        }
+
+        #[test]
+        fn valid_time_string_success() {
+            let datetime_from_valid_string = Bson::String("10:15:30".to_string()).to_datetime().unwrap();
+            assert_eq!(datetime_from_valid_string.hour(), 10);
+            assert_eq!(datetime_from_valid_string.minute(), 15);
+            assert_eq!(datetime_from_valid_string.second(), 30)
+        }
+
+        #[test]
+        fn valid_time_string_with_millis_success() {
+            let datetime_from_valid_string = Bson::String("10:15:30.123".to_string()).to_datetime().unwrap();
+            assert_eq!(datetime_from_valid_string.hour(), 10);
+            assert_eq!(datetime_from_valid_string.minute(), 15);
+            assert_eq!(datetime_from_valid_string.second(), 30)
+        }
+
+        #[test]
+        fn valid_date_string_success() {
+            let datetime_from_valid_string = Bson::String("2022-10-04".to_string()).to_datetime();
+            let expectation: chrono::DateTime<Utc> = "2022-10-04T00:00:00Z".parse().unwrap();
+            assert_eq!(
+                datetime_from_valid_string.unwrap(),
+                expectation
+            )
+        }
+
+        #[test]
+        fn invalild_time_string_error() {
+            let datetime_from_invalid_string = Bson::String("10:15".to_string()).to_datetime();
+            assert_eq!(
+                datetime_from_invalid_string.unwrap_err().get_sql_state(),
+                INVALID_DATETIME_FORMAT
+            )
+        }
+
+        #[test]
+        fn invalild_date_string_error() {
+            let datetime_from_invalid_string = Bson::String("1/4/2022".to_string()).to_datetime();
+            assert_eq!(
+                datetime_from_invalid_string.unwrap_err().get_sql_state(),
+                INVALID_DATETIME_FORMAT
+            )
+        }
+
+        #[test]
+        fn invalild_timestamp_string_error() {
+            let datetime_from_invalid_string = Bson::String("1/4/22T10:22:22.123Z".to_string()).to_datetime();
+            assert_eq!(
+                datetime_from_invalid_string.unwrap_err().get_sql_state(),
+                INVALID_DATETIME_FORMAT
+            )
+        }
+
+        #[test]
+        fn valid_datetime_success() {
+            let chrono_time: chrono::DateTime<Utc> = "2014-11-28T09:23:24.123Z".parse().unwrap();
+            let bson_datetime_from_datetime = Bson::DateTime(bson::DateTime::from_chrono(chrono_time)).to_datetime();
+            let expectation: chrono::DateTime<Utc> = "2014-11-28T09:23:24.123Z".parse().unwrap();
+            assert_eq!(
+                bson_datetime_from_datetime.unwrap(),
+                expectation
             )
         }
     }
