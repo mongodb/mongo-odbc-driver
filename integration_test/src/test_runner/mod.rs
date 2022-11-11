@@ -374,7 +374,7 @@ fn validate_result_set(
                 for i in 1..(columns + 1) {
                     let expected_field = expected_row.get(i - 1).unwrap();
                     let expected_data_type = if expected_field.is_number() {
-                        CDataType::Numeric
+                        CDataType::SLong
                     } else {
                         CDataType::Char
                     };
@@ -435,8 +435,8 @@ fn get_data(
             data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
                 [0..*out_len_or_ind as usize]
                 .to_string());
-        } else if data_type == CDataType::Numeric {
-            data = json!(buffer as i64);
+        } else if data_type == CDataType::SLong {
+            data = json!(*(buffer as *const i64));
         }
     }
     Ok(data)

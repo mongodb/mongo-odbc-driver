@@ -4,5 +4,5 @@ tests:
     db: integration_test
     expected_result:
       - ['{"$numberInt":"0"}', "a" ]
-      - ['{"$numberInt":"1"}', "b"]
+      - [1, "b"]
       - ['{"$numberInt":"2"}', "c"]
