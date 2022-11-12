@@ -257,7 +257,7 @@ impl IntoCData for Bson {
             Bson::Int32(i) if *i < 0i32 => Err(ODBCError::IntegralTruncation(i.to_string())),
             Bson::String(s) => Bson::Double(
                 f64::from_str(s)
-                    .map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), UINT64))?,
+                    .map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), UINT32))?,
             )
             .to_u32(),
             _ => self.to_i64().map_or_else(
