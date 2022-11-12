@@ -108,19 +108,22 @@ impl IntoCData for Bson {
 
     fn to_i64(&self) -> Result<(i64, Option<ODBCError>)> {
         match self {
-            Bson::Double(f) if *f < i64::MAX as f64 && *f > i64::MIN as f64 => Ok((
-                *f as i64,
-                if f.floor() != *f {
-                    Some(ODBCError::FractionalTruncation(f.to_string()))
+            Bson::Double(f) => {
+                if *f > i64::MAX as f64 || *f < i64::MIN as f64 {
+                    Err(ODBCError::IntegralTruncation(f.to_string()))
                 } else {
-                    None
-                },
-            )),
-            Bson::Double(f) => Err(ODBCError::IntegralTruncation(f.to_string())),
-            Bson::String(s) => Ok((
-                i64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), INT64))?,
-                None,
-            )),
+                    let info = if f.fract() != 0f64 {
+                        Some(ODBCError::FractionalTruncation(f.to_string()))
+                    } else {
+                        None
+                    };
+                    Ok((*f as i64, info))
+                }
+            }
+            Bson::String(s) => Bson::Double(
+                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), INT64))?,
+            )
+            .to_i64(),
             Bson::Boolean(b) => Ok((i64::from(*b), None)),
             Bson::Int32(i) => Ok((*i as i64, None)),
             Bson::Int64(i) => Ok((*i, None)),
@@ -149,17 +152,21 @@ impl IntoCData for Bson {
 
     fn to_i32(&self) -> Result<(i32, Option<ODBCError>)> {
         match self {
-            Bson::Double(x) if *x > i32::MAX as f64 || *x < i32::MIN as f64 => {
-                Err(ODBCError::IntegralTruncation(x.to_string()))
+            Bson::Double(f) if *f > i32::MAX as f64 || *f < i32::MIN as f64 => {
+                Err(ODBCError::IntegralTruncation(f.to_string()))
             }
-            Bson::Int64(x) if *x > i32::MAX as i64 || *x < i32::MIN as i64 => {
-                Err(ODBCError::IntegralTruncation(x.to_string()))
+            Bson::Int64(i) if *i > i32::MAX as i64 || *i < i32::MIN as i64 => {
+                Err(ODBCError::IntegralTruncation(i.to_string()))
             }
-            Bson::Decimal128(x)
+            Bson::Decimal128(d)
                 if self.to_f64()? > i32::MAX as f64 || self.to_f64()? < i32::MIN as f64 =>
             {
-                Err(ODBCError::IntegralTruncation(x.to_string()))
+                Err(ODBCError::IntegralTruncation(d.to_string()))
             }
+            Bson::String(s) => Bson::Double(
+                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), INT32))?,
+            )
+            .to_i32(),
             _ => self.to_i64().map_or_else(
                 |e| {
                     Err(match e {
@@ -179,25 +186,40 @@ impl IntoCData for Bson {
 
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)> {
         match self {
-            Bson::Double(f) if *f < 0f64 => Err(ODBCError::IntegralTruncation(f.to_string())),
-            Bson::Double(f) => Ok((
-                *f as u64,
-                if f.floor() != *f {
-                    Some(ODBCError::FractionalTruncation(f.to_string()))
+            Bson::Double(f) => {
+                if *f < 0f64 || *f > u64::MAX as f64 {
+                    Err(ODBCError::IntegralTruncation(f.to_string()))
                 } else {
-                    None
-                },
-            )),
-            Bson::String(s) => Ok((
-                u64::from_str(s)
+                    Ok((
+                        *f as u64,
+                        if f.fract() != 0f64 {
+                            Some(ODBCError::FractionalTruncation(f.to_string()))
+                        } else {
+                            None
+                        },
+                    ))
+                }
+            }
+            Bson::String(s) => Bson::Double(
+                f64::from_str(s)
                     .map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), UINT64))?,
-                None,
-            )),
+            )
+            .to_u64(),
             Bson::Boolean(b) => Ok((u64::from(*b), None)),
-            Bson::Int32(i) if *i < 0i32 => Err(ODBCError::IntegralTruncation(i.to_string())),
-            Bson::Int32(i) => Ok((*i as u64, None)),
-            Bson::Int64(i) if *i < 0i64 => Err(ODBCError::IntegralTruncation(i.to_string())),
-            Bson::Int64(i) => Ok((*i as u64, None)),
+            Bson::Int32(i) => {
+                if *i < 0i32 {
+                    Err(ODBCError::IntegralTruncation(i.to_string()))
+                } else {
+                    Ok((*i as u64, None))
+                }
+            }
+            Bson::Int64(i) => {
+                if *i < 0i64 {
+                    Err(ODBCError::IntegralTruncation(i.to_string()))
+                } else {
+                    Ok((*i as u64, None))
+                }
+            }
             // Note that this isn't perfect because there are some 64bit integer values that are
             // not representable as doubles. There *could* be a specific value where we will get a
             // different result here than if we had a conversion from Decimal128 to i64 directly.
@@ -223,16 +245,21 @@ impl IntoCData for Bson {
 
     fn to_u32(&self) -> Result<(u32, Option<ODBCError>)> {
         match self {
-            Bson::Double(x) if *x > u32::MAX as f64 || *x < 0f64 => {
-                Err(ODBCError::IntegralTruncation(x.to_string()))
+            Bson::Double(f) if *f > u32::MAX as f64 || *f < 0f64 => {
+                Err(ODBCError::IntegralTruncation(f.to_string()))
             }
-            Bson::Int64(x) if *x > u32::MAX as i64 || *x < 0i64 => {
-                Err(ODBCError::IntegralTruncation(x.to_string()))
+            Bson::Int64(i) if *i > u32::MAX as i64 || *i < 0i64 => {
+                Err(ODBCError::IntegralTruncation(i.to_string()))
             }
-            Bson::Decimal128(x) if self.to_f64()? > u32::MAX as f64 || self.to_f64()? < 0f64 => {
-                Err(ODBCError::IntegralTruncation(x.to_string()))
+            Bson::Decimal128(d) if self.to_f64()? > u32::MAX as f64 || self.to_f64()? < 0f64 => {
+                Err(ODBCError::IntegralTruncation(d.to_string()))
             }
-            Bson::Int32(x) if *x < 0i32 => Err(ODBCError::IntegralTruncation(x.to_string())),
+            Bson::Int32(i) if *i < 0i32 => Err(ODBCError::IntegralTruncation(i.to_string())),
+            Bson::String(s) => Bson::Double(
+                f64::from_str(s)
+                    .map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), UINT64))?,
+            )
+            .to_u32(),
             _ => self.to_i64().map_or_else(
                 |e| {
                     Err(match e {
@@ -1227,224 +1254,233 @@ mod unit {
     }
 
     mod conversion {
-        use crate::api::data::IntoCData;
+        use std::{collections::HashMap, f64::consts::PI};
+
+        use crate::{api::data::IntoCData, map};
         use bson::Bson;
-        use constants::{FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION};
-        #[test]
-        fn positive_values_without_truncation_to_u64_succeed() {
-            let bson_double_to_u64 = Bson::Double(42.).to_u64();
-            let bson_int64_to_u64 = Bson::Int64(42).to_u64();
-            let bson_int32_to_u64 = Bson::Int32(42).to_u64();
+        use constants::{FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE};
 
-            assert_eq!(bson_double_to_u64.unwrap().0, 42);
-            assert_eq!(bson_int64_to_u64.unwrap().0, 42);
-            assert_eq!(bson_int32_to_u64.unwrap().0, 42);
+        macro_rules! test_conversion_ok {
+            (input = $input:expr, method = $method:tt, expected = $expected:expr, info = $info:expr) => {
+                let actual = $input.$method();
+                assert!(actual.is_ok(), "{:?}", actual);
+                match actual {
+                    Ok(r) => {
+                        assert_eq!($expected, r.0, "expected {}, got {}", $expected, r.0);
+                        if r.1.is_some() {
+                            let odbc_info = r.1.unwrap().get_sql_state().to_string();
+                            assert_eq!(
+                                $info, odbc_info,
+                                "expected success with info {}, got {}",
+                                $info, odbc_info
+                            );
+                        }
+                    }
+                    Err(e) => unreachable!("should not have had an err {:?}", e),
+                }
+            };
+        }
+        macro_rules! test_conversion_err {
+            (input = $input:expr, method = $method:tt, expected = $expected:expr, info = $info:expr) => {
+                let actual = $input.$method();
+                assert!(actual.is_err(), "{:?}", actual);
+                match actual {
+                    Err(e) => {
+                        assert_eq!(
+                            $info,
+                            e.get_sql_state(),
+                            "expected {}, got {}",
+                            $info,
+                            e.get_sql_state()
+                        );
+                    }
+                    Ok(r) => unreachable!("should not have had an Ok {:?}", r),
+                }
+            };
+        }
+
+        macro_rules! test_it {
+            ($bson:expr,$v:expr) => {
+                $v.iter().for_each(
+                    |(method, expected, test, info)| match (method, test, info) {
+                        (&"i64", Ok(()), info) => {
+                            test_conversion_ok!(
+                                input = $bson,
+                                method = to_i64,
+                                expected = *expected as i64,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"i64", Err(()), info) => {
+                            test_conversion_err!(
+                                input = $bson,
+                                method = to_i64,
+                                expected = *expected as i64,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"i32", Ok(()), info) => {
+                            test_conversion_ok!(
+                                input = $bson,
+                                method = to_i32,
+                                expected = *expected as i32,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"i32", Err(()), info) => {
+                            test_conversion_err!(
+                                input = $bson,
+                                method = to_i32,
+                                expected = *expected as i32,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"u64", Ok(()), info) => {
+                            test_conversion_ok!(
+                                input = $bson,
+                                method = to_u64,
+                                expected = *expected as u64,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"u64", Err(()), info) => {
+                            test_conversion_err!(
+                                input = $bson,
+                                method = to_u64,
+                                expected = *expected as u64,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"u32", Ok(()), info) => {
+                            test_conversion_ok!(
+                                input = $bson,
+                                method = to_u32,
+                                expected = *expected as u32,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        (&"u32", Err(()), info) => {
+                            test_conversion_err!(
+                                input = $bson,
+                                method = to_u32,
+                                expected = *expected as u32,
+                                info = info.unwrap_or_default()
+                            );
+                        }
+                        _ => unimplemented!(),
+                    },
+                );
+            };
+        }
+
+        // This also tests doubles (f64) as well, since the implementation
+        // for converting strings to numerics converts the string to
+        // an f64
+        #[test]
+        fn string_conversions_to_numerics() {
+            type V = Vec<(&'static str, i32, Result<(), ()>, Option<&'static str>)>;
+            let strings: HashMap<String, V> = map! {
+                (-PI).to_string() => vec![
+                    ("i64", -3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("i32", -3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION))
+                ],
+                PI.to_string() => vec![
+                    ("i64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("i32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("u64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("u32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                ],
+                i128::MIN.to_string() => vec![
+                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                ],
+                i128::MAX.to_string() => vec![
+                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                ],
+                i32::MAX.to_string() => vec![
+                    ("i64", i32::MAX, Ok(()), None),
+                    ("i32", i32::MAX, Ok(()), None),
+                    ("u64", i32::MAX, Ok(()), None),
+                    ("u32", i32::MAX, Ok(()), None),
+                ],
+                "foo".to_string() => vec![
+                    ("i64", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
+                    ("i32", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
+                    ("u64", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
+                    ("u32", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
+                ],
+            };
+            strings.iter().for_each(|(k, v)| {
+                let bson = Bson::String(k.to_string());
+                test_it!(bson, v);
+            });
         }
 
         #[test]
-        fn positive_values_without_truncation_to_i64_succeed() {
-            let bson_double_to_i64 = Bson::Double(42.).to_i64();
-            let bson_int64_to_i64 = Bson::Int64(42).to_i64();
-            let bson_int32_to_i64 = Bson::Int32(42).to_i64();
+        fn int64_conversions_to_numerics() {
+            type V = Vec<(&'static str, i64, Result<(), ()>, Option<&'static str>)>;
+            let int_64s: HashMap<i64, V> = map! {
+                i64::MAX => vec![
+                    ("i64", i64::MAX, Ok(()), None),
+                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u64", i64::MAX, Ok(()), None),
+                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION))
+                ],
+                i32::MAX as i64 => vec![
+                    ("i64", i32::MAX as i64, Ok(()), None),
+                    ("i32", i32::MAX as i64, Ok(()), None),
+                    ("u64", i32::MAX as i64, Ok(()), None),
+                    ("u32", i32::MAX as i64, Ok(()), None)
+                ],
+                i64::MIN => vec![
+                    ("i64", i64::MIN, Ok(()), None),
+                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u64", 0i64, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION))
+                ],
+                i32::MIN as i64 => vec![
+                    ("i64", i32::MIN as i64, Ok(()), None),
+                    ("i32", i32::MIN as i64, Ok(()), None),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION))
+                ],
+            };
 
-            assert_eq!(bson_double_to_i64.unwrap().0, 42);
-            assert_eq!(bson_int64_to_i64.unwrap().0, 42);
-            assert_eq!(bson_int32_to_i64.unwrap().0, 42);
+            int_64s.iter().for_each(|(k, v)| {
+                let bson = Bson::Int64(*k);
+                test_it!(bson, v);
+            })
         }
 
         #[test]
-        fn positive_values_without_truncation_to_u32_succeed() {
-            let bson_double_to_u32 = Bson::Double(42.).to_u32();
-            let bson_int64_to_u32 = Bson::Int64(42).to_u32();
-            let bson_int32_to_u32 = Bson::Int32(42).to_u32();
+        fn int_32_conversions_to_numerics() {
+            type V = Vec<(&'static str, i32, Result<(), ()>, Option<&'static str>)>;
+            let int_32s: HashMap<i32, V> = map! {
+                i32::MAX => vec![
+                    ("i64", i32::MAX, Ok(()), None),
+                    ("i32", i32::MAX, Ok(()), None),
+                    ("u64", i32::MAX, Ok(()), None),
+                    ("u32", i32::MAX, Ok(()), None)
+                ],
+                i32::MIN => vec![
+                    ("i64", i32::MIN, Ok(()), None),
+                    ("i32", i32::MIN, Ok(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION))
+                ]
+            };
 
-            assert_eq!(bson_double_to_u32.unwrap().0, 42);
-            assert_eq!(bson_int64_to_u32.unwrap().0, 42);
-            assert_eq!(bson_int32_to_u32.unwrap().0, 42);
-        }
-
-        #[test]
-        fn positive_values_without_truncation_to_i32_succeed() {
-            let bson_double_to_i32 = Bson::Double(42.).to_i32();
-            let bson_int64_to_i32 = Bson::Int64(42).to_i32();
-            let bson_int32_to_i32 = Bson::Int32(42).to_i32();
-
-            assert_eq!(bson_double_to_i32.unwrap().0, 42);
-            assert_eq!(bson_int64_to_i32.unwrap().0, 42);
-            assert_eq!(bson_int32_to_i32.unwrap().0, 42);
-        }
-
-        #[test]
-        fn negative_value_without_truncation_to_i64_and_i32_succeed() {
-            let bson_double_to_i64 = Bson::Double(-42.).to_i64();
-            let bson_double_to_i32 = Bson::Double(-42.).to_i32();
-
-            assert_eq!(bson_double_to_i64.unwrap().0, -42);
-            assert_eq!(bson_double_to_i32.unwrap().0, -42);
-        }
-
-        #[test]
-        fn negative_values_with_fractional_truncation_to_i64_and_i32_succeed() {
-            let bson_double_to_i64 = Bson::Double(-42.05).to_i64();
-            let bson_double_to_i32 = Bson::Double(-42.05).to_i32();
-
-            assert_eq!(bson_double_to_i64.as_ref().unwrap().0, -42);
-            assert_eq!(bson_double_to_i32.as_ref().unwrap().0, -42);
-
-            assert_eq!(
-                bson_double_to_i64.unwrap().1.unwrap().get_sql_state(),
-                FRACTIONAL_TRUNCATION
-            );
-            assert_eq!(
-                bson_double_to_i32.unwrap().1.unwrap().get_sql_state(),
-                FRACTIONAL_TRUNCATION
-            );
-        }
-
-        #[test]
-        fn negative_values_with_integral_truncation_to_i64_and_i32_fail() {
-            let bson_double_to_i64 = Bson::Double(f64::MIN).to_i64();
-            let bson_double_to_i32 = Bson::Double(f64::MIN).to_i32();
-
-            assert_eq!(
-                bson_double_to_i64.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION,
-                "expected integral truncation error"
-            );
-
-            assert_eq!(
-                bson_double_to_i32.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION,
-                "expected integral truncation error"
-            );
-        }
-
-        #[test]
-        fn positive_values_with_fractional_truncation_to_u64_succeed_with_info() {
-            let bson_double_to_u64 = Bson::Double(42.05).to_u64();
-
-            assert_eq!(bson_double_to_u64.as_ref().unwrap().0, 42);
-            assert_eq!(
-                bson_double_to_u64.unwrap().1.unwrap().get_sql_state(),
-                FRACTIONAL_TRUNCATION
-            );
-        }
-
-        #[test]
-        fn positive_values_with_fractional_truncation_to_i64_succeed_with_info() {
-            let bson_double_to_i64 = Bson::Double(42.05).to_i64();
-
-            assert_eq!(bson_double_to_i64.as_ref().unwrap().0, 42);
-            assert_eq!(
-                bson_double_to_i64.unwrap().1.unwrap().get_sql_state(),
-                FRACTIONAL_TRUNCATION
-            );
-        }
-
-        #[test]
-        fn positive_values_with_fractional_truncation_to_u32_succeed_with_info() {
-            let bson_double_to_u32 = Bson::Double(42.05).to_i64();
-
-            assert_eq!(bson_double_to_u32.as_ref().unwrap().0, 42);
-            assert_eq!(
-                bson_double_to_u32.unwrap().1.unwrap().get_sql_state(),
-                FRACTIONAL_TRUNCATION
-            );
-        }
-
-        #[test]
-        fn positive_values_with_fractional_truncation_to_i32_succeed_with_info() {
-            let bson_double_to_i32 = Bson::Double(42.05).to_i64();
-
-            assert_eq!(bson_double_to_i32.as_ref().unwrap().0, 42);
-            assert_eq!(
-                bson_double_to_i32.unwrap().1.unwrap().get_sql_state(),
-                FRACTIONAL_TRUNCATION
-            );
-        }
-
-        #[test]
-        fn values_with_integral_truncation_to_u32_fail() {
-            let bson_double_to_u32 = Bson::Double(f64::MAX - 0.1).to_u32();
-            let bson_int64_to_u32 = Bson::Int64(i64::MAX).to_u32();
-
-            assert_eq!(
-                bson_double_to_u32.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION,
-                "expected integral truncation error"
-            );
-
-            assert_eq!(
-                bson_int64_to_u32.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION,
-                "expected integral truncation error"
-            );
-        }
-
-        #[test]
-        fn positive_values_with_integral_truncation_to_i32_fail() {
-            let bson_double_to_i32 = Bson::Double(f64::MAX - 0.1).to_i32();
-            let bson_int64_to_i32 = Bson::Int64(i64::MAX).to_i32();
-
-            assert_eq!(
-                bson_double_to_i32.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION,
-                "expected integral truncation error"
-            );
-
-            assert_eq!(
-                bson_int64_to_i32.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION,
-                "expected integral truncation error"
-            );
-        }
-
-        #[test]
-        fn negative_values_to_u32_fail() {
-            let bson_double_to_u32 = Bson::Double(-42.).to_u32();
-            let bson_int64_to_u32 = Bson::Int64(-42).to_u32();
-            let bson_int32_to_u32 = Bson::Int32(-42).to_u32();
-
-            assert!(bson_double_to_u32.is_err());
-            assert!(bson_int64_to_u32.is_err());
-            assert!(bson_int32_to_u32.is_err());
-
-            assert_eq!(
-                bson_double_to_u32.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
-            );
-            assert_eq!(
-                bson_int64_to_u32.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
-            );
-            assert_eq!(
-                bson_int32_to_u32.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
-            );
-        }
-
-        #[test]
-        fn negative_values_to_u64_fail() {
-            let bson_double_to_u64 = Bson::Double(-42.).to_u64();
-            let bson_int64_to_u64 = Bson::Int64(-42).to_u64();
-            let bson_int32_to_u64 = Bson::Int32(-42).to_u64();
-
-            assert!(bson_double_to_u64.is_err());
-            assert!(bson_int64_to_u64.is_err());
-            assert!(bson_int32_to_u64.is_err());
-
-            assert_eq!(
-                bson_double_to_u64.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
-            );
-            assert_eq!(
-                bson_int64_to_u64.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
-            );
-            assert_eq!(
-                bson_int32_to_u64.unwrap_err().get_sql_state(),
-                INTEGRAL_TRUNCATION
-            );
+            int_32s.iter().for_each(|(k, v)| {
+                let bson = Bson::Int32(*k);
+                test_it!(bson, v);
+            })
         }
     }
 
