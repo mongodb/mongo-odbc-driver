@@ -2269,7 +2269,6 @@ unsafe fn sql_get_infow_helper(
             // MongoSQL does not have a maximum identifier length.
             i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr)
         }
-        _ => SqlReturn::SUCCESS,
     }
 }
 
