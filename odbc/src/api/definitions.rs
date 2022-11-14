@@ -239,7 +239,7 @@ pub enum InfoType {
 }
 
 pub const SQL_CB_NULL: u16 = 0x0000;
-pub const SQL_U16_ZERO: u16 = SQL_CB_NULL;
+pub const SQL_U16_ZERO: u16 = 0x0000;
 pub const SQL_CL_START: u16 = 0x0001;
 pub const SQL_U32_ZERO: u32 = 0;
 pub const SQL_OIC_CORE: u32 = 0x00000001;
