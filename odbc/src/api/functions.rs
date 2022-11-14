@@ -7,7 +7,7 @@ use crate::{
         definitions::*,
         errors::{ODBCError, Result},
         odbc_uri::ODBCUri,
-        util::{connection_attribute_to_string, format_version},
+        util::connection_attribute_to_string,
     },
     handles::definitions::*,
 };
@@ -1843,7 +1843,7 @@ unsafe fn sql_get_infow_helper(
                 string_length_ptr,
             )
         }
-        // TODO: SQL-XYZ: implement InfoType::DriverVer for SQLGetInfoW
+        // TODO: SQL-1109: implement InfoType::DriverVer for SQLGetInfoW
         // // SQL_DRIVER_VER
         // InfoType::DriverVer => { 
         //     // The driver version can be obtained from the Cargo.toml file.
