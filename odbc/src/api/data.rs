@@ -909,6 +909,30 @@ pub mod i16_len {
         *text_length_ptr = len as SmallInt;
         ret
     }
+
+    ///
+    /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
+    /// ODBC drivers assume the output buffer is large enough for fixed types, and are allowed to
+    /// overwrite the buffer if too small a buffer is passed.
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_fixed_data<T: core::fmt::Debug>(
+        data: &T,
+        output_ptr: Pointer,
+        data_len_ptr: *mut SmallInt,
+    ) -> SqlReturn {
+        if !data_len_ptr.is_null() {
+            // If the output_ptr is NULL, we should still return the length of the message.
+            *data_len_ptr = size_of::<T>() as i16;
+        }
+        if output_ptr.is_null() {
+            return SqlReturn::SUCCESS_WITH_INFO;
+        }
+        copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
+        SqlReturn::SUCCESS
+    }
 }
 
 pub mod i32_len {

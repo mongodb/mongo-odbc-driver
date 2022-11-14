@@ -26,3 +26,59 @@ pub(crate) fn connection_attribute_to_string(attr: ConnectionAttribute) -> Strin
         ConnectionAttribute::MetadataId => "METADATA_ID".to_string(),
     }
 }
+
+// TODO: SQL-1109
+// pub(crate) fn format_version(major: &str, minor: &str, patch: &str) -> String {
+//     format!(
+//         "{}.{}.{}",
+//         format_version_part(major, 2),
+//         format_version_part(minor, 2),
+//         format_version_part(patch, 4)
+//     )
+// }
+//
+// fn format_version_part(part: &str, len: usize) -> String {
+//     if len < part.len() {
+//         return part.to_string();
+//     }
+//     format!("{}{}", "0".repeat(len - part.len()), part)
+// }
+//
+// mod unit {
+//     #[cfg(test)]
+//     use super::format_version;
+//
+//     macro_rules! format_version_test {
+//         ($func_name:ident, expected = $expected:expr, major = $major:expr, minor = $minor:expr, patch = $patch:expr) => {
+//             #[test]
+//             fn $func_name() {
+//                 let actual = format_version($major, $minor, $patch);
+//                 assert_eq!($expected, actual)
+//             }
+//         };
+//     }
+//
+//     format_version_test!(
+//         no_padding_needed,
+//         expected = "10.11.1213",
+//         major = "10",
+//         minor = "11",
+//         patch = "1213"
+//     );
+//
+//     format_version_test!(
+//         padding_needed,
+//         expected = "01.01.0001",
+//         major = "1",
+//         minor = "1",
+//         patch = "1"
+//     );
+//
+//     format_version_test!(
+//         parts_larger_than_length,
+//         expected = "111.222.33333",
+//         major = "111",
+//         minor = "222",
+//         patch = "33333"
+//     );
+// }

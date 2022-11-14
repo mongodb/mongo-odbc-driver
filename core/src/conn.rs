@@ -2,6 +2,7 @@ use crate::err::Result;
 use crate::Error;
 use bson::doc;
 use mongodb::{options::ClientOptions, sync::Client};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -63,4 +64,32 @@ impl MongoConnection {
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
         })
     }
+
+    /// Gets the ADF version the client is connected to.
+    pub fn get_adf_version(&self) -> Result<String> {
+        let db = self.client.database("admin");
+        let cmd_res = db.run_command(doc! {"buildInfo": 1}, None)?;
+        let build_info: BuildInfoResult = bson::from_document(cmd_res)?;
+        Ok(build_info.data_lake.version)
+    }
+}
+
+// Struct representing the response for a buildInfo command.
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
+struct BuildInfoResult {
+    pub ok: i32,
+    pub version: String,
+    #[serde(rename = "versionArray")]
+    pub version_array: Vec<i32>,
+    #[serde(rename = "dataLake")]
+    pub data_lake: DataLakeBuildInfo,
+}
+
+// Auxiliary struct representing part of the response for a buildInfo command.
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
+struct DataLakeBuildInfo {
+    pub version: String,
+    #[serde(rename = "gitVersion")]
+    pub git_version: String,
+    pub date: String,
 }
