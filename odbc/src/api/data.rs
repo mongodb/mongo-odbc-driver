@@ -199,11 +199,11 @@ impl IntoCData for Bson {
         match self {
             Bson::DateTime(d) => Ok((*d).into()),
             Bson::String(s) => {
-                if s.contains("T") { // received a valid datetime string
+                if s.contains("T") { // received a datetime string
                     return Utc
                     .datetime_from_str(s, "%FT%H:%M:%S%.3fZ")
                     .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()));
-                } else if s.contains("-") { // received a valid date string
+                } else if s.contains("-") { // received a date string
                     let date = NaiveDate::parse_from_str(s, "%F").map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
                     return Ok(DateTime::<Utc>::from_utc(date.and_hms(0, 0, 0), Utc))
                 } else { // received a time string -- should return utc today + time
@@ -427,7 +427,7 @@ pub unsafe fn format_date(
     let mut guard = stmt.write().unwrap();
     let indices = guard.var_data_cache.as_mut().unwrap();
     indices.insert(col_num, CachedData::Fixed);
-    let dt = data.to_datetime();
+    let dt = data.to_date();
     match dt {
         Ok(dt) => {
             let data = Date {
