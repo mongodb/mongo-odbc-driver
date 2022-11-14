@@ -2,7 +2,7 @@ use crate::{
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle},
 };
-use bson::Bson;
+use bson::{spec::BinarySubtype, Bson};
 use chrono::{
     offset::{TimeZone, Utc},
     DateTime, Datelike, Timelike,
@@ -18,6 +18,7 @@ const INT32: &str = "Int32";
 const INT64: &str = "Int64";
 const BIT: &str = "Bit";
 const DATETIME: &str = "DateTime";
+const GUID: &str = "GUID";
 
 type Result<T> = std::result::Result<T, ODBCError>;
 
@@ -25,6 +26,7 @@ type Result<T> = std::result::Result<T, ODBCError>;
 trait IntoCData {
     fn to_json(self) -> String;
     fn to_binary(self) -> Result<Vec<u8>>;
+    fn to_guid(self) -> Result<Vec<u8>>;
     fn to_f64(&self) -> Result<f64>;
     fn to_f32(&self) -> Result<f32>;
     fn to_i64(&self) -> Result<(i64, Option<ODBCError>)>;
@@ -95,6 +97,22 @@ impl IntoCData for Bson {
             Bson::Binary(b) => Ok(b.bytes),
             Bson::Decimal128(d) => Ok(d.bytes().to_vec()),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BINARY)),
+        }
+    }
+
+    fn to_guid(self) -> Result<Vec<u8>> {
+        match self {
+            Bson::Binary(b) => {
+                if b.subtype != BinarySubtype::Uuid {
+                    Err(ODBCError::RestrictedDataType(
+                        "binary with non-uuid subtype",
+                        GUID,
+                    ))
+                } else {
+                    Ok(b.bytes)
+                }
+            }
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), GUID)),
         }
     }
 
@@ -536,8 +554,12 @@ pub unsafe fn format_bson_data(
         _ => {}
     }
     match target_type {
-        CDataType::Binary => {
-            let data = data.to_binary();
+        CDataType::Binary | CDataType::Guid => {
+            let data = if target_type == CDataType::Guid {
+                data.to_guid()
+            } else {
+                data.to_binary()
+            };
             match data {
                 Ok(data) => format_binary(
                     mongo_handle,
