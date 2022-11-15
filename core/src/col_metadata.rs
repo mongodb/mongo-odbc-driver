@@ -8,9 +8,9 @@ pub enum ColumnNullability {
     Unknown,
 }
 
-impl Into<odbc_sys::Nullability> for ColumnNullability {
-    fn into(self) -> Nullability {
-        match self {
+impl From<ColumnNullability> for Nullability {
+    fn from(col: ColumnNullability) -> Self {
+        match col {
             ColumnNullability::NoNulls => Nullability::NO_NULLS,
             ColumnNullability::Unknown => Nullability::UNKNOWN,
             ColumnNullability::Nullable => Nullability::NULLABLE,
