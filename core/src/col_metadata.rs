@@ -1,23 +1,6 @@
 use crate::{json_schema::simplified::Schema, BsonTypeInfo};
 use odbc_sys::{Nullability, SqlDataType};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ColumnNullability {
-    Nullable,
-    NoNulls,
-    Unknown,
-}
-
-impl From<ColumnNullability> for Nullability {
-    fn from(col: ColumnNullability) -> Self {
-        match col {
-            ColumnNullability::NoNulls => Nullability::NO_NULLS,
-            ColumnNullability::Unknown => Nullability::UNKNOWN,
-            ColumnNullability::Nullable => Nullability::NULLABLE,
-        }
-    }
-}
-
 // Metadata information for a column of the result set.
 // The information is to be used when reporting columns information from
 // SQLColAttribute or SQLDescribeCol and when converting the data to the targeted C type.
@@ -31,7 +14,7 @@ pub struct MongoColMetadata {
     pub label: String,
     pub length: Option<u16>,
     pub col_name: String,
-    pub is_nullable: ColumnNullability,
+    pub nullability: Nullability,
     pub octet_length: Option<u16>,
     pub precision: Option<u16>,
     pub scale: Option<u16>,
@@ -51,7 +34,7 @@ impl MongoColMetadata {
         datasource_name: String,
         field_name: String,
         field_schema: Schema,
-        is_nullable: ColumnNullability,
+        nullability: Nullability,
     ) -> MongoColMetadata {
         let bson_type_info: BsonTypeInfo = field_schema.into();
 
@@ -67,7 +50,7 @@ impl MongoColMetadata {
             label: field_name.clone(),
             length: bson_type_info.fixed_bytes_length,
             col_name: field_name,
-            is_nullable,
+            nullability,
             octet_length: bson_type_info.octet_length,
             precision: bson_type_info.precision,
             scale: bson_type_info.scale,

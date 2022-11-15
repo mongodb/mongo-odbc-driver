@@ -1,5 +1,5 @@
 use crate::{
-    col_metadata::{ColumnNullability, MongoColMetadata},
+    col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
     json_schema::{
@@ -11,6 +11,7 @@ use crate::{
 use bson::{Bson, Document};
 use lazy_static::lazy_static;
 use mongodb::sync::Cursor;
+use odbc_sys::Nullability;
 
 lazy_static! {
     static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
@@ -19,119 +20,119 @@ lazy_static! {
             "".to_string(),
             "TABLE_CAT".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "COLUMN_NAME".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "DATA_TYPE".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "TYPE_NAME".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "COLUMN_SIZE".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "BUFFER_LENGTH".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "DECIMAL_DIGITS".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "NUM_PREC_RADIX".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "NULLABLE".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "COLUMN_DEF".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "SQL_DATA_TYPE".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "SQL_DATETIME_SUB".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "CHAR_OCTET_LENGTH".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "ORDINAL_POSITION".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
@@ -140,8 +141,8 @@ lazy_static! {
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
             // the docs do not say 'not NULL', but they also say the only possible values for
             // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
-            // the empty varchar... so NoNulls seems correct to me.
-            ColumnNullability::NoNulls
+            // the empty varchar... so NO_NULLS seems correct to me.
+            Nullability::NO_NULLS
         ),
     ];
 }
@@ -312,136 +313,136 @@ mod unit {
 
     #[test]
     fn metadata_column_nullability() {
-        use crate::col_metadata::ColumnNullability;
         use crate::{fields::MongoFields, stmt::MongoStatement};
+        use odbc_sys::Nullability;
         // This gives us assurance that the types are all correct (note
         // that we do not have smallint, so we use int, however).
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(1)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(2)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(3)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(4)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(5)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(6)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(7)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(8)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(9)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(10)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(11)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(12)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(13)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(14)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(15)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(16)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(17)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         // This one deviates from the docs as mentioned.
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(18)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
     }
 }

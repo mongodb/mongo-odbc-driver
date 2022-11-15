@@ -440,7 +440,7 @@ mod unit {
             (Desc::DisplaySize, 0),
             (Desc::FixedPrecScale, 0),
             (Desc::Length, 0),
-            (Desc::Nullable, 1),
+            (Desc::Nullable, 0),
             (Desc::OctetLength, 0),
             (Desc::Precision, 0),
             (Desc::Scale, 0),
