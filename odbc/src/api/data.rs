@@ -143,11 +143,6 @@ impl IntoCData for Bson {
             Bson::Double(f) => {
                 if *f > f32::MAX as f64 || *f < f32::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(f.to_string()))
-                } else if f.fract() != (*f as f32).fract() as f64 {
-                    Ok((
-                        *f as f32,
-                        Some(ODBCError::FractionalTruncation(f.to_string())),
-                    ))
                 } else {
                     Ok((*f as f32, None))
                 }
@@ -475,22 +470,6 @@ macro_rules! char_data {
     }};
 }
 
-macro_rules! fixed_data {
-    ($mongo_handle:expr, $col_num:expr, $data:expr, $target_value_ptr:expr, $str_len_or_ind_ptr:expr) => {{
-        let stmt = (*$mongo_handle).as_statement().unwrap();
-        let mut guard = stmt.write().unwrap();
-        let indices = guard.var_data_cache.as_mut().unwrap();
-        indices.insert($col_num, CachedData::Fixed);
-        match $data {
-            Ok(f) => isize_len::set_output_fixed_data(&f, $target_value_ptr, $str_len_or_ind_ptr),
-            Err(e) => {
-                guard.errors.push(e);
-                SqlReturn::ERROR
-            }
-        }
-    }};
-}
-
 macro_rules! fixed_data_with_warnings {
     ($mongo_handle:expr, $col_num:expr, $data:expr, $target_value_ptr:expr, $str_len_or_ind_ptr:expr) => {{
         let stmt = (*$mongo_handle).as_statement().unwrap();
@@ -770,7 +749,7 @@ pub unsafe fn format_bson_data(
             )
         }
         CDataType::Double => {
-            fixed_data!(
+            fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
                 data.to_f64(),
@@ -779,7 +758,7 @@ pub unsafe fn format_bson_data(
             )
         }
         CDataType::Float => {
-            fixed_data!(
+            fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
                 data.to_f32(),
