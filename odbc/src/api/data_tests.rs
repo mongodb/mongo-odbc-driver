@@ -1364,26 +1364,26 @@ mod unit {
                     ARRAY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type array cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type array cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     BIN_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type binData cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type binData cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(BOOL_COL, 1, SqlReturn::SUCCESS, "");
                 u64_val_test(
                     DATETIME_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type date cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type date cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     DOC_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type object cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type object cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     DOUBLE_COL,
@@ -1397,44 +1397,44 @@ mod unit {
                     JS_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type javascript cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type javascript cannot be converted to ODBC type UInt64",
                 );
-                u64_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Int64");
+                u64_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type UInt64");
                 u64_val_test(
                     MAXKEY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type maxKey cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type maxKey cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     MINKEY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type minKey cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type minKey cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     OID_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type objectId cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type objectId cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     REGEX_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type regex cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type regex cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     STRING_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Int64",
+                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: UInt64",
                 );
                 u64_val_test(
                     NEGATIVE_COL,
-                    18446744073709551615u64,
-                    SqlReturn::SUCCESS,
-                    "",
+                    0,
+                    SqlReturn::ERROR,
+                    "[MongoDB][API] integral data \"-1\" was truncated due to overflow",
                 );
             }
 
@@ -1736,26 +1736,26 @@ mod unit {
                     ARRAY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type array cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type array cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     BIN_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type binData cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type binData cannot be converted to ODBC type UInt32",
                 );
-                u32_val_test(BOOL_COL, 1, SqlReturn::SUCCESS, "");
+                u32_val_test(BOOL_COL, 1, SqlReturn::SUCCESS, "convert bool to u32");
                 u32_val_test(
                     DATETIME_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type date cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type date cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     DOC_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type object cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type object cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     DOUBLE_COL,
@@ -1763,46 +1763,51 @@ mod unit {
                     SqlReturn::SUCCESS_WITH_INFO,
                     "[MongoDB][API] floating point data \"1.3\" was truncated to fixed point",
                 );
-                u32_val_test(I32_COL, 1, SqlReturn::SUCCESS, "");
-                u32_val_test(I64_COL, 0, SqlReturn::SUCCESS, "");
+                u32_val_test(I32_COL, 1, SqlReturn::SUCCESS, "convert i32 to u32");
+                u32_val_test(I64_COL, 0, SqlReturn::SUCCESS, "convert i64 to u32");
                 u32_val_test(
                     JS_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type javascript cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type javascript cannot be converted to ODBC type UInt32",
                 );
-                u32_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Int32");
+                u32_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type UInt32");
                 u32_val_test(
                     MAXKEY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type maxKey cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type maxKey cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     MINKEY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type minKey cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type minKey cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     OID_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type objectId cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type objectId cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     REGEX_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type regex cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type regex cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     STRING_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Int32",
+                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: UInt32",
                 );
-                u32_val_test(NEGATIVE_COL, 4294967295, SqlReturn::SUCCESS, "");
+                u32_val_test(
+                    NEGATIVE_COL,
+                    0,
+                    SqlReturn::ERROR,
+                    "[MongoDB][API] integral data \"-1\" was truncated due to overflow",
+                );
             }
 
             {

@@ -1,10 +1,13 @@
 [package]
 name = "mongo-odbc-driver"
 version = "0.1.0"
-authors = ["Ryan Chipman <ryan@ryanchipman.com>",
+authors = [
+    "Ryan Chipman <ryan@ryanchipman.com>",
     "Natacha Bagnard <natacha.bagnard@mongodb.com>",
     "Patrick Meredith <pmeredit@protonmail.com>",
-    "Varsha Subrahmanyam <varsha.subrahmanyam@mongodb.com>"]
+    "Varsha Subrahmanyam <varsha.subrahmanyam@mongodb.com>",
+    "Nathan Leniz <nathan.leniz@gmail.com>",
+]
 edition = "2021"
 
 [dependencies]
@@ -36,4 +39,4 @@ thiserror = "1"
 
 [lib]
 name = "mongoodbc"
-crate-type = ["cdylib","lib"]
+crate-type = ["cdylib", "lib"]
