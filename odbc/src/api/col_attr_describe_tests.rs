@@ -473,4 +473,48 @@ mod unit {
             }
         }
     }
+
+    // check the describe output
+    #[test]
+    fn test_describe_col() {
+        unsafe {
+            let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+            stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
+            let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+            let col_index = 3; //TABLE_NAME
+            let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+            let name_buffer_length: SmallInt = 20;
+            let out_name_length = &mut 10;
+            let mut data_type = SqlDataType::UNKNOWN_TYPE;
+            let col_size = &mut 42usize;
+            let decimal_digits = &mut 42i16;
+            let mut nullable = Nullability::UNKNOWN;
+            // test string attributes
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLDescribeColW(
+                    mongo_handle as *mut _,
+                    col_index,
+                    name_buffer as *mut _,
+                    name_buffer_length,
+                    out_name_length,
+                    &mut data_type,
+                    col_size,
+                    decimal_digits,
+                    &mut nullable,
+                )
+            );
+            // out_name_length was 10 should stay 10, because statement was unalloacted
+            assert_eq!(10, *out_name_length);
+            // data_type should be VARCHAR
+            assert_eq!(SqlDataType::VARCHAR, data_type);
+            // col_size should be 0
+            assert_eq!(0usize, *col_size);
+            // decimal_digits should be 0
+            assert_eq!(0i16, *decimal_digits);
+            // nullable should stay as NO_NULLS
+            assert_eq!(Nullability::NO_NULLS, nullable);
+            let _ = Box::from_raw(name_buffer);
+        }
+    }
 }
