@@ -10,6 +10,7 @@ use chrono::{
 use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp, USmallInt};
 use odbc_sys::{Char, Integer, SmallInt, SqlReturn, WChar};
+use regex::Regex;
 use std::{cmp::min, collections::HashMap, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
 
 const BINARY: &str = "Binary";
@@ -32,9 +33,9 @@ trait IntoCData {
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)>;
     fn to_u32(&self) -> Result<(u32, Option<ODBCError>)>;
     fn to_bit(&self) -> Result<(u8, Option<ODBCError>)>;
-    fn to_datetime(&self) -> Result<DateTime<Utc>>;
-    fn to_date(&self) -> Result<NaiveDate>;
-    fn to_time(&self) -> Result<NaiveTime>;
+    fn to_datetime(&self) -> Result<(DateTime<Utc>, Option<ODBCError>)>;
+    fn to_date(&self) -> Result<(NaiveDate, Option<ODBCError>)>;
+    fn to_time(&self) -> Result<(NaiveTime, Option<ODBCError>)>;
     fn to_type_str(&self) -> &'static str;
 }
 
@@ -58,6 +59,16 @@ fn i64_to_bit(i: i64) -> Result<(u8, Option<ODBCError>)> {
         1 => Ok((1u8, None)),
         _ => Err(ODBCError::IntegralTruncation(i.to_string())),
     }
+}
+
+fn num_fractional_seconds(s: &String) -> usize {
+    let time_split: Vec<&str> = s.split(".").collect();
+    if time_split.len() > 1 {
+        if let Some(mat) = Regex::new(r"^(\d+)").unwrap().find(time_split[1]) {
+            return mat.as_str().len();
+        }
+    }
+    return 0;
 }
 
 impl IntoCData for Bson {
@@ -195,26 +206,44 @@ impl IntoCData for Bson {
         }
     }
 
-    fn to_datetime(&self) -> Result<DateTime<Utc>> {
+    fn to_datetime(&self) -> Result<(DateTime<Utc>, Option<ODBCError>)> {
         match self {
-            Bson::DateTime(d) => Ok((*d).into()),
+            Bson::DateTime(d) => Ok(((*d).into(), None)),
             Bson::String(s) => {
-                if s.contains('T') {
+                if s.contains('-') && s.contains(':') {
+                    // using '-' to proxy for dates and ':' to proxy for times
                     // received a datetime string
-                    Utc.datetime_from_str(s, "%FT%H:%M:%S%.3fZ")
-                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))
+                    let fmt = if s.contains('T') { "%+" } else { "%F %T%.f" };
+                    let datetime = Utc
+                        .datetime_from_str(s, fmt)
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                    Ok((
+                        datetime,
+                        if num_fractional_seconds(s) > 9 {
+                            Some(ODBCError::FractionalTruncation(s.clone()))
+                        } else {
+                            None
+                        },
+                    ))
                 } else if s.contains('-') {
                     // received a date string
                     let date = NaiveDate::parse_from_str(s, "%F")
                         .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
-                    Ok(DateTime::<Utc>::from_utc(date.and_hms(0, 0, 0), Utc))
+                    Ok((DateTime::<Utc>::from_utc(date.and_hms(0, 0, 0), Utc), None))
                 } else {
                     // received a time string -- should return utc today + time
-                    let time = NaiveTime::parse_from_str(s, "%H:%M:%S%.3f")
+                    let time = NaiveTime::parse_from_str(s, "%T%.f")
                         .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
-                    Ok(DateTime::<Utc>::from_utc(
-                        NaiveDateTime::new(Utc::today().naive_utc(), time),
-                        Utc,
+                    Ok((
+                        DateTime::<Utc>::from_utc(
+                            NaiveDateTime::new(Utc::today().naive_utc(), time),
+                            Utc,
+                        ),
+                        if num_fractional_seconds(s) > 9 {
+                            Some(ODBCError::FractionalTruncation(s.clone()))
+                        } else {
+                            None
+                        },
                     ))
                 }
             }
@@ -222,33 +251,70 @@ impl IntoCData for Bson {
         }
     }
 
-    fn to_date(&self) -> Result<NaiveDate> {
+    fn to_date(&self) -> Result<(NaiveDate, Option<ODBCError>)> {
         match self {
-            Bson::DateTime(d) => Ok((*d).to_chrono().date_naive()),
+            Bson::DateTime(d) => {
+                let chrono_datetime = (*d).to_chrono();
+                Ok((
+                    chrono_datetime.date_naive(),
+                    if chrono_datetime.time() != NaiveTime::from_hms_nano(0, 0, 0, 0) {
+                        Some(ODBCError::FractionalTruncation(d.to_string()))
+                    } else {
+                        None
+                    }
+                ))
+            }
             Bson::String(s) => {
-                let fmt = if s.contains('T') {
-                    "%FT%H:%M:%S%.3fZ"
+                let fmt = if s.contains(':') {
+                    if s.contains('T') {
+                        "%+"
+                    } else {
+                        "%F %T%.f"
+                    }
                 } else {
                     "%F"
                 };
-                NaiveDate::parse_from_str(s, fmt)
-                    .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))
+                let date = NaiveDate::parse_from_str(s, fmt)
+                    .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                Ok((date, None))
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
         }
     }
 
-    fn to_time(&self) -> Result<NaiveTime> {
+    fn to_time(&self) -> Result<(NaiveTime, Option<ODBCError>)> {
         match self {
-            Bson::DateTime(d) => Ok((*d).to_chrono().time()),
+            Bson::DateTime(d) => {
+                let chrono_datetime = (*d).to_chrono();
+                Ok((
+                    chrono_datetime.time(),
+                    if chrono_datetime.nanosecond() > 0 {
+                        Some(ODBCError::FractionalTruncation(d.to_string()))
+                    } else {
+                        None
+                    }
+                ))
+            },
             Bson::String(s) => {
-                let fmt = if s.contains('T') {
-                    "%FT%H:%M:%S%.3fZ"
+                let fmt = if s.contains('-') {
+                    if s.contains('T') {
+                        "%+"
+                    } else {
+                        "%F %T%.f"
+                    }
                 } else {
-                    "%H:%M:%S%.3f"
+                    "%H:%M:%S"
                 };
-                NaiveTime::parse_from_str(s, fmt)
-                    .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))
+                let time = NaiveTime::parse_from_str(s, fmt)
+                    .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                Ok((
+                    time,
+                    if num_fractional_seconds(s) > 0 {
+                        Some(ODBCError::FractionalTruncation(s.clone()))
+                    } else {
+                        None
+                    },
+                ))
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
         }
@@ -388,13 +454,13 @@ pub unsafe fn format_datetime(
     match dt {
         Ok(dt) => {
             let data = Timestamp {
-                year: dt.year() as i16,
-                month: dt.month() as u16,
-                day: dt.day() as u16,
-                hour: dt.hour() as u16,
-                minute: dt.minute() as u16,
-                second: dt.second() as u16,
-                fraction: (dt.nanosecond() as f32 * 0.000001) as u32,
+                year: dt.0.year() as i16,
+                month: dt.0.month() as u16,
+                day: dt.0.day() as u16,
+                hour: dt.0.hour() as u16,
+                minute: dt.0.minute() as u16,
+                second: dt.0.second() as u16,
+                fraction: (dt.0.nanosecond() as f32 * 0.000001) as u32,
             };
             isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
@@ -420,9 +486,9 @@ pub unsafe fn format_time(
     match time {
         Ok(time) => {
             let data = Time {
-                hour: time.hour() as u16,
-                minute: time.minute() as u16,
-                second: time.second() as u16,
+                hour: time.0.hour() as u16,
+                minute: time.0.minute() as u16,
+                second: time.0.second() as u16,
             };
             isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
@@ -448,9 +514,9 @@ pub unsafe fn format_date(
     match dt {
         Ok(dt) => {
             let data = Date {
-                year: dt.year() as i16,
-                month: dt.month() as u16,
-                day: dt.day() as u16,
+                year: dt.0.year() as i16,
+                month: dt.0.month() as u16,
+                day: dt.0.day() as u16,
             };
             isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
@@ -1188,7 +1254,7 @@ mod unit {
     fn date_format() {
         assert_eq!(
             Utc.timestamp(1003483404, 123000000),
-            bson!("2001-10-19T09:23:24.123Z").to_datetime().unwrap()
+            bson!("2001-10-19T09:23:24.123Z").to_datetime().unwrap().0
         );
     }
 
@@ -1377,36 +1443,46 @@ mod unit {
         use constants::INVALID_DATETIME_FORMAT;
         #[test]
         fn valid_time_string_success() {
-            let time_from_valid_string = Bson::String("10:06:02".to_string()).to_time();
+            let (time_from_valid_string, err) =
+                Bson::String("10:06:02".to_string()).to_time().unwrap();
+            assert!(err.is_none());
             assert_eq!(
-                time_from_valid_string.unwrap(),
+                time_from_valid_string,
                 NaiveTime::from_hms_milli(10, 6, 2, 0)
             );
         }
 
         #[test]
         fn valid_time_string_with_millis_success() {
-            let time_from_valid_string = Bson::String("10:06:02.123".to_string()).to_time();
+            let (time_from_valid_string, err) =
+                Bson::String("10:06:02.123".to_string()).to_time().unwrap();
+            assert!(err.is_none());
             assert_eq!(
-                time_from_valid_string.unwrap(),
+                time_from_valid_string,
                 NaiveTime::from_hms_milli(10, 6, 2, 123)
             )
         }
         #[test]
         fn valid_timestamp_success() {
-            let time_from_valid_string = Bson::String("2022-11-07T10:06:02Z".to_string()).to_time();
+            let (time_from_valid_string, err) = Bson::String("2022-11-07T10:06:02Z".to_string())
+                .to_time()
+                .unwrap();
+            assert!(err.is_none());
             assert_eq!(
-                time_from_valid_string.unwrap(),
+                time_from_valid_string,
                 NaiveTime::from_hms_milli(10, 6, 2, 0)
             )
         }
 
         #[test]
         fn valid_timestamp_with_millis_success() {
-            let time_from_valid_string =
-                Bson::String("2022-11-07T10:06:02.123Z".to_string()).to_time();
+            let (time_from_valid_string, err) =
+                Bson::String("2022-11-07T10:06:02.123Z".to_string())
+                    .to_time()
+                    .unwrap();
+            assert!(err.is_none());
             assert_eq!(
-                time_from_valid_string.unwrap(),
+                time_from_valid_string,
                 NaiveTime::from_hms_milli(10, 6, 2, 123)
             )
         }
@@ -1432,10 +1508,13 @@ mod unit {
         #[test]
         fn datetime_to_time_success() {
             let chrono_time: chrono::DateTime<Utc> = "2014-11-28T09:23:24.123Z".parse().unwrap();
-            let time_from_datetime =
-                Bson::DateTime(bson::DateTime::from_chrono(chrono_time)).to_time();
+            let (time_from_datetime, err) =
+                Bson::DateTime(bson::DateTime::from_chrono(chrono_time))
+                    .to_time()
+                    .unwrap();
+            assert!(err.is_none());
             assert_eq!(
-                time_from_datetime.unwrap(),
+                time_from_datetime,
                 NaiveTime::from_hms_milli(9, 23, 24, 123)
             )
         }
@@ -1448,21 +1527,18 @@ mod unit {
         use constants::INVALID_DATETIME_FORMAT;
         #[test]
         fn valid_date_string_sucess() {
-            let date_from_valid_string = Bson::String("2022-10-04".to_string()).to_date();
-            assert_eq!(
-                date_from_valid_string.unwrap(),
-                NaiveDate::from_ymd(2022, 10, 4)
-            )
+            let (date_from_valid_string, err) =
+                Bson::String("2022-10-04".to_string()).to_date().unwrap();
+            assert!(err.is_none());
+            assert_eq!(date_from_valid_string, NaiveDate::from_ymd(2022, 10, 4))
         }
 
         #[test]
         fn valid_timestamp_string_success() {
-            let date_from_valid_string =
-                Bson::String("2022-11-07T10:06:02.123Z".to_string()).to_date();
-            assert_eq!(
-                date_from_valid_string.unwrap(),
-                NaiveDate::from_ymd(2022, 11, 7)
-            )
+            let (date_from_valid_string, err) = Bson::String("2022-11-07T00:00:00Z".to_string())
+                .to_date()
+                .unwrap();
+            assert_eq!(date_from_valid_string, NaiveDate::from_ymd(2022, 11, 7))
         }
 
         #[test]
@@ -1486,13 +1562,13 @@ mod unit {
 
         #[test]
         fn datetime_to_date_success() {
-            let chrono_time: chrono::DateTime<Utc> = "2014-11-28T09:23:24.123Z".parse().unwrap();
-            let bson_date_from_datetime =
-                Bson::DateTime(bson::DateTime::from_chrono(chrono_time)).to_date();
-            assert_eq!(
-                bson_date_from_datetime.unwrap(),
-                NaiveDate::from_ymd(2014, 11, 28)
-            )
+            let chrono_time: chrono::DateTime<Utc> = "2014-11-28T00:00:00Z".parse().unwrap();
+            let (bson_date_from_datetime, err) =
+                Bson::DateTime(bson::DateTime::from_chrono(chrono_time))
+                    .to_date()
+                    .unwrap();
+            assert!(err.is_none());
+            assert_eq!(bson_date_from_datetime, NaiveDate::from_ymd(2014, 11, 28))
         }
     }
 
@@ -1500,20 +1576,34 @@ mod unit {
         use crate::api::data::IntoCData;
         use bson::Bson;
         use chrono::{Timelike, Utc};
-        use constants::INVALID_DATETIME_FORMAT;
+        use constants::{FRACTIONAL_TRUNCATION, INVALID_DATETIME_FORMAT};
+
 
         #[test]
-        fn valid_timestamp_string_success() {
+        fn valid_timestamp_with_truncation_success_with_info() {
             let datetime_from_valid_string =
-                Bson::String("2022-10-04T05:10:15.123Z".to_string()).to_datetime();
-            let expectation: chrono::DateTime<Utc> = "2022-10-04T05:10:15.123Z".parse().unwrap();
-            assert_eq!(datetime_from_valid_string.unwrap(), expectation)
+                Bson::String("2022-10-04 10:15:30.12345678901".to_string()).to_datetime();
+
+            assert!(datetime_from_valid_string.is_ok());
+            let (datetime, err) = datetime_from_valid_string.unwrap();
+
+            assert_eq!(datetime.hour(), 10);
+            assert_eq!(datetime.minute(), 15);
+            assert_eq!(datetime.second(), 30);
+            assert_eq!(datetime.nanosecond(), 123456789);
+
+            assert!(err.is_some());
+            assert_eq!(
+                err.unwrap().get_sql_state().to_string(),
+                FRACTIONAL_TRUNCATION
+            );
         }
 
         #[test]
         fn valid_time_string_success() {
-            let datetime_from_valid_string =
+            let (datetime_from_valid_string, err) =
                 Bson::String("10:15:30".to_string()).to_datetime().unwrap();
+            assert!(err.is_none());
             assert_eq!(datetime_from_valid_string.hour(), 10);
             assert_eq!(datetime_from_valid_string.minute(), 15);
             assert_eq!(datetime_from_valid_string.second(), 30)
@@ -1521,19 +1611,43 @@ mod unit {
 
         #[test]
         fn valid_time_string_with_millis_success() {
-            let datetime_from_valid_string = Bson::String("10:15:30.123".to_string())
+            let (datetime_from_valid_string, err) = Bson::String("10:15:30.123".to_string())
                 .to_datetime()
                 .unwrap();
+            assert!(err.is_none());
             assert_eq!(datetime_from_valid_string.hour(), 10);
             assert_eq!(datetime_from_valid_string.minute(), 15);
             assert_eq!(datetime_from_valid_string.second(), 30)
         }
 
         #[test]
+        fn valid_time_string_with_truncation_success_with_info() {
+            let datetime_from_valid_string =
+                Bson::String("10:15:30.12345678901".to_string()).to_datetime();
+
+            assert!(datetime_from_valid_string.is_ok());
+            let (datetime, err) = datetime_from_valid_string.unwrap();
+
+            assert_eq!(datetime.hour(), 10);
+            assert_eq!(datetime.minute(), 15);
+            assert_eq!(datetime.second(), 30);
+            assert_eq!(datetime.nanosecond(), 123456789);
+
+            assert!(err.is_some());
+            assert_eq!(
+                err.unwrap().get_sql_state().to_string(),
+                FRACTIONAL_TRUNCATION
+            );
+        }
+
+        #[test]
         fn valid_date_string_success() {
-            let datetime_from_valid_string = Bson::String("2022-10-04".to_string()).to_datetime();
+            let (datetime_from_valid_string, err) = Bson::String("2022-10-04".to_string())
+                .to_datetime()
+                .unwrap();
             let expectation: chrono::DateTime<Utc> = "2022-10-04T00:00:00Z".parse().unwrap();
-            assert_eq!(datetime_from_valid_string.unwrap(), expectation)
+            assert!(err.is_none());
+            assert_eq!(datetime_from_valid_string, expectation)
         }
 
         #[test]
@@ -1567,10 +1681,13 @@ mod unit {
         #[test]
         fn valid_datetime_success() {
             let chrono_time: chrono::DateTime<Utc> = "2014-11-28T09:23:24.123Z".parse().unwrap();
-            let bson_datetime_from_datetime =
-                Bson::DateTime(bson::DateTime::from_chrono(chrono_time)).to_datetime();
+            let (bson_datetime_from_datetime, err) =
+                Bson::DateTime(bson::DateTime::from_chrono(chrono_time))
+                    .to_datetime()
+                    .unwrap();
             let expectation: chrono::DateTime<Utc> = "2014-11-28T09:23:24.123Z".parse().unwrap();
-            assert_eq!(bson_datetime_from_datetime.unwrap(), expectation)
+            assert!(err.is_none());
+            assert_eq!(bson_datetime_from_datetime, expectation)
         }
     }
 }
