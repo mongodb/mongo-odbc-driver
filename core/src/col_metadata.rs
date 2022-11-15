@@ -1,11 +1,21 @@
 use crate::{json_schema::simplified::Schema, BsonTypeInfo};
-use odbc_sys::SqlDataType;
+use odbc_sys::{Nullability, SqlDataType};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ColumnNullability {
     Nullable,
     NoNulls,
     Unknown,
+}
+
+impl Into<odbc_sys::Nullability> for ColumnNullability {
+    fn into(self) -> Nullability {
+        match self {
+            ColumnNullability::NoNulls => Nullability::NO_NULLS,
+            ColumnNullability::Unknown => Nullability::UNKNOWN,
+            ColumnNullability::Nullable => Nullability::NULLABLE,
+        }
+    }
 }
 
 // Metadata information for a column of the result set.

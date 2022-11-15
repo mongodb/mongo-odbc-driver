@@ -769,16 +769,45 @@ pub unsafe extern "C" fn SQLDescribeCol(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDescribeColW(
     hstmt: HStmt,
-    _col_number: USmallInt,
-    _col_name: *mut WChar,
-    _buffer_length: SmallInt,
-    _name_length: *mut SmallInt,
-    _data_type: *mut SqlDataType,
-    _col_size: *mut ULen,
-    _decimal_digits: *mut SmallInt,
-    _nullable: *mut Nullability,
+    col_number: USmallInt,
+    col_name: *mut WChar,
+    buffer_length: SmallInt,
+    name_length: *mut SmallInt,
+    data_type: *mut SqlDataType,
+    col_size: *mut ULen,
+    decimal_digits: *mut SmallInt,
+    nullable: *mut Nullability,
 ) -> SqlReturn {
-    unimpl!(hstmt);
+    panic_safe_exec!(
+        || {
+            let stmt_handle = MongoHandleRef::from(hstmt);
+            stmt_handle.clear_diagnostics();
+            {
+                let stmt = must_be_valid!(stmt_handle.as_statement());
+                let stmt_contents = stmt.read().unwrap();
+                let col_metadata = stmt_contents
+                    .mongo_statement
+                    .as_ref()
+                    .unwrap()
+                    .get_col_metadata(col_number);
+                if let Ok(col_metadata) = col_metadata {
+                    *data_type = col_metadata.sql_type;
+                    *col_size = col_metadata.display_size.unwrap_or(0) as usize;
+                    *decimal_digits = col_metadata.scale.unwrap_or(0) as i16;
+                    *nullable = col_metadata.is_nullable.into();
+                    return i16_len::set_output_wstring(
+                        &col_metadata.label,
+                        col_name,
+                        buffer_length as usize,
+                        name_length,
+                    );
+                }
+            }
+            stmt_handle.add_diag_info(ODBCError::InvalidDescriptorIndex(col_number));
+            SqlReturn::ERROR
+        },
+        hstmt
+    );
 }
 
 ///
