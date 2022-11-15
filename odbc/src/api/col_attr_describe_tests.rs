@@ -3,7 +3,7 @@ use crate::{
     SQLColAttributeW, SQLDescribeColW,
 };
 use mongo_odbc_core::MongoFields;
-use odbc_sys::{Desc, SmallInt, SqlReturn};
+use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn};
 use std::sync::RwLock;
 
 mod unit {
@@ -152,7 +152,6 @@ mod unit {
 
     #[test]
     fn unallocated_statement_describe_col() {
-        use odbc_sys::Nullability;
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
@@ -161,10 +160,10 @@ mod unit {
             let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
             let name_buffer_length: SmallInt = 20;
             let out_name_length = &mut 10;
-            let data_type = &mut SqlDataType::UNKNOWN_TYPE;
+            let mut data_type = SqlDataType::UNKNOWN_TYPE;
             let col_size = &mut 42usize;
             let decimal_digits = &mut 42i16;
-            let nullable = &mut Nullability::NO_NULLS;
+            let mut nullable = Nullability::NO_NULLS;
             // test string attributes
             assert_eq!(
                 SqlReturn::ERROR,
@@ -174,22 +173,22 @@ mod unit {
                     name_buffer as *mut _,
                     name_buffer_length,
                     out_name_length,
-                    data_type,
+                    &mut data_type,
                     col_size,
                     decimal_digits,
-                    nullable,
+                    &mut nullable,
                 )
             );
             // out_name_length was 10 should stay 10, because statement was unalloacted
             assert_eq!(10, *out_name_length);
             // data_type should stay as UNKNOWN_TYPE
-            assert_eq!(SqlDataType::UNKNOWN_TYPE, *data_type);
+            assert_eq!(SqlDataType::UNKNOWN_TYPE, data_type);
             // col_size should stay as 42
             assert_eq!(42usize, *col_size);
             // decimal_digits should stay as 42
             assert_eq!(42i16, *decimal_digits);
             // nullable should stay as NO_NULLS
-            assert_eq!(Nullability::NO_NULLS, *nullable);
+            assert_eq!(Nullability::NO_NULLS, nullable);
             assert_eq!(
                 "[MongoDB][API] No resultset for statement".to_string(),
                 format!(
@@ -260,11 +259,70 @@ mod unit {
     }
 
     #[test]
-    fn test_index_out_of_bounds() {
+    fn test_index_out_of_bounds_describe() {
+        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        unsafe {
+            for col_index in [0, 30] {
+                let name_buffer: *mut std::ffi::c_void =
+                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
+                let name_buffer_length: SmallInt = 20;
+                let out_name_length = &mut 10;
+                let mut data_type = SqlDataType::UNKNOWN_TYPE;
+                let col_size = &mut 42usize;
+                let decimal_digits = &mut 42i16;
+                let mut nullable = Nullability::NO_NULLS;
+                // test string attributes
+                assert_eq!(
+                    SqlReturn::ERROR,
+                    SQLDescribeColW(
+                        stmt_handle as *mut _,
+                        col_index,
+                        name_buffer as *mut _,
+                        name_buffer_length,
+                        out_name_length,
+                        &mut data_type,
+                        col_size,
+                        decimal_digits,
+                        &mut nullable,
+                    )
+                );
+                // out_name_length was 10 should stay 10, because statement was unalloacted
+                assert_eq!(10, *out_name_length);
+                // data_type should stay as UNKNOWN_TYPE
+                assert_eq!(SqlDataType::UNKNOWN_TYPE, data_type);
+                // col_size should stay as 42
+                assert_eq!(42usize, *col_size);
+                // decimal_digits should stay as 42
+                assert_eq!(42i16, *decimal_digits);
+                // nullable should stay as NO_NULLS
+                assert_eq!(Nullability::NO_NULLS, nullable);
+                assert_eq!(
+                    format!(
+                        "[MongoDB][API] The field index {} is out of bounds",
+                        col_index,
+                    ),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[0]
+                    )
+                );
+                let _ = Box::from_raw(name_buffer);
+            }
+        }
+    }
+
+    #[test]
+    fn test_index_out_of_bounds_attr() {
         let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
         stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
         let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
-        let mut i = 0;
         for desc in [
             // string descriptor
             Desc::TypeName,
@@ -307,11 +365,10 @@ mod unit {
                                 .unwrap()
                                 .read()
                                 .unwrap()
-                                .errors[i]
+                                .errors[0]
                         )
                     );
                     let _ = Box::from_raw(char_buffer);
-                    i += 1;
                 }
             }
         }

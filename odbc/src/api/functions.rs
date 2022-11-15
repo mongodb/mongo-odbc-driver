@@ -378,6 +378,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
         || {
             {
                 let mongo_handle = MongoHandleRef::from(statement_handle);
+                mongo_handle.clear_diagnostics();
                 let stmt = must_be_valid!((*mongo_handle).as_statement());
                 let mut stmt_contents = stmt.write().unwrap();
                 if stmt_contents.mongo_statement.is_none() {
