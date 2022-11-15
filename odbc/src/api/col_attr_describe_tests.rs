@@ -1,6 +1,6 @@
 use crate::{
     handles::definitions::{MongoHandle, Statement, StatementState},
-    SQLColAttributeW,
+    SQLColAttributeW, SQLDescribeColW,
 };
 use mongo_odbc_core::MongoFields;
 use odbc_sys::{Desc, SmallInt, SqlReturn};
@@ -39,7 +39,7 @@ mod unit {
                 let numeric_attr_ptr = &mut 10;
                 // test string attributes
                 assert_eq!(
-                    SqlReturn::SUCCESS,
+                    SqlReturn::ERROR,
                     SQLColAttributeW(
                         stmt_handle as *mut _,
                         0,
@@ -50,10 +50,29 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                // out_length was 10 should get changed to 0, denoting an empty output.
-                assert_eq!(0, *out_length);
-                // numeric_attr_ptr should still be 10 since no numeric value was requested.
+                // out_length should stay 10.
+                assert_eq!(10, *out_length);
+                // numeric_attr_ptr should still be 10.
                 assert_eq!(10, *numeric_attr_ptr);
+                let errors_len = (*stmt_handle)
+                    .as_statement()
+                    .unwrap()
+                    .read()
+                    .unwrap()
+                    .errors
+                    .len();
+                assert_eq!(
+                    "[MongoDB][API] No resultset for statement".to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[errors_len - 1]
+                    ),
+                );
                 let _ = Box::from_raw(char_buffer);
             }
         }
@@ -92,7 +111,7 @@ mod unit {
                 let numeric_attr_ptr = &mut 10;
                 // test string attributes
                 assert_eq!(
-                    SqlReturn::SUCCESS,
+                    SqlReturn::ERROR,
                     SQLColAttributeW(
                         stmt_handle as *mut _,
                         0,
@@ -105,10 +124,85 @@ mod unit {
                 );
                 // out_length was 10 should stay 10, because a numeric attribute was selected
                 assert_eq!(10, *out_length);
-                // numeric_attr_ptr should change to 0 since a numeric attribute was requested.
-                assert_eq!(0, *numeric_attr_ptr);
+                // numeric_attr_ptr should stay as 10 since an error was returned.
+                assert_eq!(10, *numeric_attr_ptr);
+                let errors_len = (*stmt_handle)
+                    .as_statement()
+                    .unwrap()
+                    .read()
+                    .unwrap()
+                    .errors
+                    .len();
+                assert_eq!(
+                    "[MongoDB][API] No resultset for statement".to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[errors_len - 1]
+                    ),
+                );
                 let _ = Box::from_raw(char_buffer);
             }
+        }
+    }
+
+    #[test]
+    fn unallocated_statement_describe_col() {
+        use odbc_sys::Nullability;
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+            std::ptr::null_mut(),
+            StatementState::Allocated,
+        )));
+        unsafe {
+            let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+            let name_buffer_length: SmallInt = 20;
+            let out_name_length = &mut 10;
+            let data_type = &mut SqlDataType::UNKNOWN_TYPE;
+            let col_size = &mut 42usize;
+            let decimal_digits = &mut 42i16;
+            let nullable = &mut Nullability::NO_NULLS;
+            // test string attributes
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLDescribeColW(
+                    stmt_handle as *mut _,
+                    0,
+                    name_buffer as *mut _,
+                    name_buffer_length,
+                    out_name_length,
+                    data_type,
+                    col_size,
+                    decimal_digits,
+                    nullable,
+                )
+            );
+            // out_name_length was 10 should stay 10, because statement was unalloacted
+            assert_eq!(10, *out_name_length);
+            // data_type should stay as UNKNOWN_TYPE
+            assert_eq!(SqlDataType::UNKNOWN_TYPE, *data_type);
+            // col_size should stay as 42
+            assert_eq!(42usize, *col_size);
+            // decimal_digits should stay as 42
+            assert_eq!(42i16, *decimal_digits);
+            // nullable should stay as NO_NULLS
+            assert_eq!(Nullability::NO_NULLS, *nullable);
+            assert_eq!(
+                "[MongoDB][API] No resultset for statement".to_string(),
+                format!(
+                    "{}",
+                    (*stmt_handle)
+                        .as_statement()
+                        .unwrap()
+                        .read()
+                        .unwrap()
+                        .errors[0]
+                ),
+            );
+            let _ = Box::from_raw(name_buffer);
         }
     }
 
