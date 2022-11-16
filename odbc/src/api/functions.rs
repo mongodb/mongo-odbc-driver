@@ -796,7 +796,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
                     *data_type = col_metadata.sql_type;
                     *col_size = col_metadata.display_size.unwrap_or(0) as usize;
                     *decimal_digits = col_metadata.scale.unwrap_or(0) as i16;
-                    *nullable = col_metadata.nullability.into();
+                    *nullable = col_metadata.nullability;
                     return i16_len::set_output_wstring(
                         &col_metadata.label,
                         col_name,
