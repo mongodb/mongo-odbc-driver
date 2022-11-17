@@ -39,6 +39,7 @@ const UNDEFINED_COL: u16 = 17;
 const UNICODE_COL: u16 = 18;
 const NEGATIVE_COL: u16 = 19;
 const UNIT_STR_COL: u16 = 20;
+const GUID_COL: u16 = 21;
 
 lazy_static! {
     static ref CHRONO_TIME: chrono::DateTime<Utc> = "2014-11-28T12:00:09Z".parse().unwrap();
@@ -77,6 +78,10 @@ lazy_static! {
                 "unicode": "你好，世界，这是一个中文句子",
                 "negative_long": -1i64,
                 "unit_str": "a",
+                "guid": Bson::Binary(Binary {
+                    subtype: BinarySubtype::Uuid,
+                    bytes: vec![0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8, 15u8],
+                }),
             }}],
             vec![
                 MongoColMetadata::new(
@@ -226,6 +231,13 @@ lazy_static! {
                     "test".to_string(),
                     "unit_str".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+                    ColumnNullability::NoNulls,
+                ),
+                MongoColMetadata::new(
+                    "",
+                    "test".to_string(),
+                    "guid".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
                     ColumnNullability::NoNulls,
                 ),
             ],
@@ -506,6 +518,79 @@ mod unit {
     }
 
     #[test]
+    fn sql_get_guid_data() {
+        use crate::api::functions::SQLGetData;
+        use odbc_sys::CDataType;
+        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        unsafe {
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
+            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
+            let buffer_length: isize = 100;
+            let out_len_or_ind = &mut 0;
+            {
+                let mut guid_val_test = |col: u16, expected: &[u8], code: SqlReturn| {
+                    assert_eq!(
+                        code,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::Guid,
+                            buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+
+                    assert_eq!(
+                        expected,
+                        std::slice::from_raw_parts(buffer as *const u8, expected.len()),
+                    );
+                };
+
+                guid_val_test(BIN_COL, &[], SqlReturn::ERROR);
+                assert_eq!(
+                    "[MongoDB][API] BSON type binary with non-uuid subtype cannot be converted to ODBC type GUID"
+                        .to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[0]
+                    ),
+                );
+                guid_val_test(STRING_COL, &[], SqlReturn::ERROR);
+                assert_eq!(
+                    "[MongoDB][API] BSON type string cannot be converted to ODBC type GUID"
+                        .to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[1]
+                    ),
+                );
+                guid_val_test(
+                    GUID_COL,
+                    &[
+                        0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8,
+                        15u8,
+                    ],
+                    SqlReturn::SUCCESS,
+                );
+            }
+            let _ = Box::from_raw(buffer);
+        }
+    }
+
+    #[test]
     fn sql_get_string_data_by_pieces() {
         use crate::api::{data::input_text_to_string, functions::SQLGetData};
         use odbc_sys::CDataType;
@@ -552,6 +637,128 @@ mod unit {
     }
 
     #[test]
+    fn sql_get_binary_data() {
+        use crate::api::functions::SQLGetData;
+        use odbc_sys::CDataType;
+        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        unsafe {
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
+            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
+            let buffer_length: isize = 100;
+            let out_len_or_ind = &mut 0;
+            {
+                let mut bin_val_test = |col: u16, expected: &[u8], code: SqlReturn| {
+                    assert_eq!(
+                        code,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::Binary,
+                            buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+                    if code == SqlReturn::SUCCESS {
+                        assert_eq!(expected.len() as isize, *out_len_or_ind);
+                        assert_eq!(
+                            expected,
+                            std::slice::from_raw_parts(buffer as *const u8, expected.len())
+                        );
+                    }
+                };
+
+                bin_val_test(ARRAY_COL, &[], SqlReturn::ERROR);
+                bin_val_test(BIN_COL, &[5, 6, 42], SqlReturn::SUCCESS);
+                bin_val_test(BOOL_COL, &[1u8], SqlReturn::SUCCESS);
+                bin_val_test(
+                    DATETIME_COL,
+                    &[
+                        222, 7, 0, 0, 11, 0, 0, 0, 28, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0,
+                        0, 0, 0, 0, 0,
+                    ],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(DOC_COL, &[], SqlReturn::ERROR);
+                let errors_len = (*stmt_handle)
+                    .as_statement()
+                    .unwrap()
+                    .read()
+                    .unwrap()
+                    .errors
+                    .len();
+                assert_eq!(
+                    "[MongoDB][API] BSON type object cannot be converted to ODBC type Binary"
+                        .to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[errors_len - 1]
+                    ),
+                );
+                bin_val_test(
+                    DOUBLE_COL,
+                    &[205, 204, 204, 204, 204, 204, 244, 63],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(I32_COL, &[1, 0, 0, 0], SqlReturn::SUCCESS);
+                bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0], SqlReturn::SUCCESS);
+                bin_val_test(JS_COL, &[], SqlReturn::ERROR);
+                bin_val_test(JS_W_S_COL, &[], SqlReturn::ERROR);
+                bin_val_test(MAXKEY_COL, &[], SqlReturn::ERROR);
+                bin_val_test(MINKEY_COL, &[], SqlReturn::ERROR);
+                bin_val_test(OID_COL, &[], SqlReturn::ERROR);
+                bin_val_test(REGEX_COL, &[], SqlReturn::ERROR);
+                bin_val_test(
+                    STRING_COL,
+                    &[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(UNIT_STR_COL, &[97], SqlReturn::SUCCESS);
+            }
+
+            {
+                let mut null_val_test = |col: u16| {
+                    assert_eq!(
+                        SqlReturn::SUCCESS,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::Binary,
+                            buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+                    assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                    assert_eq!(
+                        SqlReturn::NO_DATA,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::Binary,
+                            buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+                };
+
+                null_val_test(NULL_COL);
+                null_val_test(UNDEFINED_COL);
+            }
+
+            let _ = Box::from_raw(buffer);
+        }
+    }
+
+    #[test]
     fn sql_get_binary_data_by_pieces() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
@@ -577,11 +784,16 @@ mod unit {
                                 out_len_or_ind,
                             )
                         );
-                        assert_eq!(expected_out_len, *out_len_or_ind);
-                        assert_eq!(
-                            expected,
-                            std::slice::from_raw_parts(buffer as *const u8, expected.len()),
-                        );
+                        match code {
+                            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => {
+                                assert_eq!(expected_out_len, *out_len_or_ind);
+                                assert_eq!(
+                                    expected,
+                                    std::slice::from_raw_parts(buffer as *const u8, expected.len())
+                                );
+                            }
+                            _ => (),
+                        }
                     };
 
                 bin_val_test(BIN_COL, 3, &[5u8, 6u8], SqlReturn::SUCCESS_WITH_INFO);
@@ -599,31 +811,6 @@ mod unit {
                 );
                 bin_val_test(BIN_COL, 1, &[42u8], SqlReturn::SUCCESS);
                 bin_val_test(BIN_COL, 0, &[], SqlReturn::NO_DATA);
-
-                assert_eq!(
-                    SqlReturn::ERROR,
-                    SQLGetData(
-                        stmt_handle as *mut _,
-                        UNICODE_COL,
-                        CDataType::Binary,
-                        buffer,
-                        buffer_length,
-                        out_len_or_ind,
-                    )
-                );
-                assert_eq!(
-                    "[MongoDB][API] BSON type string cannot be converted to ODBC type Binary"
-                        .to_string(),
-                    format!(
-                        "{}",
-                        (*stmt_handle)
-                            .as_statement()
-                            .unwrap()
-                            .read()
-                            .unwrap()
-                            .errors[1]
-                    ),
-                );
             }
             let _ = Box::from_raw(buffer);
         }
@@ -1177,26 +1364,26 @@ mod unit {
                     ARRAY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type array cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type array cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     BIN_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type binData cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type binData cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(BOOL_COL, 1, SqlReturn::SUCCESS, "");
                 u64_val_test(
                     DATETIME_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type date cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type date cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     DOC_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type object cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type object cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     DOUBLE_COL,
@@ -1210,44 +1397,44 @@ mod unit {
                     JS_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type javascript cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type javascript cannot be converted to ODBC type UInt64",
                 );
-                u64_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Int64");
+                u64_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type UInt64");
                 u64_val_test(
                     MAXKEY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type maxKey cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type maxKey cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     MINKEY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type minKey cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type minKey cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     OID_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type objectId cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type objectId cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     REGEX_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type regex cannot be converted to ODBC type Int64",
+                    "[MongoDB][API] BSON type regex cannot be converted to ODBC type UInt64",
                 );
                 u64_val_test(
                     STRING_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Int64",
+                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: UInt64",
                 );
                 u64_val_test(
                     NEGATIVE_COL,
-                    18446744073709551615u64,
-                    SqlReturn::SUCCESS,
-                    "",
+                    0,
+                    SqlReturn::ERROR,
+                    "[MongoDB][API] integral data \"-1\" was truncated due to overflow",
                 );
             }
 
@@ -1549,26 +1736,26 @@ mod unit {
                     ARRAY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type array cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type array cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     BIN_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type binData cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type binData cannot be converted to ODBC type UInt32",
                 );
-                u32_val_test(BOOL_COL, 1, SqlReturn::SUCCESS, "");
+                u32_val_test(BOOL_COL, 1, SqlReturn::SUCCESS, "convert bool to u32");
                 u32_val_test(
                     DATETIME_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type date cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type date cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     DOC_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type object cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type object cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     DOUBLE_COL,
@@ -1576,46 +1763,51 @@ mod unit {
                     SqlReturn::SUCCESS_WITH_INFO,
                     "[MongoDB][API] floating point data \"1.3\" was truncated to fixed point",
                 );
-                u32_val_test(I32_COL, 1, SqlReturn::SUCCESS, "");
-                u32_val_test(I64_COL, 0, SqlReturn::SUCCESS, "");
+                u32_val_test(I32_COL, 1, SqlReturn::SUCCESS, "convert i32 to u32");
+                u32_val_test(I64_COL, 0, SqlReturn::SUCCESS, "convert i64 to u32");
                 u32_val_test(
                     JS_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type javascript cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type javascript cannot be converted to ODBC type UInt32",
                 );
-                u32_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Int32");
+                u32_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type UInt32");
                 u32_val_test(
                     MAXKEY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type maxKey cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type maxKey cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     MINKEY_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type minKey cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type minKey cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     OID_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type objectId cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type objectId cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     REGEX_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] BSON type regex cannot be converted to ODBC type Int32",
+                    "[MongoDB][API] BSON type regex cannot be converted to ODBC type UInt32",
                 );
                 u32_val_test(
                     STRING_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Int32",
+                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: UInt32",
                 );
-                u32_val_test(NEGATIVE_COL, 4294967295, SqlReturn::SUCCESS, "");
+                u32_val_test(
+                    NEGATIVE_COL,
+                    0,
+                    SqlReturn::ERROR,
+                    "[MongoDB][API] integral data \"-1\" was truncated due to overflow",
+                );
             }
 
             {
