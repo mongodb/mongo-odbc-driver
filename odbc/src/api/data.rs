@@ -1362,12 +1362,13 @@ mod unit {
                             stringify!($method),
                             $input
                         );
-                        if r.1.is_some() {
+                        if $info.is_some() {
                             let odbc_info = r.1.unwrap().get_sql_state().to_string();
+                            let info = $info.unwrap();
                             assert_eq!(
-                                $info, odbc_info,
+                                info, odbc_info,
                                 "expected success with info {:?}, got {:?} calling method {} with {}",
-                                $info, odbc_info, stringify!($method), $input
+                                info, odbc_info, stringify!($method), $input
                             );
                         }
                     }
@@ -1380,11 +1381,12 @@ mod unit {
                 let actual = $input.$method();
                 match actual {
                     Err(e) => {
+                        let info = $info.unwrap();
                         assert_eq!(
-                            $info,
+                            info,
                             e.get_sql_state(),
                             "expected {:?}, got {:?} calling method {:?} on {}",
-                            $info,
+                            info,
                             e.get_sql_state(),
                             stringify!($method),
                             $input
@@ -1409,7 +1411,7 @@ mod unit {
                                 input = $bson,
                                 method = to_i64,
                                 expected = *expected as i64,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"i64", Err(()), info) => {
@@ -1417,7 +1419,7 @@ mod unit {
                                 input = $bson,
                                 method = to_i64,
                                 expected = *expected as i64,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"i32", Ok(()), info) => {
@@ -1425,7 +1427,7 @@ mod unit {
                                 input = $bson,
                                 method = to_i32,
                                 expected = *expected as i32,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"i32", Err(()), info) => {
@@ -1433,7 +1435,7 @@ mod unit {
                                 input = $bson,
                                 method = to_i32,
                                 expected = *expected as i32,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"u64", Ok(()), info) => {
@@ -1441,7 +1443,7 @@ mod unit {
                                 input = $bson,
                                 method = to_u64,
                                 expected = *expected as u64,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"u64", Err(()), info) => {
@@ -1449,7 +1451,7 @@ mod unit {
                                 input = $bson,
                                 method = to_u64,
                                 expected = *expected as u64,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"u32", Ok(()), info) => {
@@ -1457,7 +1459,7 @@ mod unit {
                                 input = $bson,
                                 method = to_u32,
                                 expected = *expected as u32,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"u32", Err(()), info) => {
@@ -1465,7 +1467,7 @@ mod unit {
                                 input = $bson,
                                 method = to_u32,
                                 expected = *expected as u32,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"f64", Ok(()), info) => {
@@ -1473,7 +1475,7 @@ mod unit {
                                 input = $bson,
                                 method = to_f64,
                                 expected = *expected as f64,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"f64", Err(()), info) => {
@@ -1481,7 +1483,7 @@ mod unit {
                                 input = $bson,
                                 method = to_f64,
                                 expected = *expected as f64,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"f32", Ok(()), info) => {
@@ -1489,7 +1491,7 @@ mod unit {
                                 input = $bson,
                                 method = to_f32,
                                 expected = *expected as f32,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         (&"f32", Err(()), info) => {
@@ -1497,7 +1499,7 @@ mod unit {
                                 input = $bson,
                                 method = to_f32,
                                 expected = *expected as f32,
-                                info = info.unwrap_or_default()
+                                info = info
                             );
                         }
                         _ => unimplemented!(),
@@ -1561,11 +1563,11 @@ mod unit {
             let strings: HashMap<String, V> = map! {
                 (-PI).to_string() => vec![
                     ("f64", -PI, Ok(()), None),
-                    ("f32", -PI, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("f32", -PI, Ok(()), None),
                 ],
                 PI.to_string() => vec![
                     ("f64", PI, Ok(()), None),
-                    ("f32", PI, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("f32", PI, Ok(()), None),
                 ],
                 f64::MAX.to_string() => vec![
                     ("f64", f64::MAX, Ok(()), None),
@@ -1630,7 +1632,7 @@ mod unit {
                 ],
                 i32::MIN => vec![
                     ("i64", i32::MIN, Ok(()), None),
-                    ("i32", i32::MIN, Ok(()), Some(INTEGRAL_TRUNCATION)),
+                    ("i32", i32::MIN, Ok(()), None),
                     ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
                     ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION))
                 ]
