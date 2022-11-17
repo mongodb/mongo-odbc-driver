@@ -1,7 +1,7 @@
 use constants::{
     FRACTIONAL_TRUNCATION, GENERAL_ERROR, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
     INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
-    INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, OPTION_CHANGED,
+    INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED,
     RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNABLE_TO_CONNECT, UNSUPPORTED_FIELD_DESCRIPTOR,
     VENDOR_IDENTIFIER,
 };
@@ -84,6 +84,8 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     RestrictedDataType(&'static str, &'static str),
+    #[error("[{}][API] No resultset for statement", VENDOR_IDENTIFIER)]
+    NoResultSet,
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
     Core(mongo_odbc_core::Error),
 }
@@ -114,6 +116,7 @@ impl ODBCError {
             ODBCError::InvalidDatetimeFormat(_) => INVALID_DATETIME_FORMAT,
             ODBCError::InvalidCharacterValue(_, _) => INVALID_CHARACTER_VALUE,
             ODBCError::IndicatorVariableRequiredButNotSupplied => INDICATOR_VARIABLE_REQUIRED,
+            ODBCError::NoResultSet => NO_RESULTSET,
         }
     }
 
@@ -142,7 +145,8 @@ impl ODBCError {
             | ODBCError::IntegralTruncation(_)
             | ODBCError::InvalidDatetimeFormat(_)
             | ODBCError::UnsupportedFieldDescriptor(_)
-            | ODBCError::InvalidCharacterValue(_, _) => 0,
+            | ODBCError::InvalidCharacterValue(_, _)
+            | ODBCError::NoResultSet => 0,
             ODBCError::Core(me) => me.code(),
         }
     }
