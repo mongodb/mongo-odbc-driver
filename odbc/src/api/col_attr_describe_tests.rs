@@ -50,17 +50,6 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                // out_length should stay 10.
-                assert_eq!(10, *out_length);
-                // numeric_attr_ptr should still be 10.
-                assert_eq!(10, *numeric_attr_ptr);
-                let errors_len = (*stmt_handle)
-                    .as_statement()
-                    .unwrap()
-                    .read()
-                    .unwrap()
-                    .errors
-                    .len();
                 assert_eq!(
                     "[MongoDB][API] No resultset for statement".to_string(),
                     format!(
@@ -70,7 +59,7 @@ mod unit {
                             .unwrap()
                             .read()
                             .unwrap()
-                            .errors[errors_len - 1]
+                            .errors[0]
                     ),
                 );
                 let _ = Box::from_raw(char_buffer);
@@ -122,17 +111,6 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                // out_length was 10 should stay 10, because a numeric attribute was selected
-                assert_eq!(10, *out_length);
-                // numeric_attr_ptr should stay as 10 since an error was returned.
-                assert_eq!(10, *numeric_attr_ptr);
-                let errors_len = (*stmt_handle)
-                    .as_statement()
-                    .unwrap()
-                    .read()
-                    .unwrap()
-                    .errors
-                    .len();
                 assert_eq!(
                     "[MongoDB][API] No resultset for statement".to_string(),
                     format!(
@@ -142,7 +120,7 @@ mod unit {
                             .unwrap()
                             .read()
                             .unwrap()
-                            .errors[errors_len - 1]
+                            .errors[0]
                     ),
                 );
                 let _ = Box::from_raw(char_buffer);
@@ -179,16 +157,6 @@ mod unit {
                     &mut nullable,
                 )
             );
-            // out_name_length was 10 should stay 10, because statement was unalloacted
-            assert_eq!(10, *out_name_length);
-            // data_type should stay as UNKNOWN_TYPE
-            assert_eq!(SqlDataType::UNKNOWN_TYPE, data_type);
-            // col_size should stay as 42
-            assert_eq!(42usize, *col_size);
-            // decimal_digits should stay as 42
-            assert_eq!(42i16, *decimal_digits);
-            // nullable should stay as NO_NULLS
-            assert_eq!(Nullability::NO_NULLS, nullable);
             assert_eq!(
                 "[MongoDB][API] No resultset for statement".to_string(),
                 format!(
@@ -249,10 +217,18 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                // out_length should still be 10 since no string value was requested.
-                assert_eq!(10, *out_length);
-                // numeric_attr_ptr should still be 10 since no numeric value was requested.
-                assert_eq!(10, *numeric_attr_ptr);
+                assert_eq!(
+                    "[MongoDB][API] No resultset for statement".to_string(),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .read()
+                            .unwrap()
+                            .errors[0]
+                    ),
+                );
                 let _ = Box::from_raw(char_buffer);
             }
         }
@@ -288,16 +264,6 @@ mod unit {
                         &mut nullable,
                     )
                 );
-                // out_name_length was 10 should stay 10, because statement was unalloacted
-                assert_eq!(10, *out_name_length);
-                // data_type should stay as UNKNOWN_TYPE
-                assert_eq!(SqlDataType::UNKNOWN_TYPE, data_type);
-                // col_size should stay as 42
-                assert_eq!(42usize, *col_size);
-                // decimal_digits should stay as 42
-                assert_eq!(42i16, *decimal_digits);
-                // nullable should stay as NO_NULLS
-                assert_eq!(Nullability::NO_NULLS, nullable);
                 assert_eq!(
                     format!(
                         "[MongoDB][API] The field index {} is out of bounds",
@@ -349,10 +315,6 @@ mod unit {
                             numeric_attr_ptr,
                         )
                     );
-                    // out_length should still be 10 since no string value was requested.
-                    assert_eq!(10, *out_length);
-                    // numeric_attr_ptr should still be 10 since no numeric value was requested.
-                    assert_eq!(10, *numeric_attr_ptr);
                     assert_eq!(
                         format!(
                             "[MongoDB][API] The field index {} is out of bounds",
@@ -484,7 +446,7 @@ mod unit {
             let col_index = 3; //TABLE_NAME
             let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
             let name_buffer_length: SmallInt = 20;
-            let out_name_length = &mut 10;
+            let out_name_length = &mut 0;
             let mut data_type = SqlDataType::UNKNOWN_TYPE;
             let col_size = &mut 42usize;
             let decimal_digits = &mut 42i16;
@@ -504,7 +466,7 @@ mod unit {
                     &mut nullable,
                 )
             );
-            // out_name_length was 10 should stay 10, because statement was unalloacted
+            // out_name_length should be 10
             assert_eq!(10, *out_name_length);
             // data_type should be VARCHAR
             assert_eq!(SqlDataType::VARCHAR, data_type);
@@ -514,6 +476,14 @@ mod unit {
             assert_eq!(0i16, *decimal_digits);
             // nullable should stay as NO_NULLS
             assert_eq!(Nullability::NO_NULLS, nullable);
+            // name_buffer should contain TABLE_NAME
+            assert_eq!(
+                "TABLE_NAME".to_string(),
+                crate::api::data::input_wtext_to_string(
+                    name_buffer as *const _,
+                    *out_name_length as usize
+                )
+            );
             let _ = Box::from_raw(name_buffer);
         }
     }
