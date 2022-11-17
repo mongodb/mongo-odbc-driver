@@ -59,6 +59,8 @@ fn i64_to_bit(i: i64) -> Result<(u8, Option<ODBCError>)> {
 }
 
 fn is_string_fraction_precision_micro(s: &str) -> bool {
+    // pull out microseconds by splitting on decimal place (only one in valid time[stamp])
+    // use regex to separate fractional seconds from any timezone formatting
     let time_split: Vec<&str> = s.split('.').collect();
     if time_split.len() > 1 {
         if let Some(mat) = Regex::new(r"^(\d+)").unwrap().find(time_split[1]) {
@@ -1511,8 +1513,8 @@ mod unit {
                 Err(_) => {
                     assert!(actual.is_err());
                     assert_eq!(
-                        actual.unwrap_err().get_sql_state().to_string(),
-                        INVALID_DATETIME_FORMAT
+                        INVALID_DATETIME_FORMAT,
+                        actual.unwrap_err().get_sql_state().to_string()
                     )
                 }
             }
@@ -1634,8 +1636,8 @@ mod unit {
                 Err(_) => {
                     assert!(actual.is_err());
                     assert_eq!(
-                        actual.unwrap_err().get_sql_state().to_string(),
-                        INVALID_DATETIME_FORMAT
+                        INVALID_DATETIME_FORMAT,
+                        actual.unwrap_err().get_sql_state().to_string()
                     )
                 }
             }
@@ -1648,6 +1650,7 @@ mod unit {
                 ("2014-11-28", Ok((date_expectation, None))),
                 ("11/28/2014", DATETIME_FORMAT_ERROR),
                 ("2014-22-22", DATETIME_FORMAT_ERROR),
+                ("10:15:30", DATETIME_FORMAT_ERROR),
                 ("2014-11-28 00:00:00", Ok((date_expectation, None))),
                 ("2014-11-28 00:00:00.000", Ok((date_expectation, None))),
                 ("2014-11-28T00:00:00Z", Ok((date_expectation, None))),
@@ -1735,8 +1738,8 @@ mod unit {
                 Err(_) => {
                     assert!(actual.is_err());
                     assert_eq!(
-                        actual.unwrap_err().get_sql_state().to_string(),
-                        INVALID_DATETIME_FORMAT
+                        INVALID_DATETIME_FORMAT,
+                        actual.unwrap_err().get_sql_state().to_string()
                     )
                 }
             }
@@ -1750,6 +1753,7 @@ mod unit {
                 ("10:15:30.00000", Ok((expectation, None))),
                 ("10:15:30.123", DATETIME_FORMAT_ERROR),
                 ("25:15:30.123", DATETIME_FORMAT_ERROR),
+                ("2022-10-15", DATETIME_FORMAT_ERROR),
                 ("2014-11-28 10:15:30.000", Ok((expectation, None))),
                 (
                     "2014-11-28 10:15:30.1243",
