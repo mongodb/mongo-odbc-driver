@@ -356,20 +356,10 @@ impl IntoCData for Bson {
     fn to_bit(&self) -> Result<(u8, Option<ODBCError>)> {
         match self {
             Bson::Double(f) => f64_to_bit(*f),
-            Bson::String(s) => {
-                let (i, warning) = self.to_i64().map_err(|e| {
-                    if let ODBCError::InvalidCharacterValue(s, _) = e {
-                        ODBCError::InvalidCharacterValue(s, BIT)
-                    } else {
-                        e
-                    }
-                })?;
-                match i {
-                    0 => Ok((0u8, warning)),
-                    1 => Ok((1u8, warning)),
-                    _ => Err(ODBCError::InvalidCharacterValue(s.clone(), BIT)),
-                }
-            }
+            Bson::String(s) => Bson::Double(
+                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), BIT))?,
+            )
+            .to_bit(),
             Bson::Boolean(b) => Ok((u8::from(*b), None)),
             Bson::Int32(i) => i64_to_bit(*i as i64),
             Bson::Int64(i) => i64_to_bit(*i),
