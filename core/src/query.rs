@@ -1,5 +1,5 @@
 use crate::{
-    col_metadata::{ColumnNullability, MongoColMetadata},
+    col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
     json_schema::{
@@ -13,6 +13,7 @@ use crate::{
 use bson::{doc, Bson, Document};
 use itertools::Itertools;
 use mongodb::{options::AggregateOptions, sync::Cursor};
+use odbc_sys::Nullability;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -217,7 +218,7 @@ impl ObjectSchema {
     ///     - If one of the component schemas in the AnyOf list is Null, it
     ///       is considered nullable
     ///     - Otherwise, its nullability depends on whether it is required
-    pub fn get_field_nullability(&self, field_name: String) -> Result<ColumnNullability> {
+    pub fn get_field_nullability(&self, field_name: String) -> Result<Nullability> {
         let required = self.required.contains(&field_name);
 
         let field_schema = self.properties.get(&field_name);
@@ -225,26 +226,24 @@ impl ObjectSchema {
         // Case 1: field not present in properties
         if field_schema.is_none() {
             if required || self.additional_properties {
-                return Ok(ColumnNullability::Unknown);
+                return Ok(Nullability::UNKNOWN);
             }
 
             return Err(Error::UnknownColumn(field_name));
         }
 
         let nullable = if required {
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         } else {
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         };
 
         match field_schema.unwrap() {
             // Case 2: field is Any schema
-            Schema::Atomic(Atomic::Any) => Ok(ColumnNullability::Nullable),
+            Schema::Atomic(Atomic::Any) => Ok(Nullability::NULLABLE),
             // Case 3: field is scalar/array/object schema
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Null))
-            | Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)) => {
-                Ok(ColumnNullability::Nullable)
-            }
+            | Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)) => Ok(Nullability::NULLABLE),
             Schema::Atomic(Atomic::Scalar(_))
             | Schema::Atomic(Atomic::Array(_))
             | Schema::Atomic(Atomic::Object(_)) => Ok(nullable),
@@ -252,7 +251,7 @@ impl ObjectSchema {
             Schema::AnyOf(any_of) => {
                 for any_of_schema in any_of {
                     if *any_of_schema == Atomic::Scalar(BsonTypeName::Null) {
-                        return Ok(ColumnNullability::Nullable);
+                        return Ok(Nullability::NULLABLE);
                     }
                 }
                 Ok(nullable)
@@ -384,13 +383,13 @@ mod unit {
 
     mod object_schema {
         use crate::{
-            col_metadata::ColumnNullability,
             json_schema::{
                 simplified::{Atomic, ObjectSchema, Schema},
                 BsonTypeName,
             },
             map, set, Error,
         };
+        use odbc_sys::Nullability;
 
         macro_rules! get_field_nullability_test {
             ($func_name:ident, expected = $expected:expr, input_schema = $input_schema:expr, input_field = $input_field:expr) => {
@@ -404,7 +403,7 @@ mod unit {
 
         get_field_nullability_test!(
             field_not_in_properties_but_is_required,
-            expected = ColumnNullability::Unknown,
+            expected = Nullability::UNKNOWN,
             input_schema = ObjectSchema {
                 properties: map! {},
                 required: set! {"a".to_string()},
@@ -415,7 +414,7 @@ mod unit {
 
         get_field_nullability_test!(
             field_not_in_properties_but_additional_properties_allowed,
-            expected = ColumnNullability::Unknown,
+            expected = Nullability::UNKNOWN,
             input_schema = ObjectSchema {
                 properties: map! {},
                 required: set! {},
@@ -426,7 +425,7 @@ mod unit {
 
         get_field_nullability_test!(
             any_schema,
-            expected = ColumnNullability::Nullable,
+            expected = Nullability::NULLABLE,
             input_schema = ObjectSchema {
                 properties: map! {
                     "a".to_string() => Schema::Atomic(Atomic::Any)
@@ -439,7 +438,7 @@ mod unit {
 
         get_field_nullability_test!(
             scalar_null_schema,
-            expected = ColumnNullability::Nullable,
+            expected = Nullability::NULLABLE,
             input_schema = ObjectSchema {
                 properties: map! {
                     "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Null))
@@ -452,7 +451,7 @@ mod unit {
 
         get_field_nullability_test!(
             nonrequired_scalar_nonnull_schema,
-            expected = ColumnNullability::Nullable,
+            expected = Nullability::NULLABLE,
             input_schema = ObjectSchema {
                 properties: map! {
                     "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Int))
@@ -465,7 +464,7 @@ mod unit {
 
         get_field_nullability_test!(
             required_scalar_nonnull_schema,
-            expected = ColumnNullability::NoNulls,
+            expected = Nullability::NO_NULLS,
             input_schema = ObjectSchema {
                 properties: map! {
                     "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Int))
@@ -478,7 +477,7 @@ mod unit {
 
         get_field_nullability_test!(
             any_of_schema_with_null,
-            expected = ColumnNullability::Nullable,
+            expected = Nullability::NULLABLE,
             input_schema = ObjectSchema {
                 properties: map! {
                     "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::Null)})
@@ -491,7 +490,7 @@ mod unit {
 
         get_field_nullability_test!(
             nonrequired_any_of_schema_without_null,
-            expected = ColumnNullability::Nullable,
+            expected = Nullability::NULLABLE,
             input_schema = ObjectSchema {
                 properties: map! {
                     "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::String)})
@@ -504,7 +503,7 @@ mod unit {
 
         get_field_nullability_test!(
             required_any_of_schema_without_null,
-            expected = ColumnNullability::NoNulls,
+            expected = Nullability::NO_NULLS,
             input_schema = ObjectSchema {
                 properties: map! {
                     "a".to_string() => Schema::AnyOf(set! {Atomic::Scalar(BsonTypeName::Int), Atomic::Scalar(BsonTypeName::String)})

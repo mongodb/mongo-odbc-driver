@@ -7,7 +7,7 @@ use crate::{
         definitions::*,
         errors::{ODBCError, Result},
         odbc_uri::ODBCUri,
-        util::connection_attribute_to_string,
+        util::{connection_attribute_to_string, format_version},
     },
     handles::definitions::*,
 };
@@ -376,19 +376,21 @@ pub unsafe extern "C" fn SQLColAttributeW(
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
+            {
+                let mongo_handle = MongoHandleRef::from(statement_handle);
+                mongo_handle.clear_diagnostics();
+                let stmt = must_be_valid!((*mongo_handle).as_statement());
+                let mut stmt_contents = stmt.write().unwrap();
+                if stmt_contents.mongo_statement.is_none() {
+                    stmt_contents.errors.push(ODBCError::NoResultSet);
+                    return SqlReturn::ERROR;
+                }
+            }
             let string_col_attr = |f: &dyn Fn(&MongoColMetadata) -> &str| {
                 let mongo_handle = MongoHandleRef::from(statement_handle);
-                let stmt = must_be_valid!((*mongo_handle).as_statement());
+                let stmt = (*mongo_handle).as_statement().unwrap();
                 {
                     let stmt_contents = stmt.read().unwrap();
-                    if stmt_contents.mongo_statement.is_none() {
-                        return i16_len::set_output_wstring(
-                            "",
-                            character_attribute_ptr as *mut WChar,
-                            buffer_length as usize,
-                            string_length_ptr,
-                        );
-                    }
                     let col_metadata = stmt_contents
                         .mongo_statement
                         .as_ref()
@@ -409,13 +411,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
             };
             let numeric_col_attr = |f: &dyn Fn(&MongoColMetadata) -> Len| {
                 let mongo_handle = MongoHandleRef::from(statement_handle);
-                let stmt = must_be_valid!((*mongo_handle).as_statement());
+                let stmt = (*mongo_handle).as_statement().unwrap();
                 {
                     let stmt_contents = stmt.read().unwrap();
-                    if stmt_contents.mongo_statement.is_none() {
-                        *numeric_attribute_ptr = 0 as Len;
-                        return SqlReturn::SUCCESS;
-                    }
                     let col_metadata = stmt_contents
                         .mongo_statement
                         .as_ref()
@@ -486,7 +484,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 | Desc::LocalTypeName
                 | Desc::SchemaName => string_col_attr(&|_| ""),
                 Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
-                Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.is_nullable as Len),
+                Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.nullability.0 as Len),
                 Desc::OctetLength => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
                 }
@@ -769,16 +767,49 @@ pub unsafe extern "C" fn SQLDescribeCol(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDescribeColW(
     hstmt: HStmt,
-    _col_number: USmallInt,
-    _col_name: *mut WChar,
-    _buffer_length: SmallInt,
-    _name_length: *mut SmallInt,
-    _data_type: *mut SqlDataType,
-    _col_size: *mut ULen,
-    _decimal_digits: *mut SmallInt,
-    _nullable: *mut Nullability,
+    col_number: USmallInt,
+    col_name: *mut WChar,
+    buffer_length: SmallInt,
+    name_length: *mut SmallInt,
+    data_type: *mut SqlDataType,
+    col_size: *mut ULen,
+    decimal_digits: *mut SmallInt,
+    nullable: *mut Nullability,
 ) -> SqlReturn {
-    unimpl!(hstmt);
+    panic_safe_exec!(
+        || {
+            let stmt_handle = MongoHandleRef::from(hstmt);
+            stmt_handle.clear_diagnostics();
+            {
+                let stmt = must_be_valid!(stmt_handle.as_statement());
+                let mut stmt_contents = stmt.write().unwrap();
+                if stmt_contents.mongo_statement.is_none() {
+                    stmt_contents.errors.push(ODBCError::NoResultSet);
+                    return SqlReturn::ERROR;
+                }
+                let col_metadata = stmt_contents
+                    .mongo_statement
+                    .as_ref()
+                    .unwrap()
+                    .get_col_metadata(col_number);
+                if let Ok(col_metadata) = col_metadata {
+                    *data_type = col_metadata.sql_type;
+                    *col_size = col_metadata.display_size.unwrap_or(0) as usize;
+                    *decimal_digits = col_metadata.scale.unwrap_or(0) as i16;
+                    *nullable = col_metadata.nullability;
+                    return i16_len::set_output_wstring(
+                        &col_metadata.label,
+                        col_name,
+                        buffer_length as usize,
+                        name_length,
+                    );
+                }
+            }
+            stmt_handle.add_diag_info(ODBCError::InvalidDescriptorIndex(col_number));
+            SqlReturn::ERROR
+        },
+        hstmt
+    );
 }
 
 ///
@@ -1843,25 +1874,24 @@ unsafe fn sql_get_infow_helper(
                 string_length_ptr,
             )
         }
-        // TODO: SQL-1109: implement InfoType::DriverVer for SQLGetInfoW
-        // // SQL_DRIVER_VER
-        // InfoType::DriverVer => { 
-        //     // The driver version can be obtained from the Cargo.toml file.
-        //     // The env! macro call below gets the version from the Cargo file
-        //     // at compile time.
-        //     let version_major = env!("CARGO_PKG_VERSION_MAJOR");
-        //     let version_minor = env!("CARGO_PKG_VERSION_MINOR");
-        //     let version_patch = env!("CARGO_PKG_VERSION_PATCH");
-        //     
-        //     let version = format_version(version_major, version_minor, version_patch);
-        //     
-        //     i16_len::set_output_wstring(
-        //         version.as_str(),
-        //         info_value_ptr as *mut WChar,
-        //         buffer_length as usize,
-        //         string_length_ptr,
-        //     )
-        // }
+        // SQL_DRIVER_VER
+        InfoType::DriverVer => {
+            // The driver version can be obtained from the Cargo.toml file.
+            // The env! macro call below gets the version from the Cargo file
+            // at compile time.
+            let version_major = env!("CARGO_PKG_VERSION_MAJOR");
+            let version_minor = env!("CARGO_PKG_VERSION_MINOR");
+            let version_patch = env!("CARGO_PKG_VERSION_PATCH");
+
+            let version = format_version(version_major, version_minor, version_patch);
+
+            i16_len::set_output_wstring(
+                version.as_str(),
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            )
+        }
         // SQL_DRIVER_ODBC_VER
         InfoType::DriverOdbcVer => {
             // This driver supports version 3.8.
@@ -2270,7 +2300,6 @@ unsafe fn sql_get_infow_helper(
             // MongoSQL does not have a maximum identifier length.
             i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr)
         }
-        _ => SqlReturn::SUCCESS,
     }
 }
 
