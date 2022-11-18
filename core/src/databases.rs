@@ -1,5 +1,5 @@
 use crate::{
-    col_metadata::{ColumnNullability, MongoColMetadata},
+    col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
     json_schema::{
@@ -10,6 +10,7 @@ use crate::{
     Error,
 };
 use bson::Bson;
+use odbc_sys::Nullability;
 
 use lazy_static::lazy_static;
 
@@ -20,35 +21,35 @@ lazy_static! {
             "".to_string(),
             "TABLE_CAT".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::NoNulls
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            ColumnNullability::Nullable
+            Nullability::NULLABLE
         ),
     ];
 }
@@ -143,45 +144,45 @@ mod unit {
 
     #[test]
     fn metadata_column_nullability() {
-        use crate::col_metadata::ColumnNullability;
         use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        use odbc_sys::Nullability;
         assert_eq!(
-            ColumnNullability::NoNulls,
+            Nullability::NO_NULLS,
             MongoDatabases::empty()
                 .get_col_metadata(1)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoDatabases::empty()
                 .get_col_metadata(2)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
-        // Docs do not say NoNulls, but there is no way the tale name can be null.
+        // Docs do not say NO_NULLS, but there is no way the tale name can be null.
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoDatabases::empty()
                 .get_col_metadata(3)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
-        // The docs also do not say NoNulls, but they enumerate every possible value and
+        // The docs also do not say NO_NULLS, but they enumerate every possible value and
         // NULL is not one of them.
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoDatabases::empty()
                 .get_col_metadata(4)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
         assert_eq!(
-            ColumnNullability::Nullable,
+            Nullability::NULLABLE,
             MongoDatabases::empty()
                 .get_col_metadata(5)
                 .unwrap()
-                .is_nullable
+                .nullability
         );
     }
 }

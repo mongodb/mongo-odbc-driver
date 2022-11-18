@@ -7,7 +7,7 @@ mod data;
 pub(crate) mod util;
 
 #[cfg(test)]
-mod col_attr_tests;
+mod col_attr_describe_tests;
 #[cfg(test)]
 mod connect_attr_tests;
 #[cfg(test)]

@@ -11,6 +11,7 @@ pub const OPTION_CHANGED: &str = "01S02";
 pub const FRACTIONAL_TRUNCATION: &str = "01S07";
 pub const UNABLE_TO_CONNECT: &str = "08001";
 pub const INVALID_DESCRIPTOR_INDEX: &str = "07009";
+pub const NO_RESULTSET: &str = "07005";
 pub const RESTRICTED_DATATYPE: &str = "07006";
 pub const INVALID_CURSOR_STATE: &str = "24000";
 pub const FUNCTION_SEQUENCE_ERROR: &str = "HY010";
