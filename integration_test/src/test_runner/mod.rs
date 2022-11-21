@@ -1,5 +1,5 @@
 use odbc::{create_environment_v3, Allocated, Connection, Handle, NoResult, Statement};
-use odbc_sys::{CDataType, HStmt, SqlReturn, USmallInt};
+use odbc_sys::{CDataType, HStmt, SqlReturn, USmallInt, Desc, SmallInt};
 
 use odbc::safe::AutocommitOn;
 use serde::{Deserialize, Serialize};
@@ -12,6 +12,7 @@ use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
 const SQL_NULL_DATA: isize = -1;
+const BUFFER_LENGTH: usize = 200;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
@@ -353,21 +354,21 @@ fn validate_result_set(
     entry: &TestEntry,
     stmt: Statement<Allocated, NoResult, AutocommitOn>,
 ) -> Result<(), Error> {
-    let columns = get_column_count(&stmt)?;
+    let column_count = get_column_count(&stmt)?;
     let mut row_counter = 0;
     if let Some(expected_result) = entry.expected_result.as_ref() {
         while fetch_row(&stmt)? {
             let expected_row_check = expected_result.get(row_counter);
             // If there are no more expected rows, continue fetching to get actual row count
             if let Some(expected_row) = expected_row_check {
-                if expected_row.len() != columns {
+                if expected_row.len() != column_count {
                     return Err(Error::ColumnCount {
                         test: entry.description.clone(),
                         expected: expected_row.len(),
-                        actual: columns,
+                        actual: column_count,
                     });
                 }
-                for i in 0..(columns) {
+                for i in 0..(column_count) {
                     let expected_field = expected_row.get(i).unwrap();
                     let expected_data_type = if expected_field.is_number() {
                         CDataType::SLong
@@ -395,7 +396,67 @@ fn validate_result_set(
             });
         }
     }
+    // TODO: validate_rs_metadata()
     Ok(())
+}
+
+// TODO: In validate_rs_metadata I call the function that passes in entry
+//       Then if some, check against the column type that I am looking for `SQLColAttributeW`
+fn validate_result_set_metadata(entry: &TestEntry, column_count: usize,
+                      stmt: Statement<Allocated, NoResult, AutocommitOn>) -> Result<(), Error> {
+
+
+
+    if let Some(exp_column_name) = &entry.expected_column_name {
+        if column_count != exp_column_name.len() {
+            // return error
+        }
+        for i in 0..(column_count) {
+            // SQLColAttributeW
+        }
+    }
+    if entry.expected_column_name.is_some() {
+        // Check the column lengths match
+        // for loop on all columns
+        // if not return column match error
+
+    }
+    if entry.expected_sql_type.is_some() {
+
+    }
+    if entry.expected_bson_type.is_some() {
+
+    }
+    if entry.expected_precision.is_some() {
+
+    }
+    if entry.expected_scale.is_some() {
+
+    }
+    if entry.expected_nullability.is_some() {
+
+    }
+    Ok(())
+}
+
+fn get_column_attribute(stmt: &Statement<Allocated, NoResult, AutocommitOn>, column: usize, field_identifier: Desc)
+                        -> Result<String, Error> {
+    let string_length_ptr = &mut 0;
+    let character_attrib_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
+    let numeric_attrib_ptr = &mut 0;
+    unsafe {
+        match odbc_sys::SQLColAttributeW(stmt.handle() as *mut _,
+                                         column as USmallInt,
+                                         field_identifier,
+                                         character_attrib_ptr,
+                                         BUFFER_LENGTH as SmallInt,
+                                         string_length_ptr,
+                                         numeric_attrib_ptr,
+        ) {
+            _ => {}
+        }
+    }
+    Ok("");
 }
 
 fn get_data(
@@ -403,7 +464,6 @@ fn get_data(
     column: USmallInt,
     data_type: CDataType,
 ) -> Result<Value, Error> {
-    const BUFFER_LENGTH: usize = 200;
     let out_len_or_ind = &mut 0;
     let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
     let mut data: Value = Default::default();
@@ -462,3 +522,5 @@ fn fetch_row(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<bool
         }
     }
 }
+
+
