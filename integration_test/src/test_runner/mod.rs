@@ -83,7 +83,13 @@ pub struct TestEntry {
     pub expected_result: Option<Vec<Vec<Value>>>,
     pub skip_reason: Option<String>,
     pub ordered: Option<bool>,
+    pub expected_catalog_name: Option<Vec<Value>>,
+    pub expected_case_sensitive: Option<Vec<Value>>,
     pub expected_column_name: Option<Vec<Value>>,
+    pub expected_display_size: Option<Vec<Value>>,
+    pub expected_length: Option<Vec<Value>>,
+    pub expected_is_searchable: Option<Vec<Value>>,
+    pub expected_is_unsigned: Option<Vec<Value>>,
     pub expected_sql_type: Option<Vec<Value>>,
     pub expected_bson_type: Option<Vec<Value>>,
     pub expected_precision: Option<Vec<Value>>,
@@ -419,6 +425,7 @@ fn validate_result_set(
     Ok(())
 }
 
+// Checks that column attributes match for the given descriptor type
 fn validate_result_set_metadata_helper(
     stmt: &Statement<Allocated, NoResult, AutocommitOn>,
     column_count: usize,
@@ -436,6 +443,7 @@ fn validate_result_set_metadata_helper(
             });
         }
         for (i, current_exp_metadata) in exp_metadata.iter().enumerate().take(column_count) {
+            // Columns start at 1, the column_count parameter is 0-indexed
             let actual_value = get_column_attribute(stmt, i + 1, descriptor, current_exp_metadata)?;
             match &current_exp_metadata {
                 Value::Number(n) => {
@@ -476,8 +484,50 @@ fn validate_result_set_metadata(
         &stmt,
         column_count,
         entry.description.clone(),
+        Desc::CatalogName,
+        &entry.expected_catalog_name,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::CaseSensitive,
+        &entry.expected_case_sensitive,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::DisplaySize,
+        &entry.expected_display_size,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::Length,
+        &entry.expected_length,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
         Desc::Name,
         &entry.expected_column_name,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::Searchable,
+        &entry.expected_is_searchable,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::Unsigned,
+        &entry.expected_is_unsigned,
     )?;
     validate_result_set_metadata_helper(
         &stmt,
@@ -525,7 +575,7 @@ fn get_column_attribute(
 ) -> Result<Value, Error> {
     let string_length_ptr = &mut 0;
     let character_attrib_ptr: *mut std::ffi::c_void =
-        Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
+        Box::into_raw(Box::new([0u16; BUFFER_LENGTH])) as *mut _;
     let numeric_attrib_ptr = &mut 0;
     unsafe {
         match odbc_sys::SQLColAttributeW(
