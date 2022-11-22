@@ -28,7 +28,7 @@ pub enum Error {
         expected: usize,
         actual: usize,
     },
-    #[error("mismatch in results column counts for test {test}: expected {expected}, actual {actual}, row {row}")]
+    #[error("mismatch in result set column counts for test {test}: expected {expected}, actual {actual}, row {row}")]
     RSColumnCount {
         test: String,
         expected: usize,
