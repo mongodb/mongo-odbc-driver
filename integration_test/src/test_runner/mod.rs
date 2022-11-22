@@ -1,5 +1,5 @@
 use odbc::{create_environment_v3, Allocated, Connection, Handle, NoResult, Statement};
-use odbc_sys::{CDataType, HStmt, SqlReturn, USmallInt, Desc, SmallInt};
+use odbc_sys::{CDataType, Desc, HStmt, SmallInt, SqlReturn, USmallInt};
 
 use odbc::safe::AutocommitOn;
 use serde::{Deserialize, Serialize};
@@ -28,11 +28,27 @@ pub enum Error {
         expected: usize,
         actual: usize,
     },
-    #[error("mismatch in column counts for test {test}: expected {expected}, actual {actual}")]
-    ColumnCount {
+    #[error("mismatch in results column counts for test {test}: expected {expected}, actual {actual}, row {row}")]
+    RSColumnCount {
         test: String,
         expected: usize,
         actual: usize,
+        row: usize,
+    },
+    #[error("mismatch in metadata column counts for test {test}: expected {expected}, actual {actual}, descriptor {descriptor}")]
+    MetadataColumnCount {
+        test: String,
+        expected: usize,
+        actual: usize,
+        descriptor: String,
+    },
+    #[error("mismatch in metadata column value for test {test}: expected {expected}, actual {actual}, descriptor {descriptor}, column {column}")]
+    MetadataColumnValue {
+        test: String,
+        expected: String,
+        actual: String,
+        descriptor: String,
+        column: usize,
     },
     #[error("failed to read file: {0}")]
     InvalidFile(String),
@@ -46,6 +62,8 @@ pub enum Error {
     NotEnoughArguments(usize, usize),
     #[error("unsupported function {0}")]
     UnsupportedFunction(String),
+    #[error("unexpected column metadata type in test input: {0}")]
+    UnexpectedMetadataType(String),
     #[error("overflow caused by value {0}, err {1}")]
     ValueOverflowI16(i64, String),
     #[error("function {0} failed with sql code {1}")]
@@ -65,12 +83,12 @@ pub struct TestEntry {
     pub expected_result: Option<Vec<Vec<Value>>>,
     pub skip_reason: Option<String>,
     pub ordered: Option<bool>,
-    pub expected_column_name: Option<Vec<String>>,
-    pub expected_sql_type: Option<Vec<String>>,
-    pub expected_bson_type: Option<Vec<String>>,
-    pub expected_precision: Option<Vec<i32>>,
-    pub expected_scale: Option<Vec<i32>>,
-    pub expected_nullability: Option<Vec<String>>,
+    pub expected_column_name: Option<Vec<Value>>,
+    pub expected_sql_type: Option<Vec<Value>>,
+    pub expected_bson_type: Option<Vec<Value>>,
+    pub expected_precision: Option<Vec<Value>>,
+    pub expected_scale: Option<Vec<Value>>,
+    pub expected_nullability: Option<Vec<Value>>,
 }
 
 #[derive(Debug, Error, PartialEq, Eq, Serialize, Deserialize)]
@@ -362,10 +380,11 @@ fn validate_result_set(
             // If there are no more expected rows, continue fetching to get actual row count
             if let Some(expected_row) = expected_row_check {
                 if expected_row.len() != column_count {
-                    return Err(Error::ColumnCount {
+                    return Err(Error::RSColumnCount {
                         test: entry.description.clone(),
                         expected: expected_row.len(),
                         actual: column_count,
+                        row: row_counter,
                     });
                 }
                 for i in 0..(column_count) {
@@ -396,67 +415,142 @@ fn validate_result_set(
             });
         }
     }
-    // TODO: validate_rs_metadata()
+    validate_result_set_metadata(entry, column_count, stmt)?;
     Ok(())
 }
 
-// TODO: In validate_rs_metadata I call the function that passes in entry
-//       Then if some, check against the column type that I am looking for `SQLColAttributeW`
-fn validate_result_set_metadata(entry: &TestEntry, column_count: usize,
-                      stmt: Statement<Allocated, NoResult, AutocommitOn>) -> Result<(), Error> {
-
-
-
-    if let Some(exp_column_name) = &entry.expected_column_name {
-        if column_count != exp_column_name.len() {
-            // return error
+fn validate_result_set_metadata_helper(
+    stmt: &Statement<Allocated, NoResult, AutocommitOn>,
+    column_count: usize,
+    description: String,
+    descriptor: Desc,
+    expected_metadata: &Option<Vec<Value>>,
+) -> Result<(), Error> {
+    if let Some(exp_metadata) = &expected_metadata {
+        if column_count != exp_metadata.len() {
+            return Err(Error::MetadataColumnCount {
+                test: description,
+                expected: exp_metadata.len(),
+                actual: column_count,
+                descriptor: format!("{:?}", descriptor),
+            });
         }
-        for i in 0..(column_count) {
-            // SQLColAttributeW
+        for (i, current_exp_metadata) in exp_metadata.iter().enumerate().take(column_count) {
+            let actual_value = get_column_attribute(stmt, i + 1, descriptor, current_exp_metadata)?;
+            match &current_exp_metadata {
+                Value::Number(n) => {
+                    if actual_value.as_i64() != Some(n.as_i64().unwrap()) {
+                        return Err(Error::MetadataColumnValue {
+                            test: description,
+                            expected: n.to_string(),
+                            actual: actual_value.to_string(),
+                            descriptor: format!("{:?}", descriptor),
+                            column: i,
+                        });
+                    }
+                }
+                Value::String(s) => {
+                    if actual_value.as_str() != Some(s) {
+                        return Err(Error::MetadataColumnValue {
+                            test: description,
+                            expected: s.to_string(),
+                            actual: actual_value.to_string(),
+                            descriptor: format!("{:?}", descriptor),
+                            column: i,
+                        });
+                    }
+                }
+                meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),
+            }
         }
-    }
-    if entry.expected_column_name.is_some() {
-        // Check the column lengths match
-        // for loop on all columns
-        // if not return column match error
-
-    }
-    if entry.expected_sql_type.is_some() {
-
-    }
-    if entry.expected_bson_type.is_some() {
-
-    }
-    if entry.expected_precision.is_some() {
-
-    }
-    if entry.expected_scale.is_some() {
-
-    }
-    if entry.expected_nullability.is_some() {
-
     }
     Ok(())
 }
 
-fn get_column_attribute(stmt: &Statement<Allocated, NoResult, AutocommitOn>, column: usize, field_identifier: Desc)
-                        -> Result<String, Error> {
+fn validate_result_set_metadata(
+    entry: &TestEntry,
+    column_count: usize,
+    stmt: Statement<Allocated, NoResult, AutocommitOn>,
+) -> Result<(), Error> {
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::Name,
+        &entry.expected_column_name,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::Type,
+        &entry.expected_sql_type,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::TypeName,
+        &entry.expected_bson_type,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::Precision,
+        &entry.expected_precision,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::Scale,
+        &entry.expected_scale,
+    )?;
+    validate_result_set_metadata_helper(
+        &stmt,
+        column_count,
+        entry.description.clone(),
+        Desc::Nullable,
+        &entry.expected_nullability,
+    )?;
+    Ok(())
+}
+
+fn get_column_attribute(
+    stmt: &Statement<Allocated, NoResult, AutocommitOn>,
+    column: usize,
+    field_identifier: Desc,
+    column_metadata_type: &Value,
+) -> Result<Value, Error> {
     let string_length_ptr = &mut 0;
-    let character_attrib_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
+    let character_attrib_ptr: *mut std::ffi::c_void =
+        Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
     let numeric_attrib_ptr = &mut 0;
     unsafe {
-        match odbc_sys::SQLColAttributeW(stmt.handle() as *mut _,
-                                         column as USmallInt,
-                                         field_identifier,
-                                         character_attrib_ptr,
-                                         BUFFER_LENGTH as SmallInt,
-                                         string_length_ptr,
-                                         numeric_attrib_ptr,
+        match odbc_sys::SQLColAttributeW(
+            stmt.handle() as *mut _,
+            column as USmallInt,
+            field_identifier,
+            character_attrib_ptr,
+            BUFFER_LENGTH as SmallInt,
+            string_length_ptr,
+            numeric_attrib_ptr,
         ) {
-            _ => {}
+            SqlReturn::SUCCESS => Ok(match column_metadata_type {
+                Value::String(_) => json!((String::from_utf16_lossy(
+                    &*(character_attrib_ptr as *const [u16; BUFFER_LENGTH])
+                ))[0..*string_length_ptr as usize]
+                    .to_string()),
+                Value::Number(_) => json!(*numeric_attrib_ptr),
+                meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),
+            }),
+            sql_return => Err(Error::OdbcFunctionFailed(
+                "SQLColAttributeW".to_string(),
+                format!("{:?}", sql_return),
+            )),
         }
     }
-    Ok("");
 }
 
 fn get_data(
@@ -522,5 +616,3 @@ fn fetch_row(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<bool
         }
     }
 }
-
-

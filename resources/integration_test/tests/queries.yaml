@@ -3,6 +3,13 @@ tests:
     test_definition: "select * from example"
     db: integration_test
     expected_result:
-      - ['{"$numberInt":"0"}', "a" ]
+      - ['{"$numberInt":"0"}', "a"]
       - [1, "b"]
       - ['{"$numberInt":"2"}', "c"]
+    expected_column_name: ["_id", "b"]
+    expected_sql_type: [4, 12]
+    expected_bson_type: ["int", "string"]
+    expected_precision: [10, 0]
+    expected_scale: [0, 0]
+    expected_nullability: [0, 0]
+

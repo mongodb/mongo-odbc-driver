@@ -5,5 +5,12 @@ tests:
     expected_result:
       - ["db2", null, null, null, null]
       - ["integration_test", null, null, null, null]
+    expected_column_name: ["TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS"]
+    expected_sql_type: [12, 12, 12, 12, 12]
+    expected_bson_type: ["string", "string", "string", "string", "string"]
+    expected_precision: [0, 0, 0, 0, 0]
+    expected_scale: [0, 0, 0, 0, 0]
+    expected_nullability: [1, 0, 0, 0, 0]
+
 
 
