@@ -822,7 +822,6 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     } else {
         odbc_uri.remove(&["database"])
     };
-    let conn_attrs = conn.attributes.read().unwrap();
     let connection_timeout = conn_attrs.connection_timeout;
     let login_timeout = conn_attrs.login_timeout;
     let application_name = odbc_uri.remove(&["app_name", "application_name"]);
