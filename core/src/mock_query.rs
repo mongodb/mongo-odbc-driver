@@ -1,4 +1,6 @@
-use crate::{col_metadata::MongoColMetadata, err::Result, stmt::MongoStatement, Error};
+use crate::{
+    col_metadata::MongoColMetadata, err::Result, stmt::MongoStatement, Error, MongoConnection,
+};
 use bson::{Bson, Document};
 
 #[derive(Debug, Clone)]
@@ -24,7 +26,7 @@ impl MongoQuery {
 impl MongoStatement for MongoQuery {
     // Move the current index to the next Document in the Vec.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self) -> Result<bool> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
         if let Some(current) = self.current {
             self.current = Some(current + 1);
         } else {

@@ -9,27 +9,27 @@ use std::{
 
 #[derive(Debug)]
 pub enum MongoHandle {
-    Env(RwLock<Env>),
-    Connection(RwLock<Connection>),
-    Statement(RwLock<Statement>),
+    Env(Env),
+    Connection(Connection),
+    Statement(Statement),
 }
 
 impl MongoHandle {
-    pub fn as_env(&self) -> Option<&RwLock<Env>> {
+    pub fn as_env(&self) -> Option<&Env> {
         match self {
             MongoHandle::Env(e) => Some(e),
             _ => None,
         }
     }
 
-    pub fn as_connection(&self) -> Option<&RwLock<Connection>> {
+    pub fn as_connection(&self) -> Option<&Connection> {
         match self {
             MongoHandle::Connection(c) => Some(c),
             _ => None,
         }
     }
 
-    pub fn as_statement(&self) -> Option<&RwLock<Statement>> {
+    pub fn as_statement(&self) -> Option<&Statement> {
         match self {
             MongoHandle::Statement(s) => Some(s),
             _ => None,
@@ -40,16 +40,13 @@ impl MongoHandle {
     pub fn add_diag_info(&mut self, error: ODBCError) {
         match self {
             MongoHandle::Env(e) => {
-                let mut env_contents = (*e).write().unwrap();
-                env_contents.errors.push(error);
+                e.errors.write().unwrap().push(error);
             }
             MongoHandle::Connection(c) => {
-                let mut dbc_contents = (*c).write().unwrap();
-                dbc_contents.errors.push(error);
+                c.errors.write().unwrap().push(error);
             }
             MongoHandle::Statement(s) => {
-                let mut stmt_contents = (*s).write().unwrap();
-                stmt_contents.errors.push(error);
+                s.errors.write().unwrap().push(error);
             }
         }
     }
@@ -57,16 +54,13 @@ impl MongoHandle {
     pub fn clear_diagnostics(&mut self) {
         match self {
             MongoHandle::Env(e) => {
-                let mut env_contents = (*e).write().unwrap();
-                env_contents.errors.clear();
+                e.errors.write().unwrap().clear();
             }
             MongoHandle::Connection(c) => {
-                let mut dbc_contents = (*c).write().unwrap();
-                dbc_contents.errors.clear();
+                c.errors.write().unwrap().clear();
             }
             MongoHandle::Statement(s) => {
-                let mut stmt_contents = (*s).write().unwrap();
-                stmt_contents.errors.clear();
+                s.errors.write().unwrap().clear();
             }
         }
     }
@@ -102,20 +96,20 @@ impl From<HDbc> for MongoHandleRef {
 pub struct Env {
     // attributes for this Env. We box the attributes so that the MongoHandle type
     // remains fairly small regardless of underlying handle type.
-    pub attributes: Box<EnvAttributes>,
+    pub attributes: RwLock<EnvAttributes>,
     // state of this Env
-    pub state: EnvState,
-    pub connections: HashSet<*mut MongoHandle>,
-    pub errors: Vec<ODBCError>,
+    pub state: RwLock<EnvState>,
+    pub connections: RwLock<HashSet<*mut MongoHandle>>,
+    pub errors: RwLock<Vec<ODBCError>>,
 }
 
 impl Env {
     pub fn with_state(state: EnvState) -> Self {
         Self {
-            attributes: Box::new(EnvAttributes::default()),
-            state,
-            connections: HashSet::new(),
-            errors: vec![],
+            attributes: RwLock::new(EnvAttributes::default()),
+            state: RwLock::new(state),
+            connections: RwLock::new(HashSet::new()),
+            errors: RwLock::new(vec![]),
         }
     }
 }
@@ -153,16 +147,16 @@ pub struct Connection {
     pub env: *mut MongoHandle,
     // mongo_connection is the actual connection to the mongo server
     // it will be None when the Connection is closed.
-    pub mongo_connection: Option<mongo_odbc_core::MongoConnection>,
+    pub mongo_connection: RwLock<Option<mongo_odbc_core::MongoConnection>>,
     // all the possible Connection settings
-    pub attributes: Box<ConnectionAttributes>,
+    pub attributes: RwLock<ConnectionAttributes>,
     // state of this connection
-    pub state: ConnectionState,
+    pub state: RwLock<ConnectionState>,
     // MongoDB Client for issuing commands
     // pub client: Option<MongoClient>,
     // all Statements allocated from this Connection
-    pub statements: HashSet<*mut MongoHandle>,
-    pub errors: Vec<ODBCError>,
+    pub statements: RwLock<HashSet<*mut MongoHandle>>,
+    pub errors: RwLock<Vec<ODBCError>>,
 }
 
 #[derive(Debug, Default)]
@@ -192,11 +186,11 @@ impl Connection {
     pub fn with_state(env: *mut MongoHandle, state: ConnectionState) -> Self {
         Self {
             env,
-            mongo_connection: None,
-            attributes: Box::new(ConnectionAttributes::default()),
-            state,
-            statements: HashSet::new(),
-            errors: vec![],
+            mongo_connection: RwLock::new(None),
+            attributes: RwLock::new(ConnectionAttributes::default()),
+            state: RwLock::new(state),
+            statements: RwLock::new(HashSet::new()),
+            errors: RwLock::new(vec![]),
         }
     }
 }
@@ -213,12 +207,12 @@ pub enum CachedData {
 #[derive(Debug)]
 pub struct Statement {
     pub connection: *mut MongoHandle,
-    pub mongo_statement: Option<Box<dyn mongo_odbc_core::MongoStatement>>,
-    pub var_data_cache: Option<HashMap<USmallInt, CachedData>>,
-    pub attributes: Box<StatementAttributes>,
-    pub state: StatementState,
-    // pub cursor: Option<Box<Peekable<Cursor>>>,
-    pub errors: Vec<ODBCError>,
+    pub mongo_statement: RwLock<Option<Box<dyn mongo_odbc_core::MongoStatement>>>,
+    pub var_data_cache: RwLock<Option<HashMap<USmallInt, CachedData>>>,
+    pub attributes: RwLock<StatementAttributes>,
+    pub state: RwLock<StatementState>,
+    // pub cursor: RwLock<Option<Box<Peekable<Cursor>>>>,
+    pub errors: RwLock<Vec<ODBCError>>,
 }
 
 #[derive(Debug)]
@@ -278,9 +272,9 @@ impl Statement {
     pub fn with_state(connection: *mut MongoHandle, state: StatementState) -> Self {
         Self {
             connection,
-            state,
-            var_data_cache: None,
-            attributes: Box::new(StatementAttributes {
+            state: RwLock::new(state),
+            var_data_cache: RwLock::new(None),
+            attributes: RwLock::new(StatementAttributes {
                 app_row_desc: null_mut(),
                 app_param_desc: null_mut(),
                 async_enable: AsyncEnable::Off,
@@ -315,8 +309,8 @@ impl Statement {
                 simulate_cursor: SimulateCursor::NonUnique as usize,
                 use_bookmarks: UseBookmarks::Off,
             }),
-            errors: vec![],
-            mongo_statement: None,
+            errors: RwLock::new(vec![]),
+            mongo_statement: RwLock::new(None),
         }
     }
 }

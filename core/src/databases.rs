@@ -227,7 +227,7 @@ impl MongoDatabases {
 impl MongoStatement for MongoDatabases {
     // Increment current_db_index.
     // Return true if current_db_index index is <= for databases_names.length.
-    fn next(&mut self) -> Result<bool> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
         self.current_db_index += 1;
         Ok(self.current_db_index <= self.database_names.len())
     }

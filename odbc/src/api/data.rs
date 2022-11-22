@@ -419,12 +419,11 @@ pub unsafe fn format_binary(
 ) -> SqlReturn {
     let sql_return = {
         let stmt = (*mongo_handle).as_statement().unwrap();
-        let mut guard = stmt.write().unwrap();
         isize_len::set_output_binary(
             data,
             col_num,
             index,
-            guard.var_data_cache.as_mut().unwrap(),
+            stmt.var_data_cache.write().unwrap().as_mut().unwrap(),
             target_value_ptr as *mut _,
             buffer_len as usize,
             str_len_or_ind_ptr,
@@ -442,12 +441,11 @@ macro_rules! char_data {
         let (mongo_handle, buffer_len) = ($mongo_handle, $buffer_len);
         let sql_return = {
             let stmt = (*mongo_handle).as_statement().unwrap();
-            let mut guard = stmt.write().unwrap();
             $func(
                 $data,
                 $col_num,
                 $index,
-                guard.var_data_cache.as_mut().unwrap(),
+                stmt.var_data_cache.write().unwrap().as_mut().unwrap(),
                 $target_value_ptr as *mut _,
                 $buffer_len as usize,
                 $str_len_or_ind_ptr,
@@ -463,21 +461,24 @@ macro_rules! char_data {
 macro_rules! fixed_data_with_warnings {
     ($mongo_handle:expr, $col_num:expr, $data:expr, $target_value_ptr:expr, $str_len_or_ind_ptr:expr) => {{
         let stmt = (*$mongo_handle).as_statement().unwrap();
-        let mut guard = stmt.write().unwrap();
-        let indices = guard.var_data_cache.as_mut().unwrap();
-        indices.insert($col_num, CachedData::Fixed);
+        stmt.var_data_cache
+            .write()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .insert($col_num, CachedData::Fixed);
         match $data {
             Ok((u, warning)) => {
                 let sqlreturn =
                     isize_len::set_output_fixed_data(&u, $target_value_ptr, $str_len_or_ind_ptr);
                 if let Some(warning) = warning {
-                    guard.errors.push(warning);
+                    stmt.errors.write().unwrap().push(warning);
                     return SqlReturn::SUCCESS_WITH_INFO;
                 }
                 sqlreturn
             }
             Err(e) => {
-                guard.errors.push(e);
+                stmt.errors.write().unwrap().push(e);
                 SqlReturn::ERROR
             }
         }
@@ -492,9 +493,12 @@ pub unsafe fn format_datetime(
     data: Bson,
 ) -> SqlReturn {
     let stmt = (*mongo_handle).as_statement().unwrap();
-    let mut guard = stmt.write().unwrap();
-    let indices = guard.var_data_cache.as_mut().unwrap();
-    indices.insert(col_num, CachedData::Fixed);
+    stmt.var_data_cache
+        .write()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .insert(col_num, CachedData::Fixed);
     let dt = data.to_datetime();
     match dt {
         Ok(dt) => {
@@ -510,7 +514,7 @@ pub unsafe fn format_datetime(
             isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
         Err(e) => {
-            guard.errors.push(e);
+            stmt.errors.write().unwrap().push(e);
             SqlReturn::ERROR
         }
     }
@@ -524,10 +528,13 @@ pub unsafe fn format_time(
     data: Bson,
 ) -> SqlReturn {
     let stmt = (*mongo_handle).as_statement().unwrap();
-    let mut guard = stmt.write().unwrap();
     let dt = data.to_datetime();
-    let indices = guard.var_data_cache.as_mut().unwrap();
-    indices.insert(col_num, CachedData::Fixed);
+    stmt.var_data_cache
+        .write()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .insert(col_num, CachedData::Fixed);
     match dt {
         Ok(dt) => {
             let data = Time {
@@ -538,7 +545,7 @@ pub unsafe fn format_time(
             isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
         Err(e) => {
-            guard.errors.push(e);
+            stmt.errors.write().unwrap().push(e);
             SqlReturn::ERROR
         }
     }
@@ -552,9 +559,12 @@ pub unsafe fn format_date(
     data: Bson,
 ) -> SqlReturn {
     let stmt = (*mongo_handle).as_statement().unwrap();
-    let mut guard = stmt.write().unwrap();
-    let indices = guard.var_data_cache.as_mut().unwrap();
-    indices.insert(col_num, CachedData::Fixed);
+    stmt.var_data_cache
+        .write()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .insert(col_num, CachedData::Fixed);
     let dt = data.to_datetime();
     match dt {
         Ok(dt) => {
@@ -566,7 +576,7 @@ pub unsafe fn format_date(
             isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
         }
         Err(e) => {
-            guard.errors.push(e);
+            stmt.errors.write().unwrap().push(e);
             SqlReturn::ERROR
         }
     }
@@ -585,19 +595,25 @@ pub unsafe fn format_cached_data(
         // Fixed cannot be streamed, and this data has already been retrived before.
         a @ CachedData::Fixed => {
             let stmt = (*mongo_handle).as_statement().unwrap();
-            let mut guard = stmt.write().unwrap();
-            let indices = guard.var_data_cache.as_mut().unwrap();
             // we need to insert Fixed so that we can return SqlReturn::NO_DATA if this is
             // called again.
-            indices.insert(col_or_param_num, a);
+            stmt.var_data_cache
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .insert(col_or_param_num, a);
             SqlReturn::NO_DATA
         }
         CachedData::Char(index, data) => {
             if target_type != CDataType::Char {
                 let stmt = (*mongo_handle).as_statement().unwrap();
-                let mut guard = stmt.write().unwrap();
-                let indices = guard.var_data_cache.as_mut().unwrap();
-                indices.insert(col_or_param_num, CachedData::Char(index, data));
+                stmt.var_data_cache
+                    .write()
+                    .unwrap()
+                    .as_mut()
+                    .unwrap()
+                    .insert(col_or_param_num, CachedData::Char(index, data));
                 return SqlReturn::NO_DATA;
             }
             char_data!(
@@ -614,9 +630,13 @@ pub unsafe fn format_cached_data(
         CachedData::WChar(index, data) => {
             if target_type != CDataType::WChar {
                 let stmt = (*mongo_handle).as_statement().unwrap();
-                let mut guard = stmt.write().unwrap();
-                let indices = guard.var_data_cache.as_mut().unwrap();
-                indices.insert(col_or_param_num, CachedData::WChar(index, data));
+
+                stmt.var_data_cache
+                    .write()
+                    .unwrap()
+                    .as_mut()
+                    .unwrap()
+                    .insert(col_or_param_num, CachedData::WChar(index, data));
                 return SqlReturn::NO_DATA;
             }
             char_data!(
@@ -633,9 +653,13 @@ pub unsafe fn format_cached_data(
         CachedData::Bin(index, data) => {
             if target_type != CDataType::Binary {
                 let stmt = (*mongo_handle).as_statement().unwrap();
-                let mut guard = stmt.write().unwrap();
-                let indices = guard.var_data_cache.as_mut().unwrap();
-                indices.insert(col_or_param_num, CachedData::Bin(index, data));
+
+                stmt.var_data_cache
+                    .write()
+                    .unwrap()
+                    .as_mut()
+                    .unwrap()
+                    .insert(col_or_param_num, CachedData::Bin(index, data));
                 return SqlReturn::NO_DATA;
             }
             crate::api::data::format_binary(
@@ -664,16 +688,21 @@ pub unsafe fn format_bson_data(
     match data {
         Bson::Null | Bson::Undefined => {
             let stmt = (*mongo_handle).as_statement().unwrap();
-            let mut guard = stmt.write().unwrap();
-            let indices = guard.var_data_cache.as_mut().unwrap();
+
             if str_len_or_ind_ptr.is_null() {
-                guard
-                    .errors
+                stmt.errors
+                    .write()
+                    .unwrap()
                     .push(ODBCError::IndicatorVariableRequiredButNotSupplied);
                 return SqlReturn::SUCCESS_WITH_INFO;
             }
             *str_len_or_ind_ptr = odbc_sys::NULL_DATA;
-            indices.insert(col_num, CachedData::Fixed);
+            stmt.var_data_cache
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .insert(col_num, CachedData::Fixed);
             return SqlReturn::SUCCESS;
         }
         _ => {}
@@ -697,8 +726,8 @@ pub unsafe fn format_bson_data(
                 ),
                 Err(e) => {
                     let stmt = (*mongo_handle).as_statement().unwrap();
-                    let mut guard = stmt.write().unwrap();
-                    guard.errors.push(e);
+
+                    stmt.errors.write().unwrap().push(e);
                     SqlReturn::ERROR
                 }
             }

@@ -1,12 +1,10 @@
 use crate::{handles::definitions::*, SQLAllocHandle, SQLFreeHandle};
 use odbc_sys::{Handle, HandleType, SqlReturn};
-use std::sync::RwLock;
 
 #[test]
 fn test_env_alloc_free() {
     unsafe {
-        let mut handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let mut handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -18,7 +16,7 @@ fn test_env_alloc_free() {
         );
         assert_eq!(
             EnvState::Allocated,
-            (*handle).as_env().unwrap().read().unwrap().state
+            *(*handle).as_env().unwrap().state.read().unwrap(),
         );
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -33,13 +31,12 @@ fn test_env_alloc_free() {
 #[test]
 fn test_connection_alloc_free() {
     unsafe {
-        let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
-        let mut handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(Connection::with_state(
+        let mut handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
             std::ptr::null_mut(),
             ConnectionState::Allocated,
-        )));
+        ));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -51,21 +48,21 @@ fn test_connection_alloc_free() {
         );
         assert_eq!(
             ConnectionState::Allocated,
-            (*handle).as_connection().unwrap().read().unwrap().state
+            *(*handle).as_connection().unwrap().state.read().unwrap()
         );
         assert_eq!(
             1,
             (*env_handle)
                 .as_env()
                 .unwrap()
+                .connections
                 .read()
                 .unwrap()
-                .connections
                 .len()
         );
         assert_eq!(
             EnvState::ConnectionAllocated,
-            (*env_handle).as_env().unwrap().read().unwrap().state
+            *(*env_handle).as_env().unwrap().state.read().unwrap(),
         );
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -79,14 +76,14 @@ fn test_connection_alloc_free() {
             (*env_handle)
                 .as_env()
                 .unwrap()
+                .connections
                 .read()
                 .unwrap()
-                .connections
                 .len()
         );
         assert_eq!(
             EnvState::Allocated,
-            (*env_handle).as_env().unwrap().read().unwrap().state
+            *(*env_handle).as_env().unwrap().state.read().unwrap(),
         );
     }
 }
@@ -94,17 +91,17 @@ fn test_connection_alloc_free() {
 #[test]
 fn test_statement_alloc_free() {
     unsafe {
-        let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
-        let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
-            Connection::with_state(env_handle, ConnectionState::Allocated),
+        let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
+            env_handle,
+            ConnectionState::Allocated,
         ));
 
-        let mut handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let mut handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -116,16 +113,16 @@ fn test_statement_alloc_free() {
         );
         assert_eq!(
             StatementState::Allocated,
-            (*handle).as_statement().unwrap().write().unwrap().state
+            *(*handle).as_statement().unwrap().state.read().unwrap()
         );
         assert_eq!(
             1,
             (*conn_handle)
                 .as_connection()
                 .unwrap()
+                .statements
                 .read()
                 .unwrap()
-                .statements
                 .len()
         );
         assert_eq!(
@@ -140,9 +137,9 @@ fn test_statement_alloc_free() {
             (*conn_handle)
                 .as_connection()
                 .unwrap()
+                .statements
                 .read()
                 .unwrap()
-                .statements
                 .len()
         );
     }
@@ -151,8 +148,7 @@ fn test_statement_alloc_free() {
 #[test]
 fn test_invalid_free() {
     unsafe {
-        let mut env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let mut env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let env_handle_ptr: *mut _ = &mut env_handle;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -164,7 +160,7 @@ fn test_invalid_free() {
         );
         assert_eq!(
             EnvState::Allocated,
-            (*env_handle).as_env().unwrap().read().unwrap().state
+            *(*env_handle).as_env().unwrap().state.read().unwrap(),
         );
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
@@ -181,8 +177,9 @@ fn test_invalid_free() {
             )
         );
 
-        let mut conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
-            Connection::with_state(env_handle, ConnectionState::Allocated),
+        let mut conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
+            env_handle,
+            ConnectionState::Allocated,
         ));
         let conn_handle_ptr: *mut _ = &mut conn_handle;
         assert_eq!(
@@ -195,12 +192,12 @@ fn test_invalid_free() {
         );
         assert_eq!(
             ConnectionState::Allocated,
-            (*conn_handle)
+            *(*conn_handle)
                 .as_connection()
                 .unwrap()
+                .state
                 .read()
                 .unwrap()
-                .state
         );
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
@@ -239,8 +236,7 @@ fn test_invalid_free() {
 #[test]
 fn test_invalid_alloc() {
     unsafe {
-        let mut handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let mut handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let handle_ptr: *mut _ = &mut handle;
         // first check null ptrs for the two handles that require parent handles
         assert_eq!(
@@ -260,10 +256,10 @@ fn test_invalid_alloc() {
             )
         );
 
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
 
         // now test wrong parent handle type (Dbc needs Env, and Stmt needs Connection).
         assert_eq!(
