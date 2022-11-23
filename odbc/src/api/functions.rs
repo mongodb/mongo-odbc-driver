@@ -7,7 +7,7 @@ use crate::{
         definitions::*,
         errors::{ODBCError, Result},
         odbc_uri::ODBCUri,
-        util::connection_attribute_to_string,
+        util::{connection_attribute_to_string, format_version},
     },
     handles::definitions::*,
 };
@@ -1874,25 +1874,24 @@ unsafe fn sql_get_infow_helper(
                 string_length_ptr,
             )
         }
-        // TODO: SQL-1109: implement InfoType::DriverVer for SQLGetInfoW
-        // // SQL_DRIVER_VER
-        // InfoType::DriverVer => { 
-        //     // The driver version can be obtained from the Cargo.toml file.
-        //     // The env! macro call below gets the version from the Cargo file
-        //     // at compile time.
-        //     let version_major = env!("CARGO_PKG_VERSION_MAJOR");
-        //     let version_minor = env!("CARGO_PKG_VERSION_MINOR");
-        //     let version_patch = env!("CARGO_PKG_VERSION_PATCH");
-        //     
-        //     let version = format_version(version_major, version_minor, version_patch);
-        //     
-        //     i16_len::set_output_wstring(
-        //         version.as_str(),
-        //         info_value_ptr as *mut WChar,
-        //         buffer_length as usize,
-        //         string_length_ptr,
-        //     )
-        // }
+        // SQL_DRIVER_VER
+        InfoType::DriverVer => {
+            // The driver version can be obtained from the Cargo.toml file.
+            // The env! macro call below gets the version from the Cargo file
+            // at compile time.
+            let version_major = env!("CARGO_PKG_VERSION_MAJOR");
+            let version_minor = env!("CARGO_PKG_VERSION_MINOR");
+            let version_patch = env!("CARGO_PKG_VERSION_PATCH");
+
+            let version = format_version(version_major, version_minor, version_patch);
+
+            i16_len::set_output_wstring(
+                version.as_str(),
+                info_value_ptr as *mut WChar,
+                buffer_length as usize,
+                string_length_ptr,
+            )
+        }
         // SQL_DRIVER_ODBC_VER
         InfoType::DriverOdbcVer => {
             // This driver supports version 3.8.
@@ -2301,7 +2300,6 @@ unsafe fn sql_get_infow_helper(
             // MongoSQL does not have a maximum identifier length.
             i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr)
         }
-        _ => SqlReturn::SUCCESS,
     }
 }
 
