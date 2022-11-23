@@ -313,4 +313,13 @@ impl Statement {
             mongo_statement: RwLock::new(None),
         }
     }
+
+    pub(crate) fn insert_var_data_cache(&self, col: u16, data: CachedData) {
+        self.var_data_cache
+            .write()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .insert(col, data);
+    }
 }
