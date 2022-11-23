@@ -405,7 +405,7 @@ impl IntoCData for Bson {
                 Ok((
                     DateTime::<Utc>::from_utc(NaiveDateTime::new(date, time), Utc),
                     string_contains_fractional_precision_micros(s)
-                        .then_some(ODBCError::FractionalTruncation(s.clone())),
+                        .then_some(ODBCError::FractionalSecondsTruncation(s.clone())),
                 ))
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
@@ -419,7 +419,7 @@ impl IntoCData for Bson {
                 Ok((
                     chrono_datetime.date_naive(),
                     (chrono_datetime.time() != NaiveTime::from_hms_nano(0, 0, 0, 0))
-                        .then_some(ODBCError::FractionalTruncation(d.to_string())),
+                        .then_some(ODBCError::TimeTruncation(d.to_string())),
                 ))
             }
             Bson::String(s) => {
@@ -435,7 +435,7 @@ impl IntoCData for Bson {
                 Ok((
                     dt.date(),
                     (dt.time() != NaiveTime::from_hms_nano(0, 0, 0, 0))
-                        .then_some(ODBCError::FractionalTruncation(s.clone())),
+                        .then_some(ODBCError::TimeTruncation(s.clone())),
                 ))
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
@@ -449,7 +449,7 @@ impl IntoCData for Bson {
                 Ok((
                     dt_chrono.time().with_nanosecond(0).unwrap(),
                     (dt_chrono.nanosecond() > 0)
-                        .then_some(ODBCError::FractionalTruncation(d.to_string())),
+                        .then_some(ODBCError::SecondsTruncation(d.to_string())),
                 ))
             }
             Bson::String(s) => {
@@ -469,8 +469,7 @@ impl IntoCData for Bson {
                 } else {
                     Ok((
                         time.with_nanosecond(0).unwrap(),
-                        (time.nanosecond() > 0)
-                            .then_some(ODBCError::FractionalTruncation(s.clone())),
+                        (time.nanosecond() > 0).then_some(ODBCError::SecondsTruncation(s.clone())),
                     ))
                 }
             }
@@ -602,7 +601,7 @@ pub unsafe fn format_datetime(
                 hour: dt.hour() as u16,
                 minute: dt.minute() as u16,
                 second: dt.second() as u16,
-                fraction: (dt.nanosecond() as f32 * 0.000001) as u32,
+                fraction: dt.nanosecond(),
             };
             let sqlreturn =
                 isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);

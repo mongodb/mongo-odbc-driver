@@ -2492,7 +2492,7 @@ mod unit {
                         day: 28,
                     },
                     SqlReturn::SUCCESS_WITH_INFO,
-                    "[MongoDB][API] floating point data \"2014-11-28 12:00:09.0 +00:00:00\" was truncated to fixed point",
+                    "[MongoDB][API] datetime data \"2014-11-28 12:00:09.0 +00:00:00\" was truncated to date",
                 );
                 date_val_test(
                     DOC_COL,
