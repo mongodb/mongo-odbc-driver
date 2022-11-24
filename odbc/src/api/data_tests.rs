@@ -1,6 +1,8 @@
 use crate::{
     api::functions::{SQLFetch, SQLMoreResults},
-    handles::definitions::{MongoHandle, Statement, StatementState},
+    handles::definitions::{
+        Connection, ConnectionState, Env, EnvState, MongoHandle, Statement, StatementState,
+    },
     map, set,
 };
 use bson::{
@@ -17,7 +19,6 @@ use mongo_odbc_core::{
     mock_query::MongoQuery,
 };
 use odbc_sys::{Date, Nullability, SqlReturn, Time, Timestamp};
-use std::sync::RwLock;
 
 const ARRAY_COL: u16 = 1;
 const BIN_COL: u16 = 2;
@@ -251,10 +252,15 @@ mod unit {
     // has been called).
     #[test]
     fn unallocated_statement_sql_fetch() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        )));
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
 
         unsafe {
             assert_eq!(SqlReturn::ERROR, SQLFetch(stmt_handle as *mut _,));
@@ -265,18 +271,27 @@ mod unit {
                     (*stmt_handle)
                         .as_statement()
                         .unwrap()
+                        .errors
                         .read()
-                        .unwrap()
-                        .errors[0]
+                        .unwrap()[0]
                 ),
-            )
+            );
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
     #[test]
     fn sql_fetch_and_more_results_basic_functionality() {
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new(MongoQuery::new(
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new(MongoQuery::new(
             vec![
                 doc! {"a": {"b": 42}},
                 doc! {"a": {"b": 43}},
@@ -290,13 +305,15 @@ mod unit {
                 Nullability::NO_NULLS,
             )],
         )));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt_handle as *mut _,));
             assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt_handle as *mut _,));
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -304,9 +321,18 @@ mod unit {
     fn indicator_missing() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -331,12 +357,14 @@ mod unit {
                     (*stmt_handle)
                         .as_statement()
                         .unwrap()
+                        .errors
                         .read()
-                        .unwrap()
-                        .errors[0],
+                        .unwrap()[0],
                 ),
             );
             let _ = Box::from_raw(char_buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -344,9 +372,18 @@ mod unit {
     fn sql_get_wstring_data() {
         use crate::api::{data::input_wtext_to_string, functions::SQLGetData};
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -436,6 +473,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(char_buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -443,9 +482,18 @@ mod unit {
     fn sql_get_wstring_data_by_pieces() {
         use crate::api::{data::input_wtext_to_string, functions::SQLGetData};
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -478,9 +526,9 @@ mod unit {
                                 (*stmt_handle)
                                     .as_statement()
                                     .unwrap()
+                                    .errors
                                     .read()
-                                    .unwrap()
-                                    .errors[0],
+                                    .unwrap()[0],
                             ),
                         );
                     }
@@ -514,6 +562,8 @@ mod unit {
                 str_val_test(UNICODE_COL, 0, "", SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(char_buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -521,9 +571,18 @@ mod unit {
     fn sql_get_guid_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -558,10 +617,10 @@ mod unit {
                         (*stmt_handle)
                             .as_statement()
                             .unwrap()
+                            .errors
                             .read()
-                            .unwrap()
-                            .errors[0]
-                    ),
+                            .unwrap()[0]
+                ),
                 );
                 guid_val_test(STRING_COL, &[], SqlReturn::ERROR);
                 assert_eq!(
@@ -572,9 +631,9 @@ mod unit {
                         (*stmt_handle)
                             .as_statement()
                             .unwrap()
+                            .errors
                             .read()
-                            .unwrap()
-                            .errors[1]
+                            .unwrap()[1]
                     ),
                 );
                 guid_val_test(
@@ -587,6 +646,8 @@ mod unit {
                 );
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -594,9 +655,18 @@ mod unit {
     fn sql_get_string_data_by_pieces() {
         use crate::api::{data::input_text_to_string, functions::SQLGetData};
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -633,6 +703,8 @@ mod unit {
                 str_val_test(ARRAY_COL, 0, "", SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(char_buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -640,9 +712,18 @@ mod unit {
     fn sql_get_binary_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -685,9 +766,9 @@ mod unit {
                 let errors_len = (*stmt_handle)
                     .as_statement()
                     .unwrap()
+                    .errors
                     .read()
                     .unwrap()
-                    .errors
                     .len();
                 assert_eq!(
                     "[MongoDB][API] BSON type object cannot be converted to ODBC type Binary"
@@ -697,9 +778,9 @@ mod unit {
                         (*stmt_handle)
                             .as_statement()
                             .unwrap()
+                            .errors
                             .read()
-                            .unwrap()
-                            .errors[errors_len - 1]
+                            .unwrap()[errors_len - 1]
                     ),
                 );
                 bin_val_test(
@@ -755,6 +836,8 @@ mod unit {
             }
 
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -762,9 +845,18 @@ mod unit {
     fn sql_get_binary_data_by_pieces() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -804,15 +896,17 @@ mod unit {
                         (*stmt_handle)
                             .as_statement()
                             .unwrap()
+                            .errors
                             .read()
-                            .unwrap()
-                            .errors[0]
+                            .unwrap()[0]
                     ),
                 );
                 bin_val_test(BIN_COL, 1, &[42u8], SqlReturn::SUCCESS);
                 bin_val_test(BIN_COL, 0, &[], SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -820,9 +914,18 @@ mod unit {
     fn sql_get_string_data() {
         use crate::api::{data::input_text_to_string, functions::SQLGetData};
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -912,6 +1015,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(char_buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -919,9 +1024,18 @@ mod unit {
     fn sql_get_bit_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 10])) as *mut _;
@@ -951,9 +1065,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0]
+                                            .unwrap()[0]
                                     )
                                 );
                             }
@@ -967,9 +1081,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0]
+                                            .unwrap()[0]
                                     )
                                 );
                             }
@@ -1097,6 +1211,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -1104,9 +1220,18 @@ mod unit {
     fn sql_get_i64_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 10])) as *mut _;
@@ -1151,9 +1276,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1167,9 +1292,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1280,6 +1405,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -1287,9 +1414,18 @@ mod unit {
     fn sql_get_u64_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 10])) as *mut _;
@@ -1334,9 +1470,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1350,9 +1486,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1469,6 +1605,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -1476,9 +1614,18 @@ mod unit {
     fn sql_get_i32_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 10])) as *mut _;
@@ -1523,9 +1670,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1539,9 +1686,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1652,6 +1799,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -1659,9 +1808,18 @@ mod unit {
     fn sql_get_u32_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 10])) as *mut _;
@@ -1706,9 +1864,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1722,9 +1880,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1841,6 +1999,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -1848,9 +2008,18 @@ mod unit {
     fn sql_get_f64_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 10])) as *mut _;
@@ -1895,9 +2064,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -1909,9 +2078,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -2017,6 +2186,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -2024,9 +2195,18 @@ mod unit {
     fn sql_get_f32_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 10])) as *mut _;
@@ -2071,9 +2251,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -2085,9 +2265,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0],
+                                            .unwrap()[0]
                                     ),
                                 );
                             }
@@ -2193,6 +2373,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -2200,9 +2382,18 @@ mod unit {
     fn sql_get_datetime_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
@@ -2247,9 +2438,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0]
+                                            .unwrap()[0]
                                     )
                                 );
                             }
@@ -2394,6 +2585,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -2401,9 +2594,18 @@ mod unit {
     fn sql_get_date_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
@@ -2448,9 +2650,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0]
+                                            .unwrap()[0]
                                     )
                                 );
                             }
@@ -2587,6 +2789,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 
@@ -2594,9 +2798,18 @@ mod unit {
     fn sql_get_time_data() {
         use crate::api::functions::SQLGetData;
         use odbc_sys::CDataType;
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new((*MQ).clone()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new((*MQ).clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
@@ -2641,9 +2854,9 @@ mod unit {
                                         (*stmt_handle)
                                             .as_statement()
                                             .unwrap()
+                                            .errors
                                             .read()
-                                            .unwrap()
-                                            .errors[0]
+                                            .unwrap()[0]
                                     )
                                 );
                             }
@@ -2780,6 +2993,8 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
             let _ = Box::from_raw(buffer);
+            let _ = Box::from_raw(conn);
+            let _ = Box::from_raw(env);
         }
     }
 }

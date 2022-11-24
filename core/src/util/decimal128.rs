@@ -133,7 +133,7 @@ impl Decimal128Plus for [u8; 16] {
         };
 
         // the exponent if scientific notation is used
-        let scientific_exponent = significand_digits as i32 - 1 + exponent as i32;
+        let scientific_exponent = significand_digits - 1 + exponent;
 
         // The scientific exponent checks are dictated by the string conversion
         // specification and are somewhat arbitrary cutoffs.
@@ -178,7 +178,7 @@ impl Decimal128Plus for [u8; 16] {
             }
             return str_out;
         }
-        let mut radix_position = significand_digits as i32 + exponent;
+        let mut radix_position = significand_digits + exponent;
         if radix_position > 0 {
             // non-zero digits before radix
             let mut i = 0;
@@ -202,7 +202,7 @@ impl Decimal128Plus for [u8; 16] {
         // Note we do not have radix_position - 1 in max here unlike the C code.
         // This is because the C code has radix_position++ in the while condition,
         // so `C radix postion` == `rust radix position` + 1 at this point.
-        while (i < (significand_digits as i32 - std::cmp::max(radix_position, 0)))
+        while (i < (significand_digits - std::cmp::max(radix_position, 0)))
             && str_out.len() < BSON_DECIMAL128_STRING
         {
             str_out.push(char::from_digit(significand[significand_index] as u32, 10).unwrap());

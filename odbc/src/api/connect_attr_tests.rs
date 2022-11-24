@@ -31,7 +31,7 @@ mod unit {
                     let mut conn =
                         Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
                     $(conn.attributes = $initial_attrs;)?
-                    let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
+                    let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
 
                     let value_ptr: *mut std::ffi::c_void =
                         Box::into_raw(Box::new([0u8; 40])) as *mut _;
@@ -79,7 +79,7 @@ mod unit {
             current_catalog,
             attribute = ConnectionAttribute::CurrentCatalog,
             expected_sql_return = SqlReturn::SUCCESS,
-            initial_attrs = Box::new(ConnectionAttributes {
+            initial_attrs = RwLock::new(ConnectionAttributes {
                 current_catalog: Some("test".to_string()),
                 ..Default::default()
             }),
@@ -102,7 +102,7 @@ mod unit {
             connection_timeout,
             attribute = ConnectionAttribute::ConnectionTimeout,
             expected_sql_return = SqlReturn::SUCCESS,
-            initial_attrs = Box::new(ConnectionAttributes {
+            initial_attrs = RwLock::new(ConnectionAttributes {
                 connection_timeout: Some(42),
                 ..Default::default()
             }),
@@ -124,7 +124,7 @@ mod unit {
             login_timeout,
             attribute = ConnectionAttribute::LoginTimeout,
             expected_sql_return = SqlReturn::SUCCESS,
-            initial_attrs = Box::new(ConnectionAttributes {
+            initial_attrs = RwLock::new(ConnectionAttributes {
                 login_timeout: Some(42),
                 ..Default::default()
             }),
@@ -139,7 +139,7 @@ mod unit {
     fn set_login_timeout() {
         unsafe {
             let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-            let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
+            let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
 
             let login_timeout_value: UInteger = 42u32;
 
@@ -153,7 +153,7 @@ mod unit {
                 )
             );
             let conn_handle = (*mongo_handle).as_connection().unwrap();
-            let attributes = &conn_handle.read().unwrap().attributes;
+            let attributes = &conn_handle.attributes.read().unwrap();
             assert_eq!(attributes.login_timeout, Some(42));
         }
     }
@@ -186,7 +186,7 @@ mod unit {
         unsafe {
             for attr in UNSUPPORTED_ATTRS {
                 let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-                let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
+                let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
                 assert_eq!(
                     SqlReturn::ERROR,
                     SQLGetConnectAttrW(
@@ -217,7 +217,7 @@ mod unit {
             .concat()
             {
                 let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-                let mongo_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(conn));
+                let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
 
                 assert_eq!(
                     SqlReturn::ERROR,
@@ -239,7 +239,7 @@ mod unit {
         attr: ConnectionAttribute,
     ) {
         let conn_handle = (*mongo_handle).as_connection().unwrap();
-        let errors = &conn_handle.read().unwrap().errors;
+        let errors = &conn_handle.errors.read().unwrap();
         assert_eq!(1, errors.len());
         let actual_err = errors.first().unwrap();
         match actual_err {
