@@ -18,7 +18,7 @@ impl BsonTypeInfo {
         searchable: true,
         scale: Some(15),
         precision: Some(15),
-        octet_length: None,
+        octet_length: Some(8),
         fixed_bytes_length: Some(8),
     };
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
@@ -72,7 +72,7 @@ impl BsonTypeInfo {
         searchable: true,
         scale: None,
         precision: Some(24),
-        octet_length: None,
+        octet_length: Some(24),
         fixed_bytes_length: None,
     };
     pub const BOOL: BsonTypeInfo = BsonTypeInfo {
@@ -81,7 +81,7 @@ impl BsonTypeInfo {
         searchable: true,
         scale: None,
         precision: Some(1),
-        octet_length: None,
+        octet_length: Some(1),
         fixed_bytes_length: Some(1),
     };
     pub const DATE: BsonTypeInfo = BsonTypeInfo {
@@ -89,9 +89,9 @@ impl BsonTypeInfo {
         sql_type: SqlDataType::TIMESTAMP,
         searchable: true,
         scale: Some(3),
-        precision: Some(24),
-        octet_length: None,
-        fixed_bytes_length: Some(8),
+        precision: Some(23),
+        octet_length: Some(16),
+        fixed_bytes_length: Some(16),
     };
     pub const NULL: BsonTypeInfo = BsonTypeInfo {
         type_name: "null",
@@ -153,7 +153,7 @@ impl BsonTypeInfo {
         searchable: true,
         scale: Some(0),
         precision: Some(10),
-        octet_length: None,
+        octet_length: Some(4),
         fixed_bytes_length: Some(4),
     };
     pub const TIMESTAMP: BsonTypeInfo = BsonTypeInfo {
@@ -171,7 +171,7 @@ impl BsonTypeInfo {
         searchable: true,
         scale: Some(0),
         precision: Some(19),
-        octet_length: None,
+        octet_length: Some(8),
         fixed_bytes_length: Some(8),
     };
     pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
@@ -179,10 +179,10 @@ impl BsonTypeInfo {
         // TODO SQL-1068: Change to SqlDataType::DECIMAL
         sql_type: SqlDataType::UNKNOWN_TYPE,
         searchable: true,
-        scale: Some(34),
-        precision: Some(34),
-        octet_length: None,
-        fixed_bytes_length: Some(16),
+        scale: None,
+        precision: None,          //Some(34),
+        octet_length: None,       //Some(16),
+        fixed_bytes_length: None, //Some(16),
     };
     pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "minKey",

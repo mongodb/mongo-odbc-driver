@@ -7,32 +7,14 @@ use crate::{
         BsonTypeName,
     },
     stmt::MongoStatement,
-    util::to_name_regex,
+    util::{add_table_type_filter, to_name_regex_doc, COLLECTION, TABLE, TIMESERIES},
     Error,
 };
-use bson::{doc, Bson, Document};
-use constants::SQL_ALL_TABLE_TYPES;
+use bson::Bson;
 use lazy_static::lazy_static;
 use mongodb::results::CollectionSpecification;
 use mongodb::sync::Cursor;
 use odbc_sys::Nullability;
-use regex::{RegexSet, RegexSetBuilder};
-
-const TABLE: &str = "TABLE";
-const COLLECTION: &str = "collection";
-const TIMESERIES: &str = "timeseries";
-const VIEW: &str = "view";
-
-lazy_static! {
-    static ref TABLE_VALUES: RegexSet = RegexSetBuilder::new(["^table$", "^\'table\'$"])
-        .case_insensitive(true)
-        .build()
-        .unwrap();
-    static ref VIEW_VALUES: RegexSet = RegexSetBuilder::new(["^view$", "^\'view\'$"])
-        .case_insensitive(true)
-        .build()
-        .unwrap();
-}
 
 lazy_static! {
     static ref COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
@@ -105,11 +87,11 @@ impl MongoCollections {
     ) -> Self {
         let names = mongo_connection
             .client
-            .list_database_names(to_name_regex(db_name_filter), None)
+            .list_database_names(to_name_regex_doc(db_name_filter), None)
             .unwrap();
         let mut databases: Vec<CollectionsForDb> = Vec::with_capacity(names.len());
         for name in names {
-            let list_coll_name_filter = to_name_regex(collection_name_filter);
+            let list_coll_name_filter = to_name_regex_doc(collection_name_filter);
             let db = mongo_connection.client.database(name.as_str());
             let collections = db
                 .list_collections(
@@ -141,29 +123,6 @@ impl MongoCollections {
             collections_for_db_list: Vec::new(),
         }
     }
-}
-
-// Iterates through the table types and adds the corresponding type to the filter document.
-fn add_table_type_filter(table_type: &str, mut filter: Document) -> Document {
-    let mut table_type_filters: Vec<Bson> = Vec::new();
-    let table_type_entries = table_type
-        .split(',')
-        .map(|attr| attr.trim())
-        .collect::<Vec<&str>>();
-    for table_type_entry in &table_type_entries {
-        if SQL_ALL_TABLE_TYPES.to_string().eq(table_type_entry) {
-            // No need to add a 'type' filter
-            return filter;
-        } else if TABLE_VALUES.is_match(table_type_entry) {
-            // Collection and Timeseries types are mapped to table
-            table_type_filters.push(Bson::String(COLLECTION.to_string()));
-            table_type_filters.push(Bson::String(TIMESERIES.to_string()));
-        } else if VIEW_VALUES.is_match(table_type_entry) {
-            table_type_filters.push(Bson::String(VIEW.to_string()));
-        }
-    }
-    filter.insert("type", doc! {"$in": Bson::Array(table_type_filters) });
-    filter
 }
 
 impl MongoStatement for MongoCollections {
@@ -221,7 +180,7 @@ impl MongoStatement for MongoCollections {
                     .database_name
                     .clone(),
             ),
-            2 | 5 => Bson::Null,
+            2 => Bson::Null,
             3 => Bson::String(self.current_collection.as_ref().unwrap().name.clone()),
             4 => {
                 let coll_type = format!(
@@ -235,6 +194,7 @@ impl MongoStatement for MongoCollections {
                     _ => Bson::String(coll_type.to_uppercase()),
                 }
             }
+            5 => Bson::String("".to_string()),
             _ => return Err(Error::ColIndexOutOfBounds(col_index)),
         };
         Ok(Some(return_val))
