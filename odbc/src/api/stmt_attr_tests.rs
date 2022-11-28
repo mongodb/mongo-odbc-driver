@@ -4,7 +4,7 @@ use crate::{
     map, SQLGetStmtAttrW, SQLSetStmtAttrW,
 };
 use odbc_sys::{HStmt, Integer, Pointer, SqlReturn, StatementAttribute, ULen, USmallInt};
-use std::{collections::BTreeMap, mem::size_of, sync::RwLock};
+use std::{collections::BTreeMap, mem::size_of};
 
 fn get_set_stmt_attr(
     handle: *mut MongoHandle,
@@ -121,10 +121,10 @@ mod unit {
     #[test]
     fn test_supported_attributes() {
         use crate::map;
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
 
         get_set_stmt_attr(
             stmt_handle,
@@ -252,10 +252,10 @@ mod unit {
     #[test]
     fn test_unsupported_attributes() {
         use crate::map;
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
 
         get_set_stmt_attr(
             stmt_handle,

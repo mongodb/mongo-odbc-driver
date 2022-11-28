@@ -1,4 +1,7 @@
-use crate::{databases::DATABASES_METADATA, err::Result, Error, MongoColMetadata, MongoStatement};
+use crate::{
+    databases::DATABASES_METADATA, err::Result, Error, MongoColMetadata, MongoConnection,
+    MongoStatement,
+};
 use bson::Bson;
 
 const TABLE_TYPES: [&str; 2] = ["TABLE", "VIEW"];
@@ -24,7 +27,7 @@ impl MongoTableTypes {
 impl MongoStatement for MongoTableTypes {
     // Increment current_table_type_index.
     // Return true if current_table_type_index index is <= for table_type.length.
-    fn next(&mut self) -> Result<bool> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
         self.current_table_type_index += 1;
         Ok(self.current_table_type_index <= self.table_type.len())
     }

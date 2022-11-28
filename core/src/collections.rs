@@ -7,6 +7,7 @@ use crate::{
         BsonTypeName,
     },
     stmt::MongoStatement,
+    util::to_name_regex,
     Error,
 };
 use bson::{doc, Bson, Document};
@@ -169,7 +170,7 @@ impl MongoStatement for MongoCollections {
     // Move the cursor to the next CollectionSpecification.
     // When cursor is exhausted move to next database in list
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self) -> Result<bool> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
         if self.current_database_index.is_none() {
             if self.collections_for_db_list.is_empty() {
                 return Ok(false);
@@ -242,14 +243,6 @@ impl MongoStatement for MongoCollections {
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
         &COLLECTIONS_METADATA
     }
-}
-
-// Replaces SQL wildcard characters with associated regex
-// Returns a doc applying filter to name
-// SQL-1060: Improve SQL-to-Rust regex pattern method
-fn to_name_regex(filter: &str) -> Document {
-    let regex_filter = filter.replace('%', ".*").replace('_', ".");
-    doc! { "name": { "$regex": regex_filter } }
 }
 
 mod unit {

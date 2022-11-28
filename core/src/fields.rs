@@ -7,10 +7,10 @@ use crate::{
         BsonTypeName,
     },
     stmt::MongoStatement,
+    util::to_name_regex,
 };
 use bson::{Bson, Document};
 use lazy_static::lazy_static;
-use mongodb::sync::Cursor;
 use odbc_sys::Nullability;
 
 lazy_static! {
@@ -448,18 +448,16 @@ mod unit {
 }
 
 #[derive(Debug)]
-struct FieldsForCollection {
-    database_name: String,
-    collection_name: String,
-    // Info retrieved via sqlgetschema
-    // See https://docs.mongodb.com/datalake/reference/cli/sql/sqlgetschema/ for more details.
-    schema: Cursor<Document>,
-}
-
-#[derive(Debug)]
 pub struct MongoFields {
-    // The current collection specification.
-    current_field_list: Option<FieldsForCollection>,
+    dbs: Option<Vec<String>>,
+    current_db: Option<usize>,
+    collections_for_db: Option<Vec<String>>,
+    current_collection: Option<usize>,
+    num_fields_for_collection: Option<usize>,
+    current_schema: Option<Schema>,
+    current_field_for_collection: Option<usize>,
+    db_name_filter: Option<Document>,
+    collection_name_filter: Option<Document>,
 }
 
 // Statement related to a SQLTables call.
@@ -471,17 +469,35 @@ impl MongoFields {
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
     // timeout, the query must finish before the timeout or an error is returned.
     pub fn list_columns(
-        _client: &MongoConnection,
+        _mongo_connection: &MongoConnection,
         _query_timeout: Option<i32>,
-        _db_name_filter: &str,
-        _collection_name_filter: &str,
+        db_name_filter: &str,
+        collection_name_filter: &str,
     ) -> Self {
-        unimplemented!()
+        MongoFields {
+            dbs: None,
+            current_db: None,
+            collections_for_db: None,
+            current_collection: None,
+            num_fields_for_collection: None,
+            current_schema: None,
+            current_field_for_collection: None,
+            db_name_filter: Some(to_name_regex(db_name_filter)),
+            collection_name_filter: Some(to_name_regex(collection_name_filter)),
+        }
     }
 
     pub fn empty() -> MongoFields {
         MongoFields {
-            current_field_list: None,
+            dbs: None,
+            current_db: None,
+            collections_for_db: None,
+            current_collection: None,
+            num_fields_for_collection: None,
+            current_schema: None,
+            current_field_for_collection: None,
+            db_name_filter: None,
+            collection_name_filter: None,
         }
     }
 }
@@ -489,7 +505,7 @@ impl MongoFields {
 impl MongoStatement for MongoFields {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self) -> Result<bool> {
+    fn next(&mut self, _mongo_connection: Option<&MongoConnection>) -> Result<bool> {
         unimplemented!()
     }
 

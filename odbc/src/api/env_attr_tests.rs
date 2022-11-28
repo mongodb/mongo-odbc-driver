@@ -5,7 +5,7 @@ use crate::{
     SQLGetDiagRecW, SQLGetEnvAttrW, SQLSetEnvAttrW,
 };
 use odbc_sys::{EnvironmentAttribute, HEnv, HandleType, Integer, Pointer, SqlReturn};
-use std::{collections::BTreeMap, ffi::c_void, mem::size_of, sync::RwLock};
+use std::{collections::BTreeMap, ffi::c_void, mem::size_of};
 
 const OPTIONAL_VALUE_CHANGED: &str = "01S02\0";
 
@@ -76,8 +76,7 @@ mod unit {
     fn test_env_attr() {
         unsafe {
             use crate::map;
-            let env_handle: *mut _ =
-                &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+            let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
             get_set_env_attr(
                 env_handle,
@@ -155,8 +154,7 @@ mod unit {
     #[test]
     fn test_optional_value_changed() {
         unsafe {
-            let handle: *mut _ =
-                &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+            let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLSetEnvAttrW(

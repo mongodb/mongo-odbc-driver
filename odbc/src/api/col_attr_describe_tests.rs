@@ -15,10 +15,10 @@ mod unit {
     // has been called).
     #[test]
     fn unallocated_statement_string_attr() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
 
         for desc in [
             Desc::BaseColumnName,
@@ -57,9 +57,9 @@ mod unit {
                         (*stmt_handle)
                             .as_statement()
                             .unwrap()
+                            .errors
                             .read()
-                            .unwrap()
-                            .errors[0]
+                            .unwrap()[0]
                     ),
                 );
                 let _ = Box::from_raw(char_buffer);
@@ -69,10 +69,10 @@ mod unit {
 
     #[test]
     fn unallocated_statement_numeric_attr() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
 
         for desc in [
             Desc::AutoUniqueValue,
@@ -118,9 +118,9 @@ mod unit {
                         (*stmt_handle)
                             .as_statement()
                             .unwrap()
+                            .errors
                             .read()
-                            .unwrap()
-                            .errors[0]
+                            .unwrap()[0]
                     ),
                 );
                 let _ = Box::from_raw(char_buffer);
@@ -130,10 +130,10 @@ mod unit {
 
     #[test]
     fn unallocated_statement_describe_col() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
         unsafe {
             let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
             let name_buffer_length: SmallInt = 20;
@@ -164,9 +164,9 @@ mod unit {
                     (*stmt_handle)
                         .as_statement()
                         .unwrap()
+                        .errors
                         .read()
-                        .unwrap()
-                        .errors[0]
+                        .unwrap()[0]
                 ),
             );
             let _ = Box::from_raw(name_buffer);
@@ -175,10 +175,10 @@ mod unit {
 
     #[test]
     fn unallocated_statement_unsupported_attr() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
 
         for desc in [
             Desc::OctetLengthPtr,
@@ -224,9 +224,9 @@ mod unit {
                         (*stmt_handle)
                             .as_statement()
                             .unwrap()
+                            .errors
                             .read()
-                            .unwrap()
-                            .errors[0]
+                            .unwrap()[0]
                     ),
                 );
                 let _ = Box::from_raw(char_buffer);
@@ -237,8 +237,8 @@ mod unit {
     #[test]
     fn test_index_out_of_bounds_describe() {
         let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             for col_index in [0, 30] {
                 let name_buffer: *mut std::ffi::c_void =
@@ -274,9 +274,9 @@ mod unit {
                         (*stmt_handle)
                             .as_statement()
                             .unwrap()
+                            .errors
                             .read()
-                            .unwrap()
-                            .errors[0]
+                            .unwrap()[0]
                     )
                 );
                 let _ = Box::from_raw(name_buffer);
@@ -287,8 +287,8 @@ mod unit {
     #[test]
     fn test_index_out_of_bounds_attr() {
         let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
-        let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
+        let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         for desc in [
             // string descriptor
             Desc::TypeName,
@@ -325,9 +325,9 @@ mod unit {
                             (*mongo_handle)
                                 .as_statement()
                                 .unwrap()
+                                .errors
                                 .read()
-                                .unwrap()
-                                .errors[0]
+                                .unwrap()[0]
                         )
                     );
                     let _ = Box::from_raw(char_buffer);
@@ -341,8 +341,8 @@ mod unit {
     fn test_string_field_attributes() {
         unsafe {
             let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-            stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
-            let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+            stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
+            let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
             let col_index = 3; //TABLE_NAME
             for (desc, expected) in [
                 (Desc::BaseColumnName, ""),
@@ -390,8 +390,8 @@ mod unit {
     #[test]
     fn test_numeric_field_attributes() {
         let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-        stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
-        let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+        stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
+        let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         let col_index = 3; //TABLE_NAME
         for (desc, expected) in [
             (Desc::AutoUniqueValue, 0isize),
@@ -441,8 +441,8 @@ mod unit {
     fn test_describe_col() {
         unsafe {
             let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
-            stmt.mongo_statement = Some(Box::new(MongoFields::empty()));
-            let mongo_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(stmt));
+            stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
+            let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
             let col_index = 3; //TABLE_NAME
             let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
             let name_buffer_length: SmallInt = 20;

@@ -1,6 +1,5 @@
 use crate::{api::errors::ODBCError, handles::definitions::*, SQLGetDiagRecW};
 use odbc_sys::{HandleType, SqlReturn};
-use std::sync::RwLock;
 
 const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
 
@@ -48,26 +47,25 @@ mod unit {
             }
         }
 
-        let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         validate_diag_rec(HandleType::Env, env_handle);
 
-        let conn_handle: *mut _ = &mut MongoHandle::Connection(RwLock::new(
-            Connection::with_state(env_handle, ConnectionState::Allocated),
+        let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
+            env_handle,
+            ConnectionState::Allocated,
         ));
         validate_diag_rec(HandleType::Dbc, conn_handle);
 
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(RwLock::new(Statement::with_state(
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
-        )));
+        ));
         validate_diag_rec(HandleType::Stmt, stmt_handle);
     }
 
     #[test]
     fn test_error_message() {
-        let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         // Initialize buffers
         let sql_state = &mut [0u16; 6] as *mut _;
@@ -121,8 +119,7 @@ mod unit {
 
     #[test]
     fn test_invalid_ops() {
-        let env_handle: *mut _ =
-            &mut MongoHandle::Env(RwLock::new(Env::with_state(EnvState::Allocated)));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         // Initialize buffers
         let sql_state = &mut [0u16; 6] as *mut _;
