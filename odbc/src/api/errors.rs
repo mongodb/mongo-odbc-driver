@@ -63,12 +63,12 @@ pub enum ODBCError {
     )]
     FractionalTruncation(String),
     #[error(
-        "[{}][API] fractional seconds data \"{0}\" was truncated to nanoseconds",
+        "[{}][API] fractional seconds for data \"{0}\" was truncated to nanoseconds",
         VENDOR_IDENTIFIER
     )]
     FractionalSecondsTruncation(String),
     #[error(
-        "[{}][API] seconds data \"{0}\" was truncated to fixed point",
+        "[{}][API] fractional seconds data truncated from \"{0}\"",
         VENDOR_IDENTIFIER
     )]
     SecondsTruncation(String),

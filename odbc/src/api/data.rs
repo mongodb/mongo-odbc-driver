@@ -1756,12 +1756,14 @@ mod unit {
 
         #[test]
         fn string_conversions_to_datetimes() {
-            // input = $input:expr, method = $method:tt, expected = $expected:expr, info = $info:expr
             let date_expectation: DateTime<Utc> = "2014-11-28T00:00:00Z".parse().unwrap();
             let datetime_expectation_no_millis: DateTime<Utc> =
                 "2014-11-28T09:23:24Z".parse().unwrap();
             let datetime_expectation_millis: DateTime<Utc> =
                 "2014-11-28T09:23:24.123456789Z".parse().unwrap();
+            let today_plus_time_no_millis_expectation = Utc::today().and_hms(9, 23, 24);
+            let today_plus_time_millis_expectation =
+                Utc::today().and_hms_nano(9, 23, 24, 123456789);
 
             type V = Vec<(
                 &'static str,
@@ -1825,6 +1827,24 @@ mod unit {
                     Err(()),
                     Some(INVALID_DATETIME_FORMAT),
                 ),
+                (
+                    "09:23:24",
+                    today_plus_time_no_millis_expectation,
+                    Ok(()),
+                    None,
+                ),
+                (
+                    "09:23:24.123456789",
+                    today_plus_time_millis_expectation,
+                    Ok(()),
+                    None,
+                ),
+                (
+                    "09:23:24.1234567898",
+                    today_plus_time_millis_expectation,
+                    Ok(()),
+                    Some(FRACTIONAL_TRUNCATION),
+                ),
             ];
             test_cases
                 .iter()
@@ -1848,34 +1868,6 @@ mod unit {
                         }
                     };
                 });
-        }
-
-        #[test]
-        fn string_time_conversions_to_datetimes() {
-            let time_expectation_no_millis = NaiveTime::from_hms(9, 23, 24);
-            let time_expectation_millis = NaiveTime::from_hms_nano(9, 23, 24, 123456789);
-            let test_cases: Vec<(&str, NaiveTime, Option<&'static str>)> = vec![
-                ("09:23:24", time_expectation_no_millis, None),
-                ("09:23:24.123456789", time_expectation_millis, None),
-                (
-                    "09:23:24.1234567890",
-                    time_expectation_millis,
-                    Some(FRACTIONAL_TRUNCATION),
-                ),
-            ];
-            test_cases.iter().for_each(|(input, expectation, info)| {
-                let datetime_from_string = Bson::String(input.to_string()).to_datetime();
-                assert!(datetime_from_string.is_ok());
-                let (dt, err) = datetime_from_string.unwrap();
-                assert_eq!(&dt.time(), expectation);
-                if info.is_some() {
-                    assert!(err.is_some());
-                    assert_eq!(
-                        err.unwrap().get_sql_state().to_string(),
-                        info.unwrap_or_default()
-                    );
-                }
-            });
         }
 
         #[test]
