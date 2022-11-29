@@ -63,6 +63,21 @@ pub enum ODBCError {
     )]
     FractionalTruncation(String),
     #[error(
+        "[{}][API] fractional seconds for data \"{0}\" was truncated to nanoseconds",
+        VENDOR_IDENTIFIER
+    )]
+    FractionalSecondsTruncation(String),
+    #[error(
+        "[{}][API] fractional seconds data truncated from \"{0}\"",
+        VENDOR_IDENTIFIER
+    )]
+    SecondsTruncation(String),
+    #[error(
+        "[{}][API] datetime data \"{0}\" was truncated to date",
+        VENDOR_IDENTIFIER
+    )]
+    TimeTruncation(String),
+    #[error(
         "[{}][API] integral data \"{0}\" was truncated due to overflow",
         VENDOR_IDENTIFIER
     )]
@@ -112,6 +127,9 @@ impl ODBCError {
             ODBCError::InvalidDescriptorIndex(_) => INVALID_DESCRIPTOR_INDEX,
             ODBCError::RestrictedDataType(_, _) => RESTRICTED_DATATYPE,
             ODBCError::FractionalTruncation(_) => FRACTIONAL_TRUNCATION,
+            ODBCError::FractionalSecondsTruncation(_) => FRACTIONAL_TRUNCATION,
+            ODBCError::SecondsTruncation(_) => FRACTIONAL_TRUNCATION,
+            ODBCError::TimeTruncation(_) => FRACTIONAL_TRUNCATION,
             ODBCError::IntegralTruncation(_) => INTEGRAL_TRUNCATION,
             ODBCError::InvalidDatetimeFormat(_) => INVALID_DATETIME_FORMAT,
             ODBCError::InvalidCharacterValue(_, _) => INVALID_CHARACTER_VALUE,
@@ -142,6 +160,9 @@ impl ODBCError {
             | ODBCError::RestrictedDataType(_, _)
             | ODBCError::IndicatorVariableRequiredButNotSupplied
             | ODBCError::FractionalTruncation(_)
+            | ODBCError::FractionalSecondsTruncation(_)
+            | ODBCError::SecondsTruncation(_)
+            | ODBCError::TimeTruncation(_)
             | ODBCError::IntegralTruncation(_)
             | ODBCError::InvalidDatetimeFormat(_)
             | ODBCError::UnsupportedFieldDescriptor(_)

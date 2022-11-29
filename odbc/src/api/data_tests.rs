@@ -2627,19 +2627,20 @@ mod unit {
                             )
                         );
                         match code {
-                            SqlReturn::SUCCESS => {
+                            SqlReturn::SUCCESS_WITH_INFO => {
                                 assert_eq!(6, *out_len_or_ind);
                                 assert_eq!(expected, *(buffer as *const Date));
                                 assert_eq!(
-                                    SqlReturn::NO_DATA,
-                                    SQLGetData(
-                                        stmt_handle as *mut _,
-                                        col,
-                                        CDataType::Date,
-                                        buffer,
-                                        buffer_length,
-                                        out_len_or_ind,
-                                    )
+                                    expected_error.to_string(),
+                                    format!(
+                                        "{}",
+                                        (*stmt_handle)
+                                            .as_statement()
+                                            .unwrap()
+                                            .errors
+                                            .read()
+                                            .unwrap()[0],
+                                    ),
                                 );
                             }
                             SqlReturn::ERROR => {
@@ -2692,8 +2693,8 @@ mod unit {
                         month: 11,
                         day: 28,
                     },
-                    SqlReturn::SUCCESS,
-                    "",
+                    SqlReturn::SUCCESS_WITH_INFO,
+                    "[MongoDB][API] datetime data \"2014-11-28 12:00:09.0 +00:00:00\" was truncated to date",
                 );
                 date_val_test(
                     DOC_COL,

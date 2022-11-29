@@ -3,13 +3,11 @@ use crate::{
     handles::definitions::{CachedData, MongoHandle, Statement},
 };
 use bson::{spec::BinarySubtype, Bson};
-use chrono::{
-    offset::{TimeZone, Utc},
-    DateTime, Datelike, Timelike,
-};
+use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp, USmallInt};
 use odbc_sys::{Char, Integer, SmallInt, SqlReturn, WChar};
+use regex::Regex;
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
 
 const BINARY: &str = "Binary";
@@ -36,7 +34,9 @@ trait IntoCData {
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)>;
     fn to_u32(&self) -> Result<(u32, Option<ODBCError>)>;
     fn to_bit(&self) -> Result<(u8, Option<ODBCError>)>;
-    fn to_datetime(&self) -> Result<DateTime<Utc>>;
+    fn to_datetime(&self) -> Result<(DateTime<Utc>, Option<ODBCError>)>;
+    fn to_date(&self) -> Result<(NaiveDate, Option<ODBCError>)>;
+    fn to_time(&self) -> Result<(NaiveTime, Option<ODBCError>)>;
     fn to_type_str(&self) -> &'static str;
 }
 
@@ -60,6 +60,15 @@ fn i64_to_bit(i: i64) -> Result<(u8, Option<ODBCError>)> {
         1 => Ok((1u8, None)),
         _ => Err(ODBCError::IntegralTruncation(i.to_string())),
     }
+}
+
+fn string_contains_fractional_precision_micros(s: &str) -> bool {
+    // pull out microseconds by splitting on decimal place (only one in valid time[stamp])
+    // use regex to separate fractional seconds from any timezone formatting
+    Regex::new(r"(\.\d+)")
+        .unwrap()
+        .find(s)
+        .map_or(false, |mat| mat.as_str().len() > 10) // 9 digits plus a '.'
 }
 
 fn from_string(s: &str, conversion_error_type: &'static str) -> Result<f64> {
@@ -371,12 +380,99 @@ impl IntoCData for Bson {
         }
     }
 
-    fn to_datetime(&self) -> Result<DateTime<Utc>> {
+    fn to_datetime(&self) -> Result<(DateTime<Utc>, Option<ODBCError>)> {
         match self {
-            Bson::DateTime(d) => Ok((*d).into()),
-            Bson::String(s) => Utc
-                .datetime_from_str(s, "%FT%H:%M:%S%.3fZ")
-                .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone())),
+            Bson::DateTime(d) => Ok(((*d).into(), None)),
+            Bson::String(s) => {
+                // using '-' to check if input string contains a date and ':' to check if input string contains a time
+                // parse (or set defaults) for date and time depending on contents of string
+                let (date, time) = if s.contains('-') && s.contains(':') {
+                    let dt = NaiveDateTime::parse_from_str(s, "%F %T%.f")
+                        .or_else(|_| NaiveDateTime::parse_from_str(s, "%+"))
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                    (dt.date(), dt.time())
+                } else if s.contains('-') {
+                    (
+                        NaiveDate::parse_from_str(s, "%F")
+                            .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?,
+                        NaiveTime::from_hms(0, 0, 0),
+                    )
+                } else {
+                    let time = NaiveTime::parse_from_str(s, "%T%.f")
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                    (Utc::today().naive_utc(), time)
+                };
+                Ok((
+                    DateTime::<Utc>::from_utc(NaiveDateTime::new(date, time), Utc),
+                    string_contains_fractional_precision_micros(s)
+                        .then_some(ODBCError::FractionalSecondsTruncation(s.clone())),
+                ))
+            }
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
+        }
+    }
+
+    fn to_date(&self) -> Result<(NaiveDate, Option<ODBCError>)> {
+        match self {
+            Bson::DateTime(d) => {
+                let chrono_datetime = (*d).to_chrono();
+                Ok((
+                    chrono_datetime.date_naive(),
+                    (chrono_datetime.time() != NaiveTime::from_hms_nano(0, 0, 0, 0))
+                        .then_some(ODBCError::TimeTruncation(d.to_string())),
+                ))
+            }
+            Bson::String(s) => {
+                let dt = if s.contains(':') {
+                    NaiveDateTime::parse_from_str(s, "%F %T%.f")
+                        .or_else(|_| NaiveDateTime::parse_from_str(s, "%+"))
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?
+                } else {
+                    NaiveDate::parse_from_str(s, "%F")
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?
+                        .and_hms(0, 0, 0)
+                };
+                Ok((
+                    dt.date(),
+                    (dt.time() != NaiveTime::from_hms_nano(0, 0, 0, 0))
+                        .then_some(ODBCError::TimeTruncation(s.clone())),
+                ))
+            }
+            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
+        }
+    }
+
+    fn to_time(&self) -> Result<(NaiveTime, Option<ODBCError>)> {
+        match self {
+            Bson::DateTime(d) => {
+                let dt_chrono = (*d).to_chrono();
+                Ok((
+                    dt_chrono.time().with_nanosecond(0).unwrap(),
+                    (dt_chrono.nanosecond() > 0)
+                        .then_some(ODBCError::SecondsTruncation(d.to_string())),
+                ))
+            }
+            Bson::String(s) => {
+                let time = if s.contains('-') {
+                    NaiveDateTime::parse_from_str(s, "%F %T%.f")
+                        .or_else(|_| NaiveDateTime::parse_from_str(s, "%+"))
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?
+                        .time()
+                } else {
+                    NaiveTime::parse_from_str(s, "%T%.f")
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?
+                };
+
+                // time strings with fractional seconds are invalid; timestamps with fractional seconds yield truncation
+                if time.nanosecond() > 0 && !s.contains('-') {
+                    Err(ODBCError::InvalidDatetimeFormat(s.clone()))
+                } else {
+                    Ok((
+                        time.with_nanosecond(0).unwrap(),
+                        (time.nanosecond() > 0).then_some(ODBCError::SecondsTruncation(s.clone())),
+                    ))
+                }
+            }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
         }
     }
@@ -491,7 +587,7 @@ pub unsafe fn format_datetime(
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
     let dt = data.to_datetime();
     match dt {
-        Ok(dt) => {
+        Ok((dt, warning)) => {
             let data = Timestamp {
                 year: dt.year() as i16,
                 month: dt.month() as u16,
@@ -499,9 +595,15 @@ pub unsafe fn format_datetime(
                 hour: dt.hour() as u16,
                 minute: dt.minute() as u16,
                 second: dt.second() as u16,
-                fraction: (dt.nanosecond() as f32 * 0.000001) as u32,
+                fraction: dt.nanosecond(),
             };
-            isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
+            let sqlreturn =
+                isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
+            if let Some(warning) = warning {
+                stmt.errors.write().unwrap().push(warning);
+                return SqlReturn::SUCCESS_WITH_INFO;
+            }
+            sqlreturn
         }
         Err(e) => {
             stmt.errors.write().unwrap().push(e);
@@ -518,16 +620,22 @@ pub unsafe fn format_time(
     data: Bson,
 ) -> SqlReturn {
     let stmt = (*mongo_handle).as_statement().unwrap();
-    let dt = data.to_datetime();
+    let time = data.to_time();
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
-    match dt {
-        Ok(dt) => {
+    match time {
+        Ok((time, warning)) => {
             let data = Time {
-                hour: dt.hour() as u16,
-                minute: dt.minute() as u16,
-                second: dt.second() as u16,
+                hour: time.hour() as u16,
+                minute: time.minute() as u16,
+                second: time.second() as u16,
             };
-            isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
+            let sqlreturn =
+                isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
+            if let Some(warning) = warning {
+                stmt.errors.write().unwrap().push(warning);
+                return SqlReturn::SUCCESS_WITH_INFO;
+            }
+            sqlreturn
         }
         Err(e) => {
             stmt.errors.write().unwrap().push(e);
@@ -544,16 +652,22 @@ pub unsafe fn format_date(
     data: Bson,
 ) -> SqlReturn {
     let stmt = (*mongo_handle).as_statement().unwrap();
+    let dt = data.to_date();
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
-    let dt = data.to_datetime();
     match dt {
-        Ok(dt) => {
+        Ok((dt, warning)) => {
             let data = Date {
                 year: dt.year() as i16,
                 month: dt.month() as u16,
                 day: dt.day() as u16,
             };
-            isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr)
+            let sqlreturn =
+                isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
+            if let Some(warning) = warning {
+                stmt.errors.write().unwrap().push(warning);
+                return SqlReturn::SUCCESS_WITH_INFO;
+            }
+            sqlreturn
         }
         Err(e) => {
             stmt.errors.write().unwrap().push(e);
@@ -1307,11 +1421,12 @@ pub unsafe fn set_str_length(string_length_ptr: *mut Integer, length: Integer) {
 mod unit {
     use super::*;
     use bson::bson;
+    use chrono::offset::TimeZone;
     #[test]
     fn date_format() {
         assert_eq!(
             Utc.timestamp(1003483404, 123000000),
-            bson!("2001-10-19T09:23:24.123Z").to_datetime().unwrap()
+            bson!("2001-10-19T09:23:24.123Z").to_datetime().unwrap().0
         );
     }
 
@@ -1320,7 +1435,12 @@ mod unit {
 
         use crate::{api::data::IntoCData, map};
         use bson::Bson;
-        use constants::{FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE};
+        use constants::{
+            FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE,
+            INVALID_DATETIME_FORMAT,
+        };
+
+        use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 
         macro_rules! test_conversion_ok {
             (input = $input:expr, method = $method:tt, expected = $expected:expr, info = $info:expr) => {
@@ -1616,6 +1736,235 @@ mod unit {
                 let bson = Bson::Int32(*k);
                 test_it!(bson, v);
             })
+        }
+
+        #[test]
+        fn string_conversions_to_datetimes() {
+            let date_expectation: DateTime<Utc> = "2014-11-28T00:00:00Z".parse().unwrap();
+            let datetime_expectation_no_millis: DateTime<Utc> =
+                "2014-11-28T09:23:24Z".parse().unwrap();
+            let datetime_expectation_millis: DateTime<Utc> =
+                "2014-11-28T09:23:24.123456789Z".parse().unwrap();
+            let today_plus_time_no_millis_expectation = Utc::today().and_hms(9, 23, 24);
+            let today_plus_time_millis_expectation =
+                Utc::today().and_hms_nano(9, 23, 24, 123456789);
+
+            type V = Vec<(
+                &'static str,
+                DateTime<Utc>,
+                Result<(), ()>,
+                Option<&'static str>,
+            )>;
+            let test_cases: V = vec![
+                (
+                    "2014-11-28 09:23:24",
+                    datetime_expectation_no_millis,
+                    Ok(()),
+                    None,
+                ),
+                (
+                    "2014-11-28 09:23:24.123456789",
+                    datetime_expectation_millis,
+                    Ok(()),
+                    None,
+                ),
+                (
+                    "2014-11-28 09:23:24.1234567890",
+                    datetime_expectation_millis,
+                    Ok(()),
+                    Some(FRACTIONAL_TRUNCATION),
+                ),
+                (
+                    "2014-11-28T09:23:24.123456789Z",
+                    datetime_expectation_millis,
+                    Ok(()),
+                    None,
+                ),
+                (
+                    "2014-11-28T09:23:24.1234567890Z",
+                    datetime_expectation_millis,
+                    Ok(()),
+                    Some(FRACTIONAL_TRUNCATION),
+                ),
+                ("2014-11-28", date_expectation, Ok(()), None),
+                (
+                    "11/28/2014",
+                    datetime_expectation_no_millis,
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT),
+                ),
+                (
+                    "2014-35-80",
+                    datetime_expectation_no_millis,
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT),
+                ),
+                (
+                    "2014-30-90 09:23:24.1234567890",
+                    datetime_expectation_no_millis,
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT),
+                ),
+                (
+                    "30:23:24",
+                    datetime_expectation_no_millis,
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT),
+                ),
+                (
+                    "09:23:24",
+                    today_plus_time_no_millis_expectation,
+                    Ok(()),
+                    None,
+                ),
+                (
+                    "09:23:24.123456789",
+                    today_plus_time_millis_expectation,
+                    Ok(()),
+                    None,
+                ),
+                (
+                    "09:23:24.1234567898",
+                    today_plus_time_millis_expectation,
+                    Ok(()),
+                    Some(FRACTIONAL_TRUNCATION),
+                ),
+            ];
+            test_cases
+                .iter()
+                .for_each(|(input, expectation, result, info)| {
+                    match result {
+                        Ok(_) => {
+                            test_conversion_ok!(
+                                input = Bson::String(input.to_string()),
+                                method = to_datetime,
+                                expected = *expectation,
+                                info = info
+                            );
+                        }
+                        Err(_) => {
+                            test_conversion_err!(
+                                input = Bson::String(input.to_string()),
+                                method = to_datetime,
+                                expected = None,
+                                info = info
+                            );
+                        }
+                    };
+                });
+        }
+
+        #[test]
+        fn string_conversions_to_dates() {
+            let date_expectation = NaiveDate::from_ymd(2014, 11, 28);
+            let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
+                ("2014-11-28", Ok(()), None),
+                ("11/28/2014", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("2014-22-22", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("10:15:30", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("2014-11-28 00:00:00", Ok(()), None),
+                ("2014-11-28 00:00:00.000", Ok(()), None),
+                ("2014-11-28T00:00:00Z", Ok(()), None),
+                ("2014-11-28 10:15:30", Ok(()), Some(FRACTIONAL_TRUNCATION)),
+            ];
+            test_cases.iter().for_each(|(input, result, info)| {
+                match result {
+                    Ok(_) => {
+                        test_conversion_ok!(
+                            input = Bson::String(input.to_string()),
+                            method = to_date,
+                            expected = date_expectation,
+                            info = info
+                        );
+                    }
+                    Err(_) => {
+                        test_conversion_err!(
+                            input = Bson::String(input.to_string()),
+                            method = to_date,
+                            expected = None,
+                            info = info
+                        );
+                    }
+                };
+            });
+        }
+
+        #[test]
+        fn datetime_conversions_to_dates() {
+            let date_expectation = NaiveDate::from_ymd(2014, 11, 28);
+            let test_cases: [(chrono::DateTime<Utc>, Option<&str>); 2] = [
+                ("2014-11-28T00:00:00Z".parse().unwrap(), None),
+                (
+                    "2014-11-28T10:15:30.123Z".parse().unwrap(),
+                    Some(FRACTIONAL_TRUNCATION),
+                ),
+            ];
+            test_cases.iter().for_each(|(input, info)| {
+                test_conversion_ok!(
+                    input = Bson::DateTime(bson::DateTime::from_chrono(*input)),
+                    method = to_date,
+                    expected = date_expectation,
+                    info = info
+                );
+            });
+        }
+
+        #[test]
+        fn string_conversions_to_times() {
+            let time_expectation = NaiveTime::from_hms(10, 15, 30);
+            let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
+                ("10:15:30", Ok(()), None),
+                ("10:15:30.00000", Ok(()), None),
+                ("10:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("25:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("2022-10-15", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("2014-11-28 10:15:30.000", Ok(()), None),
+                (
+                    "2014-11-28 10:15:30.1243",
+                    Ok(()),
+                    Some(FRACTIONAL_TRUNCATION),
+                ),
+            ];
+            test_cases.iter().for_each(|(input, result, info)| {
+                match result {
+                    Ok(_) => {
+                        test_conversion_ok!(
+                            input = Bson::String(input.to_string()),
+                            method = to_time,
+                            expected = time_expectation,
+                            info = info
+                        );
+                    }
+                    Err(_) => {
+                        test_conversion_err!(
+                            input = Bson::String(input.to_string()),
+                            method = to_time,
+                            expected = None,
+                            info = info
+                        );
+                    }
+                };
+            });
+        }
+
+        #[test]
+        fn datetime_conversions_to_times() {
+            let time_expectation = NaiveTime::from_hms(10, 15, 30);
+            let test_cases: [(chrono::DateTime<Utc>, Option<&str>); 2] = [
+                ("2014-11-28T10:15:30Z".parse().unwrap(), None),
+                (
+                    "2014-11-28T10:15:30.123Z".parse().unwrap(),
+                    Some(FRACTIONAL_TRUNCATION),
+                ),
+            ];
+            test_cases.iter().for_each(|(input, info)| {
+                test_conversion_ok!(
+                    input = Bson::DateTime(bson::DateTime::from_chrono(*input)),
+                    method = to_time,
+                    expected = time_expectation,
+                    info = info
+                );
+            });
         }
     }
 
