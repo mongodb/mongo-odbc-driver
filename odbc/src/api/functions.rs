@@ -64,6 +64,13 @@ macro_rules! must_be_stmt {
     }};
 }
 
+macro_rules! must_be_desc {
+    ($handle:expr) => {{
+        let desc = (*$handle).as_descriptor();
+        must_be_valid!(desc)
+    }};
+}
+
 macro_rules! odbc_unwrap {
     ($value:expr, $handle:expr) => {{
         // force the expression
@@ -1712,7 +1719,10 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
                     let stmt = must_be_stmt!(mongo_handle);
                     get_error(&stmt.errors.read().unwrap())
                 }
-                HandleType::Desc => unimplemented!(),
+                HandleType::Desc => {
+                    let desc = must_be_desc!(mongo_handle);
+                    get_error(&desc.errors.read().unwrap())
+                }
             }
         },
         handle
