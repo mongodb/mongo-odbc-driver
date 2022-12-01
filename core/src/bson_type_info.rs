@@ -176,7 +176,8 @@ impl BsonTypeInfo {
     };
     pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
         type_name: "decimal",
-        sql_type: SqlDataType::DECIMAL,
+        // TODO SQL-1068: Change to SqlDataType::DECIMAL
+        sql_type: SqlDataType::UNKNOWN_TYPE,
         searchable: true,
         scale: Some(34),
         precision: Some(34),
