@@ -1,4 +1,9 @@
+use odbc_sys::{
+    AttrConnectionPooling, AttrOdbcVersion, EnvironmentAttribute, HEnv, Handle, HandleType,
+    SQLAllocHandle, SQLSetEnvAttr, SqlReturn,
+};
 use std::env;
+use std::ptr::null_mut;
 
 /// Generate the default connection setting defined for the tests using a connection string
 /// of the form 'Driver={};PWD={};USER={};SERVER={};AUTH_SRC={}'.
@@ -21,7 +26,7 @@ pub fn generate_default_connection_str() -> String {
     };
 
     let mut connection_string = format!(
-        "Driver={};USER={};PWD={};SERVER={};AUTH_SRC={};",
+        "Driver={{{}}};USER={};PWD={};SERVER={};AUTH_SRC={};",
         driver, user_name, password, host, auth_db,
     );
 
@@ -32,4 +37,43 @@ pub fn generate_default_connection_str() -> String {
     };
 
     connection_string
+}
+
+/// Setup flow.
+/// This will allocate a new environment handle and set ODBC_VERSION and CONNECTION_POOLING environment attributes.
+/// Setup flow is:
+///     - SQLAllocHandle(SQL_HANDLE_ENV)
+///     - SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3)
+///     - SQLSetEnvAttr(SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_HENV)
+pub fn setup() -> odbc_sys::HEnv {
+    let mut env: Handle = null_mut();
+
+    unsafe {
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(HandleType::Env, null_mut(), &mut env as *mut Handle)
+        );
+
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLSetEnvAttr(
+                env as HEnv,
+                EnvironmentAttribute::OdbcVersion,
+                AttrOdbcVersion::Odbc3.into(),
+                0,
+            )
+        );
+
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLSetEnvAttr(
+                env as HEnv,
+                EnvironmentAttribute::ConnectionPooling,
+                AttrConnectionPooling::OnePerHenv.into(),
+                0,
+            )
+        );
+    }
+
+    env as HEnv
 }
