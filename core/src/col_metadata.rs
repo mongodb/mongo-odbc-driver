@@ -17,6 +17,8 @@ pub struct MongoColMetadata {
     pub base_col_name: String,
     pub base_table_name: String,
     pub catalog_name: String,
+    // more info for column size can be found here:
+    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/column-size?view=sql-server-ver16
     pub display_size: Option<u16>,
     pub fixed_prec_scale: bool,
     pub label: String,
@@ -35,7 +37,7 @@ pub struct MongoColMetadata {
     // non-concise SqlDataType
     pub non_concise_type: SqlDataType,
     // sql_code, always NULL or SQL_CODE_TIMESTAMP (3) for our types
-    // odbc_sys does not define this enum yet.
+    // odbc_sys does not define this enum yet, so we just use an i32.
     pub sql_code: Option<i32>,
     pub is_unsigned: bool,
     pub is_updatable: bool,

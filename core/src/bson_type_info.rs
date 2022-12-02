@@ -180,9 +180,9 @@ impl BsonTypeInfo {
         sql_type: SqlDataType::UNKNOWN_TYPE,
         searchable: true,
         scale: None,
-        precision: None,          //Some(34),
-        octet_length: None,       //Some(16),
-        fixed_bytes_length: None, //Some(16),
+        precision: None,          // TODO SQL-1068: Some(34),
+        octet_length: None,       // TODO SQL-1068: Some(16),
+        fixed_bytes_length: None, // TODO SQL-1068: Some(16),
     };
     pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "minKey",
