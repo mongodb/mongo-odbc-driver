@@ -640,7 +640,7 @@ impl MongoStatement for MongoFields {
                 let l = get_meta_data()?.octet_length;
                 match l {
                     None => odbc_sys::NO_TOTAL as i32,
-                    Some(_) => 0 as i32,
+                    Some(_) => 0i32,
                 }
             }),
             17 => Bson::Int32(self.current_field_for_collection as i32),
