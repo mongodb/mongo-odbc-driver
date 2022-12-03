@@ -29,6 +29,8 @@ pub enum Error {
     UnknownColumn(String),
     #[error(transparent)]
     ValueAccess(bson::document::ValueAccessError),
+    #[error("Missing connection {0}")]
+    MissingConnection(&'static str),
 }
 
 impl Error {
@@ -49,6 +51,7 @@ impl Error {
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_)
             | Error::InvalidResultSetJsonSchema
+            | Error::MissingConnection(_)
             | Error::MissingFieldBsonType(_) => GENERAL_ERROR,
         }
     }
@@ -76,6 +79,7 @@ impl Error {
             | Error::MissingFieldBsonType(_)
             | Error::ColIndexOutOfBounds(_)
             | Error::BsonDeserialization(_)
+            | Error::MissingConnection(_)
             | Error::ValueAccess(_) => 0,
         }
     }
