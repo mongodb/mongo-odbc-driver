@@ -6,3 +6,7 @@ members = [
   "core",
   "integration_test",
 ]
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
