@@ -146,6 +146,43 @@ fn test_statement_alloc_free() {
 }
 
 #[test]
+fn test_descriptor_alloc_free() {
+    unsafe {
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+
+        let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
+            env_handle,
+            ConnectionState::Allocated,
+        ));
+
+        let mut handle: *mut _ = &mut MongoHandle::Descriptor(Descriptor::with_state(
+            std::ptr::null_mut(),
+            DescriptorState::Allocated,
+        ));
+        let handle_ptr: *mut _ = &mut handle;
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::Desc,
+                conn_handle as *mut _,
+                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
+            )
+        );
+        assert_eq!(
+            DescriptorState::Allocated,
+            *(*handle).as_descriptor().unwrap().state.read().unwrap()
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(
+                HandleType::Desc,
+                std::mem::transmute::<*mut MongoHandle, Handle>(handle),
+            )
+        );
+    }
+}
+
+#[test]
 fn test_invalid_free() {
     unsafe {
         let mut env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
@@ -173,6 +210,13 @@ fn test_invalid_free() {
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
                 HandleType::Stmt,
+                std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
+            )
+        );
+        assert_eq!(
+            SqlReturn::INVALID_HANDLE,
+            SQLFreeHandle(
+                HandleType::Desc,
                 std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
             )
         );
@@ -213,6 +257,13 @@ fn test_invalid_free() {
                 std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
             )
         );
+        assert_eq!(
+            SqlReturn::INVALID_HANDLE,
+            SQLFreeHandle(
+                HandleType::Desc,
+                std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
+            )
+        );
 
         // Free for real so we don't leak. Note we must free the Connection before the Env or we
         // will violate ASAN!
@@ -238,7 +289,7 @@ fn test_invalid_alloc() {
     unsafe {
         let mut handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let handle_ptr: *mut _ = &mut handle;
-        // first check null ptrs for the two handles that require parent handles
+        // first check null ptrs for the three handles that require parent handles
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
@@ -255,13 +306,21 @@ fn test_invalid_alloc() {
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
         );
+        assert_eq!(
+            SqlReturn::INVALID_HANDLE,
+            SQLAllocHandle(
+                HandleType::Desc,
+                std::ptr::null_mut(),
+                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
+            )
+        );
 
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
         ));
 
-        // now test wrong parent handle type (Dbc needs Env, and Stmt needs Connection).
+        // now test wrong parent handle type (Dbc needs Env, and Stmt and Desc need Connection).
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
@@ -274,6 +333,14 @@ fn test_invalid_alloc() {
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
                 HandleType::Stmt,
+                stmt_handle as *mut _,
+                std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
+            )
+        );
+        assert_eq!(
+            SqlReturn::INVALID_HANDLE,
+            SQLAllocHandle(
+                HandleType::Desc,
                 stmt_handle as *mut _,
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
