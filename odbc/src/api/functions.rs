@@ -30,6 +30,7 @@ const NULL_HANDLE_ERROR: &str = "handle cannot be null";
 const HANDLE_MUST_BE_ENV_ERROR: &str = "handle must be env";
 const HANDLE_MUST_BE_CONN_ERROR: &str = "handle must be conn";
 const HANDLE_MUST_BE_STMT_ERROR: &str = "handle must be stmt";
+const HANDLE_MUST_BE_DESC_ERROR: &str = "handle must be desc";
 
 macro_rules! must_be_valid {
     ($maybe_handle:expr) => {{
@@ -60,6 +61,13 @@ macro_rules! must_be_stmt {
     ($handle:expr) => {{
         let stmt = (*$handle).as_statement();
         must_be_valid!(stmt)
+    }};
+}
+
+macro_rules! must_be_desc {
+    ($handle:expr) => {{
+        let desc = (*$handle).as_descriptor();
+        must_be_valid!(desc)
     }};
 }
 
@@ -193,7 +201,20 @@ fn sql_alloc_handle(
             Ok(())
         }
         HandleType::Desc => {
-            unimplemented!();
+            if input_handle.is_null() {
+                return Err(ODBCError::InvalidHandleType(NULL_HANDLE_ERROR));
+            }
+            // input handle must be a Connection
+            unsafe {
+                (*input_handle)
+                    .as_connection()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_CONN_ERROR))?
+            };
+            let desc = Descriptor::with_state(input_handle, DescriptorState::Allocated);
+            let mh = Box::new(MongoHandle::Descriptor(desc));
+            let mh_ptr = Box::into_raw(mh);
+            unsafe { *output_handle = mh_ptr as *mut _ }
+            Ok(())
         }
     }
 }
@@ -652,7 +673,7 @@ pub unsafe extern "C" fn SQLCopyDesc(
     _source_desc_handle: HDesc,
     _target_desc_handle: HDesc,
 ) -> SqlReturn {
-    unimplemented!()
+    unsupported_function(MongoHandleRef::from(_source_desc_handle), "SQLCopyDesc")
 }
 
 ///
@@ -1271,7 +1292,11 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
             }
         }
         HandleType::Desc => {
-            unimplemented!();
+            let _ = unsafe {
+                (*handle)
+                    .as_descriptor()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_DESC_ERROR))?
+            };
         }
     }
     // create the Box at the end to ensure Drop only occurs when there are no errors due
@@ -1508,7 +1533,7 @@ pub unsafe extern "C" fn SQLGetDescField(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsupported_function(MongoHandleRef::from(_descriptor_handle), "SQLGetDescField")
 }
 
 ///
@@ -1528,7 +1553,7 @@ pub unsafe extern "C" fn SQLGetDescFieldW(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsupported_function(MongoHandleRef::from(_descriptor_handle), "SQLGetDescFieldW")
 }
 
 ///
@@ -1551,7 +1576,7 @@ pub unsafe extern "C" fn SQLGetDescRec(
     _scale_ptr: *mut SmallInt,
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
-    unimplemented!()
+    unsupported_function(MongoHandleRef::from(_descriptor_handle), "SQLGetDescRec")
 }
 
 ///
@@ -1576,7 +1601,7 @@ pub unsafe extern "C" fn SQLGetDescRecW(
     _scale_ptr: *mut SmallInt,
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
-    unimplemented!()
+    unsupported_function(MongoHandleRef::from(_descriptor_handle), "SQLGetDescRecW")
 }
 
 ///
@@ -1694,7 +1719,10 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
                     let stmt = must_be_stmt!(mongo_handle);
                     get_error(&stmt.errors.read().unwrap())
                 }
-                HandleType::Desc => unimplemented!(),
+                HandleType::Desc => {
+                    let desc = must_be_desc!(mongo_handle);
+                    get_error(&desc.errors.read().unwrap())
+                }
             }
         },
         handle
@@ -2836,7 +2864,7 @@ pub unsafe extern "C" fn SQLSetDescField(
     _value_ptr: Pointer,
     _buffer_length: Integer,
 ) -> SqlReturn {
-    unimplemented!()
+    unsupported_function(MongoHandleRef::from(_desc_handle), "SQLSetDescField")
 }
 
 ///

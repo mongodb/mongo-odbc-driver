@@ -854,7 +854,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::SBigInt | CDataType::Numeric => {
+        CDataType::SBigInt => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,

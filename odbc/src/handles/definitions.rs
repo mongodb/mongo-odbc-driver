@@ -1,5 +1,5 @@
 use crate::api::{definitions::*, errors::ODBCError};
-use odbc_sys::{HDbc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
+use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
     borrow::BorrowMut,
     collections::{HashMap, HashSet},
@@ -12,6 +12,7 @@ pub enum MongoHandle {
     Env(Env),
     Connection(Connection),
     Statement(Statement),
+    Descriptor(Descriptor),
 }
 
 impl MongoHandle {
@@ -36,6 +37,13 @@ impl MongoHandle {
         }
     }
 
+    pub fn as_descriptor(&self) -> Option<&Descriptor> {
+        match self {
+            MongoHandle::Descriptor(d) => Some(d),
+            _ => None,
+        }
+    }
+
     /// add_diag_info appends a new ODBCError object to the `errors` field.
     pub fn add_diag_info(&mut self, error: ODBCError) {
         match self {
@@ -47,6 +55,9 @@ impl MongoHandle {
             }
             MongoHandle::Statement(s) => {
                 s.errors.write().unwrap().push(error);
+            }
+            MongoHandle::Descriptor(d) => {
+                d.errors.write().unwrap().push(error);
             }
         }
     }
@@ -61,6 +72,9 @@ impl MongoHandle {
             }
             MongoHandle::Statement(s) => {
                 s.errors.write().unwrap().clear();
+            }
+            MongoHandle::Descriptor(d) => {
+                d.errors.write().unwrap().clear();
             }
         }
     }
@@ -88,6 +102,12 @@ impl From<HStmt> for MongoHandleRef {
 
 impl From<HDbc> for MongoHandleRef {
     fn from(handle: HDbc) -> Self {
+        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+    }
+}
+
+impl From<HDesc> for MongoHandleRef {
+    fn from(handle: HDesc) -> Self {
         unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
     }
 }
@@ -321,5 +341,32 @@ impl Statement {
             .as_mut()
             .unwrap()
             .insert(col, data);
+    }
+}
+
+#[derive(Debug)]
+pub struct Descriptor {
+    pub connection: *mut MongoHandle,
+    pub attributes: RwLock<DescriptorAttributes>,
+    pub state: RwLock<DescriptorState>,
+    pub errors: RwLock<Vec<ODBCError>>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum DescriptorState {
+    Allocated,
+}
+
+#[derive(Debug, Default)]
+pub struct DescriptorAttributes {}
+
+impl Descriptor {
+    pub fn with_state(connection: *mut MongoHandle, state: DescriptorState) -> Self {
+        Self {
+            connection,
+            attributes: RwLock::new(DescriptorAttributes::default()),
+            state: RwLock::new(state),
+            errors: RwLock::new(vec![]),
+        }
     }
 }

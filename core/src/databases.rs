@@ -236,7 +236,8 @@ impl MongoStatement for MongoDatabases {
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> databases_names[current_row_index]
-        // 2..5 -> Null
+        // 2..=4 -> Null
+        // 5 => "" (Remarks)
         match col_index {
             1 => Ok(Some(Bson::String(
                 self.database_names
@@ -244,7 +245,8 @@ impl MongoStatement for MongoDatabases {
                     .unwrap()
                     .to_string(),
             ))),
-            2..=5 => Ok(Some(Bson::Null)),
+            2..=4 => Ok(Some(Bson::Null)),
+            5 => Ok(Some(Bson::String("".to_string()))),
             _ => Err(Error::ColIndexOutOfBounds(col_index)),
         }
     }

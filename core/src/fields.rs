@@ -1,17 +1,20 @@
 use crate::{
-    col_metadata::MongoColMetadata,
+    col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     conn::MongoConnection,
-    err::Result,
+    err::{Error, Result},
     json_schema::{
         simplified::{Atomic, Schema},
         BsonTypeName,
     },
     stmt::MongoStatement,
-    util::to_name_regex,
+    util::{to_name_regex, to_name_regex_doc},
 };
-use bson::{Bson, Document};
+use bson::{doc, Bson, Document};
 use lazy_static::lazy_static;
-use odbc_sys::Nullability;
+use mongodb::{results::CollectionSpecification, sync::Cursor};
+use odbc_sys::{Nullability, SqlDataType};
+use regex::Regex;
+use std::collections::VecDeque;
 
 lazy_static! {
     static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
@@ -449,15 +452,13 @@ mod unit {
 
 #[derive(Debug)]
 pub struct MongoFields {
-    dbs: Option<Vec<String>>,
-    current_db: Option<usize>,
-    collections_for_db: Option<Vec<String>>,
-    current_collection: Option<usize>,
-    num_fields_for_collection: Option<usize>,
-    current_schema: Option<Schema>,
-    current_field_for_collection: Option<usize>,
-    db_name_filter: Option<Document>,
+    dbs: VecDeque<String>,
+    current_db_name: String,
+    collections_for_db: Option<Cursor<CollectionSpecification>>,
+    current_col_metadata: Vec<MongoColMetadata>,
+    current_field_for_collection: isize,
     collection_name_filter: Option<Document>,
+    field_name_filter: Option<Regex>,
 }
 
 // Statement related to a SQLTables call.
@@ -469,35 +470,75 @@ impl MongoFields {
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
     // timeout, the query must finish before the timeout or an error is returned.
     pub fn list_columns(
-        _mongo_connection: &MongoConnection,
+        mongo_connection: &MongoConnection,
         _query_timeout: Option<i32>,
-        db_name_filter: &str,
-        collection_name_filter: &str,
+        db_name: Option<&str>,
+        collection_name_filter: Option<&str>,
+        field_name_filter: Option<&str>,
     ) -> Self {
+        let dbs = db_name.map_or_else(
+            || {
+                mongo_connection
+                    .client
+                    .list_database_names(None, None)
+                    .unwrap()
+            },
+            |db| vec![db.to_string()],
+        );
         MongoFields {
-            dbs: None,
-            current_db: None,
+            dbs: dbs.into(),
+            current_db_name: "".to_string(),
             collections_for_db: None,
-            current_collection: None,
-            num_fields_for_collection: None,
-            current_schema: None,
-            current_field_for_collection: None,
-            db_name_filter: Some(to_name_regex(db_name_filter)),
-            collection_name_filter: Some(to_name_regex(collection_name_filter)),
+            current_col_metadata: Vec::new(),
+            current_field_for_collection: -1,
+            collection_name_filter: collection_name_filter.map(to_name_regex_doc),
+            field_name_filter: field_name_filter.map(to_name_regex),
         }
     }
 
     pub fn empty() -> MongoFields {
         MongoFields {
-            dbs: None,
-            current_db: None,
+            dbs: VecDeque::new(),
+            current_db_name: "".to_string(),
             collections_for_db: None,
-            current_collection: None,
-            num_fields_for_collection: None,
-            current_schema: None,
-            current_field_for_collection: None,
-            db_name_filter: None,
+            current_col_metadata: Vec::new(),
+            current_field_for_collection: -1,
             collection_name_filter: None,
+            field_name_filter: None,
+        }
+    }
+
+    fn get_next_metadata(&mut self, mongo_connection: &MongoConnection) -> bool {
+        loop {
+            if self.collections_for_db.is_some() {
+                for current_collection in self.collections_for_db.as_mut().unwrap() {
+                    let get_schema_cmd = doc! {"sqlGetSchema": current_collection.unwrap().name};
+
+                    let db = mongo_connection.client.database(&self.current_db_name);
+                    let current_col_metadata_response: SqlGetSchemaResponse =
+                        bson::from_document(db.run_command(get_schema_cmd, None).unwrap())
+                            .map_err(Error::BsonDeserialization)
+                            .unwrap();
+                    let current_col_metadata = current_col_metadata_response
+                        .process_metadata(&self.current_db_name)
+                        .unwrap();
+                    if !current_col_metadata.is_empty() {
+                        self.current_col_metadata = current_col_metadata;
+                        self.current_field_for_collection = 0;
+                        return true;
+                    }
+                }
+            }
+            if self.dbs.is_empty() {
+                return false;
+            }
+            let db_name = self.dbs.pop_front().unwrap();
+            let db = mongo_connection.client.database(&db_name);
+            self.current_db_name = db_name;
+            self.collections_for_db = Some(
+                db.list_collections(self.collection_name_filter.clone(), None)
+                    .unwrap(),
+            );
         }
     }
 }
@@ -505,14 +546,115 @@ impl MongoFields {
 impl MongoStatement for MongoFields {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self, _mongo_connection: Option<&MongoConnection>) -> Result<bool> {
-        unimplemented!()
+    fn next(&mut self, mongo_connection: Option<&MongoConnection>) -> Result<bool> {
+        match self.field_name_filter.as_ref() {
+            None => {
+                self.current_field_for_collection += 1;
+                Ok(
+                    (self.current_field_for_collection as usize) < self.current_col_metadata.len()
+                        || self.get_next_metadata(mongo_connection.unwrap()),
+                )
+            }
+            Some(filter) => {
+                let filter = filter.clone();
+                loop {
+                    self.current_field_for_collection += 1;
+                    if !(self.current_field_for_collection as usize)
+                        < self.current_col_metadata.len()
+                        || self.get_next_metadata(mongo_connection.unwrap())
+                    {
+                        return Ok(false);
+                    }
+                    if filter.is_match(
+                        &self
+                            .current_col_metadata
+                            .get(self.current_field_for_collection as usize)
+                            .unwrap()
+                            .col_name,
+                    ) {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
-        unimplemented!()
+    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+        // use self.current_col_metadata[current_field_for_collection]
+        // 1 -> TABLE_CAT
+        // 2 -> TABLE_SCHEM  (NULL)
+        // 3 -> TABLE_NAME
+        // 4 -> COLUMN_NAME
+        // 5 -> DATA_TYPE
+        // 6 -> TYPE_NAME
+        // 7 -> COLUMN_SIZE
+        // 8 -> BUFFER_LENGTH
+        // 9 -> DECIMAL_DIGITS
+        // 10 -> NUM_PREC_RADIX
+        // 11 -> NULLABLE
+        // 12 -> REMARKS
+        // 13 -> COLUMN_DEF
+        // 14 -> SQL_DATA_TYPE
+        // 15 -> SQL_DATETIME_SUB
+        // 16 -> CHAR_OCTET_LENGTH
+        // 17 -> ORDINAL_POSITION
+        // 18 -> IS_NULLABLE "YES" or "NO"
+        let get_meta_data = || {
+            self.current_col_metadata
+                .get(self.current_field_for_collection as usize)
+                .ok_or(Error::InvalidCursorState)
+        };
+        Ok(Some(match col_index {
+            1 => Bson::String(self.current_db_name.clone()),
+            2 => Bson::Null,
+            3 => Bson::String(get_meta_data()?.table_name.clone()),
+            4 => Bson::String(get_meta_data()?.col_name.clone()),
+            5 => Bson::Int32(get_meta_data()?.sql_type.0 as i32),
+            6 => Bson::String(get_meta_data()?.type_name.clone()),
+            7 => Bson::Int32(get_meta_data()?.precision.unwrap_or(0) as i32),
+            8 => Bson::Int32({
+                let l = get_meta_data()?.octet_length;
+                match l {
+                    None => odbc_sys::NO_TOTAL as i32,
+                    Some(l) => l as i32,
+                }
+            }),
+            9 => Bson::Int32(get_meta_data()?.scale.unwrap_or(0) as i32),
+            10 => match get_meta_data()?.sql_type {
+                SqlDataType::INTEGER | SqlDataType::DOUBLE | SqlDataType::DECIMAL => {
+                    Bson::Int32(10)
+                }
+                _ => Bson::Null,
+            },
+            11 => Bson::Int32(get_meta_data()?.nullability.0 as i32),
+            12 => Bson::String("".to_string()),
+            13 => Bson::Null,
+            14 => Bson::Int32(get_meta_data()?.non_concise_type.0 as i32),
+            15 => match get_meta_data()?.sql_code {
+                None => Bson::Null,
+                Some(x) => Bson::Int32(x),
+            },
+            16 => Bson::Int32({
+                let l = get_meta_data()?.octet_length;
+                match l {
+                    None => odbc_sys::NO_TOTAL as i32,
+                    Some(_) => 0i32,
+                }
+            }),
+            17 => Bson::Int32(self.current_field_for_collection as i32),
+            18 => Bson::String(
+                // odbc_sys should use an enum instead of constants...
+                match get_meta_data()?.nullability {
+                    Nullability::UNKNOWN | Nullability::NULLABLE => "YES",
+                    Nullability::NO_NULLS => "NO",
+                    _ => unreachable!(),
+                }
+                .to_string(),
+            ),
+            _ => return Err(Error::ColIndexOutOfBounds(col_index)),
+        }))
     }
 
     fn get_resultset_metadata(&self) -> &Vec<crate::MongoColMetadata> {
