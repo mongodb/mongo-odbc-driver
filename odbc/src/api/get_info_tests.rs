@@ -95,7 +95,6 @@ mod unit {
         actual_value_modifier = modify_string_value,
     );
 
-    // TODO: change the InfoType variant to correct name and value
     test_get_info!(
         driver_odbc_ver,
         info_type = InfoType::DriverOdbcVer,
