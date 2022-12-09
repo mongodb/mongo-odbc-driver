@@ -210,7 +210,7 @@ fn sql_alloc_handle(
                     .as_connection()
                     .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_CONN_ERROR))?
             };
-            let desc = Descriptor::with_state(input_handle, DescriptorState::Allocated);
+            let desc = Descriptor::with_state(input_handle, DescriptorState::ExplicitlyAllocated);
             let mh = Box::new(MongoHandle::Descriptor(desc));
             let mh_ptr = Box::into_raw(mh);
             unsafe { *output_handle = mh_ptr as *mut _ }
