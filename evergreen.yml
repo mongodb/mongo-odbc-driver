@@ -307,11 +307,11 @@ functions:
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
                     
+          export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader
+          ./resources/run_adf.sh start && cargo run --bin data_loader &&
           
           # Run integration tests with asan
-          export RUST_BACKTRACE=1
           cargo test --target x86_64-unknown-linux-gnu integration
           EXITCODE=$?
           
@@ -329,7 +329,7 @@ functions:
         ${prepare_shell}
         export RUST_BACKTRACE=1
         ./resources/run_adf.sh start &&
-        cargo run --bin data_loader
+        cargo run --bin data_loader &&
         cargo test -- --ignored
         EXITCODE=$?
         ./resources/run_adf.sh stop
