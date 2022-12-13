@@ -236,14 +236,7 @@ mod unit {
         actual_value_modifier = modify_u32_value,
     );
 
-    test_get_info!(
-        system_functions,
-        info_type = InfoType::SystemFunctions,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(system_functions, info_type = InfoType::SystemFunctions);
 
     test_get_info!(
         timedate_functions,
@@ -347,14 +340,7 @@ mod unit {
         actual_value_modifier = modify_string_value,
     );
 
-    test_get_info!(
-        owner_usage,
-        info_type = InfoType::OwnerUsage,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(owner_usage, info_type = InfoType::OwnerUsage);
 
     test_get_info!(
         catalog_usage,
