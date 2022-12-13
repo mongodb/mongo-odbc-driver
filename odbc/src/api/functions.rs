@@ -2307,19 +2307,23 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
             set_str_length(string_length_ptr, size_of::<ULen>() as Integer);
             match attribute {
                 StatementAttribute::AppRowDesc => {
-                    *(value_ptr as *mut Pointer) = stmt.attributes.read().unwrap().app_row_desc;
+                    *(value_ptr as *mut Pointer) =
+                        stmt.attributes.read().unwrap().app_row_desc as Pointer;
                     set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
                 }
                 StatementAttribute::AppParamDesc => {
-                    *(value_ptr as *mut Pointer) = stmt.attributes.read().unwrap().app_param_desc;
+                    *(value_ptr as *mut Pointer) =
+                        stmt.attributes.read().unwrap().app_param_desc as Pointer;
                     set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
                 }
                 StatementAttribute::ImpRowDesc => {
-                    *(value_ptr as *mut Pointer) = stmt.attributes.read().unwrap().imp_row_desc;
+                    *(value_ptr as *mut Pointer) =
+                        stmt.attributes.read().unwrap().imp_row_desc as Pointer;
                     set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
                 }
                 StatementAttribute::ImpParamDesc => {
-                    *(value_ptr as *mut Pointer) = stmt.attributes.read().unwrap().imp_param_desc;
+                    *(value_ptr as *mut Pointer) =
+                        stmt.attributes.read().unwrap().imp_param_desc as Pointer;
                     set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
                 }
                 StatementAttribute::FetchBookmarkPtr => {
