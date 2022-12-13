@@ -1,6 +1,6 @@
 use crate::{
     api::data::input_wtext_to_string,
-    definitions::InfoType,
+    definitions::*,
     handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
 };
@@ -60,6 +60,19 @@ macro_rules! test_get_info {
     }
 }
 
+macro_rules! test_get_info_expect_u32_zero {
+    ($func_name:ident, info_type = $info_type:expr) => {
+        test_get_info!(
+            $func_name,
+            info_type = $info_type,
+            expected_sql_return = SqlReturn::SUCCESS,
+            expected_length = std::mem::size_of::<u32>() as i16,
+            expected_value = 0u32,
+            actual_value_modifier = modify_u32_value,
+        );
+    };
+}
+
 unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
     input_wtext_to_string(value_ptr as *const _, out_length)
 }
@@ -74,6 +87,7 @@ unsafe fn modify_u16_value(value_ptr: Pointer, _: usize) -> u16 {
 
 mod unit {
     use super::*;
+    use constants::{DBMS_NAME, DRIVER_NAME};
 
     test_get_info!(
         driver_name,
@@ -81,7 +95,7 @@ mod unit {
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 40,
         expected_length = 39,
-        expected_value = "MongoDB Atlas SQL interface ODBC Driver",
+        expected_value = DRIVER_NAME,
         actual_value_modifier = modify_string_value,
     );
 
@@ -121,7 +135,7 @@ mod unit {
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 14,
         expected_length = 13,
-        expected_value = "MongoDB Atlas",
+        expected_value = DBMS_NAME,
         actual_value_modifier = modify_string_value,
     );
 
@@ -190,7 +204,19 @@ mod unit {
         info_type = InfoType::NumericFunctions,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 7663201u32,
+        expected_value = SQL_FN_NUM_ABS
+            | SQL_FN_NUM_CEILING
+            | SQL_FN_NUM_COS
+            | SQL_FN_NUM_FLOOR
+            | SQL_FN_NUM_LOG
+            | SQL_FN_NUM_MOD
+            | SQL_FN_NUM_SIN
+            | SQL_FN_NUM_SQRT
+            | SQL_FN_NUM_TAN
+            | SQL_FN_NUM_DEGREES
+            | SQL_FN_NUM_POWER
+            | SQL_FN_NUM_RADIANS
+            | SQL_FN_NUM_ROUND,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -199,7 +225,14 @@ mod unit {
         info_type = InfoType::StringFunctions,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 16254993u32,
+        expected_value = SQL_FN_STR_CONCAT
+            | SQL_FN_STR_LENGTH
+            | SQL_FN_STR_SUBSTRING
+            | SQL_FN_STR_BIT_LENGTH
+            | SQL_FN_STR_CHAR_LENGTH
+            | SQL_FN_STR_CHARACTER_LENGTH
+            | SQL_FN_STR_OCTET_LENGTH
+            | SQL_FN_STR_POSITION,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -217,223 +250,71 @@ mod unit {
         info_type = InfoType::TimedateFunctions,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 1572864u32,
+        expected_value = SQL_FN_TD_CURRENT_TIMESTAMP | SQL_FN_TD_EXTRACT,
         actual_value_modifier = modify_u32_value,
     );
 
-    test_get_info!(
-        convert_big_int,
-        info_type = InfoType::ConvertBigInt,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_big_int, info_type = InfoType::ConvertBigInt);
 
-    test_get_info!(
-        convert_decimal,
-        info_type = InfoType::ConvertDecimal,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_decimal, info_type = InfoType::ConvertDecimal);
 
-    test_get_info!(
-        convert_double,
-        info_type = InfoType::ConvertDouble,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_double, info_type = InfoType::ConvertDouble);
 
-    test_get_info!(
-        convert_float,
-        info_type = InfoType::ConvertFloat,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_float, info_type = InfoType::ConvertFloat);
 
-    test_get_info!(
-        convert_integer,
-        info_type = InfoType::ConvertInteger,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_integer, info_type = InfoType::ConvertInteger);
 
-    test_get_info!(
-        convert_numeric,
-        info_type = InfoType::ConvertNumeric,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_numeric, info_type = InfoType::ConvertNumeric);
 
-    test_get_info!(
-        convert_real,
-        info_type = InfoType::ConvertReal,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_real, info_type = InfoType::ConvertReal);
 
-    test_get_info!(
-        convert_small_int,
-        info_type = InfoType::ConvertSmallInt,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_small_int, info_type = InfoType::ConvertSmallInt);
 
-    test_get_info!(
-        convert_tiny_int,
-        info_type = InfoType::ConvertTinyInt,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_tiny_int, info_type = InfoType::ConvertTinyInt);
 
-    test_get_info!(
-        convert_bit,
-        info_type = InfoType::ConvertBit,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_bit, info_type = InfoType::ConvertBit);
 
-    test_get_info!(
-        convert_char,
-        info_type = InfoType::ConvertChar,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_char, info_type = InfoType::ConvertChar);
 
-    test_get_info!(
-        convert_var_char,
-        info_type = InfoType::ConvertVarChar,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_var_char, info_type = InfoType::ConvertVarChar);
 
-    test_get_info!(
+    test_get_info_expect_u32_zero!(
         convert_long_var_char,
-        info_type = InfoType::ConvertLongVarChar,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
+        info_type = InfoType::ConvertLongVarChar
     );
 
-    test_get_info!(
-        convert_w_char,
-        info_type = InfoType::ConvertWChar,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_w_char, info_type = InfoType::ConvertWChar);
 
-    test_get_info!(
-        convert_w_var_char,
-        info_type = InfoType::ConvertWVarChar,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_w_var_char, info_type = InfoType::ConvertWVarChar);
 
-    test_get_info!(
+    test_get_info_expect_u32_zero!(
         convert_w_long_var_char,
-        info_type = InfoType::ConvertWLongVarChar,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
+        info_type = InfoType::ConvertWLongVarChar
     );
 
-    test_get_info!(
-        convert_timestamp,
-        info_type = InfoType::ConvertTimestamp,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_timestamp, info_type = InfoType::ConvertTimestamp);
 
-    test_get_info!(
-        convert_binary,
-        info_type = InfoType::ConvertBinary,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_binary, info_type = InfoType::ConvertBinary);
 
-    test_get_info!(
-        convert_date,
-        info_type = InfoType::ConvertDate,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_date, info_type = InfoType::ConvertDate);
 
-    test_get_info!(
-        convert_time,
-        info_type = InfoType::ConvertTime,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_time, info_type = InfoType::ConvertTime);
 
-    test_get_info!(
-        convert_var_binary,
-        info_type = InfoType::ConvertVarBinary,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_var_binary, info_type = InfoType::ConvertVarBinary);
 
-    test_get_info!(
+    test_get_info_expect_u32_zero!(
         convert_long_var_binary,
-        info_type = InfoType::ConvertLongVarBinary,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
+        info_type = InfoType::ConvertLongVarBinary
     );
 
-    test_get_info!(
-        convert_guid,
-        info_type = InfoType::ConvertGuid,
-        expected_sql_return = SqlReturn::SUCCESS,
-        expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 0u32,
-        actual_value_modifier = modify_u32_value,
-    );
+    test_get_info_expect_u32_zero!(convert_guid, info_type = InfoType::ConvertGuid);
 
     test_get_info!(
         getdata_extensions,
         info_type = InfoType::GetDataExtensions,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 3u32,
+        expected_value = SQL_GD_ANY_COLUMN | SQL_GD_ANY_ORDER,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -536,7 +417,14 @@ mod unit {
         info_type = InfoType::TimedateAddIntervals,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 510u32,
+        expected_value = SQL_FN_TSI_SECOND
+            | SQL_FN_TSI_MINUTE
+            | SQL_FN_TSI_HOUR
+            | SQL_FN_TSI_DAY
+            | SQL_FN_TSI_WEEK
+            | SQL_FN_TSI_MONTH
+            | SQL_FN_TSI_QUARTER
+            | SQL_FN_TSI_YEAR,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -545,7 +433,14 @@ mod unit {
         info_type = InfoType::TimedateDiffIntervals,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 510u32,
+        expected_value = SQL_FN_TSI_SECOND
+            | SQL_FN_TSI_MINUTE
+            | SQL_FN_TSI_HOUR
+            | SQL_FN_TSI_DAY
+            | SQL_FN_TSI_WEEK
+            | SQL_FN_TSI_MONTH
+            | SQL_FN_TSI_QUARTER
+            | SQL_FN_TSI_YEAR,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -581,7 +476,14 @@ mod unit {
         info_type = InfoType::Sql92Predicates,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 15879u32,
+        expected_value = SQL_SP_EXISTS
+            | SQL_SP_ISNOTNULL
+            | SQL_SP_ISNULL
+            | SQL_SP_LIKE
+            | SQL_SP_IN
+            | SQL_SP_BETWEEN
+            | SQL_SP_COMPARISON
+            | SQL_SP_QUANTIFIED_COMPARISON,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -590,7 +492,10 @@ mod unit {
         info_type = InfoType::Sql92RelationalJoinOperators,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 338u32,
+        expected_value = SQL_SRJO_CROSS_JOIN
+            | SQL_SRJO_INNER_JOIN
+            | SQL_SRJO_LEFT_OUTER_JOIN
+            | SQL_SRJO_RIGHT_OUTER_JOIN,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -599,7 +504,13 @@ mod unit {
         info_type = InfoType::AggregateFunctions,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = 127u32,
+        expected_value = SQL_AF_AVG
+            | SQL_AF_COUNT
+            | SQL_AF_MAX
+            | SQL_AF_MIN
+            | SQL_AF_SUM
+            | SQL_AF_DISTINCT
+            | SQL_AF_ALL,
         actual_value_modifier = modify_u32_value,
     );
 

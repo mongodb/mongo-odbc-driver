@@ -1,4 +1,6 @@
 pub const VENDOR_IDENTIFIER: &str = "MongoDB";
+pub const DRIVER_NAME: &str = "MongoDB Atlas SQL interface ODBC Driver";
+pub const DBMS_NAME: &str = "MongoDB Atlas";
 
 // SQL states
 pub const NOT_IMPLEMENTED: &str = "HYC00";
