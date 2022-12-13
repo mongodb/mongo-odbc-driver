@@ -1,10 +1,10 @@
 mod common;
 
 mod integration {
-    use odbc::*;
 
     #[test]
     fn test_odbc_query() {
+        use odbc::*;
         let env = create_environment_v3().unwrap();
         let mut conn_string = crate::common::generate_default_connection_str();
         conn_string.push_str("DATABASE=integration_test");
@@ -28,5 +28,24 @@ mod integration {
             }
             _ => panic!("no data"),
         };
+    }
+
+    #[test]
+    fn test_columns() {
+        use odbc_api::*;
+        let mut conn_string = crate::common::generate_default_connection_str();
+        conn_string.push_str("DATABASE=integration_test");
+
+        let env = Environment::new().unwrap();
+        let conn = env.connect_with_connection_string(&conn_string).unwrap();
+
+        let mut cursor = conn.columns("", "", "", "");
+        dbg!();
+        while let Ok(Some(mut row)) = cursor.as_mut().unwrap().next_row() {
+            dbg!();
+            let mut buf = Vec::new();
+            row.get_text(4, &mut buf).unwrap();
+            println!("COL NAME: {}", std::str::from_utf8(&buf).unwrap());
+        }
     }
 }

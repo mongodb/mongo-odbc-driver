@@ -126,9 +126,11 @@ impl SqlGetSchemaResponse {
     /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
     pub(crate) fn process_metadata(&self, current_db: &str) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
-            self.schema.json_schema.clone().try_into()?;
+            dbg!(dbg!(self).schema.json_schema.clone().try_into())?;
+        dbg!();
         let result_set_object_schema = result_set_schema.assert_datasource_schema()?;
 
+        dbg!();
         let sorted_datasource_object_schemas = result_set_object_schema
             .clone()
             // 1. Access result_set_schema.properties and sort alphabetically.
@@ -143,6 +145,7 @@ impl SqlGetSchemaResponse {
             })
             .collect::<Result<Vec<(String, ObjectSchema)>>>()?;
 
+        dbg!();
         sorted_datasource_object_schemas
             .into_iter()
             // 2. Flat-map fields for each datasource, sorting fields alphabetically.

@@ -14,7 +14,7 @@ use crate::{
 use bson::Bson;
 use constants::{SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
-    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery,
+    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoFields, MongoQuery,
     MongoStatement, MongoTableTypes,
 };
 use num_traits::FromPrimitive;
@@ -88,6 +88,7 @@ macro_rules! odbc_unwrap {
 // The panic message is added to the diagnostics of `handle` and SqlReturn::ERROR returned.
 macro_rules! panic_safe_exec {
     ($function:expr, $handle:expr) => {{
+        dbg!();
         let function = $function;
         let handle = $handle;
         let handle_ref = MongoHandleRef::from(handle);
@@ -572,16 +573,59 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumns(
     statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _catalog_name_length: SmallInt,
+    catalog_name: *const Char,
+    catalog_name_length: SmallInt,
     _schema_name: *const Char,
     _schema_name_length: SmallInt,
-    _table_name: *const Char,
-    _table_name_length: SmallInt,
-    _column_name: *const Char,
-    _column_name_length: SmallInt,
+    table_name: *const Char,
+    table_name_length: SmallInt,
+    column_name: *const Char,
+    column_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLColumns")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let catalog_string = input_text_to_string(catalog_name, catalog_name_length as usize);
+            let catalog = if catalog_name.is_null() {
+                None
+            } else {
+                Some(catalog_string.as_str())
+            };
+            // ignore schema
+            let table_string = input_text_to_string(table_name, table_name_length as usize);
+            let table = if table_name.is_null() {
+                None
+            } else {
+                Some(table_string.as_str())
+            };
+            let column_name_string = input_text_to_string(column_name, column_name_length as usize);
+            let column = if column_name.is_null() {
+                None
+            } else {
+                Some(column_name_string.as_str())
+            };
+            let connection = stmt.connection;
+            let mongo_statement = sql_columns(
+                (*connection)
+                    .as_connection()
+                    .unwrap()
+                    .mongo_connection
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap(),
+                stmt.attributes.read().unwrap().query_timeout as i32,
+                dbg!(catalog),
+                dbg!(table),
+                column,
+            );
+            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+            *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -595,16 +639,76 @@ pub unsafe extern "C" fn SQLColumns(
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnsW(
     statement_handle: HStmt,
-    _catalog_name: *const WChar,
-    _catalog_name_length: SmallInt,
+    catalog_name: *const WChar,
+    catalog_name_length: SmallInt,
     _schema_name: *const WChar,
     _schema_name_length: SmallInt,
-    _table_name: *const WChar,
-    _table_name_length: SmallInt,
-    _column_name: *const WChar,
-    _column_name_length: SmallInt,
+    table_name: *const WChar,
+    table_name_length: SmallInt,
+    column_name: *const WChar,
+    column_name_length: SmallInt,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let catalog_string = input_wtext_to_string(catalog_name, catalog_name_length as usize);
+            let catalog = if catalog_name.is_null() {
+                None
+            } else {
+                Some(catalog_string.as_str())
+            };
+            // ignore schema
+            let table_string = input_wtext_to_string(table_name, table_name_length as usize);
+            let table = if table_name.is_null() {
+                None
+            } else {
+                Some(table_string.as_str())
+            };
+            let column_name_string =
+                input_wtext_to_string(column_name, column_name_length as usize);
+            let column = if column_name.is_null() {
+                None
+            } else {
+                Some(column_name_string.as_str())
+            };
+            let connection = stmt.connection;
+            let mongo_statement = sql_columns(
+                (*connection)
+                    .as_connection()
+                    .unwrap()
+                    .mongo_connection
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap(),
+                stmt.attributes.read().unwrap().query_timeout as i32,
+                catalog,
+                table,
+                column,
+            );
+            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+            *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
+}
+
+fn sql_columns(
+    mongo_connection: &MongoConnection,
+    query_timeout: i32,
+    catalog: Option<&str>,
+    table: Option<&str>,
+    column: Option<&str>,
+) -> Result<Box<dyn MongoStatement>> {
+    Ok(Box::new(MongoFields::list_columns(
+        mongo_connection,
+        Some(query_timeout),
+        catalog,
+        table,
+        column,
+    )))
 }
 
 ///

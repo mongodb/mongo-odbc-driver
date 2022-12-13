@@ -128,7 +128,7 @@ pub mod simplified {
         /// A datasource schema must be an Object schema. Unlike Object schemata
         /// in general, the properties field cannot be null.
         pub fn assert_datasource_schema(&self) -> Result<&ObjectSchema> {
-            match self {
+            match dbg!(self) {
                 Schema::Atomic(Atomic::Object(s)) => Ok(s),
                 _ => Err(Error::InvalidResultSetJsonSchema),
             }

@@ -485,7 +485,7 @@ impl MongoFields {
             },
             |db| vec![db.to_string()],
         );
-        MongoFields {
+        dbg!(MongoFields {
             dbs: dbs.into(),
             current_db_name: "".to_string(),
             collections_for_db: None,
@@ -493,7 +493,7 @@ impl MongoFields {
             current_field_for_collection: -1,
             collection_name_filter: collection_name_filter.map(to_name_regex_doc),
             field_name_filter: field_name_filter.map(to_name_regex),
-        }
+        })
     }
 
     pub fn empty() -> MongoFields {
@@ -509,19 +509,22 @@ impl MongoFields {
     }
 
     fn get_next_metadata(&mut self, mongo_connection: &MongoConnection) -> bool {
+        dbg!();
         loop {
             if self.collections_for_db.is_some() {
+                dbg!();
                 for current_collection in self.collections_for_db.as_mut().unwrap() {
-                    let get_schema_cmd = doc! {"sqlGetSchema": current_collection.unwrap().name};
+                    let get_schema_cmd =
+                        doc! {"sqlGetSchema": dbg!(current_collection.unwrap().name)};
 
                     let db = mongo_connection.client.database(&self.current_db_name);
                     let current_col_metadata_response: SqlGetSchemaResponse =
                         bson::from_document(db.run_command(get_schema_cmd, None).unwrap())
                             .map_err(Error::BsonDeserialization)
                             .unwrap();
-                    let current_col_metadata = current_col_metadata_response
-                        .process_metadata(&self.current_db_name)
-                        .unwrap();
+                    let current_col_metadata =
+                        dbg!(current_col_metadata_response.process_metadata(&self.current_db_name))
+                            .unwrap();
                     if !current_col_metadata.is_empty() {
                         self.current_col_metadata = current_col_metadata;
                         self.current_field_for_collection = 0;
@@ -532,7 +535,7 @@ impl MongoFields {
             if self.dbs.is_empty() {
                 return false;
             }
-            let db_name = self.dbs.pop_front().unwrap();
+            let db_name = dbg!(self.dbs.pop_front().unwrap());
             let db = mongo_connection.client.database(&db_name);
             self.current_db_name = db_name;
             self.collections_for_db = Some(
@@ -547,13 +550,14 @@ impl MongoStatement for MongoFields {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self, mongo_connection: Option<&MongoConnection>) -> Result<bool> {
+        dbg!();
         match self.field_name_filter.as_ref() {
             None => {
+                dbg!();
                 self.current_field_for_collection += 1;
-                Ok(
-                    (self.current_field_for_collection as usize) < self.current_col_metadata.len()
-                        || self.get_next_metadata(mongo_connection.unwrap()),
-                )
+                Ok(dbg!(self.current_field_for_collection as usize)
+                    < dbg!(self.current_col_metadata.len())
+                    || dbg!(self.get_next_metadata(mongo_connection.unwrap())))
             }
             Some(filter) => {
                 let filter = filter.clone();
