@@ -183,7 +183,7 @@ impl SqlGetSchemaResponse {
             .collect::<Result<Vec<MongoColMetadata>>>()
     }
 
-    /// Converts a sqlGetSchema command result into a list of column
+    /// Converts a sqlGetSchema command response into a list of column
     /// metadata. Ensures the top-level schema is an Object with properties,
     /// The metadata is sorted alphabetically by property name and then by field name.
     /// As in, a result set with schema:
