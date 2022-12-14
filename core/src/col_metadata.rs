@@ -87,14 +87,14 @@ impl MongoColMetadata {
     }
 }
 
-// Struct representing the response for a sqlGetResultSchema command.
+// Struct representing the result for a sqlGetResultSchema command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct SqlGetSchemaResponse {
     pub ok: i32,
     pub schema: VersionedJsonSchema,
 }
 
-// Auxiliary struct representing part of the response for a sqlGetResultSchema
+// Auxiliary struct representing part of the result for a sqlGetResultSchema
 // command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct VersionedJsonSchema {
@@ -104,7 +104,7 @@ pub struct VersionedJsonSchema {
 }
 
 impl SqlGetSchemaResponse {
-    /// Converts a sqlGetResultSchema command response into a list of column
+    /// Converts a sqlGetResultSchema command result into a list of column
     /// metadata. Ensures the top-level schema is an Object with properties,
     /// and ensures the same for each top-level property -- which correspond
     /// to datasources. The metadata is sorted alphabetically by datasource
@@ -124,13 +124,14 @@ impl SqlGetSchemaResponse {
     ///   }
     ///
     /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
-    pub(crate) fn process_metadata(&self, current_db: &str) -> Result<Vec<MongoColMetadata>> {
+    pub(crate) fn process_result_metadata(
+        &self,
+        current_db: &str,
+    ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
-            dbg!(dbg!(self).schema.json_schema.clone().try_into())?;
-        dbg!();
+            self.schema.json_schema.clone().try_into()?;
         let result_set_object_schema = result_set_schema.assert_datasource_schema()?;
 
-        dbg!();
         let sorted_datasource_object_schemas = result_set_object_schema
             .clone()
             // 1. Access result_set_schema.properties and sort alphabetically.
@@ -145,7 +146,6 @@ impl SqlGetSchemaResponse {
             })
             .collect::<Result<Vec<(String, ObjectSchema)>>>()?;
 
-        dbg!();
         sorted_datasource_object_schemas
             .into_iter()
             // 2. Flat-map fields for each datasource, sorting fields alphabetically.
@@ -181,6 +181,55 @@ impl SqlGetSchemaResponse {
             )
             // 4. Collect as a Vec.
             .collect::<Result<Vec<MongoColMetadata>>>()
+    }
+
+    /// Converts a sqlGetSchema command result into a list of column
+    /// metadata. Ensures the top-level schema is an Object with properties,
+    /// The metadata is sorted alphabetically by property name and then by field name.
+    /// As in, a result set with schema:
+    ///
+    ///   {
+    ///     bsonType: "object",
+    ///     properties: {
+    ///       "foo": {
+    ///         bsonType: "int",
+    ///       },
+    ///       "bar": {
+    ///         bsonType: "double",
+    ///       }
+    ///   }
+    ///
+    /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
+    pub(crate) fn process_collection_metadata(
+        &self,
+        current_db: &str,
+        current_collection: &str,
+    ) -> Result<Vec<MongoColMetadata>> {
+        let collection_schema: crate::json_schema::simplified::Schema =
+            self.schema.json_schema.clone().try_into()?;
+        let collection_object_schema = collection_schema.assert_datasource_schema()?;
+
+        collection_object_schema
+            // 1. Access collection_schema.properties and sort alphabetically.
+            //    This means we are sorting by datasource name.
+            .properties
+            .clone()
+            .into_iter()
+            .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
+            // 2. Map each field into a MongoColMetadata.
+            .map(|(name, schema)| {
+                let field_nullability =
+                    collection_object_schema.get_field_nullability(name.clone())?;
+
+                Ok(MongoColMetadata::new(
+                    current_db,
+                    current_collection.to_string(),
+                    name,
+                    schema,
+                    field_nullability,
+                ))
+            })
+            .collect::<Result<Vec<_>>>()
     }
 }
 
@@ -266,7 +315,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_metadata("test_db");
+            let actual = input.process_result_metadata("test_db");
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema) => (),
@@ -294,7 +343,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_metadata("test_db");
+            let actual = input.process_result_metadata("test_db");
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema) => (),
@@ -342,7 +391,7 @@ mod unit {
                 },
             };
 
-            let res = input.process_metadata("test_db");
+            let res = input.process_result_metadata("test_db");
 
             match res {
                 Err(e) => panic!("unexpected error: {:?}", e),

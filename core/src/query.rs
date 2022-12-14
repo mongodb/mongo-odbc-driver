@@ -42,7 +42,7 @@ impl MongoQuery {
             bson::from_document(db.run_command(get_result_schema_cmd, None)?)
                 .map_err(Error::BsonDeserialization)?;
 
-        let metadata = get_result_schema_response.process_metadata(current_db)?;
+        let metadata = get_result_schema_response.process_result_metadata(current_db)?;
 
         // 2. Run the $sql aggregation to get the result set cursor.
         let pipeline = vec![doc! {"$sql": {

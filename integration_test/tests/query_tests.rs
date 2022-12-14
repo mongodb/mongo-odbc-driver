@@ -31,7 +31,7 @@ mod integration {
     }
 
     #[test]
-    fn test_columns() {
+    fn ffftest_columns() {
         use odbc_api::*;
         let mut conn_string = crate::common::generate_default_connection_str();
         conn_string.push_str("DATABASE=integration_test");
@@ -40,10 +40,13 @@ mod integration {
         let conn = env.connect_with_connection_string(&conn_string).unwrap();
 
         let mut cursor = conn.columns("", "", "", "");
-        dbg!();
         while let Ok(Some(mut row)) = cursor.as_mut().unwrap().next_row() {
-            dbg!();
             let mut buf = Vec::new();
+            println!("NEXT");
+            row.get_text(1, &mut buf).unwrap();
+            println!("DB NAME: {}", std::str::from_utf8(&buf).unwrap());
+            row.get_text(3, &mut buf).unwrap();
+            println!("TABLE NAME: {}", std::str::from_utf8(&buf).unwrap());
             row.get_text(4, &mut buf).unwrap();
             println!("COL NAME: {}", std::str::from_utf8(&buf).unwrap());
         }

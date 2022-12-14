@@ -88,7 +88,6 @@ macro_rules! odbc_unwrap {
 // The panic message is added to the diagnostics of `handle` and SqlReturn::ERROR returned.
 macro_rules! panic_safe_exec {
     ($function:expr, $handle:expr) => {{
-        dbg!();
         let function = $function;
         let handle = $handle;
         let handle_ref = MongoHandleRef::from(handle);
@@ -616,8 +615,8 @@ pub unsafe extern "C" fn SQLColumns(
                     .as_ref()
                     .unwrap(),
                 stmt.attributes.read().unwrap().query_timeout as i32,
-                dbg!(catalog),
-                dbg!(table),
+                catalog,
+                table,
                 column,
             );
             let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);

@@ -128,7 +128,7 @@ pub mod simplified {
         /// A datasource schema must be an Object schema. Unlike Object schemata
         /// in general, the properties field cannot be null.
         pub fn assert_datasource_schema(&self) -> Result<&ObjectSchema> {
-            match dbg!(self) {
+            match self {
                 Schema::Atomic(Atomic::Object(s)) => Ok(s),
                 _ => Err(Error::InvalidResultSetJsonSchema),
             }
@@ -164,35 +164,45 @@ pub mod simplified {
                     additional_properties,
                     items,
                     any_of: None,
-                } => match bson_type {
-                    BsonType::Single(BsonTypeName::Array) => {
-                        Ok(Atomic::Array(Box::new(match items {
-                            Some(Items::Single(s)) => Schema::try_from(*s)?,
-                            // The multiple-schema variant of the `items`
-                            // field only asserts the schemas for the
-                            // array items at specified indexes, and
-                            // imposes no constraint on items at larger
-                            // indexes. As such, the only schema that can
-                            // describe all elements of the array is
-                            // `Any`.
-                            Some(Items::Multiple(_)) => Schema::Atomic(Atomic::Any),
-                            None => Schema::Atomic(Atomic::Any),
-                        })))
+                } => {
+                    let construct_obj = || {
+                        Ok(Atomic::Object(ObjectSchema {
+                            properties: properties
+                                .unwrap_or_default()
+                                .into_iter()
+                                .map(|(prop, prop_schema)| {
+                                    Ok((prop, Schema::try_from(prop_schema)?))
+                                })
+                                .collect::<Result<_>>()?,
+                            required: required.unwrap_or_default().into_iter().collect(),
+                            additional_properties: additional_properties.unwrap_or(true),
+                        }))
+                    };
+                    match bson_type {
+                        BsonType::Single(BsonTypeName::Array) => {
+                            Ok(Atomic::Array(Box::new(match items {
+                                Some(Items::Single(s)) => Schema::try_from(*s)?,
+                                // The multiple-schema variant of the `items`
+                                // field only asserts the schemas for the
+                                // array items at specified indexes, and
+                                // imposes no constraint on items at larger
+                                // indexes. As such, the only schema that can
+                                // describe all elements of the array is
+                                // `Any`.
+                                Some(Items::Multiple(_)) => Schema::Atomic(Atomic::Any),
+                                None => Schema::Atomic(Atomic::Any),
+                            })))
+                        }
+                        BsonType::Single(BsonTypeName::Object) => construct_obj(),
+                        BsonType::Single(t) => Ok(Atomic::Scalar(t)),
+                        // If there is a "Multiple" that contains a single type, we can simplify it.
+                        BsonType::Multiple(types) if types.len() == 1 => match types.as_slice() {
+                            [BsonTypeName::Object] => construct_obj(),
+                            types => Ok(Atomic::Scalar(types[0])),
+                        },
+                        BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema),
                     }
-                    BsonType::Single(BsonTypeName::Object) => Ok(Atomic::Object(ObjectSchema {
-                        properties: properties
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|(prop, prop_schema)| Ok((prop, Schema::try_from(prop_schema)?)))
-                            .collect::<Result<_>>()?,
-                        required: required.unwrap_or_default().into_iter().collect(),
-                        additional_properties: additional_properties.unwrap_or(true),
-                    })),
-                    BsonType::Single(t) => Ok(Atomic::Scalar(t)),
-                    // If there is a "Multiple" that contains a single type, we can simplify it.
-                    BsonType::Multiple(types) if types.len() == 1 => Ok(Atomic::Scalar(types[0])),
-                    BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema),
-                },
+                }
                 _ => Err(Error::InvalidResultSetJsonSchema),
             }
         }
