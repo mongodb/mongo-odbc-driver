@@ -87,7 +87,7 @@ impl MongoColMetadata {
     }
 }
 
-// Struct representing the result for a sqlGetResultSchema command.
+// Struct representing the response for a sqlGetResultSchema command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct SqlGetSchemaResponse {
     pub ok: i32,
