@@ -211,7 +211,7 @@ impl SqlGetSchemaResponse {
 
         collection_object_schema
             // 1. Access collection_schema.properties and sort alphabetically.
-            //    This means we are sorting by datasource name.
+            //    This means we are sorting by field name.
             .properties
             .clone()
             .into_iter()
