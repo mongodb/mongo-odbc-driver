@@ -94,7 +94,7 @@ pub struct SqlGetSchemaResponse {
     pub schema: VersionedJsonSchema,
 }
 
-// Auxiliary struct representing part of the result for a sqlGetResultSchema
+// Auxiliary struct representing part of the response for a sqlGetResultSchema
 // command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct VersionedJsonSchema {
