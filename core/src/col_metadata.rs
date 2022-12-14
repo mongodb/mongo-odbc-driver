@@ -104,7 +104,7 @@ pub struct VersionedJsonSchema {
 }
 
 impl SqlGetSchemaResponse {
-    /// Converts a sqlGetResultSchema command result into a list of column
+    /// Converts a sqlGetResultSchema command response into a list of column
     /// metadata. Ensures the top-level schema is an Object with properties,
     /// and ensures the same for each top-level property -- which correspond
     /// to datasources. The metadata is sorted alphabetically by datasource
