@@ -1,3 +1,5 @@
+mod test_generator_util;
+
 use odbc::{create_environment_v3, Allocated, Connection, Handle, NoResult, Statement};
 use odbc_sys::{CDataType, Desc, HStmt, HandleType, SmallInt, SqlReturn, USmallInt};
 
@@ -8,7 +10,10 @@ use serde_json::value::Value;
 use std::ptr::null_mut;
 use std::{fmt, fs, path::PathBuf};
 
-use crate::common::{get_sql_diagnostics, sql_return_to_string};
+use crate::{
+    common::{get_sql_diagnostics, sql_return_to_string},
+    test_runner::test_generator_util::generate_baseline_test_files,
+};
 use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
@@ -71,6 +76,8 @@ pub enum Error {
     OdbcFunctionFailed(String, String, String),
 }
 
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IntegrationTest {
     pub tests: Vec<TestEntry>,
@@ -111,9 +118,46 @@ impl fmt::Display for TestDef {
     }
 }
 
+/// integration_test runs the query and function tests contained in the TEST_FILE_DIR directory
+#[test]
+#[ignore]
+pub fn integration_test() -> Result<()> {
+    run_integration_tests(false)
+}
+
+pub fn run_integration_tests(generate: bool) -> Result<()> {
+    let env = create_environment_v3().unwrap();
+    let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
+    for path in paths {
+        let yaml = parse_test_file_yaml(&path).unwrap();
+
+        for test in yaml.tests {
+            match test.skip_reason {
+                Some(sr) => println!("Skip Reason: {}", sr),
+                None => {
+                    let mut conn_str = crate::common::generate_default_connection_str();
+                    conn_str.push_str(&("DATABASE=".to_owned() + &test.db));
+                    let connection = env
+                        .connect_with_connection_string(conn_str.as_str())
+                        .unwrap();
+                    let test_result = match test.test_definition {
+                        TestDef::Query(ref q) => run_query_test(q, &test, &connection, generate),
+                        TestDef::Function(ref f) => {
+                            run_function_test(f, &test, &connection, generate)
+                        }
+                    };
+                    drop(connection);
+                    assert_eq!(Ok(()), test_result);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 /// load_file_paths reads the given directory and returns a list its file path
 /// names.
-pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>, Error> {
+pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>> {
     let mut paths: Vec<String> = vec![];
     let entries = fs::read_dir(dir).map_err(|e| Error::InvalidDirectory(format!("{:?}", e)))?;
     for entry in entries {
@@ -132,42 +176,11 @@ pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>, Error> {
 
 /// parse_test_file_yaml deserializes the given YAML file into a
 /// IntegrationTest struct.
-pub fn parse_test_file_yaml(path: &str) -> Result<IntegrationTest, Error> {
+pub fn parse_test_file_yaml(path: &str) -> Result<IntegrationTest> {
     let f = fs::File::open(path).map_err(|e| Error::InvalidFile(format!("{:?}", e)))?;
     let integration_test: IntegrationTest =
         serde_yaml::from_reader(f).map_err(|e| Error::CannotDeserializeYaml(format!("{:?}", e)))?;
     Ok(integration_test)
-}
-
-/// integration_test runs the query and function tests contained in the TEST_FILE_DIR directory
-#[test]
-#[ignore]
-pub fn integration_test() -> Result<(), Error> {
-    let env = create_environment_v3().unwrap();
-    let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
-    for path in paths {
-        let yaml = parse_test_file_yaml(&path).unwrap();
-
-        for test in yaml.tests {
-            match test.skip_reason {
-                Some(sr) => println!("Skip Reason: {}", sr),
-                None => {
-                    let mut conn_str = crate::common::generate_default_connection_str();
-                    conn_str.push_str(&("DATABASE=".to_owned() + &test.db));
-                    let connection = env
-                        .connect_with_connection_string(conn_str.as_str())
-                        .unwrap();
-                    let test_result = match test.test_definition {
-                        TestDef::Query(ref q) => run_query_test(q, &test, &connection),
-                        TestDef::Function(ref f) => run_function_test(f, &test, &connection),
-                    };
-                    drop(connection);
-                    assert_eq!(Ok(()), test_result);
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 /// str_or_null converts value to a narrow string or null_mut() if null
@@ -195,12 +208,12 @@ fn to_wstr_ptr(string: &str) -> *const u16 {
     v.as_ptr()
 }
 
-fn to_i16(value: &Value) -> Result<i16, Error> {
+fn to_i16(value: &Value) -> Result<i16> {
     let val = value.as_i64().expect("Unable to cast value as i64");
     i16::try_from(val).map_err(|e| Error::ValueOverflowI16(val, e.to_string()))
 }
 
-fn check_array_length(array: &Vec<Value>, length: usize) -> Result<(), Error> {
+fn check_array_length(array: &Vec<Value>, length: usize) -> Result<()> {
     if array.len() < length {
         return Err(Error::NotEnoughArguments(length, array.len()));
     }
@@ -211,7 +224,8 @@ fn run_query_test(
     query: &str,
     entry: &TestEntry,
     conn: &Connection<AutocommitOn>,
-) -> Result<(), Error> {
+    generate: bool,
+) -> Result<()> {
     let stmt = Statement::with_parent(conn).unwrap();
     unsafe {
         match odbc_sys::SQLExecDirectW(
@@ -219,7 +233,13 @@ fn run_query_test(
             to_wstr_ptr(query),
             query.len() as i32,
         ) {
-            SqlReturn::SUCCESS => validate_result_set(entry, stmt),
+            SqlReturn::SUCCESS => {
+                if generate {
+                    generate_baseline_test_files(entry, stmt)
+                } else {
+                    validate_result_set(entry, stmt)
+                }
+            }
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLExecDirectW".to_string(),
                 sql_return_to_string(sql_return),
@@ -233,7 +253,8 @@ fn run_function_test(
     function: &Vec<Value>,
     entry: &TestEntry,
     conn: &Connection<AutocommitOn>,
-) -> Result<(), Error> {
+    generate: bool,
+) -> Result<()> {
     let statement = Statement::with_parent(conn).unwrap();
     check_array_length(function, 1)?;
     let function_name = function[0].as_str().unwrap().to_lowercase();
@@ -376,13 +397,17 @@ fn run_function_test(
             ));
         }
     }
-    validate_result_set(entry, statement)
+    if generate {
+        generate_baseline_test_files(entry, statement)
+    } else {
+        validate_result_set(entry, statement)
+    }
 }
 
 fn validate_result_set(
     entry: &TestEntry,
     stmt: Statement<Allocated, NoResult, AutocommitOn>,
-) -> Result<(), Error> {
+) -> Result<()> {
     let column_count = get_column_count(&stmt)?;
     let mut row_counter = 0;
     if let Some(expected_result) = entry.expected_result.as_ref() {
@@ -437,7 +462,7 @@ fn validate_result_set_metadata_helper(
     description: String,
     descriptor: Desc,
     expected_metadata: &Option<Vec<Value>>,
-) -> Result<(), Error> {
+) -> Result<()> {
     if let Some(exp_metadata) = &expected_metadata {
         if column_count != exp_metadata.len() {
             return Err(Error::MetadataColumnCount {
@@ -484,7 +509,7 @@ fn validate_result_set_metadata(
     entry: &TestEntry,
     column_count: usize,
     stmt: Statement<Allocated, NoResult, AutocommitOn>,
-) -> Result<(), Error> {
+) -> Result<()> {
     validate_result_set_metadata_helper(
         &stmt,
         column_count,
@@ -577,7 +602,7 @@ fn get_column_attribute(
     column: usize,
     field_identifier: Desc,
     column_metadata_type: &Value,
-) -> Result<Value, Error> {
+) -> Result<Value> {
     let string_length_ptr = &mut 0;
     let character_attrib_ptr: *mut std::ffi::c_void =
         Box::into_raw(Box::new([0u16; BUFFER_LENGTH])) as *mut _;
@@ -613,7 +638,7 @@ fn get_data(
     stmt: &Statement<Allocated, NoResult, AutocommitOn>,
     column: USmallInt,
     data_type: CDataType,
-) -> Result<Value, Error> {
+) -> Result<Value> {
     let out_len_or_ind = &mut 0;
     let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
     let mut data: Value = Default::default();
@@ -648,7 +673,7 @@ fn get_data(
     }
 }
 
-fn get_column_count(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<usize, Error> {
+fn get_column_count(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<usize> {
     unsafe {
         let columns = &mut 0;
         match odbc_sys::SQLNumResultCols(stmt.handle() as HStmt, columns) {
@@ -662,7 +687,7 @@ fn get_column_count(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Resu
     }
 }
 
-fn fetch_row(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<bool, Error> {
+fn fetch_row(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<bool> {
     unsafe {
         match odbc_sys::SQLFetch(stmt.handle() as HStmt) {
             SqlReturn::SUCCESS => Ok(true),
