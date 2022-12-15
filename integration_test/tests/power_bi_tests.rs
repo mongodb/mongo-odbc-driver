@@ -1,7 +1,9 @@
 mod common;
 
 mod integration {
-    use crate::common::generate_default_connection_str;
+    use crate::common::{
+        generate_default_connection_str, get_sql_diagnostics, sql_return_to_string,
+    };
     use odbc::ffi::SQL_NTS;
     use odbc_sys::{
         AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, DriverConnectOption,
@@ -105,7 +107,9 @@ mod integration {
                     BUFFER_LENGTH,
                     str_len_ptr,
                     DriverConnectOption::NoPrompt,
-                )
+                ),
+                "{}",
+                get_sql_diagnostics(HandleType::Dbc, dbc)
             );
 
             output_len = *str_len_ptr;
@@ -138,7 +142,9 @@ mod integration {
             // Verify that freeing the handle is working as expected
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLFreeHandle(HandleType::Env, env_handle as Handle)
+                SQLFreeHandle(HandleType::Env, env_handle as Handle),
+                "{}",
+                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
             );
         }
     }
@@ -189,15 +195,20 @@ mod integration {
             );
              */
 
+            let mut outcome = SQLGetInfoW(
+                conn_handle as HDbc,
+                InfoType::DbmsName,
+                output_buffer as Pointer,
+                BUFFER_LENGTH,
+                str_len_ptr,
+            );
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetInfoW(
-                    conn_handle as HDbc,
-                    InfoType::DbmsName,
-                    output_buffer as Pointer,
-                    BUFFER_LENGTH,
-                    str_len_ptr
-                )
+                outcome,
+                "Expected {}, got {}. Diagnostic message is: {}",
+                sql_return_to_string(SqlReturn::SUCCESS),
+                sql_return_to_string(outcome),
+                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
             );
             println!(
                 "DBMS name = {}\nLength is {}",
@@ -208,15 +219,20 @@ mod integration {
                 *str_len_ptr
             );
 
+            outcome = SQLGetInfoW(
+                conn_handle as HDbc,
+                InfoType::DbmsVer,
+                output_buffer as Pointer,
+                BUFFER_LENGTH,
+                str_len_ptr,
+            );
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetInfoW(
-                    conn_handle as HDbc,
-                    InfoType::DbmsVer,
-                    output_buffer as Pointer,
-                    BUFFER_LENGTH,
-                    str_len_ptr
-                )
+                outcome,
+                "Expected {}, got {}. Diagnostic message is: {}",
+                sql_return_to_string(SqlReturn::SUCCESS),
+                sql_return_to_string(outcome),
+                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
             );
             println!(
                 "DBMS version = {}\nLength is {}",

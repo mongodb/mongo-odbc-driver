@@ -1,5 +1,5 @@
 use odbc::{create_environment_v3, Allocated, Connection, Handle, NoResult, Statement};
-use odbc_sys::{CDataType, Desc, HStmt, SmallInt, SqlReturn, USmallInt};
+use odbc_sys::{CDataType, Desc, HStmt, HandleType, SmallInt, SqlReturn, USmallInt};
 
 use odbc::safe::AutocommitOn;
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,7 @@ use serde_json::value::Value;
 use std::ptr::null_mut;
 use std::{fmt, fs, path::PathBuf};
 
+use crate::common::{get_sql_diagnostics, sql_return_to_string};
 use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
@@ -66,8 +67,8 @@ pub enum Error {
     UnexpectedMetadataType(String),
     #[error("overflow caused by value {0}, err {1}")]
     ValueOverflowI16(i64, String),
-    #[error("function {0} failed with sql code {1}")]
-    OdbcFunctionFailed(String, String),
+    #[error("Function {0} failed with sql code {1}. Error message: {2}")]
+    OdbcFunctionFailed(String, String, String),
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -221,7 +222,8 @@ fn run_query_test(
             SqlReturn::SUCCESS => validate_result_set(entry, stmt),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLExecDirectW".to_string(),
-                format!("{:?}", sql_return),
+                sql_return_to_string(sql_return),
+                get_sql_diagnostics(HandleType::Stmt, stmt.handle() as *mut _),
             )),
         }
     }
@@ -366,10 +368,13 @@ fn run_function_test(
 
     let sql_return_val = sql_return.unwrap();
     if sql_return_val != SqlReturn::SUCCESS {
-        return Err(Error::OdbcFunctionFailed(
-            function_name,
-            format!("{:?}", sql_return_val),
-        ));
+        unsafe {
+            return Err(Error::OdbcFunctionFailed(
+                function_name,
+                sql_return_to_string(sql_return_val),
+                get_sql_diagnostics(HandleType::Stmt, statement.handle() as *mut _),
+            ));
+        }
     }
     validate_result_set(entry, statement)
 }
@@ -597,7 +602,8 @@ fn get_column_attribute(
             }),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLColAttributeW".to_string(),
-                format!("{:?}", sql_return),
+                sql_return_to_string(sql_return),
+                get_sql_diagnostics(HandleType::Stmt, stmt.handle() as *mut _),
             )),
         }
     }
@@ -635,7 +641,8 @@ fn get_data(
             }
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLGetData".to_string(),
-                format!("{:?}", sql_return),
+                sql_return_to_string(sql_return),
+                get_sql_diagnostics(HandleType::Stmt, stmt.handle() as *mut _),
             )),
         }
     }
@@ -648,7 +655,8 @@ fn get_column_count(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Resu
             SqlReturn::SUCCESS => Ok(*columns as usize),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLNumResultCols".to_string(),
-                format!("{:?}", sql_return),
+                sql_return_to_string(sql_return),
+                get_sql_diagnostics(HandleType::Stmt, stmt.handle() as *mut _),
             )),
         }
     }
@@ -661,7 +669,8 @@ fn fetch_row(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<bool
             SqlReturn::NO_DATA => Ok(false),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLFetch".to_string(),
-                format!("{:?}", sql_return),
+                sql_return_to_string(sql_return),
+                get_sql_diagnostics(HandleType::Stmt, stmt.handle() as *mut _),
             )),
         }
     }
