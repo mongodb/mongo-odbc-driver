@@ -243,6 +243,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          set +e
           export RUST_BACKTRACE=1
           ./resources/run_adf.sh start &&
           cargo run --bin data_loader &&
@@ -298,6 +299,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          set +e
           echo "-------- ODBC related env variable ----------"
           echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
           echo "LIBRARY_PATH = $LIBRARY_PATH"
@@ -310,7 +312,7 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
-          
+
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration
           EXITCODE=$?
@@ -327,6 +329,7 @@ functions:
       working_dir: mongosql-odbc-driver
       script: |
         ${prepare_shell}
+        set +e
         export RUST_BACKTRACE=1
         ./resources/run_adf.sh start &&
         cargo run --bin data_loader &&
@@ -335,10 +338,32 @@ functions:
         ./resources/run_adf.sh stop
         exit $EXITCODE
 
+  "upload start_adf logs":
+     - command: s3.put
+       params:
+         aws_key: ${aws_key}
+         aws_secret: ${aws_secret}
+         local_file: mongosql-odbc-driver/local_adf/logs/mongohoused.log
+         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongohoused.log
+         bucket: mciuploads
+         permissions: public-read
+         content_type: application/octet-stream
+     - command: s3.put
+       params:
+         aws_key: ${aws_key}
+         aws_secret: ${aws_secret}
+         local_file: mongosql-odbc-driver/local_adf/logs/mongodb_test.log
+         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongodb_test.log
+         bucket: mciuploads
+         permissions: public-read
+         content_type: application/octet-stream
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
   - func: "install rust toolchain"
+post:
+  - func: "upload start_adf logs"
 
 tasks:
 
