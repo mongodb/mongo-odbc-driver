@@ -12,7 +12,7 @@ use crate::{
     handles::definitions::*,
 };
 use bson::Bson;
-use constants::{SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
+use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
     MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery,
     MongoStatement, MongoTableTypes,
@@ -1853,7 +1853,7 @@ unsafe fn sql_get_infow_helper(
                 InfoType::SQL_DRIVER_NAME => {
                     // This Driver Name is consistent with the name used for our JDBC driver.
                     i16_len::set_output_wstring(
-                        "MongoDB Atlas SQL interface ODBC Driver",
+                        DRIVER_NAME,
                         info_value_ptr as *mut WChar,
                         buffer_length as usize,
                         string_length_ptr,
@@ -1897,7 +1897,7 @@ unsafe fn sql_get_infow_helper(
                 InfoType::SQL_DBMS_NAME => {
                     // The underlying DBMS is MongoDB Atlas.
                     i16_len::set_output_wstring(
-                        "MongoDB Atlas",
+                        DBMS_NAME,
                         info_value_ptr as *mut WChar,
                         buffer_length as usize,
                         string_length_ptr,
