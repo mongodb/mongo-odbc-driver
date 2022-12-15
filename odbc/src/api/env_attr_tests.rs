@@ -31,7 +31,7 @@ fn get_set_env_attr(
             )
         );
 
-        assert_eq!(default_value, *(attr_buffer as *const _) as i32);
+        assert_eq!(default_value, *(attr_buffer as *const _));
         // All environment attributes are represented numerically
         assert_eq!(size_of::<Integer>() as i32, *string_length_ptr);
 
@@ -55,10 +55,10 @@ fn get_set_env_attr(
                 );
                 match expected_return {
                     SqlReturn::SUCCESS => {
-                        assert_eq!(discriminant, *(attr_buffer as *const _) as i32)
+                        assert_eq!(discriminant, *(attr_buffer as *const _))
                     }
                     _ => {
-                        assert_eq!(default_value, *(attr_buffer as *const _) as i32)
+                        assert_eq!(default_value, *(attr_buffer as *const _))
                     }
                 };
                 assert_eq!(size_of::<Integer>() as i32, *string_length_ptr);

@@ -2259,7 +2259,7 @@ unsafe fn sql_get_infow_helper(
                 }
                 _ => {
                     err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
-                        (info_type as u16).to_string(),
+                        info_type.to_string(),
                     ));
                     SqlReturn::ERROR
                 }
@@ -2267,7 +2267,7 @@ unsafe fn sql_get_infow_helper(
         }
         None => {
             err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
-                (info_type as u16).to_string(),
+                info_type.to_string(),
             ));
             SqlReturn::ERROR
         }
