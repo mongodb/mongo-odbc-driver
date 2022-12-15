@@ -95,4 +95,10 @@ mod integration {
         ];
         columns_test(&expected, ("integration_test_2", "", ""));
     }
+
+    #[test]
+    fn columns_with_all_filters() {
+        let expected = [["integration_test", "foo", "_id"]];
+        columns_test(&expected, ("integration_test", "%o%", "%i%"));
+    }
 }
