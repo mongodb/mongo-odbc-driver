@@ -1906,7 +1906,13 @@ unsafe fn sql_get_infow_helper(
                 InfoType::SQL_DBMS_VER => {
                     // Return the ADF version.
                     let conn = must_be_valid!((*conn_handle).as_connection());
-                    let version = conn.mongo_connection.read().unwrap().as_ref().unwrap().get_adf_version();
+                    let version = conn
+                        .mongo_connection
+                        .read()
+                        .unwrap()
+                        .as_ref()
+                        .unwrap()
+                        .get_adf_version();
                     match version {
                         Ok(version) => i16_len::set_output_wstring(
                             version.as_str(),
@@ -1974,7 +1980,11 @@ unsafe fn sql_get_infow_helper(
                 }
                 InfoType::SQL_CONVERT_FUNCTIONS => {
                     // MongoSQL only supports the CAST type conversion function.
-                    i16_len::set_output_fixed_data(&SQL_FN_CVT_CAST, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(
+                        &SQL_FN_CVT_CAST,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 InfoType::SQL_NUMERIC_FUNCTIONS => {
                     // MongoSQL supports the following numeric functions.
@@ -1991,7 +2001,11 @@ unsafe fn sql_get_infow_helper(
                         | SQL_FN_NUM_POWER
                         | SQL_FN_NUM_RADIANS
                         | SQL_FN_NUM_ROUND;
-                    i16_len::set_output_fixed_data(&NUMERIC_FUNCTIONS, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(
+                        &NUMERIC_FUNCTIONS,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 InfoType::SQL_STRING_FUNCTIONS => {
                     // MongoSQL supports the following string functions.
@@ -2003,7 +2017,11 @@ unsafe fn sql_get_infow_helper(
                         | SQL_FN_STR_CHARACTER_LENGTH
                         | SQL_FN_STR_OCTET_LENGTH
                         | SQL_FN_STR_POSITION;
-                    i16_len::set_output_fixed_data(&STRING_FUNCTIONS, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(
+                        &STRING_FUNCTIONS,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 InfoType::SQL_SYSTEM_FUNCTIONS => {
                     // MongoSQL does not support any of the ODBC system functions.
@@ -2011,55 +2029,35 @@ unsafe fn sql_get_infow_helper(
                 }
                 InfoType::SQL_TIMEDATE_FUNCTIONS => {
                     // MongoSQL supports the following timedate functions.
-                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP
-                        | SQL_FN_TD_EXTRACT;
-                    i16_len::set_output_fixed_data(&TIMEDATE_FUNCTIONS, info_value_ptr, string_length_ptr)
+                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP | SQL_FN_TD_EXTRACT;
+                    i16_len::set_output_fixed_data(
+                        &TIMEDATE_FUNCTIONS,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
-                // SQL_CONVERT_BIGINT
                 InfoType::SQL_CONVERT_BIGINT
-                // SQL_CONVERT_DECIMAL
                 | InfoType::SQL_CONVERT_DECIMAL
-                // SQL_CONVERT_DOUBLE
                 | InfoType::SQL_CONVERT_DOUBLE
-                // SQL_CONVERT_FLOAT
                 | InfoType::SQL_CONVERT_FLOAT
-                // SQL_CONVERT_INTEGER
                 | InfoType::SQL_CONVERT_INTEGER
-                // SQL_CONVERT_NUMERIC
                 | InfoType::SQL_CONVERT_NUMERIC
-                // SQL_CONVERT_REAL
                 | InfoType::SQL_CONVERT_REAL
-                // SQL_CONVERT_SMALLINT
                 | InfoType::SQL_CONVERT_SMALLINT
-                // SQL_CONVERT_TINYINT
                 | InfoType::SQL_CONVERT_TINYINT
-                // SQL_CONVERT_BIT
                 | InfoType::SQL_CONVERT_BIT
-                // SQL_CONVERT_CHAR
                 | InfoType::SQL_CONVERT_CHAR
-                // SQL_CONVERT_VARCHAR
                 | InfoType::SQL_CONVERT_VARCHAR
-                // SQL_CONVERT_LONGVARCHAR
                 | InfoType::SQL_CONVERT_LONGVARCHAR
-                // SQL_CONVERT_WCHAR
                 | InfoType::SQL_CONVERT_WCHAR
-                // SQL_CONVERT_WVARCHAR
                 | InfoType::SQL_CONVERT_WVARCHAR
-                // SQL_CONVERT_WLONGVARCHAR
                 | InfoType::SQL_CONVERT_WLONGVARCHAR
-                // SQL_CONVERT_TIMESTAMP
                 | InfoType::SQL_CONVERT_TIMESTAMP
-                // SQL_CONVERT_BINARY
                 | InfoType::SQL_CONVERT_BINARY
-                // SQL_CONVERT_DATE
                 | InfoType::SQL_CONVERT_DATE
-                // SQL_CONVERT_TIME
                 | InfoType::SQL_CONVERT_TIME
-                // SQL_CONVERT_VARBINARY
                 | InfoType::SQL_CONVERT_VARBINARY
-                // SQL_CONVERT_LONGVARBINARY
                 | InfoType::SQL_CONVERT_LONGVARBINARY
-                // SQL_CONVERT_GUID
                 | InfoType::SQL_CONVERT_GUID => {
                     // MongoSQL does not support CONVERT.
                     i16_len::set_output_fixed_data(&SQL_U32_ZERO, info_value_ptr, string_length_ptr)
@@ -2067,7 +2065,11 @@ unsafe fn sql_get_infow_helper(
                 InfoType::SQL_GETDATA_EXTENSIONS => {
                     // GetData can be called on any column in any order.
                     const GETDATA_EXTENSIONS: u32 = SQL_GD_ANY_COLUMN | SQL_GD_ANY_ORDER;
-                    i16_len::set_output_fixed_data(&GETDATA_EXTENSIONS, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(
+                        &GETDATA_EXTENSIONS,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 InfoType::SQL_COLUMN_ALIAS => {
                     // MongoSQL does support column aliases.
@@ -2110,7 +2112,11 @@ unsafe fn sql_get_infow_helper(
                     // INSERT, UPDATE, and DELETE. In conjunction with the following
                     // InfoType, SQL_DATA_SOURCE_READ_ONLY, this return value is
                     // valid.
-                    i16_len::set_output_fixed_data(&SQL_CU_DML_STATEMENTS, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(
+                        &SQL_CU_DML_STATEMENTS,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 InfoType::SQL_DATA_SOURCE_READ_ONLY => {
                     // MongoSQL is read-only.
@@ -2157,8 +2163,7 @@ unsafe fn sql_get_infow_helper(
                     i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr)
                 }
 
-                InfoType::SQL_TIMEDATE_ADD_INTERVALS
-                | InfoType::SQL_TIMEDATE_DIFF_INTERVALS => {
+                InfoType::SQL_TIMEDATE_ADD_INTERVALS | InfoType::SQL_TIMEDATE_DIFF_INTERVALS => {
                     // Note that MongoSQL does not support TIMEDATE_ADD or
                     // TIMEDATE_DIFF, so this value will not be used. For the
                     // MongoSQL DATEADD and DATEDIFF functions, we support the
@@ -2171,7 +2176,11 @@ unsafe fn sql_get_infow_helper(
                         | SQL_FN_TSI_MONTH
                         | SQL_FN_TSI_QUARTER
                         | SQL_FN_TSI_YEAR;
-                    i16_len::set_output_fixed_data(&TIMEDATE_INTERVALS, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(
+                        &TIMEDATE_INTERVALS,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 InfoType::SQL_CATALOG_LOCATION => {
                     // MongoSQL puts the catalog (database) at the start of a qualified
@@ -2219,7 +2228,11 @@ unsafe fn sql_get_infow_helper(
                         | SQL_AF_SUM
                         | SQL_AF_DISTINCT
                         | SQL_AF_ALL;
-                    i16_len::set_output_fixed_data(&AGG_FUNCTIONS, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(
+                        &AGG_FUNCTIONS,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 InfoType::SQL_CATALOG_NAME => {
                     // MongoSQL does support catalog (database) names.
@@ -2237,12 +2250,17 @@ unsafe fn sql_get_infow_helper(
                     i16_len::set_output_fixed_data(&u16::MAX, info_value_ptr, string_length_ptr)
                 }
                 // Since we don't support transaction, Commit and Rollback are not supported.
-                InfoType::SQL_CURSOR_COMMIT_BEHAVIOR
-                | InfoType::SQL_CURSOR_ROLLBACK_BEHAVIOR => {
-                    i16_len::set_output_fixed_data(&SQL_CB_PRESERVE, info_value_ptr, string_length_ptr)
+                InfoType::SQL_CURSOR_COMMIT_BEHAVIOR | InfoType::SQL_CURSOR_ROLLBACK_BEHAVIOR => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_CB_PRESERVE,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 _ => {
-                    err = Some(ODBCError::UnsupportedInfoTypeRetrieval((info_type as u16).to_string()));
+                    err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
+                        (info_type as u16).to_string(),
+                    ));
                     SqlReturn::ERROR
                 }
             }
