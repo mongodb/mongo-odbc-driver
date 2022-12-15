@@ -199,7 +199,7 @@ impl SqlGetSchemaResponse {
     ///       }
     ///   }
     ///
-    /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
+    /// produces a list of metadata with the order: "bar", "foo".
     pub(crate) fn process_collection_metadata(
         &self,
         current_db: &str,
