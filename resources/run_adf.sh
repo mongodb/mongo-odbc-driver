@@ -62,7 +62,7 @@ if [[ $OS =~ ^CYGWIN ]]; then
 else
     TMP_DIR="/tmp/run_adf"
 fi
-TIMEOUT=120
+TIMEOUT=180
 JQ=$TMP_DIR/jq
 
 MONGO_DOWNLOAD_BASE=https://fastdl.mongodb.org
@@ -88,9 +88,11 @@ check_procname() {
   fi
 }
 
-check_port() {
-  netstat -van 2>/dev/null | grep LISTEN | grep $1 >/dev/null
+check_version() {
+  VERSION=`$2/bin/mongo --port $1 --eval "version"`
   result=$?
+  echo "check_version() output"
+  echo $VERSION
 
   if [[ result -eq 0 ]]; then
     return 0
@@ -102,7 +104,7 @@ check_port() {
 check_mongod() {
   check_procname $MONGOD
   process_check_result=$?
-  check_port $MONGOD_PORT
+  check_version $MONGOD_PORT $1
   port_check_result=$?
 
   if [[ $process_check_result -eq 0 ]] && [[ $port_check_result -eq 0 ]]; then
@@ -125,14 +127,8 @@ get_jq() {
 }
 
 check_mongohoused() {
-  check_port $MONGOHOUSED_PORT
-  port_check_result=$?
-
-  if [[ $port_check_result -eq 0 ]]; then
-    return 0
-  else
-    return 1
-  fi
+  check_version $MONGOHOUSED_PORT $1
+  return $?
 }
 
 # check if mac or linux
@@ -162,7 +158,25 @@ else
   exit 1
 fi
 
-check_mongod
+install_mongodb() {
+    (cd $LOCAL_INSTALL_DIR && curl -O $MONGO_DOWNLOAD_LINK)
+    if [[ $OS =~ ^CYGWIN ]]; then
+      unzip -qo $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE -d $LOCAL_INSTALL_DIR 2> /dev/null
+
+      # Obtain unzipped directory name
+      MONGO_UNZIP_DIR=$(unzip -lq $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE | grep mongod.exe | tr -s ' ' \
+	          | cut -d ' ' -f 5 | cut -d/ -f1)
+      chmod -R +x $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR/bin/
+      echo $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR
+    else
+      tar zxf $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR
+      echo $LOCAL_INSTALL_DIR/${MONGO_DOWNLOAD_FILE:0:$((${#MONGO_DOWNLOAD_FILE} - 4))}
+    fi
+}
+
+MONGO_DOWNLOAD_DIR=$(install_mongodb)
+
+check_mongod $MONGO_DOWNLOAD_DIR
 if [[ $? -ne 0 ]]; then
   if [ $ARG = $START ]; then
     echo "Starting $MONGOD"
@@ -171,27 +185,18 @@ if [[ $? -ne 0 ]]; then
     mkdir -p $LOGS_PATH
     mkdir -p $TMP_DIR
 
-    # Install and start mongod
+    # Start mongod
     (cd $LOCAL_INSTALL_DIR && curl -O $MONGO_DOWNLOAD_LINK)
 
     # Note: ADF has a storage.json file that generates configs for us.
     # The mongodb source is on port $MONGOD_PORT so we use that here.
     # Uncompress the archive
     if [[ $OS =~ ^CYGWIN ]]; then
-      unzip -o $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE -d $LOCAL_INSTALL_DIR
-
-      # Obtain unzipped directory name
-      MONGO_UNZIP_DIR=$(unzip -l $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE | grep mongod.exe | tr -s ' ' \
-	          | cut -d ' ' -f 5 | cut -d/ -f1)
-      chmod +x $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR/bin/mongod.exe
-      MONGO_DOWNLOAD_DIR=$LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR
       # mongod does not have --fork option on Windows, using nohup
       nohup $MONGO_DOWNLOAD_DIR/bin/mongod --port $MONGOD_PORT --dbpath $(cygpath -m ${MONGO_DB_PATH}) \
               --logpath $(cygpath -m $LOGS_PATH/mongodb_test.log) &
       echo $! > $TMP_DIR/${MONGOD}.pid
     else
-      tar zxvf $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR
-      MONGO_DOWNLOAD_DIR=$LOCAL_INSTALL_DIR/${MONGO_DOWNLOAD_FILE:0:$((${#MONGO_DOWNLOAD_FILE} - 4))}
       $MONGO_DOWNLOAD_DIR/bin/mongod --port $MONGOD_PORT --dbpath $MONGO_DB_PATH \
         --logpath $LOGS_PATH/mongodb_test.log --pidfilepath $TMP_DIR/${MONGOD}.pid --fork
     fi
@@ -204,7 +209,7 @@ else
   fi
 fi
 
-check_mongohoused
+check_mongohoused $MONGO_DOWNLOAD_DIR
 if [[ $? -ne 0 ]]; then
   if [ $ARG = $START ]; then
     echo "Starting $MONGOHOUSED"
@@ -285,7 +290,7 @@ if [[ $? -ne 0 ]]; then
 
     waitCounter=0
     while : ; do
-        check_mongohoused
+        check_mongohoused $MONGO_DOWNLOAD_DIR
         if [[ $? -eq 0 ]]; then
             break
         fi
@@ -297,29 +302,29 @@ if [[ $? -ne 0 ]]; then
         sleep 1
     done
   fi
-else
-  if [ $ARG = $STOP ]; then
-    MONGOHOUSED_PID=$(< $TMP_DIR/${MONGOHOUSED}.pid)
-    echo "Stopping $MONGOHOUSED, pid $MONGOHOUSED_PID"
+fi
+if [ $ARG = $STOP ]; then
+  MONGOHOUSED_PID=$(< $TMP_DIR/${MONGOHOUSED}.pid)
+  echo "Stopping $MONGOHOUSED, pid $MONGOHOUSED_PID"
 
-    if [[ $OS =~ ^CYGWIN ]]; then
-      ps -W | grep $MONGOHOUSED | sed 's/   */:/g' | cut -d: -f5 | xargs -l taskkill /F /PID
-    else
-      pkill -TERM -P ${MONGOHOUSED_PID}
-    fi
-    if [[ $HAVE_LOCAL_MONGOHOUSE -eq 1 && -d "$LOCAL_MONGOHOUSE_DIR" ]]; then
-        echo "Restoring ${TENANT_CONFIG}"
-        cd $LOCAL_MONGOHOUSE_DIR
-        mv ${TENANT_CONFIG}.orig ${TENANT_CONFIG}
-        if [[ -f ${MONGOSQL_MQLRUN}.orig ]] ; then
-            echo "Restoring $MONGOSQL_MQLRUN"
-            mv ${MONGOSQL_MQLRUN}.orig $MONGOSQL_MQLRUN
-        fi
-        MONGOSQL_LIB=$LOCAL_MONGOHOUSE_DIR/artifacts/libmongosql.a
-        if [[ -f ${MONGOSQL_LIB}.orig ]] ; then
-            echo "Restoring $MONGOSQL_LIB"
-            mv ${MONGOSQL_LIB}.orig $MONGOSQL_LIB
-        fi
-    fi
+  if [[ $OS =~ ^CYGWIN ]]; then
+    ps -W | grep $MONGOHOUSED | sed 's/   */:/g' | cut -d: -f5 | xargs -l taskkill /F /PID
+  else
+    pkill -TERM -P ${MONGOHOUSED_PID}
+  fi
+  if [[ $HAVE_LOCAL_MONGOHOUSE -eq 1 && -d "$LOCAL_MONGOHOUSE_DIR" ]]; then
+      echo "Restoring ${TENANT_CONFIG}"
+      cd $LOCAL_MONGOHOUSE_DIR
+      mv ${TENANT_CONFIG}.orig ${TENANT_CONFIG}
+      if [[ -f ${MONGOSQL_MQLRUN}.orig ]] ; then
+          echo "Restoring $MONGOSQL_MQLRUN"
+          mv ${MONGOSQL_MQLRUN}.orig $MONGOSQL_MQLRUN
+      fi
+      MONGOSQL_LIB=$LOCAL_MONGOHOUSE_DIR/artifacts/libmongosql.a
+      if [[ -f ${MONGOSQL_LIB}.orig ]] ; then
+          echo "Restoring $MONGOSQL_LIB"
+          mv ${MONGOSQL_LIB}.orig $MONGOSQL_LIB
+      fi
   fi
 fi
+

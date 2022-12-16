@@ -1,9 +1,9 @@
 use constants::{
     FRACTIONAL_TRUNCATION, GENERAL_ERROR, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
     INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
-    INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED,
-    RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNABLE_TO_CONNECT, UNSUPPORTED_FIELD_DESCRIPTOR,
-    VENDOR_IDENTIFIER,
+    INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER,
+    NO_RESULTSET, OPTION_CHANGED, RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNABLE_TO_CONNECT,
+    UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -32,6 +32,13 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     UnsupportedFieldDescriptor(String),
+    #[error(
+        "[{}][API] Retrieving value for infoType {0} is not implemented yet",
+        VENDOR_IDENTIFIER
+    )]
+    UnsupportedInfoTypeRetrieval(String),
+    #[error("[{}][API] InfoType {0} out of range", VENDOR_IDENTIFIER)]
+    UnknownInfoType(String),
     #[error(
         "[{}][API] Indicator variable was null when null data was accessed",
         VENDOR_IDENTIFIER
@@ -113,7 +120,8 @@ impl ODBCError {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
-            | ODBCError::UnsupportedConnectionAttribute(_) => NOT_IMPLEMENTED,
+            | ODBCError::UnsupportedConnectionAttribute(_)
+            | ODBCError::UnsupportedInfoTypeRetrieval(_) => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
@@ -135,6 +143,7 @@ impl ODBCError {
             ODBCError::InvalidCharacterValue(_, _) => INVALID_CHARACTER_VALUE,
             ODBCError::IndicatorVariableRequiredButNotSupplied => INDICATOR_VARIABLE_REQUIRED,
             ODBCError::NoResultSet => NO_RESULTSET,
+            ODBCError::UnknownInfoType(_) => INVALID_INFO_TYPE_VALUE,
         }
     }
 
@@ -167,7 +176,9 @@ impl ODBCError {
             | ODBCError::InvalidDatetimeFormat(_)
             | ODBCError::UnsupportedFieldDescriptor(_)
             | ODBCError::InvalidCharacterValue(_, _)
-            | ODBCError::NoResultSet => 0,
+            | ODBCError::NoResultSet
+            | ODBCError::UnsupportedInfoTypeRetrieval(_)
+            | ODBCError::UnknownInfoType(_) => 0,
             ODBCError::Core(me) => me.code(),
         }
     }
