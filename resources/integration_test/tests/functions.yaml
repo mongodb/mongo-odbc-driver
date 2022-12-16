@@ -5,6 +5,7 @@ tests:
     expected_result:
       - ["db2", null, null, null, null]
       - ["integration_test", null, null, null, null]
+      - ["integration_test_2", null, null, null, null]
     expected_bson_type: ["string", "string", "string", "string", "string"]
     expected_case_sensitive: [ "", "", "", "", "" ]
     expected_catalog_name: [ "", "", "", "", "" ]
