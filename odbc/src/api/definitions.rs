@@ -238,6 +238,41 @@ pub enum InfoType {
     MaxIdentifierLen = 10005,
 }
 
+#[repr(i16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum DiagType {
+    // SQL_DIAG_RETURNCODE 1
+    ReturnCode = 1,
+    // SQL_DIAG_NUMBER 2
+    Number = 2,
+    // SQL_DIAG_ROW_COUNT 3
+    RowCount = 3,
+    // SQL_DIAG_SQLSTATE 4
+    SqlState = 4,
+    // SQL_DIAG_NATIVE 5
+    Native = 5,
+    // SQL_DIAG_MESSAGE_TEXT 6
+    MessageText = 6,
+    // SQL_DIAG_DYNAMIC_FUNCTION 7
+    DynamicFunction = 7,
+    // SQL_DIAG_CLASS_ORIGIN 8
+    ClassOrigin = 8,
+    // SQL_DIAG_SUBCLASS_ORIGIN 9
+    SubclassOrigin = 9,
+    // SQL_DIAG_CONNECTION_NAME 10
+    ConnectionName = 10,
+    // SQL_DIAG_SERVER_NAME 11
+    ServerName = 11,
+    // SQL_DIAG_DYNAMIC_FUNCTION_CODE 12
+    DynamicFunctionCode = 12,
+    // SQL_DIAG_CURSOR_ROW_COUNT -1249
+    CursorRowCount = -1249,
+    // SQL_DIAG_ROW_NUMBER -1248
+    RowNumber = -1248,
+    // SQL_DIAG_COLUMN_NUMBER -1247
+    ColumnNumber = -1247,
+}
+
 pub const SQL_CB_NULL: u16 = 0x0000;
 pub const SQL_U16_ZERO: u16 = 0x0000;
 pub const SQL_CL_START: u16 = 0x0001;

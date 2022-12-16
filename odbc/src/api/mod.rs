@@ -15,6 +15,8 @@ mod data_tests;
 #[cfg(test)]
 mod env_attr_tests;
 #[cfg(test)]
+mod get_diag_field_tests;
+#[cfg(test)]
 mod get_diag_rec_tests;
 #[cfg(test)]
 mod get_info_tests;

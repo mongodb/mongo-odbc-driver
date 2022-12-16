@@ -1,4 +1,5 @@
 use crate::{
+    api::definitions::DiagType,
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle, Statement},
 };
@@ -1393,6 +1394,88 @@ pub unsafe fn get_diag_rec(
         buffer_length as usize,
         text_length_ptr,
     )
+}
+
+///
+/// get_stmt_diag_field copies a part of the given ODBC error's diagnostic information
+/// into the provided pointer.
+///
+/// # Safety
+/// This writes to a raw C-pointer
+///
+pub unsafe fn get_stmt_diag_field(
+    handle: &Statement,
+    diag_identifier: DiagType,
+    diag_info_ptr: Pointer,
+) -> SqlReturn {
+    match diag_identifier {
+        DiagType::RowCount => {
+            *(diag_info_ptr as *mut u64) = 0u64;
+            SqlReturn::SUCCESS
+        }
+        DiagType::RowNumber => {
+            *(diag_info_ptr as *mut u64) = handle.attributes.read().unwrap().row_number as u64;
+            SqlReturn::SUCCESS
+        }
+        _ => SqlReturn::ERROR,
+    }
+}
+
+///
+/// get_diag_field copies a part of the given ODBC error's diagnostic information
+/// into the provided pointers.
+///
+/// # Safety
+/// This writes to multiple raw C-pointers
+///
+pub unsafe fn get_diag_field(
+    errors: &Vec<ODBCError>,
+    diag_identifier: DiagType,
+    diag_info_ptr: Pointer,
+    record_number: i16,
+    buffer_length: i16,
+    string_length_ptr: *mut i16,
+) -> SqlReturn {
+    // NOTE: header is dependent on the list of errors, but is a header, hence separating it from the match
+    if diag_identifier == DiagType::Number {
+        *(diag_info_ptr as *mut usize) = errors.len();
+        SqlReturn::SUCCESS
+    } else {
+        if buffer_length < 0 || record_number < 1 {
+            return SqlReturn::ERROR;
+        }
+        let rec_number = (record_number - 1) as usize;
+        match errors.get(rec_number) {
+            Some(error) => {
+                match diag_identifier {
+                    // NOTE: return code is handled by driver manager; just return success
+                    DiagType::ReturnCode => SqlReturn::SUCCESS,
+                    DiagType::SqlState => i16_len::set_output_wstring(
+                        error.get_sql_state(),
+                        diag_info_ptr as *mut u16,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    ),
+                    DiagType::Native => {
+                        *(diag_info_ptr as *mut i32) = error.get_native_err_code();
+                        SqlReturn::SUCCESS
+                    }
+                    DiagType::MessageText => {
+                        let message = format!("{}", error);
+                        i16_len::set_output_wstring(
+                            &message,
+                            diag_info_ptr as *mut u16,
+                            buffer_length as usize,
+                            string_length_ptr,
+                        )
+                    }
+                    // this should not be reachable if match branches here match those in SQLGetDiagFieldW
+                    _ => SqlReturn::ERROR,
+                }
+            }
+            _ => SqlReturn::NO_DATA,
+        }
+    }
 }
 
 ///

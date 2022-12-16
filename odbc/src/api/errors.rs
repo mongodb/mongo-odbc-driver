@@ -2,8 +2,8 @@ use constants::{
     FRACTIONAL_TRUNCATION, GENERAL_ERROR, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
     INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
     INVALID_DESCRIPTOR_INDEX, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED,
-    RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNABLE_TO_CONNECT, UNSUPPORTED_FIELD_DESCRIPTOR,
-    VENDOR_IDENTIFIER,
+    RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNABLE_TO_CONNECT, UNSUPPORTED_DIAG_IDENTIFIER,
+    UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -32,6 +32,11 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     UnsupportedFieldDescriptor(String),
+    #[error(
+        "[{}][API] The diag identifier value {0} is not supported",
+        VENDOR_IDENTIFIER
+    )]
+    UnsupportedDiagIdentifier(String),
     #[error(
         "[{}][API] Indicator variable was null when null data was accessed",
         VENDOR_IDENTIFIER
@@ -124,6 +129,7 @@ impl ODBCError {
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
             ODBCError::UnsupportedFieldDescriptor(_) => UNSUPPORTED_FIELD_DESCRIPTOR,
+            ODBCError::UnsupportedDiagIdentifier(_) => UNSUPPORTED_DIAG_IDENTIFIER,
             ODBCError::InvalidDescriptorIndex(_) => INVALID_DESCRIPTOR_INDEX,
             ODBCError::RestrictedDataType(_, _) => RESTRICTED_DATATYPE,
             ODBCError::FractionalTruncation(_) => FRACTIONAL_TRUNCATION,
@@ -166,6 +172,7 @@ impl ODBCError {
             | ODBCError::IntegralTruncation(_)
             | ODBCError::InvalidDatetimeFormat(_)
             | ODBCError::UnsupportedFieldDescriptor(_)
+            | ODBCError::UnsupportedDiagIdentifier(_)
             | ODBCError::InvalidCharacterValue(_, _)
             | ODBCError::NoResultSet => 0,
             ODBCError::Core(me) => me.code(),
