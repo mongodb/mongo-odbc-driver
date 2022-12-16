@@ -28,6 +28,11 @@ pub enum ODBCError {
     )]
     UnsupportedConnectionAttribute(String),
     #[error(
+        "[{}][API] A schema pattern was specified, and the driver does not support schemas",
+        VENDOR_IDENTIFIER
+    )]
+    UnsupportedFieldSchema(),
+    #[error(
         "[{}][API] The field descriptor value {0} is not supported",
         VENDOR_IDENTIFIER
     )]
@@ -113,6 +118,7 @@ impl ODBCError {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
+            | ODBCError::UnsupportedFieldSchema()
             | ODBCError::UnsupportedConnectionAttribute(_) => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
             ODBCError::Core(c) => c.get_sql_state(),
@@ -155,6 +161,7 @@ impl ODBCError {
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::UnsupportedConnectionAttribute(_)
+            | ODBCError::UnsupportedFieldSchema()
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)
             | ODBCError::RestrictedDataType(_, _)

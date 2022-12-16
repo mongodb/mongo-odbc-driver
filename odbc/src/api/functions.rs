@@ -1,8 +1,8 @@
 use crate::{
     api::{
         data::{
-            get_diag_rec, i16_len, i32_len, input_text_to_string, input_wtext_to_string,
-            set_str_length, unsupported_function,
+            get_diag_rec, get_diag_recw, i16_len, i32_len, input_text_to_string,
+            input_wtext_to_string, set_str_length, unsupported_function,
         },
         definitions::*,
         errors::{ODBCError, Result},
@@ -574,8 +574,8 @@ pub unsafe extern "C" fn SQLColumns(
     statement_handle: HStmt,
     catalog_name: *const Char,
     catalog_name_length: SmallInt,
-    _schema_name: *const Char,
-    _schema_name_length: SmallInt,
+    schema_name: *const Char,
+    schema_name_length: SmallInt,
     table_name: *const Char,
     table_name_length: SmallInt,
     column_name: *const Char,
@@ -584,6 +584,10 @@ pub unsafe extern "C" fn SQLColumns(
     panic_safe_exec!(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
+            if !(schema_name.is_null() || schema_name_length == 0) {
+                mongo_handle.add_diag_info(ODBCError::UnsupportedFieldSchema());
+                return SqlReturn::ERROR;
+            }
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog_string = input_text_to_string(catalog_name, catalog_name_length as usize);
             let catalog = if catalog_name.is_null() {
@@ -1747,6 +1751,55 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
     unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagFieldW")
 }
 
+macro_rules! sql_get_diag_rec_impl {
+    ($handle_type:ident, $handle:ident, $rec_number:ident, $state:ident, $native_error_ptr:ident, $message_text:ident, $buffer_length:ident, $text_length_ptr:ident, $error_output_func:ident) => {{
+        panic_safe_exec!(
+            || {
+                if $rec_number < 1 || $buffer_length < 0 {
+                    return SqlReturn::ERROR;
+                }
+                let mongo_handle = $handle as *mut MongoHandle;
+                // Make the record number zero-indexed
+                let rec_number = ($rec_number - 1) as usize;
+
+                let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
+                    match errors.get(rec_number) {
+                        Some(odbc_err) => $error_output_func(
+                            odbc_err,
+                            $state,
+                            $message_text,
+                            $buffer_length,
+                            $text_length_ptr,
+                            $native_error_ptr,
+                        ),
+                        None => SqlReturn::NO_DATA,
+                    }
+                };
+
+                match $handle_type {
+                    HandleType::Env => {
+                        let env = must_be_env!(mongo_handle);
+                        get_error(&env.errors.read().unwrap())
+                    }
+                    HandleType::Dbc => {
+                        let dbc = must_be_conn!(mongo_handle);
+                        get_error(&dbc.errors.read().unwrap())
+                    }
+                    HandleType::Stmt => {
+                        let stmt = must_be_stmt!(mongo_handle);
+                        get_error(&stmt.errors.read().unwrap())
+                    }
+                    HandleType::Desc => {
+                        let desc = must_be_desc!(mongo_handle);
+                        get_error(&desc.errors.read().unwrap())
+                    }
+                }
+            },
+            $handle
+        );
+    }};
+}
+
 ///
 /// [`SQLGetDiagRec`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDiagRec-function
 ///
@@ -1755,16 +1808,26 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagRec(
-    _handle_type: HandleType,
+    handle_type: HandleType,
     handle: Handle,
-    _rec_number: SmallInt,
-    _state: *mut Char,
-    _native_error_ptr: *mut Integer,
-    _message_text: *mut Char,
-    _buffer_length: SmallInt,
-    _text_length_ptr: *mut SmallInt,
+    rec_number: SmallInt,
+    state: *mut Char,
+    native_error_ptr: *mut Integer,
+    message_text: *mut Char,
+    buffer_length: SmallInt,
+    text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagRec")
+    sql_get_diag_rec_impl!(
+        handle_type,
+        handle,
+        rec_number,
+        state,
+        native_error_ptr,
+        message_text,
+        buffer_length,
+        text_length_ptr,
+        get_diag_rec
+    )
 }
 
 ///
@@ -1786,50 +1849,17 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(
-        || {
-            if rec_number < 1 || buffer_length < 0 {
-                return SqlReturn::ERROR;
-            }
-            let mongo_handle = handle as *mut MongoHandle;
-            // Make the record number zero-indexed
-            let rec_number = (rec_number - 1) as usize;
-
-            let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
-                match errors.get(rec_number) {
-                    Some(odbc_err) => get_diag_rec(
-                        odbc_err,
-                        state,
-                        message_text,
-                        buffer_length,
-                        text_length_ptr,
-                        native_error_ptr,
-                    ),
-                    None => SqlReturn::NO_DATA,
-                }
-            };
-
-            match handle_type {
-                HandleType::Env => {
-                    let env = must_be_env!(mongo_handle);
-                    get_error(&env.errors.read().unwrap())
-                }
-                HandleType::Dbc => {
-                    let dbc = must_be_conn!(mongo_handle);
-                    get_error(&dbc.errors.read().unwrap())
-                }
-                HandleType::Stmt => {
-                    let stmt = must_be_stmt!(mongo_handle);
-                    get_error(&stmt.errors.read().unwrap())
-                }
-                HandleType::Desc => {
-                    let desc = must_be_desc!(mongo_handle);
-                    get_error(&desc.errors.read().unwrap())
-                }
-            }
-        },
-        handle
-    );
+    sql_get_diag_rec_impl!(
+        handle_type,
+        handle,
+        rec_number,
+        state,
+        native_error_ptr,
+        message_text,
+        buffer_length,
+        text_length_ptr,
+        get_diag_recw
+    )
 }
 
 ///

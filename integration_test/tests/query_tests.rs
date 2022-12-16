@@ -101,4 +101,26 @@ mod integration {
         let expected = [["integration_test", "foo", "_id"]];
         columns_test(&expected, ("integration_test", "%o%", "%i%"));
     }
+
+    #[test]
+    fn columns_with_schema_is_error() {
+        use odbc_api::*;
+
+        let mut conn_string = crate::common::generate_default_connection_str();
+        conn_string.push_str("DATABASE=integration_test");
+
+        let env = Environment::new().unwrap();
+        let conn = env.connect_with_connection_string(&conn_string).unwrap();
+
+        let res = conn.columns("", "foo", "", "");
+        assert!(res.is_err());
+        unsafe {
+            assert_eq!(
+                "ODBC emitted an error calling 'SQLColumns':\nState: HYC00, Native error: 0, Message: ".to_string(),
+                // have to use unchecked because the library implementors very nicely
+                // decided not to derive Debug. EVERYTHING should just derive Debug.
+                format!("{}", res.unwrap_err_unchecked()),
+            );
+        }
+    }
 }
