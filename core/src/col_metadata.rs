@@ -130,7 +130,7 @@ impl SqlGetSchemaResponse {
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
-        let result_set_object_schema = result_set_schema.assert_datasource_schema()?;
+        let result_set_object_schema = result_set_schema.assert_object_schema()?;
 
         result_set_object_schema
             .clone()
@@ -181,15 +181,19 @@ impl SqlGetSchemaResponse {
         Self::schema_to_col_metadata(&collection_schema, current_db, current_collection)
     }
 
+    // Helper function that asserts the the passed object_schema is actually an ObjectSchema
+    // (required), and then converts all the propety schemata of the properties into a
+    // Result<Vec<MongoColMetadata>>, one MongoColMetadata per property schema in lexicographical
+    // order.
     fn schema_to_col_metadata(
-        collection_schema: &crate::json_schema::simplified::Schema,
+        object_schema: &crate::json_schema::simplified::Schema,
         current_db: &str,
         current_collection: &str,
     ) -> Result<Vec<MongoColMetadata>> {
-        let collection_object_schema = collection_schema.assert_datasource_schema()?;
+        let object_schema = object_schema.assert_object_schema()?;
 
-        collection_object_schema
-            // 1. Access collection_schema.properties and sort alphabetically.
+        object_schema
+            // 1. Access object_schema.properties and sort alphabetically.
             //    This means we are sorting by field name. This is necessary
             //    because this defines our ordinal positions.
             .properties
@@ -198,8 +202,7 @@ impl SqlGetSchemaResponse {
             .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
             // 2. Map each field into a MongoColMetadata.
             .map(|(name, schema)| {
-                let field_nullability =
-                    collection_object_schema.get_field_nullability(name.clone())?;
+                let field_nullability = object_schema.get_field_nullability(name.clone())?;
 
                 Ok(MongoColMetadata::new(
                     current_db,
