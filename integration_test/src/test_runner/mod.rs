@@ -74,6 +74,8 @@ pub enum Error {
     ValueOverflowI16(i64, String),
     #[error("Function {0} failed with sql code {1}. Error message: {2}")]
     OdbcFunctionFailed(String, String, String),
+    #[error("yaml err: {0}")]
+    Yaml(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -235,7 +237,7 @@ fn run_query_test(
         ) {
             SqlReturn::SUCCESS => {
                 if generate {
-                    generate_baseline_test_files(entry, stmt)
+                    generate_baseline_test_file(entry, stmt)
                 } else {
                     validate_result_set(entry, stmt)
                 }
@@ -398,7 +400,7 @@ fn run_function_test(
         }
     }
     if generate {
-        generate_baseline_test_files(entry, statement)
+        generate_baseline_test_file(entry, statement)
     } else {
         validate_result_set(entry, statement)
     }

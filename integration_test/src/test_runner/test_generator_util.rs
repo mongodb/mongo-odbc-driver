@@ -1,5 +1,5 @@
 use crate::test_runner::{
-    fetch_row, get_column_attribute, get_column_count, get_data, Result, TestEntry,
+    fetch_row, get_column_attribute, get_column_count, get_data, Error, Result, TestEntry,
 };
 use lazy_static::lazy_static;
 use odbc::{safe::AutocommitOn, Allocated, NoResult, Statement};
@@ -16,8 +16,8 @@ lazy_static! {
 
 /// Given a TestEntry and Statement, write the results of the test entry to
 /// a file in the GENERATED_TEST_DIR. The only fields retained from the initial
-/// TestEntry are description, db, and either query or meta_function.
-pub fn generate_baseline_test_files(
+/// TestEntry are description, db, ordered, and test_definition.
+pub fn generate_baseline_test_file(
     entry: &TestEntry,
     stmt: Statement<Allocated, NoResult, AutocommitOn>,
 ) -> Result<()> {
@@ -110,9 +110,21 @@ pub fn generate_baseline_test_files(
         expected_nullability: Some(expected_nullability),
     };
 
-    // TODO: write yaml to file
+    // 4. Write the TestEntry to a file
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let desc = entry.description.clone().replace(" ", "_");
+    let file_name = format!("{}-{}.yml", desc, now);
 
-    Ok(())
+    let writer = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(format!("{}/{}", GENERATED_TEST_DIR, file_name))
+        .expect("could not open or create test file");
+
+    serde_yaml::to_writer(writer, &test_entry).map_err(|err| Error::Yaml(err.to_string()))
 }
 
 // Get the expected CDataType for the provided sql_type.
