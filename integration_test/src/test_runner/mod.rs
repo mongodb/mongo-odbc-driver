@@ -105,7 +105,7 @@ pub struct TestEntry {
     pub expected_nullability: Option<Vec<Value>>,
 }
 
-#[derive(Debug, Error, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Error, PartialEq, Eq, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum TestDef {
     Query(String),
