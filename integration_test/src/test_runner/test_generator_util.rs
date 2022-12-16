@@ -129,6 +129,40 @@ pub fn generate_baseline_test_file(
 
 // Get the expected CDataType for the provided sql_type.
 fn get_expected_data_type(sql_type: &Value) -> CDataType {
-    // TODO create mapping from sql_type to cdatatype
-    todo!()
+    match sql_type {
+        Value::Number(n) => {
+            let sdt = SqlDataType(n.as_i64().unwrap() as i16);
+            match sdt {
+                SqlDataType::UNKNOWN_TYPE => CDataType::Default,
+                SqlDataType::CHAR => CDataType::Char,
+                SqlDataType::NUMERIC => CDataType::Numeric,
+                SqlDataType::DECIMAL => CDataType::Numeric,
+                SqlDataType::INTEGER => CDataType::SLong,
+                SqlDataType::SMALLINT => CDataType::SShort,
+                SqlDataType::FLOAT => CDataType::Float,
+                SqlDataType::REAL => CDataType::Numeric,
+                SqlDataType::DOUBLE => CDataType::Double,
+                SqlDataType::DATETIME => CDataType::TypeTimestamp,
+                SqlDataType::VARCHAR => CDataType::Char,
+                SqlDataType::DATE => CDataType::TypeDate,
+                SqlDataType::TIME => CDataType::TypeTime,
+                SqlDataType::TIMESTAMP => CDataType::Default,
+                SqlDataType::EXT_TIME_OR_INTERVAL => CDataType::Default,
+                SqlDataType::EXT_TIMESTAMP => CDataType::Default,
+                SqlDataType::EXT_LONG_VARCHAR => CDataType::Char,
+                SqlDataType::EXT_BINARY => CDataType::Binary,
+                SqlDataType::EXT_VAR_BINARY => CDataType::Binary,
+                SqlDataType::EXT_LONG_VAR_BINARY => CDataType::Binary,
+                SqlDataType::EXT_BIG_INT => CDataType::SBigInt,
+                SqlDataType::EXT_TINY_INT => CDataType::STinyInt,
+                SqlDataType::EXT_BIT => CDataType::Bit,
+                SqlDataType::EXT_W_CHAR => CDataType::WChar,
+                SqlDataType::EXT_W_VARCHAR => CDataType::WChar,
+                SqlDataType::EXT_W_LONG_VARCHAR => CDataType::WChar,
+                SqlDataType::EXT_GUID => CDataType::Guid,
+                v => unreachable!("invalid sql_type encountered: {:?}", v),
+            }
+        }
+        v => unreachable!("sql_type should always be a number: {:?}", v),
+    }
 }
