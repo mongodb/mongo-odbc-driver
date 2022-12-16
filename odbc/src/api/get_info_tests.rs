@@ -555,14 +555,12 @@ mod unit {
         actual_value_modifier = modify_string_value,
     );
 
-    /*
     test_get_info!(
         max_identifier_len,
         info_type = InfoType::SQL_MAX_IDENTIFIER_LEN as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u16>() as i16,
-        expected_value = 0u16,
+        expected_value = u16::MAX,
         actual_value_modifier = modify_u16_value,
     );
-    */
 }
