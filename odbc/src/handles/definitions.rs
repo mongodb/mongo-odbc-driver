@@ -237,8 +237,8 @@ pub struct Statement {
 
 #[derive(Debug)]
 pub struct StatementAttributes {
-    pub app_row_desc: Pointer,
-    pub app_param_desc: Pointer,
+    pub app_row_desc: *mut MongoHandle,
+    pub app_param_desc: *mut MongoHandle,
     pub async_enable: AsyncEnable,
     pub async_stmt_event: Pointer,
     pub cursor_scrollable: CursorScrollable,
@@ -247,8 +247,8 @@ pub struct StatementAttributes {
     pub cursor_type: CursorType,
     pub enable_auto_ipd: SqlBool,
     pub fetch_bookmark_ptr: *mut Len,
-    pub imp_row_desc: Pointer,
-    pub imp_param_desc: Pointer,
+    pub imp_row_desc: *mut MongoHandle,
+    pub imp_param_desc: *mut MongoHandle,
     pub max_length: ULen,
     pub max_rows: ULen,
     pub no_scan: NoScan,
@@ -272,6 +272,17 @@ pub struct StatementAttributes {
     pub use_bookmarks: UseBookmarks,
 }
 
+impl Drop for StatementAttributes {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = Box::from_raw(self.app_row_desc);
+            let _ = Box::from_raw(self.app_param_desc);
+            let _ = Box::from_raw(self.imp_row_desc);
+            let _ = Box::from_raw(self.imp_param_desc);
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum StatementState {
     Allocated,
@@ -290,13 +301,29 @@ pub enum StatementState {
 
 impl Statement {
     pub fn with_state(connection: *mut MongoHandle, state: StatementState) -> Self {
+        let implicit_app_row_desc =
+            Descriptor::with_state(connection, DescriptorState::ImplicitlyAllocated);
+
+        let implicit_param_row_desc =
+            Descriptor::with_state(connection, DescriptorState::ImplicitlyAllocated);
+
+        let implicit_app_imp_desc =
+            Descriptor::with_state(connection, DescriptorState::ImplicitlyAllocated);
+
+        let implicit_param_imp_desc =
+            Descriptor::with_state(connection, DescriptorState::ImplicitlyAllocated);
+
         Self {
             connection,
             state: RwLock::new(state),
             var_data_cache: RwLock::new(None),
             attributes: RwLock::new(StatementAttributes {
-                app_row_desc: null_mut(),
-                app_param_desc: null_mut(),
+                app_row_desc: Box::into_raw(Box::new(MongoHandle::Descriptor(
+                    implicit_app_row_desc,
+                ))),
+                app_param_desc: Box::into_raw(Box::new(MongoHandle::Descriptor(
+                    implicit_param_row_desc,
+                ))),
                 async_enable: AsyncEnable::Off,
                 async_stmt_event: null_mut(),
                 cursor_scrollable: CursorScrollable::NonScrollable,
@@ -305,8 +332,12 @@ impl Statement {
                 cursor_type: CursorType::ForwardOnly,
                 enable_auto_ipd: SqlBool::False,
                 fetch_bookmark_ptr: null_mut(),
-                imp_row_desc: null_mut(),
-                imp_param_desc: null_mut(),
+                imp_row_desc: Box::into_raw(Box::new(MongoHandle::Descriptor(
+                    implicit_app_imp_desc,
+                ))),
+                imp_param_desc: Box::into_raw(Box::new(MongoHandle::Descriptor(
+                    implicit_param_imp_desc,
+                ))),
                 max_length: 0,
                 max_rows: 0,
                 no_scan: NoScan::Off,
@@ -352,9 +383,12 @@ pub struct Descriptor {
     pub errors: RwLock<Vec<ODBCError>>,
 }
 
+/// See https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/descriptor-transitions for
+/// states and transitions
 #[derive(Debug, PartialEq, Eq)]
 pub enum DescriptorState {
-    Allocated,
+    ImplicitlyAllocated, // D1i
+    ExplicitlyAllocated, // D1e
 }
 
 #[derive(Debug, Default)]

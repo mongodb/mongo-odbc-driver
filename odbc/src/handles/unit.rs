@@ -157,7 +157,7 @@ fn test_descriptor_alloc_free() {
 
         let mut handle: *mut _ = &mut MongoHandle::Descriptor(Descriptor::with_state(
             std::ptr::null_mut(),
-            DescriptorState::Allocated,
+            DescriptorState::ExplicitlyAllocated,
         ));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
@@ -169,7 +169,7 @@ fn test_descriptor_alloc_free() {
             )
         );
         assert_eq!(
-            DescriptorState::Allocated,
+            DescriptorState::ExplicitlyAllocated,
             *(*handle).as_descriptor().unwrap().state.read().unwrap()
         );
         assert_eq!(

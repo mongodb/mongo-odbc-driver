@@ -33,21 +33,27 @@ functions:
         shell: bash
         working_dir: mongosql-odbc-driver
         script: |
-          export PATH="$PATH:$HOME/.cargo/bin"
           export CARGO_NET_GIT_FETCH_WITH_CLI=true
+          export UNIX_ODBC_PATH="$PWD/unixodbc/install"
+          export LD_LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
+          export PATH="$LD_LIBRARY_PATH:$PATH:$HOME/.cargo/bin"
 
           cat <<EOT > expansions.yml
           prepare_shell: |
             set -o errexit
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
-            export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
             export ADF_TEST_LOCAL_USER="${adf_test_local_user}"
             export ADF_TEST_LOCAL_PWD="${adf_test_local_pwd}"
             export ADF_TEST_LOCAL_AUTH_DB="${adf_test_local_auth_db}"
             export ADF_TEST_LOCAL_HOST="${adf_test_local_host}"
             export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
+            # Non-Windows variables
+            export UNIX_ODBC_PATH="$PWD/unixodbc/install"
+            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
+            export LIBRARY_PATH="$LD_LIBRARY_PATH"
+            export ODBCSYSINI="$(pwd)"/setup
           EOT
     - command: expansions.update
       params:
@@ -123,6 +129,25 @@ functions:
           ${prepare_shell}
           cargo build --release
 
+  "compile release with debug info":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          echo "env $(env)"
+          # Build a release driver with debug information
+          cargo build --profile=release-with-debug
+          export DRIVER_LIB_PATH=$PWD/target/release-with-debug
+          
+          cat <<EOT >> expansions.yml
+            export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
+          EOT
+    - command: expansions.update
+      params:
+        file: mongosql-odbc-driver/expansions.yml
+
   "upload artifact":
     - command: s3.put
       params:
@@ -163,6 +188,25 @@ functions:
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
           echo "-------------------------"
 
+  "setup driver with UnixODBC":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script:  |
+          ${prepare_shell}
+          echo "-----   Setup driver with Unix ODBC   -----"
+          # DRIVER_LIB_PATH should have been set by the compile task
+          echo "DRIVER_LIB_PATH = $DRIVER_LIB_PATH"
+          if [ ! -d  "$DRIVER_LIB_PATH" ]; then
+            echo "$DRIVER_LIB_PATH directory does not exist. Built targets are:"
+            ls ${DRIVER_LIB_PATH%/*}
+          fi
+          sed -i "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/odbcinst.ini
+          echo "-------------------------"
+          cat setup/odbcinst.ini
+          echo "-------------------------"  
+
   "clean-up driver on Windows":
     - command: shell.exec
       params:
@@ -199,10 +243,11 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          set +e
           export RUST_BACKTRACE=1
           ./resources/run_adf.sh start &&
           cargo run --bin data_loader &&
-          cargo test integration
+          cargo test integration -- --nocapture
           EXITCODE=$?
           ./resources/run_adf.sh stop
           exit $EXITCODE
@@ -231,8 +276,7 @@ functions:
           make
           make install
 
-
-  "run asan tests":
+  "run asan unit tests":
     - command: shell.exec
       type: test
       params:
@@ -242,11 +286,40 @@ functions:
           ${prepare_shell}
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-          export LD_LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
-          export LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
+                  
           export RUSTFLAGS="-Z sanitizer=address"
           # we only run asan on the unit tests for now
           cargo test --target x86_64-unknown-linux-gnu unit
+
+  "run asan integration tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          echo "-------- ODBC related env variable ----------"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "LIBRARY_PATH = $LIBRARY_PATH"
+          echo "ODBCSYSINI = $ODBCSYSINI"
+          echo "----------------------------------------------"
+          
+          ~/.cargo/bin/rustup default nightly
+          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+                    
+          export RUST_BACKTRACE=1
+          # Start a local ADF
+          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+
+          # Run integration tests with asan
+          cargo test --target x86_64-unknown-linux-gnu integration
+          EXITCODE=$?
+          
+          # Stop the local ADF
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
 
   "run result set test":
     command: shell.exec
@@ -256,18 +329,41 @@ functions:
       working_dir: mongosql-odbc-driver
       script: |
         ${prepare_shell}
+        set +e
         export RUST_BACKTRACE=1
         ./resources/run_adf.sh start &&
-        cargo run --bin data_loader
+        cargo run --bin data_loader &&
         cargo test -- --ignored
         EXITCODE=$?
         ./resources/run_adf.sh stop
         exit $EXITCODE
 
+  "upload start_adf logs":
+     - command: s3.put
+       params:
+         aws_key: ${aws_key}
+         aws_secret: ${aws_secret}
+         local_file: mongosql-odbc-driver/local_adf/logs/mongohoused.log
+         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongohoused.log
+         bucket: mciuploads
+         permissions: public-read
+         content_type: application/octet-stream
+     - command: s3.put
+       params:
+         aws_key: ${aws_key}
+         aws_secret: ${aws_secret}
+         local_file: mongosql-odbc-driver/local_adf/logs/mongodb_test.log
+         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongodb_test.log
+         bucket: mciuploads
+         permissions: public-read
+         content_type: application/octet-stream
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
   - func: "install rust toolchain"
+post:
+  - func: "upload start_adf logs"
 
 tasks:
 
@@ -303,10 +399,17 @@ tasks:
       - func: "install rust toolchain"
       - func: "run result set test"
 
-  - name: asan
+  - name: asan-unit-test
     commands:
       - func: "install unix odbc"
-      - func: "run asan tests"
+      - func: "run asan unit tests"
+
+  - name: asan-integration-test
+    commands:
+      - func: "install unix odbc"
+      - func: "compile release with debug info"
+      - func: "setup driver with UnixODBC"
+      - func: "run asan integration tests"
 
 task_groups:
   - name: test-unit-group
@@ -363,4 +466,5 @@ buildvariants:
     display_name: Ubuntu 20.04
     run_on: [ ubuntu2004-large ]
     tasks:
-      - name: asan
+      - name: asan-unit-test
+      - name: asan-integration-test

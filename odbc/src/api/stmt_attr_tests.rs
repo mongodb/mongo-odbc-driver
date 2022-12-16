@@ -65,7 +65,8 @@ fn get_set_stmt_attr(
 fn get_set_ptr(
     handle: *mut MongoHandle,
     attribute: StatementAttribute,
-    is_attr_supported: bool,
+    is_default_null: bool,
+    is_set_attr_supported: bool,
     str_len: usize,
 ) {
     unsafe {
@@ -84,14 +85,26 @@ fn get_set_ptr(
             )
         );
 
-        assert_eq!(0, { *attr_buffer });
+        if is_default_null {
+            assert!(
+                (*attr_buffer as Pointer).is_null(),
+                "Expected a null pointer for attribute {}, but got {}",
+                attribute as u16,
+                { *attr_buffer }
+            );
+        } else {
+            assert!(
+                !(*attr_buffer as Pointer).is_null(),
+                "Expected an allocated pointer for attribute {}, but got a Null pointer",
+                attribute as u16
+            );
+        }
 
         // attr_value can be any non-zero number.
         let attr_value = 10_usize;
-        // All pointer attributes have a default value of zero.
-        let (expected_value, expected_return) = match is_attr_supported {
+        let (expected_value, expected_return) = match is_set_attr_supported {
             true => (attr_value, SqlReturn::SUCCESS),
-            false => (0_usize, SqlReturn::ERROR),
+            false => (*attr_buffer, SqlReturn::ERROR),
         };
         assert_eq!(
             expected_return,
@@ -126,6 +139,34 @@ mod unit {
             StatementState::Allocated,
         ));
 
+        get_set_ptr(
+            stmt_handle,
+            StatementAttribute::AppRowDesc,
+            false,
+            false,
+            size_of::<Pointer>(),
+        );
+        get_set_ptr(
+            stmt_handle,
+            StatementAttribute::AppParamDesc,
+            false,
+            false,
+            size_of::<Pointer>(),
+        );
+        get_set_ptr(
+            stmt_handle,
+            StatementAttribute::ImpParamDesc,
+            false,
+            false,
+            size_of::<Pointer>(),
+        );
+        get_set_ptr(
+            stmt_handle,
+            StatementAttribute::ImpRowDesc,
+            false,
+            false,
+            size_of::<Pointer>(),
+        );
         get_set_stmt_attr(
             stmt_handle,
             StatementAttribute::CursorScrollable,
@@ -220,11 +261,13 @@ mod unit {
             stmt_handle,
             StatementAttribute::RowStatusPtr,
             true,
+            true,
             size_of::<*mut USmallInt>(),
         );
         get_set_ptr(
             stmt_handle,
             StatementAttribute::RowsFetchedPtr,
+            true,
             true,
             size_of::<*mut ULen>(),
         );
@@ -301,73 +344,57 @@ mod unit {
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::AppRowDesc,
-            false,
-            size_of::<Pointer>(),
-        );
-        get_set_ptr(
-            stmt_handle,
-            StatementAttribute::AppParamDesc,
-            false,
-            size_of::<Pointer>(),
-        );
-        get_set_ptr(
-            stmt_handle,
             StatementAttribute::AsyncStmtEvent,
+            true,
             false,
             size_of::<Pointer>(),
         );
         get_set_ptr(
             stmt_handle,
             StatementAttribute::FetchBookmarkPtr,
-            false,
-            size_of::<Pointer>(),
-        );
-        get_set_ptr(
-            stmt_handle,
-            StatementAttribute::ImpParamDesc,
-            false,
-            size_of::<Pointer>(),
-        );
-        get_set_ptr(
-            stmt_handle,
-            StatementAttribute::ImpRowDesc,
+            true,
             false,
             size_of::<Pointer>(),
         );
         get_set_ptr(
             stmt_handle,
             StatementAttribute::ParamBindOffsetPtr,
+            true,
             false,
             size_of::<*mut ULen>(),
         );
         get_set_ptr(
             stmt_handle,
             StatementAttribute::ParamOpterationPtr,
+            true,
             false,
             size_of::<*mut USmallInt>(),
         );
         get_set_ptr(
             stmt_handle,
             StatementAttribute::ParamStatusPtr,
+            true,
             false,
             size_of::<*mut USmallInt>(),
         );
         get_set_ptr(
             stmt_handle,
             StatementAttribute::ParamsProcessedPtr,
+            true,
             false,
             size_of::<*mut ULen>(),
         );
         get_set_ptr(
             stmt_handle,
             StatementAttribute::RowBindOffsetPtr,
+            true,
             false,
             size_of::<*mut ULen>(),
         );
         get_set_ptr(
             stmt_handle,
             StatementAttribute::RowOperationPtr,
+            true,
             false,
             size_of::<*mut USmallInt>(),
         );
