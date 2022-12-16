@@ -132,55 +132,26 @@ impl SqlGetSchemaResponse {
             self.schema.json_schema.clone().try_into()?;
         let result_set_object_schema = result_set_schema.assert_datasource_schema()?;
 
-        let sorted_datasource_object_schemas = result_set_object_schema
+        result_set_object_schema
             .clone()
             // 1. Access result_set_schema.properties and sort alphabetically.
             //    This means we are sorting by datasource name.
             .properties
             .into_iter()
             .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
+            // 2. map each datasource_schema to a Result of an Iterator over MongoColMetadata.
             .map(|(datasource_name, datasource_schema)| {
-                let obj_schema = datasource_schema.assert_datasource_schema()?;
-
-                Ok((datasource_name, obj_schema.clone()))
+                Ok::<std::vec::IntoIter<MongoColMetadata>, Error>(
+                    Self::schema_to_col_metadata(&datasource_schema, current_db, &datasource_name)?
+                        .into_iter(),
+                )
             })
-            .collect::<Result<Vec<(String, ObjectSchema)>>>()?;
-
-        sorted_datasource_object_schemas
-            .into_iter()
-            // 2. Flat-map fields for each datasource, sorting fields alphabetically.
-            .flat_map(|(datasource_name, datasource_schema)| {
-                datasource_schema
-                    .clone()
-                    .properties
-                    .into_iter()
-                    .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
-                    .map(move |(field_name, field_schema)| {
-                        (
-                            datasource_name.clone(),
-                            datasource_schema.clone(),
-                            field_name,
-                            field_schema,
-                        )
-                    })
-            })
-            // 3. Map each field into a MongoColMetadata.
-            .map(
-                |(datasource_name, datasource_schema, field_name, field_schema)| {
-                    let field_nullability =
-                        datasource_schema.get_field_nullability(field_name.clone())?;
-
-                    Ok(MongoColMetadata::new(
-                        current_db,
-                        datasource_name,
-                        field_name,
-                        field_schema,
-                        field_nullability,
-                    ))
-                },
-            )
-            // 4. Collect as a Vec.
-            .collect::<Result<Vec<MongoColMetadata>>>()
+            // 3. flatten each Ok(inner_iterator) into the top iterator, will short circuit if an
+            //    Err is hit and just return the first Error.
+            .flatten_ok()
+            // 4. collect the Iterator<Item=Result<MongoColMetadata>> into a
+            //    Result<Vec<MongoColMetadata>>
+            .collect()
     }
 
     /// Converts a sqlGetSchema command response into a list of column
@@ -207,11 +178,20 @@ impl SqlGetSchemaResponse {
     ) -> Result<Vec<MongoColMetadata>> {
         let collection_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
+        Self::schema_to_col_metadata(&collection_schema, current_db, current_collection)
+    }
+
+    fn schema_to_col_metadata(
+        collection_schema: &crate::json_schema::simplified::Schema,
+        current_db: &str,
+        current_collection: &str,
+    ) -> Result<Vec<MongoColMetadata>> {
         let collection_object_schema = collection_schema.assert_datasource_schema()?;
 
         collection_object_schema
             // 1. Access collection_schema.properties and sort alphabetically.
-            //    This means we are sorting by field name.
+            //    This means we are sorting by field name. This is necessary
+            //    because this defines our ordinal positions.
             .properties
             .clone()
             .into_iter()
