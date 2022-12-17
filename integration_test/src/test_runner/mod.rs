@@ -627,7 +627,7 @@ fn get_data(
             BUFFER_LENGTH as isize,
             out_len_or_ind,
         ) {
-            SqlReturn::SUCCESS => {
+            SqlReturn::SUCCESS | SqlReturn::NO_DATA => {
                 if *out_len_or_ind == SQL_NULL_DATA {
                     data = json!(null);
                 } else if data_type == CDataType::Char {
