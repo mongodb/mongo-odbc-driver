@@ -196,7 +196,7 @@ impl<'a> ODBCUri<'a> {
                 .password(pwd.map(String::from))
                 .build(),
         );
-        return Ok(client_options);
+        Ok(client_options)
     }
 
     fn handle_no_uri(&mut self) -> Result<ClientOptions> {
