@@ -170,29 +170,36 @@ impl<'a> ODBCUri<'a> {
     pub fn try_into_client_options(&mut self) -> Result<ClientOptions> {
         let uri = self.remove(URI);
         if uri.is_some() {
-            let uri = uri.unwrap();
-            let mut client_options = ClientOptions::parse(uri)?;
-            if client_options.credential.is_some() {
-                let user = self.remove(USER);
-                if user.is_some() {
-                    client_options.credential.as_mut().unwrap().username = user.map(String::from);
-                }
-                let pwd = self.remove(PWD);
-                if pwd.is_some() {
-                    client_options.credential.as_mut().unwrap().password = pwd.map(String::from);
-                }
-                return Ok(client_options);
-            }
+            return self.handle_uri(uri.unwrap());
+        }
+        self.handle_no_uri()
+    }
+
+    fn handle_uri(&mut self, uri: &str) -> Result<ClientOptions> {
+        let mut client_options = ClientOptions::parse(uri)?;
+        if client_options.credential.is_some() {
             let user = self.remove(USER);
+            if user.is_some() {
+                client_options.credential.as_mut().unwrap().username = user.map(String::from);
+            }
             let pwd = self.remove(PWD);
-            client_options.credential = Some(
-                Credential::builder()
-                    .username(user.map(String::from))
-                    .password(pwd.map(String::from))
-                    .build(),
-            );
+            if pwd.is_some() {
+                client_options.credential.as_mut().unwrap().password = pwd.map(String::from);
+            }
             return Ok(client_options);
         }
+        let user = self.remove(USER);
+        let pwd = self.remove(PWD);
+        client_options.credential = Some(
+            Credential::builder()
+                .username(user.map(String::from))
+                .password(pwd.map(String::from))
+                .build(),
+        );
+        return Ok(client_options);
+    }
+
+    fn handle_no_uri(&mut self) -> Result<ClientOptions> {
         let user = self.remove_mandatory_attribute(USER)?;
         let pwd = self.remove_mandatory_attribute(PWD)?;
         let server = self.remove_mandatory_attribute(SERVER)?;
