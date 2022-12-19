@@ -1,6 +1,6 @@
 use crate::err::{Error, Result};
 use lazy_static::lazy_static;
-use mongodb::options::{ClientOptions, Credential, ServerAddress};
+use mongodb::options::{ClientOptions, Credential, ServerAddress, Tls, TlsOptions};
 use regex::{RegexSet, RegexSetBuilder};
 use std::collections::HashMap;
 
@@ -196,21 +196,18 @@ impl<'a> ODBCUri<'a> {
         let user = self.remove_mandatory_attribute(USER)?;
         let pwd = self.remove_mandatory_attribute(PWD)?;
         let server = self.remove_mandatory_attribute(SERVER)?;
-        //let ssl = self.remove(SSL);
-        //        let ssl_string =
-        //            if ssl.is_some() && ssl.unwrap() != "0" && ssl.unwrap().to_lowercase() != "false" {
-        //                "?ssl=true"
-        //            } else {
-        //                ""
-        //            };
+        let ssl = self.remove(SSL);
         let cred = Credential::builder()
             .username(user.to_string())
             .password(pwd.to_string())
             .build();
-        let client_options = ClientOptions::builder()
+        let mut client_options = ClientOptions::builder()
             .hosts(vec![ServerAddress::parse(server)?])
             .credential(cred)
             .build();
+        if ssl.is_some() && ssl.unwrap() != "0" && ssl.unwrap().to_lowercase() != "false" {
+            client_options.tls = Some(Tls::Enabled(TlsOptions::builder().build()));
+        };
         Ok(client_options)
     }
 }
@@ -509,11 +506,18 @@ mod unit {
         fn uid_instead_of_user_works() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017".to_string()).unwrap(),
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017".to_string())
+                    .unwrap()
+                    .credential
+                    .unwrap()
+                    .username,
                 ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017")
                     .unwrap()
                     .try_into_client_options()
                     .unwrap()
+                    .credential
+                    .unwrap()
+                    .username
             );
         }
 
@@ -521,62 +525,79 @@ mod unit {
         fn password_instead_of_pwd_works() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017".to_string()).unwrap(),
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017".to_string())
+                    .unwrap()
+                    .credential
+                    .unwrap()
+                    .password,
                 ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017")
                     .unwrap()
                     .try_into_client_options()
                     .unwrap()
+                    .credential
+                    .unwrap()
+                    .password
             );
         }
-        //        // SSL=faLse should not set SSL option
-        //        #[test]
-        //        fn ssl_eq_false_should_not_set_ssl() {
-        //            use crate::odbc_uri::ODBCUri;
-        //            assert_eq!(
-        //                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017".to_string()).unwrap(),
-        //                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
-        //                    .unwrap()
-        //                    .try_into_client_options()
-        //                    .unwrap()
-        //            );
-        //        }
-        //
-        //        #[test]
-        //        fn ssl_eq_0_should_not_set_ssl() {
-        //            use crate::odbc_uri::ODBCUri;
-        //            assert_eq!(
-        //                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017".to_string()).unwrap(),
-        //                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
-        //                    .unwrap()
-        //                    .try_into_client_options()
-        //                    .unwrap()
-        //            );
-        //        }
-        //
-        //        #[test]
-        //        fn ssl_eq_1_should_set_ssl_to_true() {
-        //            use crate::odbc_uri::ODBCUri;
-        //            assert_eq!(
-        //                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string())
-        //                    .unwrap(),
-        //                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
-        //                    .unwrap()
-        //                    .try_into_client_options()
-        //                    .unwrap()
-        //            );
-        //        }
-        //
-        //        #[test]
-        //        fn ssl_eq_true_should_set_ssl_to_true() {
-        //            use crate::odbc_uri::ODBCUri;
-        //            assert_eq!(
-        //                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017?ssl=true".to_string())
-        //                    .unwrap(),
-        //                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
-        //                    .unwrap()
-        //                    .try_into_client_options()
-        //                    .unwrap()
-        //            );
-        //        }
+        // SSL=faLse should not set SSL option
+        #[test]
+        fn ssl_eq_false_should_not_set_ssl() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017".to_string())
+                    .unwrap()
+                    .tls,
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
+                    .unwrap()
+                    .try_into_client_options()
+                    .unwrap()
+                    .tls
+            );
+        }
+
+        #[test]
+        fn ssl_eq_0_should_not_set_ssl() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017".to_string())
+                    .unwrap()
+                    .tls,
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
+                    .unwrap()
+                    .try_into_client_options()
+                    .unwrap()
+                    .tls
+            );
+        }
+
+        #[test]
+        fn ssl_eq_1_should_set_ssl_to_true() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017/?ssl=true".to_string())
+                    .unwrap()
+                    .tls,
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
+                    .unwrap()
+                    .try_into_client_options()
+                    .unwrap()
+                    .tls
+            );
+        }
+
+        #[test]
+        fn ssl_eq_true_should_set_ssl_to_true() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017/?ssl=true".to_string())
+                    .unwrap()
+                    .tls,
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
+                    .unwrap()
+                    .try_into_client_options()
+                    .unwrap()
+                    .tls
+            );
+        }
     }
 }

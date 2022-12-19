@@ -1,5 +1,4 @@
 use crate::err::Result;
-use crate::Error;
 use bson::doc;
 use mongodb::{options::ClientOptions, sync::Client};
 use serde::{Deserialize, Serialize};
