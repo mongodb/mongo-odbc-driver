@@ -15,9 +15,9 @@ mod unit {
         handle_type: HandleType,
         handle: *mut MongoHandle,
         diag_identifier: DiagType,
-        expected_value: i32,
+        expected_value: u64,
     ) {
-        let diag_info_ptr = &mut 0 as *mut _ as *mut c_void;
+        let diag_info_ptr = &mut 0u64 as *mut _ as *mut c_void;
         unsafe {
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -31,7 +31,7 @@ mod unit {
                     &mut 0
                 )
             );
-            assert_eq!(expected_value, *(diag_info_ptr as *const i32));
+            assert_eq!(expected_value, *(diag_info_ptr as *const u64));
         }
     }
 
@@ -139,8 +139,8 @@ mod unit {
 
             //statement only
             if *handle_type == HandleType::Stmt {
-                validate_integer_diag_field(*handle_type, *handle, DiagType::RowNumber, 0);
-                validate_integer_diag_field(*handle_type, *handle, DiagType::RowCount, 0);
+                validate_integer_diag_field(*handle_type, *handle, DiagType::RowNumber, 0u64);
+                validate_integer_diag_field(*handle_type, *handle, DiagType::RowCount, 0u64);
             }
         });
     }
@@ -308,7 +308,7 @@ mod unit {
                 )
             );
             // check the correct diagnostic was added for this error
-            let num_errors_buffer = &mut 0 as *mut _ as *mut c_void;
+            let num_errors_buffer = &mut 0u64 as *mut _ as *mut c_void;
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetDiagFieldW(
@@ -321,7 +321,7 @@ mod unit {
                     &mut 0
                 )
             );
-            assert_eq!(2, *(num_errors_buffer as *const i32));
+            assert_eq!(2, *(num_errors_buffer as *const u64));
 
             // validating error text
             let message_text = &mut [0u16; 78] as *mut _ as *mut c_void;
