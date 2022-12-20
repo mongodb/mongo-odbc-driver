@@ -1636,7 +1636,7 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
     _handle_type: HandleType,
     handle: Handle,
     _record_number: SmallInt,
-    _diag_identifier: DiagType,
+    _diag_identifier: SmallInt,
     _diag_info_ptr: Pointer,
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
@@ -1644,57 +1644,57 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
     panic_safe_exec!(
         || {
             let mongo_handle = handle as *mut MongoHandle;
+            let diag_identifier = DiagType::from_i16(_diag_identifier);
             let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
                 get_diag_field(
                     errors,
-                    _diag_identifier,
+                    diag_identifier,
                     _diag_info_ptr,
                     _record_number,
                     _buffer_length,
                     _string_length_ptr,
+                    true,
                 )
             };
 
-            match _diag_identifier {
-                // some diagnostics are statement specific; return error if another handle is passed
-                DiagType::RowCount | DiagType::RowNumber => {
-                    if _handle_type != HandleType::Stmt {
-                        return SqlReturn::ERROR;
+            match FromPrimitive::from_i16(_diag_identifier) {
+                Some(diag_identifier) => {
+                    match diag_identifier {
+                        // some diagnostics are statement specific; return error if another handle is passed
+                        DiagType::SQL_DIAG_ROW_COUNT | DiagType::SQL_DIAG_ROW_NUMBER => {
+                            if _handle_type != HandleType::Stmt {
+                                return SqlReturn::ERROR;
+                            }
+                            get_stmt_diag_field(diag_identifier, _diag_info_ptr)
+                        }
+                        DiagType::SQL_DIAG_NUMBER
+                        | DiagType::SQL_DIAG_MESSAGE_TEXT
+                        | DiagType::SQL_DIAG_NATIVE
+                        | DiagType::SQL_DIAG_SQLSTATE
+                        | DiagType::SQL_DIAG_RETURNCODE => match _handle_type {
+                            HandleType::Env => {
+                                let env = must_be_env!(mongo_handle);
+                                get_error(&env.errors.read().unwrap())
+                            }
+                            HandleType::Dbc => {
+                                let dbc = must_be_conn!(mongo_handle);
+                                get_error(&dbc.errors.read().unwrap())
+                            }
+                            HandleType::Stmt => {
+                                let stmt = must_be_stmt!(mongo_handle);
+                                get_error(&stmt.errors.read().unwrap())
+                            }
+                            HandleType::Desc => {
+                                let desc = must_be_desc!(mongo_handle);
+                                get_error(&desc.errors.read().unwrap())
+                            }
+                        },
+                        // TODO: SQL-1152: Implement additional diag types
+                        // this condition should only occur if the _diag_identifier is not in the spec
+                        _ => SqlReturn::ERROR,
                     }
-                    let stmt = must_be_stmt!(mongo_handle);
-                    get_stmt_diag_field(stmt, _diag_identifier, _diag_info_ptr)
                 }
-                DiagType::Number
-                | DiagType::MessageText
-                | DiagType::Native
-                | DiagType::SqlState
-                | DiagType::ReturnCode => match _handle_type {
-                    HandleType::Env => {
-                        let env = must_be_env!(mongo_handle);
-                        get_error(&env.errors.read().unwrap())
-                    }
-                    HandleType::Dbc => {
-                        let dbc = must_be_conn!(mongo_handle);
-                        get_error(&dbc.errors.read().unwrap())
-                    }
-                    HandleType::Stmt => {
-                        let stmt = must_be_stmt!(mongo_handle);
-                        get_error(&stmt.errors.read().unwrap())
-                    }
-                    HandleType::Desc => {
-                        let desc = must_be_desc!(mongo_handle);
-                        get_error(&desc.errors.read().unwrap())
-                    }
-                },
-                // NOTE: not all diag types are implemented; push an unsupported error if requesting one
-                _ => {
-                    unsafe {
-                        (*mongo_handle).add_diag_info(ODBCError::UnsupportedDiagIdentifier(
-                            format!("{:?}", _diag_identifier),
-                        ));
-                    }
-                    SqlReturn::ERROR
-                }
+                None => SqlReturn::ERROR,
             }
         },
         handle

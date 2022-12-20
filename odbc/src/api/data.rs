@@ -1406,20 +1406,20 @@ pub unsafe fn get_diag_rec(
 /// # Safety
 /// This writes to a raw C-pointer
 ///
-pub unsafe fn get_stmt_diag_field(
-    handle: &Statement,
-    diag_identifier: DiagType,
-    diag_info_ptr: Pointer,
-) -> SqlReturn {
+pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Pointer) -> SqlReturn {
+    // NOTE: at the moment, this could be merged with get_diag_field. However, as part of SQL-1152,
+    // some functionality will be specific to the statement handle, and thus warrants a separate function
     match diag_identifier {
-        DiagType::RowCount => {
-            *(diag_info_ptr as *mut u64) = 0u64;
-            SqlReturn::SUCCESS
+        // default to 0, mirroring the behavior in SQLRowCount
+        DiagType::SQL_DIAG_ROW_COUNT => {
+            i16_len::set_output_fixed_data(&0isize, diag_info_ptr, &mut 0)
         }
-        DiagType::RowNumber => {
-            *(diag_info_ptr as *mut u64) = handle.attributes.read().unwrap().row_number as u64;
-            SqlReturn::SUCCESS
+        DiagType::SQL_DIAG_ROW_NUMBER => {
+            // default to unknown, as at the moment statement handels don't update their row number attribute
+            const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
+            i16_len::set_output_fixed_data(&SQL_ROW_NUMBER_UNKNOWN, diag_info_ptr, &mut 0)
         }
+        // this should not be reachable if match branches here match those in SQLGetDiagFieldW
         _ => SqlReturn::ERROR,
     }
 }
@@ -1438,9 +1438,10 @@ pub unsafe fn get_diag_field(
     record_number: i16,
     buffer_length: i16,
     string_length_ptr: *mut i16,
+    wstring: bool,
 ) -> SqlReturn {
     // NOTE: header is dependent on the list of errors, but is a header, hence separating it from the match
-    if diag_identifier == DiagType::Number {
+    if diag_identifier == DiagType::SQL_DIAG_NUMBER {
         *(diag_info_ptr as *mut usize) = errors.len();
         SqlReturn::SUCCESS
     } else {
@@ -1452,25 +1453,42 @@ pub unsafe fn get_diag_field(
             Some(error) => {
                 match diag_identifier {
                     // NOTE: return code is handled by driver manager; just return success
-                    DiagType::ReturnCode => SqlReturn::SUCCESS,
-                    DiagType::SqlState => i16_len::set_output_wstring(
-                        error.get_sql_state(),
-                        diag_info_ptr as *mut u16,
-                        buffer_length as usize,
-                        string_length_ptr,
-                    ),
-                    DiagType::Native => {
-                        *(diag_info_ptr as *mut i32) = error.get_native_err_code();
-                        SqlReturn::SUCCESS
-                    }
-                    DiagType::MessageText => {
-                        let message = format!("{}", error);
-                        i16_len::set_output_wstring(
-                            &message,
+                    DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
+                    DiagType::SQL_DIAG_SQLSTATE => match wstring {
+                        true => i16_len::set_output_wstring(
+                            error.get_sql_state(),
                             diag_info_ptr as *mut u16,
                             buffer_length as usize,
                             string_length_ptr,
-                        )
+                        ),
+                        false => i16_len::set_output_string(
+                            error.get_sql_state(),
+                            diag_info_ptr as *mut u8,
+                            buffer_length as usize,
+                            string_length_ptr,
+                        ),
+                    },
+                    DiagType::SQL_DIAG_NATIVE => i16_len::set_output_fixed_data(
+                        &error.get_native_err_code(),
+                        diag_info_ptr,
+                        0i16 as *mut i16,
+                    ),
+                    DiagType::SQL_DIAG_MESSAGE_TEXT => {
+                        let message = format!("{}", error);
+                        match wstring {
+                            true => i16_len::set_output_wstring(
+                                &message,
+                                diag_info_ptr as *mut u16,
+                                buffer_length as usize,
+                                string_length_ptr,
+                            ),
+                            false => i16_len::set_output_string(
+                                &message,
+                                diag_info_ptr as *mut u8,
+                                buffer_length as usize,
+                                string_length_ptr,
+                            ),
+                        }
                     }
                     // this should not be reachable if match branches here match those in SQLGetDiagFieldW
                     _ => SqlReturn::ERROR,

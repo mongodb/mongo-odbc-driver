@@ -1,8 +1,4 @@
-use crate::{
-    api::{definitions::DiagType, errors::ODBCError},
-    handles::definitions::*,
-    SQLGetDiagFieldW,
-};
+use crate::{api::errors::ODBCError, handles::definitions::*, SQLGetDiagFieldW};
 use odbc_sys::{HandleType, SqlReturn};
 
 const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
@@ -14,10 +10,10 @@ mod unit {
     fn validate_integer_diag_field(
         handle_type: HandleType,
         handle: *mut MongoHandle,
-        diag_identifier: DiagType,
-        expected_value: u64,
+        diag_identifier: i16,
+        expected_value: i64,
     ) {
-        let diag_info_ptr = &mut 0u64 as *mut _ as *mut c_void;
+        let diag_info_ptr = &mut 0i64 as *mut _ as *mut c_void;
         unsafe {
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -31,7 +27,7 @@ mod unit {
                     &mut 0
                 )
             );
-            assert_eq!(expected_value, *(diag_info_ptr as *const u64));
+            assert_eq!(expected_value, *(diag_info_ptr as *const i64));
         }
     }
 
@@ -47,7 +43,7 @@ mod unit {
                     handle_type,
                     handle as *mut _,
                     1,
-                    DiagType::MessageText,
+                    6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
                     57,
                     string_length_ptr
@@ -72,7 +68,7 @@ mod unit {
                     handle_type,
                     handle as *mut _,
                     1,
-                    DiagType::SqlState,
+                    4, //DiagType::SQL_DIAG_SQLSTATE
                     message_text,
                     6,
                     string_length_ptr
@@ -87,6 +83,11 @@ mod unit {
     }
 
     fn validate_return_code(handle_type: HandleType, handle: *mut MongoHandle) {
+        /*
+           The return code is always implemented by the driver manager, per the spec.
+           Thus, calling SQLGetDiagField with type SQL_DIAG_RETURNCODE is essentially
+           a no-op. Verify this by checking we get sqlsucces, and buffers remain unchanged.
+        */
         let message_text = &mut [116u16, 101, 115, 116, 0];
         let string_length_ptr = &mut 0;
         unsafe {
@@ -96,13 +97,13 @@ mod unit {
                     handle_type,
                     handle as *mut _,
                     1,
-                    DiagType::ReturnCode,
+                    1, // DiagType::SQL_DIAG_RETURNCODE
                     message_text as *mut _ as *mut c_void,
                     10,
                     string_length_ptr
                 )
             );
-            // checking input pointer was not altered in any way, and we just pass through SUCESS
+            // checking input pointer was not altered in any way, and we just pass through SUCCESS
             assert_eq!(
                 "test\0",
                 String::from_utf16(&*(message_text as *const [u16; 5])).unwrap()
@@ -133,14 +134,18 @@ mod unit {
             }
             validate_message_text(*handle_type, *handle);
             validate_sql_state(*handle_type, *handle);
-            validate_integer_diag_field(*handle_type, *handle, DiagType::Native, 0);
-            validate_integer_diag_field(*handle_type, *handle, DiagType::Number, 1);
+            // SQL_DIAG_NATIVE
+            validate_integer_diag_field(*handle_type, *handle, 5, 0);
+            // SQL_DIAG_NUMBER
+            validate_integer_diag_field(*handle_type, *handle, 2, 1);
             validate_return_code(*handle_type, *handle);
 
             //statement only
             if *handle_type == HandleType::Stmt {
-                validate_integer_diag_field(*handle_type, *handle, DiagType::RowNumber, 0u64);
-                validate_integer_diag_field(*handle_type, *handle, DiagType::RowCount, 0u64);
+                // SQL_DIAG_ROW_NUMBER
+                validate_integer_diag_field(*handle_type, *handle, -1248, -2i64);
+                // SQL_DIAG_ROW_COUNT
+                validate_integer_diag_field(*handle_type, *handle, 3, 0i64);
             }
         });
     }
@@ -163,7 +168,7 @@ mod unit {
                     HandleType::Env,
                     env_handle as *mut _,
                     1,
-                    DiagType::MessageText,
+                    6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
                     15,
                     string_length_ptr
@@ -182,7 +187,7 @@ mod unit {
                     HandleType::Env,
                     env_handle as *mut _,
                     2,
-                    DiagType::MessageText,
+                    6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
                     57,
                     string_length_ptr
@@ -208,7 +213,7 @@ mod unit {
                     HandleType::Env,
                     env_handle as *mut _,
                     1,
-                    DiagType::MessageText,
+                    6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     (&mut [0u16; 6]) as *mut _ as *mut c_void,
                     -1,
                     &mut 0
@@ -221,7 +226,7 @@ mod unit {
                     HandleType::Env,
                     env_handle as *mut _,
                     0,
-                    DiagType::MessageText,
+                    6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     (&mut [0u16; 6]) as *mut _ as *mut c_void,
                     57,
                     &mut 0
@@ -234,7 +239,7 @@ mod unit {
                     HandleType::Env,
                     env_handle as *mut _,
                     3,
-                    DiagType::MessageText,
+                    6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     (&mut [0u16; 6]) as *mut _ as *mut c_void,
                     57,
                     &mut 0
@@ -247,7 +252,7 @@ mod unit {
                     HandleType::Env,
                     env_handle as *mut _,
                     1,
-                    DiagType::RowCount,
+                    -1249, // DiagType::SQL_DIAG_ROW_COUNT
                     (&mut 0) as *mut _ as *mut c_void,
                     10,
                     &mut 0
@@ -259,41 +264,12 @@ mod unit {
                     HandleType::Env,
                     env_handle as *mut _,
                     1,
-                    DiagType::RowNumber,
+                    -1248, // DiagType::SQL_DIAG_ROW_NUMBER
                     (&mut 0) as *mut _ as *mut c_void,
                     10,
                     &mut 0
                 )
             );
-        }
-    }
-
-    /*
-       TODO: This test should be removed when we implement the rest of the diag field types
-    */
-    #[test]
-    fn test_invalid_diag_identifier() {
-        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
-
-        unsafe {
-            (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers"));
-
-            // check first we have exactly one error in the handle
-            let num_errors_buffer = &mut 0u64 as *mut _ as *mut c_void;
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetDiagFieldW(
-                    HandleType::Env,
-                    env_handle as *mut _,
-                    0,
-                    DiagType::Number,
-                    num_errors_buffer,
-                    0,
-                    &mut 0
-                )
-            );
-            assert_eq!(1, *(num_errors_buffer as *const u64));
-
             // make a call for an unimplemented diagnostic type
             assert_eq!(
                 SqlReturn::ERROR,
@@ -301,48 +277,12 @@ mod unit {
                     HandleType::Env,
                     env_handle as *mut _,
                     1,
-                    DiagType::DynamicFunctionCode,
+                    12, // DiagType::SQL_DIAG_DYNAMIC_FUNCTION_CODE
                     &mut 0 as *mut _ as *mut c_void,
                     1,
                     &mut 0
                 )
             );
-            // check the correct diagnostic was added for this error
-            let num_errors_buffer = &mut 0u64 as *mut _ as *mut c_void;
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetDiagFieldW(
-                    HandleType::Env,
-                    env_handle as *mut _,
-                    0,
-                    DiagType::Number,
-                    num_errors_buffer,
-                    0,
-                    &mut 0
-                )
-            );
-            assert_eq!(2, *(num_errors_buffer as *const u64));
-
-            // validating error text
-            let message_text = &mut [0u16; 78] as *mut _ as *mut c_void;
-            let string_length_ptr = &mut 0;
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetDiagFieldW(
-                    HandleType::Env,
-                    env_handle as *mut _,
-                    2,
-                    DiagType::MessageText,
-                    message_text,
-                    78,
-                    string_length_ptr
-                )
-            );
-            assert_eq!(
-                "[MongoDB][API] The diag identifier value DynamicFunctionCode is not supported\0",
-                String::from_utf16(&*(message_text as *const [u16; 78])).unwrap()
-            );
-            assert_eq!(77, *string_length_ptr);
         }
     }
 }
