@@ -2,7 +2,7 @@ use crate::err::{Error, Result};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress, Tls, TlsOptions};
 use regex::{RegexSet, RegexSetBuilder};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
 const INVALID_ATTR_FORMAT_ERROR: &str = "all URI attributes must be of the form keyword=value";
@@ -32,11 +32,6 @@ lazy_static! {
     .case_insensitive(true)
     .build()
     .unwrap();
-
-    // taken from the rust driver
-    static ref ILLEGAL_DATABASE_CHARACTERS: HashSet<&'static char> = {
-        ['/', '\\', ' ', '"', '$', '.'].iter().collect()
-    };
 }
 
 #[derive(Debug, PartialEq, Eq)]
