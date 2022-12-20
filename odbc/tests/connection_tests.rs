@@ -69,20 +69,12 @@ mod integration {
     use std::ptr::null_mut;
 
     test_connection_diagnostics! (
-            invalid_connection_string_parse_error,
-            in_connection_string = "PWD=N_A;Driver=ADF_ODBC_DRIVER;SERVER=//;AUTH_SRC=N_A;USER=N_A",
-            driver_completion = DriverConnectOption::NoPrompt,
-            expected_sql_state = UNABLE_TO_CONNECT,
-            expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][Core] Invalid connection string. Parse error: An invalid argument was provided: illegal character in database name"
-        );
-    test_connection_diagnostics! (
             missing_user_in_connection_string,
             in_connection_string = "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri"
+            expected_error_message = "[MongoDB][Core] Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri"
         );
     test_connection_diagnostics! (
             missing_pwd_in_connection_string,
@@ -90,7 +82,7 @@ mod integration {
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][API] Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri"
+            expected_error_message = "[MongoDB][Core] Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri"
         );
     test_connection_diagnostics!(
         missing_driver_in_connection_string,
