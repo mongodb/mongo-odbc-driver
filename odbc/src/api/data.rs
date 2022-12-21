@@ -973,21 +973,6 @@ pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
 }
 
 ///
-/// set_sql_state writes the given sql state to the [`output_ptr`].
-///
-/// # Safety
-/// This writes to a raw C-pointer
-///
-pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
-    if output_ptr.is_null() {
-        return;
-    }
-    let sql_state = &format!("{}\0", sql_state);
-    let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>();
-    copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
-}
-
-///
 /// set_output_wstring_helper writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
 /// length of the [`output_ptr`] buffer in characters; the message should be truncated
 /// if it is longer than the buffer length.

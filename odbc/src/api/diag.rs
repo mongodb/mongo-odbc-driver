@@ -1,12 +1,25 @@
 use crate::{
-    api::{
-        data::{i16_len, set_sql_state},
-        definitions::DiagType,
-    },
+    api::{data::i16_len, definitions::DiagType},
     errors::ODBCError,
 };
 use odbc_sys::Pointer;
 use odbc_sys::{Char, Integer, SmallInt, SqlReturn, WChar};
+use std::ptr::copy_nonoverlapping;
+
+///
+/// set_sql_state writes the given sql state to the [`output_ptr`].
+///
+/// # Safety
+/// This writes to a raw C-pointer
+///
+pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
+    if output_ptr.is_null() {
+        return;
+    }
+    let sql_state = &format!("{}\0", sql_state);
+    let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>();
+    copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
+}
 
 ///
 /// get_diag_rec copies the given ODBC error's diagnostic information
@@ -117,7 +130,7 @@ pub unsafe fn get_diag_field(
                     DiagType::SQL_DIAG_NATIVE => i16_len::set_output_fixed_data(
                         &error.get_native_err_code(),
                         diag_info_ptr,
-                        0i16 as *mut i16,
+                        std::ptr::null_mut::<i16>(),
                     ),
                     DiagType::SQL_DIAG_MESSAGE_TEXT => {
                         let message = format!("{}", error);
