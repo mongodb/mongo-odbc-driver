@@ -833,7 +833,7 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoConnection> {
     let mut odbc_uri = ODBCUri::new(odbc_uri_string)?;
     let mongo_uri = odbc_uri.remove_to_mongo_uri()?;
-    let auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
+    let _auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
@@ -849,9 +849,8 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     // ODBCError has an impl From mongo_odbc_core::Error, but that does not
     // create an impl From Result<T, mongo_odbc_core::Error> to Result<T, ODBCError>
     // hence this bizarre Ok(func?) pattern.
-    Ok(mongo_odbc_core::MongoConnection::connect(
+    Ok(MongoConnection::connect(
         &mongo_uri,
-        auth_src,
         database,
         connection_timeout,
         login_timeout,
