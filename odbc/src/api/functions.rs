@@ -1,10 +1,11 @@
 use crate::{
     api::{
         data::{
-            get_diag_field, get_diag_rec, get_stmt_diag_field, i16_len, i32_len,
-            input_text_to_string, input_wtext_to_string, set_str_length, unsupported_function,
+            i16_len, i32_len, input_text_to_string, input_wtext_to_string, set_str_length,
+            unsupported_function,
         },
         definitions::*,
+        diag::{get_diag_field, get_diag_rec, get_stmt_diag_field},
         errors::{ODBCError, Result},
         odbc_uri::ODBCUri,
         util::{connection_attribute_to_string, format_version},
@@ -1644,8 +1645,7 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
     panic_safe_exec!(
         || {
             let mongo_handle = handle as *mut MongoHandle;
-            let diag_identifier = DiagType::from_i16(_diag_identifier);
-            let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
+            let get_error = |errors: &Vec<ODBCError>, diag_identifier: DiagType| -> SqlReturn {
                 get_diag_field(
                     errors,
                     diag_identifier,
@@ -1674,19 +1674,19 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
                         | DiagType::SQL_DIAG_RETURNCODE => match _handle_type {
                             HandleType::Env => {
                                 let env = must_be_env!(mongo_handle);
-                                get_error(&env.errors.read().unwrap())
+                                get_error(&env.errors.read().unwrap(), diag_identifier)
                             }
                             HandleType::Dbc => {
                                 let dbc = must_be_conn!(mongo_handle);
-                                get_error(&dbc.errors.read().unwrap())
+                                get_error(&dbc.errors.read().unwrap(), diag_identifier)
                             }
                             HandleType::Stmt => {
                                 let stmt = must_be_stmt!(mongo_handle);
-                                get_error(&stmt.errors.read().unwrap())
+                                get_error(&stmt.errors.read().unwrap(), diag_identifier)
                             }
                             HandleType::Desc => {
                                 let desc = must_be_desc!(mongo_handle);
-                                get_error(&desc.errors.read().unwrap())
+                                get_error(&desc.errors.read().unwrap(), diag_identifier)
                             }
                         },
                         // TODO: SQL-1152: Implement additional diag types
@@ -1754,10 +1754,11 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
                     Some(odbc_err) => get_diag_rec(
                         odbc_err,
                         state,
-                        message_text,
+                        message_text as *mut _,
                         buffer_length,
                         text_length_ptr,
                         native_error_ptr,
+                        true,
                     ),
                     None => SqlReturn::NO_DATA,
                 }
