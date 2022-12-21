@@ -1,6 +1,7 @@
 use odbc_sys::SqlDataType;
 
 #[non_exhaustive]
+#[derive(PartialEq, Eq)]
 pub struct BsonTypeInfo {
     pub type_name: &'static str,
     pub sql_type: SqlDataType,

@@ -21,4 +21,6 @@ pub use query::MongoQuery;
 pub mod mock_query;
 mod stmt;
 pub use stmt::MongoStatement;
+mod type_info;
+pub use type_info::MongoTypesInfo;
 pub mod util;

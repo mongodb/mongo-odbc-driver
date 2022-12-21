@@ -15,7 +15,7 @@ use bson::Bson;
 use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
     MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery,
-    MongoStatement, MongoTableTypes,
+    MongoStatement, MongoTableTypes, MongoTypesInfo,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -2462,7 +2462,11 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SqlDataType) -> SqlReturn {
-    unimpl!(handle);
+    let mongo_handle = MongoHandleRef::from(handle);
+    let stmt = must_be_valid!((*mongo_handle).as_statement());
+    let types_info = MongoTypesInfo::new(_data_type);
+    *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
+    SqlReturn::SUCCESS
 }
 
 ///
