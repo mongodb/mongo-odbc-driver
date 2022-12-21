@@ -7,7 +7,7 @@ use odbc_sys::{CDataType, Desc, SqlDataType, USmallInt};
 use serde_json::{Number, Value};
 use std::string::ToString;
 
-const GENERATED_TEST_DIR: &str = "../resources/generated_test";
+const GENERATED_TEST_DIR: &str = "./resources/generated_test";
 
 lazy_static! {
     static ref STRING_VAL: Value = Value::String("".to_string());
