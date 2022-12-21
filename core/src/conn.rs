@@ -38,7 +38,6 @@ impl MongoConnection {
     /// setting specified in the uri if any.
     pub fn connect(
         mongo_uri: &str,
-        auth_src: &str,
         current_db: Option<&str>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
