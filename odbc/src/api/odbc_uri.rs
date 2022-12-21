@@ -14,6 +14,8 @@ const SSL: &[&str] = &["ssl", "tls"];
 
 lazy_static! {
     static ref KEYWORDS: RegexSet = RegexSetBuilder::new([
+        "^APP_NAME$",
+        "^APPLICATION_NAME$",
         "^AUTH_SRC$",
         "^DATABASE$",
         "^DRIVER$",
@@ -530,6 +532,21 @@ mod unit {
                     .unwrap()
                     .remove_to_mongo_uri()
                     .unwrap()
+            );
+        }
+
+        #[test]
+        fn app_name_options_are_valid() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "mongodb://foo:bar@127.0.0.1:27017".to_string(),
+                ODBCUri::new(
+                    "APP_NAME=app name test;APPLICATION_NAME=application name test;\
+                              USER=foo;PWD=bar;SERVER=127.0.0.1:27017"
+                )
+                .unwrap()
+                .remove_to_mongo_uri()
+                .unwrap()
             );
         }
     }
