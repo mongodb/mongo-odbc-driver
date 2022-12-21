@@ -12,7 +12,7 @@ use std::{fmt, fs, path::PathBuf};
 
 use crate::{
     common::{get_sql_diagnostics, sql_return_to_string},
-    test_runner::test_generator_util::generate_baseline_test_files,
+    test_runner::test_generator_util::generate_baseline_test_file,
 };
 use thiserror::Error;
 
