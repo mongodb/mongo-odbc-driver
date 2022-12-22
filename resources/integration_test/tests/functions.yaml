@@ -3,9 +3,9 @@ tests:
     test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "", 0 ]
     db: integration_test
     expected_result:
-      - ["db2", null, null, null, null]
-      - ["integration_test", null, null, null, null]
-      - ["integration_test_2", null, null, null, null]
+      - ["db2", null, null, null, ""]
+      - ["integration_test", null, null, null, ""]
+      - ["integration_test_2", null, null, null, ""]
     expected_bson_type: ["string", "string", "string", "string", "string"]
     expected_case_sensitive: [ "", "", "", "", "" ]
     expected_catalog_name: [ "", "", "", "", "" ]
@@ -17,7 +17,7 @@ tests:
     expected_sql_type: [12, 12, 12, 12, 12]
     expected_precision: [0, 0, 0, 0, 0]
     expected_scale: [0, 0, 0, 0, 0]
-    expected_nullability: [1, 0, 0, 0, 0]
+    expected_nullability: [0, 1, 1, 1, 1]
 
 
 

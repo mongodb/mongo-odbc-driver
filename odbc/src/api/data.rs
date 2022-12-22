@@ -1122,7 +1122,10 @@ pub mod i16_len {
     ) -> SqlReturn {
         let message = message.encode_utf16().collect::<Vec<u16>>();
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len);
-        *text_length_ptr = len as SmallInt;
+        // Only copy the length if the pointer is not null
+        if !text_length_ptr.is_null() {
+            *text_length_ptr = len as SmallInt;
+        }
         ret
     }
 

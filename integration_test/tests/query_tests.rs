@@ -26,7 +26,7 @@ mod integration {
                     i += 1;
                 }
             }
-            _ => panic!("no data"),
+            _ => panic!("No data found in Collection `example`. Make sure that the integration test environment is setup correctly."),
         };
     }
 
