@@ -16,7 +16,7 @@ use odbc_sys::{Nullability, SqlDataType};
 use lazy_static::lazy_static;
 
 // pub static ref DATA_TYPES: Vec<BsonTypeInfo> = vec![
-const DATA_TYPES: [&'static BsonTypeInfo; 21] = [
+const DATA_TYPES: [&BsonTypeInfo; 21] = [
     &BsonTypeInfo::LONG,                // SqlDataType(-5)
     &BsonTypeInfo::BINDATA,             // SqlDataType(-2)
     &BsonTypeInfo::ARRAY,               // SqlDataType(0)
@@ -188,7 +188,7 @@ impl MongoTypesInfo {
     pub fn new(sql_data_type: SqlDataType) -> MongoTypesInfo {
         MongoTypesInfo {
             current_type_index: 0,
-            sql_data_type: sql_data_type,
+            sql_data_type,
         }
     }
 }
