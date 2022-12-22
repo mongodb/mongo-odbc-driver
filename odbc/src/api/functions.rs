@@ -2462,11 +2462,16 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SqlDataType) -> SqlReturn {
-    let mongo_handle = MongoHandleRef::from(handle);
-    let stmt = must_be_valid!((*mongo_handle).as_statement());
-    let types_info = MongoTypesInfo::new(_data_type);
-    *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
-    SqlReturn::SUCCESS
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let types_info = MongoTypesInfo::new(_data_type);
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
+            SqlReturn::SUCCESS
+        },
+        handle
+    )
 }
 
 ///

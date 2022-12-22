@@ -206,7 +206,6 @@ impl MongoStatement for MongoTypesInfo {
                 break;
             }
         }
-        print!("{self:?}");
         Ok(self.current_type_index <= (DATA_TYPES.len() as isize))
     }
 

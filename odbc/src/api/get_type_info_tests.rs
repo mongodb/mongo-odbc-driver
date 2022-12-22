@@ -20,7 +20,6 @@ mod unit {
                     .unwrap()
                     .next(None)
             };
-            // let stms = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetTypeInfo(handle as *mut _, data_type)
