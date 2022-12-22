@@ -25,3 +25,23 @@ dataset:
                               }
               }
     }
+
+  - db: integration_test_2
+    collection: example_2
+    docs:
+      - {_id: 0.0, b: "a"}
+      - {_id: 1.0, b: "b"}
+      - {_id: 2.0, b: "c"}
+    indexes:
+      - {key: {b: 1}}
+    schema: {
+              "bsonType": ["object"],
+              "properties": {
+                              "_id": {
+                                       "bsonType": ["double"]
+                              },
+                              "b": {
+                                     "bsonType": ["string"]
+                              }
+              }
+    }
