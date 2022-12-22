@@ -8,27 +8,32 @@ const EMPTY_URI_ERROR: &str = "URI must not be empty";
 const INVALID_ATTR_FORMAT_ERROR: &str = "all URI attributes must be of the form keyword=value";
 const MISSING_CLOSING_BRACE_ERROR: &str = "attribute value beginning with '{' must end with '}'";
 
-const URI: &[&str] = &["uri"];
-const USER: &[&str] = &["uid", "user"];
-const PWD: &[&str] = &["password", "pwd"];
-const SERVER: &[&str] = &["server"];
-const SSL: &[&str] = &["ssl", "tls"];
+const AUTH_SRC: &str = "auth_src";
+const DATABASE: &str = "database";
+const DRIVER: &str = "driver";
+const DSN: &str = "dsn";
+const PASSWORD: &str = "password";
+const PWD: &str = "pwd";
+const SERVER: &str = "server";
+const SSL: &str = "ssl";
+const TLS: &str = "tls";
+const USER: &str = "user";
+const UID: &str = "uid";
+const URI: &str = "uri";
+
+const URI_KWS: &[&str] = &[URI];
+const USER_KWS: &[&str] = &[UID, USER];
+const PWD_KWS: &[&str] = &[PASSWORD, PWD];
+const SERVER_KWS: &[&str] = &[SERVER];
+const SSL_KWS: &[&str] = &[SSL, TLS];
 
 lazy_static! {
-    static ref KEYWORDS: RegexSet = RegexSetBuilder::new([
-        "^AUTH_SRC$",
-        "^DATABASE$",
-        "^DRIVER$",
-        "^DSN$",
-        "^PASSWORD$",
-        "^PWD$",
-        "^SERVER$",
-        "^SSL$",
-        "^TLS$",
-        "^USER$",
-        "^UID$",
-        "^URI$",
-    ])
+    static ref KEYWORDS: RegexSet = RegexSetBuilder::new(
+        [AUTH_SRC, DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, SSL, TLS, USER, UID, URI,]
+            .into_iter()
+            .map(|x| "^".to_string() + x + "$")
+            .collect::<Vec<_>>()
+    )
     .case_insensitive(true)
     .build()
     .unwrap();
@@ -168,42 +173,71 @@ impl<'a> ODBCUri<'a> {
     // try_into_client_options converts this ODBCUri to a mongo_uri String. It will
     // remove all the attributes necessary to make a mongo_uri. This is destructive!
     pub fn try_into_client_options(&mut self) -> Result<ClientOptions> {
-        let uri = self.remove(URI);
+        let uri = self.remove(URI_KWS);
         if let Some(uri) = uri {
             return self.handle_uri(uri);
         }
         self.handle_no_uri()
     }
 
+    fn check_client_opts_credentials(client_options: &ClientOptions) -> Result<()> {
+        if client_options
+            .credential
+            .as_ref()
+            .unwrap()
+            .username
+            .is_none()
+        {
+            return Err(Error::InvalidUriFormat(format!(
+                "One of {:?} is required for a valid Mongo ODBC Uri",
+                USER_KWS,
+            )));
+        }
+        if client_options
+            .credential
+            .as_ref()
+            .unwrap()
+            .password
+            .is_none()
+        {
+            return Err(Error::InvalidUriFormat(format!(
+                "One of {:?} is required for a valid Mongo ODBC Uri",
+                PWD_KWS,
+            )));
+        }
+        Ok(())
+    }
+
     fn handle_uri(&mut self, uri: &str) -> Result<ClientOptions> {
         let mut client_options = ClientOptions::parse(uri)?;
         if client_options.credential.is_some() {
-            let user = self.remove(USER);
+            let user = self.remove(USER_KWS);
             if user.is_some() {
                 client_options.credential.as_mut().unwrap().username = user.map(String::from);
             }
-            let pwd = self.remove(PWD);
+            let pwd = self.remove(PWD_KWS);
             if pwd.is_some() {
                 client_options.credential.as_mut().unwrap().password = pwd.map(String::from);
             }
+            Self::check_client_opts_credentials(&client_options)?;
             return Ok(client_options);
         }
-        let user = self.remove(USER);
-        let pwd = self.remove(PWD);
+        let user = self.remove_mandatory_attribute(USER_KWS)?;
+        let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
         client_options.credential = Some(
             Credential::builder()
-                .username(user.map(String::from))
-                .password(pwd.map(String::from))
+                .username(user.to_string())
+                .password(pwd.to_string())
                 .build(),
         );
         Ok(client_options)
     }
 
     fn handle_no_uri(&mut self) -> Result<ClientOptions> {
-        let user = self.remove_mandatory_attribute(USER)?;
-        let pwd = self.remove_mandatory_attribute(PWD)?;
-        let server = self.remove_mandatory_attribute(SERVER)?;
-        let ssl = self.remove(SSL);
+        let user = self.remove_mandatory_attribute(USER_KWS)?;
+        let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
+        let server = self.remove_mandatory_attribute(SERVER_KWS)?;
+        let ssl = self.remove(SSL_KWS);
         let cred = Credential::builder()
             .username(user.to_string())
             .password(pwd.to_string())
@@ -604,6 +638,95 @@ mod unit {
                     .try_into_client_options()
                     .unwrap()
                     .tls
+            );
+        }
+
+        #[test]
+        fn uri_with_embedded_user_and_password_works() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("URI=mongodb://foo:bar@127.0.0.1:27017")
+                .unwrap()
+                .try_into_client_options()
+                .unwrap();
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+            assert_eq!(expected_opts.hosts, opts.hosts);
+        }
+
+        #[test]
+        fn uri_seperate_user_and_password_replace_embedded() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts =
+                ClientOptions::parse("mongodb://foo2:bar2@127.0.0.1:27017").unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("USER=foo2;PWD=bar2;URI=mongodb://foo:bar@127.0.0.1:27017")
+                .unwrap()
+                .try_into_client_options()
+                .unwrap();
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+            assert_eq!(expected_opts.hosts, opts.hosts);
+        }
+
+        #[test]
+        fn uri_with_separate_user_and_password_works() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://127.0.0.1:27017")
+                .unwrap()
+                .try_into_client_options()
+                .unwrap();
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+            assert_eq!(expected_opts.hosts, opts.hosts);
+        }
+
+        #[test]
+        fn uri_with_separate_password_works() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("PWD=bar;URI=mongodb://foo@127.0.0.1:27017")
+                .unwrap()
+                .try_into_client_options()
+                .unwrap();
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+            assert_eq!(expected_opts.hosts, opts.hosts);
+        }
+
+        #[test]
+        fn credless_uri_without_user_and_password_is_error() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "Err(InvalidUriFormat(\"One of [\\\"uid\\\", \\\"user\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
+                format!(
+                    "{:?}",
+                    ODBCUri::new("URI=mongodb://127.0.0.1:27017")
+                        .unwrap()
+                        .try_into_client_options()
+                )
+            );
+        }
+
+        #[test]
+        fn credless_uri_with_user_and_no_password_is_error() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "Err(InvalidUriFormat(\"One of [\\\"password\\\", \\\"pwd\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
+                format!(
+                    "{:?}",
+                    ODBCUri::new("URI=mongodb://foo@127.0.0.1:27017")
+                        .unwrap()
+                        .try_into_client_options()
+                )
             );
         }
     }
