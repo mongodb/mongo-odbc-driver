@@ -28,7 +28,7 @@ mod unit {
             // for each expectation, check that calling next succeeds and we get the expected value
             expectations.iter().for_each(|name| {
                 let result = get_next(stmt);
-                assert_eq!(true, result.unwrap());
+                assert!(result.unwrap());
                 assert_eq!(
                     Bson::String((*name).to_string()),
                     stmt.mongo_statement
@@ -44,7 +44,7 @@ mod unit {
 
             // check there are no additional results in the set that were not expected
             let result = get_next(stmt);
-            assert_eq!(false, result.unwrap());
+            assert!(!result.unwrap());
         }
     }
 
@@ -132,7 +132,7 @@ mod unit {
                 .unwrap()
                 .next(None);
             assert!(result.is_ok());
-            assert_eq!(result.unwrap(), true);
+            assert!(result.unwrap());
             // test each of the values come out properly for a given type
             let values: Vec<Bson> = vec![
                 Bson::String("int".to_string()),
