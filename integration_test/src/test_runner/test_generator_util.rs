@@ -115,7 +115,7 @@ pub fn generate_baseline_test_file(
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_millis();
-    let desc = entry.description.clone().replace(" ", "_");
+    let desc = entry.description.clone().replace(' ', "_");
     let file_name = format!("{}-{}.yml", desc, now);
 
     let writer = std::fs::OpenOptions::new()
