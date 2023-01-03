@@ -16,7 +16,7 @@ use crate::{
 };
 use thiserror::Error;
 
-const TEST_FILE_DIR: &str = "./resources/integration_test/tests";
+const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
 const SQL_NULL_DATA: isize = -1;
 const BUFFER_LENGTH: usize = 200;
 
