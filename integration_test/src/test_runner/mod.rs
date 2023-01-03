@@ -127,6 +127,9 @@ pub fn integration_test() -> Result<()> {
     run_integration_tests(false)
 }
 
+/// Run an integration test. The generate argument indicates whether
+/// the test results should written to a file for baseline test file
+/// generation, or be asserted for correctness.
 pub fn run_integration_tests(generate: bool) -> Result<()> {
     let env = create_environment_v3().unwrap();
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
@@ -157,8 +160,8 @@ pub fn run_integration_tests(generate: bool) -> Result<()> {
     Ok(())
 }
 
-/// load_file_paths reads the given directory and returns a list its file path
-/// names.
+/// load_file_paths reads the given directory and returns a list of its file
+/// path names.
 pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>> {
     let mut paths: Vec<String> = vec![];
     let entries = fs::read_dir(dir).map_err(|e| Error::InvalidDirectory(format!("{:?}", e)))?;
@@ -222,6 +225,9 @@ fn check_array_length(array: &Vec<Value>, length: usize) -> Result<()> {
     Ok(())
 }
 
+/// Run a query integration test. The generate argument indicates
+/// whether the test results should written to a file for baseline
+/// test file generation, or be asserted for correctness.
 fn run_query_test(
     query: &str,
     entry: &TestEntry,
@@ -251,6 +257,9 @@ fn run_query_test(
     }
 }
 
+/// Run a function integration test. The generate argument indicates
+/// whether the test results should written to a file for baseline
+/// test file generation, or be asserted for correctness.
 fn run_function_test(
     function: &Vec<Value>,
     entry: &TestEntry,
