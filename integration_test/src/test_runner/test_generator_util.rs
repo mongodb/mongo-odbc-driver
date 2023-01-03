@@ -133,7 +133,7 @@ fn get_expected_data_type(sql_type: &Value) -> CDataType {
         Value::Number(n) => {
             let sdt = SqlDataType(n.as_i64().unwrap() as i16);
             match sdt {
-                SqlDataType::UNKNOWN_TYPE => CDataType::Default,
+                SqlDataType::UNKNOWN_TYPE => CDataType::Char,
                 SqlDataType::CHAR => CDataType::Char,
                 SqlDataType::NUMERIC => CDataType::Numeric,
                 SqlDataType::DECIMAL => CDataType::Numeric,
@@ -146,8 +146,8 @@ fn get_expected_data_type(sql_type: &Value) -> CDataType {
                 SqlDataType::VARCHAR => CDataType::Char,
                 SqlDataType::DATE => CDataType::TypeDate,
                 SqlDataType::TIME => CDataType::TypeTime,
-                SqlDataType::TIMESTAMP => CDataType::Default,
-                SqlDataType::EXT_TIME_OR_INTERVAL => CDataType::Default,
+                SqlDataType::TIMESTAMP => CDataType::Char,
+                SqlDataType::EXT_TIME_OR_INTERVAL => CDataType::Char,
                 SqlDataType::EXT_TIMESTAMP => CDataType::Default,
                 SqlDataType::EXT_LONG_VARCHAR => CDataType::Char,
                 SqlDataType::EXT_BINARY => CDataType::Binary,
