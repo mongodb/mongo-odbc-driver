@@ -241,19 +241,18 @@ impl<'a> ODBCUri<'a> {
                 client_options.credential.as_mut().unwrap().password = pwd.map(String::from);
             }
             Self::check_client_opts_credentials(&client_options)?;
-            Self::set_server_and_source(&mut client_options, server, source)?;
-            return Ok(client_options);
+        } else {
+            // if the credentials were not set in the mongo uri, then user and pwd are _required_ to be
+            // set as attributes.
+            let user = self.remove_mandatory_attribute(USER_KWS)?;
+            let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
+            client_options.credential = Some(
+                Credential::builder()
+                    .username(user.to_string())
+                    .password(pwd.to_string())
+                    .build(),
+            );
         }
-        // if the credentials were not set in the mongo uri, then user and pwd are _required_ to be
-        // set as attributes.
-        let user = self.remove_mandatory_attribute(USER_KWS)?;
-        let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
-        client_options.credential = Some(
-            Credential::builder()
-                .username(user.to_string())
-                .password(pwd.to_string())
-                .build(),
-        );
         Self::set_server_and_source(&mut client_options, server, source)?;
         Ok(client_options)
     }
@@ -705,6 +704,18 @@ mod unit {
             assert_eq!(
                 source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().credential.unwrap().source);
             }
+        }
+
+        #[test]
+        fn uri_seperate_server_replaces_embedded() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts =
+                ClientOptions::parse("mongodb://foo2:bar2@127.0.0.2:27017").unwrap();
+            let opts = ODBCUri::new("SERVER=127.0.0.2:27017;URI=mongodb://foo:bar@127.0.0.1:27017")
+                .unwrap()
+                .try_into_client_options()
+                .unwrap();
+            assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
         }
     }
 }
