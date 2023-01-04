@@ -1,6 +1,6 @@
 use crate::err::{Error, Result};
 use lazy_static::lazy_static;
-use mongodb::options::{ClientOptions, Credential, ServerAddress, Tls, TlsOptions};
+use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{RegexSet, RegexSetBuilder};
 use std::collections::HashMap;
 
@@ -8,52 +8,27 @@ const EMPTY_URI_ERROR: &str = "URI must not be empty";
 const INVALID_ATTR_FORMAT_ERROR: &str = "all URI attributes must be of the form keyword=value";
 const MISSING_CLOSING_BRACE_ERROR: &str = "attribute value beginning with '{' must end with '}'";
 
-const AUTH_SRC: &str = "auth_src";
-const AUTH_SOURCE: &str = "auth_source";
 const DATABASE: &str = "database";
 const DRIVER: &str = "driver";
 const DSN: &str = "dsn";
 const PASSWORD: &str = "password";
 const PWD: &str = "pwd";
 const SERVER: &str = "server";
-const SSL: &str = "ssl";
-const TLS: &str = "tls";
 const USER: &str = "user";
 const UID: &str = "uid";
 const URI: &str = "uri";
-const APPLICATION_NAME: &str = "application_name";
-const APP_NAME: &str = "app_name";
 
-const AUTH_SRC_KWS: &[&str] = &[AUTH_SRC, AUTH_SOURCE];
 const URI_KWS: &[&str] = &[URI];
 const USER_KWS: &[&str] = &[UID, USER];
 const PWD_KWS: &[&str] = &[PASSWORD, PWD];
 const SERVER_KWS: &[&str] = &[SERVER];
-const SSL_KWS: &[&str] = &[SSL, TLS];
-const APP_NAME_KWS: &[&str] = &[APPLICATION_NAME, APP_NAME];
 
 lazy_static! {
     static ref KEYWORDS: RegexSet = RegexSetBuilder::new(
-        [
-            AUTH_SRC,
-            AUTH_SOURCE,
-            DATABASE,
-            DRIVER,
-            DSN,
-            PASSWORD,
-            PWD,
-            SERVER,
-            SSL,
-            TLS,
-            USER,
-            UID,
-            URI,
-            APPLICATION_NAME,
-            APP_NAME
-        ]
-        .into_iter()
-        .map(|x| "^".to_string() + x + "$")
-        .collect::<Vec<_>>()
+        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI,]
+            .into_iter()
+            .map(|x| "^".to_string() + x + "$")
+            .collect::<Vec<_>>()
     )
     .case_insensitive(true)
     .build()
@@ -195,27 +170,10 @@ impl<'a> ODBCUri<'a> {
     // remove all the attributes necessary to make a mongo_uri. This is destructive!
     pub fn try_into_client_options(&mut self) -> Result<ClientOptions> {
         let uri = self.remove(URI_KWS);
-        let mut opts = if let Some(uri) = uri {
-            self.handle_uri(uri)
-        } else {
-            self.handle_no_uri()
-        }?;
-        // app_name specified as attribute should supercede mongo uri.
-        let app_name = self.remove(APP_NAME_KWS).map(String::from);
-        if app_name.is_some() {
-            opts.app_name = app_name;
+        if let Some(uri) = uri {
+            return self.handle_uri(uri);
         }
-        // ssl setting as attribute should supercede mongo uri.
-        let ssl = self.remove(SSL_KWS);
-        if ssl.is_some() && ssl.unwrap() != "0" && ssl.unwrap().to_lowercase() != "false" {
-            opts.tls = Some(Tls::Enabled(TlsOptions::builder().build()));
-        };
-        // auth_source as attribute should supercede mongo uri.
-        let auth_source = self.remove(AUTH_SRC_KWS).map(String::from);
-        if auth_source.is_some() {
-            opts.credential.as_mut().unwrap().source = auth_source;
-        }
-        Ok(opts)
+        self.handle_no_uri()
     }
 
     fn check_client_opts_credentials(client_options: &ClientOptions) -> Result<()> {
@@ -260,6 +218,10 @@ impl<'a> ODBCUri<'a> {
                 client_options.credential.as_mut().unwrap().password = pwd.map(String::from);
             }
             Self::check_client_opts_credentials(&client_options)?;
+            let server = self.remove(SERVER_KWS);
+            if let Some(server) = server {
+                client_options.hosts = vec![ServerAddress::parse(server)?];
+            }
             return Ok(client_options);
         }
         // if the credentials were not set in the mongo uri, then user and pwd are _required_ to be
@@ -272,6 +234,10 @@ impl<'a> ODBCUri<'a> {
                 .password(pwd.to_string())
                 .build(),
         );
+        let server = self.remove(SERVER_KWS);
+        if let Some(server) = server {
+            client_options.hosts = vec![ServerAddress::parse(server)?];
+        }
         Ok(client_options)
     }
 
@@ -617,66 +583,6 @@ mod unit {
                     .password
             );
         }
-        // SSL=faLse should not set SSL option
-        #[test]
-        fn ssl_eq_false_should_not_set_ssl() {
-            use crate::odbc_uri::ODBCUri;
-            assert_eq!(
-                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
-                    .unwrap()
-                    .tls,
-                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=faLse")
-                    .unwrap()
-                    .try_into_client_options()
-                    .unwrap()
-                    .tls
-            );
-        }
-
-        #[test]
-        fn ssl_eq_0_should_not_set_ssl() {
-            use crate::odbc_uri::ODBCUri;
-            assert_eq!(
-                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
-                    .unwrap()
-                    .tls,
-                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=0")
-                    .unwrap()
-                    .try_into_client_options()
-                    .unwrap()
-                    .tls
-            );
-        }
-
-        #[test]
-        fn ssl_eq_1_should_set_ssl_to_true() {
-            use crate::odbc_uri::ODBCUri;
-            assert_eq!(
-                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017/?ssl=true")
-                    .unwrap()
-                    .tls,
-                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=1")
-                    .unwrap()
-                    .try_into_client_options()
-                    .unwrap()
-                    .tls
-            );
-        }
-
-        #[test]
-        fn ssl_eq_true_should_set_ssl_to_true() {
-            use crate::odbc_uri::ODBCUri;
-            assert_eq!(
-                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017/?ssl=true")
-                    .unwrap()
-                    .tls,
-                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017;SSL=true")
-                    .unwrap()
-                    .try_into_client_options()
-                    .unwrap()
-                    .tls
-            );
-        }
 
         #[test]
         fn uri_with_embedded_user_and_password_works() {
@@ -764,43 +670,6 @@ mod unit {
                         .unwrap()
                         .try_into_client_options()
                 )
-            );
-        }
-
-        #[test]
-        fn if_uid_and_pw_not_set_in_uri_auth_source_is_lost() {
-            // this conforms to the connection string spec for mongodb, auth_source is explicitly
-            // lost in a mongo connection string (uri) if username and password are not supplied.
-            use crate::odbc_uri::ODBCUri;
-            assert_eq!(
-                None,
-                ODBCUri::new("URI=mongodb://127.0.0.1:27017/?authSource=foo;UID=foo;PWD=bar")
-                    .unwrap()
-                    .try_into_client_options()
-                    .unwrap()
-                    .credential
-                    .unwrap()
-                    .source
-            );
-        }
-
-        #[test]
-        fn odbc_attributes_supercede_uri_options() {
-            use crate::odbc_uri::ODBCUri;
-            let expected_opts = ClientOptions::parse(
-                "mongodb://foo:bar@127.0.0.1:27017/?authSource=b&appName=app2&tls=true",
-            )
-            .unwrap();
-            let opts = ODBCUri::new("URI=mongodb://foo:bar@127.0.0.1:27017/?authSource=a&appName=app1&tls=false;TLS=true;auth_src=b;app_name=app2")
-                .unwrap()
-                .try_into_client_options()
-                .unwrap();
-            assert_eq!(expected_opts.hosts, opts.hosts);
-            assert_eq!(expected_opts.app_name, opts.app_name);
-            assert_eq!(expected_opts.tls, opts.tls);
-            assert_eq!(
-                expected_opts.credential.unwrap().source,
-                opts.credential.unwrap().source
             );
         }
     }
