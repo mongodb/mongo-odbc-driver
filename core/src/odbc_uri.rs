@@ -226,7 +226,7 @@ impl<'a> ODBCUri<'a> {
     fn handle_uri(&mut self, uri: &str) -> Result<ClientOptions> {
         let server = self.remove(SERVER_KWS);
         let source = AUTH_SOURCE_REGEX
-            .captures(&uri)
+            .captures(uri)
             .and_then(|cap| cap.name("source").map(|s| s.as_str()));
         let mut client_options = ClientOptions::parse(uri)?;
         if client_options.credential.is_some() {
