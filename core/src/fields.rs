@@ -512,15 +512,22 @@ impl MongoFields {
         loop {
             if self.collections_for_db.is_some() {
                 for current_collection in self.collections_for_db.as_mut().unwrap() {
-                    let get_schema_cmd = doc! {"sqlGetSchema": current_collection.unwrap().name};
+                    let collection_name = current_collection.unwrap().name;
+                    let get_schema_cmd = doc! {"sqlGetSchema": collection_name.clone()};
 
                     let db = mongo_connection.client.database(&self.current_db_name);
-                    let current_col_metadata_response: SqlGetSchemaResponse =
+                    let current_col_metadata_response: Result<SqlGetSchemaResponse> =
                         bson::from_document(db.run_command(get_schema_cmd, None).unwrap())
-                            .map_err(Error::BsonDeserialization)
-                            .unwrap();
+                            .map_err(Error::BsonDeserialization);
+                    if current_col_metadata_response.is_err() {
+                        continue;
+                    }
+                    let current_col_metadata_response = current_col_metadata_response.unwrap();
                     let current_col_metadata = current_col_metadata_response
-                        .process_metadata(&self.current_db_name)
+                        .process_collection_metadata(
+                            &self.current_db_name,
+                            collection_name.as_str(),
+                        )
                         .unwrap();
                     if !current_col_metadata.is_empty() {
                         self.current_col_metadata = current_col_metadata;

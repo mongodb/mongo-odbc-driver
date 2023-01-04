@@ -1,10 +1,11 @@
 use crate::{
     api::{
         data::{
-            get_diag_rec, i16_len, i32_len, input_text_to_string, input_wtext_to_string,
-            set_str_length, unsupported_function,
+            i16_len, i32_len, input_text_to_string, input_wtext_to_string, set_str_length,
+            unsupported_function,
         },
         definitions::*,
+        diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
         util::{connection_attribute_to_string, format_version},
     },
@@ -13,7 +14,7 @@ use crate::{
 use bson::Bson;
 use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
-    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
+    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoQuery, MongoStatement, MongoTableTypes,
 };
 use num_traits::FromPrimitive;
@@ -571,16 +572,63 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumns(
     statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _catalog_name_length: SmallInt,
-    _schema_name: *const Char,
-    _schema_name_length: SmallInt,
-    _table_name: *const Char,
-    _table_name_length: SmallInt,
-    _column_name: *const Char,
-    _column_name_length: SmallInt,
+    catalog_name: *const Char,
+    catalog_name_length: SmallInt,
+    schema_name: *const Char,
+    schema_name_length: SmallInt,
+    table_name: *const Char,
+    table_name_length: SmallInt,
+    column_name: *const Char,
+    column_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLColumns")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            if !(schema_name.is_null() || schema_name_length == 0) {
+                mongo_handle.add_diag_info(ODBCError::UnsupportedFieldSchema());
+                return SqlReturn::ERROR;
+            }
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let catalog_string = input_text_to_string(catalog_name, catalog_name_length as usize);
+            let catalog = if catalog_name.is_null() {
+                None
+            } else {
+                Some(catalog_string.as_str())
+            };
+            // ignore schema
+            let table_string = input_text_to_string(table_name, table_name_length as usize);
+            let table = if table_name.is_null() {
+                None
+            } else {
+                Some(table_string.as_str())
+            };
+            let column_name_string = input_text_to_string(column_name, column_name_length as usize);
+            let column = if column_name.is_null() {
+                None
+            } else {
+                Some(column_name_string.as_str())
+            };
+            let connection = stmt.connection;
+            let mongo_statement = sql_columns(
+                (*connection)
+                    .as_connection()
+                    .unwrap()
+                    .mongo_connection
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap(),
+                stmt.attributes.read().unwrap().query_timeout as i32,
+                catalog,
+                table,
+                column,
+            );
+            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+            *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -594,16 +642,76 @@ pub unsafe extern "C" fn SQLColumns(
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnsW(
     statement_handle: HStmt,
-    _catalog_name: *const WChar,
-    _catalog_name_length: SmallInt,
+    catalog_name: *const WChar,
+    catalog_name_length: SmallInt,
     _schema_name: *const WChar,
     _schema_name_length: SmallInt,
-    _table_name: *const WChar,
-    _table_name_length: SmallInt,
-    _column_name: *const WChar,
-    _column_name_length: SmallInt,
+    table_name: *const WChar,
+    table_name_length: SmallInt,
+    column_name: *const WChar,
+    column_name_length: SmallInt,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let catalog_string = input_wtext_to_string(catalog_name, catalog_name_length as usize);
+            let catalog = if catalog_name.is_null() {
+                None
+            } else {
+                Some(catalog_string.as_str())
+            };
+            // ignore schema
+            let table_string = input_wtext_to_string(table_name, table_name_length as usize);
+            let table = if table_name.is_null() {
+                None
+            } else {
+                Some(table_string.as_str())
+            };
+            let column_name_string =
+                input_wtext_to_string(column_name, column_name_length as usize);
+            let column = if column_name.is_null() {
+                None
+            } else {
+                Some(column_name_string.as_str())
+            };
+            let connection = stmt.connection;
+            let mongo_statement = sql_columns(
+                (*connection)
+                    .as_connection()
+                    .unwrap()
+                    .mongo_connection
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap(),
+                stmt.attributes.read().unwrap().query_timeout as i32,
+                catalog,
+                table,
+                column,
+            );
+            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+            *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
+}
+
+fn sql_columns(
+    mongo_connection: &MongoConnection,
+    query_timeout: i32,
+    catalog: Option<&str>,
+    table: Option<&str>,
+    column: Option<&str>,
+) -> Result<Box<dyn MongoStatement>> {
+    Ok(Box::new(MongoFields::list_columns(
+        mongo_connection,
+        Some(query_timeout),
+        catalog,
+        table,
+        column,
+    )))
 }
 
 ///
@@ -1630,13 +1738,118 @@ pub unsafe extern "C" fn SQLGetDiagField(
 pub unsafe extern "C" fn SQLGetDiagFieldW(
     _handle_type: HandleType,
     handle: Handle,
-    _record_rumber: SmallInt,
+    _record_number: SmallInt,
     _diag_identifier: SmallInt,
     _diag_info_ptr: Pointer,
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagFieldW")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = handle as *mut MongoHandle;
+            let get_error = |errors: &Vec<ODBCError>, diag_identifier: DiagType| -> SqlReturn {
+                get_diag_field(
+                    errors,
+                    diag_identifier,
+                    _diag_info_ptr,
+                    _record_number,
+                    _buffer_length,
+                    _string_length_ptr,
+                    true,
+                )
+            };
+
+            match FromPrimitive::from_i16(_diag_identifier) {
+                Some(diag_identifier) => {
+                    match diag_identifier {
+                        // some diagnostics are statement specific; return error if another handle is passed
+                        DiagType::SQL_DIAG_ROW_COUNT | DiagType::SQL_DIAG_ROW_NUMBER => {
+                            if _handle_type != HandleType::Stmt {
+                                return SqlReturn::ERROR;
+                            }
+                            get_stmt_diag_field(diag_identifier, _diag_info_ptr)
+                        }
+                        DiagType::SQL_DIAG_NUMBER
+                        | DiagType::SQL_DIAG_MESSAGE_TEXT
+                        | DiagType::SQL_DIAG_NATIVE
+                        | DiagType::SQL_DIAG_SQLSTATE
+                        | DiagType::SQL_DIAG_RETURNCODE => match _handle_type {
+                            HandleType::Env => {
+                                let env = must_be_env!(mongo_handle);
+                                get_error(&env.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Dbc => {
+                                let dbc = must_be_conn!(mongo_handle);
+                                get_error(&dbc.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Stmt => {
+                                let stmt = must_be_stmt!(mongo_handle);
+                                get_error(&stmt.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Desc => {
+                                let desc = must_be_desc!(mongo_handle);
+                                get_error(&desc.errors.read().unwrap(), diag_identifier)
+                            }
+                        },
+                        // TODO: SQL-1152: Implement additional diag types
+                        // this condition should only occur if the _diag_identifier is not in the spec
+                        _ => SqlReturn::ERROR,
+                    }
+                }
+                None => SqlReturn::ERROR,
+            }
+        },
+        handle
+    )
+}
+
+macro_rules! sql_get_diag_rec_impl {
+    ($handle_type:ident, $handle:ident, $rec_number:ident, $state:ident, $native_error_ptr:ident, $message_text:ident, $buffer_length:ident, $text_length_ptr:ident, $error_output_func:ident) => {{
+        panic_safe_exec!(
+            || {
+                if $rec_number < 1 || $buffer_length < 0 {
+                    return SqlReturn::ERROR;
+                }
+                let mongo_handle = $handle as *mut MongoHandle;
+                // Make the record number zero-indexed
+                let rec_number = ($rec_number - 1) as usize;
+
+                let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
+                    match errors.get(rec_number) {
+                        Some(odbc_err) => $error_output_func(
+                            odbc_err,
+                            $state,
+                            $message_text,
+                            $buffer_length,
+                            $text_length_ptr,
+                            $native_error_ptr,
+                        ),
+                        None => SqlReturn::NO_DATA,
+                    }
+                };
+
+                match $handle_type {
+                    HandleType::Env => {
+                        let env = must_be_env!(mongo_handle);
+                        get_error(&env.errors.read().unwrap())
+                    }
+                    HandleType::Dbc => {
+                        let dbc = must_be_conn!(mongo_handle);
+                        get_error(&dbc.errors.read().unwrap())
+                    }
+                    HandleType::Stmt => {
+                        let stmt = must_be_stmt!(mongo_handle);
+                        get_error(&stmt.errors.read().unwrap())
+                    }
+                    HandleType::Desc => {
+                        let desc = must_be_desc!(mongo_handle);
+                        get_error(&desc.errors.read().unwrap())
+                    }
+                }
+            },
+            $handle
+        );
+    }};
 }
 
 ///
@@ -1647,16 +1860,26 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagRec(
-    _handle_type: HandleType,
+    handle_type: HandleType,
     handle: Handle,
-    _rec_number: SmallInt,
-    _state: *mut Char,
-    _native_error_ptr: *mut Integer,
-    _message_text: *mut Char,
-    _buffer_length: SmallInt,
-    _text_length_ptr: *mut SmallInt,
+    rec_number: SmallInt,
+    state: *mut Char,
+    native_error_ptr: *mut Integer,
+    message_text: *mut Char,
+    buffer_length: SmallInt,
+    text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagRec")
+    sql_get_diag_rec_impl!(
+        handle_type,
+        handle,
+        rec_number,
+        state,
+        native_error_ptr,
+        message_text,
+        buffer_length,
+        text_length_ptr,
+        get_diag_rec
+    )
 }
 
 ///
@@ -1678,50 +1901,17 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(
-        || {
-            if rec_number < 1 || buffer_length < 0 {
-                return SqlReturn::ERROR;
-            }
-            let mongo_handle = handle as *mut MongoHandle;
-            // Make the record number zero-indexed
-            let rec_number = (rec_number - 1) as usize;
-
-            let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
-                match errors.get(rec_number) {
-                    Some(odbc_err) => get_diag_rec(
-                        odbc_err,
-                        state,
-                        message_text,
-                        buffer_length,
-                        text_length_ptr,
-                        native_error_ptr,
-                    ),
-                    None => SqlReturn::NO_DATA,
-                }
-            };
-
-            match handle_type {
-                HandleType::Env => {
-                    let env = must_be_env!(mongo_handle);
-                    get_error(&env.errors.read().unwrap())
-                }
-                HandleType::Dbc => {
-                    let dbc = must_be_conn!(mongo_handle);
-                    get_error(&dbc.errors.read().unwrap())
-                }
-                HandleType::Stmt => {
-                    let stmt = must_be_stmt!(mongo_handle);
-                    get_error(&stmt.errors.read().unwrap())
-                }
-                HandleType::Desc => {
-                    let desc = must_be_desc!(mongo_handle);
-                    get_error(&desc.errors.read().unwrap())
-                }
-            }
-        },
-        handle
-    );
+    sql_get_diag_rec_impl!(
+        handle_type,
+        handle,
+        rec_number,
+        state,
+        native_error_ptr,
+        message_text,
+        buffer_length,
+        text_length_ptr,
+        get_diag_recw
+    )
 }
 
 ///
