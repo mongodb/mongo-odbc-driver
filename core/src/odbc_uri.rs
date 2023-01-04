@@ -1,7 +1,7 @@
 use crate::err::{Error, Result};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
-use regex::{RegexSet, RegexSetBuilder};
+use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use std::collections::HashMap;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
@@ -33,6 +33,10 @@ lazy_static! {
     .case_insensitive(true)
     .build()
     .unwrap();
+    static ref AUTH_SOURCE_REGEX: Regex = RegexBuilder::new(r#"[&?]authSource=(?P<source>[^&]*)"#)
+        .case_insensitive(true)
+        .build()
+        .unwrap();
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -204,7 +208,26 @@ impl<'a> ODBCUri<'a> {
         Ok(())
     }
 
+    fn set_server_and_source(
+        mut opts: &mut ClientOptions,
+        server: Option<&str>,
+        source: Option<&str>,
+    ) -> Result<()> {
+        // server should supercede that specified in the uri, if specified.
+        if let Some(server) = server {
+            opts.hosts = vec![ServerAddress::parse(server)?];
+        }
+        if source.is_some() {
+            opts.credential.as_mut().unwrap().source = source.map(String::from);
+        }
+        Ok(())
+    }
+
     fn handle_uri(&mut self, uri: &str) -> Result<ClientOptions> {
+        let server = self.remove(SERVER_KWS);
+        let source = AUTH_SOURCE_REGEX
+            .captures(&uri)
+            .and_then(|cap| cap.name("source").map(|s| s.as_str()));
         let mut client_options = ClientOptions::parse(uri)?;
         if client_options.credential.is_some() {
             // user name set as attribute should supercede mongo uri
@@ -218,10 +241,7 @@ impl<'a> ODBCUri<'a> {
                 client_options.credential.as_mut().unwrap().password = pwd.map(String::from);
             }
             Self::check_client_opts_credentials(&client_options)?;
-            let server = self.remove(SERVER_KWS);
-            if let Some(server) = server {
-                client_options.hosts = vec![ServerAddress::parse(server)?];
-            }
+            Self::set_server_and_source(&mut client_options, server, source)?;
             return Ok(client_options);
         }
         // if the credentials were not set in the mongo uri, then user and pwd are _required_ to be
@@ -234,10 +254,7 @@ impl<'a> ODBCUri<'a> {
                 .password(pwd.to_string())
                 .build(),
         );
-        let server = self.remove(SERVER_KWS);
-        if let Some(server) = server {
-            client_options.hosts = vec![ServerAddress::parse(server)?];
-        }
+        Self::set_server_and_source(&mut client_options, server, source)?;
         Ok(client_options)
     }
 
@@ -671,6 +688,23 @@ mod unit {
                         .try_into_client_options()
                 )
             );
+        }
+
+        #[test]
+        fn auth_source_correctness() {
+            use crate::odbc_uri::ODBCUri;
+            for (source, uri) in [
+                (Some("authDB".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar"),
+                (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
+                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B;UID=foo;PWD=bar"),
+                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B&appName=tgg#fed;UID=foo;PWD=bar"),
+                (Some("$external".to_string()), "URI=mongodb://uid:pwd@localhost/?authSource=$external&appName=tgg#fed;UID=foo;PWD=bar"),
+                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?appName=test&auTHSource=aut:hD@B;UID=foo;PWD=bar"),
+                (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
+            ] {
+            assert_eq!(
+                source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().credential.unwrap().source);
+            }
         }
     }
 }
