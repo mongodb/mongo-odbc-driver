@@ -70,7 +70,7 @@ mod integration {
 
     test_connection_diagnostics! (
             missing_user_in_connection_string,
-            in_connection_string = "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+            in_connection_string = "Driver=ADF_ODBC_DRIVER;SERVER=N_A;PWD=N_A",
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
@@ -78,7 +78,7 @@ mod integration {
         );
     test_connection_diagnostics! (
             missing_pwd_in_connection_string,
-            in_connection_string = "Driver=ADF_ODBC_DRIVER;SERVER=N_A;AUTH_SRC=N_A;USER=N_A",
+            in_connection_string = "Driver=ADF_ODBC_DRIVER;SERVER=N_A;USER=N_A",
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
@@ -86,7 +86,7 @@ mod integration {
         );
     test_connection_diagnostics!(
         missing_driver_in_connection_string,
-        in_connection_string = "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+        in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
         driver_completion = DriverConnectOption::NoPrompt,
         expected_sql_state = NO_DSN_OR_DRIVER,
         expected_sql_return = SqlReturn::ERROR,
@@ -95,7 +95,7 @@ mod integration {
     );
     test_connection_diagnostics!(
         unsupported_driver_connect_option_prompt,
-        in_connection_string = "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+        in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
         driver_completion = DriverConnectOption::Prompt,
         expected_sql_state = NOT_IMPLEMENTED,
         expected_sql_return = SqlReturn::ERROR,
@@ -103,7 +103,7 @@ mod integration {
     );
     test_connection_diagnostics!(
         unsupported_driver_connect_option_complete,
-        in_connection_string = "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+        in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
         driver_completion = DriverConnectOption::Complete,
         expected_sql_state = NOT_IMPLEMENTED,
         expected_sql_return = SqlReturn::ERROR,
@@ -112,7 +112,7 @@ mod integration {
     );
     test_connection_diagnostics!(
         unsupported_driver_connect_option_complete_required,
-        in_connection_string = "USER=N_A;SERVER=N_A;AUTH_SRC=N_A;PWD=N_A",
+        in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
         driver_completion = DriverConnectOption::CompleteRequired,
         expected_sql_state = NOT_IMPLEMENTED,
         expected_sql_return = SqlReturn::ERROR,
