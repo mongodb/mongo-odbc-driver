@@ -7,7 +7,6 @@ use crate::{
         definitions::*,
         diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
-        odbc_uri::ODBCUri,
         util::{connection_attribute_to_string, format_version},
     },
     handles::definitions::*,
@@ -15,8 +14,8 @@ use crate::{
 use bson::Bson;
 use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
-    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoFields, MongoQuery,
-    MongoStatement, MongoTableTypes,
+    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
+    MongoFields, MongoQuery, MongoStatement, MongoTableTypes,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -940,8 +939,7 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 
 fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoConnection> {
     let mut odbc_uri = ODBCUri::new(odbc_uri_string)?;
-    let mongo_uri = odbc_uri.remove_to_mongo_uri()?;
-    let auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
+    let client_options = odbc_uri.try_into_client_options()?;
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
@@ -953,17 +951,14 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     };
     let connection_timeout = conn_attrs.connection_timeout;
     let login_timeout = conn_attrs.login_timeout;
-    let application_name = odbc_uri.remove(&["app_name", "application_name"]);
     // ODBCError has an impl From mongo_odbc_core::Error, but that does not
     // create an impl From Result<T, mongo_odbc_core::Error> to Result<T, ODBCError>
     // hence this bizarre Ok(func?) pattern.
     Ok(mongo_odbc_core::MongoConnection::connect(
-        &mongo_uri,
-        auth_src,
+        client_options,
         database,
         connection_timeout,
         login_timeout,
-        application_name,
     )?)
 }
 

@@ -17,6 +17,8 @@ pub enum Error {
     InvalidCursorState,
     #[error("Result set metadata JSON schema must be object with properties")]
     InvalidResultSetJsonSchema,
+    #[error("Invalid Uri: {0}")]
+    InvalidUriFormat(String),
     #[error("Field '{0}' schema missing BSON type")]
     MissingFieldBsonType(String),
     #[error("Invalid connection string. Parse error: {0}")]
@@ -43,6 +45,7 @@ impl Error {
                 }
                 GENERAL_ERROR
             }
+            Error::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
             Error::MongoParseConnectionString(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
@@ -73,6 +76,7 @@ impl Error {
                 }
             }
             Error::NoDatabase
+            | Error::InvalidUriFormat(_)
             | Error::InvalidCursorState
             | Error::InvalidResultSetJsonSchema
             | Error::UnknownColumn(_)

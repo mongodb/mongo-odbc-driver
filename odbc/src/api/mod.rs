@@ -2,7 +2,6 @@ pub(crate) mod definitions;
 pub(crate) mod diag;
 pub(crate) mod errors;
 mod functions;
-pub(crate) mod odbc_uri;
 pub use functions::*;
 mod data;
 pub(crate) mod util;
