@@ -14,8 +14,8 @@ use crate::{
 use bson::Bson;
 use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
-    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
-    MongoQuery, MongoStatement, MongoTableTypes,
+    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
+    MongoFields, MongoQuery, MongoStatement, MongoTableTypes,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
