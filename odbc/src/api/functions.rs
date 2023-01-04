@@ -1,10 +1,11 @@
 use crate::{
     api::{
         data::{
-            get_diag_rec, get_diag_recw, i16_len, i32_len, input_text_to_string,
-            input_wtext_to_string, set_str_length, unsupported_function,
+            i16_len, i32_len, input_text_to_string, input_wtext_to_string, set_str_length,
+            unsupported_function,
         },
         definitions::*,
+        diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
         odbc_uri::ODBCUri,
         util::{connection_attribute_to_string, format_version},
@@ -1742,13 +1743,69 @@ pub unsafe extern "C" fn SQLGetDiagField(
 pub unsafe extern "C" fn SQLGetDiagFieldW(
     _handle_type: HandleType,
     handle: Handle,
-    _record_rumber: SmallInt,
+    _record_number: SmallInt,
     _diag_identifier: SmallInt,
     _diag_info_ptr: Pointer,
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagFieldW")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = handle as *mut MongoHandle;
+            let get_error = |errors: &Vec<ODBCError>, diag_identifier: DiagType| -> SqlReturn {
+                get_diag_field(
+                    errors,
+                    diag_identifier,
+                    _diag_info_ptr,
+                    _record_number,
+                    _buffer_length,
+                    _string_length_ptr,
+                    true,
+                )
+            };
+
+            match FromPrimitive::from_i16(_diag_identifier) {
+                Some(diag_identifier) => {
+                    match diag_identifier {
+                        // some diagnostics are statement specific; return error if another handle is passed
+                        DiagType::SQL_DIAG_ROW_COUNT | DiagType::SQL_DIAG_ROW_NUMBER => {
+                            if _handle_type != HandleType::Stmt {
+                                return SqlReturn::ERROR;
+                            }
+                            get_stmt_diag_field(diag_identifier, _diag_info_ptr)
+                        }
+                        DiagType::SQL_DIAG_NUMBER
+                        | DiagType::SQL_DIAG_MESSAGE_TEXT
+                        | DiagType::SQL_DIAG_NATIVE
+                        | DiagType::SQL_DIAG_SQLSTATE
+                        | DiagType::SQL_DIAG_RETURNCODE => match _handle_type {
+                            HandleType::Env => {
+                                let env = must_be_env!(mongo_handle);
+                                get_error(&env.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Dbc => {
+                                let dbc = must_be_conn!(mongo_handle);
+                                get_error(&dbc.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Stmt => {
+                                let stmt = must_be_stmt!(mongo_handle);
+                                get_error(&stmt.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Desc => {
+                                let desc = must_be_desc!(mongo_handle);
+                                get_error(&desc.errors.read().unwrap(), diag_identifier)
+                            }
+                        },
+                        // TODO: SQL-1152: Implement additional diag types
+                        // this condition should only occur if the _diag_identifier is not in the spec
+                        _ => SqlReturn::ERROR,
+                    }
+                }
+                None => SqlReturn::ERROR,
+            }
+        },
+        handle
+    )
 }
 
 macro_rules! sql_get_diag_rec_impl {
