@@ -1,5 +1,8 @@
 use crate::{
-    api::{data::i16_len, definitions::DiagType},
+    api::{
+        data::i16_len,
+        definitions::{DiagType, SQL_ROW_NUMBER_UNKNOWN},
+    },
     errors::ODBCError,
 };
 use odbc_sys::Pointer;
@@ -12,7 +15,22 @@ use std::ptr::copy_nonoverlapping;
 /// # Safety
 /// This writes to a raw C-pointer
 ///
-pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
+pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut Char) {
+    if output_ptr.is_null() {
+        return;
+    }
+    let sql_state = &format!("{}\0", sql_state);
+    let state_u8 = sql_state.bytes().collect::<Vec<u8>>();
+    copy_nonoverlapping(state_u8.as_ptr(), output_ptr, 6);
+}
+
+///
+/// set_sql_statew writes the given sql state to the [`output_ptr`].
+///
+/// # Safety
+/// This writes to a raw C-pointer
+///
+pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WChar) {
     if output_ptr.is_null() {
         return;
     }
@@ -30,32 +48,51 @@ pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut WChar) {
 ///
 pub unsafe fn get_diag_rec(
     error: &ODBCError,
-    state: *mut WChar,
-    message_text: Pointer,
+    state: *mut Char,
+    message_text: *mut Char,
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
     native_error_ptr: *mut Integer,
-    wstring: bool,
 ) -> SqlReturn {
     if !native_error_ptr.is_null() {
         *native_error_ptr = error.get_native_err_code();
     }
     set_sql_state(error.get_sql_state(), state);
     let message = format!("{}", error);
-    match wstring {
-        true => i16_len::set_output_wstring(
-            &message,
-            message_text as *mut WChar,
-            buffer_length as usize,
-            text_length_ptr,
-        ),
-        false => i16_len::set_output_string(
-            &message,
-            message_text as *mut Char,
-            buffer_length as usize,
-            text_length_ptr,
-        ),
+    i16_len::set_output_string(
+        &message,
+        message_text,
+        buffer_length as usize,
+        text_length_ptr,
+    )
+}
+
+///
+/// get_diag_recw copies the given ODBC error's diagnostic information
+/// into the provided pointers.
+///
+/// # Safety
+/// This writes to multiple raw C-pointers
+///
+pub unsafe fn get_diag_recw(
+    error: &ODBCError,
+    state: *mut WChar,
+    message_text: *mut WChar,
+    buffer_length: SmallInt,
+    text_length_ptr: *mut SmallInt,
+    native_error_ptr: *mut Integer,
+) -> SqlReturn {
+    if !native_error_ptr.is_null() {
+        *native_error_ptr = error.get_native_err_code();
     }
+    set_sql_statew(error.get_sql_state(), state);
+    let message = format!("{}", error);
+    i16_len::set_output_wstring(
+        &message,
+        message_text,
+        buffer_length as usize,
+        text_length_ptr,
+    )
 }
 
 ///
@@ -75,7 +112,6 @@ pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Poin
         }
         DiagType::SQL_DIAG_ROW_NUMBER => {
             // default to unknown, as at the moment statement handels don't update their row number attribute
-            const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
             i16_len::set_output_fixed_data(&SQL_ROW_NUMBER_UNKNOWN, diag_info_ptr, &mut 0)
         }
         // this should not be reachable if match branches here match those in SQLGetDiagFieldW
@@ -97,7 +133,7 @@ pub unsafe fn get_diag_field(
     record_number: i16,
     buffer_length: i16,
     string_length_ptr: *mut i16,
-    wstring: bool,
+    is_wstring: bool,
 ) -> SqlReturn {
     // NOTE: number is dependent on the list of errors, but is a header, hence separating it from the match
     if diag_identifier == DiagType::SQL_DIAG_NUMBER {
@@ -113,7 +149,7 @@ pub unsafe fn get_diag_field(
                 match diag_identifier {
                     // NOTE: return code is handled by driver manager; just return success
                     DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
-                    DiagType::SQL_DIAG_SQLSTATE => match wstring {
+                    DiagType::SQL_DIAG_SQLSTATE => match is_wstring {
                         true => i16_len::set_output_wstring(
                             error.get_sql_state(),
                             diag_info_ptr as *mut u16,
@@ -134,7 +170,7 @@ pub unsafe fn get_diag_field(
                     ),
                     DiagType::SQL_DIAG_MESSAGE_TEXT => {
                         let message = format!("{}", error);
-                        match wstring {
+                        match is_wstring {
                             true => i16_len::set_output_wstring(
                                 &message,
                                 diag_info_ptr as *mut u16,

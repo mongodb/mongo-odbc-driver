@@ -21,6 +21,21 @@
     ]
   },
   {
+    "name" : "integration_test_2",
+    "collections" : [
+      {
+        "name": "*",
+        "dataSources" : [
+          {
+            "storeName" : "localmongo",
+            "database" : "integration_test_2"
+          }
+        ]
+      }
+    ],
+    "views": null
+  },
+  {
     "name" : "db2",
     "collections" : [
       {

@@ -322,6 +322,8 @@ pub enum DiagType {
     SQL_DIAG_COLUMN_NUMBER = -1247,
 }
 
+pub const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
+
 pub const SQL_CB_NULL: u16 = 0x0000;
 pub const SQL_U16_ZERO: u16 = 0x0000;
 pub const SQL_CL_START: u16 = 0x0001;
