@@ -40,14 +40,10 @@ impl MongoConnection {
         current_db: Option<&str>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
-        application_name: Option<&str>,
     ) -> Result<Self> {
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
         // set application name, note that users can set their own application name, or we default
         // to mongo-odbc-driver.
-        client_options.app_name = application_name
-            .map(String::from)
-            .or_else(|| Some(MONGODB_ODBC_DRIVER.to_string()));
         let auth_src = if let Some(ref cred) = client_options.credential {
             if let Some(ref auth_src) = cred.source {
                 auth_src.clone()

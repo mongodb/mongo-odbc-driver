@@ -843,7 +843,6 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     };
     let connection_timeout = conn_attrs.connection_timeout;
     let login_timeout = conn_attrs.login_timeout;
-    let application_name = odbc_uri.remove(&["app_name", "application_name"]);
     // ODBCError has an impl From mongo_odbc_core::Error, but that does not
     // create an impl From Result<T, mongo_odbc_core::Error> to Result<T, ODBCError>
     // hence this bizarre Ok(func?) pattern.
@@ -852,7 +851,6 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         database,
         connection_timeout,
         login_timeout,
-        application_name,
     )?)
 }
 
