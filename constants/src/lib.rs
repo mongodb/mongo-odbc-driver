@@ -6,6 +6,7 @@ pub const DBMS_NAME: &str = "MongoDB Atlas";
 pub const NOT_IMPLEMENTED: &str = "HYC00";
 pub const TIMEOUT_EXPIRED: &str = "HYT00";
 pub const GENERAL_ERROR: &str = "HY000";
+pub const INVALID_SQL_TYPE: &str = "HY004";
 pub const INVALID_ATTR_VALUE: &str = "HY024";
 pub const INVALID_INFO_TYPE_VALUE: &str = "HY096";
 pub const NO_DSN_OR_DRIVER: &str = "IM007";

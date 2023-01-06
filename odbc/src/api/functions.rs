@@ -15,7 +15,7 @@ use bson::Bson;
 use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
     MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoFields, MongoQuery,
-    MongoStatement, MongoTableTypes, MongoTypesInfo,
+    MongoStatement, MongoTableTypes, MongoTypesInfo, DATA_TYPES,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -117,6 +117,8 @@ macro_rules! panic_safe_exec {
     }};
 }
 pub(crate) use panic_safe_exec;
+
+use super::data;
 
 macro_rules! unimpl {
     ($handle:expr) => {{
@@ -2591,14 +2593,22 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
-pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SqlDataType) -> SqlReturn {
+pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
     panic_safe_exec!(
         || {
             let mongo_handle = MongoHandleRef::from(handle);
-            let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let types_info = MongoTypesInfo::new(_data_type);
-            *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
-            SqlReturn::SUCCESS
+            match DATA_TYPES.iter().any(|v| v.sql_type.0 == data_type) {
+                true => {
+                    let stmt = must_be_valid!((*mongo_handle).as_statement());
+                    let types_info = MongoTypesInfo::new(data_type);
+                    *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
+                    SqlReturn::SUCCESS
+                }
+                false => {
+                    mongo_handle.add_diag_info(ODBCError::InvalidSqlType(data_type.to_string()));
+                    SqlReturn::ERROR
+                }
+            }
         },
         handle
     )

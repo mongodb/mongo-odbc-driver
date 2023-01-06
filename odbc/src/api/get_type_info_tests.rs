@@ -22,7 +22,7 @@ mod unit {
             };
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, data_type)
+                SQLGetTypeInfo(handle as *mut _, data_type.0)
             );
             let stmt = (*handle).as_statement().unwrap();
             // for each expectation, check that calling next succeeds and we get the expected value
@@ -51,6 +51,7 @@ mod unit {
     #[test]
     fn test_all_types() {
         let expectations = vec![
+            "bool",
             "long",
             "binData",
             "array",
@@ -68,7 +69,6 @@ mod unit {
             "timestamp",
             "undefined",
             "int",
-            "bool",
             "double",
             "string",
             "date",
@@ -84,8 +84,16 @@ mod unit {
 
     #[test]
     fn test_invalid_type() {
-        // note: with an empty list of expectations, this will just check that calling next fails
-        validate_result_set(SqlDataType(95), vec![])
+        let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
+            std::ptr::null_mut(),
+            StatementState::Allocated,
+        ));
+        unsafe {
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLGetTypeInfo(handle as *mut _, SqlDataType(95).0)
+            );
+        }
     }
 
     #[test]
@@ -99,7 +107,7 @@ mod unit {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, SqlDataType(4))
+                SQLGetTypeInfo(handle as *mut _, SqlDataType::INTEGER.0)
             );
             let value = stmt
                 .mongo_statement
@@ -113,7 +121,7 @@ mod unit {
     }
 
     #[test]
-    fn test_get_all_values() {
+    fn test_get_all_type_info_row_values() {
         let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
@@ -122,7 +130,7 @@ mod unit {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, SqlDataType(4))
+                SQLGetTypeInfo(handle as *mut _, SqlDataType::INTEGER.0)
             );
             let result = stmt
                 .mongo_statement

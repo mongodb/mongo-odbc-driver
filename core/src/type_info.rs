@@ -16,29 +16,55 @@ use odbc_sys::{Nullability, SqlDataType};
 use lazy_static::lazy_static;
 
 // pub static ref DATA_TYPES: Vec<BsonTypeInfo> = vec![
-const DATA_TYPES: [&BsonTypeInfo; 21] = [
-    &BsonTypeInfo::LONG,                // SqlDataType(-5)
-    &BsonTypeInfo::BINDATA,             // SqlDataType(-2)
-    &BsonTypeInfo::ARRAY,               // SqlDataType(0)
-    &BsonTypeInfo::BSON,                // SqlDataType(0)
-    &BsonTypeInfo::DBPOINTER,           //SqlDataType(0)
-    &BsonTypeInfo::DECIMAL,             // SqlDataType(0)
-    &BsonTypeInfo::JAVASCRIPT,          //SqlDataType(0)
-    &BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
-    &BsonTypeInfo::MAXKEY,              // SqlDataType(0)
-    &BsonTypeInfo::MINKEY,              // SqlDataType(0)
-    &BsonTypeInfo::NULL,                // SqlDataType(0)
-    &BsonTypeInfo::OBJECT,              // SqlDataType(0)
-    &BsonTypeInfo::OBJECTID,            // SqlDataType(0)
-    &BsonTypeInfo::SYMBOL,              //SqlDataType(0)
-    &BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
-    &BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
-    &BsonTypeInfo::INT,                 // SqlDataType(4)
-    &BsonTypeInfo::BOOL,                // SqlDataType(7)
-    &BsonTypeInfo::DOUBLE,              // SqlDataType(8)
-    &BsonTypeInfo::STRING,              // SqlDataType(12)
-    &BsonTypeInfo::DATE,                // SqlDataType(93)
-];
+// const DATA_TYPES: [&BsonTypeInfo; 21] = [
+//     &BsonTypeInfo::BOOL,                // SqlDataType(-7)
+//     &BsonTypeInfo::LONG,                // SqlDataType(-5)
+//     &BsonTypeInfo::BINDATA,             // SqlDataType(-2)
+//     &BsonTypeInfo::ARRAY,               // SqlDataType(0)
+//     &BsonTypeInfo::BSON,                // SqlDataType(0)
+//     &BsonTypeInfo::DBPOINTER,           //SqlDataType(0)
+//     &BsonTypeInfo::DECIMAL,             // SqlDataType(0)
+//     &BsonTypeInfo::JAVASCRIPT,          //SqlDataType(0)
+//     &BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
+//     &BsonTypeInfo::MAXKEY,              // SqlDataType(0)
+//     &BsonTypeInfo::MINKEY,              // SqlDataType(0)
+//     &BsonTypeInfo::NULL,                // SqlDataType(0)
+//     &BsonTypeInfo::OBJECT,              // SqlDataType(0)
+//     &BsonTypeInfo::OBJECTID,            // SqlDataType(0)
+//     &BsonTypeInfo::SYMBOL,              //SqlDataType(0)
+//     &BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
+//     &BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
+//     &BsonTypeInfo::INT,                 // SqlDataType(4)
+//     &BsonTypeInfo::DOUBLE,              // SqlDataType(8)
+//     &BsonTypeInfo::STRING,              // SqlDataType(12)
+//     &BsonTypeInfo::DATE,                // SqlDataType(93)
+// ];
+lazy_static! {
+    pub static ref DATA_TYPES: Vec<BsonTypeInfo> = vec! [
+
+    BsonTypeInfo::BOOL,                // SqlDataType(-7)
+    BsonTypeInfo::LONG,                // SqlDataType(-5)
+    BsonTypeInfo::BINDATA,             // SqlDataType(-2)
+    BsonTypeInfo::ARRAY,               // SqlDataType(0)
+    BsonTypeInfo::BSON,                // SqlDataType(0)
+    BsonTypeInfo::DBPOINTER,           //SqlDataType(0)
+    BsonTypeInfo::DECIMAL,             // SqlDataType(0)
+    BsonTypeInfo::JAVASCRIPT,          //SqlDataType(0)
+    BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
+    BsonTypeInfo::MAXKEY,              // SqlDataType(0)
+    BsonTypeInfo::MINKEY,              // SqlDataType(0)
+    BsonTypeInfo::NULL,                // SqlDataType(0)
+    BsonTypeInfo::OBJECT,              // SqlDataType(0)
+    BsonTypeInfo::OBJECTID,            // SqlDataType(0)
+    BsonTypeInfo::SYMBOL,              //SqlDataType(0)
+    BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
+    BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
+    BsonTypeInfo::INT,                 // SqlDataType(4)
+    BsonTypeInfo::DOUBLE,              // SqlDataType(8)
+    BsonTypeInfo::STRING,              // SqlDataType(12)
+    BsonTypeInfo::DATE,                // SqlDataType(93)
+    ];
+}
 
 lazy_static! {
     pub static ref TYPES_INFO_METADATA: Vec<MongoColMetadata> = vec![
@@ -181,11 +207,11 @@ lazy_static! {
 #[derive(Debug)]
 pub struct MongoTypesInfo {
     current_type_index: isize,
-    sql_data_type: SqlDataType,
+    sql_data_type: i16,
 }
 
 impl MongoTypesInfo {
-    pub fn new(sql_data_type: SqlDataType) -> MongoTypesInfo {
+    pub fn new(sql_data_type: i16) -> MongoTypesInfo {
         MongoTypesInfo {
             current_type_index: 0,
             sql_data_type,
@@ -200,8 +226,11 @@ impl MongoStatement for MongoTypesInfo {
         loop {
             self.current_type_index += 1;
             if self.current_type_index > (DATA_TYPES.len() as isize)
-                || DATA_TYPES[(self.current_type_index - 1) as usize].sql_type == self.sql_data_type
-                || self.sql_data_type == SqlDataType(0)
+                || DATA_TYPES[(self.current_type_index - 1) as usize]
+                    .sql_type
+                    .0
+                    == self.sql_data_type
+                || self.sql_data_type == SqlDataType::UNKNOWN_TYPE.0
             {
                 break;
             }
@@ -247,7 +276,7 @@ impl MongoStatement for MongoTypesInfo {
                     _ => Bson::Null,
                 },
                 6 => Bson::Null,
-                7 => Bson::Int32((**type_info == BsonTypeInfo::OBJECTID) as i32),
+                7 => Bson::Int32((*type_info == BsonTypeInfo::OBJECTID) as i32),
                 8 => Bson::Int32(type_info.is_case_sensitive as i32),
                 9 => Bson::Int32(type_info.searchable),
                 10 => match type_info.is_unsigned {
