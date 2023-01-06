@@ -5,6 +5,7 @@ use std::{env, fs::File, sync::Mutex};
 
 // Checks if DBG_FILE_PATH environment variable exists to use as debug file path. If not set,
 // return the OS temp directory joined with default debug filename 'mongodb_odbc.log'
+#[cfg(debug_assertions)]
 fn get_file_path() -> String {
     if let Ok(file_path) = env::var("DBG_FILE_PATH") {
         return file_path;

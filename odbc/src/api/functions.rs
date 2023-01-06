@@ -123,6 +123,7 @@ macro_rules! panic_safe_exec {
         panic::set_hook(previous_hook);
         match result {
             Ok(sql_return) => {
+                #[allow(unused_variables)]
                 let trace = trace_call_and_outcome(function_name!(), &sql_return);
                 dbg_write!(&trace);
                 return sql_return;
@@ -135,6 +136,7 @@ macro_rules! panic_safe_exec {
                 };
                 handle_ref.add_diag_info(ODBCError::Panic(msg));
                 let sql_return = SqlReturn::ERROR;
+                #[allow(unused_variables)]
                 let trace = trace_call_and_outcome(function_name!(), &sql_return);
                 dbg_write!(&trace);
                 return sql_return;
