@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 pub struct MongoColMetadata {
     pub base_col_name: String,
     pub base_table_name: String,
+    pub case_sensitive: bool,
     pub catalog_name: String,
     // more info for column size can be found here:
     // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/column-size?view=sql-server-ver16
@@ -23,12 +24,14 @@ pub struct MongoColMetadata {
     pub fixed_prec_scale: bool,
     pub label: String,
     pub length: Option<u16>,
+    pub literal_prefix: Option<&'static str>,
+    pub literal_suffix: Option<&'static str>,
     pub col_name: String,
     pub nullability: Nullability,
     pub octet_length: Option<u16>,
     pub precision: Option<u16>,
     pub scale: Option<u16>,
-    pub is_searchable: bool,
+    pub searchable: i32,
     pub table_name: String,
     // BSON type name
     pub type_name: String,
@@ -59,29 +62,26 @@ impl MongoColMetadata {
             // always be empty string for now.
             base_col_name: "".to_string(),
             base_table_name: "".to_string(),
+            case_sensitive: bson_type_info.is_case_sensitive,
             catalog_name: "".to_string(),
             display_size: bson_type_info.fixed_bytes_length,
-            fixed_prec_scale: false,
+            fixed_prec_scale: bson_type_info.fixed_prec_scale,
             label: field_name.clone(),
             length: bson_type_info.fixed_bytes_length,
+            literal_prefix: bson_type_info.literal_prefix,
+            literal_suffix: bson_type_info.literal_suffix,
             col_name: field_name,
             nullability,
             octet_length: bson_type_info.octet_length,
             precision: bson_type_info.precision,
             scale: bson_type_info.scale,
-            is_searchable: bson_type_info.searchable,
+            searchable: bson_type_info.searchable,
             table_name: datasource_name,
             type_name: bson_type_info.type_name.to_string(),
             sql_type: bson_type_info.sql_type,
-            non_concise_type: match bson_type_info.sql_type {
-                SqlDataType::TIMESTAMP => SqlDataType::DATETIME,
-                x => x,
-            },
-            sql_code: match bson_type_info.sql_type {
-                SqlDataType::TIMESTAMP => Some(3),
-                _ => None,
-            },
-            is_unsigned: false,
+            non_concise_type: bson_type_info.non_concise_type,
+            sql_code: bson_type_info.sql_code,
+            is_unsigned: bson_type_info.is_unsigned.unwrap_or(true),
             is_updatable: false,
         }
     }

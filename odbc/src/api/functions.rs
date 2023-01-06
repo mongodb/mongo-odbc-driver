@@ -436,13 +436,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                         mongo_stmt.as_ref().unwrap().get_resultset_metadata().len() as Len;
                     SqlReturn::SUCCESS
                 }
-                Desc::CaseSensitive => numeric_col_attr(&|x: &MongoColMetadata| {
-                    (if x.type_name == "string" {
-                        SqlBool::True
-                    } else {
-                        SqlBool::False
-                    }) as Len
-                }),
+                Desc::CaseSensitive => {
+                    numeric_col_attr(&|x: &MongoColMetadata| x.case_sensitive as Len)
+                }
                 Desc::BaseColumnName => {
                     string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref())
                 }
@@ -462,10 +458,13 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::Length => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len)
                 }
-                Desc::LiteralPrefix
-                | Desc::LiteralSuffix
-                | Desc::LocalTypeName
-                | Desc::SchemaName => string_col_attr(&|_| ""),
+                Desc::LiteralPrefix => {
+                    string_col_attr(&|x: &MongoColMetadata| x.literal_prefix.unwrap_or(""))
+                }
+                Desc::LiteralSuffix => {
+                    string_col_attr(&|x: &MongoColMetadata| x.literal_suffix.unwrap_or(""))
+                }
+                Desc::LocalTypeName | Desc::SchemaName => string_col_attr(&|_| ""),
                 Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
                 Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.nullability.0 as Len),
                 Desc::OctetLength => {
@@ -477,9 +476,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::Scale => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len)
                 }
-                Desc::Searchable => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.is_searchable as Len)
-                }
+                Desc::Searchable => numeric_col_attr(&|x: &MongoColMetadata| x.searchable as Len),
                 Desc::TableName => string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref()),
                 Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref()),
                 Desc::Type | Desc::ConciseType => {

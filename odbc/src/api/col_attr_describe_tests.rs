@@ -349,8 +349,8 @@ mod unit {
                 (Desc::BaseTableName, ""),
                 (Desc::CatalogName, ""),
                 (Desc::Label, "TABLE_NAME"),
-                (Desc::LiteralPrefix, ""),
-                (Desc::LiteralSuffix, ""),
+                (Desc::LiteralPrefix, "'"),
+                (Desc::LiteralSuffix, "'"),
                 (Desc::Name, "TABLE_NAME"),
                 (Desc::TableName, ""),
                 (Desc::TypeName, "string"),
@@ -406,10 +406,10 @@ mod unit {
             (Desc::OctetLength, 0),
             (Desc::Precision, 0),
             (Desc::Scale, 0),
-            (Desc::Searchable, 1),
+            (Desc::Searchable, 3),
             (Desc::Type, SqlDataType::VARCHAR.0 as isize),
             (Desc::ConciseType, SqlDataType::VARCHAR.0 as isize),
-            (Desc::Unsigned, 0),
+            (Desc::Unsigned, 1),
         ] {
             unsafe {
                 let char_buffer: *mut std::ffi::c_void =

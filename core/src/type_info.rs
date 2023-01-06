@@ -231,68 +231,49 @@ impl MongoStatement for MongoTypesInfo {
         // 18 -> NUM_PREC_RADIX
         // 19 -> INTERVAL_PRECISION
         match DATA_TYPES.get((self.current_type_index - 1) as usize) {
-            Some(type_info) => {
-                Ok(Some(match col_index {
-                    1 | 13 => Bson::String(type_info.type_name.to_string()),
-                    2 | 16 => Bson::Int32(type_info.sql_type.0 as i32),
-                    3 => match type_info.precision {
-                        Some(precision) => Bson::Int32(precision as i32),
-                        None => Bson::Null,
-                    },
-                    4 | 5 => match **type_info {
-                        BsonTypeInfo::DATE | BsonTypeInfo::STRING => Bson::String("'".to_string()),
-                        _ => Bson::Null,
-                    },
-                    6 => Bson::Null,
-                    7 => Bson::Boolean(**type_info == BsonTypeInfo::OBJECTID),
-                    8 => match **type_info {
-                        BsonTypeInfo::STRING => Bson::Int32(1),
-                        _ => Bson::Null,
-                    },
-                    9 => {
-                        match type_info.searchable {
-                            // SQL_SEARCHABLE and SQL_PRED_NONE, respectively
-                            true => Bson::Int32(3),
-                            false => Bson::Int32(0),
-                        }
-                    }
-                    10 => match **type_info {
-                        BsonTypeInfo::INT
-                        | BsonTypeInfo::DECIMAL
-                        | BsonTypeInfo::DOUBLE
-                        | BsonTypeInfo::LONG => Bson::Int32(0),
-                        _ => Bson::Null,
-                    },
-                    11 => Bson::Boolean(type_info.precision.is_some() && type_info.scale.is_some()),
-                    12 => match **type_info {
-                        BsonTypeInfo::OBJECTID => Bson::Boolean(true),
-                        BsonTypeInfo::INT
-                        | BsonTypeInfo::DECIMAL
-                        | BsonTypeInfo::DOUBLE
-                        | BsonTypeInfo::LONG => Bson::Boolean(false),
-                        _ => Bson::Null,
-                    },
-                    14 | 15 => match type_info.scale {
-                        Some(scale) => Bson::Int32(scale as i32),
-                        None => Bson::Null,
-                    },
-                    17 => {
-                        match **type_info {
-                            // timestamp subcode
-                            BsonTypeInfo::DATE => Bson::Int32(3),
-                            _ => Bson::Null,
-                        }
-                    }
-                    18 => match **type_info {
-                        BsonTypeInfo::INT | BsonTypeInfo::DOUBLE | BsonTypeInfo::LONG => {
-                            Bson::Int32(10)
-                        }
-                        _ => Bson::Null,
-                    },
-                    19 => Bson::Null,
-                    _ => return Err(Error::ColIndexOutOfBounds(col_index)),
-                }))
-            }
+            Some(type_info) => Ok(Some(match col_index {
+                1 | 13 => Bson::String(type_info.type_name.to_string()),
+                2 | 16 => Bson::Int32(type_info.sql_type.0 as i32),
+                3 => match type_info.precision {
+                    Some(precision) => Bson::Int32(precision as i32),
+                    None => Bson::Null,
+                },
+                4 => match type_info.literal_prefix {
+                    Some(prefix) => Bson::String(prefix.to_string()),
+                    _ => Bson::Null,
+                },
+                5 => match type_info.literal_suffix {
+                    Some(suffix) => Bson::String(suffix.to_string()),
+                    _ => Bson::Null,
+                },
+                6 => Bson::Null,
+                7 => Bson::Int32((**type_info == BsonTypeInfo::OBJECTID) as i32),
+                8 => Bson::Int32(type_info.is_case_sensitive as i32),
+                9 => Bson::Int32(type_info.searchable),
+                10 => match type_info.is_unsigned {
+                    Some(signed) => Bson::Int32(signed as i32),
+                    _ => Bson::Null,
+                },
+                11 => Bson::Int32(type_info.fixed_prec_scale as i32),
+                12 => match type_info.is_auto_unique_value {
+                    Some(is_auto_unique_value) => Bson::Int32(is_auto_unique_value as i32),
+                    _ => Bson::Null,
+                },
+                14 | 15 => match type_info.scale {
+                    Some(scale) => Bson::Int32(scale as i32),
+                    None => Bson::Null,
+                },
+                17 => match type_info.sql_code {
+                    Some(subcode) => Bson::Int32(subcode),
+                    _ => Bson::Null,
+                },
+                18 => match type_info.num_prec_radix {
+                    Some(precision) => Bson::Int32(precision as i32),
+                    _ => Bson::Null,
+                },
+                19 => Bson::Null,
+                _ => return Err(Error::ColIndexOutOfBounds(col_index)),
+            })),
             // Fails if the first row as not been retrieved (next must be called at least once before getValue).
             None => Err(Error::InvalidCursorState),
         }
