@@ -1,11 +1,8 @@
 use crate::{
+    bson_type_info::BsonTypeInfo,
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
-    json_schema::{
-        simplified::{Atomic, Schema},
-        BsonTypeName,
-    },
     stmt::MongoStatement,
     util::{add_table_type_filter, to_name_regex_doc, COLLECTION, TABLE, TIMESERIES},
     Error,
@@ -18,39 +15,39 @@ use odbc_sys::Nullability;
 
 lazy_static! {
     static ref COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
     ];

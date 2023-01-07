@@ -47,15 +47,13 @@ pub struct MongoColMetadata {
 }
 
 impl MongoColMetadata {
-    pub fn new(
+    pub fn new_metadata_from_bson_type_info(
         _current_db: &str,
         datasource_name: String,
         field_name: String,
-        field_schema: Schema,
+        bson_type_info: BsonTypeInfo,
         nullability: Nullability,
     ) -> MongoColMetadata {
-        let bson_type_info: BsonTypeInfo = field_schema.into();
-
         MongoColMetadata {
             // For base_col_name, base_table_name, and catalog_name, we do
             // not have this information in sqlGetResultSchema, so these will
@@ -84,6 +82,23 @@ impl MongoColMetadata {
             is_unsigned: bson_type_info.is_unsigned.unwrap_or(true),
             is_updatable: false,
         }
+    }
+
+    pub fn new(
+        _current_db: &str,
+        datasource_name: String,
+        field_name: String,
+        field_schema: Schema,
+        nullability: Nullability,
+    ) -> MongoColMetadata {
+        let bson_type_info: BsonTypeInfo = field_schema.into();
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            _current_db,
+            datasource_name,
+            field_name,
+            bson_type_info,
+            nullability,
+        )
     }
 }
 

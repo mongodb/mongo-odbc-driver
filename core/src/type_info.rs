@@ -68,137 +68,137 @@ lazy_static! {
 
 lazy_static! {
     pub static ref TYPES_INFO_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TYPE_NAME".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "DATATYPE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "COLUMN_SIZE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "LITERAL_PREFIX".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "LITERAL_SUFFIX".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "CREATE_PARAMS".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "NULLABLE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "CASE_SENSITIVE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "SEARCHABLE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "UNSIGNED_ATTRIBUTE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "FIXED_PREC_SCALE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "AUTO_UNIQUE_VALUE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "LOCAL_TYPE_NAME".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "MINIMUM_SCALE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "MAXIMUM_SCALE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "SQL_DATA_TYPE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "SQL_DATETIME_SUB".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "NUM_PREC_RADIX".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "INTERVAL_PRECISION".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
     ];
