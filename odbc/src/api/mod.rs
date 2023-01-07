@@ -1,7 +1,7 @@
 pub(crate) mod definitions;
+pub(crate) mod diag;
 pub(crate) mod errors;
 mod functions;
-pub(crate) mod odbc_uri;
 pub use functions::*;
 mod data;
 pub(crate) mod util;
@@ -14,6 +14,8 @@ mod connect_attr_tests;
 mod data_tests;
 #[cfg(test)]
 mod env_attr_tests;
+#[cfg(test)]
+mod get_diag_field_tests;
 #[cfg(test)]
 mod get_diag_rec_tests;
 #[cfg(test)]

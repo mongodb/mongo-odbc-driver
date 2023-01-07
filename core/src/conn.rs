@@ -1,5 +1,4 @@
 use crate::err::Result;
-use crate::Error;
 use bson::doc;
 use mongodb::{options::ClientOptions, sync::Client};
 use serde::{Deserialize, Serialize};
@@ -37,26 +36,28 @@ impl MongoConnection {
     /// The initial operation time if provided should come from and will take precedence over the
     /// setting specified in the uri if any.
     pub fn connect(
-        mongo_uri: &str,
-        auth_src: &str,
+        mut client_options: ClientOptions,
         current_db: Option<&str>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
-        application_name: Option<&str>,
     ) -> Result<Self> {
-        let mut client_options =
-            ClientOptions::parse(mongo_uri).map_err(Error::MongoParseConnectionString)?;
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
         // set application name, note that users can set their own application name, or we default
         // to mongo-odbc-driver.
-        client_options.app_name = application_name
-            .map(String::from)
-            .or_else(|| Some(MONGODB_ODBC_DRIVER.to_string()));
+        let auth_src = if let Some(ref cred) = client_options.credential {
+            if let Some(ref auth_src) = cred.source {
+                auth_src.clone()
+            } else {
+                "admin".to_string()
+            }
+        } else {
+            "admin".to_string()
+        };
         let client = Client::with_options(client_options)?;
         // run the "ping" command on the `auth_src` database. We assume this requires the
         // fewest permissions of anything we can do to verify a connection.
         client
-            .database(auth_src)
+            .database(&auth_src)
             .run_command(doc! {"ping": 1}, None)?;
         Ok(MongoConnection {
             client,

@@ -1,14 +1,6 @@
 use crate::{
-    bson_type_info::BsonTypeInfo,
-    col_metadata::MongoColMetadata,
-    conn::MongoConnection,
-    err::Result,
-    json_schema::{
-        simplified::{Atomic, Schema},
-        BsonTypeName,
-    },
-    stmt::MongoStatement,
-    Error,
+    bson_type_info::BsonTypeInfo, col_metadata::MongoColMetadata, conn::MongoConnection,
+    err::Result, stmt::MongoStatement, Error,
 };
 use bson::Bson;
 use odbc_sys::{Nullability, SqlDataType};

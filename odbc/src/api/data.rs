@@ -973,36 +973,6 @@ pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
 }
 
 ///
-/// set_sql_state writes the given sql state to the [`output_ptr`].
-///
-/// # Safety
-/// This writes to a raw C-pointer
-///
-pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut Char) {
-    if output_ptr.is_null() {
-        return;
-    }
-    let sql_state = &format!("{}\0", sql_state);
-    let state_u8 = sql_state.bytes().collect::<Vec<u8>>();
-    copy_nonoverlapping(state_u8.as_ptr(), output_ptr, 6);
-}
-
-///
-/// set_sql_statew writes the given sql state to the [`output_ptr`].
-///
-/// # Safety
-/// This writes to a raw C-pointer
-///
-pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WChar) {
-    if output_ptr.is_null() {
-        return;
-    }
-    let sql_state = &format!("{}\0", sql_state);
-    let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>();
-    copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
-}
-
-///
 /// set_output_wstring_helper writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
 /// length of the [`output_ptr`] buffer in characters; the message should be truncated
 /// if it is longer than the buffer length.
@@ -1383,62 +1353,6 @@ pub mod isize_len {
         copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
         SqlReturn::SUCCESS
     }
-}
-
-///
-/// get_diag_rec copies the given ODBC error's diagnostic information
-/// into the provided pointers.
-///
-/// # Safety
-/// This writes to multiple raw C-pointers
-///
-pub unsafe fn get_diag_rec(
-    error: &ODBCError,
-    state: *mut Char,
-    message_text: *mut Char,
-    buffer_length: SmallInt,
-    text_length_ptr: *mut SmallInt,
-    native_error_ptr: *mut Integer,
-) -> SqlReturn {
-    if !native_error_ptr.is_null() {
-        *native_error_ptr = error.get_native_err_code();
-    }
-    set_sql_state(error.get_sql_state(), state);
-    let message = format!("{}", error);
-    i16_len::set_output_string(
-        &message,
-        message_text,
-        buffer_length as usize,
-        text_length_ptr,
-    )
-}
-
-///
-/// get_diag_recw copies the given ODBC error's diagnostic information
-/// into the provided pointers.
-///
-/// # Safety
-/// This writes to multiple raw C-pointers
-///
-pub unsafe fn get_diag_recw(
-    error: &ODBCError,
-    state: *mut WChar,
-    message_text: *mut WChar,
-    buffer_length: SmallInt,
-    text_length_ptr: *mut SmallInt,
-    native_error_ptr: *mut Integer,
-) -> SqlReturn {
-    if !native_error_ptr.is_null() {
-        *native_error_ptr = error.get_native_err_code();
-    }
-    set_sql_statew(error.get_sql_state(), state);
-    let message = format!("{}", error);
-    i16_len::set_output_wstring(
-        &message,
-        message_text,
-        buffer_length as usize,
-        text_length_ptr,
-    )
 }
 
 ///
