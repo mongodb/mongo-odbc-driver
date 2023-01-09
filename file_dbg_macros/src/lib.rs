@@ -54,11 +54,11 @@ macro_rules! dbg_write {
                 )
                 .as_bytes(),
             ) {
-                Err(why) => panic!("couldn't write to {:?}: {}", FILE_PATH, why),
+                Err(why) => panic!("couldn't write to log file {:?}: {}", FILE_PATH, why),
                 Ok(_) => (),
             };
             match (*logger_file).flush() {
-                Err(why) => panic!("couldn't flush {:?}: {}", FILE_PATH, why),
+                Err(why) => panic!("couldn't flush log file {:?}: {}", FILE_PATH, why),
                 Ok(_) => (),
             }
         }
@@ -85,11 +85,11 @@ macro_rules! dbg_write {
                 )
                 .as_bytes(),
             ) {
-                Err(why) => panic!("couldn't write to {:?}: {}", FILE_PATH, why),
+                Err(why) => panic!("couldn't write to log file {:?}: {}", FILE_PATH, why),
                 Ok(_) => (),
             };
             match (*logger_file).flush() {
-                Err(why) => panic!("couldn't flush {:?}: {}", FILE_PATH, why),
+                Err(why) => panic!("couldn't flush log file {:?}: {}", FILE_PATH, why),
                 Ok(_) => (),
             }
         }
