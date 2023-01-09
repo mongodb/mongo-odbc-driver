@@ -4,6 +4,7 @@ use crate::{
 };
 use bson::{spec::BinarySubtype, Bson};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
+use file_dbg_macros::dbg_write;
 use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp, USmallInt};
 use odbc_sys::{Char, Integer, SmallInt, SqlReturn, WChar};
@@ -1360,6 +1361,7 @@ pub mod isize_len {
 /// unsupported functions.
 ///
 pub fn unsupported_function(handle: &mut MongoHandle, name: &'static str) -> SqlReturn {
+    dbg_write!(format!("Unsupported Function: {}, SQLReturn = ERROR", name));
     handle.clear_diagnostics();
     handle.add_diag_info(ODBCError::Unimplemented(name));
     SqlReturn::ERROR

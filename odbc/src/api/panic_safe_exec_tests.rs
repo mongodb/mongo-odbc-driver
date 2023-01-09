@@ -1,17 +1,22 @@
+use crate::trace_call_and_outcome;
 use crate::{
     errors::ODBCError,
     handles::definitions::{MongoHandle, MongoHandleRef, Statement, StatementState},
     panic_safe_exec,
 };
+use ::function_name::named;
+use file_dbg_macros::dbg_write;
 use odbc_sys::{HStmt, SqlReturn};
 use std::{panic, sync::mpsc};
 
 mod unit {
     use super::*;
+    #[named]
     fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn {
         panic_safe_exec!(|| { SqlReturn::SUCCESS }, stmt_handle);
     }
 
+    #[named]
     fn panic_fn(stmt_handle: HStmt) -> SqlReturn {
         panic_safe_exec!(|| { panic!("panic test") }, stmt_handle);
     }
