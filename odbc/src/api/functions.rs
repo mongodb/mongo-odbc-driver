@@ -34,8 +34,9 @@ const HANDLE_MUST_BE_CONN_ERROR: &str = "handle must be conn";
 const HANDLE_MUST_BE_STMT_ERROR: &str = "handle must be stmt";
 const HANDLE_MUST_BE_DESC_ERROR: &str = "handle must be desc";
 
-// Verifies that the expected SQL State, message text, and native error in the handle match
-// the expected input
+///
+/// trace_call_and_outcome returns a formatted function name and sql return type
+///
 pub fn trace_call_and_outcome(function_name: &str, sql_return: &SqlReturn) -> String {
     let outcome = match *sql_return {
         SqlReturn::SUCCESS => "SUCCESS",
