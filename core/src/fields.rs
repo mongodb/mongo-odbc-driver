@@ -7,9 +7,9 @@ use crate::{
         BsonTypeName,
     },
     stmt::MongoStatement,
-    util::{to_name_regex, to_name_regex_doc},
+    util::to_name_regex,
 };
-use bson::{doc, Bson, Document};
+use bson::{doc, Bson};
 use lazy_static::lazy_static;
 use mongodb::{results::CollectionSpecification, sync::Cursor};
 use odbc_sys::{Nullability, SqlDataType};
@@ -457,7 +457,7 @@ pub struct MongoFields {
     collections_for_db: Option<Cursor<CollectionSpecification>>,
     current_col_metadata: Vec<MongoColMetadata>,
     current_field_for_collection: isize,
-    collection_name_filter: Option<Document>,
+    collection_name_filter: Option<Regex>,
     field_name_filter: Option<Regex>,
 }
 
@@ -491,7 +491,7 @@ impl MongoFields {
             collections_for_db: None,
             current_col_metadata: Vec::new(),
             current_field_for_collection: -1,
-            collection_name_filter: collection_name_filter.map(to_name_regex_doc),
+            collection_name_filter: collection_name_filter.map(to_name_regex),
             field_name_filter: field_name_filter.map(to_name_regex),
         }
     }
@@ -513,6 +513,11 @@ impl MongoFields {
             if self.collections_for_db.is_some() {
                 for current_collection in self.collections_for_db.as_mut().unwrap() {
                     let collection_name = current_collection.unwrap().name;
+                    if let Some(ref collection_name_filter) = self.collection_name_filter {
+                        if !collection_name_filter.is_match(&collection_name) {
+                            continue;
+                        }
+                    }
                     let get_schema_cmd = doc! {"sqlGetSchema": collection_name.clone()};
 
                     let db = mongo_connection.client.database(&self.current_db_name);
@@ -542,10 +547,7 @@ impl MongoFields {
             let db_name = self.dbs.pop_front().unwrap();
             let db = mongo_connection.client.database(&db_name);
             self.current_db_name = db_name;
-            self.collections_for_db = Some(
-                db.list_collections(self.collection_name_filter.clone(), None)
-                    .unwrap(),
-            );
+            self.collections_for_db = Some(db.list_collections(None, None).unwrap());
         }
     }
 }
@@ -566,9 +568,9 @@ impl MongoStatement for MongoFields {
                 let filter = filter.clone();
                 loop {
                     self.current_field_for_collection += 1;
-                    if !(self.current_field_for_collection as usize)
-                        < self.current_col_metadata.len()
-                        || self.get_next_metadata(mongo_connection.unwrap())
+                    if (self.current_field_for_collection as usize
+                        >= self.current_col_metadata.len())
+                        && !self.get_next_metadata(mongo_connection.unwrap())
                     {
                         return Ok(false);
                     }
