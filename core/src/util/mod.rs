@@ -1,8 +1,9 @@
 mod decimal128;
-use bson::{doc, Bson, Document};
+use bson::doc;
 use constants::SQL_ALL_TABLE_TYPES;
 pub use decimal128::Decimal128Plus;
 use lazy_static::lazy_static;
+use mongodb::results::CollectionType;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 
 pub(crate) const TABLE: &str = "TABLE";
@@ -21,46 +22,40 @@ lazy_static! {
         .unwrap();
 }
 
-// Converts % pattern character into proper regex patterns.
+// Converts SQL pattern characters (% and _) into proper regex patterns.
 // SQL-1060: Improve SQL-to-Rust regex pattern method
-fn pattern_to_regex(filter: &str) -> String {
-    filter.replace('%', ".*").replace('_', ".")
-}
-
-// Returns a doc applying filter to name
-pub(crate) fn to_name_regex_doc(filter: &str) -> Document {
-    let regex_filter = pattern_to_regex(filter);
-    doc! { "name": { "$regex": regex_filter } }
-}
-
 // Returns regex for a filter
-pub(crate) fn to_name_regex(filter: &str) -> Regex {
-    let regex_filter = pattern_to_regex(filter);
-    // If this ever fails it reflects a failure in pattern_to_regex, so this unwrap can stay
-    Regex::new(&regex_filter).unwrap()
+pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
+    match filter {
+        "%" => None,
+        _ => Some(Regex::new(&filter.replace('%', ".*").replace('_', ".")).unwrap()),
+    }
 }
 
-// Iterates through the table types and adds the corresponding type to the filter document.
-pub(crate) fn add_table_type_filter(table_type: &str, mut filter: Document) -> Document {
-    let mut table_type_filters: Vec<Bson> = Vec::new();
-    let table_type_entries = table_type
-        .split(',')
-        .map(|attr| attr.trim())
-        .collect::<Vec<&str>>();
-    for table_type_entry in &table_type_entries {
-        if SQL_ALL_TABLE_TYPES.to_string().eq(table_type_entry) {
-            // No need to add a 'type' filter
-            return filter;
-        } else if TABLE_VALUES.is_match(table_type_entry) {
-            // Collection and Timeseries types are mapped to table
-            table_type_filters.push(Bson::String(COLLECTION.to_string()));
-            table_type_filters.push(Bson::String(TIMESERIES.to_string()));
-        } else if VIEW_VALUES.is_match(table_type_entry) {
-            table_type_filters.push(Bson::String(VIEW.to_string()));
+// Create the list of Collection types to filter on
+pub(crate) fn table_type_filter_to_vec(table_type: &str) -> Option<Vec<CollectionType>> {
+    return match table_type {
+        SQL_ALL_TABLE_TYPES => None,
+        _ => {
+            let table_type_entries = table_type
+                .split(',')
+                .map(|attr| attr.trim())
+                .collect::<Vec<&str>>();
+            let mut table_type_filters: Vec<CollectionType> = Vec::new();
+            for table_type_entry in &table_type_entries {
+                if TABLE_VALUES.is_match(table_type_entry) {
+                    // Collection and Timeseries types should be mapped to table
+                    // The Rust driver doesn't seem to deserialize timeseries at the moment because
+                    // there is no CollectionType::Timeseries
+                    table_type_filters.push(CollectionType::Collection);
+                } else if VIEW_VALUES.is_match(table_type_entry) {
+                    table_type_filters.push(CollectionType::View);
+                }
+            }
+
+            Some(table_type_filters)
         }
-    }
-    filter.insert("type", doc! {"$in": Bson::Array(table_type_filters) });
-    filter
+    };
 }
 
 #[macro_export]
