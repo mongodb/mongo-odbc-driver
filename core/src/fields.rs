@@ -518,7 +518,7 @@ impl MongoFields {
                             .collection_name_filter
                             .as_ref()
                             .unwrap()
-                            .is_match(&*collection_name)
+                            .is_match(&collection_name)
                     {
                         // The collection does not match the filter, moving to the next one
                         break;

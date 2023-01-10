@@ -120,7 +120,7 @@ impl MongoCollections {
             current_database_index: None,
             collections_for_db_list: databases,
             collection_name_filter: to_name_regex(collection_name_filter),
-            table_types_filter: table_type_filter_to_vec(&table_type),
+            table_types_filter: table_type_filter_to_vec(table_type),
         }
     }
 
@@ -367,6 +367,8 @@ mod unit {
                 .nullability
         );
     }
+
+    #[cfg(test)]
     mod table_type {
         use crate::util::table_type_filter_to_vec;
         use constants::SQL_ALL_TABLE_TYPES;
