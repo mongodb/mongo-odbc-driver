@@ -89,10 +89,13 @@ mod unit {
             StatementState::Allocated,
         ));
         unsafe {
+            // valid SQL type that we do not support
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetTypeInfo(handle as *mut _, SqlDataType(95).0)
             );
+            // not a SQL type
+            assert_eq!(SqlReturn::ERROR, SQLGetTypeInfo(handle as *mut _, 100));
         }
     }
 
