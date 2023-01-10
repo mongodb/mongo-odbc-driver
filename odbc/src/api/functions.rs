@@ -1,21 +1,23 @@
 use crate::{
     api::{
         data::{
-            get_diag_rec, i16_len, i32_len, input_text_to_string, input_wtext_to_string,
-            set_str_length, unsupported_function,
+            i16_len, i32_len, input_text_to_string, input_wtext_to_string, set_str_length,
+            unsupported_function,
         },
         definitions::*,
+        diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
-        odbc_uri::ODBCUri,
         util::{connection_attribute_to_string, format_version},
     },
     handles::definitions::*,
 };
+use ::function_name::named;
 use bson::Bson;
 use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
+use file_dbg_macros::dbg_write;
 use mongo_odbc_core::{
-    MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoQuery,
-    MongoStatement, MongoTableTypes,
+    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
+    MongoFields, MongoQuery, MongoStatement, MongoTableTypes,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -31,6 +33,24 @@ const HANDLE_MUST_BE_ENV_ERROR: &str = "handle must be env";
 const HANDLE_MUST_BE_CONN_ERROR: &str = "handle must be conn";
 const HANDLE_MUST_BE_STMT_ERROR: &str = "handle must be stmt";
 const HANDLE_MUST_BE_DESC_ERROR: &str = "handle must be desc";
+
+///
+/// trace_call_and_outcome returns a formatted function name and sql return type
+///
+pub fn trace_call_and_outcome(function_name: &str, sql_return: &SqlReturn) -> String {
+    let outcome = match *sql_return {
+        SqlReturn::SUCCESS => "SUCCESS",
+        SqlReturn::ERROR => "ERROR",
+        SqlReturn::SUCCESS_WITH_INFO => "SUCCESS_WITH_INFO",
+        SqlReturn::INVALID_HANDLE => "INVALID_HANDLE",
+        SqlReturn::NEED_DATA => "NEED_DATA",
+        SqlReturn::NO_DATA => "NO_DATA",
+        SqlReturn::PARAM_DATA_AVAILABLE => "PARAM_DATA_AVAILABLE",
+        SqlReturn::STILL_EXECUTING => "STILL_EXECUTING",
+        _ => "unknown sql_return",
+    };
+    format!("{}, SQLReturn = {}", function_name, outcome)
+}
 
 macro_rules! must_be_valid {
     ($maybe_handle:expr) => {{
@@ -103,7 +123,12 @@ macro_rules! panic_safe_exec {
         let result = panic::catch_unwind(function);
         panic::set_hook(previous_hook);
         match result {
-            Ok(sql_return) => return sql_return,
+            Ok(sql_return) => {
+                #[allow(unused_variables)]
+                let trace = trace_call_and_outcome(function_name!(), &sql_return);
+                dbg_write!(&trace);
+                return sql_return;
+            }
             Err(err) => {
                 let msg = if let Some(msg) = err.downcast_ref::<&'static str>() {
                     format!("{}\n{:?}", msg, r.recv())
@@ -111,7 +136,11 @@ macro_rules! panic_safe_exec {
                     format!("{:?}\n{:?}", err, r.recv())
                 };
                 handle_ref.add_diag_info(ODBCError::Panic(msg));
-                return SqlReturn::ERROR;
+                let sql_return = SqlReturn::ERROR;
+                #[allow(unused_variables)]
+                let trace = trace_call_and_outcome(function_name!(), &sql_return);
+                dbg_write!(&trace);
+                return sql_return;
             }
         };
     }};
@@ -131,6 +160,7 @@ macro_rules! unimpl {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLAllocHandle(
     handle_type: HandleType,
@@ -225,6 +255,7 @@ fn sql_alloc_handle(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLBindCol(
     hstmt: HStmt,
@@ -285,6 +316,7 @@ pub unsafe extern "C" fn SQLBrowseConnect(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLBrowseConnectW(
     connection_handle: HDbc,
@@ -317,6 +349,7 @@ pub unsafe extern "C" fn SQLBulkOperations(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
     unimpl!(statement_handle);
@@ -328,6 +361,7 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, handle: Handle) -> SqlReturn {
     unimpl!(handle);
@@ -372,6 +406,7 @@ pub unsafe extern "C" fn SQLColAttribute(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLColAttributeW(
     statement_handle: HStmt,
@@ -548,6 +583,7 @@ pub unsafe extern "C" fn SQLColumnPrivileges(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnPrivilegesW(
     statement_handle: HStmt,
@@ -569,19 +605,67 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumns(
     statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _catalog_name_length: SmallInt,
-    _schema_name: *const Char,
-    _schema_name_length: SmallInt,
-    _table_name: *const Char,
-    _table_name_length: SmallInt,
-    _column_name: *const Char,
-    _column_name_length: SmallInt,
+    catalog_name: *const Char,
+    catalog_name_length: SmallInt,
+    schema_name: *const Char,
+    schema_name_length: SmallInt,
+    table_name: *const Char,
+    table_name_length: SmallInt,
+    column_name: *const Char,
+    column_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLColumns")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            if !(schema_name.is_null() || schema_name_length == 0) {
+                mongo_handle.add_diag_info(ODBCError::UnsupportedFieldSchema());
+                return SqlReturn::ERROR;
+            }
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let catalog_string = input_text_to_string(catalog_name, catalog_name_length as usize);
+            let catalog = if catalog_name.is_null() {
+                None
+            } else {
+                Some(catalog_string.as_str())
+            };
+            // ignore schema
+            let table_string = input_text_to_string(table_name, table_name_length as usize);
+            let table = if table_name.is_null() {
+                None
+            } else {
+                Some(table_string.as_str())
+            };
+            let column_name_string = input_text_to_string(column_name, column_name_length as usize);
+            let column = if column_name.is_null() {
+                None
+            } else {
+                Some(column_name_string.as_str())
+            };
+            let connection = stmt.connection;
+            let mongo_statement = sql_columns(
+                (*connection)
+                    .as_connection()
+                    .unwrap()
+                    .mongo_connection
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap(),
+                stmt.attributes.read().unwrap().query_timeout as i32,
+                catalog,
+                table,
+                column,
+            );
+            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+            *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -592,19 +676,80 @@ pub unsafe extern "C" fn SQLColumns(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnsW(
     statement_handle: HStmt,
-    _catalog_name: *const WChar,
-    _catalog_name_length: SmallInt,
+    catalog_name: *const WChar,
+    catalog_name_length: SmallInt,
     _schema_name: *const WChar,
     _schema_name_length: SmallInt,
-    _table_name: *const WChar,
-    _table_name_length: SmallInt,
-    _column_name: *const WChar,
-    _column_name_length: SmallInt,
+    table_name: *const WChar,
+    table_name_length: SmallInt,
+    column_name: *const WChar,
+    column_name_length: SmallInt,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let catalog_string = input_wtext_to_string(catalog_name, catalog_name_length as usize);
+            let catalog = if catalog_name.is_null() {
+                None
+            } else {
+                Some(catalog_string.as_str())
+            };
+            // ignore schema
+            let table_string = input_wtext_to_string(table_name, table_name_length as usize);
+            let table = if table_name.is_null() {
+                None
+            } else {
+                Some(table_string.as_str())
+            };
+            let column_name_string =
+                input_wtext_to_string(column_name, column_name_length as usize);
+            let column = if column_name.is_null() {
+                None
+            } else {
+                Some(column_name_string.as_str())
+            };
+            let connection = stmt.connection;
+            let mongo_statement = sql_columns(
+                (*connection)
+                    .as_connection()
+                    .unwrap()
+                    .mongo_connection
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap(),
+                stmt.attributes.read().unwrap().query_timeout as i32,
+                catalog,
+                table,
+                column,
+            );
+            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+            *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
+}
+
+fn sql_columns(
+    mongo_connection: &MongoConnection,
+    query_timeout: i32,
+    catalog: Option<&str>,
+    table: Option<&str>,
+    column: Option<&str>,
+) -> Result<Box<dyn MongoStatement>> {
+    Ok(Box::new(MongoFields::list_columns(
+        mongo_connection,
+        Some(query_timeout),
+        catalog,
+        table,
+        column,
+    )))
 }
 
 ///
@@ -747,6 +892,7 @@ pub unsafe extern "C" fn SQLDescribeCol(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDescribeColW(
     hstmt: HStmt,
@@ -815,6 +961,7 @@ pub unsafe extern "C" fn SQLDescribeParam(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
     panic_safe_exec!(
@@ -832,8 +979,8 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 
 fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoConnection> {
     let mut odbc_uri = ODBCUri::new(odbc_uri_string)?;
-    let mongo_uri = odbc_uri.remove_to_mongo_uri()?;
-    let _auth_src = odbc_uri.remove_or_else(|| "admin", &["auth_src"]);
+
+    let client_options = odbc_uri.try_into_client_options()?;
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
@@ -845,16 +992,15 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     };
     let connection_timeout = conn_attrs.connection_timeout;
     let login_timeout = conn_attrs.login_timeout;
-    let application_name = odbc_uri.remove(&["app_name", "application_name"]);
     // ODBCError has an impl From mongo_odbc_core::Error, but that does not
     // create an impl From Result<T, mongo_odbc_core::Error> to Result<T, ODBCError>
     // hence this bizarre Ok(func?) pattern.
-    Ok(MongoConnection::connect(
-        &mongo_uri,
+
+    Ok(mongo_odbc_core::MongoConnection::connect(
+        client_options,
         database,
         connection_timeout,
         login_timeout,
-        application_name,
     )?)
 }
 
@@ -864,6 +1010,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
 /// # Safety
 /// Because this is a C-infereface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriverConnect(
     connection_handle: HDbc,
@@ -916,6 +1063,7 @@ pub unsafe extern "C" fn SQLDriverConnect(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriverConnectW(
     connection_handle: HDbc,
@@ -1008,6 +1156,7 @@ pub unsafe extern "C" fn SQLDriversW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLEndTran(
     _handle_type: HandleType,
@@ -1023,6 +1172,7 @@ pub unsafe extern "C" fn SQLEndTran(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecDirect(
     statement_handle: HStmt,
@@ -1064,6 +1214,7 @@ pub unsafe extern "C" fn SQLExecDirect(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecDirectW(
     statement_handle: HStmt,
@@ -1113,6 +1264,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
     panic_safe_exec!(
@@ -1163,6 +1315,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetchScroll(
     statement_handle: HStmt,
@@ -1205,6 +1358,7 @@ pub unsafe extern "C" fn SQLForeignKeys(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLForeignKeysW(
     statement_handle: HStmt,
@@ -1230,6 +1384,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
     panic_safe_exec!(
@@ -1310,6 +1465,7 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
     panic_safe_exec!(
@@ -1345,6 +1501,7 @@ pub unsafe extern "C" fn SQLGetConnectAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttrW(
     connection_handle: HDbc,
@@ -1432,6 +1589,7 @@ pub unsafe extern "C" fn SQLGetCursorName(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetCursorNameW(
     statement_handle: HStmt,
@@ -1448,6 +1606,7 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetData(
     statement_handle: HStmt,
@@ -1630,17 +1789,123 @@ pub unsafe extern "C" fn SQLGetDiagField(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagFieldW(
     _handle_type: HandleType,
     handle: Handle,
-    _record_rumber: SmallInt,
+    _record_number: SmallInt,
     _diag_identifier: SmallInt,
     _diag_info_ptr: Pointer,
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagFieldW")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = handle as *mut MongoHandle;
+            let get_error = |errors: &Vec<ODBCError>, diag_identifier: DiagType| -> SqlReturn {
+                get_diag_field(
+                    errors,
+                    diag_identifier,
+                    _diag_info_ptr,
+                    _record_number,
+                    _buffer_length,
+                    _string_length_ptr,
+                    true,
+                )
+            };
+
+            match FromPrimitive::from_i16(_diag_identifier) {
+                Some(diag_identifier) => {
+                    match diag_identifier {
+                        // some diagnostics are statement specific; return error if another handle is passed
+                        DiagType::SQL_DIAG_ROW_COUNT | DiagType::SQL_DIAG_ROW_NUMBER => {
+                            if _handle_type != HandleType::Stmt {
+                                return SqlReturn::ERROR;
+                            }
+                            get_stmt_diag_field(diag_identifier, _diag_info_ptr)
+                        }
+                        DiagType::SQL_DIAG_NUMBER
+                        | DiagType::SQL_DIAG_MESSAGE_TEXT
+                        | DiagType::SQL_DIAG_NATIVE
+                        | DiagType::SQL_DIAG_SQLSTATE
+                        | DiagType::SQL_DIAG_RETURNCODE => match _handle_type {
+                            HandleType::Env => {
+                                let env = must_be_env!(mongo_handle);
+                                get_error(&env.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Dbc => {
+                                let dbc = must_be_conn!(mongo_handle);
+                                get_error(&dbc.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Stmt => {
+                                let stmt = must_be_stmt!(mongo_handle);
+                                get_error(&stmt.errors.read().unwrap(), diag_identifier)
+                            }
+                            HandleType::Desc => {
+                                let desc = must_be_desc!(mongo_handle);
+                                get_error(&desc.errors.read().unwrap(), diag_identifier)
+                            }
+                        },
+                        // TODO: SQL-1152: Implement additional diag types
+                        // this condition should only occur if the _diag_identifier is not in the spec
+                        _ => SqlReturn::ERROR,
+                    }
+                }
+                None => SqlReturn::ERROR,
+            }
+        },
+        handle
+    )
+}
+
+macro_rules! sql_get_diag_rec_impl {
+    ($handle_type:ident, $handle:ident, $rec_number:ident, $state:ident, $native_error_ptr:ident, $message_text:ident, $buffer_length:ident, $text_length_ptr:ident, $error_output_func:ident) => {{
+        panic_safe_exec!(
+            || {
+                if $rec_number < 1 || $buffer_length < 0 {
+                    return SqlReturn::ERROR;
+                }
+                let mongo_handle = $handle as *mut MongoHandle;
+                // Make the record number zero-indexed
+                let rec_number = ($rec_number - 1) as usize;
+
+                let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
+                    match errors.get(rec_number) {
+                        Some(odbc_err) => $error_output_func(
+                            odbc_err,
+                            $state,
+                            $message_text,
+                            $buffer_length,
+                            $text_length_ptr,
+                            $native_error_ptr,
+                        ),
+                        None => SqlReturn::NO_DATA,
+                    }
+                };
+
+                match $handle_type {
+                    HandleType::Env => {
+                        let env = must_be_env!(mongo_handle);
+                        get_error(&env.errors.read().unwrap())
+                    }
+                    HandleType::Dbc => {
+                        let dbc = must_be_conn!(mongo_handle);
+                        get_error(&dbc.errors.read().unwrap())
+                    }
+                    HandleType::Stmt => {
+                        let stmt = must_be_stmt!(mongo_handle);
+                        get_error(&stmt.errors.read().unwrap())
+                    }
+                    HandleType::Desc => {
+                        let desc = must_be_desc!(mongo_handle);
+                        get_error(&desc.errors.read().unwrap())
+                    }
+                }
+            },
+            $handle
+        );
+    }};
 }
 
 ///
@@ -1649,18 +1914,29 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagRec(
-    _handle_type: HandleType,
+    handle_type: HandleType,
     handle: Handle,
-    _rec_number: SmallInt,
-    _state: *mut Char,
-    _native_error_ptr: *mut Integer,
-    _message_text: *mut Char,
-    _buffer_length: SmallInt,
-    _text_length_ptr: *mut SmallInt,
+    rec_number: SmallInt,
+    state: *mut Char,
+    native_error_ptr: *mut Integer,
+    message_text: *mut Char,
+    buffer_length: SmallInt,
+    text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(handle), "SQLGetDiagRec")
+    sql_get_diag_rec_impl!(
+        handle_type,
+        handle,
+        rec_number,
+        state,
+        native_error_ptr,
+        message_text,
+        buffer_length,
+        text_length_ptr,
+        get_diag_rec
+    )
 }
 
 ///
@@ -1671,6 +1947,7 @@ pub unsafe extern "C" fn SQLGetDiagRec(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagRecW(
     handle_type: HandleType,
@@ -1682,50 +1959,17 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    panic_safe_exec!(
-        || {
-            if rec_number < 1 || buffer_length < 0 {
-                return SqlReturn::ERROR;
-            }
-            let mongo_handle = handle as *mut MongoHandle;
-            // Make the record number zero-indexed
-            let rec_number = (rec_number - 1) as usize;
-
-            let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
-                match errors.get(rec_number) {
-                    Some(odbc_err) => get_diag_rec(
-                        odbc_err,
-                        state,
-                        message_text,
-                        buffer_length,
-                        text_length_ptr,
-                        native_error_ptr,
-                    ),
-                    None => SqlReturn::NO_DATA,
-                }
-            };
-
-            match handle_type {
-                HandleType::Env => {
-                    let env = must_be_env!(mongo_handle);
-                    get_error(&env.errors.read().unwrap())
-                }
-                HandleType::Dbc => {
-                    let dbc = must_be_conn!(mongo_handle);
-                    get_error(&dbc.errors.read().unwrap())
-                }
-                HandleType::Stmt => {
-                    let stmt = must_be_stmt!(mongo_handle);
-                    get_error(&stmt.errors.read().unwrap())
-                }
-                HandleType::Desc => {
-                    let desc = must_be_desc!(mongo_handle);
-                    get_error(&desc.errors.read().unwrap())
-                }
-            }
-        },
-        handle
-    );
+    sql_get_diag_rec_impl!(
+        handle_type,
+        handle,
+        rec_number,
+        state,
+        native_error_ptr,
+        message_text,
+        buffer_length,
+        text_length_ptr,
+        get_diag_recw
+    )
 }
 
 ///
@@ -1753,6 +1997,7 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetEnvAttrW(
     environment_handle: HEnv,
@@ -1817,6 +2062,7 @@ pub unsafe extern "C" fn SQLGetInfo(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetInfoW(
     connection_handle: HDbc,
@@ -2303,6 +2549,7 @@ pub unsafe extern "C" fn SQLGetStmtAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetStmtAttrW(
     handle: HStmt,
@@ -2459,6 +2706,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SqlDataType) -> SqlReturn {
     unimpl!(handle);
@@ -2503,6 +2751,7 @@ pub unsafe extern "C" fn SQLNativeSql(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLNativeSqlW(
     connection_handle: HDbc,
@@ -2535,6 +2784,7 @@ pub unsafe extern "C" fn SQLNumParams(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLNumResultCols(
     statement_handle: HStmt,
@@ -2632,6 +2882,7 @@ pub unsafe extern "C" fn SQLPrimaryKeys(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLPrimaryKeysW(
     statement_handle: HStmt,
@@ -2756,6 +3007,7 @@ pub unsafe extern "C" fn SQLPutData(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLRowCount(
     statement_handle: HStmt,
@@ -2798,6 +3050,7 @@ pub unsafe extern "C" fn SQLSetConnectAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttrW(
     connection_handle: HDbc,
@@ -2862,6 +3115,7 @@ pub unsafe extern "C" fn SQLSetCursorName(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetCursorNameW(
     statement_handle: HStmt,
@@ -2894,9 +3148,10 @@ pub unsafe extern "C" fn SQLSetDescField(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetDescRec(
-    _desc_handle: HDesc,
+    desc_handle: HDesc,
     _rec_number: SmallInt,
     _desc_type: SmallInt,
     _desc_sub_type: SmallInt,
@@ -2907,7 +3162,7 @@ pub unsafe extern "C" fn SQLSetDescRec(
     _string_length_ptr: *const Len,
     _indicator_ptr: *const Len,
 ) -> SqlReturn {
-    unimplemented!()
+    unimpl!(desc_handle)
 }
 
 ///
@@ -2950,6 +3205,7 @@ pub unsafe extern "C" fn SQLSetEnvAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetEnvAttrW(
     environment_handle: HEnv,
@@ -3033,6 +3289,7 @@ pub unsafe extern "C" fn SQLSetStmtAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetStmtAttrW(
     hstmt: HStmt,
@@ -3275,6 +3532,7 @@ pub unsafe extern "C" fn SQLSpecialColumns(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSpecialColumnsW(
     statement_handle: HStmt,
@@ -3297,6 +3555,7 @@ pub unsafe extern "C" fn SQLSpecialColumnsW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLStatistics(
     statement_handle: HStmt,
@@ -3339,6 +3598,7 @@ pub unsafe extern "C" fn SQLTablePrivileges(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLTablesPrivilegesW(
     statement_handle: HStmt,
@@ -3407,6 +3667,7 @@ fn sql_tables(
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
+#[named]
 pub unsafe extern "C" fn SQLTablesW(
     statement_handle: HStmt,
     catalog_name: *const WChar,

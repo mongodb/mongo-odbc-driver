@@ -124,60 +124,95 @@ impl SqlGetSchemaResponse {
     ///   }
     ///
     /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
-    pub(crate) fn process_metadata(&self, current_db: &str) -> Result<Vec<MongoColMetadata>> {
+    pub(crate) fn process_result_metadata(
+        &self,
+        current_db: &str,
+    ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
-        let result_set_object_schema = result_set_schema.assert_datasource_schema()?;
+        let result_set_object_schema = result_set_schema.assert_object_schema()?;
 
-        let sorted_datasource_object_schemas = result_set_object_schema
+        result_set_object_schema
             .clone()
             // 1. Access result_set_schema.properties and sort alphabetically.
             //    This means we are sorting by datasource name.
             .properties
             .into_iter()
             .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
+            // 2. map each datasource_schema to a Result of an Iterator over MongoColMetadata.
             .map(|(datasource_name, datasource_schema)| {
-                let obj_schema = datasource_schema.assert_datasource_schema()?;
-
-                Ok((datasource_name, obj_schema.clone()))
+                Ok::<std::vec::IntoIter<MongoColMetadata>, Error>(
+                    Self::schema_to_col_metadata(&datasource_schema, current_db, &datasource_name)?
+                        .into_iter(),
+                )
             })
-            .collect::<Result<Vec<(String, ObjectSchema)>>>()?;
+            // 3. flatten each Ok(inner_iterator) into the top iterator, will short circuit if an
+            //    Err is hit and just return the first Error.
+            .flatten_ok()
+            // 4. collect the Iterator<Item=Result<MongoColMetadata>> into a
+            //    Result<Vec<MongoColMetadata>>
+            .collect()
+    }
 
-        sorted_datasource_object_schemas
+    /// Converts a sqlGetSchema command response into a list of column
+    /// metadata. Ensures the top-level schema is an Object with properties,
+    /// The metadata is sorted alphabetically by property name and then by field name.
+    /// As in, a result set with schema:
+    ///
+    ///   {
+    ///     bsonType: "object",
+    ///     properties: {
+    ///       "foo": {
+    ///         bsonType: "int",
+    ///       },
+    ///       "bar": {
+    ///         bsonType: "double",
+    ///       }
+    ///   }
+    ///
+    /// produces a list of metadata with the order: "bar", "foo".
+    pub(crate) fn process_collection_metadata(
+        &self,
+        current_db: &str,
+        current_collection: &str,
+    ) -> Result<Vec<MongoColMetadata>> {
+        let collection_schema: crate::json_schema::simplified::Schema =
+            self.schema.json_schema.clone().try_into()?;
+        Self::schema_to_col_metadata(&collection_schema, current_db, current_collection)
+    }
+
+    // Helper function that asserts the the passed object_schema is actually an ObjectSchema
+    // (required), and then converts all the propety schemata of the properties into a
+    // Result<Vec<MongoColMetadata>>, one MongoColMetadata per property schema in lexicographical
+    // order.
+    fn schema_to_col_metadata(
+        object_schema: &crate::json_schema::simplified::Schema,
+        current_db: &str,
+        current_collection: &str,
+    ) -> Result<Vec<MongoColMetadata>> {
+        let object_schema = object_schema.assert_object_schema()?;
+
+        object_schema
+            // 1. Access object_schema.properties and sort alphabetically.
+            //    This means we are sorting by field name. This is necessary
+            //    because this defines our ordinal positions.
+            .properties
+            .clone()
             .into_iter()
-            // 2. Flat-map fields for each datasource, sorting fields alphabetically.
-            .flat_map(|(datasource_name, datasource_schema)| {
-                datasource_schema
-                    .clone()
-                    .properties
-                    .into_iter()
-                    .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
-                    .map(move |(field_name, field_schema)| {
-                        (
-                            datasource_name.clone(),
-                            datasource_schema.clone(),
-                            field_name,
-                            field_schema,
-                        )
-                    })
-            })
-            // 3. Map each field into a MongoColMetadata.
-            .map(
-                |(datasource_name, datasource_schema, field_name, field_schema)| {
-                    let field_nullability =
-                        datasource_schema.get_field_nullability(field_name.clone())?;
+            .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
+            // 2. Map each field into a MongoColMetadata.
+            .map(|(name, schema)| {
+                let field_nullability = object_schema.get_field_nullability(name.clone())?;
 
-                    Ok(MongoColMetadata::new(
-                        current_db,
-                        datasource_name,
-                        field_name,
-                        field_schema,
-                        field_nullability,
-                    ))
-                },
-            )
-            // 4. Collect as a Vec.
-            .collect::<Result<Vec<MongoColMetadata>>>()
+                Ok(MongoColMetadata::new(
+                    current_db,
+                    current_collection.to_string(),
+                    name,
+                    schema,
+                    field_nullability,
+                ))
+            })
+            .collect::<Result<Vec<_>>>()
     }
 }
 
@@ -263,7 +298,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_metadata("test_db");
+            let actual = input.process_result_metadata("test_db");
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema) => (),
@@ -291,7 +326,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_metadata("test_db");
+            let actual = input.process_result_metadata("test_db");
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema) => (),
@@ -339,7 +374,7 @@ mod unit {
                 },
             };
 
-            let res = input.process_metadata("test_db");
+            let res = input.process_result_metadata("test_db");
 
             match res {
                 Err(e) => panic!("unexpected error: {:?}", e),
