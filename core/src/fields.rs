@@ -514,14 +514,14 @@ impl MongoFields {
                 for current_collection in self.collections_for_db.as_mut().unwrap() {
                     let collection_name = current_collection.unwrap().name;
                     if self.collection_name_filter.is_some()
-                        && self
+                        && !self
                             .collection_name_filter
                             .as_ref()
                             .unwrap()
                             .is_match(&collection_name)
                     {
                         // The collection does not match the filter, moving to the next one
-                        break;
+                        continue;
                     }
                     let get_schema_cmd = doc! {"sqlGetSchema": collection_name.clone()};
 
@@ -530,6 +530,8 @@ impl MongoFields {
                         bson::from_document(db.run_command(get_schema_cmd, None).unwrap())
                             .map_err(Error::BsonDeserialization);
                     if current_col_metadata_response.is_err() {
+                        // If there is an Error while deserialization the schema, we don't show the column
+                        // TODO : Add a log or warning
                         continue;
                     }
                     let current_col_metadata_response = current_col_metadata_response.unwrap();
@@ -578,9 +580,9 @@ impl MongoStatement for MongoFields {
                 let filter = filter.clone();
                 loop {
                     self.current_field_for_collection += 1;
-                    if !(self.current_field_for_collection as usize)
-                        < self.current_col_metadata.len()
-                        || self.get_next_metadata(mongo_connection.unwrap())
+                    if (self.current_field_for_collection as usize
+                        >= self.current_col_metadata.len())
+                        && !self.get_next_metadata(mongo_connection.unwrap())
                     {
                         return Ok(false);
                     }

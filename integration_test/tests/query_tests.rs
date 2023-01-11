@@ -51,6 +51,14 @@ mod integration {
             row.get_text(4, &mut buf).unwrap();
             assert_eq!(expected_row[2], std::str::from_utf8(&buf).unwrap());
         }
+        // assert that there were actually the correct number of rows in the resultset.
+        assert_eq!(
+            expected.len(),
+            i,
+            "Expected {} rows, found {}",
+            expected.len(),
+            i
+        );
     }
 
     #[test]
