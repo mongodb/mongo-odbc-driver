@@ -2825,7 +2825,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SqlDataType) -> SqlReturn {
+pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SmallInt) -> SqlReturn {
     unimpl!(handle);
 }
 
