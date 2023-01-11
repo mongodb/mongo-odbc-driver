@@ -1615,7 +1615,7 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
 pub unsafe extern "C" fn SQLGetData(
     statement_handle: HStmt,
     col_or_param_num: USmallInt,
-    target_type: CDataType,
+    target_type: SmallInt,
     target_value_ptr: Pointer,
     buffer_length: Len,
     str_len_or_ind_ptr: *mut Len,

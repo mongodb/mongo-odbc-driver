@@ -343,7 +343,7 @@ mod unit {
                 SQLGetData(
                     stmt_handle as *mut _,
                     NULL_COL,
-                    CDataType::WChar,
+                    CDataType::WChar as i16,
                     char_buffer,
                     buffer_length,
                     out_len_or_ind,
@@ -396,7 +396,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::WChar,
+                            CDataType::WChar as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -449,7 +449,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::WChar,
+                            CDataType::WChar as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -461,7 +461,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::WChar,
+                            CDataType::WChar as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -509,7 +509,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::WChar,
+                            CDataType::WChar as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -595,7 +595,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Guid,
+                            CDataType::Guid as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -680,7 +680,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Char,
+                                CDataType::Char as i16,
                                 char_buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -736,7 +736,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Binary,
+                            CDataType::Binary as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -811,7 +811,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Binary,
+                            CDataType::Binary as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -823,7 +823,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Binary,
+                            CDataType::Binary as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -870,7 +870,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Binary,
+                                CDataType::Binary as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -938,7 +938,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Char,
+                            CDataType::Char as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -991,7 +991,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Char,
+                            CDataType::Char as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1003,7 +1003,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Char,
+                            CDataType::Char as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1050,7 +1050,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Bit,
+                                CDataType::Bit as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1095,7 +1095,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::Bit,
+                                        CDataType::Bit as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1187,7 +1187,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Bit,
+                            CDataType::Bit as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1199,7 +1199,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Bit,
+                            CDataType::Bit as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1246,7 +1246,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::SBigInt,
+                                CDataType::SBigInt as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1261,7 +1261,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::SBigInt,
+                                        CDataType::SBigInt as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1381,7 +1381,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::SBigInt,
+                            CDataType::SBigInt as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1393,7 +1393,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::SBigInt,
+                            CDataType::SBigInt as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1440,7 +1440,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::UBigInt,
+                                CDataType::UBigInt as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1455,7 +1455,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::UBigInt,
+                                        CDataType::UBigInt as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1581,7 +1581,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::UBigInt,
+                            CDataType::UBigInt as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1593,7 +1593,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::UBigInt,
+                            CDataType::UBigInt as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1640,7 +1640,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::SLong,
+                                CDataType::SLong as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1655,7 +1655,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::SLong,
+                                        CDataType::SLong as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1775,7 +1775,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::SLong,
+                            CDataType::SLong as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1787,7 +1787,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::SLong,
+                            CDataType::SLong as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1834,7 +1834,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::ULong,
+                                CDataType::ULong as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1849,7 +1849,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::ULong,
+                                        CDataType::ULong as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1975,7 +1975,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::ULong,
+                            CDataType::ULong as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1987,7 +1987,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::ULong,
+                            CDataType::ULong as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2034,7 +2034,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Double,
+                                CDataType::Double as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2049,7 +2049,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::Double,
+                                        CDataType::Double as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -2162,7 +2162,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Double,
+                            CDataType::Double as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2174,7 +2174,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Double,
+                            CDataType::Double as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2221,7 +2221,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Float,
+                                CDataType::Float as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2236,7 +2236,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::Float,
+                                        CDataType::Float as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -2349,7 +2349,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Float,
+                            CDataType::Float as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2361,7 +2361,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Float,
+                            CDataType::Float as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2408,7 +2408,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::TimeStamp,
+                                CDataType::TimeStamp as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2423,7 +2423,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::TimeStamp,
+                                        CDataType::TimeStamp as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -2561,7 +2561,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::TimeStamp,
+                            CDataType::TimeStamp as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2573,7 +2573,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::TimeStamp,
+                            CDataType::TimeStamp as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2620,7 +2620,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Date,
+                                CDataType::Date as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2766,7 +2766,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Date,
+                            CDataType::Date as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2778,7 +2778,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Date,
+                            CDataType::Date as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2825,7 +2825,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Time,
+                                CDataType::Time as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2840,7 +2840,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::Time,
+                                        CDataType::Time as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -2970,7 +2970,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Time,
+                            CDataType::Time as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2982,7 +2982,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Time,
+                            CDataType::Time as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
