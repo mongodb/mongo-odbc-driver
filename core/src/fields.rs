@@ -514,7 +514,7 @@ impl MongoFields {
                 for current_collection in self.collections_for_db.as_mut().unwrap() {
                     let collection_name = current_collection.unwrap().name;
                     if self.collection_name_filter.is_some()
-                        && self
+                        && !self
                             .collection_name_filter
                             .as_ref()
                             .unwrap()
