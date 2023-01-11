@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, mem::size_of};
 
 fn get_set_stmt_attr(
     handle: *mut MongoHandle,
-    attribute: StatementAttribute,
+    attribute: Integer,
     value_map: BTreeMap<i32, SqlReturn>,
     default_value: usize,
 ) {
@@ -64,7 +64,7 @@ fn get_set_stmt_attr(
 
 fn get_set_ptr(
     handle: *mut MongoHandle,
-    attribute: StatementAttribute,
+    attribute: Integer,
     is_default_null: bool,
     is_set_attr_supported: bool,
     str_len: usize,
@@ -141,35 +141,35 @@ mod unit {
 
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::AppRowDesc,
+            StatementAttribute::AppRowDesc as i32,
             false,
             false,
             size_of::<Pointer>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::AppParamDesc,
+            StatementAttribute::AppParamDesc as i32,
             false,
             false,
             size_of::<Pointer>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::ImpParamDesc,
+            StatementAttribute::ImpParamDesc as i32,
             false,
             false,
             size_of::<Pointer>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::ImpRowDesc,
+            StatementAttribute::ImpRowDesc as i32,
             false,
             false,
             size_of::<Pointer>(),
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::CursorScrollable,
+            StatementAttribute::CursorScrollable as i32,
             map! {
                 CursorScrollable::NonScrollable as i32 => SqlReturn::SUCCESS,
                 CursorScrollable::Scrollable as i32 => SqlReturn::ERROR,
@@ -178,7 +178,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::CursorSensitivity,
+            StatementAttribute::CursorSensitivity as i32,
             map! {
                 CursorSensitivity::Insensitive as i32 => SqlReturn::SUCCESS,
                 CursorSensitivity::Sensitive as i32 => SqlReturn::ERROR,
@@ -188,7 +188,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::CursorType,
+            StatementAttribute::CursorType as i32,
             map! {
                 CursorType::ForwardOnly as i32 => SqlReturn::SUCCESS,
                 CursorType::Dynamic as i32 => SqlReturn::SUCCESS_WITH_INFO,
@@ -199,7 +199,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::MaxLength,
+            StatementAttribute::MaxLength as i32,
             map! {
                 10 => SqlReturn::ERROR, // Any number
             },
@@ -208,7 +208,7 @@ mod unit {
 
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::MaxRows,
+            StatementAttribute::MaxRows as i32,
             map! {
                 10 => SqlReturn::SUCCESS, // Any number
             },
@@ -216,7 +216,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::NoScan,
+            StatementAttribute::NoScan as i32,
             map! {
                 NoScan::Off as i32 => SqlReturn::SUCCESS,
                 NoScan::On as i32 => SqlReturn::SUCCESS
@@ -225,7 +225,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::QueryTimeout,
+            StatementAttribute::QueryTimeout as i32,
             map! {
                 10 => SqlReturn::SUCCESS, // Any number
             },
@@ -233,7 +233,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::RetrieveData,
+            StatementAttribute::RetrieveData as i32,
             map! {
                 RetrieveData::Off as i32 => SqlReturn::SUCCESS,
                 RetrieveData::On as i32 => SqlReturn::ERROR
@@ -242,7 +242,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::RowBindType,
+            StatementAttribute::RowBindType as i32,
             map! {
                 BindType::BindByColumn as i32 => SqlReturn::SUCCESS,
                 10 => SqlReturn::SUCCESS // Any number besides 0
@@ -251,7 +251,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::RowNumber,
+            StatementAttribute::RowNumber as i32,
             map! {
                 10 => SqlReturn::SUCCESS // Any number
             },
@@ -259,21 +259,21 @@ mod unit {
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::RowStatusPtr,
+            StatementAttribute::RowStatusPtr as i32,
             true,
             true,
             size_of::<*mut USmallInt>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::RowsFetchedPtr,
+            StatementAttribute::RowsFetchedPtr as i32,
             true,
             true,
             size_of::<*mut ULen>(),
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::RowArraySize,
+            StatementAttribute::RowArraySize as i32,
             map! {
                 10 => SqlReturn::SUCCESS // Any number
             },
@@ -281,7 +281,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::UseBookmarks,
+            StatementAttribute::UseBookmarks as i32,
             map! {
                 UseBookmarks::Off as i32 => SqlReturn::SUCCESS,
                 UseBookmarks::Variable as i32 => SqlReturn::SUCCESS
@@ -302,7 +302,7 @@ mod unit {
 
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::AsyncEnable,
+            StatementAttribute::AsyncEnable as i32,
             map! {
                 AsyncEnable::Off as i32 => SqlReturn::ERROR,
                 AsyncEnable::On as i32 => SqlReturn::ERROR,
@@ -311,7 +311,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::EnableAutoIpd,
+            StatementAttribute::EnableAutoIpd as i32,
             map! {
                 SqlBool::False as i32 => SqlReturn::ERROR,
                 SqlBool::True as i32 => SqlReturn::ERROR,
@@ -320,7 +320,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::KeysetSize,
+            StatementAttribute::KeysetSize as i32,
             map! {
                 0 => SqlReturn::ERROR, // Any number
             },
@@ -328,7 +328,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::ParamBindType,
+            StatementAttribute::ParamBindType as i32,
             map! {
                 0 => SqlReturn::ERROR, // Any number
             },
@@ -336,7 +336,7 @@ mod unit {
         );
         get_set_stmt_attr(
             stmt_handle,
-            StatementAttribute::SimulateCursor,
+            StatementAttribute::SimulateCursor as i32,
             map! {
                 10 => SqlReturn::ERROR // Any number
             },
@@ -344,56 +344,56 @@ mod unit {
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::AsyncStmtEvent,
+            StatementAttribute::AsyncStmtEvent as i32,
             true,
             false,
             size_of::<Pointer>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::FetchBookmarkPtr,
+            StatementAttribute::FetchBookmarkPtr as i32,
             true,
             false,
             size_of::<Pointer>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::ParamBindOffsetPtr,
+            StatementAttribute::ParamBindOffsetPtr as i32,
             true,
             false,
             size_of::<*mut ULen>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::ParamOpterationPtr,
+            StatementAttribute::ParamOpterationPtr as i32,
             true,
             false,
             size_of::<*mut USmallInt>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::ParamStatusPtr,
+            StatementAttribute::ParamStatusPtr as i32,
             true,
             false,
             size_of::<*mut USmallInt>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::ParamsProcessedPtr,
+            StatementAttribute::ParamsProcessedPtr as i32,
             true,
             false,
             size_of::<*mut ULen>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::RowBindOffsetPtr,
+            StatementAttribute::RowBindOffsetPtr as i32,
             true,
             false,
             size_of::<*mut ULen>(),
         );
         get_set_ptr(
             stmt_handle,
-            StatementAttribute::RowOperationPtr,
+            StatementAttribute::RowOperationPtr as i32,
             true,
             false,
             size_of::<*mut USmallInt>(),

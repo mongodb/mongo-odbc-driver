@@ -24,7 +24,47 @@ pub(crate) fn connection_attribute_to_string(attr: Integer) -> String {
         1209 => "CONNECTION_DEAD".to_string(),
         10001 => "AUTO_IPD".to_string(),
         10014 => "METADATA_ID".to_string(),
-        _ => "<unknown>".to_string(),
+        _ => format!("<unknown: {}>", attr),
+    }
+}
+
+pub(crate) fn statement_attribute_to_string(attr: Integer) -> String {
+    match attr {
+        10010 => "AppRowDesc".to_string(),
+        10011 => "AppParamDesc".to_string(),
+        10012 => "ImpRowDesc".to_string(),
+        10013 => "ImpParamDesc".to_string(),
+        -1 => "CursorScrollable".to_string(),
+        -2 => "CursorSensitivity".to_string(),
+        4 => "AsyncEnable".to_string(),
+        7 => "Concurrency".to_string(),
+        6 => "CursorType".to_string(),
+        15 => "EnableAutoIpd".to_string(),
+        16 => "FetchBookmarkPtr".to_string(),
+        8 => "KeysetSize".to_string(),
+        3 => "MaxLength".to_string(),
+        1 => "MaxRows".to_string(),
+        2 => "NoScan".to_string(),
+        17 => "ParamBindOffsetPtr".to_string(),
+        18 => "ParamBindType".to_string(),
+        19 => "ParamOpterationPtr".to_string(),
+        20 => "ParamStatusPtr".to_string(),
+        21 => "ParamsProcessedPtr".to_string(),
+        22 => "ParamsetSize".to_string(),
+        0 => "QueryTimeout".to_string(),
+        11 => "RetrieveData".to_string(),
+        23 => "RowBindOffsetPtr".to_string(),
+        5 => "RowBindType".to_string(),
+        14 => "RowNumber".to_string(),
+        24 => "RowOperationPtr".to_string(),
+        25 => "RowStatusPtr".to_string(),
+        26 => "RowsFetchedPtr".to_string(),
+        27 => "RowArraySize".to_string(),
+        10 => "SimulateCursor".to_string(),
+        12 => "UseBookmarks".to_string(),
+        29 => "AsyncStmtEvent".to_string(),
+        10014 => "MetadataId".to_string(),
+        _ => format!("<unknown: {}>", attr),
     }
 }
 
