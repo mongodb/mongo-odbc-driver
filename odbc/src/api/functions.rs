@@ -24,10 +24,9 @@ use mongo_odbc_core::{
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
-    BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
-    EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
-    Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn,
-    StatementAttribute, ULen, USmallInt, WChar,
+    BulkOperation, CDataType, Char, CompletionType, Desc, DriverConnectOption, FetchOrientation,
+    HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, Nullability, ParamType,
+    Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, ULen, USmallInt, WChar,
 };
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 
@@ -1486,7 +1485,7 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt)
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttr(
     connection_handle: HDbc,
-    _attribute: ConnectionAttribute,
+    _attribute: Integer,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
@@ -1985,7 +1984,7 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetEnvAttr(
     environment_handle: HEnv,
-    _attribute: EnvironmentAttribute,
+    _attribute: Integer,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length: *mut Integer,
@@ -2562,7 +2561,7 @@ unsafe fn sql_get_infow_helper(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetStmtAttr(
     handle: HStmt,
-    _attribute: StatementAttribute,
+    _attribute: Integer,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
@@ -3152,7 +3151,7 @@ pub unsafe extern "C" fn SQLRowCount(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttr(
     connection_handle: HDbc,
-    _attribute: ConnectionAttribute,
+    _attribute: Integer,
     _value_ptr: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
@@ -3400,7 +3399,7 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetStmtAttr(
     hstmt: HStmt,
-    _attr: StatementAttribute,
+    _attr: Integer,
     _value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
