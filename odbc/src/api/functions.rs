@@ -1503,7 +1503,7 @@ pub unsafe extern "C" fn SQLGetConnectAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttrW(
     connection_handle: HDbc,
-    attribute: ConnectionAttribute,
+    attribute: Integer,
     value_ptr: Pointer,
     buffer_length: Integer,
     string_length_ptr: *mut Integer,
@@ -1521,7 +1521,8 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                 let attributes = &conn.attributes.read().unwrap();
 
                 match attribute {
-                    ConnectionAttribute::CurrentCatalog => {
+                    // CurrentCatalog
+                    109 => {
                         let current_catalog = attributes.current_catalog.as_deref();
                         match current_catalog {
                             None => SqlReturn::NO_DATA,
@@ -1533,11 +1534,13 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                             ),
                         }
                     }
-                    ConnectionAttribute::LoginTimeout => {
+                    // LoginTimeout
+                    103 => {
                         let login_timeout = attributes.login_timeout.unwrap_or(0);
                         i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
                     }
-                    ConnectionAttribute::ConnectionTimeout => {
+                    // ConnectionTimeout
+                    113 => {
                         let connection_timeout = attributes.connection_timeout.unwrap_or(0);
                         i32_len::set_output_fixed_data(
                             &connection_timeout,
@@ -3052,7 +3055,7 @@ pub unsafe extern "C" fn SQLSetConnectAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttrW(
     connection_handle: HDbc,
-    attribute: ConnectionAttribute,
+    attribute: Integer,
     value_ptr: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
@@ -3068,7 +3071,8 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
                 let conn = must_be_valid!((*conn_handle).as_connection());
 
                 match attribute {
-                    ConnectionAttribute::LoginTimeout => {
+                    // LoginTimeout
+                    103 => {
                         conn.attributes.write().unwrap().login_timeout = Some(value_ptr as u32);
                         SqlReturn::SUCCESS
                     }

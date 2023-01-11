@@ -71,13 +71,13 @@ mod unit {
 
         test_get_attr!(
             current_catalog_default,
-            attribute = ConnectionAttribute::CurrentCatalog,
+            attribute = ConnectionAttribute::CurrentCatalog as i32,
             expected_sql_return = SqlReturn::NO_DATA,
         );
 
         test_get_attr!(
             current_catalog,
-            attribute = ConnectionAttribute::CurrentCatalog,
+            attribute = ConnectionAttribute::CurrentCatalog as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             initial_attrs = RwLock::new(ConnectionAttributes {
                 current_catalog: Some("test".to_string()),
@@ -91,7 +91,7 @@ mod unit {
 
         test_get_attr!(
             connection_timeout_default,
-            attribute = ConnectionAttribute::ConnectionTimeout,
+            attribute = ConnectionAttribute::ConnectionTimeout as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 0u32,
@@ -100,7 +100,7 @@ mod unit {
 
         test_get_attr!(
             connection_timeout,
-            attribute = ConnectionAttribute::ConnectionTimeout,
+            attribute = ConnectionAttribute::ConnectionTimeout as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             initial_attrs = RwLock::new(ConnectionAttributes {
                 connection_timeout: Some(42),
@@ -113,7 +113,7 @@ mod unit {
 
         test_get_attr!(
             login_timeout_default,
-            attribute = ConnectionAttribute::LoginTimeout,
+            attribute = ConnectionAttribute::LoginTimeout as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 0u32,
@@ -122,7 +122,7 @@ mod unit {
 
         test_get_attr!(
             login_timeout,
-            attribute = ConnectionAttribute::LoginTimeout,
+            attribute = ConnectionAttribute::LoginTimeout as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             initial_attrs = RwLock::new(ConnectionAttributes {
                 login_timeout: Some(42),
@@ -147,7 +147,7 @@ mod unit {
                 SqlReturn::SUCCESS,
                 SQLSetConnectAttrW(
                     mongo_handle as *mut _,
-                    ConnectionAttribute::LoginTimeout,
+                    ConnectionAttribute::LoginTimeout as i32,
                     login_timeout_value as Pointer,
                     0,
                 )
@@ -191,7 +191,7 @@ mod unit {
                     SqlReturn::ERROR,
                     SQLGetConnectAttrW(
                         mongo_handle as *mut _,
-                        attr,
+                        attr as i32,
                         std::ptr::null_mut() as Pointer,
                         0,
                         std::ptr::null_mut()
@@ -223,7 +223,7 @@ mod unit {
                     SqlReturn::ERROR,
                     SQLSetConnectAttrW(
                         mongo_handle as *mut _,
-                        attr,
+                        attr as i32,
                         std::ptr::null_mut() as Pointer,
                         0
                     )
@@ -244,7 +244,7 @@ mod unit {
         let actual_err = errors.first().unwrap();
         match actual_err {
             ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
-                assert_eq!(connection_attribute_to_string(attr), *actual_attr)
+                assert_eq!(connection_attribute_to_string(attr as i32), *actual_attr)
             }
             _ => panic!("unexpected err: {:?}", actual_err),
         }
