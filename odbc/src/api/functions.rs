@@ -7,7 +7,10 @@ use crate::{
         definitions::*,
         diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
-        util::{connection_attribute_to_string, format_version},
+        util::{
+            connection_attribute_to_string, environment_attribute_to_string, format_version,
+            statement_attribute_to_string,
+        },
     },
     handles::definitions::*,
 };
@@ -145,7 +148,6 @@ macro_rules! panic_safe_exec {
         };
     }};
 }
-use crate::util::statement_attribute_to_string;
 pub(crate) use panic_safe_exec;
 
 macro_rules! unimpl {
@@ -2003,37 +2005,62 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetEnvAttrW(
     environment_handle: HEnv,
-    attribute: EnvironmentAttribute,
+    attribute: Integer,
     value_ptr: Pointer,
     _buffer_length: Integer,
     string_length: *mut Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
+            let mut err = None;
             let env_handle = MongoHandleRef::from(environment_handle);
             env_handle.clear_diagnostics();
-            let env = must_be_valid!(env_handle.as_env());
-            if value_ptr.is_null() {
-                set_str_length(string_length, 0);
-            } else {
-                set_str_length(string_length, size_of::<Integer>() as Integer);
-                match attribute {
-                    EnvironmentAttribute::OdbcVersion => {
-                        *(value_ptr as *mut OdbcVersion) = env.attributes.read().unwrap().odbc_ver;
-                    }
-                    EnvironmentAttribute::OutputNts => {
-                        *(value_ptr as *mut SqlBool) = env.attributes.read().unwrap().output_nts;
-                    }
-                    EnvironmentAttribute::ConnectionPooling => {
-                        *(value_ptr as *mut ConnectionPooling) =
-                            env.attributes.read().unwrap().connection_pooling;
-                    }
-                    EnvironmentAttribute::CpMatch => {
-                        *(value_ptr as *mut CpMatch) = env.attributes.read().unwrap().cp_match;
+
+            let sql_return = {
+                let env = must_be_valid!(env_handle.as_env());
+                if value_ptr.is_null() {
+                    set_str_length(string_length, 0);
+                    SqlReturn::SUCCESS
+                } else {
+                    set_str_length(string_length, size_of::<Integer>() as Integer);
+                    match attribute {
+                        // OdbcVersion
+                        200 => {
+                            *(value_ptr as *mut OdbcVersion) =
+                                env.attributes.read().unwrap().odbc_ver;
+                            SqlReturn::SUCCESS
+                        }
+                        // OutputNts
+                        201 => {
+                            *(value_ptr as *mut SqlBool) =
+                                env.attributes.read().unwrap().output_nts;
+                            SqlReturn::SUCCESS
+                        }
+                        // ConnectionPooling
+                        202 => {
+                            *(value_ptr as *mut ConnectionPooling) =
+                                env.attributes.read().unwrap().connection_pooling;
+                            SqlReturn::SUCCESS
+                        }
+                        // CpMatch
+                        10001 => {
+                            *(value_ptr as *mut CpMatch) = env.attributes.read().unwrap().cp_match;
+                            SqlReturn::SUCCESS
+                        }
+                        _ => {
+                            err = Some(ODBCError::UnsupportedEnvironmentAttribute(
+                                environment_attribute_to_string(attribute),
+                            ));
+                            SqlReturn::ERROR
+                        }
                     }
                 }
+            };
+
+            if let Some(error) = err {
+                env_handle.add_diag_info(error);
             }
-            SqlReturn::SUCCESS
+            sql_return
         },
         environment_handle
     );
@@ -3281,7 +3308,7 @@ pub unsafe extern "C" fn SQLSetPos(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetEnvAttr(
     environment_handle: HEnv,
-    attribute: EnvironmentAttribute,
+    attribute: Integer,
     value: Pointer,
     string_length: Integer,
 ) -> SqlReturn {
@@ -3300,7 +3327,7 @@ pub unsafe extern "C" fn SQLSetEnvAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetEnvAttrW(
     environment_handle: HEnv,
-    attribute: EnvironmentAttribute,
+    attribute: Integer,
     value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
@@ -3310,7 +3337,8 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
             env_handle.clear_diagnostics();
             let env = must_be_valid!(env_handle.as_env());
             match attribute {
-                EnvironmentAttribute::OdbcVersion => match FromPrimitive::from_i32(value as i32) {
+                // OdbcVersion
+                200 => match FromPrimitive::from_i32(value as i32) {
                     Some(version) => {
                         env.attributes.write().unwrap().odbc_ver = version;
                         SqlReturn::SUCCESS
@@ -3321,26 +3349,27 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
                         SqlReturn::ERROR
                     }
                 },
-                EnvironmentAttribute::OutputNts => match FromPrimitive::from_i32(value as i32) {
+                // OutputNts
+                201 => match FromPrimitive::from_i32(value as i32) {
                     Some(SqlBool::True) => SqlReturn::SUCCESS,
                     _ => {
                         env_handle.add_diag_info(ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"));
                         SqlReturn::ERROR
                     }
                 },
-                EnvironmentAttribute::ConnectionPooling => {
-                    match FromPrimitive::from_i32(value as i32) {
-                        Some(ConnectionPooling::Off) => SqlReturn::SUCCESS,
-                        _ => {
-                            env_handle.add_diag_info(ODBCError::OptionValueChanged(
-                                "SQL_ATTR_CONNECTION_POOLING",
-                                "SQL_CP_OFF",
-                            ));
-                            SqlReturn::SUCCESS_WITH_INFO
-                        }
+                // ConnectionPooling
+                202 => match FromPrimitive::from_i32(value as i32) {
+                    Some(ConnectionPooling::Off) => SqlReturn::SUCCESS,
+                    _ => {
+                        env_handle.add_diag_info(ODBCError::OptionValueChanged(
+                            "SQL_ATTR_CONNECTION_POOLING",
+                            "SQL_CP_OFF",
+                        ));
+                        SqlReturn::SUCCESS_WITH_INFO
                     }
-                }
-                EnvironmentAttribute::CpMatch => match FromPrimitive::from_i32(value as i32) {
+                },
+                // CpMatch
+                10001 => match FromPrimitive::from_i32(value as i32) {
                     Some(CpMatch::Strict) => SqlReturn::SUCCESS,
                     _ => {
                         env_handle.add_diag_info(ODBCError::OptionValueChanged(
@@ -3350,6 +3379,12 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
                         SqlReturn::SUCCESS_WITH_INFO
                     }
                 },
+                _ => {
+                    env_handle.add_diag_info(ODBCError::UnsupportedEnvironmentAttribute(
+                        environment_attribute_to_string(attribute),
+                    ));
+                    SqlReturn::ERROR
+                }
             }
         },
         environment_handle

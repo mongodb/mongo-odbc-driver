@@ -28,6 +28,11 @@ pub enum ODBCError {
     )]
     UnsupportedConnectionAttribute(String),
     #[error(
+        "[{}][API] The Environment attribute {0} is not supported",
+        VENDOR_IDENTIFIER
+    )]
+    UnsupportedEnvironmentAttribute(String),
+    #[error(
         "[{}][API] The statement attribute {0} is not supported",
         VENDOR_IDENTIFIER
     )]
@@ -130,6 +135,7 @@ impl ODBCError {
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::UnsupportedConnectionAttribute(_)
+            | ODBCError::UnsupportedEnvironmentAttribute(_)
             | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedInfoTypeRetrieval(_) => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
@@ -172,6 +178,7 @@ impl ODBCError {
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::UnsupportedConnectionAttribute(_)
+            | ODBCError::UnsupportedEnvironmentAttribute(_)
             | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::OptionValueChanged(_, _)

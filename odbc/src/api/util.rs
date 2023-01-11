@@ -28,6 +28,16 @@ pub(crate) fn connection_attribute_to_string(attr: Integer) -> String {
     }
 }
 
+pub(crate) fn environment_attribute_to_string(attr: Integer) -> String {
+    match attr {
+        200 => "OdbcVersion".to_string(),
+        201 => "ConnectionPooling".to_string(),
+        202 => "CpMatch".to_string(),
+        10001 => "OutputNts".to_string(),
+        _ => format!("<unknown: {}>", attr),
+    }
+}
+
 pub(crate) fn statement_attribute_to_string(attr: Integer) -> String {
     match attr {
         10010 => "AppRowDesc".to_string(),

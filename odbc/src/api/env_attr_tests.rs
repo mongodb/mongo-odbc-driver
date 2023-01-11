@@ -11,7 +11,7 @@ const OPTIONAL_VALUE_CHANGED: &str = "01S02\0";
 
 fn get_set_env_attr(
     handle: *mut MongoHandle,
-    attribute: EnvironmentAttribute,
+    attribute: Integer,
     value_map: BTreeMap<i32, SqlReturn>,
     default_value: i32,
 ) {
@@ -80,7 +80,7 @@ mod unit {
 
             get_set_env_attr(
                 env_handle,
-                EnvironmentAttribute::OdbcVersion,
+                EnvironmentAttribute::OdbcVersion as i32,
                 map! {
                     OdbcVersion::Odbc3 as i32 => SqlReturn::SUCCESS,
                     OdbcVersion::Odbc3_80 as i32 => SqlReturn::SUCCESS,
@@ -91,7 +91,7 @@ mod unit {
 
             get_set_env_attr(
                 env_handle,
-                EnvironmentAttribute::OutputNts,
+                EnvironmentAttribute::OutputNts as i32,
                 map! {
                     SqlBool::True as i32 => SqlReturn::SUCCESS,
                     SqlBool::False as i32 => SqlReturn::ERROR
@@ -101,7 +101,7 @@ mod unit {
 
             get_set_env_attr(
                 env_handle,
-                EnvironmentAttribute::ConnectionPooling,
+                EnvironmentAttribute::ConnectionPooling as i32,
                 map! {
                     ConnectionPooling::Off as i32 => SqlReturn::SUCCESS,
                     ConnectionPooling::OnePerHEnv as i32 => SqlReturn::SUCCESS_WITH_INFO,
@@ -113,7 +113,7 @@ mod unit {
 
             get_set_env_attr(
                 env_handle,
-                EnvironmentAttribute::CpMatch,
+                EnvironmentAttribute::CpMatch as i32,
                 map! {
                     CpMatch::Strict as i32 => SqlReturn::SUCCESS,
                     CpMatch::Relaxed as i32 => SqlReturn::SUCCESS_WITH_INFO,
@@ -127,7 +127,7 @@ mod unit {
                 SqlReturn::SUCCESS,
                 SQLGetEnvAttrW(
                     env_handle as *mut _,
-                    EnvironmentAttribute::OutputNts,
+                    EnvironmentAttribute::OutputNts as i32,
                     std::ptr::null_mut() as *mut c_void,
                     0,
                     string_length_ptr
@@ -140,7 +140,7 @@ mod unit {
                 SqlReturn::SUCCESS,
                 SQLGetEnvAttrW(
                     env_handle as *mut _,
-                    EnvironmentAttribute::OutputNts,
+                    EnvironmentAttribute::OutputNts as i32,
                     std::ptr::null_mut() as *mut c_void,
                     0,
                     std::ptr::null_mut()
@@ -159,7 +159,7 @@ mod unit {
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLSetEnvAttrW(
                     handle as HEnv,
-                    EnvironmentAttribute::CpMatch,
+                    EnvironmentAttribute::CpMatch as i32,
                     CpMatch::Relaxed as i32 as Pointer,
                     0
                 )
