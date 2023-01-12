@@ -1523,6 +1523,11 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                 let attributes = &conn.attributes.read().unwrap();
 
                 match attribute {
+                    // LoginTimeout
+                    103 => {
+                        let login_timeout = attributes.login_timeout.unwrap_or(0);
+                        i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
+                    }
                     // CurrentCatalog
                     109 => {
                         let current_catalog = attributes.current_catalog.as_deref();
@@ -1535,11 +1540,6 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
                                 string_length_ptr,
                             ),
                         }
-                    }
-                    // LoginTimeout
-                    103 => {
-                        let login_timeout = attributes.login_timeout.unwrap_or(0);
-                        i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
                     }
                     // ConnectionTimeout
                     113 => {
