@@ -2029,21 +2029,21 @@ pub unsafe extern "C" fn SQLGetEnvAttrW(
                                 env.attributes.read().unwrap().odbc_ver;
                             SqlReturn::SUCCESS
                         }
-                        // OutputNts
-                        201 => {
-                            *(value_ptr as *mut SqlBool) =
-                                env.attributes.read().unwrap().output_nts;
-                            SqlReturn::SUCCESS
-                        }
                         // ConnectionPooling
-                        202 => {
+                        201 => {
                             *(value_ptr as *mut ConnectionPooling) =
                                 env.attributes.read().unwrap().connection_pooling;
                             SqlReturn::SUCCESS
                         }
                         // CpMatch
-                        10001 => {
+                        202 => {
                             *(value_ptr as *mut CpMatch) = env.attributes.read().unwrap().cp_match;
+                            SqlReturn::SUCCESS
+                        }
+                        // OutputNts
+                        10001 => {
+                            *(value_ptr as *mut SqlBool) =
+                                env.attributes.read().unwrap().output_nts;
                             SqlReturn::SUCCESS
                         }
                         _ => {
@@ -3348,16 +3348,8 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
                         SqlReturn::ERROR
                     }
                 },
-                // OutputNts
-                201 => match FromPrimitive::from_i32(value as i32) {
-                    Some(SqlBool::True) => SqlReturn::SUCCESS,
-                    _ => {
-                        env_handle.add_diag_info(ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"));
-                        SqlReturn::ERROR
-                    }
-                },
                 // ConnectionPooling
-                202 => match FromPrimitive::from_i32(value as i32) {
+                201 => match FromPrimitive::from_i32(value as i32) {
                     Some(ConnectionPooling::Off) => SqlReturn::SUCCESS,
                     _ => {
                         env_handle.add_diag_info(ODBCError::OptionValueChanged(
@@ -3368,7 +3360,7 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
                     }
                 },
                 // CpMatch
-                10001 => match FromPrimitive::from_i32(value as i32) {
+                202 => match FromPrimitive::from_i32(value as i32) {
                     Some(CpMatch::Strict) => SqlReturn::SUCCESS,
                     _ => {
                         env_handle.add_diag_info(ODBCError::OptionValueChanged(
@@ -3376,6 +3368,14 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
                             "SQL_CP_STRICT_MATCH",
                         ));
                         SqlReturn::SUCCESS_WITH_INFO
+                    }
+                },
+                // OutputNts
+                10001 => match FromPrimitive::from_i32(value as i32) {
+                    Some(SqlBool::True) => SqlReturn::SUCCESS,
+                    _ => {
+                        env_handle.add_diag_info(ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"));
+                        SqlReturn::ERROR
                     }
                 },
                 _ => {
