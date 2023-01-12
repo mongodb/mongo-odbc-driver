@@ -2016,11 +2016,11 @@ pub unsafe extern "C" fn SQLGetEnvAttrW(
             env_handle.clear_diagnostics();
 
             let sql_return = {
-                let env = must_be_valid!(env_handle.as_env());
                 if value_ptr.is_null() {
                     set_str_length(string_length, 0);
                     SqlReturn::SUCCESS
                 } else {
+                    let env = must_be_valid!(env_handle.as_env());
                     set_str_length(string_length, size_of::<Integer>() as Integer);
                     match attribute {
                         // OdbcVersion
