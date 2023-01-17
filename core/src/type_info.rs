@@ -7,30 +7,33 @@ use odbc_sys::{Nullability, SqlDataType};
 
 use lazy_static::lazy_static;
 
+const SQL_NO_NULLS: i32 = 0i32;
+pub const SQL_NULLABLE: i32 = 1i32;
+const SQL_NULLABLE_UNKNOWN: i32 = 2i32;
+
 lazy_static! {
     pub static ref DATA_TYPES: Vec<BsonTypeInfo> = vec! [
-
-    BsonTypeInfo::BOOL,                // SqlDataType(-7)
-    BsonTypeInfo::LONG,                // SqlDataType(-5)
-    BsonTypeInfo::BINDATA,             // SqlDataType(-2)
-    BsonTypeInfo::ARRAY,               // SqlDataType(0)
-    BsonTypeInfo::BSON,                // SqlDataType(0)
-    BsonTypeInfo::DBPOINTER,           //SqlDataType(0)
-    BsonTypeInfo::DECIMAL,             // SqlDataType(0)
-    BsonTypeInfo::JAVASCRIPT,          //SqlDataType(0)
-    BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
-    BsonTypeInfo::MAXKEY,              // SqlDataType(0)
-    BsonTypeInfo::MINKEY,              // SqlDataType(0)
-    BsonTypeInfo::NULL,                // SqlDataType(0)
-    BsonTypeInfo::OBJECT,              // SqlDataType(0)
-    BsonTypeInfo::OBJECTID,            // SqlDataType(0)
-    BsonTypeInfo::SYMBOL,              //SqlDataType(0)
-    BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
-    BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
-    BsonTypeInfo::INT,                 // SqlDataType(4)
-    BsonTypeInfo::DOUBLE,              // SqlDataType(8)
-    BsonTypeInfo::STRING,              // SqlDataType(12)
-    BsonTypeInfo::DATE,                // SqlDataType(93)
+        BsonTypeInfo::BOOL,                // SqlDataType(-7)
+        BsonTypeInfo::LONG,                // SqlDataType(-5)
+        BsonTypeInfo::BINDATA,             // SqlDataType(-2)
+        BsonTypeInfo::ARRAY,               // SqlDataType(0)
+        BsonTypeInfo::BSON,                // SqlDataType(0)
+        BsonTypeInfo::DBPOINTER,           //SqlDataType(0)
+        BsonTypeInfo::DECIMAL,             // SqlDataType(0)
+        BsonTypeInfo::JAVASCRIPT,          //SqlDataType(0)
+        BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
+        BsonTypeInfo::MAXKEY,              // SqlDataType(0)
+        BsonTypeInfo::MINKEY,              // SqlDataType(0)
+        BsonTypeInfo::NULL,                // SqlDataType(0)
+        BsonTypeInfo::OBJECT,              // SqlDataType(0)
+        BsonTypeInfo::OBJECTID,            // SqlDataType(0)
+        BsonTypeInfo::SYMBOL,              //SqlDataType(0)
+        BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
+        BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
+        BsonTypeInfo::INT,                 // SqlDataType(4)
+        BsonTypeInfo::DOUBLE,              // SqlDataType(8)
+        BsonTypeInfo::STRING,              // SqlDataType(12)
+        BsonTypeInfo::DATE,                // SqlDataType(93)
     ];
 }
 
@@ -174,7 +177,7 @@ lazy_static! {
 
 #[derive(Debug)]
 pub struct MongoTypesInfo {
-    current_type_index: isize,
+    current_type_index: usize,
     sql_data_type: i16,
 }
 
@@ -193,7 +196,7 @@ impl MongoStatement for MongoTypesInfo {
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
         loop {
             self.current_type_index += 1;
-            if self.current_type_index > (DATA_TYPES.len() as isize)
+            if self.current_type_index > DATA_TYPES.len()
                 || DATA_TYPES[(self.current_type_index - 1) as usize]
                     .sql_type
                     .0
@@ -203,7 +206,7 @@ impl MongoStatement for MongoTypesInfo {
                 break;
             }
         }
-        Ok(self.current_type_index <= (DATA_TYPES.len() as isize))
+        Ok(self.current_type_index <= DATA_TYPES.len())
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
@@ -227,6 +230,10 @@ impl MongoStatement for MongoTypesInfo {
         // 17 -> SQL_DATETIME_SUB
         // 18 -> NUM_PREC_RADIX
         // 19 -> INTERVAL_PRECISION
+        // Fails if the first row as not been retrieved (next must be called at least once before getValue).
+        if self.current_type_index == 0 {
+            return Err(Error::InvalidCursorState)
+        }
         match DATA_TYPES.get((self.current_type_index - 1) as usize) {
             Some(type_info) => Ok(Some(match col_index {
                 1 | 13 => Bson::String(type_info.type_name.to_string()),
@@ -244,7 +251,7 @@ impl MongoStatement for MongoTypesInfo {
                     _ => Bson::Null,
                 },
                 6 => Bson::Null,
-                7 => Bson::Int32((*type_info == BsonTypeInfo::OBJECTID) as i32),
+                7 => Bson::Int32(SQL_NULLABLE),
                 8 => Bson::Int32(type_info.is_case_sensitive as i32),
                 9 => Bson::Int32(type_info.searchable),
                 10 => match type_info.is_unsigned {
@@ -265,14 +272,13 @@ impl MongoStatement for MongoTypesInfo {
                     _ => Bson::Null,
                 },
                 18 => match type_info.num_prec_radix {
-                    Some(precision) => Bson::Int32(precision as i32),
+                    Some(num_prec_radix) => Bson::Int32(num_prec_radix as i32),
                     _ => Bson::Null,
                 },
                 19 => Bson::Null,
                 _ => return Err(Error::ColIndexOutOfBounds(col_index)),
             })),
-            // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-            None => Err(Error::InvalidCursorState),
+            None => Err(Error::ColIndexOutOfBounds(col_index)),
         }
     }
 

@@ -4,7 +4,7 @@ use odbc_sys::{SqlDataType, SqlReturn};
 
 mod unit {
     use super::*;
-    use mongo_odbc_core::Error;
+    use mongo_odbc_core::{Error, SQL_NULLABLE};
 
     fn validate_result_set(data_type: SqlDataType, expectations: Vec<&str>) {
         let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
@@ -73,13 +73,13 @@ mod unit {
             "string",
             "date",
         ];
-        validate_result_set(SqlDataType(0), expectations);
+        validate_result_set(SqlDataType::UNKNOWN_TYPE, expectations);
     }
 
     #[test]
     fn test_specific_type_one_response() {
         let expectations = vec!["int"];
-        validate_result_set(SqlDataType(4), expectations);
+        validate_result_set(SqlDataType::INTEGER, expectations);
     }
 
     #[test]
@@ -92,7 +92,7 @@ mod unit {
             // valid SQL type that we do not support
             assert_eq!(
                 SqlReturn::ERROR,
-                SQLGetTypeInfo(handle as *mut _, SqlDataType(95).0)
+                SQLGetTypeInfo(handle as *mut _, SqlDataType::DATE.0)
             );
             // not a SQL type
             assert_eq!(SqlReturn::ERROR, SQLGetTypeInfo(handle as *mut _, 100));
@@ -152,7 +152,7 @@ mod unit {
                 Bson::Null,
                 Bson::Null,
                 Bson::Null,
-                Bson::Int32(0),
+                Bson::Int32(SQL_NULLABLE),
                 Bson::Int32(0),
                 Bson::Int32(2),
                 Bson::Int32(0),

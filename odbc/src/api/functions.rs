@@ -467,6 +467,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::LocalTypeName | Desc::SchemaName => string_col_attr(&|_| ""),
                 Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
                 Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.nullability.0 as Len),
+                Desc::NumPrecRadix => numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len),
                 Desc::OctetLength => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
                 }
@@ -495,7 +496,6 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 | Desc::DatetimeIntervalPrecision
                 | Desc::MaximumScale
                 | Desc::MinimumScale
-                | Desc::NumPrecRadix
                 | Desc::ParameterType
                 | Desc::RowsProcessedPtr
                 | Desc::RowVer) => {
@@ -2647,7 +2647,11 @@ pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> S
     panic_safe_exec!(
         || {
             let mongo_handle = MongoHandleRef::from(handle);
-            match DATA_TYPES.iter().any(|v| v.sql_type.0 == data_type) {
+            let unhandled_data_types = vec![
+                SqlDataType::CHAR.0,
+
+            ];
+            match DATA_TYPES.iter().any(|v| v.sql_type.0 == data_type) || unhandled_data_types.contains(&data_type) {
                 true => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
                     let types_info = MongoTypesInfo::new(data_type);

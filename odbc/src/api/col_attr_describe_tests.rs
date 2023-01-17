@@ -2,7 +2,7 @@ use crate::{
     handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW, SQLDescribeColW,
 };
-use mongo_odbc_core::MongoFields;
+use mongo_odbc_core::{MongoFields, SQL_SEARCHABLE};
 use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn};
 use std::sync::RwLock;
 
@@ -406,7 +406,7 @@ mod unit {
             (Desc::OctetLength, 0),
             (Desc::Precision, 0),
             (Desc::Scale, 0),
-            (Desc::Searchable, 3),
+            (Desc::Searchable, SQL_SEARCHABLE as isize),
             (Desc::Type, SqlDataType::VARCHAR.0 as isize),
             (Desc::ConciseType, SqlDataType::VARCHAR.0 as isize),
             (Desc::Unsigned, 1),

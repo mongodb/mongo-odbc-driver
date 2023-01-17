@@ -120,7 +120,7 @@ impl BsonTypeInfo {
         type_name: "undefined",
         sql_type: SqlDataType::UNKNOWN_TYPE,
         non_concise_type: SqlDataType::UNKNOWN_TYPE,
-        searchable: SQL_PRED_BASIC,
+        searchable: SQL_PRED_NONE,
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,

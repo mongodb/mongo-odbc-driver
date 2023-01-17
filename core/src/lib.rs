@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 mod bson_type_info;
 use bson_type_info::BsonTypeInfo;
+pub use bson_type_info::SQL_SEARCHABLE;
 mod collections;
 pub use collections::MongoCollections;
 mod conn;
@@ -23,5 +24,5 @@ mod stmt;
 pub use stmt::MongoStatement;
 pub mod odbc_uri;
 mod type_info;
-pub use type_info::{MongoTypesInfo, DATA_TYPES};
+pub use type_info::{MongoTypesInfo, DATA_TYPES, SQL_NULLABLE};
 pub mod util;
