@@ -2650,9 +2650,39 @@ pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> S
     panic_safe_exec!(
         || {
             let mongo_handle = MongoHandleRef::from(handle);
-            let unhandled_data_types = vec![SqlDataType::CHAR.0];
+            let unsupported_sql_types = vec![
+                SqlDataType::DATE,
+                SqlDataType::TIME,
+                SqlDataType::CHAR,
+                SqlDataType::EXT_GUID,
+                SqlDataType::EXT_LONG_VARCHAR,
+                SqlDataType::EXT_W_CHAR,
+                SqlDataType::EXT_W_VARCHAR,
+                SqlDataType::EXT_W_LONG_VARCHAR,
+                SqlDataType::DECIMAL,
+                SqlDataType::NUMERIC,
+                SqlDataType::SMALLINT,
+                SqlDataType::REAL,
+                SqlDataType::FLOAT,
+                SqlDataType::EXT_TINY_INT,
+                SqlDataType::EXT_VAR_BINARY,
+                SqlDataType::EXT_LONG_VAR_BINARY,
+                SqlDataType::INTERVAL_YEAR,
+                SqlDataType::INTERVAL_MONTH,
+                SqlDataType::INTERVAL_DAY,
+                SqlDataType::INTERVAL_HOUR,
+                SqlDataType::INTERVAL_MINUTE,
+                SqlDataType::INTERVAL_SECOND,
+                SqlDataType::INTERVAL_YEAR_TO_MONTH,
+                SqlDataType::INTERVAL_DAY_TO_HOUR,
+                SqlDataType::INTERVAL_DAY_TO_MINUTE,
+                SqlDataType::INTERVAL_DAY_TO_SECOND,
+                SqlDataType::INTERVAL_HOUR_TO_MINUTE,
+                SqlDataType::INTERVAL_HOUR_TO_SECOND,
+                SqlDataType::INTERVAL_MINUTE_TO_SECOND,
+            ];
             match DATA_TYPES.iter().any(|v| v.sql_type.0 == data_type)
-                || unhandled_data_types.contains(&data_type)
+                || unsupported_sql_types.iter().any(|v| v.0 == data_type)
             {
                 true => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());

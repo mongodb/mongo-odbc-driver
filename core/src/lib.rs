@@ -26,5 +26,5 @@ mod stmt;
 pub use stmt::MongoStatement;
 pub mod odbc_uri;
 mod type_info;
-pub use type_info::{MongoTypesInfo, DATA_TYPES, SQL_NULLABLE};
+pub use type_info::{MongoTypesInfo, DATA_TYPES};
 pub mod util;

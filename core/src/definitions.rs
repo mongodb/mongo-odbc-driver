@@ -41,6 +41,21 @@ impl SqlDataType {
     #[cfg(feature = "odbc_version_4")]
     pub const TIMESTAMP_WITH_TIMEZONE: SqlDataType = SqlDataType(95);
 
+    // additional spec types: https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-data-types?view=sql-server-ver16
+    pub const INTERVAL_YEAR: SqlDataType = SqlDataType(101);
+    pub const INTERVAL_MONTH: SqlDataType = SqlDataType(102);
+    pub const INTERVAL_DAY: SqlDataType = SqlDataType(103);
+    pub const INTERVAL_HOUR: SqlDataType = SqlDataType(104);
+    pub const INTERVAL_MINUTE: SqlDataType = SqlDataType(105);
+    pub const INTERVAL_SECOND: SqlDataType = SqlDataType(106);
+    pub const INTERVAL_YEAR_TO_MONTH: SqlDataType = SqlDataType(107);
+    pub const INTERVAL_DAY_TO_HOUR: SqlDataType = SqlDataType(108);
+    pub const INTERVAL_DAY_TO_MINUTE: SqlDataType = SqlDataType(109);
+    pub const INTERVAL_DAY_TO_SECOND: SqlDataType = SqlDataType(110);
+    pub const INTERVAL_HOUR_TO_MINUTE: SqlDataType = SqlDataType(111);
+    pub const INTERVAL_HOUR_TO_SECOND: SqlDataType = SqlDataType(112);
+    pub const INTERVAL_MINUTE_TO_SECOND: SqlDataType = SqlDataType(113);
+
     // SQL extended datatypes:
     pub const EXT_TIME_OR_INTERVAL: SqlDataType = SqlDataType(10);
     pub const EXT_TIMESTAMP: SqlDataType = SqlDataType(11);

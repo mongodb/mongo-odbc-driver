@@ -1,11 +1,14 @@
-use crate::{handles::definitions::*, SQLGetTypeInfo};
+use crate::{definitions::DiagType, handles::definitions::*, SQLGetDiagFieldW, SQLGetTypeInfo};
 use bson::Bson;
 use mongo_odbc_core::SqlDataType;
-use odbc_sys::SqlReturn;
+use odbc_sys::{HandleType::Stmt, Nullability, SqlReturn};
+
+const INVALID_SQL_TYPE: &str = "HY004\0";
 
 mod unit {
     use super::*;
-    use mongo_odbc_core::{Error, SQL_NULLABLE};
+    use mongo_odbc_core::Error;
+    use std::ffi::c_void;
 
     fn validate_result_set(data_type: SqlDataType, expectations: Vec<&str>) {
         let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
@@ -84,20 +87,39 @@ mod unit {
     }
 
     #[test]
-    fn test_invalid_type() {
+    fn test_invalid_type_error() {
+        // Test that a sql data type that is not defined in the enum yields the correct error
         let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             std::ptr::null_mut(),
             StatementState::Allocated,
         ));
         unsafe {
-            // valid SQL type that we do not support
-            assert_eq!(
-                SqlReturn::ERROR,
-                SQLGetTypeInfo(handle as *mut _, SqlDataType::DATE.0)
-            );
-            // not a SQL type
             assert_eq!(SqlReturn::ERROR, SQLGetTypeInfo(handle as *mut _, 100));
+            // use SQLGetDiagField to retreive and assert correct error message
+            let message_text = &mut [0u16; 6] as *mut _ as *mut c_void;
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetDiagFieldW(
+                    Stmt,
+                    handle as *mut _,
+                    1,
+                    DiagType::SQL_DIAG_SQLSTATE as i16,
+                    message_text,
+                    6,
+                    &mut 0
+                )
+            );
+            assert_eq!(
+                INVALID_SQL_TYPE,
+                String::from_utf16(&*(message_text as *const [u16; 6])).unwrap()
+            );
         }
+    }
+
+    #[test]
+    fn test_unsupported_type_empty_list() {
+        // given a valid type defined in the enum, but not supported, yield an empty list
+        validate_result_set(SqlDataType::INTERVAL_HOUR_TO_MINUTE, vec![]);
     }
 
     #[test]
@@ -148,12 +170,12 @@ mod unit {
             // test each of the values come out properly for a given type
             let values: Vec<Bson> = vec![
                 Bson::String("int".to_string()),
-                Bson::Int32(4),
+                Bson::Int32(SqlDataType::INTEGER.0 as i32),
                 Bson::Int32(10),
                 Bson::Null,
                 Bson::Null,
                 Bson::Null,
-                Bson::Int32(SQL_NULLABLE),
+                Bson::Int32(Nullability::NULLABLE.0 as i32),
                 Bson::Int32(0),
                 Bson::Int32(2),
                 Bson::Int32(0),

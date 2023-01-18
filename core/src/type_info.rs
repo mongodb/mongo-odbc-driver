@@ -7,10 +7,6 @@ use odbc_sys::Nullability;
 
 use lazy_static::lazy_static;
 
-const SQL_NO_NULLS: i32 = 0i32;
-pub const SQL_NULLABLE: i32 = 1i32;
-const SQL_NULLABLE_UNKNOWN: i32 = 2i32;
-
 lazy_static! {
     pub static ref DATA_TYPES: Vec<BsonTypeInfo> = vec! [
         BsonTypeInfo::BOOL,                // SqlDataType(-7)
@@ -197,10 +193,7 @@ impl MongoStatement for MongoTypesInfo {
         loop {
             self.current_type_index += 1;
             if self.current_type_index > DATA_TYPES.len()
-                || DATA_TYPES[(self.current_type_index - 1) as usize]
-                    .sql_type
-                    .0
-                    == self.sql_data_type
+                || DATA_TYPES[self.current_type_index - 1].sql_type.0 == self.sql_data_type
                 || self.sql_data_type == SqlDataType::UNKNOWN_TYPE.0
             {
                 break;
@@ -234,7 +227,7 @@ impl MongoStatement for MongoTypesInfo {
         if self.current_type_index == 0 {
             return Err(Error::InvalidCursorState);
         }
-        match DATA_TYPES.get((self.current_type_index - 1) as usize) {
+        match DATA_TYPES.get(self.current_type_index - 1) {
             Some(type_info) => Ok(Some(match col_index {
                 1 | 13 => Bson::String(type_info.type_name.to_string()),
                 2 | 16 => Bson::Int32(type_info.sql_type.0 as i32),
@@ -251,7 +244,7 @@ impl MongoStatement for MongoTypesInfo {
                     _ => Bson::Null,
                 },
                 6 => Bson::Null,
-                7 => Bson::Int32(SQL_NULLABLE),
+                7 => Bson::Int32(Nullability::NULLABLE.0 as i32),
                 8 => Bson::Int32(type_info.is_case_sensitive as i32),
                 9 => Bson::Int32(type_info.searchable),
                 10 => match type_info.is_unsigned {
