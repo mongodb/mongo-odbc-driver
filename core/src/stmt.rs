@@ -43,3 +43,34 @@ impl MongoStatement for EmptyStatement {
         &self.resultset_metadata
     }
 }
+
+#[cfg(test)]
+mod unit {
+    use crate::{
+        col_metadata::MongoColMetadata,
+        json_schema::{
+            simplified::{Atomic, Schema},
+            BsonTypeName,
+        },
+        stmt::{EmptyStatement, MongoStatement},
+    };
+    use odbc_sys::Nullability;
+
+    #[test]
+    fn metadata_column_names() {
+        let test_empty = EmptyStatement {
+            resultset_metadata: vec![MongoColMetadata::new(
+                "",
+                "".to_string(),
+                "TABLE_CAT".to_string(),
+                Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+                Nullability::NO_NULLS,
+            )],
+        };
+
+        assert_eq!(
+            "TABLE_CAT",
+            test_empty.get_col_metadata(1).unwrap().col_name
+        );
+    }
+}

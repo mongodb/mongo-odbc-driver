@@ -2878,6 +2878,7 @@ pub unsafe extern "C" fn SQLPrepareW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLPrimaryKeys(
     statement_handle: HStmt,
