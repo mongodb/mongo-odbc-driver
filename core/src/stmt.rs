@@ -57,8 +57,8 @@ mod unit {
     use odbc_sys::Nullability;
 
     #[test]
-    fn metadata_column_names() {
-        let test_empty = EmptyStatement {
+    fn empty_statement_correctness() {
+        let mut test_empty = EmptyStatement {
             resultset_metadata: vec![MongoColMetadata::new(
                 "",
                 "".to_string(),
@@ -72,5 +72,7 @@ mod unit {
             "TABLE_CAT",
             test_empty.get_col_metadata(1).unwrap().col_name
         );
+        assert_eq!(false, test_empty.next(None).unwrap());
+        assert!(test_empty.get_value(1).is_err());
     }
 }
