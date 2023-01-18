@@ -24,3 +24,22 @@ pub trait MongoStatement: Debug {
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)
     }
 }
+
+#[derive(Debug)]
+pub struct EmptyStatement {
+    pub resultset_metadata: Vec<MongoColMetadata>,
+}
+
+impl MongoStatement for EmptyStatement {
+    fn next(&mut self, _mongo_connection: Option<&MongoConnection>) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
+        Err(Error::InvalidCursorState)
+    }
+
+    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+        &self.resultset_metadata
+    }
+}

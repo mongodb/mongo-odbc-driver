@@ -17,7 +17,7 @@ use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_A
 use file_dbg_macros::dbg_write;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
-    MongoFields, MongoQuery, MongoStatement, MongoTableTypes,
+    MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -1329,6 +1329,7 @@ pub unsafe extern "C" fn SQLFetchScroll(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLForeignKeys(
     statement_handle: HStmt,
@@ -1345,7 +1346,16 @@ pub unsafe extern "C" fn SQLForeignKeys(
     _fk_table_name: *const Char,
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLForeignKeys")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let mongo_statement = MongoForeignKeys::new();
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -1373,7 +1383,16 @@ pub unsafe extern "C" fn SQLForeignKeysW(
     _fk_table_name: *const WChar,
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let mongo_statement = MongoForeignKeys::new();
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -2869,7 +2888,16 @@ pub unsafe extern "C" fn SQLPrimaryKeys(
     _table_name: *const Char,
     _table_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLPrimaryKeys")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let mongo_statement = MongoPrimaryKeys::new();
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -2891,7 +2919,16 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
     _table_name: *const WChar,
     _table_name_length: SmallInt,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let mongo_statement = MongoPrimaryKeys::new();
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
