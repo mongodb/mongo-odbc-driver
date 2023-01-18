@@ -108,7 +108,7 @@ lazy_static! {
 pub struct MongoForeignKeys {}
 
 impl MongoForeignKeys {
-    pub fn new() -> EmptyStatement {
+    pub fn empty() -> EmptyStatement {
         EmptyStatement {
             resultset_metadata: FK_METADATA.clone(),
         }

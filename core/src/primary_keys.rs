@@ -59,7 +59,7 @@ lazy_static! {
 pub struct MongoPrimaryKeys {}
 
 impl MongoPrimaryKeys {
-    pub fn new() -> EmptyStatement {
+    pub fn empty() -> EmptyStatement {
         EmptyStatement {
             resultset_metadata: PK_METADATA.clone(),
         }

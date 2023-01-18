@@ -1350,7 +1350,7 @@ pub unsafe extern "C" fn SQLForeignKeys(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mongo_statement = MongoForeignKeys::new();
+            let mongo_statement = MongoForeignKeys::empty();
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
@@ -1387,7 +1387,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mongo_statement = MongoForeignKeys::new();
+            let mongo_statement = MongoForeignKeys::empty();
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
@@ -2893,7 +2893,7 @@ pub unsafe extern "C" fn SQLPrimaryKeys(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mongo_statement = MongoPrimaryKeys::new();
+            let mongo_statement = MongoPrimaryKeys::empty();
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
@@ -2924,7 +2924,7 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mongo_statement = MongoPrimaryKeys::new();
+            let mongo_statement = MongoPrimaryKeys::empty();
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },

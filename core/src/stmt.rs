@@ -72,7 +72,7 @@ mod unit {
             "TABLE_CAT",
             test_empty.get_col_metadata(1).unwrap().col_name
         );
-        assert_eq!(false, test_empty.next(None).unwrap());
+        assert!(!test_empty.next(None).unwrap());
         assert!(test_empty.get_value(1).is_err());
     }
 }
