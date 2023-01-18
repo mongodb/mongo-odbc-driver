@@ -1,6 +1,7 @@
 use crate::{handles::definitions::*, SQLGetTypeInfo};
 use bson::Bson;
-use odbc_sys::{SqlDataType, SqlReturn};
+use mongo_odbc_core::SqlDataType;
+use odbc_sys::SqlReturn;
 
 mod unit {
     use super::*;

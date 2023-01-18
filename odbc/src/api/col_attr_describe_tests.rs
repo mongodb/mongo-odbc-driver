@@ -7,7 +7,7 @@ use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn};
 use std::sync::RwLock;
 
 mod unit {
-    use odbc_sys::SqlDataType;
+    use mongo_odbc_core::SqlDataType;
 
     use super::*;
     // test unallocated_statement tests SQLColAttributeW when the mongo_statement inside

@@ -1,4 +1,4 @@
-use odbc_sys::SqlDataType;
+use crate::definitions::SqlDataType;
 
 #[non_exhaustive]
 #[derive(PartialEq, Eq)]

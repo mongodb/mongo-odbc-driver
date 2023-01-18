@@ -15,13 +15,14 @@ use bson::Bson;
 use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
-    MongoFields, MongoQuery, MongoStatement, MongoTableTypes, MongoTypesInfo, DATA_TYPES,
+    MongoFields, MongoQuery, MongoStatement, MongoTableTypes, MongoTypesInfo, SqlDataType,
+    DATA_TYPES,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
     BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
     EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
-    Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn,
+    Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlReturn,
     StatementAttribute, ULen, USmallInt, WChar,
 };
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
@@ -467,7 +468,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::LocalTypeName | Desc::SchemaName => string_col_attr(&|_| ""),
                 Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
                 Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.nullability.0 as Len),
-                Desc::NumPrecRadix => numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len),
+                Desc::NumPrecRadix => {
+                    numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len)
+                }
                 Desc::OctetLength => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
                 }
@@ -2647,11 +2650,10 @@ pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> S
     panic_safe_exec!(
         || {
             let mongo_handle = MongoHandleRef::from(handle);
-            let unhandled_data_types = vec![
-                SqlDataType::CHAR.0,
-
-            ];
-            match DATA_TYPES.iter().any(|v| v.sql_type.0 == data_type) || unhandled_data_types.contains(&data_type) {
+            let unhandled_data_types = vec![SqlDataType::CHAR.0];
+            match DATA_TYPES.iter().any(|v| v.sql_type.0 == data_type)
+                || unhandled_data_types.contains(&data_type)
+            {
                 true => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
                     let types_info = MongoTypesInfo::new(data_type);

@@ -1,4 +1,5 @@
 use crate::{
+    definitions::SqlDataType,
     json_schema::{
         simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
@@ -6,7 +7,7 @@ use crate::{
     BsonTypeInfo, Error, Result,
 };
 use itertools::Itertools;
-use odbc_sys::{Nullability, SqlDataType};
+use odbc_sys::Nullability;
 use serde::{Deserialize, Serialize};
 
 // Metadata information for a column of the result set.

@@ -2,6 +2,7 @@ use crate::{
     bson_type_info::BsonTypeInfo,
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     conn::MongoConnection,
+    definitions::SqlDataType,
     err::{Error, Result},
     stmt::MongoStatement,
     util::{to_name_regex, to_name_regex_doc},
@@ -9,7 +10,7 @@ use crate::{
 use bson::{doc, Bson, Document};
 use lazy_static::lazy_static;
 use mongodb::{results::CollectionSpecification, sync::Cursor};
-use odbc_sys::{Nullability, SqlDataType};
+use odbc_sys::Nullability;
 use regex::Regex;
 use std::collections::VecDeque;
 
