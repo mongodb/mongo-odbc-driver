@@ -28,16 +28,6 @@ pub enum ODBCError {
     )]
     UnsupportedConnectionAttribute(String),
     #[error(
-        "[{}][API] The Environment attribute {0} is not supported",
-        VENDOR_IDENTIFIER
-    )]
-    UnsupportedEnvironmentAttribute(String),
-    #[error(
-        "[{}][API] The statement attribute {0} is not supported",
-        VENDOR_IDENTIFIER
-    )]
-    UnsupportedStatementAttribute(String),
-    #[error(
         "[{}][API] A schema pattern was specified, and the driver does not support schemas",
         VENDOR_IDENTIFIER
     )]
@@ -135,8 +125,6 @@ impl ODBCError {
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::UnsupportedConnectionAttribute(_)
-            | ODBCError::UnsupportedEnvironmentAttribute(_)
-            | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedInfoTypeRetrieval(_) => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
             ODBCError::Core(c) => c.get_sql_state(),
@@ -178,8 +166,6 @@ impl ODBCError {
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::UnsupportedConnectionAttribute(_)
-            | ODBCError::UnsupportedEnvironmentAttribute(_)
-            | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)

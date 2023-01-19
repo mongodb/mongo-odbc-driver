@@ -681,13 +681,13 @@ pub unsafe fn format_cached_data(
     mongo_handle: &mut MongoHandle,
     cached_data: CachedData,
     col_or_param_num: USmallInt,
-    target_type: SmallInt,
+    target_type: CDataType,
     target_value_ptr: Pointer,
     buffer_len: Len,
     str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
     match cached_data {
-        // Fixed cannot be streamed, and this data has already been retrieved before.
+        // Fixed cannot be streamed, and this data has already been retrived before.
         a @ CachedData::Fixed => {
             let stmt = (*mongo_handle).as_statement().unwrap();
             // we need to insert Fixed so that we can return SqlReturn::NO_DATA if this is
@@ -696,7 +696,7 @@ pub unsafe fn format_cached_data(
             SqlReturn::NO_DATA
         }
         CachedData::Char(index, data) => {
-            if target_type != CDataType::Char as i16 {
+            if target_type != CDataType::Char {
                 let stmt = (*mongo_handle).as_statement().unwrap();
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::Char(index, data));
                 return SqlReturn::NO_DATA;
@@ -713,7 +713,7 @@ pub unsafe fn format_cached_data(
             )
         }
         CachedData::WChar(index, data) => {
-            if target_type != CDataType::WChar as i16 {
+            if target_type != CDataType::WChar {
                 let stmt = (*mongo_handle).as_statement().unwrap();
 
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::WChar(index, data));
@@ -731,7 +731,7 @@ pub unsafe fn format_cached_data(
             )
         }
         CachedData::Bin(index, data) => {
-            if target_type != CDataType::Binary as i16 {
+            if target_type != CDataType::Binary {
                 let stmt = (*mongo_handle).as_statement().unwrap();
 
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::Bin(index, data));
@@ -753,7 +753,7 @@ pub unsafe fn format_cached_data(
 pub unsafe fn format_bson_data(
     mongo_handle: &mut MongoHandle,
     col_num: USmallInt,
-    target_type: SmallInt,
+    target_type: CDataType,
     target_value_ptr: Pointer,
     buffer_len: Len,
     str_len_or_ind_ptr: *mut Len,
@@ -778,9 +778,8 @@ pub unsafe fn format_bson_data(
         _ => {}
     }
     match target_type {
-        // Binary | Guid
-        -2 | -11 => {
-            let data = if target_type == CDataType::Guid as i16 {
+        CDataType::Binary | CDataType::Guid => {
+            let data = if target_type == CDataType::Guid {
                 data.to_guid()
             } else {
                 data.to_binary()
@@ -803,8 +802,7 @@ pub unsafe fn format_bson_data(
                 }
             }
         }
-        // Char
-        1 => {
+        CDataType::Char => {
             let data = data.to_json().bytes().collect::<Vec<u8>>();
             char_data!(
                 mongo_handle,
@@ -817,8 +815,7 @@ pub unsafe fn format_bson_data(
                 isize_len::set_output_string
             )
         }
-        // WChar
-        -8 => {
+        CDataType::WChar => {
             let data = data.to_json().encode_utf16().collect::<Vec<u16>>();
             char_data!(
                 mongo_handle,
@@ -831,8 +828,7 @@ pub unsafe fn format_bson_data(
                 isize_len::set_output_wstring
             )
         }
-        // Bit
-        -7 => {
+        CDataType::Bit => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -841,8 +837,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        // Double
-        8 => {
+        CDataType::Double => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -851,8 +846,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        // Float
-        7 => {
+        CDataType::Float => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -861,8 +855,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        // SBigInt
-        -25 => {
+        CDataType::SBigInt => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -871,8 +864,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        // UBigInt
-        -27 => {
+        CDataType::UBigInt => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -881,8 +873,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        // SLong
-        -16 => {
+        CDataType::SLong => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -891,8 +882,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        // ULong
-        -18 => {
+        CDataType::ULong => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -901,24 +891,21 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        // TimeStamp | TypeTimestamp
-        11 | 93 => format_datetime(
+        CDataType::TimeStamp | CDataType::TypeTimestamp => format_datetime(
             mongo_handle,
             col_num,
             target_value_ptr,
             str_len_or_ind_ptr,
             data,
         ),
-        // Time | TypeTime
-        10 | 92 => format_time(
+        CDataType::Time | CDataType::TypeTime => format_time(
             mongo_handle,
             col_num,
             target_value_ptr,
             str_len_or_ind_ptr,
             data,
         ),
-        // Date | TypeDate
-        9 | 91 => format_date(
+        CDataType::Date | CDataType::TypeDate => format_date(
             mongo_handle,
             col_num,
             target_value_ptr,
