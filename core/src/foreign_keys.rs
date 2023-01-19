@@ -63,6 +63,13 @@ lazy_static! {
         MongoColMetadata::new(
             "",
             "".to_string(),
+            "FKCOLUMN_NAME".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new(
+            "",
+            "".to_string(),
             "KEY_SEQ".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
             Nullability::NO_NULLS
@@ -93,7 +100,7 @@ lazy_static! {
             "".to_string(),
             "PK_NAME".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            Nullability::NO_NULLS
+            Nullability::NULLABLE
         ),
         MongoColMetadata::new(
             "",
@@ -110,7 +117,7 @@ pub struct MongoForeignKeys {}
 impl MongoForeignKeys {
     pub fn empty() -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: FK_METADATA.clone(),
+            resultset_metadata: &*FK_METADATA,
         }
     }
 }

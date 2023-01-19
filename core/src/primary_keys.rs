@@ -61,7 +61,7 @@ pub struct MongoPrimaryKeys {}
 impl MongoPrimaryKeys {
     pub fn empty() -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: PK_METADATA.clone(),
+            resultset_metadata: &*PK_METADATA,
         }
     }
 }

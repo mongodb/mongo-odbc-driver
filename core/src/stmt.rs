@@ -27,7 +27,7 @@ pub trait MongoStatement: Debug {
 
 #[derive(Debug)]
 pub struct EmptyStatement {
-    pub resultset_metadata: Vec<MongoColMetadata>,
+    pub resultset_metadata: &'static Vec<MongoColMetadata>,
 }
 
 impl MongoStatement for EmptyStatement {
@@ -54,18 +54,23 @@ mod unit {
         },
         stmt::{EmptyStatement, MongoStatement},
     };
+    use lazy_static::lazy_static;
     use odbc_sys::Nullability;
+
+    lazy_static! {
+        static ref EMPTY_TEST_METADATA: Vec<MongoColMetadata> = vec![MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_CAT".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            Nullability::NO_NULLS,
+        )];
+    }
 
     #[test]
     fn empty_statement_correctness() {
         let mut test_empty = EmptyStatement {
-            resultset_metadata: vec![MongoColMetadata::new(
-                "",
-                "".to_string(),
-                "TABLE_CAT".to_string(),
-                Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                Nullability::NO_NULLS,
-            )],
+            resultset_metadata: &*EMPTY_TEST_METADATA,
         };
 
         assert_eq!(
