@@ -7,31 +7,29 @@ use odbc_sys::Nullability;
 
 use lazy_static::lazy_static;
 
-lazy_static! {
-    pub static ref DATA_TYPES: Vec<BsonTypeInfo> = vec! [
-        BsonTypeInfo::BOOL,                // SqlDataType(-7)
-        BsonTypeInfo::LONG,                // SqlDataType(-5)
-        BsonTypeInfo::BINDATA,             // SqlDataType(-2)
-        BsonTypeInfo::ARRAY,               // SqlDataType(0)
-        BsonTypeInfo::BSON,                // SqlDataType(0)
-        BsonTypeInfo::DBPOINTER,           //SqlDataType(0)
-        BsonTypeInfo::DECIMAL,             // SqlDataType(0)
-        BsonTypeInfo::JAVASCRIPT,          //SqlDataType(0)
-        BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
-        BsonTypeInfo::MAXKEY,              // SqlDataType(0)
-        BsonTypeInfo::MINKEY,              // SqlDataType(0)
-        BsonTypeInfo::NULL,                // SqlDataType(0)
-        BsonTypeInfo::OBJECT,              // SqlDataType(0)
-        BsonTypeInfo::OBJECTID,            // SqlDataType(0)
-        BsonTypeInfo::SYMBOL,              //SqlDataType(0)
-        BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
-        BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
-        BsonTypeInfo::INT,                 // SqlDataType(4)
-        BsonTypeInfo::DOUBLE,              // SqlDataType(8)
-        BsonTypeInfo::STRING,              // SqlDataType(12)
-        BsonTypeInfo::DATE,                // SqlDataType(93)
-    ];
-}
+const DATA_TYPES: [BsonTypeInfo; 21] = [
+    BsonTypeInfo::BOOL,                // SqlDataType(-7)
+    BsonTypeInfo::LONG,                // SqlDataType(-5)
+    BsonTypeInfo::BINDATA,             // SqlDataType(-2)
+    BsonTypeInfo::ARRAY,               // SqlDataType(0)
+    BsonTypeInfo::BSON,                // SqlDataType(0)
+    BsonTypeInfo::DBPOINTER,           //SqlDataType(0)
+    BsonTypeInfo::DECIMAL,             // SqlDataType(0)
+    BsonTypeInfo::JAVASCRIPT,          //SqlDataType(0)
+    BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
+    BsonTypeInfo::MAXKEY,              // SqlDataType(0)
+    BsonTypeInfo::MINKEY,              // SqlDataType(0)
+    BsonTypeInfo::NULL,                // SqlDataType(0)
+    BsonTypeInfo::OBJECT,              // SqlDataType(0)
+    BsonTypeInfo::OBJECTID,            // SqlDataType(0)
+    BsonTypeInfo::SYMBOL,              //SqlDataType(0)
+    BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
+    BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
+    BsonTypeInfo::INT,                 // SqlDataType(4)
+    BsonTypeInfo::DOUBLE,              // SqlDataType(8)
+    BsonTypeInfo::STRING,              // SqlDataType(12)
+    BsonTypeInfo::DATE,                // SqlDataType(93)
+];
 
 lazy_static! {
     pub static ref TYPES_INFO_METADATA: Vec<MongoColMetadata> = vec![
