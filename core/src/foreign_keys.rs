@@ -100,7 +100,7 @@ lazy_static! {
             "".to_string(),
             "PK_NAME".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            Nullability::NULLABLE
+            Nullability::NO_NULLS
         ),
         MongoColMetadata::new(
             "",
