@@ -18,8 +18,8 @@ tests:
     expected_precision: [0, 0, 0, 0, 0]
     expected_scale: [0, 0, 0, 0, 0]
     expected_nullability: [0, 1, 1, 1, 1]
-  - description: SQLForeignKeys function get all the foreign keys (there are none)
-    test_definition: [ "sqlforeignkeys", "", 0, "", 0, "", 0, "", 0, "", 0, "", 0 ]
+  - description: SQLForeignKeysW function get all the foreign keys (there are none)
+    test_definition: [ "sqlforeignkeysw", "", 0, "", 0, "", 0, "", 0, "", 0, "", 0 ]
     db: integration_test
     expected_result: []
     expected_bson_type: ["string", "string", "string", "string", "string", "string", "string", "string", "int", "int", "int", "string", "string", "int" ]
