@@ -40,7 +40,7 @@ impl MongoStatement for EmptyStatement {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &self.resultset_metadata
+        self.resultset_metadata
     }
 }
 
@@ -70,7 +70,7 @@ mod unit {
     #[test]
     fn empty_statement_correctness() {
         let mut test_empty = EmptyStatement {
-            resultset_metadata: &*EMPTY_TEST_METADATA,
+            resultset_metadata: &EMPTY_TEST_METADATA,
         };
 
         assert_eq!(

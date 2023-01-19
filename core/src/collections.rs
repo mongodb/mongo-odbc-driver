@@ -122,7 +122,7 @@ impl MongoCollections {
     // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
     pub fn all_schemas() -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: &*COLLECTIONS_METADATA,
+            resultset_metadata: &COLLECTIONS_METADATA,
         }
     }
 
