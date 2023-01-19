@@ -1,73 +1,74 @@
-#[repr(C)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct SqlDataType(pub i16);
+use num_derive::FromPrimitive;
 
-impl SqlDataType {
-    pub const UNKNOWN_TYPE: SqlDataType = SqlDataType(0);
+#[allow(non_camel_case_types)]
+#[repr(i16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+pub enum SqlDataType {
+    UNKNOWN_TYPE = 0,
     // also called SQL_VARIANT_TYPE since odbc 4.0
-    pub const CHAR: SqlDataType = SqlDataType(1);
-    pub const NUMERIC: SqlDataType = SqlDataType(2);
-    pub const DECIMAL: SqlDataType = SqlDataType(3);
+    CHAR = 1,
+    NUMERIC = 2,
+    DECIMAL = 3,
     /// Exact numeric value with precision 10 and scale 0 (signed: `-2[31] <= n <= 2[31] - 1`,
     /// unsigned: `0 <= n <= 2[32] - 1`).  An application uses `SQLGetTypeInfo` or `SQLColAttribute`
     /// to determine whether a particular data type or a particular column in a result set is
     /// unsigned.
-    pub const INTEGER: SqlDataType = SqlDataType(4);
-    pub const SMALLINT: SqlDataType = SqlDataType(5);
-    pub const FLOAT: SqlDataType = SqlDataType(6);
-    pub const REAL: SqlDataType = SqlDataType(7);
+    INTEGER = 4,
+    SMALLINT = 5,
+    FLOAT = 6,
+    REAL = 7,
     /// Signed, approximate, numeric value with a binary precision 53 (zero or absolute value
     /// `10[-308]` to `10[308]`).
-    pub const DOUBLE: SqlDataType = SqlDataType(8);
-    pub const DATETIME: SqlDataType = SqlDataType(9);
-    pub const VARCHAR: SqlDataType = SqlDataType(12);
+    DOUBLE = 8,
+    DATETIME = 9,
+    VARCHAR = 12,
     #[cfg(feature = "odbc_version_4")]
-    pub const UDT: SqlDataType = SqlDataType(17);
+    UDT = 17,
     #[cfg(feature = "odbc_version_4")]
-    pub const ROW: SqlDataType = SqlDataType(19);
+    ROW = 19,
     #[cfg(feature = "odbc_version_4")]
-    pub const ARRAY: SqlDataType = SqlDataType(50);
+    ARRAY = 50,
     #[cfg(feature = "odbc_version_4")]
-    pub const MULTISET: SqlDataType = SqlDataType(55);
+    MULTISET = 55,
 
     // one-parameter shortcuts for date/time data types
-    pub const DATE: SqlDataType = SqlDataType(91);
-    pub const TIME: SqlDataType = SqlDataType(92);
+    DATE = 91,
+    TIME = 92,
     /// Year, month, day, hour, minute, and second fields, with valid values as defined for the DATE
     /// and TIME data types.
-    pub const TIMESTAMP: SqlDataType = SqlDataType(93);
+    TIMESTAMP = 93,
     #[cfg(feature = "odbc_version_4")]
-    pub const TIME_WITH_TIMEZONE: SqlDataType = SqlDataType(94);
+    TIME_WITH_TIMEZONE = 94,
     #[cfg(feature = "odbc_version_4")]
-    pub const TIMESTAMP_WITH_TIMEZONE: SqlDataType = SqlDataType(95);
+    TIMESTAMP_WITH_TIMEZONE = 95,
 
     // additional spec types: https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-data-types?view=sql-server-ver16
-    pub const INTERVAL_YEAR: SqlDataType = SqlDataType(101);
-    pub const INTERVAL_MONTH: SqlDataType = SqlDataType(102);
-    pub const INTERVAL_DAY: SqlDataType = SqlDataType(103);
-    pub const INTERVAL_HOUR: SqlDataType = SqlDataType(104);
-    pub const INTERVAL_MINUTE: SqlDataType = SqlDataType(105);
-    pub const INTERVAL_SECOND: SqlDataType = SqlDataType(106);
-    pub const INTERVAL_YEAR_TO_MONTH: SqlDataType = SqlDataType(107);
-    pub const INTERVAL_DAY_TO_HOUR: SqlDataType = SqlDataType(108);
-    pub const INTERVAL_DAY_TO_MINUTE: SqlDataType = SqlDataType(109);
-    pub const INTERVAL_DAY_TO_SECOND: SqlDataType = SqlDataType(110);
-    pub const INTERVAL_HOUR_TO_MINUTE: SqlDataType = SqlDataType(111);
-    pub const INTERVAL_HOUR_TO_SECOND: SqlDataType = SqlDataType(112);
-    pub const INTERVAL_MINUTE_TO_SECOND: SqlDataType = SqlDataType(113);
+    INTERVAL_YEAR = 101,
+    INTERVAL_MONTH = 102,
+    INTERVAL_DAY = 103,
+    INTERVAL_HOUR = 104,
+    INTERVAL_MINUTE = 105,
+    INTERVAL_SECOND = 106,
+    INTERVAL_YEAR_TO_MONTH = 107,
+    INTERVAL_DAY_TO_HOUR = 108,
+    INTERVAL_DAY_TO_MINUTE = 109,
+    INTERVAL_DAY_TO_SECOND = 110,
+    INTERVAL_HOUR_TO_MINUTE = 111,
+    INTERVAL_HOUR_TO_SECOND = 112,
+    INTERVAL_MINUTE_TO_SECOND = 113,
 
     // SQL extended datatypes:
-    pub const EXT_TIME_OR_INTERVAL: SqlDataType = SqlDataType(10);
-    pub const EXT_TIMESTAMP: SqlDataType = SqlDataType(11);
-    pub const EXT_LONG_VARCHAR: SqlDataType = SqlDataType(-1);
-    pub const EXT_BINARY: SqlDataType = SqlDataType(-2);
-    pub const EXT_VAR_BINARY: SqlDataType = SqlDataType(-3);
-    pub const EXT_LONG_VAR_BINARY: SqlDataType = SqlDataType(-4);
-    pub const EXT_BIG_INT: SqlDataType = SqlDataType(-5);
-    pub const EXT_TINY_INT: SqlDataType = SqlDataType(-6);
-    pub const EXT_BIT: SqlDataType = SqlDataType(-7);
-    pub const EXT_W_CHAR: SqlDataType = SqlDataType(-8);
-    pub const EXT_W_VARCHAR: SqlDataType = SqlDataType(-9);
-    pub const EXT_W_LONG_VARCHAR: SqlDataType = SqlDataType(-10);
-    pub const EXT_GUID: SqlDataType = SqlDataType(-11);
+    EXT_TIME_OR_INTERVAL = 10,
+    EXT_TIMESTAMP = 11,
+    EXT_LONG_VARCHAR = -1,
+    EXT_BINARY = -2,
+    EXT_VAR_BINARY = -3,
+    EXT_LONG_VAR_BINARY = -4,
+    EXT_BIG_INT = -5,
+    EXT_TINY_INT = -6,
+    EXT_BIT = -7,
+    EXT_W_CHAR = -8,
+    EXT_W_VARCHAR = -9,
+    EXT_W_LONG_VARCHAR = -10,
+    EXT_GUID = -11,
 }

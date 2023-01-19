@@ -616,7 +616,7 @@ impl MongoStatement for MongoFields {
             2 => Bson::Null,
             3 => Bson::String(get_meta_data()?.table_name.clone()),
             4 => Bson::String(get_meta_data()?.col_name.clone()),
-            5 => Bson::Int32(get_meta_data()?.sql_type.0 as i32),
+            5 => Bson::Int32(get_meta_data()?.sql_type as i32),
             6 => Bson::String(get_meta_data()?.type_name.clone()),
             7 => Bson::Int32(get_meta_data()?.precision.unwrap_or(0) as i32),
             8 => Bson::Int32({
@@ -636,7 +636,7 @@ impl MongoStatement for MongoFields {
             11 => Bson::Int32(get_meta_data()?.nullability.0 as i32),
             12 => Bson::String("".to_string()),
             13 => Bson::Null,
-            14 => Bson::Int32(get_meta_data()?.non_concise_type.0 as i32),
+            14 => Bson::Int32(get_meta_data()?.non_concise_type as i32),
             15 => match get_meta_data()?.sql_code {
                 None => Bson::Null,
                 Some(x) => Bson::Int32(x),

@@ -1189,6 +1189,8 @@ dependencies = [
  "lazy_static",
  "likely_stable",
  "mongodb",
+ "num-derive",
+ "num-traits",
  "odbc-sys 0.21.2",
  "regex",
  "serde",

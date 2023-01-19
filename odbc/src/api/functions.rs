@@ -16,7 +16,6 @@ use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_A
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoQuery, MongoStatement, MongoTableTypes, MongoTypesInfo, SqlDataType,
-    DATA_TYPES,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -484,7 +483,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::TableName => string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref()),
                 Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref()),
                 Desc::Type | Desc::ConciseType => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.sql_type.0 as Len)
+                    numeric_col_attr(&|x: &MongoColMetadata| x.sql_type as Len)
                 }
                 Desc::Unsigned => numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len),
                 desc @ (Desc::OctetLengthPtr
@@ -2650,47 +2649,14 @@ pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> S
     panic_safe_exec!(
         || {
             let mongo_handle = MongoHandleRef::from(handle);
-            let unsupported_sql_types = vec![
-                SqlDataType::DATE,
-                SqlDataType::TIME,
-                SqlDataType::CHAR,
-                SqlDataType::EXT_GUID,
-                SqlDataType::EXT_LONG_VARCHAR,
-                SqlDataType::EXT_W_CHAR,
-                SqlDataType::EXT_W_VARCHAR,
-                SqlDataType::EXT_W_LONG_VARCHAR,
-                SqlDataType::DECIMAL,
-                SqlDataType::NUMERIC,
-                SqlDataType::SMALLINT,
-                SqlDataType::REAL,
-                SqlDataType::FLOAT,
-                SqlDataType::EXT_TINY_INT,
-                SqlDataType::EXT_VAR_BINARY,
-                SqlDataType::EXT_LONG_VAR_BINARY,
-                SqlDataType::INTERVAL_YEAR,
-                SqlDataType::INTERVAL_MONTH,
-                SqlDataType::INTERVAL_DAY,
-                SqlDataType::INTERVAL_HOUR,
-                SqlDataType::INTERVAL_MINUTE,
-                SqlDataType::INTERVAL_SECOND,
-                SqlDataType::INTERVAL_YEAR_TO_MONTH,
-                SqlDataType::INTERVAL_DAY_TO_HOUR,
-                SqlDataType::INTERVAL_DAY_TO_MINUTE,
-                SqlDataType::INTERVAL_DAY_TO_SECOND,
-                SqlDataType::INTERVAL_HOUR_TO_MINUTE,
-                SqlDataType::INTERVAL_HOUR_TO_SECOND,
-                SqlDataType::INTERVAL_MINUTE_TO_SECOND,
-            ];
-            match DATA_TYPES.iter().any(|v| v.sql_type.0 == data_type)
-                || unsupported_sql_types.iter().any(|v| v.0 == data_type)
-            {
-                true => {
+            match FromPrimitive::from_i16(data_type) {
+                Some(sql_data_type) => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let types_info = MongoTypesInfo::new(data_type);
+                    let types_info = MongoTypesInfo::new(sql_data_type);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
                 }
-                false => {
+                None => {
                     mongo_handle.add_diag_info(ODBCError::InvalidSqlType(data_type.to_string()));
                     SqlReturn::ERROR
                 }

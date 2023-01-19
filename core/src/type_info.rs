@@ -174,11 +174,11 @@ lazy_static! {
 #[derive(Debug)]
 pub struct MongoTypesInfo {
     current_type_index: usize,
-    sql_data_type: i16,
+    sql_data_type: SqlDataType,
 }
 
 impl MongoTypesInfo {
-    pub fn new(sql_data_type: i16) -> MongoTypesInfo {
+    pub fn new(sql_data_type: SqlDataType) -> MongoTypesInfo {
         MongoTypesInfo {
             current_type_index: 0,
             sql_data_type,
@@ -193,8 +193,8 @@ impl MongoStatement for MongoTypesInfo {
         loop {
             self.current_type_index += 1;
             if self.current_type_index > DATA_TYPES.len()
-                || DATA_TYPES[self.current_type_index - 1].sql_type.0 == self.sql_data_type
-                || self.sql_data_type == SqlDataType::UNKNOWN_TYPE.0
+                || DATA_TYPES[self.current_type_index - 1].sql_type == self.sql_data_type
+                || self.sql_data_type == SqlDataType::UNKNOWN_TYPE
             {
                 break;
             }
@@ -230,7 +230,7 @@ impl MongoStatement for MongoTypesInfo {
         match DATA_TYPES.get(self.current_type_index - 1) {
             Some(type_info) => Ok(Some(match col_index {
                 1 | 13 => Bson::String(type_info.type_name.to_string()),
-                2 | 16 => Bson::Int32(type_info.sql_type.0 as i32),
+                2 | 16 => Bson::Int32(type_info.sql_type as i32),
                 3 => match type_info.precision {
                     Some(precision) => Bson::Int32(precision as i32),
                     None => Bson::Null,

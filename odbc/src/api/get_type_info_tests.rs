@@ -26,7 +26,7 @@ mod unit {
             };
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, data_type.0)
+                SQLGetTypeInfo(handle as *mut _, data_type as i16)
             );
             let stmt = (*handle).as_statement().unwrap();
             // for each expectation, check that calling next succeeds and we get the expected value
@@ -133,7 +133,7 @@ mod unit {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, SqlDataType::INTEGER.0)
+                SQLGetTypeInfo(handle as *mut _, SqlDataType::INTEGER as i16)
             );
             let value = stmt
                 .mongo_statement
@@ -156,7 +156,7 @@ mod unit {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, SqlDataType::INTEGER.0)
+                SQLGetTypeInfo(handle as *mut _, SqlDataType::INTEGER as i16)
             );
             let result = stmt
                 .mongo_statement
@@ -170,7 +170,7 @@ mod unit {
             // test each of the values come out properly for a given type
             let values: Vec<Bson> = vec![
                 Bson::String("int".to_string()),
-                Bson::Int32(SqlDataType::INTEGER.0 as i32),
+                Bson::Int32(SqlDataType::INTEGER as i32),
                 Bson::Int32(10),
                 Bson::Null,
                 Bson::Null,
