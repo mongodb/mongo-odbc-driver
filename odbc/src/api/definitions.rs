@@ -386,6 +386,52 @@ pub enum InfoType {
 #[allow(non_camel_case_types)]
 #[repr(i16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+pub enum SqlDataType {
+    UNKNOWN_TYPE = 0,
+    // also called SQL_VARIANT_TYPE since odbc 4.0
+    CHAR = 1,
+    NUMERIC = 2,
+    DECIMAL = 3,
+    /// Exact numeric value with precision 10 and scale 0 (signed: `-2[31] <= n <= 2[31] - 1`,
+    /// unsigned: `0 <= n <= 2[32] - 1`).  An application uses `SQLGetTypeInfo` or `SQLColAttribute`
+    /// to determine whether a particular data type or a particular column in a result set is
+    /// unsigned.
+    INTEGER = 4,
+    SMALLINT = 5,
+    FLOAT = 6,
+    REAL = 7,
+    /// Signed, approximate, numeric value with a binary precision 53 (zero or absolute value
+    /// `10[-308]` to `10[308]`).
+    DOUBLE = 8,
+    DATETIME = 9,
+    VARCHAR = 12,
+
+    // one-parameter shortcuts for date/time data types
+    DATE = 91,
+    TIME = 92,
+    /// Year, month, day, hour, minute, and second fields, with valid values as defined for the DATE
+    /// and TIME data types.
+    TIMESTAMP = 93,
+
+    // SQL extended datatypes:
+    EXT_TIME_OR_INTERVAL = 10,
+    EXT_TIMESTAMP = 11,
+    EXT_LONG_VARCHAR = -1,
+    EXT_BINARY = -2,
+    EXT_VAR_BINARY = -3,
+    EXT_LONG_VAR_BINARY = -4,
+    EXT_BIG_INT = -5,
+    EXT_TINY_INT = -6,
+    EXT_BIT = -7,
+    EXT_W_CHAR = -8,
+    EXT_W_VARCHAR = -9,
+    EXT_W_LONG_VARCHAR = -10,
+    EXT_GUID = -11,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(i16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum DiagType {
     SQL_DIAG_RETURNCODE = 1,
     SQL_DIAG_NUMBER = 2,
