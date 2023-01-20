@@ -1,3 +1,4 @@
+use crate::stmt::EmptyStatement;
 use crate::util::{table_type_filter_to_vec, to_name_regex};
 use crate::{
     col_metadata::MongoColMetadata,
@@ -119,8 +120,10 @@ impl MongoCollections {
     }
 
     // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
-    pub fn all_schemas() -> MongoCollections {
-        MongoCollections::empty()
+    pub fn all_schemas() -> EmptyStatement {
+        EmptyStatement {
+            resultset_metadata: &COLLECTIONS_METADATA,
+        }
     }
 
     pub fn empty() -> MongoCollections {

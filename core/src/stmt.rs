@@ -24,3 +24,60 @@ pub trait MongoStatement: Debug {
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)
     }
 }
+
+#[derive(Debug)]
+pub struct EmptyStatement {
+    pub resultset_metadata: &'static Vec<MongoColMetadata>,
+}
+
+impl MongoStatement for EmptyStatement {
+    fn next(&mut self, _mongo_connection: Option<&MongoConnection>) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
+        Err(Error::InvalidCursorState)
+    }
+
+    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+        self.resultset_metadata
+    }
+}
+
+#[cfg(test)]
+mod unit {
+    use crate::{
+        col_metadata::MongoColMetadata,
+        json_schema::{
+            simplified::{Atomic, Schema},
+            BsonTypeName,
+        },
+        stmt::{EmptyStatement, MongoStatement},
+    };
+    use lazy_static::lazy_static;
+    use odbc_sys::Nullability;
+
+    lazy_static! {
+        static ref EMPTY_TEST_METADATA: Vec<MongoColMetadata> = vec![MongoColMetadata::new(
+            "",
+            "".to_string(),
+            "TABLE_CAT".to_string(),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            Nullability::NO_NULLS,
+        )];
+    }
+
+    #[test]
+    fn empty_statement_correctness() {
+        let mut test_empty = EmptyStatement {
+            resultset_metadata: &EMPTY_TEST_METADATA,
+        };
+
+        assert_eq!(
+            "TABLE_CAT",
+            test_empty.get_col_metadata(1).unwrap().col_name
+        );
+        assert!(!test_empty.next(None).unwrap());
+        assert!(test_empty.get_value(1).is_err());
+    }
+}

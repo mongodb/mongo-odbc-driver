@@ -22,4 +22,8 @@ pub mod mock_query;
 mod stmt;
 pub use stmt::MongoStatement;
 pub mod odbc_uri;
+mod primary_keys;
 pub mod util;
+pub use primary_keys::MongoPrimaryKeys;
+mod foreign_keys;
+pub use foreign_keys::MongoForeignKeys;
