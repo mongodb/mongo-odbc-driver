@@ -3,7 +3,8 @@ use constants::{
     INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE,
     INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX,
     INVALID_INFO_TYPE_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED,
-    RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR,
+    VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -142,6 +143,7 @@ impl ODBCError {
             ODBCError::InvalidAttrIdentifier(_) => INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER,
             ODBCError::InvalidCursorState => INVALID_CURSOR_STATE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
+            ODBCError::InvalidTargetType(_) => PROGRAM_TYPE_OUT_OF_RANGE,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
@@ -174,6 +176,7 @@ impl ODBCError {
             | ODBCError::InvalidAttrIdentifier(_)
             | ODBCError::InvalidCursorState
             | ODBCError::InvalidHandleType(_)
+            | ODBCError::InvalidTargetType(_)
             | ODBCError::MissingDriverOrDSNProperty
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
