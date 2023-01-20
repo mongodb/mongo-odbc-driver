@@ -21,9 +21,9 @@ use mongo_odbc_core::{
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
-    BulkOperation, CDataType, Char, CompletionType, Desc, DriverConnectOption, FetchOrientation,
-    HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, Nullability, ParamType,
-    Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, ULen, USmallInt, WChar,
+    BulkOperation, Char, CompletionType, Desc, DriverConnectOption, FetchOrientation, HDbc, HDesc,
+    HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, Nullability, ParamType, Pointer, RetCode,
+    SmallInt, SqlDataType, SqlReturn, ULen, USmallInt, WChar,
 };
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 
@@ -1627,68 +1627,93 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
 pub unsafe extern "C" fn SQLGetData(
     statement_handle: HStmt,
     col_or_param_num: USmallInt,
-    target_type: CDataType,
+    target_type: SmallInt,
     target_value_ptr: Pointer,
     buffer_length: Len,
     str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
-            let mut error = None;
-            let mut ret = Bson::Null;
             let mongo_handle = MongoHandleRef::from(statement_handle);
-            {
-                let res = {
-                    let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    stmt.var_data_cache
-                        .write()
-                        .unwrap()
-                        .as_mut()
-                        .unwrap()
-                        .remove(&col_or_param_num)
-                };
-                if let Some(cached_data) = res {
-                    return crate::api::data::format_cached_data(
-                        mongo_handle,
-                        cached_data,
-                        col_or_param_num,
-                        target_type,
-                        target_value_ptr,
-                        buffer_length,
-                        str_len_or_ind_ptr,
-                    );
-                }
-                let stmt = (*mongo_handle).as_statement().unwrap();
-                let mut mongo_stmt = stmt.mongo_statement.write().unwrap();
-                let bson = match mongo_stmt.as_mut() {
-                    None => Err(ODBCError::InvalidCursorState),
-                    Some(mongo_stmt) => mongo_stmt
-                        .get_value(col_or_param_num)
-                        .map_err(ODBCError::Core),
-                };
-                match bson {
-                    Err(e) => error = Some(e),
-                    Ok(None) => error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num)),
-                    Ok(Some(d)) => {
-                        ret = d;
-                    }
+
+            match FromPrimitive::from_i16(target_type) {
+                Some(valid_type) => sql_get_data_helper(
+                    mongo_handle,
+                    col_or_param_num,
+                    valid_type,
+                    target_value_ptr,
+                    buffer_length,
+                    str_len_or_ind_ptr,
+                ),
+                None => {
+                    mongo_handle.add_diag_info(ODBCError::InvalidTargetType(target_type));
+                    SqlReturn::ERROR
                 }
             }
-            if let Some(e) = error {
-                mongo_handle.add_diag_info(e);
-                return SqlReturn::ERROR;
-            }
-            crate::api::data::format_bson_data(
+        },
+        statement_handle
+    )
+}
+
+unsafe fn sql_get_data_helper(
+    mongo_handle: &mut MongoHandle,
+    col_or_param_num: USmallInt,
+    target_type: CDataType,
+    target_value_ptr: Pointer,
+    buffer_length: Len,
+    str_len_or_ind_ptr: *mut Len,
+) -> SqlReturn {
+    let mut error = None;
+    let mut ret = Bson::Null;
+    {
+        let res = {
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            stmt.var_data_cache
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .remove(&col_or_param_num)
+        };
+        if let Some(cached_data) = res {
+            return crate::api::data::format_cached_data(
                 mongo_handle,
+                cached_data,
                 col_or_param_num,
                 target_type,
                 target_value_ptr,
                 buffer_length,
                 str_len_or_ind_ptr,
-                ret,
-            )
-        },
-        statement_handle
+            );
+        }
+        let stmt = (*mongo_handle).as_statement().unwrap();
+        let mut mongo_stmt = stmt.mongo_statement.write().unwrap();
+        let bson = match mongo_stmt.as_mut() {
+            None => Err(ODBCError::InvalidCursorState),
+            Some(mongo_stmt) => mongo_stmt
+                .get_value(col_or_param_num)
+                .map_err(ODBCError::Core),
+        };
+        match bson {
+            Err(e) => error = Some(e),
+            Ok(None) => error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num)),
+            Ok(Some(d)) => {
+                ret = d;
+            }
+        }
+    }
+    if let Some(e) = error {
+        mongo_handle.add_diag_info(e);
+        return SqlReturn::ERROR;
+    }
+    crate::api::data::format_bson_data(
+        mongo_handle,
+        col_or_param_num,
+        target_type,
+        target_value_ptr,
+        buffer_length,
+        str_len_or_ind_ptr,
+        ret,
     )
 }
 

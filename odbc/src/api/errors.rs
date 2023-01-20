@@ -64,6 +64,8 @@ pub enum ODBCError {
     InvalidAttrValue(&'static str),
     #[error("[{}][API] Invalid attribute identifier {0}", VENDOR_IDENTIFIER)]
     InvalidAttrIdentifier(i32),
+    #[error("[{}][API] Invalid target type {0}", VENDOR_IDENTIFIER)]
+    InvalidTargetType(i16),
     #[error(
         "[{}][API] Missing property \"Driver\" or \"DSN\" in connection string",
         VENDOR_IDENTIFIER
