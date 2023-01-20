@@ -27,6 +27,8 @@ pub enum Error {
         test: String,
         expected: String,
         actual: String,
+        row: usize,
+        column: usize,
     },
     #[error("mismatch in row counts for test {test}: expected {expected}, actual {actual}")]
     RowCount {
@@ -454,6 +456,7 @@ fn validate_result_set(
     let column_count = get_column_count(&stmt)?;
     let mut row_counter = 0;
     if let Some(expected_result) = entry.expected_result.as_ref() {
+        let mut row_num = 0;
         while fetch_row(&stmt)? {
             let expected_row_check = expected_result.get(row_counter);
             // If there are no more expected rows, continue fetching to get actual row count
@@ -466,6 +469,7 @@ fn validate_result_set(
                         row: row_counter,
                     });
                 }
+                row_num += 1;
                 for i in 0..(column_count) {
                     let expected_field = expected_row.get(i).unwrap();
                     let expected_data_type = if expected_field.is_number() {
@@ -480,6 +484,8 @@ fn validate_result_set(
                             test: entry.description.clone(),
                             expected: expected_field.to_string(),
                             actual: actual_field.to_string(),
+                            row: row_num,
+                            column: i + 1,
                         });
                     }
                 }
