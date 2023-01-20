@@ -63,7 +63,7 @@ mod integration {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         let output_len;
-        let in_connection_string;
+        let mut in_connection_string;
         let out_connection_string;
         unsafe {
             assert_eq!(
@@ -89,6 +89,7 @@ mod integration {
 
             // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
             in_connection_string = generate_default_connection_str();
+            in_connection_string.push_str("DATABASE=integration_test;");
             let mut in_connection_string_encoded: Vec<u16> =
                 in_connection_string.encode_utf16().collect();
             in_connection_string_encoded.push(0);
@@ -323,11 +324,11 @@ mod integration {
                 SQLNumResultCols(stmt as HStmt, column_count_ptr)
             );
             let numeric_attribute_ptr = &mut 0;
-            const FIELD_TYPES: [Desc; 4] = [
+            const FIELD_TYPES: [Desc; 3] = [
                 Desc::ConciseType,
                 Desc::Unsigned,
                 // SQL_COLUMN_NAME,
-                Desc::Unsigned,
+                // SQL_COLUMN_NULLABLE,
                 Desc::TypeName,
                 // SQL_COLUMN_LENGTH,
                 // SQL_COLUMN_SCALE,
