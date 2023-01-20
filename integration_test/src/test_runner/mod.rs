@@ -125,14 +125,14 @@ impl fmt::Display for TestDef {
 /// integration_test runs the query and function tests contained in the TEST_FILE_DIR directory
 #[test]
 #[ignore]
-pub fn integration_test() -> Result<()> {
-    run_integration_tests(false)
+pub fn resultset_tests() -> Result<()> {
+    run_resultset_tests(false)
 }
 
 /// Run an integration test. The generate argument indicates whether
 /// the test results should written to a file for baseline test file
 /// generation, or be asserted for correctness.
-pub fn run_integration_tests(generate: bool) -> Result<()> {
+pub fn run_resultset_tests(generate: bool) -> Result<()> {
     let env = create_environment_v3().unwrap();
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
     for path in paths {
@@ -212,7 +212,10 @@ fn wstr_or_null(value: &Value) -> *const u16 {
 fn to_wstr_ptr(string: &str) -> *const u16 {
     let mut v: Vec<u16> = string.encode_utf16().collect();
     v.push(0);
-    v.as_ptr()
+    let ret = v.as_ptr();
+    // we are leaking memory for this test. Do not run asan on this test.
+    std::mem::forget(v);
+    ret
 }
 
 fn to_i16(value: &Value) -> Result<i16> {
@@ -333,6 +336,7 @@ fn run_function_test(
         }
         "sqlcolumnsw" => {
             check_array_length(function, 9)?;
+            dbg!(&function);
             unsafe {
                 Ok(odbc_sys::SQLColumnsW(
                     statement.handle() as HStmt,

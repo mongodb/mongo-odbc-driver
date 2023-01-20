@@ -486,7 +486,7 @@ impl MongoFields {
             |db| vec![db.to_string()],
         );
         MongoFields {
-            dbs: dbg!(dbs.into()),
+            dbs: dbs.into(),
             current_db_name: "".to_string(),
             collections_for_db: None,
             current_col_metadata: Vec::new(),
