@@ -6,10 +6,11 @@ mod integration {
     };
     use odbc::ffi::SQL_NTS;
     use odbc_sys::{
-        AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, DriverConnectOption,
-        EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, InfoType, Pointer, SQLAllocHandle,
-        SQLDriverConnectW, SQLFreeHandle, SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt,
-        SqlReturn,
+        AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, Desc, DriverConnectOption,
+        EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType, Pointer,
+        SQLAllocHandle, SQLColAttributeW, SQLDriverConnectW, SQLExecDirectW, SQLFetch,
+        SQLFreeHandle, SQLGetData, SQLGetInfoW, SQLMoreResults, SQLNumResultCols,
+        SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt, SqlReturn,
     };
     use std::ptr::null_mut;
     use std::slice;
@@ -241,6 +242,151 @@ mod integration {
                     *str_len_ptr as usize
                 )),
                 *str_len_ptr
+            );
+        }
+    }
+
+    /// Test PowerBi data retrieval flow (setup and connection flows are prerequisites)
+    /// data retreival flow is:
+    ///     - SQLAllocHandle(SQL_HANDLE_STMT)
+    ///     - SQLGetInfoW(SQL_DRIVER_ODBC_VER)
+    ///     - SQLGetInfoW(SQL_DRIVER_NAME)
+    ///     - SQLExecDirectW({NullTerminatedQuery},SQL_NTS)
+    ///     - SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
+    ///     - SQLGetInfoW(SQL_GETDATA_EXTENSIONS)
+    ///     - SQLNumResultCols()
+    ///     - For columns 1 to {numCols}
+    ///         - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
+    ///         - SQLColAttributeW(SQL_DESC_UNSIGNED)
+    ///         - SQLColAttributeW(SQL_COLUMN_NAME)
+    ///         - SQLColAttributeW(SQL_COLUMN_NULLABLE)
+    ///         - SQLColAttributeW(SQL_DESC_TYPE_NAME)
+    ///         - SQLColAttributeW(SQL_COLUMN_LENGTH)
+    ///         - SQLColAttributeW(SQL_COLUMN_SCALE)
+    ///     - For X rows or until SQLFetch returns SQL_NO_DATA
+    ///         - SQLFetch()
+    ///         - For columns 1 to {numCols}
+    ///             - SQLGetData({colIndex}, {defaultCtoSqlType})
+    ///     - SQLMoreResults()
+    ///     - SQLFreeHandle(SQL_HANDLE_STMT)
+    #[test]
+    fn test_data_retrieval() {
+        let env_handle: HEnv = setup();
+        let (conn_handle, _, _, _) = power_bi_connect(env_handle);
+        let mut stmt: Handle = null_mut();
+        unsafe {
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLAllocHandle(
+                    HandleType::Stmt,
+                    conn_handle as *mut _,
+                    &mut stmt as *mut Handle
+                )
+            );
+
+            // SQL_DRIVER_ODBC_VER and SQL_DRIVER_NAME are not available through odbc_sys
+            /*
+            SQLGetInfoW(SQL_DRIVER_ODBC_VER)
+            SQLGetInfoW(SQL_DRIVER_NAME)
+            */
+
+            let mut query: Vec<u16> = "select * from example".encode_utf16().collect();
+            query.push(0);
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS as i32)
+            );
+
+            // SQLGetFunctions is not available through odbc_sys
+            /*
+            SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
+            */
+
+            let str_len_ptr = &mut 0;
+            const BUFFER_LENGTH: SmallInt = 300;
+            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetInfoW(
+                    conn_handle,
+                    InfoType::GetDataExtensions,
+                    output_buffer as Pointer,
+                    BUFFER_LENGTH,
+                    str_len_ptr
+                )
+            );
+
+            let column_count_ptr = &mut 0;
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLNumResultCols(stmt as HStmt, column_count_ptr)
+            );
+            let numeric_attribute_ptr = &mut 0;
+            const FIELD_TYPES: [Desc; 4] = [
+                Desc::ConciseType,
+                Desc::Unsigned,
+                // SQL_COLUMN_NAME,
+                Desc::Unsigned,
+                Desc::TypeName,
+                // SQL_COLUMN_LENGTH,
+                // SQL_COLUMN_SCALE,
+            ];
+            for col_num in 0..*column_count_ptr {
+                FIELD_TYPES.iter().for_each(|field_type| {
+                    assert_eq!(
+                        SqlReturn::SUCCESS,
+                        SQLColAttributeW(
+                            stmt as HStmt,
+                            (col_num + 1) as u16,
+                            *field_type,
+                            output_buffer as Pointer,
+                            BUFFER_LENGTH,
+                            str_len_ptr,
+                            numeric_attribute_ptr
+                        )
+                    );
+                });
+            }
+            loop {
+                let result = SQLFetch(stmt as HStmt);
+                assert!(result == SqlReturn::SUCCESS || result == SqlReturn::NO_DATA);
+                match result {
+                    SqlReturn::SUCCESS => {
+                        assert_eq!(
+                            SqlReturn::SUCCESS,
+                            SQLGetData(
+                                stmt as HStmt,
+                                1,
+                                odbc_sys::CDataType::SLong,
+                                output_buffer as Pointer,
+                                BUFFER_LENGTH as isize,
+                                &mut 0
+                            )
+                        );
+                        assert_eq!(
+                            SqlReturn::SUCCESS,
+                            SQLGetData(
+                                stmt as HStmt,
+                                2,
+                                odbc_sys::CDataType::Char,
+                                output_buffer as Pointer,
+                                BUFFER_LENGTH as isize,
+                                &mut 0
+                            )
+                        );
+                    }
+                    // break if SQLFetch returns SQL_NO_DATA
+                    _ => break,
+                }
+            }
+
+            assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt as HStmt));
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLFreeHandle(HandleType::Stmt, stmt as Handle),
+                "{}",
+                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
             );
         }
     }
