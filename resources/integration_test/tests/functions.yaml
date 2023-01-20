@@ -55,10 +55,12 @@ tests:
         "int",
         "int",
         "int",
-        "int"
+        "int",
+        "string"
     ]
     exepected_case_sensitive: [
         "", 
+        "",
         "",
         "",
         "",
@@ -78,6 +80,7 @@ tests:
     ]
     exepected_catalog_name: [
         "", 
+        "",
         "",
         "",
         "",
@@ -132,7 +135,8 @@ tests:
         4,
         4,
         4,
-        4
+        4,
+        0
     ]
     expected_length: [
         0, 
@@ -151,10 +155,12 @@ tests:
         4,
         4,
         4,
-        4
+        4,
+        0
     ]
     expected_is_searchable: [ 
         1, 
+        1,
         1,
         1,
         1,
@@ -189,6 +195,7 @@ tests:
         0,
         0,
         0,
+        0,
         0
     ]
     expected_sql_type: [
@@ -208,7 +215,8 @@ tests:
         4,
         4,
         4,
-        4
+        4,
+        12
     ]
     expected_precision: [ 
         0, 
@@ -227,10 +235,12 @@ tests:
         10,
         10,
         10,
-        10
+        10,
+        0
     ]
     expected_scale: [ 
         0, 
+        0,
         0,
         0,
         0,
