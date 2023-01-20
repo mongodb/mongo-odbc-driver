@@ -502,6 +502,64 @@ pub enum DiagType {
     SQL_DIAG_COLUMN_NUMBER = -1247,
 }
 
+#[allow(non_camel_case_types)]
+#[repr(i16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+pub enum ParamType {
+    SQL_PARAM_TYPE_UNKNOWN = 0,
+    SQL_PARAM_INPUT = 1,
+    SQL_PARAM_INPUT_OUTPUT = 2,
+    SQL_RESULT_COL = 3,
+    SQL_PARAM_OUTPUT = 4,
+    SQL_RETURN_VALUE = 5,
+    SQL_PARAM_INPUT_OUTPUT_STREAM = 8,
+    SQL_PARAM_OUTPUT_STREAM = 16,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(i16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+pub enum BulkOperation {
+    SQL_ADD = 4,
+    SQL_UPDATE_BY_BOOKMARK = 5,
+    SQL_DELETE_BY_BOOKMARK = 6,
+    SQL_FETCH_BY_BOOKMARK = 7,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(i16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+pub enum CompletionType {
+    SQL_COMMIT = 0,
+    SQL_ROLLBACK = 1,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(u16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+pub enum FetchOrientation {
+    SQL_FETCH_NEXT = 1,
+    SQL_FETCH_FIRST = 2,
+    SQL_FETCH_LAST = 3,
+    SQL_FETCH_PRIOR = 4,
+    SQL_FETCH_ABSOLUTE = 5,
+    SQL_FETCH_RELATIVE = 6,
+    SQL_FETCH_FIRST_USER = 31,
+    SQL_FETCH_FIRST_SYSTEM = 32,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(i16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+pub enum Nullability {
+    SQL_NO_NULLS = 0,
+    SQL_NULLABLE = 1,
+    SQL_NULLABLE_UNKNOWN = 2,
+}
+
+// FETCH ORIENTATION
+// COMPLETION TYPE
+
 pub const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
 
 pub const SQL_CB_NULL: u16 = 0x0000;

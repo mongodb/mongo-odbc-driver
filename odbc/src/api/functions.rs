@@ -21,9 +21,8 @@ use mongo_odbc_core::{
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
-    BulkOperation, Char, CompletionType, Desc, DriverConnectOption, FetchOrientation, HDbc, HDesc,
-    HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, Nullability, ParamType, Pointer, RetCode,
-    SmallInt, SqlDataType, SqlReturn, ULen, USmallInt, WChar,
+    Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
+    Len, Nullability, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, ULen, USmallInt, WChar,
 };
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 
@@ -259,7 +258,7 @@ fn sql_alloc_handle(
 pub unsafe extern "C" fn SQLBindCol(
     hstmt: HStmt,
     _col_number: USmallInt,
-    _target_type: CDataType,
+    _target_type: SmallInt,
     _target_value: Pointer,
     _buffer_length: Len,
     _length_or_indicatior: *mut Len,
@@ -277,9 +276,9 @@ pub unsafe extern "C" fn SQLBindCol(
 pub unsafe extern "C" fn SQLBindParameter(
     hstmt: HStmt,
     _parameter_number: USmallInt,
-    _input_output_type: ParamType,
-    _value_type: CDataType,
-    _parmeter_type: SqlDataType,
+    _input_output_type: SmallInt,
+    _value_type: SmallInt,
+    _parmeter_type: SmallInt,
     _column_size: ULen,
     _decimal_digits: SmallInt,
     _parameter_value_ptr: Pointer,
@@ -337,7 +336,7 @@ pub unsafe extern "C" fn SQLBrowseConnectW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLBulkOperations(
     statement_handle: HStmt,
-    _operation: BulkOperation,
+    _operation: USmallInt,
 ) -> SqlReturn {
     unsupported_function(MongoHandleRef::from(statement_handle), "SQLBulkOperations")
 }
@@ -829,7 +828,7 @@ pub unsafe extern "C" fn SQLCopyDesc(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDataSources(
     environment_handle: HEnv,
-    _direction: FetchOrientation,
+    _direction: USmallInt,
     _server_name: *mut Char,
     _buffer_length_1: SmallInt,
     _name_length_1: *mut SmallInt,
@@ -851,7 +850,7 @@ pub unsafe extern "C" fn SQLDataSources(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDataSourcesW(
     environment_handle: HEnv,
-    _direction: FetchOrientation,
+    _direction: USmallInt,
     _server_name: *mut WChar,
     _buffer_length_1: SmallInt,
     _name_length_1: *mut SmallInt,
@@ -1114,7 +1113,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDrivers(
     henv: HEnv,
-    _direction: FetchOrientation,
+    _direction: USmallInt,
     _driver_desc: *mut Char,
     _driver_desc_max: SmallInt,
     _out_driver_desc: *mut SmallInt,
@@ -1136,7 +1135,7 @@ pub unsafe extern "C" fn SQLDrivers(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriversW(
     henv: HEnv,
-    _direction: FetchOrientation,
+    _direction: USmallInt,
     _driver_desc: *mut WChar,
     _driver_desc_max: SmallInt,
     _out_driver_desc: *mut SmallInt,
@@ -1158,7 +1157,7 @@ pub unsafe extern "C" fn SQLDriversW(
 pub unsafe extern "C" fn SQLEndTran(
     _handle_type: HandleType,
     handle: Handle,
-    _completion_type: CompletionType,
+    _completion_type: SmallInt,
 ) -> SqlReturn {
     unimpl!(handle);
 }
@@ -1316,7 +1315,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetchScroll(
     statement_handle: HStmt,
-    _fetch_orientation: FetchOrientation,
+    _fetch_orientation: USmallInt,
     _fetch_offset: Len,
 ) -> SqlReturn {
     unimpl!(statement_handle);
@@ -3698,7 +3697,7 @@ pub unsafe extern "C" fn SQLSpecialColumns(
     _table_name: *const Char,
     _table_name_length: SmallInt,
     _scope: SmallInt,
-    _nullable: Nullability,
+    _nullable: SmallInt,
 ) -> SqlReturn {
     unsupported_function(MongoHandleRef::from(statement_handle), "SQLSpecialColumns")
 }
