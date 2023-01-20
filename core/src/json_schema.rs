@@ -233,21 +233,17 @@ pub mod simplified {
                     additional_properties: None,
                     items: None,
                     any_of: Some(any_of),
-                } => {
-                    if any_of.is_empty() {
-                        return Err(Error::InvalidResultSetJsonSchema);
-                    }
-                    // if there is an AnyOf that contains one item, we can simplify it
-                    if any_of.len() == 1 {
-                        return Schema::try_from(any_of.into_iter().next().unwrap());
-                    }
-                    Ok(Schema::AnyOf(
+                } => match any_of.len() {
+                    0 => Err(Error::InvalidResultSetJsonSchema),
+                    // AnyOf with a single schema is equivalent to the schema.
+                    1 => Schema::try_from(any_of.into_iter().next().unwrap()),
+                    _ => Ok(Schema::AnyOf(
                         any_of
                             .into_iter()
                             .map(Atomic::try_from)
                             .collect::<Result<BTreeSet<Atomic>>>()?,
-                    ))
-                }
+                    )),
+                },
                 _ => Err(Error::InvalidResultSetJsonSchema),
             }
         }
