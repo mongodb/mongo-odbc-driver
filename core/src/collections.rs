@@ -1,17 +1,20 @@
+use crate::stmt::EmptyStatement;
+use crate::util::{table_type_filter_to_vec, to_name_regex};
 use crate::{
     bson_type_info::BsonTypeInfo,
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
-    util::{add_table_type_filter, to_name_regex_doc, COLLECTION, TABLE, TIMESERIES},
+    util::{COLLECTION, TABLE, TIMESERIES},
     Error,
 };
 use bson::Bson;
 use lazy_static::lazy_static;
-use mongodb::results::CollectionSpecification;
+use mongodb::results::{CollectionSpecification, CollectionType};
 use mongodb::sync::Cursor;
 use odbc_sys::Nullability;
+use regex::Regex;
 
 lazy_static! {
     static ref COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
@@ -67,6 +70,8 @@ pub struct MongoCollections {
     current_database_index: Option<usize>,
     // List of CollectionsForDb for each db.
     collections_for_db_list: Vec<CollectionsForDb>,
+    collection_name_filter: Option<Regex>,
+    table_types_filter: Option<Vec<CollectionType>>,
 }
 
 // Statement related to a SQLColumns call.
@@ -82,35 +87,40 @@ impl MongoCollections {
         collection_name_filter: &str,
         table_type: &str,
     ) -> Self {
-        let names = mongo_connection
+        let db_name_filter_regex = to_name_regex(db_name_filter);
+        let databases = mongo_connection
             .client
-            .list_database_names(to_name_regex_doc(db_name_filter), None)
-            .unwrap();
-        let mut databases: Vec<CollectionsForDb> = Vec::with_capacity(names.len());
-        for name in names {
-            let list_coll_name_filter = to_name_regex_doc(collection_name_filter);
-            let db = mongo_connection.client.database(name.as_str());
-            let collections = db
-                .list_collections(
-                    add_table_type_filter(table_type, list_coll_name_filter),
-                    None,
-                )
-                .unwrap();
-            databases.push(CollectionsForDb {
-                database_name: name,
-                collection_list: collections,
-            });
-        }
+            .list_database_names(None, None)
+            .unwrap()
+            .iter()
+            .filter(|db_name| match &db_name_filter_regex {
+                Some(val) => val.is_match(db_name.as_str()),
+                None => true,
+            })
+            .map(|val| CollectionsForDb {
+                database_name: val.to_string(),
+                collection_list: mongo_connection
+                    .client
+                    .database(val.as_str())
+                    .list_collections(None, None)
+                    .unwrap(),
+            })
+            .collect();
+
         MongoCollections {
             current_collection: None,
             current_database_index: None,
             collections_for_db_list: databases,
+            collection_name_filter: to_name_regex(collection_name_filter),
+            table_types_filter: table_type_filter_to_vec(table_type),
         }
     }
 
     // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
-    pub fn all_schemas() -> MongoCollections {
-        MongoCollections::empty()
+    pub fn all_schemas() -> EmptyStatement {
+        EmptyStatement {
+            resultset_metadata: &COLLECTIONS_METADATA,
+        }
     }
 
     pub fn empty() -> MongoCollections {
@@ -118,6 +128,8 @@ impl MongoCollections {
             current_collection: None,
             current_database_index: None,
             collections_for_db_list: Vec::new(),
+            table_types_filter: None,
+            collection_name_filter: None,
         }
     }
 }
@@ -134,7 +146,7 @@ impl MongoStatement for MongoCollections {
             self.current_database_index = Some(0);
         }
         loop {
-            if self
+            while self
                 .collections_for_db_list
                 .get_mut(self.current_database_index.unwrap())
                 .unwrap()
@@ -142,17 +154,33 @@ impl MongoStatement for MongoCollections {
                 .advance()
                 .map_err(Error::Mongo)?
             {
-                // Cursor advance succeeded, update current CollectionSpecification
-                self.current_collection = Some(
-                    self.collections_for_db_list
-                        .get(self.current_database_index.unwrap())
+                let collection = self
+                    .collections_for_db_list
+                    .get(self.current_database_index.unwrap())
+                    .unwrap()
+                    .collection_list
+                    .deserialize_current()
+                    .map_err(Error::Mongo)?;
+                // Filter the collection matching the types and names specified by the user
+                if (self.table_types_filter.is_none()
+                    || self
+                        .table_types_filter
+                        .as_ref()
                         .unwrap()
-                        .collection_list
-                        .deserialize_current()
-                        .map_err(Error::Mongo)?,
-                );
-                return Ok(true);
+                        .contains(&collection.collection_type))
+                    && (self.collection_name_filter.is_none()
+                        || self
+                            .collection_name_filter
+                            .as_ref()
+                            .unwrap()
+                            .is_match(&collection.name))
+                {
+                    // Cursor advance succeeded and the collection matches the filters, update current CollectionSpecification
+                    self.current_collection = Some(collection);
+                    return Ok(true);
+                }
             }
+
             self.current_database_index = Some(self.current_database_index.unwrap() + 1);
             if self.current_database_index.unwrap() >= self.collections_for_db_list.len() {
                 return Ok(false);
@@ -333,66 +361,58 @@ mod unit {
                 .nullability
         );
     }
+
+    #[cfg(test)]
     mod table_type {
+        use crate::util::table_type_filter_to_vec;
+        use constants::SQL_ALL_TABLE_TYPES;
+        use mongodb::results::CollectionType;
+
         #[test]
         fn all_types() {
-            use crate::collections::add_table_type_filter;
-            use bson::doc;
-            use constants::SQL_ALL_TABLE_TYPES;
-            let filter = doc! {};
-            assert_eq!(doc! {}, add_table_type_filter(SQL_ALL_TABLE_TYPES, filter));
+            let filters_opt = table_type_filter_to_vec(SQL_ALL_TABLE_TYPES);
+            // No filtering will be required
+            assert!(filters_opt.is_none());
         }
         #[test]
         fn view() {
-            use crate::collections::add_table_type_filter;
-            use bson::{
-                doc,
-                Bson::{Array, String},
-            };
-            let filter = doc! {};
-            assert_eq!(
-                doc! {"type":doc!{"$in": Array([String("view".to_string())].to_vec())}},
-                add_table_type_filter("'view'", filter)
-            );
+            let filters_opt = table_type_filter_to_vec("View");
+            assert!(filters_opt.is_some());
+            let filters = filters_opt.unwrap();
+            assert_eq!(filters.len(), 1);
+            assert!(filters.contains(&CollectionType::View));
         }
         #[test]
         fn table() {
-            use crate::collections::add_table_type_filter;
-            use bson::{
-                doc,
-                Bson::{Array, String},
-            };
-            let filter = doc! {};
-            assert_eq!(
-                doc! {"type":doc!{"$in": Array([String("collection".to_string()),
-                String("timeseries".to_string())].to_vec())}},
-                add_table_type_filter("TABLE", filter)
-            );
+            let filters_opt = table_type_filter_to_vec("table");
+            assert!(filters_opt.is_some());
+            let filters = filters_opt.unwrap();
+            assert_eq!(filters.len(), 1);
+            assert!(filters.contains(&CollectionType::Collection));
         }
         #[test]
         fn view_table() {
-            use crate::collections::add_table_type_filter;
-            use bson::{
-                doc,
-                Bson::{Array, String},
-            };
-            let filter = doc! {};
-            assert_eq!(
-                doc! {"type":doc!{"$in": Array([String("view".to_string()),
-                String("collection".to_string()),
-                String("timeseries".to_string())].to_vec())}},
-                add_table_type_filter("View,'table'", filter)
-            );
+            let filters_opt = table_type_filter_to_vec("view,'table'");
+            assert!(filters_opt.is_some());
+            let filters = filters_opt.unwrap();
+            assert_eq!(filters.len(), 2);
+            assert!(filters.contains(&CollectionType::Collection));
+            assert!(filters.contains(&CollectionType::View));
         }
         #[test]
-        fn not_supported() {
-            use crate::collections::add_table_type_filter;
-            use bson::{doc, Bson::Array};
-            let filter = doc! {};
-            assert_eq!(
-                doc! {"type":doc!{"$in": Array([].to_vec())}},
-                add_table_type_filter("GLOBAL TEMPORARY", filter)
-            );
+        fn some_not_supported() {
+            let filters_opt = table_type_filter_to_vec("TABLE, GLOBAL TEMPORARY");
+            assert!(filters_opt.is_some());
+            let filters = filters_opt.unwrap();
+            assert_eq!(filters.len(), 1);
+            assert!(filters.contains(&CollectionType::Collection));
+        }
+        #[test]
+        fn none_supported() {
+            let filters_opt = table_type_filter_to_vec("GLOBAL TEMPORARY, SYSTEM TABLE");
+            assert!(filters_opt.is_some());
+            let filters = filters_opt.unwrap();
+            assert!(filters.is_empty());
         }
     }
 }

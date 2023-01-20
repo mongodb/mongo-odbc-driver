@@ -11,11 +11,14 @@ use crate::{
     },
     handles::definitions::*,
 };
+use ::function_name::named;
 use bson::Bson;
 use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
+use file_dbg_macros::dbg_write;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
-    MongoFields, MongoQuery, MongoStatement, MongoTableTypes, MongoTypesInfo, SqlDataType,
+    MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
+    MongoTypesInfo, SqlDataType,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -31,6 +34,24 @@ const HANDLE_MUST_BE_ENV_ERROR: &str = "handle must be env";
 const HANDLE_MUST_BE_CONN_ERROR: &str = "handle must be conn";
 const HANDLE_MUST_BE_STMT_ERROR: &str = "handle must be stmt";
 const HANDLE_MUST_BE_DESC_ERROR: &str = "handle must be desc";
+
+///
+/// trace_call_and_outcome returns a formatted function name and sql return type
+///
+pub fn trace_call_and_outcome(function_name: &str, sql_return: &SqlReturn) -> String {
+    let outcome = match *sql_return {
+        SqlReturn::SUCCESS => "SUCCESS",
+        SqlReturn::ERROR => "ERROR",
+        SqlReturn::SUCCESS_WITH_INFO => "SUCCESS_WITH_INFO",
+        SqlReturn::INVALID_HANDLE => "INVALID_HANDLE",
+        SqlReturn::NEED_DATA => "NEED_DATA",
+        SqlReturn::NO_DATA => "NO_DATA",
+        SqlReturn::PARAM_DATA_AVAILABLE => "PARAM_DATA_AVAILABLE",
+        SqlReturn::STILL_EXECUTING => "STILL_EXECUTING",
+        _ => "unknown sql_return",
+    };
+    format!("{}, SQLReturn = {}", function_name, outcome)
+}
 
 macro_rules! must_be_valid {
     ($maybe_handle:expr) => {{
@@ -103,7 +124,12 @@ macro_rules! panic_safe_exec {
         let result = panic::catch_unwind(function);
         panic::set_hook(previous_hook);
         match result {
-            Ok(sql_return) => return sql_return,
+            Ok(sql_return) => {
+                #[allow(unused_variables)]
+                let trace = trace_call_and_outcome(function_name!(), &sql_return);
+                dbg_write!(&trace);
+                return sql_return;
+            }
             Err(err) => {
                 let msg = if let Some(msg) = err.downcast_ref::<&'static str>() {
                     format!("{}\n{:?}", msg, r.recv())
@@ -111,7 +137,11 @@ macro_rules! panic_safe_exec {
                     format!("{:?}\n{:?}", err, r.recv())
                 };
                 handle_ref.add_diag_info(ODBCError::Panic(msg));
-                return SqlReturn::ERROR;
+                let sql_return = SqlReturn::ERROR;
+                #[allow(unused_variables)]
+                let trace = trace_call_and_outcome(function_name!(), &sql_return);
+                dbg_write!(&trace);
+                return sql_return;
             }
         };
     }};
@@ -131,6 +161,7 @@ macro_rules! unimpl {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLAllocHandle(
     handle_type: HandleType,
@@ -225,6 +256,7 @@ fn sql_alloc_handle(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLBindCol(
     hstmt: HStmt,
@@ -285,6 +317,7 @@ pub unsafe extern "C" fn SQLBrowseConnect(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLBrowseConnectW(
     connection_handle: HDbc,
@@ -317,6 +350,7 @@ pub unsafe extern "C" fn SQLBulkOperations(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
     unimpl!(statement_handle);
@@ -328,6 +362,7 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, handle: Handle) -> SqlReturn {
     unimpl!(handle);
@@ -372,6 +407,7 @@ pub unsafe extern "C" fn SQLColAttribute(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLColAttributeW(
     statement_handle: HStmt,
@@ -547,6 +583,7 @@ pub unsafe extern "C" fn SQLColumnPrivileges(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnPrivilegesW(
     statement_handle: HStmt,
@@ -568,6 +605,7 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumns(
     statement_handle: HStmt,
@@ -638,6 +676,7 @@ pub unsafe extern "C" fn SQLColumns(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLColumnsW(
     statement_handle: HStmt,
@@ -853,6 +892,7 @@ pub unsafe extern "C" fn SQLDescribeCol(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDescribeColW(
     hstmt: HStmt,
@@ -921,6 +961,7 @@ pub unsafe extern "C" fn SQLDescribeParam(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
     panic_safe_exec!(
@@ -967,6 +1008,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
 /// # Safety
 /// Because this is a C-infereface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriverConnect(
     connection_handle: HDbc,
@@ -1019,6 +1061,7 @@ pub unsafe extern "C" fn SQLDriverConnect(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriverConnectW(
     connection_handle: HDbc,
@@ -1111,6 +1154,7 @@ pub unsafe extern "C" fn SQLDriversW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLEndTran(
     _handle_type: HandleType,
@@ -1126,6 +1170,7 @@ pub unsafe extern "C" fn SQLEndTran(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecDirect(
     statement_handle: HStmt,
@@ -1167,6 +1212,7 @@ pub unsafe extern "C" fn SQLExecDirect(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLExecDirectW(
     statement_handle: HStmt,
@@ -1216,6 +1262,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
     panic_safe_exec!(
@@ -1266,6 +1313,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetchScroll(
     statement_handle: HStmt,
@@ -1281,6 +1329,7 @@ pub unsafe extern "C" fn SQLFetchScroll(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLForeignKeys(
     statement_handle: HStmt,
@@ -1297,7 +1346,16 @@ pub unsafe extern "C" fn SQLForeignKeys(
     _fk_table_name: *const Char,
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLForeignKeys")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let mongo_statement = MongoForeignKeys::empty();
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -1308,6 +1366,7 @@ pub unsafe extern "C" fn SQLForeignKeys(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLForeignKeysW(
     statement_handle: HStmt,
@@ -1324,7 +1383,16 @@ pub unsafe extern "C" fn SQLForeignKeysW(
     _fk_table_name: *const WChar,
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let mongo_statement = MongoForeignKeys::empty();
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -1333,6 +1401,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
     panic_safe_exec!(
@@ -1413,6 +1482,7 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
     panic_safe_exec!(
@@ -1448,6 +1518,7 @@ pub unsafe extern "C" fn SQLGetConnectAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttrW(
     connection_handle: HDbc,
@@ -1535,6 +1606,7 @@ pub unsafe extern "C" fn SQLGetCursorName(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetCursorNameW(
     statement_handle: HStmt,
@@ -1551,6 +1623,7 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetData(
     statement_handle: HStmt,
@@ -1733,6 +1806,7 @@ pub unsafe extern "C" fn SQLGetDiagField(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagFieldW(
     _handle_type: HandleType,
@@ -1857,6 +1931,7 @@ macro_rules! sql_get_diag_rec_impl {
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagRec(
     handle_type: HandleType,
@@ -1889,6 +1964,7 @@ pub unsafe extern "C" fn SQLGetDiagRec(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetDiagRecW(
     handle_type: HandleType,
@@ -1938,6 +2014,7 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetEnvAttrW(
     environment_handle: HEnv,
@@ -2002,6 +2079,7 @@ pub unsafe extern "C" fn SQLGetInfo(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetInfoW(
     connection_handle: HDbc,
@@ -2488,6 +2566,7 @@ pub unsafe extern "C" fn SQLGetStmtAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetStmtAttrW(
     handle: HStmt,
@@ -2644,6 +2723,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
     panic_safe_exec!(
@@ -2705,6 +2785,7 @@ pub unsafe extern "C" fn SQLNativeSql(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLNativeSqlW(
     connection_handle: HDbc,
@@ -2737,6 +2818,7 @@ pub unsafe extern "C" fn SQLNumParams(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLNumResultCols(
     statement_handle: HStmt,
@@ -2813,6 +2895,7 @@ pub unsafe extern "C" fn SQLPrepareW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLPrimaryKeys(
     statement_handle: HStmt,
@@ -2823,7 +2906,16 @@ pub unsafe extern "C" fn SQLPrimaryKeys(
     _table_name: *const Char,
     _table_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function(MongoHandleRef::from(statement_handle), "SQLPrimaryKeys")
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let mongo_statement = MongoPrimaryKeys::empty();
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -2834,6 +2926,7 @@ pub unsafe extern "C" fn SQLPrimaryKeys(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLPrimaryKeysW(
     statement_handle: HStmt,
@@ -2844,7 +2937,16 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
     _table_name: *const WChar,
     _table_name_length: SmallInt,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            let mongo_statement = MongoPrimaryKeys::empty();
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
 }
 
 ///
@@ -2958,6 +3060,7 @@ pub unsafe extern "C" fn SQLPutData(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLRowCount(
     statement_handle: HStmt,
@@ -3000,6 +3103,7 @@ pub unsafe extern "C" fn SQLSetConnectAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttrW(
     connection_handle: HDbc,
@@ -3064,6 +3168,7 @@ pub unsafe extern "C" fn SQLSetCursorName(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetCursorNameW(
     statement_handle: HStmt,
@@ -3096,9 +3201,10 @@ pub unsafe extern "C" fn SQLSetDescField(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetDescRec(
-    _desc_handle: HDesc,
+    desc_handle: HDesc,
     _rec_number: SmallInt,
     _desc_type: SmallInt,
     _desc_sub_type: SmallInt,
@@ -3109,7 +3215,7 @@ pub unsafe extern "C" fn SQLSetDescRec(
     _string_length_ptr: *const Len,
     _indicator_ptr: *const Len,
 ) -> SqlReturn {
-    unimplemented!()
+    unimpl!(desc_handle)
 }
 
 ///
@@ -3152,6 +3258,7 @@ pub unsafe extern "C" fn SQLSetEnvAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetEnvAttrW(
     environment_handle: HEnv,
@@ -3235,6 +3342,7 @@ pub unsafe extern "C" fn SQLSetStmtAttr(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetStmtAttrW(
     hstmt: HStmt,
@@ -3477,6 +3585,7 @@ pub unsafe extern "C" fn SQLSpecialColumns(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLSpecialColumnsW(
     statement_handle: HStmt,
@@ -3499,6 +3608,7 @@ pub unsafe extern "C" fn SQLSpecialColumnsW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLStatistics(
     statement_handle: HStmt,
@@ -3541,6 +3651,7 @@ pub unsafe extern "C" fn SQLTablePrivileges(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLTablesPrivilegesW(
     statement_handle: HStmt,
@@ -3609,6 +3720,7 @@ fn sql_tables(
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
+#[named]
 pub unsafe extern "C" fn SQLTablesW(
     statement_handle: HStmt,
     catalog_name: *const WChar,

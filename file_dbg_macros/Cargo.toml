@@ -1,0 +1,12 @@
+[package]
+name = "file_dbg_macros"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ryan Chipman <ryan@ryanchipman.com>",
+    "Natacha Bagnard <natacha.bagnard@mongodb.com>",
+    "Patrick Meredith <pmeredit@protonmail.com>",
+    "Oliver Bucaojit <oliver.bucaojit@mongodb.com>"]
+
+[dependencies]
+lazy_static = "1.4.0"
+thiserror = "1"
