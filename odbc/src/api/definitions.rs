@@ -439,46 +439,46 @@ pub enum CDataType {
 #[repr(i16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum SqlDataType {
-    UNKNOWN_TYPE = 0,
+    SQL_UNKNOWN_TYPE = 0,
     // also called SQL_VARIANT_TYPE since odbc 4.0
-    CHAR = 1,
-    NUMERIC = 2,
-    DECIMAL = 3,
+    SQL_CHAR = 1,
+    SQL_NUMERIC = 2,
+    SQL_DECIMAL = 3,
     /// Exact numeric value with precision 10 and scale 0 (signed: `-2[31] <= n <= 2[31] - 1`,
     /// unsigned: `0 <= n <= 2[32] - 1`).  An application uses `SQLGetTypeInfo` or `SQLColAttribute`
     /// to determine whether a particular data type or a particular column in a result set is
     /// unsigned.
-    INTEGER = 4,
-    SMALLINT = 5,
-    FLOAT = 6,
-    REAL = 7,
+    SQL_INTEGER = 4,
+    SQL_SMALLINT = 5,
+    SQL_FLOAT = 6,
+    SQL_REAL = 7,
     /// Signed, approximate, numeric value with a binary precision 53 (zero or absolute value
     /// `10[-308]` to `10[308]`).
-    DOUBLE = 8,
-    DATETIME = 9,
-    VARCHAR = 12,
+    SQL_DOUBLE = 8,
+    SQL_DATETIME = 9,
+    SQL_VARCHAR = 12,
 
     // one-parameter shortcuts for date/time data types
-    DATE = 91,
-    TIME = 92,
+    SQL_TYPE_DATE = 91,
+    SQL_TYPE_TIME = 92,
     /// Year, month, day, hour, minute, and second fields, with valid values as defined for the DATE
     /// and TIME data types.
-    TIMESTAMP = 93,
+    SQL_TYPE_TIMESTAMP = 93,
 
     // SQL extended datatypes:
-    EXT_TIME_OR_INTERVAL = 10,
-    EXT_TIMESTAMP = 11,
-    EXT_LONG_VARCHAR = -1,
-    EXT_BINARY = -2,
-    EXT_VAR_BINARY = -3,
-    EXT_LONG_VAR_BINARY = -4,
-    EXT_BIG_INT = -5,
-    EXT_TINY_INT = -6,
-    EXT_BIT = -7,
-    EXT_W_CHAR = -8,
-    EXT_W_VARCHAR = -9,
-    EXT_W_LONG_VARCHAR = -10,
-    EXT_GUID = -11,
+    SQL_TIME_OR_INTERVAL = 10,
+    SQL_TIMESTAMP = 11,
+    SQL_LONGVARCHAR = -1,
+    SQL_BINARY = -2,
+    SQL_VARBINARY = -3,
+    SQL_LONGVARBINARY = -4,
+    SQL_BIGINT = -5,
+    SQL_TINYINT = -6,
+    SQL_BIT = -7,
+    SQL_WCHAR = -8,
+    SQL_WVARCHAR = -9,
+    SQL_WLONGVARCHAR = -10,
+    SQL_GUID = -11,
 }
 
 #[allow(non_camel_case_types)]
