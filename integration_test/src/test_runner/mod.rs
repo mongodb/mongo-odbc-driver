@@ -313,6 +313,38 @@ fn run_function_test(
                 ))
             }
         }
+        "sqlcolumns" => {
+            check_array_length(function, 9)?;
+            unsafe {
+                Ok(odbc_sys::SQLColumns(
+                    statement.handle() as HStmt,
+                    str_or_null(&function[1]),
+                    to_i16(&function[2])?,
+                    str_or_null(&function[3]),
+                    to_i16(&function[4])?,
+                    str_or_null(&function[5]),
+                    to_i16(&function[6])?,
+                    str_or_null(&function[7]),
+                    to_i16(&function[8])?,
+                ))
+            }
+        }
+        "sqlcolumnsw" => {
+            check_array_length(function, 9)?;
+            unsafe {
+                Ok(odbc_sys::SQLColumnsW(
+                    statement.handle() as HStmt,
+                    wstr_or_null(&function[1]),
+                    to_i16(&function[2])?,
+                    wstr_or_null(&function[3]),
+                    to_i16(&function[4])?,
+                    wstr_or_null(&function[5]),
+                    to_i16(&function[6])?,
+                    wstr_or_null(&function[7]),
+                    to_i16(&function[8])?,
+                ))
+            }
+        }
         "sqlforeignkeysw" => {
             check_array_length(function, 13)?;
             unsafe {
