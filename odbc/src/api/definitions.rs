@@ -440,32 +440,19 @@ pub enum CDataType {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum SqlDataType {
     SQL_UNKNOWN_TYPE = 0,
-    // also called SQL_VARIANT_TYPE since odbc 4.0
     SQL_CHAR = 1,
     SQL_NUMERIC = 2,
     SQL_DECIMAL = 3,
-    /// Exact numeric value with precision 10 and scale 0 (signed: `-2[31] <= n <= 2[31] - 1`,
-    /// unsigned: `0 <= n <= 2[32] - 1`).  An application uses `SQLGetTypeInfo` or `SQLColAttribute`
-    /// to determine whether a particular data type or a particular column in a result set is
-    /// unsigned.
     SQL_INTEGER = 4,
     SQL_SMALLINT = 5,
     SQL_FLOAT = 6,
     SQL_REAL = 7,
-    /// Signed, approximate, numeric value with a binary precision 53 (zero or absolute value
-    /// `10[-308]` to `10[308]`).
     SQL_DOUBLE = 8,
     SQL_DATETIME = 9,
     SQL_VARCHAR = 12,
-
-    // one-parameter shortcuts for date/time data types
     SQL_TYPE_DATE = 91,
     SQL_TYPE_TIME = 92,
-    /// Year, month, day, hour, minute, and second fields, with valid values as defined for the DATE
-    /// and TIME data types.
     SQL_TYPE_TIMESTAMP = 93,
-
-    // SQL extended datatypes:
     SQL_TIME_OR_INTERVAL = 10,
     SQL_TIMESTAMP = 11,
     SQL_LONGVARCHAR = -1,
@@ -556,9 +543,6 @@ pub enum Nullability {
     SQL_NULLABLE = 1,
     SQL_NULLABLE_UNKNOWN = 2,
 }
-
-// FETCH ORIENTATION
-// COMPLETION TYPE
 
 pub const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
 
