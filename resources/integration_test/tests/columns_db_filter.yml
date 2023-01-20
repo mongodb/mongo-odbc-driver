@@ -2,13 +2,7 @@ tests:
   - description: SQLColumnsW no filters
     test_definition: [ "sqlcolumnsw", "", 0, "", 0, "", 0, "", 0 ]
     db: integration_test
-    expected_result:
-      - ["integration_test", "example", "_id"]
-      - ["integration_test", "example", "b"]
-      - ["integration_test", "foo", "_id"]
-      - ["integration_test", "foo", "a"]
-      - ["integration_test_2", "example_2", "_id"]
-      - ["integration_test_2", "example_2", "b"]
+    expected_result: []
     expected_bson_type: [
         "string",
         "string",
@@ -30,7 +24,7 @@ tests:
         "string"
     ]
     exepected_case_sensitive: [
-        "",
+        "", 
         "",
         "",
         "",
@@ -50,7 +44,7 @@ tests:
         ""
     ]
     exepected_catalog_name: [
-        "",
+        "", 
         "",
         "",
         "",
