@@ -142,6 +142,16 @@ pub enum ConnectionAttribute {
 #[allow(non_camel_case_types)]
 #[repr(i32)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+pub enum EnvironmentAttribute {
+    SQL_ATTR_ODBC_VERSION = 200,
+    SQL_ATTR_CONNECTION_POOLING = 201,
+    SQL_ATTR_CP_MATCH = 202,
+    SQL_ATTR_OUTPUT_NTS = 10001,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(i32)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum StatementAttribute {
     SQL_ATTR_APP_ROW_DESC = 10010,
     SQL_ATTR_APP_PARAM_DESC = 10011,
