@@ -1,29 +1,31 @@
-use odbc_sys::ConnectionAttribute;
+use crate::definitions::ConnectionAttribute;
 
 pub(crate) fn connection_attribute_to_string(attr: ConnectionAttribute) -> String {
     match attr {
-        ConnectionAttribute::AsyncEnable => "ASYNC_ENABLE".to_string(),
-        ConnectionAttribute::AccessMode => "ACCESS_MODE".to_string(),
-        ConnectionAttribute::AutoCommit => "AUTO_COMMIT".to_string(),
-        ConnectionAttribute::LoginTimeout => "LOGIN_TIMEOUT".to_string(),
-        ConnectionAttribute::Trace => "TRACE".to_string(),
-        ConnectionAttribute::TraceFile => "TRACE_FILE".to_string(),
-        ConnectionAttribute::TranslateLib => "TRANSLATE_LIB".to_string(),
-        ConnectionAttribute::TranslateOption => "TRANSLATE_OPTION".to_string(),
-        ConnectionAttribute::TxnIsolation => "TXN_ISOLATION".to_string(),
-        ConnectionAttribute::CurrentCatalog => "CURRENT_CATALOG".to_string(),
-        ConnectionAttribute::OdbcCursors => "ODBC_CURSORS".to_string(),
-        ConnectionAttribute::QuietMode => "QUIET_MODE".to_string(),
-        ConnectionAttribute::PacketSize => "PACKET_SIZE".to_string(),
-        ConnectionAttribute::ConnectionTimeout => "CONNECTION_TIMEOUT".to_string(),
-        ConnectionAttribute::DisconnectBehaviour => "DISCONNECT_BEHAVIOUR".to_string(),
-        ConnectionAttribute::AsyncDbcFunctionsEnable => "ASYNC_DBC_FUNCTIONS_ENABLE".to_string(),
-        ConnectionAttribute::AsyncDbcEvent => "ASYNC_DBC_EVENT".to_string(),
-        ConnectionAttribute::EnlistInDtc => "ENLIST_IN_DTC".to_string(),
-        ConnectionAttribute::EnlistInXa => "ENLIST_IN_XA".to_string(),
-        ConnectionAttribute::ConnectionDead => "CONNECTION_DEAD".to_string(),
-        ConnectionAttribute::AutoIpd => "AUTO_IPD".to_string(),
-        ConnectionAttribute::MetadataId => "METADATA_ID".to_string(),
+        ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE => "ASYNC_ENABLE".to_string(),
+        ConnectionAttribute::SQL_ATTR_ACCESS_MODE => "ACCESS_MODE".to_string(),
+        ConnectionAttribute::SQL_ATTR_AUTOCOMMIT => "AUTO_COMMIT".to_string(),
+        ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => "LOGIN_TIMEOUT".to_string(),
+        ConnectionAttribute::SQL_ATTR_TRACE => "TRACE".to_string(),
+        ConnectionAttribute::SQL_ATTR_TRACEFILE => "TRACE_FILE".to_string(),
+        ConnectionAttribute::SQL_ATTR_TRANSLATE_LIB => "TRANSLATE_LIB".to_string(),
+        ConnectionAttribute::SQL_ATTR_TRANSLATE_OPTION => "TRANSLATE_OPTION".to_string(),
+        ConnectionAttribute::SQL_ATTR_TXN_ISOLATION => "TXN_ISOLATION".to_string(),
+        ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => "CURRENT_CATALOG".to_string(),
+        ConnectionAttribute::SQL_ATTR_ODBC_CURSORS => "ODBC_CURSORS".to_string(),
+        ConnectionAttribute::SQL_ATTR_QUIET_MODE => "QUIET_MODE".to_string(),
+        ConnectionAttribute::SQL_ATTR_PACKET_SIZE => "PACKET_SIZE".to_string(),
+        ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => "CONNECTION_TIMEOUT".to_string(),
+        ConnectionAttribute::SQL_ATTR_DISCONNECT_BEHAVIOR => "DISCONNECT_BEHAVIOUR".to_string(),
+        ConnectionAttribute::SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE => {
+            "ASYNC_DBC_FUNCTIONS_ENABLE".to_string()
+        }
+        ConnectionAttribute::SQL_ATTR_ASYNC_DBC_EVENT => "ASYNC_DBC_EVENT".to_string(),
+        ConnectionAttribute::SQL_ATTR_ENLIST_IN_DTC => "ENLIST_IN_DTC".to_string(),
+        ConnectionAttribute::SQL_ATTR_ENLIST_IN_XA => "ENLIST_IN_XA".to_string(),
+        ConnectionAttribute::SQL_ATTR_CONNECTION_DEAD => "CONNECTION_DEAD".to_string(),
+        ConnectionAttribute::SQL_ATTR_AUTO_IPD => "AUTO_IPD".to_string(),
+        ConnectionAttribute::SQL_ATTR_METADATA_ID => "METADATA_ID".to_string(),
     }
 }
 
