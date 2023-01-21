@@ -1,5 +1,5 @@
 tests:
-  - description: SQLColumnsW no filters
+  - description: SQLColumnsW all filters
     test_definition: [ "sqlcolumnsw", "integration_test", 0, "", 0, "%o%", 3, "%i%", 3 ]
     db: integration_test
     expected_result:
