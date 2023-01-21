@@ -339,7 +339,6 @@ fn run_function_test(
         }
         "sqlcolumnsw" => {
             check_array_length(function, 9)?;
-            dbg!(&function);
             unsafe {
                 Ok(odbc_sys::SQLColumnsW(
                     statement.handle() as HStmt,
