@@ -201,21 +201,24 @@ fn str_or_null(value: &Value) -> *const u8 {
 }
 
 /// wstr_or_null converts value to a wide string or null_mut() if null
-fn wstr_or_null(value: &Value) -> *const u16 {
+/// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
+/// as the ptr.
+fn wstr_or_null(value: &Value) -> (*const u16, Vec<u16>) {
     if value.is_null() {
-        null_mut()
+        (null_mut(), Vec::new())
     } else {
         to_wstr_ptr(value.as_str().expect("Unable to cast value as string"))
     }
 }
 
-fn to_wstr_ptr(string: &str) -> *const u16 {
+/// to_wstr_ptr converts a &str into a *const u16.
+/// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
+/// as the ptr.
+fn to_wstr_ptr(string: &str) -> (*const u16, Vec<u16>) {
     let mut v: Vec<u16> = string.encode_utf16().collect();
     v.push(0);
     let ret = v.as_ptr();
-    // we are leaking memory for this test. Do not run asan on this test.
-    std::mem::forget(v);
-    ret
+    (ret, v)
 }
 
 fn to_i16(value: &Value) -> Result<i16> {
@@ -243,7 +246,7 @@ fn run_query_test(
     unsafe {
         match odbc_sys::SQLExecDirectW(
             stmt.handle() as *mut _,
-            to_wstr_ptr(query),
+            to_wstr_ptr(query).0,
             query.len() as i32,
         ) {
             SqlReturn::SUCCESS => {
@@ -307,13 +310,13 @@ fn run_function_test(
             unsafe {
                 Ok(odbc_sys::SQLTablesW(
                     statement.handle() as HStmt,
-                    wstr_or_null(&function[1]),
+                    wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
-                    wstr_or_null(&function[3]),
+                    wstr_or_null(&function[3]).0,
                     to_i16(&function[4])?,
-                    wstr_or_null(&function[5]),
+                    wstr_or_null(&function[5]).0,
                     to_i16(&function[6])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
                 ))
             }
@@ -340,13 +343,13 @@ fn run_function_test(
             unsafe {
                 Ok(odbc_sys::SQLColumnsW(
                     statement.handle() as HStmt,
-                    wstr_or_null(&function[1]),
+                    wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
-                    wstr_or_null(&function[3]),
+                    wstr_or_null(&function[3]).0,
                     to_i16(&function[4])?,
-                    wstr_or_null(&function[5]),
+                    wstr_or_null(&function[5]).0,
                     to_i16(&function[6])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
                 ))
             }
@@ -356,17 +359,17 @@ fn run_function_test(
             unsafe {
                 Ok(odbc_sys::SQLForeignKeysW(
                     statement.handle() as HStmt,
-                    wstr_or_null(&function[1]),
+                    wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
-                    wstr_or_null(&function[3]),
+                    wstr_or_null(&function[3]).0,
                     to_i16(&function[4])?,
-                    wstr_or_null(&function[5]),
+                    wstr_or_null(&function[5]).0,
                     to_i16(&function[6])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
                 ))
             }
