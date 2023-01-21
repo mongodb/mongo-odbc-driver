@@ -3,7 +3,7 @@ tests:
     test_definition: [ "sqlcolumnsw", "integration_test", 0, "", 0, "%o%", 3, "%i%", 3 ]
     db: integration_test
     expected_result:
-      - ["integration_test", null, "foo", "_id", 4, "int", 10, 4, 0, 10, 1, "", null, "{\"$numberInt\":\"4\"}" , null , 0, 0, "YES"]
+      - ["integration_test", null, "foo", "_id", 4, "int", 10, 4, 0, 10, 1, "", null, "{\"$numberInt\":\"4\"}" , null , 0, 1, "YES"]
     expected_bson_type: [
         "string",
         "string",
