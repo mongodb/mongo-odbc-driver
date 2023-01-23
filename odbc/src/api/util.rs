@@ -31,6 +31,8 @@ pub(crate) fn connection_attribute_to_string(attr: ConnectionAttribute) -> Strin
 
 pub(crate) fn statement_attribute_to_string(attr: StatementAttribute) -> String {
     match attr {
+        StatementAttribute::SQL_ROWSET_SIZE => "ROWSET_SIZE".to_string(),
+        StatementAttribute::SQL_GET_BOOKMARK => "GET_BOOKMARK".to_string(),
         StatementAttribute::SQL_ATTR_APP_ROW_DESC => "APP_ROW_DESC".to_string(),
         StatementAttribute::SQL_ATTR_APP_PARAM_DESC => "APP_PARAM_DESC".to_string(),
         StatementAttribute::SQL_ATTR_IMP_ROW_DESC => "IMP_ROW_DESC".to_string(),
