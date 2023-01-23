@@ -23,7 +23,7 @@ impl BsonTypeInfo {
     };
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
-        sql_type: SqlDataType::VARCHAR,
+        sql_type: SqlDataType::EXT_W_VARCHAR,
         searchable: true,
         scale: None,
         precision: None,

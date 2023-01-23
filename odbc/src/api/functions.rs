@@ -429,9 +429,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 let mongo_handle = MongoHandleRef::from(statement_handle);
                 let col_metadata = mongo_stmt.as_ref().unwrap().get_col_metadata(column_number);
                 if let Ok(col_metadata) = col_metadata {
-                    return i16_len::set_output_wstring(
+                    return i16_len::set_output_wstring_as_bytes(
                         (*f)(col_metadata),
-                        character_attribute_ptr as *mut WChar,
+                        character_attribute_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     );
@@ -1568,9 +1568,9 @@ unsafe fn sql_get_connect_attrw_helper(
                 let current_catalog = attributes.current_catalog.as_deref();
                 match current_catalog {
                     None => SqlReturn::NO_DATA,
-                    Some(cc) => i32_len::set_output_wstring(
+                    Some(cc) => i32_len::set_output_wstring_as_bytes(
                         cc,
-                        value_ptr as *mut WChar,
+                        value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     ),
@@ -2174,9 +2174,9 @@ unsafe fn sql_get_infow_helper(
             match some_info_type {
                 InfoType::SQL_DRIVER_NAME => {
                     // This Driver Name is consistent with the name used for our JDBC driver.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         DRIVER_NAME,
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2191,36 +2191,36 @@ unsafe fn sql_get_infow_helper(
 
                     let version = format_version(version_major, version_minor, version_patch);
 
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         version.as_str(),
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
                 }
                 InfoType::SQL_DRIVER_ODBC_VER => {
                     // This driver supports version 3.8.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         "03.08",
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
                 }
                 InfoType::SQL_SEARCH_PATTERN_ESCAPE => {
                     // TODO: SQL-1060: improve sql-to-rust regex pattern method and report escape character here
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         "",
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
                 }
                 InfoType::SQL_DBMS_NAME => {
                     // The underlying DBMS is MongoDB Atlas.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         DBMS_NAME,
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2236,9 +2236,9 @@ unsafe fn sql_get_infow_helper(
                         .unwrap()
                         .get_adf_version();
                     match version {
-                        Ok(version) => i16_len::set_output_wstring(
+                        Ok(version) => i16_len::set_output_wstring_as_bytes(
                             version.as_str(),
-                            info_value_ptr as *mut WChar,
+                            info_value_ptr,
                             buffer_length as usize,
                             string_length_ptr,
                         ),
@@ -2257,9 +2257,9 @@ unsafe fn sql_get_infow_helper(
                     // MongoSQL supports ` and " as identifier delimiters. The "
                     // character is the SQL-92 standard, but we instead return `
                     // to be consistent with our JDBC driver.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         "`",
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2275,27 +2275,27 @@ unsafe fn sql_get_infow_helper(
                     // Therefore, a "schema" may map to MongoSQL's "database".
                     // However, we choose to use "catalog" to represent MongoSQL
                     // databases, and we omit support for "schema".
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         "",
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
                 }
                 InfoType::SQL_CATALOG_NAME_SEPARATOR => {
                     // The name separator used by MongoSQL is '.'.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         ".",
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
                 }
                 InfoType::SQL_CATALOG_TERM => {
                     // MongoSQL uses the term "database".
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         "database",
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2395,9 +2395,9 @@ unsafe fn sql_get_infow_helper(
                 }
                 InfoType::SQL_COLUMN_ALIAS => {
                     // MongoSQL does support column aliases.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2414,9 +2414,9 @@ unsafe fn sql_get_infow_helper(
                 }
                 InfoType::SQL_ORDER_BY_COLUMNS_IN_SELECT => {
                     // MongoSQL does require ORDER BY columns to be in the SELECT list.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2442,9 +2442,9 @@ unsafe fn sql_get_infow_helper(
                 }
                 InfoType::SQL_DATA_SOURCE_READ_ONLY => {
                     // MongoSQL is read-only.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2470,9 +2470,9 @@ unsafe fn sql_get_infow_helper(
                     // than [A-Za-z0-9_]. It is unrealistic to return a string with
                     // all of those characters, so here we choose to return a string
                     // containing what we believe to be most common special characters.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         "`\"'.$+-*/|:<>!={}[]()",
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2558,9 +2558,9 @@ unsafe fn sql_get_infow_helper(
                 }
                 InfoType::SQL_CATALOG_NAME => {
                     // MongoSQL does support catalog (database) names.
-                    i16_len::set_output_wstring(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
-                        info_value_ptr as *mut WChar,
+                        info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )

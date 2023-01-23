@@ -246,6 +246,8 @@ lazy_static! {
 }
 
 mod unit {
+    use odbc_sys::WChar;
+
     use super::*;
     // test unallocated_statement tests SQLFetch when the mongo_statement inside
     // of the statement handle has not been allocated (before an execute or tables function
@@ -402,7 +404,10 @@ mod unit {
                             out_len_or_ind,
                         )
                     );
-                    assert_eq!(expected.len() as isize, *out_len_or_ind);
+                    assert_eq!(
+                        (std::mem::size_of::<WChar>() * expected.len()) as isize,
+                        *out_len_or_ind
+                    );
                     assert_eq!(
                         expected.to_string(),
                         input_wtext_to_string(char_buffer as *const _, expected.len())
@@ -533,7 +538,10 @@ mod unit {
                             ),
                         );
                     }
-                    assert_eq!(expected_out_len, *out_len_or_ind);
+                    assert_eq!(
+                        std::mem::size_of::<WChar>() as isize * expected_out_len,
+                        *out_len_or_ind
+                    );
                     assert_eq!(
                         expected.to_string(),
                         input_wtext_to_string(char_buffer as *const _, expected.chars().count())

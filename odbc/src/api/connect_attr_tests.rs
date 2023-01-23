@@ -10,6 +10,8 @@ mod unit {
     use std::sync::RwLock;
 
     mod get {
+        use odbc_sys::WChar;
+
         use super::*;
 
         macro_rules! test_get_attr {
@@ -62,7 +64,10 @@ mod unit {
     }
 
         unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String {
-            input_wtext_to_string(value_ptr as *const _, out_length)
+            input_wtext_to_string(
+                value_ptr as *const _,
+                out_length / std::mem::size_of::<WChar>(),
+            )
         }
 
         unsafe fn modify_numeric_attr(value_ptr: Pointer, _: usize) -> u32 {
@@ -84,7 +89,7 @@ mod unit {
                 ..Default::default()
             }),
             buffer_length = 5,
-            expected_length = 4,
+            expected_length = 8,
             expected_value = "test".to_string(),
             actual_value_modifier = modify_string_attr,
         );

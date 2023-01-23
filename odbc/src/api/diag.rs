@@ -150,9 +150,9 @@ pub unsafe fn get_diag_field(
                     // NOTE: return code is handled by driver manager; just return success
                     DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
                     DiagType::SQL_DIAG_SQLSTATE => match is_wstring {
-                        true => i16_len::set_output_wstring(
+                        true => i16_len::set_output_wstring_as_bytes(
                             error.get_sql_state(),
-                            diag_info_ptr as *mut u16,
+                            diag_info_ptr,
                             buffer_length as usize,
                             string_length_ptr,
                         ),
@@ -171,9 +171,9 @@ pub unsafe fn get_diag_field(
                     DiagType::SQL_DIAG_MESSAGE_TEXT => {
                         let message = format!("{}", error);
                         match is_wstring {
-                            true => i16_len::set_output_wstring(
+                            true => i16_len::set_output_wstring_as_bytes(
                                 &message,
-                                diag_info_ptr as *mut u16,
+                                diag_info_ptr,
                                 buffer_length as usize,
                                 string_length_ptr,
                             ),

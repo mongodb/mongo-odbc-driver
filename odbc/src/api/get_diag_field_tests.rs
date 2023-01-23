@@ -53,7 +53,7 @@ mod unit {
                 ERROR_MESSAGE,
                 String::from_utf16(&*(message_text as *const [u16; 57])).unwrap()
             );
-            assert_eq!(56, *string_length_ptr);
+            assert_eq!(112, *string_length_ptr);
         }
     }
 
@@ -78,7 +78,7 @@ mod unit {
                 UNIMPLEMENTED_FUNC,
                 String::from_utf16(&*(message_text as *const [u16; 6])).unwrap()
             );
-            assert_eq!(5, *string_length_ptr);
+            assert_eq!(10, *string_length_ptr);
         }
     }
 

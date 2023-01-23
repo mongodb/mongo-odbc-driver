@@ -729,7 +729,7 @@ pub unsafe fn format_cached_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_wstring
+                isize_len::set_output_wstring_as_bytes
             )
         }
         CachedData::Bin(index, data) => {
@@ -827,7 +827,7 @@ pub unsafe fn format_bson_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_wstring
+                isize_len::set_output_wstring_as_bytes
             )
         }
         CDataType::SQL_C_BIT => {
@@ -1079,6 +1079,30 @@ unsafe fn set_output_binary_helper(
 pub mod i16_len {
     use super::*;
     ///
+    /// set_output_wstring_as_bytes writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of *BYTES* written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_wstring_as_bytes(
+        message: &str,
+        output_ptr: Pointer,
+        buffer_len: usize,
+        text_length_ptr: *mut SmallInt,
+    ) -> SqlReturn {
+        let message = message.encode_utf16().collect::<Vec<u16>>();
+        let (len, ret) = set_output_wstring_helper(&message, output_ptr as *mut WChar, buffer_len);
+        // Only copy the length if the pointer is not null
+        if !text_length_ptr.is_null() {
+            *text_length_ptr = (size_of::<WChar>() * len) as SmallInt;
+        }
+        ret
+    }
+
+    ///
     /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
     /// length of the [`output_ptr`] buffer in characters; the message should be truncated
     /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
@@ -1152,26 +1176,26 @@ pub mod i16_len {
 pub mod i32_len {
     use super::*;
     ///
-    /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
-    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
-    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// set_output_wstring_as_bytes writes [`message`] to the Pointer [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in *BYTES*; the message should be truncated
+    /// if it is longer than the buffer length. The number of *BYTES* written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
     ///
     /// # Safety
     /// This writes to multiple raw C-pointers
     ///
-    pub unsafe fn set_output_wstring(
+    pub unsafe fn set_output_wstring_as_bytes(
         message: &str,
-        output_ptr: *mut WChar,
+        output_ptr: Pointer,
         buffer_len: usize,
         text_length_ptr: *mut Integer,
     ) -> SqlReturn {
         let (len, ret) = set_output_wstring_helper(
             &message.encode_utf16().collect::<Vec<_>>(),
-            output_ptr,
+            output_ptr as *mut WChar,
             buffer_len,
         );
-        *text_length_ptr = len as Integer;
+        *text_length_ptr = (size_of::<WChar>() * len) as Integer;
         ret
     }
 
@@ -1226,13 +1250,13 @@ pub mod isize_len {
     ///
     /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
     /// length of the [`output_ptr`] buffer in characters; the message should be truncated
-    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// if it is longer than the buffer length. The number of *BYTES* written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
     ///
     /// # Safety
     /// This writes to multiple raw C-pointers
     ///
-    pub unsafe fn set_output_wstring(
+    pub unsafe fn set_output_wstring_as_bytes(
         stmt: &Statement,
         message: Vec<u16>,
         col_num: USmallInt,
@@ -1254,7 +1278,7 @@ pub mod isize_len {
         let (len, ret) =
             set_output_wstring_helper(message.get(index..).unwrap(), output_ptr, buffer_len);
         // the returned length should always be the total length of the data.
-        *text_length_ptr = (message.len() - index) as Len;
+        *text_length_ptr = (size_of::<WChar>() * (message.len() - index)) as Len;
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret
     }
