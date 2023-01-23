@@ -1,12 +1,12 @@
 mod unit {
     use crate::{
-        api::data::input_wtext_to_string,
+        api::{data::input_wtext_to_string, definitions::ConnectionAttribute},
         errors::ODBCError,
         handles::definitions::{Connection, ConnectionAttributes, ConnectionState, MongoHandle},
         util::connection_attribute_to_string,
         SQLGetConnectAttrW, SQLSetConnectAttrW,
     };
-    use odbc_sys::{ConnectionAttribute, Integer, Pointer, SqlReturn, UInteger};
+    use odbc_sys::{Integer, Pointer, SqlReturn, UInteger};
     use std::sync::RwLock;
 
     mod get {
@@ -71,13 +71,13 @@ mod unit {
 
         test_get_attr!(
             current_catalog_default,
-            attribute = ConnectionAttribute::CurrentCatalog,
+            attribute = ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG as i32,
             expected_sql_return = SqlReturn::NO_DATA,
         );
 
         test_get_attr!(
             current_catalog,
-            attribute = ConnectionAttribute::CurrentCatalog,
+            attribute = ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             initial_attrs = RwLock::new(ConnectionAttributes {
                 current_catalog: Some("test".to_string()),
@@ -91,7 +91,7 @@ mod unit {
 
         test_get_attr!(
             connection_timeout_default,
-            attribute = ConnectionAttribute::ConnectionTimeout,
+            attribute = ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 0u32,
@@ -100,7 +100,7 @@ mod unit {
 
         test_get_attr!(
             connection_timeout,
-            attribute = ConnectionAttribute::ConnectionTimeout,
+            attribute = ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             initial_attrs = RwLock::new(ConnectionAttributes {
                 connection_timeout: Some(42),
@@ -113,7 +113,7 @@ mod unit {
 
         test_get_attr!(
             login_timeout_default,
-            attribute = ConnectionAttribute::LoginTimeout,
+            attribute = ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 0u32,
@@ -122,7 +122,7 @@ mod unit {
 
         test_get_attr!(
             login_timeout,
-            attribute = ConnectionAttribute::LoginTimeout,
+            attribute = ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT as i32,
             expected_sql_return = SqlReturn::SUCCESS,
             initial_attrs = RwLock::new(ConnectionAttributes {
                 login_timeout: Some(42),
@@ -147,7 +147,7 @@ mod unit {
                 SqlReturn::SUCCESS,
                 SQLSetConnectAttrW(
                     mongo_handle as *mut _,
-                    ConnectionAttribute::LoginTimeout,
+                    ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT as i32,
                     login_timeout_value as Pointer,
                     0,
                 )
@@ -159,25 +159,25 @@ mod unit {
     }
 
     const UNSUPPORTED_ATTRS: [ConnectionAttribute; 19] = [
-        ConnectionAttribute::AsyncEnable,
-        ConnectionAttribute::AccessMode,
-        ConnectionAttribute::AutoCommit,
-        ConnectionAttribute::Trace,
-        ConnectionAttribute::TraceFile,
-        ConnectionAttribute::TranslateLib,
-        ConnectionAttribute::TranslateOption,
-        ConnectionAttribute::TxnIsolation,
-        ConnectionAttribute::OdbcCursors,
-        ConnectionAttribute::QuietMode,
-        ConnectionAttribute::PacketSize,
-        ConnectionAttribute::DisconnectBehaviour,
-        ConnectionAttribute::AsyncDbcFunctionsEnable,
-        ConnectionAttribute::AsyncDbcEvent,
-        ConnectionAttribute::EnlistInDtc,
-        ConnectionAttribute::EnlistInXa,
-        ConnectionAttribute::ConnectionDead,
-        ConnectionAttribute::AutoIpd,
-        ConnectionAttribute::MetadataId,
+        ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE,
+        ConnectionAttribute::SQL_ATTR_ACCESS_MODE,
+        ConnectionAttribute::SQL_ATTR_AUTOCOMMIT,
+        ConnectionAttribute::SQL_ATTR_TRACE,
+        ConnectionAttribute::SQL_ATTR_TRACEFILE,
+        ConnectionAttribute::SQL_ATTR_TRANSLATE_LIB,
+        ConnectionAttribute::SQL_ATTR_TRANSLATE_OPTION,
+        ConnectionAttribute::SQL_ATTR_TXN_ISOLATION,
+        ConnectionAttribute::SQL_ATTR_ODBC_CURSORS,
+        ConnectionAttribute::SQL_ATTR_QUIET_MODE,
+        ConnectionAttribute::SQL_ATTR_PACKET_SIZE,
+        ConnectionAttribute::SQL_ATTR_DISCONNECT_BEHAVIOR,
+        ConnectionAttribute::SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE,
+        ConnectionAttribute::SQL_ATTR_ASYNC_DBC_EVENT,
+        ConnectionAttribute::SQL_ATTR_ENLIST_IN_DTC,
+        ConnectionAttribute::SQL_ATTR_ENLIST_IN_XA,
+        ConnectionAttribute::SQL_ATTR_CONNECTION_DEAD,
+        ConnectionAttribute::SQL_ATTR_AUTO_IPD,
+        ConnectionAttribute::SQL_ATTR_METADATA_ID,
     ];
 
     // Test getting unsupported attributes.
@@ -191,7 +191,7 @@ mod unit {
                     SqlReturn::ERROR,
                     SQLGetConnectAttrW(
                         mongo_handle as *mut _,
-                        attr,
+                        attr as i32,
                         std::ptr::null_mut() as Pointer,
                         0,
                         std::ptr::null_mut()
@@ -210,8 +210,8 @@ mod unit {
             for attr in [
                 &UNSUPPORTED_ATTRS[..],
                 &[
-                    ConnectionAttribute::CurrentCatalog,
-                    ConnectionAttribute::ConnectionTimeout,
+                    ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG,
+                    ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT,
                 ][..],
             ]
             .concat()
@@ -223,7 +223,7 @@ mod unit {
                     SqlReturn::ERROR,
                     SQLSetConnectAttrW(
                         mongo_handle as *mut _,
-                        attr,
+                        attr as i32,
                         std::ptr::null_mut() as Pointer,
                         0
                     )

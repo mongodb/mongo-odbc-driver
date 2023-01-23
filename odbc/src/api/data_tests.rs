@@ -319,8 +319,7 @@ mod unit {
 
     #[test]
     fn indicator_missing() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -343,7 +342,7 @@ mod unit {
                 SQLGetData(
                     stmt_handle as *mut _,
                     NULL_COL,
-                    CDataType::WChar,
+                    CDataType::SQL_C_WCHAR as i16,
                     char_buffer,
                     buffer_length,
                     out_len_or_ind,
@@ -370,8 +369,9 @@ mod unit {
 
     #[test]
     fn sql_get_wstring_data() {
-        use crate::api::{data::input_wtext_to_string, functions::SQLGetData};
-        use odbc_sys::CDataType;
+        use crate::api::{
+            data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
+        };
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -396,7 +396,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::WChar,
+                            CDataType::SQL_C_WCHAR as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -449,7 +449,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::WChar,
+                            CDataType::SQL_C_WCHAR as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -461,7 +461,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::WChar,
+                            CDataType::SQL_C_WCHAR as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -480,8 +480,9 @@ mod unit {
 
     #[test]
     fn sql_get_wstring_data_by_pieces() {
-        use crate::api::{data::input_wtext_to_string, functions::SQLGetData};
-        use odbc_sys::CDataType;
+        use crate::api::{
+            data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
+        };
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -509,7 +510,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::WChar,
+                            CDataType::SQL_C_WCHAR as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -569,8 +570,7 @@ mod unit {
 
     #[test]
     fn sql_get_guid_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -595,7 +595,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Guid,
+                            CDataType::SQL_C_GUID as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -653,8 +653,9 @@ mod unit {
 
     #[test]
     fn sql_get_string_data_by_pieces() {
-        use crate::api::{data::input_text_to_string, functions::SQLGetData};
-        use odbc_sys::CDataType;
+        use crate::api::{
+            data::input_text_to_string, definitions::CDataType, functions::SQLGetData,
+        };
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -680,7 +681,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Char,
+                                CDataType::SQL_C_CHAR as i16,
                                 char_buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -710,8 +711,7 @@ mod unit {
 
     #[test]
     fn sql_get_binary_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -736,7 +736,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Binary,
+                            CDataType::SQL_C_BINARY as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -811,7 +811,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Binary,
+                            CDataType::SQL_C_BINARY as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -823,7 +823,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Binary,
+                            CDataType::SQL_C_BINARY as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -843,8 +843,7 @@ mod unit {
 
     #[test]
     fn sql_get_binary_data_by_pieces() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -870,7 +869,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Binary,
+                                CDataType::SQL_C_BINARY as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -912,8 +911,9 @@ mod unit {
 
     #[test]
     fn sql_get_string_data() {
-        use crate::api::{data::input_text_to_string, functions::SQLGetData};
-        use odbc_sys::CDataType;
+        use crate::api::{
+            data::input_text_to_string, definitions::CDataType, functions::SQLGetData,
+        };
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -938,7 +938,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Char,
+                            CDataType::SQL_C_CHAR as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -991,7 +991,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Char,
+                            CDataType::SQL_C_CHAR as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1003,7 +1003,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Char,
+                            CDataType::SQL_C_CHAR as i16,
                             char_buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1022,8 +1022,7 @@ mod unit {
 
     #[test]
     fn sql_get_bit_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -1050,7 +1049,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Bit,
+                                CDataType::SQL_C_BIT as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1095,7 +1094,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::Bit,
+                                        CDataType::SQL_C_BIT as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1187,7 +1186,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Bit,
+                            CDataType::SQL_C_BIT as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1199,7 +1198,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Bit,
+                            CDataType::SQL_C_BIT as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1218,8 +1217,7 @@ mod unit {
 
     #[test]
     fn sql_get_i64_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -1246,7 +1244,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::SBigInt,
+                                CDataType::SQL_C_SBIGINT as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1261,7 +1259,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::SBigInt,
+                                        CDataType::SQL_C_SBIGINT as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1381,7 +1379,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::SBigInt,
+                            CDataType::SQL_C_SBIGINT as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1393,7 +1391,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::SBigInt,
+                            CDataType::SQL_C_SBIGINT as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1412,8 +1410,7 @@ mod unit {
 
     #[test]
     fn sql_get_u64_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -1440,7 +1437,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::UBigInt,
+                                CDataType::SQL_C_UBIGINT as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1455,7 +1452,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::UBigInt,
+                                        CDataType::SQL_C_UBIGINT as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1581,7 +1578,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::UBigInt,
+                            CDataType::SQL_C_UBIGINT as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1593,7 +1590,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::UBigInt,
+                            CDataType::SQL_C_UBIGINT as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1612,8 +1609,7 @@ mod unit {
 
     #[test]
     fn sql_get_i32_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -1640,7 +1636,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::SLong,
+                                CDataType::SQL_C_SLONG as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1655,7 +1651,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::SLong,
+                                        CDataType::SQL_C_SLONG as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1775,7 +1771,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::SLong,
+                            CDataType::SQL_C_SLONG as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1787,7 +1783,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::SLong,
+                            CDataType::SQL_C_SLONG as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1806,8 +1802,7 @@ mod unit {
 
     #[test]
     fn sql_get_u32_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -1834,7 +1829,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::ULong,
+                                CDataType::SQL_C_ULONG as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -1849,7 +1844,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::ULong,
+                                        CDataType::SQL_C_ULONG as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -1975,7 +1970,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::ULong,
+                            CDataType::SQL_C_ULONG as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -1987,7 +1982,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::ULong,
+                            CDataType::SQL_C_ULONG as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2006,8 +2001,7 @@ mod unit {
 
     #[test]
     fn sql_get_f64_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -2034,7 +2028,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Double,
+                                CDataType::SQL_C_DOUBLE as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2049,7 +2043,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::Double,
+                                        CDataType::SQL_C_DOUBLE as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -2162,7 +2156,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Double,
+                            CDataType::SQL_C_DOUBLE as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2174,7 +2168,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Double,
+                            CDataType::SQL_C_DOUBLE as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2193,8 +2187,7 @@ mod unit {
 
     #[test]
     fn sql_get_f32_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -2221,7 +2214,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Float,
+                                CDataType::SQL_C_FLOAT as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2236,7 +2229,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::Float,
+                                        CDataType::SQL_C_FLOAT as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -2349,7 +2342,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Float,
+                            CDataType::SQL_C_FLOAT as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2361,7 +2354,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Float,
+                            CDataType::SQL_C_FLOAT as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2380,8 +2373,7 @@ mod unit {
 
     #[test]
     fn sql_get_datetime_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -2408,7 +2400,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::TimeStamp,
+                                CDataType::SQL_C_TIMESTAMP as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2423,7 +2415,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::TimeStamp,
+                                        CDataType::SQL_C_TIMESTAMP as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -2561,7 +2553,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::TimeStamp,
+                            CDataType::SQL_C_TIMESTAMP as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2573,7 +2565,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::TimeStamp,
+                            CDataType::SQL_C_TIMESTAMP as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2592,8 +2584,7 @@ mod unit {
 
     #[test]
     fn sql_get_date_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -2620,7 +2611,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Date,
+                                CDataType::SQL_C_DATE as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2766,7 +2757,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Date,
+                            CDataType::SQL_C_DATE as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2778,7 +2769,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Date,
+                            CDataType::SQL_C_DATE as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2797,8 +2788,7 @@ mod unit {
 
     #[test]
     fn sql_get_time_data() {
-        use crate::api::functions::SQLGetData;
-        use odbc_sys::CDataType;
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -2825,7 +2815,7 @@ mod unit {
                             SQLGetData(
                                 stmt_handle as *mut _,
                                 col,
-                                CDataType::Time,
+                                CDataType::SQL_C_TIME as i16,
                                 buffer,
                                 buffer_length,
                                 out_len_or_ind,
@@ -2840,7 +2830,7 @@ mod unit {
                                     SQLGetData(
                                         stmt_handle as *mut _,
                                         col,
-                                        CDataType::Time,
+                                        CDataType::SQL_C_TIME as i16,
                                         buffer,
                                         buffer_length,
                                         out_len_or_ind,
@@ -2970,7 +2960,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Time,
+                            CDataType::SQL_C_TIME as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
@@ -2982,7 +2972,7 @@ mod unit {
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
-                            CDataType::Time,
+                            CDataType::SQL_C_TIME as i16,
                             buffer,
                             buffer_length,
                             out_len_or_ind,
