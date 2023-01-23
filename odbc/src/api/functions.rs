@@ -7,7 +7,7 @@ use crate::{
         definitions::*,
         diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
-        util::{connection_attribute_to_string, format_version},
+        util::{connection_attribute_to_string, format_version, statement_attribute_to_string},
     },
     handles::definitions::*,
 };
@@ -21,10 +21,8 @@ use mongo_odbc_core::{
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
-    BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
-    EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
-    Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn,
-    StatementAttribute, ULen, USmallInt, WChar,
+    Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
+    Len, Nullability, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, ULen, USmallInt, WChar,
 };
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 
@@ -260,7 +258,7 @@ fn sql_alloc_handle(
 pub unsafe extern "C" fn SQLBindCol(
     hstmt: HStmt,
     _col_number: USmallInt,
-    _target_type: CDataType,
+    _target_type: SmallInt,
     _target_value: Pointer,
     _buffer_length: Len,
     _length_or_indicatior: *mut Len,
@@ -278,9 +276,9 @@ pub unsafe extern "C" fn SQLBindCol(
 pub unsafe extern "C" fn SQLBindParameter(
     hstmt: HStmt,
     _parameter_number: USmallInt,
-    _input_output_type: ParamType,
-    _value_type: CDataType,
-    _parmeter_type: SqlDataType,
+    _input_output_type: SmallInt,
+    _value_type: SmallInt,
+    _parmeter_type: SmallInt,
     _column_size: ULen,
     _decimal_digits: SmallInt,
     _parameter_value_ptr: Pointer,
@@ -338,7 +336,7 @@ pub unsafe extern "C" fn SQLBrowseConnectW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLBulkOperations(
     statement_handle: HStmt,
-    _operation: BulkOperation,
+    _operation: USmallInt,
 ) -> SqlReturn {
     unsupported_function(MongoHandleRef::from(statement_handle), "SQLBulkOperations")
 }
@@ -830,7 +828,7 @@ pub unsafe extern "C" fn SQLCopyDesc(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDataSources(
     environment_handle: HEnv,
-    _direction: FetchOrientation,
+    _direction: USmallInt,
     _server_name: *mut Char,
     _buffer_length_1: SmallInt,
     _name_length_1: *mut SmallInt,
@@ -852,7 +850,7 @@ pub unsafe extern "C" fn SQLDataSources(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDataSourcesW(
     environment_handle: HEnv,
-    _direction: FetchOrientation,
+    _direction: USmallInt,
     _server_name: *mut WChar,
     _buffer_length_1: SmallInt,
     _name_length_1: *mut SmallInt,
@@ -1115,7 +1113,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDrivers(
     henv: HEnv,
-    _direction: FetchOrientation,
+    _direction: USmallInt,
     _driver_desc: *mut Char,
     _driver_desc_max: SmallInt,
     _out_driver_desc: *mut SmallInt,
@@ -1137,7 +1135,7 @@ pub unsafe extern "C" fn SQLDrivers(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDriversW(
     henv: HEnv,
-    _direction: FetchOrientation,
+    _direction: USmallInt,
     _driver_desc: *mut WChar,
     _driver_desc_max: SmallInt,
     _out_driver_desc: *mut SmallInt,
@@ -1159,7 +1157,7 @@ pub unsafe extern "C" fn SQLDriversW(
 pub unsafe extern "C" fn SQLEndTran(
     _handle_type: HandleType,
     handle: Handle,
-    _completion_type: CompletionType,
+    _completion_type: SmallInt,
 ) -> SqlReturn {
     unimpl!(handle);
 }
@@ -1317,7 +1315,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetchScroll(
     statement_handle: HStmt,
-    _fetch_orientation: FetchOrientation,
+    _fetch_orientation: USmallInt,
     _fetch_offset: Len,
 ) -> SqlReturn {
     unimpl!(statement_handle);
@@ -1502,7 +1500,7 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt)
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttr(
     connection_handle: HDbc,
-    _attribute: ConnectionAttribute,
+    _attribute: Integer,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
@@ -1522,64 +1520,83 @@ pub unsafe extern "C" fn SQLGetConnectAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetConnectAttrW(
     connection_handle: HDbc,
-    attribute: ConnectionAttribute,
+    attribute: Integer,
     value_ptr: Pointer,
     buffer_length: Integer,
     string_length_ptr: *mut Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
-            let mut err = None;
             let conn_handle = MongoHandleRef::from(connection_handle);
 
-            // This scope is introduced to make the RWLock Guard expire before we write
-            // any error values via add_diag_info as RWLock::write is not reentrant on
-            // all operating systems, and the docs say it can panic.
-            let sql_return = {
-                let conn = must_be_valid!((*conn_handle).as_connection());
-                let attributes = &conn.attributes.read().unwrap();
-
-                match attribute {
-                    ConnectionAttribute::CurrentCatalog => {
-                        let current_catalog = attributes.current_catalog.as_deref();
-                        match current_catalog {
-                            None => SqlReturn::NO_DATA,
-                            Some(cc) => i32_len::set_output_wstring(
-                                cc,
-                                value_ptr as *mut WChar,
-                                buffer_length as usize,
-                                string_length_ptr,
-                            ),
-                        }
-                    }
-                    ConnectionAttribute::LoginTimeout => {
-                        let login_timeout = attributes.login_timeout.unwrap_or(0);
-                        i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
-                    }
-                    ConnectionAttribute::ConnectionTimeout => {
-                        let connection_timeout = attributes.connection_timeout.unwrap_or(0);
-                        i32_len::set_output_fixed_data(
-                            &connection_timeout,
-                            value_ptr,
-                            string_length_ptr,
-                        )
-                    }
-                    _ => {
-                        err = Some(ODBCError::UnsupportedConnectionAttribute(
-                            connection_attribute_to_string(attribute),
-                        ));
-                        SqlReturn::ERROR
-                    }
+            match FromPrimitive::from_i32(attribute) {
+                Some(valid_attr) => sql_get_connect_attrw_helper(
+                    conn_handle,
+                    valid_attr,
+                    value_ptr,
+                    buffer_length,
+                    string_length_ptr,
+                ),
+                None => {
+                    conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+                    SqlReturn::ERROR
                 }
-            };
-
-            if let Some(error) = err {
-                conn_handle.add_diag_info(error);
             }
-            sql_return
         },
         connection_handle
     )
+}
+
+unsafe fn sql_get_connect_attrw_helper(
+    conn_handle: &mut MongoHandle,
+    attribute: ConnectionAttribute,
+    value_ptr: Pointer,
+    buffer_length: Integer,
+    string_length_ptr: *mut Integer,
+) -> SqlReturn {
+    let mut err = None;
+
+    // This scope is introduced to make the RWLock Guard expire before we write
+    // any error values via add_diag_info as RWLock::write is not reentrant on
+    // all operating systems, and the docs say it can panic.
+    let sql_return = {
+        let conn = must_be_valid!((*conn_handle).as_connection());
+        let attributes = &conn.attributes.read().unwrap();
+
+        match attribute {
+            ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
+                let current_catalog = attributes.current_catalog.as_deref();
+                match current_catalog {
+                    None => SqlReturn::NO_DATA,
+                    Some(cc) => i32_len::set_output_wstring(
+                        cc,
+                        value_ptr as *mut WChar,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    ),
+                }
+            }
+            ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => {
+                let login_timeout = attributes.login_timeout.unwrap_or(0);
+                i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
+            }
+            ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => {
+                let connection_timeout = attributes.connection_timeout.unwrap_or(0);
+                i32_len::set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
+            }
+            _ => {
+                err = Some(ODBCError::UnsupportedConnectionAttribute(
+                    connection_attribute_to_string(attribute),
+                ));
+                SqlReturn::ERROR
+            }
+        }
+    };
+
+    if let Some(error) = err {
+        conn_handle.add_diag_info(error);
+    }
+    sql_return
 }
 
 ///
@@ -1628,68 +1645,93 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
 pub unsafe extern "C" fn SQLGetData(
     statement_handle: HStmt,
     col_or_param_num: USmallInt,
-    target_type: CDataType,
+    target_type: SmallInt,
     target_value_ptr: Pointer,
     buffer_length: Len,
     str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
-            let mut error = None;
-            let mut ret = Bson::Null;
             let mongo_handle = MongoHandleRef::from(statement_handle);
-            {
-                let res = {
-                    let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    stmt.var_data_cache
-                        .write()
-                        .unwrap()
-                        .as_mut()
-                        .unwrap()
-                        .remove(&col_or_param_num)
-                };
-                if let Some(cached_data) = res {
-                    return crate::api::data::format_cached_data(
-                        mongo_handle,
-                        cached_data,
-                        col_or_param_num,
-                        target_type,
-                        target_value_ptr,
-                        buffer_length,
-                        str_len_or_ind_ptr,
-                    );
-                }
-                let stmt = (*mongo_handle).as_statement().unwrap();
-                let mut mongo_stmt = stmt.mongo_statement.write().unwrap();
-                let bson = match mongo_stmt.as_mut() {
-                    None => Err(ODBCError::InvalidCursorState),
-                    Some(mongo_stmt) => mongo_stmt
-                        .get_value(col_or_param_num)
-                        .map_err(ODBCError::Core),
-                };
-                match bson {
-                    Err(e) => error = Some(e),
-                    Ok(None) => error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num)),
-                    Ok(Some(d)) => {
-                        ret = d;
-                    }
+
+            match FromPrimitive::from_i16(target_type) {
+                Some(valid_type) => sql_get_data_helper(
+                    mongo_handle,
+                    col_or_param_num,
+                    valid_type,
+                    target_value_ptr,
+                    buffer_length,
+                    str_len_or_ind_ptr,
+                ),
+                None => {
+                    mongo_handle.add_diag_info(ODBCError::InvalidTargetType(target_type));
+                    SqlReturn::ERROR
                 }
             }
-            if let Some(e) = error {
-                mongo_handle.add_diag_info(e);
-                return SqlReturn::ERROR;
-            }
-            crate::api::data::format_bson_data(
+        },
+        statement_handle
+    )
+}
+
+unsafe fn sql_get_data_helper(
+    mongo_handle: &mut MongoHandle,
+    col_or_param_num: USmallInt,
+    target_type: CDataType,
+    target_value_ptr: Pointer,
+    buffer_length: Len,
+    str_len_or_ind_ptr: *mut Len,
+) -> SqlReturn {
+    let mut error = None;
+    let mut ret = Bson::Null;
+    {
+        let res = {
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+            stmt.var_data_cache
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .remove(&col_or_param_num)
+        };
+        if let Some(cached_data) = res {
+            return crate::api::data::format_cached_data(
                 mongo_handle,
+                cached_data,
                 col_or_param_num,
                 target_type,
                 target_value_ptr,
                 buffer_length,
                 str_len_or_ind_ptr,
-                ret,
-            )
-        },
-        statement_handle
+            );
+        }
+        let stmt = (*mongo_handle).as_statement().unwrap();
+        let mut mongo_stmt = stmt.mongo_statement.write().unwrap();
+        let bson = match mongo_stmt.as_mut() {
+            None => Err(ODBCError::InvalidCursorState),
+            Some(mongo_stmt) => mongo_stmt
+                .get_value(col_or_param_num)
+                .map_err(ODBCError::Core),
+        };
+        match bson {
+            Err(e) => error = Some(e),
+            Ok(None) => error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num)),
+            Ok(Some(d)) => {
+                ret = d;
+            }
+        }
+    }
+    if let Some(e) = error {
+        mongo_handle.add_diag_info(e);
+        return SqlReturn::ERROR;
+    }
+    crate::api::data::format_bson_data(
+        mongo_handle,
+        col_or_param_num,
+        target_type,
+        target_value_ptr,
+        buffer_length,
+        str_len_or_ind_ptr,
+        ret,
     )
 }
 
@@ -1998,7 +2040,7 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetEnvAttr(
     environment_handle: HEnv,
-    _attribute: EnvironmentAttribute,
+    _attribute: Integer,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length: *mut Integer,
@@ -2018,7 +2060,7 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetEnvAttrW(
     environment_handle: HEnv,
-    attribute: EnvironmentAttribute,
+    attribute: Integer,
     value_ptr: Pointer,
     _buffer_length: Integer,
     string_length: *mut Integer,
@@ -2027,31 +2069,49 @@ pub unsafe extern "C" fn SQLGetEnvAttrW(
         || {
             let env_handle = MongoHandleRef::from(environment_handle);
             env_handle.clear_diagnostics();
-            let env = must_be_valid!(env_handle.as_env());
-            if value_ptr.is_null() {
-                set_str_length(string_length, 0);
-            } else {
-                set_str_length(string_length, size_of::<Integer>() as Integer);
-                match attribute {
-                    EnvironmentAttribute::OdbcVersion => {
-                        *(value_ptr as *mut OdbcVersion) = env.attributes.read().unwrap().odbc_ver;
-                    }
-                    EnvironmentAttribute::OutputNts => {
-                        *(value_ptr as *mut SqlBool) = env.attributes.read().unwrap().output_nts;
-                    }
-                    EnvironmentAttribute::ConnectionPooling => {
-                        *(value_ptr as *mut ConnectionPooling) =
-                            env.attributes.read().unwrap().connection_pooling;
-                    }
-                    EnvironmentAttribute::CpMatch => {
-                        *(value_ptr as *mut CpMatch) = env.attributes.read().unwrap().cp_match;
-                    }
+
+            match FromPrimitive::from_i32(attribute) {
+                Some(valid_attr) => {
+                    sql_get_env_attrw_helper(env_handle, valid_attr, value_ptr, string_length)
+                }
+                None => {
+                    env_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+                    SqlReturn::ERROR
                 }
             }
-            SqlReturn::SUCCESS
         },
         environment_handle
     );
+}
+
+unsafe fn sql_get_env_attrw_helper(
+    env_handle: &mut MongoHandle,
+    attribute: EnvironmentAttribute,
+    value_ptr: Pointer,
+    string_length: *mut Integer,
+) -> SqlReturn {
+    let env = must_be_valid!(env_handle.as_env());
+    if value_ptr.is_null() {
+        set_str_length(string_length, 0);
+    } else {
+        set_str_length(string_length, size_of::<Integer>() as Integer);
+        match attribute {
+            EnvironmentAttribute::SQL_ATTR_ODBC_VERSION => {
+                *(value_ptr as *mut OdbcVersion) = env.attributes.read().unwrap().odbc_ver;
+            }
+            EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS => {
+                *(value_ptr as *mut SqlBool) = env.attributes.read().unwrap().output_nts;
+            }
+            EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING => {
+                *(value_ptr as *mut ConnectionPooling) =
+                    env.attributes.read().unwrap().connection_pooling;
+            }
+            EnvironmentAttribute::SQL_ATTR_CP_MATCH => {
+                *(value_ptr as *mut CpMatch) = env.attributes.read().unwrap().cp_match;
+            }
+        }
+    }
+    SqlReturn::SUCCESS
 }
 
 ///
@@ -2550,7 +2610,7 @@ unsafe fn sql_get_infow_helper(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetStmtAttr(
     handle: HStmt,
-    _attribute: StatementAttribute,
+    _attribute: Integer,
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
@@ -2570,7 +2630,7 @@ pub unsafe extern "C" fn SQLGetStmtAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetStmtAttrW(
     handle: HStmt,
-    attribute: StatementAttribute,
+    attribute: Integer,
     value_ptr: Pointer,
     _buffer_length: Integer,
     string_length_ptr: *mut Integer,
@@ -2579,142 +2639,206 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
         || {
             let stmt_handle = MongoHandleRef::from(handle);
             stmt_handle.clear_diagnostics();
-            let stmt = must_be_valid!(stmt_handle.as_statement());
             if value_ptr.is_null() {
                 return SqlReturn::ERROR;
             }
-            // Most attributes have type SQLULEN, so default to the size of that
-            // type.
-            set_str_length(string_length_ptr, size_of::<ULen>() as Integer);
-            match attribute {
-                StatementAttribute::AppRowDesc => {
-                    *(value_ptr as *mut Pointer) =
-                        stmt.attributes.read().unwrap().app_row_desc as Pointer;
-                    set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+
+            match FromPrimitive::from_i32(attribute) {
+                Some(valid_attr) => {
+                    sql_get_stmt_attrw_helper(stmt_handle, valid_attr, value_ptr, string_length_ptr)
                 }
-                StatementAttribute::AppParamDesc => {
-                    *(value_ptr as *mut Pointer) =
-                        stmt.attributes.read().unwrap().app_param_desc as Pointer;
-                    set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
-                }
-                StatementAttribute::ImpRowDesc => {
-                    *(value_ptr as *mut Pointer) =
-                        stmt.attributes.read().unwrap().imp_row_desc as Pointer;
-                    set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
-                }
-                StatementAttribute::ImpParamDesc => {
-                    *(value_ptr as *mut Pointer) =
-                        stmt.attributes.read().unwrap().imp_param_desc as Pointer;
-                    set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
-                }
-                StatementAttribute::FetchBookmarkPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().fetch_bookmark_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut Len>() as Integer);
-                }
-                StatementAttribute::CursorScrollable => {
-                    *(value_ptr as *mut CursorScrollable) =
-                        stmt.attributes.read().unwrap().cursor_scrollable;
-                }
-                StatementAttribute::CursorSensitivity => {
-                    *(value_ptr as *mut CursorSensitivity) =
-                        stmt.attributes.read().unwrap().cursor_sensitivity;
-                }
-                StatementAttribute::AsyncEnable => {
-                    *(value_ptr as *mut AsyncEnable) = stmt.attributes.read().unwrap().async_enable;
-                }
-                StatementAttribute::Concurrency => {
-                    *(value_ptr as *mut Concurrency) = stmt.attributes.read().unwrap().concurrency;
-                }
-                StatementAttribute::CursorType => {
-                    *(value_ptr as *mut CursorType) = stmt.attributes.read().unwrap().cursor_type;
-                }
-                StatementAttribute::EnableAutoIpd => {
-                    *(value_ptr as *mut SqlBool) = stmt.attributes.read().unwrap().enable_auto_ipd;
-                }
-                StatementAttribute::KeysetSize => {
-                    *(value_ptr as *mut ULen) = 0;
-                }
-                StatementAttribute::MaxLength => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().max_length;
-                }
-                StatementAttribute::MaxRows => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().max_rows;
-                }
-                StatementAttribute::NoScan => {
-                    *(value_ptr as *mut NoScan) = stmt.attributes.read().unwrap().no_scan;
-                }
-                StatementAttribute::ParamBindOffsetPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_bind_offset_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer)
-                }
-                StatementAttribute::ParamBindType => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().param_bind_type;
-                }
-                StatementAttribute::ParamOpterationPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_operation_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer)
-                }
-                StatementAttribute::ParamStatusPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_status_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer)
-                }
-                StatementAttribute::ParamsProcessedPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_processed_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer)
-                }
-                StatementAttribute::ParamsetSize => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().paramset_size;
-                }
-                StatementAttribute::QueryTimeout => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().query_timeout;
-                }
-                StatementAttribute::RetrieveData => {
-                    *(value_ptr as *mut RetrieveData) =
-                        stmt.attributes.read().unwrap().retrieve_data;
-                }
-                StatementAttribute::RowBindOffsetPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_bind_offset_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer)
-                }
-                StatementAttribute::RowBindType => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().row_bind_type;
-                }
-                StatementAttribute::RowNumber => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().row_number;
-                }
-                StatementAttribute::RowOperationPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_operation_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer)
-                }
-                StatementAttribute::RowStatusPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_status_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer)
-                }
-                StatementAttribute::RowsFetchedPtr => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().rows_fetched_ptr;
-                    set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer)
-                }
-                StatementAttribute::RowArraySize => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().row_array_size;
-                }
-                StatementAttribute::SimulateCursor => {
-                    *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().simulate_cursor;
-                }
-                StatementAttribute::UseBookmarks => {
-                    *(value_ptr as *mut UseBookmarks) =
-                        stmt.attributes.read().unwrap().use_bookmarks;
-                }
-                StatementAttribute::AsyncStmtEvent => {
-                    *(value_ptr as *mut _) = stmt.attributes.read().unwrap().async_stmt_event;
-                }
-                StatementAttribute::MetadataId => {
-                    todo!();
+                None => {
+                    stmt_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+                    SqlReturn::ERROR
                 }
             }
-            SqlReturn::SUCCESS
         },
         handle
     );
+}
+
+unsafe fn sql_get_stmt_attrw_helper(
+    stmt_handle: &mut MongoHandle,
+    attribute: StatementAttribute,
+    value_ptr: Pointer,
+    string_length_ptr: *mut Integer,
+) -> SqlReturn {
+    // Most attributes have type SQLULEN, so default to the size of that
+    // type.
+    set_str_length(string_length_ptr, size_of::<ULen>() as Integer);
+
+    let mut err = None;
+
+    let sql_return = {
+        let stmt = must_be_valid!(stmt_handle.as_statement());
+        match attribute {
+            StatementAttribute::SQL_ATTR_APP_ROW_DESC => {
+                *(value_ptr as *mut Pointer) =
+                    stmt.attributes.read().unwrap().app_row_desc as Pointer;
+                set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_APP_PARAM_DESC => {
+                *(value_ptr as *mut Pointer) =
+                    stmt.attributes.read().unwrap().app_param_desc as Pointer;
+                set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_IMP_ROW_DESC => {
+                *(value_ptr as *mut Pointer) =
+                    stmt.attributes.read().unwrap().imp_row_desc as Pointer;
+                set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_IMP_PARAM_DESC => {
+                *(value_ptr as *mut Pointer) =
+                    stmt.attributes.read().unwrap().imp_param_desc as Pointer;
+                set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_FETCH_BOOKMARK_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().fetch_bookmark_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut Len>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_CURSOR_SCROLLABLE => {
+                *(value_ptr as *mut CursorScrollable) =
+                    stmt.attributes.read().unwrap().cursor_scrollable;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_CURSOR_SENSITIVITY => {
+                *(value_ptr as *mut CursorSensitivity) =
+                    stmt.attributes.read().unwrap().cursor_sensitivity;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ASYNC_ENABLE => {
+                *(value_ptr as *mut AsyncEnable) = stmt.attributes.read().unwrap().async_enable;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_CONCURRENCY => {
+                *(value_ptr as *mut Concurrency) = stmt.attributes.read().unwrap().concurrency;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_CURSOR_TYPE => {
+                *(value_ptr as *mut CursorType) = stmt.attributes.read().unwrap().cursor_type;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ENABLE_AUTO_IPD => {
+                *(value_ptr as *mut SqlBool) = stmt.attributes.read().unwrap().enable_auto_ipd;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_KEYSET_SIZE => {
+                *(value_ptr as *mut ULen) = 0;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_MAX_LENGTH => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().max_length;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_MAX_ROWS => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().max_rows;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_NOSCAN => {
+                *(value_ptr as *mut NoScan) = stmt.attributes.read().unwrap().no_scan;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_PARAM_BIND_OFFSET_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_bind_offset_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_PARAM_BIND_TYPE => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().param_bind_type;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_PARAM_OPERATION_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_operation_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_PARAM_STATUS_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_status_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_PARAMS_PROCESSED_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_processed_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_PARAMSET_SIZE => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().paramset_size;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_QUERY_TIMEOUT => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().query_timeout;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_RETRIEVE_DATA => {
+                *(value_ptr as *mut RetrieveData) = stmt.attributes.read().unwrap().retrieve_data;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ROW_BIND_OFFSET_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_bind_offset_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ROW_BIND_TYPE => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().row_bind_type;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ROW_NUMBER => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().row_number;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ROW_OPERATION_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_operation_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ROW_STATUS_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_status_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ROWS_FETCHED_PTR => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().rows_fetched_ptr;
+                set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer);
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().row_array_size;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_SIMULATE_CURSOR => {
+                *(value_ptr as *mut ULen) = stmt.attributes.read().unwrap().simulate_cursor;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_USE_BOOKMARKS => {
+                *(value_ptr as *mut UseBookmarks) = stmt.attributes.read().unwrap().use_bookmarks;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_ASYNC_STMT_EVENT => {
+                *(value_ptr as *mut _) = stmt.attributes.read().unwrap().async_stmt_event;
+                SqlReturn::SUCCESS
+            }
+            StatementAttribute::SQL_ATTR_METADATA_ID => {
+                todo!();
+            }
+            _ => {
+                err = Some(ODBCError::UnsupportedStatementAttribute(
+                    statement_attribute_to_string(attribute),
+                ));
+                SqlReturn::ERROR
+            }
+        }
+    };
+
+    if let Some(error) = err {
+        stmt_handle.add_diag_info(error);
+    }
+    sql_return
 }
 
 ///
@@ -2725,7 +2849,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SqlDataType) -> SqlReturn {
+pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SmallInt) -> SqlReturn {
     unimpl!(handle);
 }
 
@@ -3071,7 +3195,7 @@ pub unsafe extern "C" fn SQLRowCount(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttr(
     connection_handle: HDbc,
-    _attribute: ConnectionAttribute,
+    _attribute: Integer,
     _value_ptr: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
@@ -3090,42 +3214,57 @@ pub unsafe extern "C" fn SQLSetConnectAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetConnectAttrW(
     connection_handle: HDbc,
-    attribute: ConnectionAttribute,
+    attribute: Integer,
     value_ptr: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
-            let mut err = None;
             let conn_handle = MongoHandleRef::from(connection_handle);
 
-            // This scope is introduced to make the RWLock Guard expire before we write
-            // any error values via add_diag_info as RWLock::write is not reentrant on
-            // all operating systems, and the docs say it can panic.
-            let sql_return = {
-                let conn = must_be_valid!((*conn_handle).as_connection());
-
-                match attribute {
-                    ConnectionAttribute::LoginTimeout => {
-                        conn.attributes.write().unwrap().login_timeout = Some(value_ptr as u32);
-                        SqlReturn::SUCCESS
-                    }
-                    _ => {
-                        err = Some(ODBCError::UnsupportedConnectionAttribute(
-                            connection_attribute_to_string(attribute),
-                        ));
-                        SqlReturn::ERROR
-                    }
+            match FromPrimitive::from_i32(attribute) {
+                Some(valid_attr) => set_connect_attrw_helper(conn_handle, valid_attr, value_ptr),
+                None => {
+                    conn_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+                    SqlReturn::ERROR
                 }
-            };
-
-            if let Some(error) = err {
-                conn_handle.add_diag_info(error);
             }
-            sql_return
         },
         connection_handle
     )
+}
+
+unsafe fn set_connect_attrw_helper(
+    conn_handle: &mut MongoHandle,
+    attribute: ConnectionAttribute,
+    value_ptr: Pointer,
+) -> SqlReturn {
+    let mut err = None;
+
+    // This scope is introduced to make the RWLock Guard expire before we write
+    // any error values via add_diag_info as RWLock::write is not reentrant on
+    // all operating systems, and the docs say it can panic.
+    let sql_return = {
+        let conn = must_be_valid!((*conn_handle).as_connection());
+
+        match attribute {
+            ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => {
+                conn.attributes.write().unwrap().login_timeout = Some(value_ptr as u32);
+                SqlReturn::SUCCESS
+            }
+            _ => {
+                err = Some(ODBCError::UnsupportedConnectionAttribute(
+                    connection_attribute_to_string(attribute),
+                ));
+                SqlReturn::ERROR
+            }
+        }
+    };
+
+    if let Some(error) = err {
+        conn_handle.add_diag_info(error);
+    }
+    sql_return
 }
 
 ///
@@ -3226,7 +3365,7 @@ pub unsafe extern "C" fn SQLSetPos(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetEnvAttr(
     environment_handle: HEnv,
-    attribute: EnvironmentAttribute,
+    attribute: Integer,
     value: Pointer,
     string_length: Integer,
 ) -> SqlReturn {
@@ -3245,7 +3384,7 @@ pub unsafe extern "C" fn SQLSetEnvAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetEnvAttrW(
     environment_handle: HEnv,
-    attribute: EnvironmentAttribute,
+    attribute: Integer,
     value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
@@ -3253,52 +3392,72 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
         || {
             let env_handle = MongoHandleRef::from(environment_handle);
             env_handle.clear_diagnostics();
-            let env = must_be_valid!(env_handle.as_env());
-            match attribute {
-                EnvironmentAttribute::OdbcVersion => match FromPrimitive::from_i32(value as i32) {
-                    Some(version) => {
-                        env.attributes.write().unwrap().odbc_ver = version;
-                        SqlReturn::SUCCESS
-                    }
-                    None => {
-                        env_handle
-                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ODBC_VERSION"));
-                        SqlReturn::ERROR
-                    }
-                },
-                EnvironmentAttribute::OutputNts => match FromPrimitive::from_i32(value as i32) {
-                    Some(SqlBool::True) => SqlReturn::SUCCESS,
-                    _ => {
-                        env_handle.add_diag_info(ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"));
-                        SqlReturn::ERROR
-                    }
-                },
-                EnvironmentAttribute::ConnectionPooling => {
-                    match FromPrimitive::from_i32(value as i32) {
-                        Some(ConnectionPooling::Off) => SqlReturn::SUCCESS,
-                        _ => {
-                            env_handle.add_diag_info(ODBCError::OptionValueChanged(
-                                "SQL_ATTR_CONNECTION_POOLING",
-                                "SQL_CP_OFF",
-                            ));
-                            SqlReturn::SUCCESS_WITH_INFO
-                        }
-                    }
+
+            match FromPrimitive::from_i32(attribute) {
+                Some(valid_attr) => sql_set_env_attrw_helper(env_handle, valid_attr, value),
+                None => {
+                    env_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
+                    SqlReturn::ERROR
                 }
-                EnvironmentAttribute::CpMatch => match FromPrimitive::from_i32(value as i32) {
-                    Some(CpMatch::Strict) => SqlReturn::SUCCESS,
-                    _ => {
-                        env_handle.add_diag_info(ODBCError::OptionValueChanged(
-                            "SQL_ATTR_CP_MATCH",
-                            "SQL_CP_STRICT_MATCH",
-                        ));
-                        SqlReturn::SUCCESS_WITH_INFO
-                    }
-                },
             }
         },
         environment_handle
     );
+}
+
+unsafe fn sql_set_env_attrw_helper(
+    env_handle: &mut MongoHandle,
+    attribute: EnvironmentAttribute,
+    value_ptr: Pointer,
+) -> SqlReturn {
+    let env = must_be_valid!(env_handle.as_env());
+    match attribute {
+        EnvironmentAttribute::SQL_ATTR_ODBC_VERSION => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(version) => {
+                    env.attributes.write().unwrap().odbc_ver = version;
+                    SqlReturn::SUCCESS
+                }
+                None => {
+                    env_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ODBC_VERSION"));
+                    SqlReturn::ERROR
+                }
+            }
+        }
+        EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(SqlBool::True) => SqlReturn::SUCCESS,
+                _ => {
+                    env_handle.add_diag_info(ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"));
+                    SqlReturn::ERROR
+                }
+            }
+        }
+        EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(ConnectionPooling::Off) => SqlReturn::SUCCESS,
+                _ => {
+                    env_handle.add_diag_info(ODBCError::OptionValueChanged(
+                        "SQL_ATTR_CONNECTION_POOLING",
+                        "SQL_CP_OFF",
+                    ));
+                    SqlReturn::SUCCESS_WITH_INFO
+                }
+            }
+        }
+        EnvironmentAttribute::SQL_ATTR_CP_MATCH => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(CpMatch::Strict) => SqlReturn::SUCCESS,
+                _ => {
+                    env_handle.add_diag_info(ODBCError::OptionValueChanged(
+                        "SQL_ATTR_CP_MATCH",
+                        "SQL_CP_STRICT_MATCH",
+                    ));
+                    SqlReturn::SUCCESS_WITH_INFO
+                }
+            }
+        }
+    }
 }
 
 ///
@@ -3310,7 +3469,7 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetStmtAttr(
     hstmt: HStmt,
-    _attr: StatementAttribute,
+    _attr: Integer,
     _value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
@@ -3329,7 +3488,7 @@ pub unsafe extern "C" fn SQLSetStmtAttr(
 #[no_mangle]
 pub unsafe extern "C" fn SQLSetStmtAttrW(
     hstmt: HStmt,
-    attr: StatementAttribute,
+    attr: Integer,
     value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
@@ -3337,205 +3496,223 @@ pub unsafe extern "C" fn SQLSetStmtAttrW(
         || {
             let stmt_handle = MongoHandleRef::from(hstmt);
             stmt_handle.clear_diagnostics();
-            let stmt = must_be_valid!(stmt_handle.as_statement());
-            match attr {
-                StatementAttribute::AppRowDesc => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_APP_ROW_DESC"));
+
+            match FromPrimitive::from_i32(attr) {
+                Some(valid_attr) => sql_set_stmt_attrw_helper(stmt_handle, valid_attr, value),
+                None => {
+                    stmt_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attr));
                     SqlReturn::ERROR
-                }
-                StatementAttribute::AppParamDesc => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_APP_PARAM_DESC"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::ImpRowDesc => {
-                    // TODO: SQL_681, determine the correct SQL state
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_IMP_ROW_DESC"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::ImpParamDesc => {
-                    // TODO: SQL_681, determine the correct SQL state
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_IMP_PARAM_DESC"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::CursorScrollable => {
-                    match FromPrimitive::from_usize(value as usize) {
-                        Some(CursorScrollable::NonScrollable) => SqlReturn::SUCCESS,
-                        _ => {
-                            stmt_handle.add_diag_info(ODBCError::InvalidAttrValue(
-                                "SQL_ATTR_CURSOR_SCROLLABLE",
-                            ));
-                            SqlReturn::ERROR
-                        }
-                    }
-                }
-                StatementAttribute::CursorSensitivity => {
-                    match FromPrimitive::from_i32(value as i32) {
-                        Some(CursorSensitivity::Insensitive) => SqlReturn::SUCCESS,
-                        _ => {
-                            stmt_handle.add_diag_info(ODBCError::InvalidAttrValue(
-                                "SQL_ATTR_CURSOR_SENSITIVITY",
-                            ));
-                            SqlReturn::ERROR
-                        }
-                    }
-                }
-                StatementAttribute::AsyncEnable => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ASYNC_ENABLE"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::Concurrency => match FromPrimitive::from_i32(value as i32) {
-                    Some(Concurrency::ReadOnly) => SqlReturn::SUCCESS,
-                    _ => {
-                        stmt_handle.add_diag_info(ODBCError::OptionValueChanged(
-                            "SQL_ATTR_CONCURRENCY",
-                            "SQL_CONCUR_READ_ONLY",
-                        ));
-                        SqlReturn::SUCCESS_WITH_INFO
-                    }
-                },
-                StatementAttribute::CursorType => match FromPrimitive::from_i32(value as i32) {
-                    Some(CursorType::ForwardOnly) => SqlReturn::SUCCESS,
-                    _ => {
-                        stmt_handle.add_diag_info(ODBCError::OptionValueChanged(
-                            "SQL_ATTR_CURSOR_TYPE",
-                            "SQL_CURSOR_FORWARD_ONLY",
-                        ));
-                        SqlReturn::SUCCESS_WITH_INFO
-                    }
-                },
-                StatementAttribute::EnableAutoIpd => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ENABLE_AUTO_IPD"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::FetchBookmarkPtr => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_FETCH_BOOKMARK_PTR"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::KeysetSize => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_KEYSET_SIZE"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::MaxLength => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_MAX_LENGTH"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::MaxRows => {
-                    stmt.attributes.write().unwrap().max_rows = value as ULen;
-                    SqlReturn::SUCCESS
-                }
-                StatementAttribute::NoScan => {
-                    match FromPrimitive::from_i32(value as i32) {
-                        Some(ns) => stmt.attributes.write().unwrap().no_scan = ns,
-                        None => stmt_handle
-                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_NOSCAN")),
-                    }
-                    SqlReturn::SUCCESS
-                }
-                StatementAttribute::ParamBindOffsetPtr => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAM_BIND_OFFSET_PTR"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::ParamBindType => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAM_BIND_TYPE"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::ParamOpterationPtr => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAM_OPERATION_PTR"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::ParamStatusPtr => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAM_STATUS_PTR"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::ParamsProcessedPtr => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAMS_PROCESSED_PTR"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::ParamsetSize => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAMSET_SIZE"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::QueryTimeout => {
-                    stmt.attributes.write().unwrap().query_timeout = value as ULen;
-                    SqlReturn::SUCCESS
-                }
-                StatementAttribute::RetrieveData => match FromPrimitive::from_i32(value as i32) {
-                    Some(RetrieveData::Off) => SqlReturn::SUCCESS,
-                    _ => {
-                        stmt_handle
-                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_RETRIEVE_DATA"));
-                        SqlReturn::ERROR
-                    }
-                },
-                StatementAttribute::RowBindOffsetPtr => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ROW_BIND_OFFSET_PTR"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::RowBindType => {
-                    stmt.attributes.write().unwrap().row_bind_type = value as ULen;
-                    SqlReturn::SUCCESS
-                }
-                StatementAttribute::RowNumber => {
-                    stmt.attributes.write().unwrap().row_number = value as ULen;
-                    SqlReturn::SUCCESS
-                }
-                StatementAttribute::RowOperationPtr => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ROW_OPERATION_PTR"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::RowStatusPtr => {
-                    stmt.attributes.write().unwrap().row_status_ptr = value as *mut USmallInt;
-                    SqlReturn::SUCCESS
-                }
-                StatementAttribute::RowsFetchedPtr => {
-                    stmt.attributes.write().unwrap().rows_fetched_ptr = value as *mut ULen;
-                    SqlReturn::SUCCESS
-                }
-                StatementAttribute::RowArraySize => match FromPrimitive::from_i32(value as i32) {
-                    Some(ras) => {
-                        stmt.attributes.write().unwrap().row_array_size = ras;
-                        SqlReturn::SUCCESS
-                    }
-                    None => {
-                        stmt_handle
-                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ROW_ARRAY_SIZE"));
-                        SqlReturn::ERROR
-                    }
-                },
-                StatementAttribute::SimulateCursor => {
-                    stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_SIMULATE_CURSOR"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::UseBookmarks => match FromPrimitive::from_i32(value as i32) {
-                    Some(ub) => {
-                        stmt.attributes.write().unwrap().use_bookmarks = ub;
-                        SqlReturn::SUCCESS
-                    }
-                    None => {
-                        stmt_handle
-                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_USE_BOOKMARKS"));
-                        SqlReturn::ERROR
-                    }
-                },
-                StatementAttribute::AsyncStmtEvent => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ASYNC_STMT_EVENT"));
-                    SqlReturn::ERROR
-                }
-                StatementAttribute::MetadataId => {
-                    todo!()
                 }
             }
         },
         hstmt
     );
+}
+
+unsafe fn sql_set_stmt_attrw_helper(
+    stmt_handle: &mut MongoHandle,
+    attribute: StatementAttribute,
+    value_ptr: Pointer,
+) -> SqlReturn {
+    let stmt = must_be_valid!(stmt_handle.as_statement());
+    match attribute {
+        StatementAttribute::SQL_ATTR_APP_ROW_DESC => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_APP_ROW_DESC"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_APP_PARAM_DESC => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_APP_PARAM_DESC"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_IMP_ROW_DESC => {
+            // TODO: SQL_681, determine the correct SQL state
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_IMP_ROW_DESC"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_IMP_PARAM_DESC => {
+            // TODO: SQL_681, determine the correct SQL state
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_IMP_PARAM_DESC"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_CURSOR_SCROLLABLE => {
+            match FromPrimitive::from_usize(value_ptr as usize) {
+                Some(CursorScrollable::NonScrollable) => SqlReturn::SUCCESS,
+                _ => {
+                    stmt_handle
+                        .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_CURSOR_SCROLLABLE"));
+                    SqlReturn::ERROR
+                }
+            }
+        }
+        StatementAttribute::SQL_ATTR_CURSOR_SENSITIVITY => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(CursorSensitivity::Insensitive) => SqlReturn::SUCCESS,
+                _ => {
+                    stmt_handle
+                        .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_CURSOR_SENSITIVITY"));
+                    SqlReturn::ERROR
+                }
+            }
+        }
+        StatementAttribute::SQL_ATTR_ASYNC_ENABLE => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ASYNC_ENABLE"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_CONCURRENCY => match FromPrimitive::from_i32(value_ptr as i32)
+        {
+            Some(Concurrency::ReadOnly) => SqlReturn::SUCCESS,
+            _ => {
+                stmt_handle.add_diag_info(ODBCError::OptionValueChanged(
+                    "SQL_ATTR_CONCURRENCY",
+                    "SQL_CONCUR_READ_ONLY",
+                ));
+                SqlReturn::SUCCESS_WITH_INFO
+            }
+        },
+        StatementAttribute::SQL_ATTR_CURSOR_TYPE => match FromPrimitive::from_i32(value_ptr as i32)
+        {
+            Some(CursorType::ForwardOnly) => SqlReturn::SUCCESS,
+            _ => {
+                stmt_handle.add_diag_info(ODBCError::OptionValueChanged(
+                    "SQL_ATTR_CURSOR_TYPE",
+                    "SQL_CURSOR_FORWARD_ONLY",
+                ));
+                SqlReturn::SUCCESS_WITH_INFO
+            }
+        },
+        StatementAttribute::SQL_ATTR_ENABLE_AUTO_IPD => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ENABLE_AUTO_IPD"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_FETCH_BOOKMARK_PTR => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_FETCH_BOOKMARK_PTR"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_KEYSET_SIZE => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_KEYSET_SIZE"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_MAX_LENGTH => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_MAX_LENGTH"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_MAX_ROWS => {
+            stmt.attributes.write().unwrap().max_rows = value_ptr as ULen;
+            SqlReturn::SUCCESS
+        }
+        StatementAttribute::SQL_ATTR_NOSCAN => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(ns) => stmt.attributes.write().unwrap().no_scan = ns,
+                None => stmt_handle.add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_NOSCAN")),
+            }
+            SqlReturn::SUCCESS
+        }
+        StatementAttribute::SQL_ATTR_PARAM_BIND_OFFSET_PTR => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAM_BIND_OFFSET_PTR"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_PARAM_BIND_TYPE => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAM_BIND_TYPE"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_PARAM_OPERATION_PTR => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAM_OPERATION_PTR"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_PARAM_STATUS_PTR => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAM_STATUS_PTR"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_PARAMS_PROCESSED_PTR => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAMS_PROCESSED_PTR"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_PARAMSET_SIZE => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_PARAMSET_SIZE"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_QUERY_TIMEOUT => {
+            stmt.attributes.write().unwrap().query_timeout = value_ptr as ULen;
+            SqlReturn::SUCCESS
+        }
+        StatementAttribute::SQL_ATTR_RETRIEVE_DATA => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(RetrieveData::Off) => SqlReturn::SUCCESS,
+                _ => {
+                    stmt_handle
+                        .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_RETRIEVE_DATA"));
+                    SqlReturn::ERROR
+                }
+            }
+        }
+        StatementAttribute::SQL_ATTR_ROW_BIND_OFFSET_PTR => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ROW_BIND_OFFSET_PTR"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_ROW_BIND_TYPE => {
+            stmt.attributes.write().unwrap().row_bind_type = value_ptr as ULen;
+            SqlReturn::SUCCESS
+        }
+        StatementAttribute::SQL_ATTR_ROW_NUMBER => {
+            stmt.attributes.write().unwrap().row_number = value_ptr as ULen;
+            SqlReturn::SUCCESS
+        }
+        StatementAttribute::SQL_ATTR_ROW_OPERATION_PTR => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ROW_OPERATION_PTR"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_ROW_STATUS_PTR => {
+            stmt.attributes.write().unwrap().row_status_ptr = value_ptr as *mut USmallInt;
+            SqlReturn::SUCCESS
+        }
+        StatementAttribute::SQL_ATTR_ROWS_FETCHED_PTR => {
+            stmt.attributes.write().unwrap().rows_fetched_ptr = value_ptr as *mut ULen;
+            SqlReturn::SUCCESS
+        }
+        StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(ras) => {
+                    stmt.attributes.write().unwrap().row_array_size = ras;
+                    SqlReturn::SUCCESS
+                }
+                None => {
+                    stmt_handle
+                        .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ROW_ARRAY_SIZE"));
+                    SqlReturn::ERROR
+                }
+            }
+        }
+        StatementAttribute::SQL_ATTR_SIMULATE_CURSOR => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_SIMULATE_CURSOR"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_USE_BOOKMARKS => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(ub) => {
+                    stmt.attributes.write().unwrap().use_bookmarks = ub;
+                    SqlReturn::SUCCESS
+                }
+                None => {
+                    stmt_handle
+                        .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_USE_BOOKMARKS"));
+                    SqlReturn::ERROR
+                }
+            }
+        }
+        StatementAttribute::SQL_ATTR_ASYNC_STMT_EVENT => {
+            stmt_handle.add_diag_info(ODBCError::Unimplemented("SQL_ATTR_ASYNC_STMT_EVENT"));
+            SqlReturn::ERROR
+        }
+        StatementAttribute::SQL_ATTR_METADATA_ID => {
+            todo!()
+        }
+        _ => {
+            stmt_handle.add_diag_info(ODBCError::UnsupportedStatementAttribute(
+                statement_attribute_to_string(attribute),
+            ));
+            SqlReturn::ERROR
+        }
+    }
 }
 
 ///
@@ -3555,7 +3732,7 @@ pub unsafe extern "C" fn SQLSpecialColumns(
     _table_name: *const Char,
     _table_name_length: SmallInt,
     _scope: SmallInt,
-    _nullable: Nullability,
+    _nullable: SmallInt,
 ) -> SqlReturn {
     unsupported_function(MongoHandleRef::from(statement_handle), "SQLSpecialColumns")
 }
