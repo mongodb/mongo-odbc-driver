@@ -1511,7 +1511,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
             let conn_handle = MongoHandleRef::from(connection_handle);
 
             match FromPrimitive::from_i32(attribute) {
-                Some(valid_attr) => sql_get_attrw_helper(
+                Some(valid_attr) => sql_get_connect_attrw_helper(
                     conn_handle,
                     valid_attr,
                     value_ptr,
@@ -1528,7 +1528,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
     )
 }
 
-unsafe fn sql_get_attrw_helper(
+unsafe fn sql_get_connect_attrw_helper(
     conn_handle: &mut MongoHandle,
     attribute: ConnectionAttribute,
     value_ptr: Pointer,
@@ -2625,14 +2625,11 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
             }
 
             match FromPrimitive::from_i32(attribute) {
-                Some(valid_attr) => sql_get_stmt_attrw_helper(
-                    stmt_handle,
-                    valid_attr,
-                    value_ptr,
-                    string_length_ptr,
-                ),
+                Some(valid_attr) => {
+                    sql_get_stmt_attrw_helper(stmt_handle, valid_attr, value_ptr, string_length_ptr)
+                }
                 None => {
-                    stmt_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute))
+                    stmt_handle.add_diag_info(ODBCError::InvalidAttrIdentifier(attribute));
                     SqlReturn::ERROR
                 }
             }
