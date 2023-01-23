@@ -217,8 +217,7 @@ fn wstr_or_null(value: &Value) -> (*const u16, Vec<u16>) {
 fn to_wstr_ptr(string: &str) -> (*const u16, Vec<u16>) {
     let mut v: Vec<u16> = string.encode_utf16().collect();
     v.push(0);
-    let ret = v.as_ptr();
-    (ret, v)
+    (v.as_ptr(), v)
 }
 
 fn to_i16(value: &Value) -> Result<i16> {
