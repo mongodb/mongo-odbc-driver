@@ -39,7 +39,8 @@ functions:
           export PATH="$LD_LIBRARY_PATH:$PATH:$HOME/.cargo/bin"
           export DUMP_FOLDER=dumps
           export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
-          export MONGOODBC_SOURCE_ARCHIVE=mongoodbcSource
+          export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
+          export SCRIPT_FOLDER=resources
 
           cat <<EOT > expansions.yml
           prepare_shell: |
@@ -52,11 +53,13 @@ functions:
             export ADF_TEST_LOCAL_AUTH_DB="${adf_test_local_auth_db}"
             export ADF_TEST_LOCAL_HOST="${adf_test_local_host}"
             export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
+            export SCRIPT_FOLDER="$SCRIPT_FOLDER"
+            export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
             # Windows variables
             export LOCAL_DUMP_ORIGINAL_REG_VAL="$LOCAL_DUMP_ORIGINAL_REG_VAL"
             export DUMP_FOLDER="$DUMP_FOLDER"
             export DUMP_PATH="$(pwd)/$DUMP_FOLDER"
-            export MONGOODBC_SOURCE_ARCHIVE=$MONGOODBC_SOURCE_ARCHIVE
+            export MONGOODBC_DEBUGGING_INFO_ARCHIVE=$MONGOODBC_DEBUGGING_INFO_ARCHIVE
             # Non-Windows variables
             export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
@@ -272,10 +275,10 @@ functions:
           fi
           reg import "setup\cleanup_driver.reg"
           echo "----- Registry entries after clean-up----"
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> /dev/null
           echo "-------------------------"
 
   "clean-up crash dump collection":
@@ -334,11 +337,19 @@ functions:
           cargo run --bin data_loader &&
           cargo test integration -- --nocapture
           EXITCODE=$?
+          echo "****** ls -l ./target/debug/deps *******"
+          ls -l ./target/debug/deps
+          echo "****************************************"
           # The execution termimated with a segfault
           if [ $EXITCODE -eq 139 ]; then
-            # Compress the sources so that we'll have everything for debugging available in Evergreen after a run
+            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
             SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
-            tar czvf "$DUMP_PATH/$MONGOODBC_SOURCE_ARCHIVE.tar.gz" $SOURCES_FOLDERS
+            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
+            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
+            tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
+            
+            echo "ls -l $DUMP_PATH"
+            ls -l $DUMP_PATH
           fi
           ./resources/run_adf.sh stop
           exit $EXITCODE
@@ -426,6 +437,14 @@ functions:
         cargo run --bin data_loader &&
         cargo test -- --ignored
         EXITCODE=$?
+        # The execution termimated with a segfault
+        if [ $EXITCODE -eq 139 ]; then
+            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
+            SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
+            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
+            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
+            tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
+        fi
         ./resources/run_adf.sh stop
         exit $EXITCODE
 
@@ -449,7 +468,7 @@ functions:
          permissions: public-read
          content_type: application/octet-stream
 
-  "upload crash dump":
+  "upload crash debugging info":
     - command: s3.put
       params:
         aws_key: ${aws_key}
@@ -536,7 +555,7 @@ task_groups:
       - func: "setup driver on Windows"
       - func: "setup crash dump collection"
     teardown_group:
-      - func: "upload crash dump"
+      - func: "upload crash debugging info"
       - func: "clean-up driver on Windows"
       - func: "clean-up crash dump collection"
     tasks:
@@ -551,7 +570,7 @@ task_groups:
       - func: "setup driver on Windows"
       - func: "setup crash dump collection"
     teardown_group:
-      - func: "upload crash dump"
+      - func: "upload crash debugging info"
       - func: "clean-up driver on Windows"
       - func: "clean-up crash dump collection"
     tasks:
