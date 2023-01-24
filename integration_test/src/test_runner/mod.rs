@@ -367,8 +367,8 @@ fn run_function_test(
                     to_i16(&function[8])?,
                     wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
-                    wstr_or_null(&function[7]).0,
-                    to_i16(&function[8])?,
+                    wstr_or_null(&function[9]).0,
+                    to_i16(&function[10])?,
                 ))
             }
         }
