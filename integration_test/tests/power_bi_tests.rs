@@ -9,10 +9,53 @@ mod integration {
         AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, DriverConnectOption,
         EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, InfoType, Pointer, SQLAllocHandle,
         SQLDriverConnectW, SQLFreeHandle, SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt,
-        SqlReturn,
+        SqlReturn, USmallInt,
     };
     use std::ptr::null_mut;
     use std::slice;
+
+    macro_rules! test_get_info {
+        ($conn_handle:expr, $env_handle: expr, $info_type: expr , $actual_value_modifier: ident) => {{
+            let conn_handle = $conn_handle;
+            let env_handle = $env_handle;
+            let info_type = $info_type;
+            let actual_value_modifier = $actual_value_modifier;
+
+            let str_len_ptr = &mut 0;
+            const BUFFER_LENGTH: SmallInt = 300;
+            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+
+            let outcome = SQLGetInfoW(
+                conn_handle as HDbc,
+                info_type,
+                output_buffer as Pointer,
+                BUFFER_LENGTH,
+                str_len_ptr,
+            );
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                outcome,
+                "Expected {}, got {}. Diagnostic message is: {}",
+                sql_return_to_string(SqlReturn::SUCCESS),
+                sql_return_to_string(outcome),
+                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+            );
+            println!(
+                "{:?} = {}\nLength is {}",
+                info_type,
+                actual_value_modifier(output_buffer as Pointer, *str_len_ptr as usize),
+                *str_len_ptr
+            );
+        }};
+    }
+
+    unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
+        String::from_utf16_lossy(slice::from_raw_parts(value_ptr as *const _, out_length))
+    }
+
+    unsafe fn modify_u16_value(value_ptr: Pointer, _: usize) -> u16 {
+        *(value_ptr as *mut USmallInt)
+    }
 
     /// Setup flow.
     /// This will allocate a new environment handle and set ODBC_VERSION and CONNECTION_POOLING environment attributes.
@@ -175,11 +218,7 @@ mod integration {
                 out_connection_string, output_len
             );
             // The output string should be the same as the input string except with extra curly braces around the driver name
-            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and ouptput connection string have the same length but input string length is {} and output string length is {}",input_len, output_len);
-
-            let str_len_ptr = &mut 0;
-            const BUFFER_LENGTH: SmallInt = 300;
-            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and output connection string have the same length but input string length is {} and output string length is {}",input_len, output_len);
 
             // SQL_DRIVER_NAME is not accessible through odbc_sys
             /*
@@ -195,53 +234,131 @@ mod integration {
             );
              */
 
-            let mut outcome = SQLGetInfoW(
-                conn_handle as HDbc,
+            test_get_info!(
+                conn_handle,
+                env_handle,
                 InfoType::DbmsName,
-                output_buffer as Pointer,
-                BUFFER_LENGTH,
-                str_len_ptr,
+                modify_string_value
             );
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                outcome,
-                "Expected {}, got {}. Diagnostic message is: {}",
-                sql_return_to_string(SqlReturn::SUCCESS),
-                sql_return_to_string(outcome),
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::DbmsVer,
+                modify_string_value
             );
-            println!(
-                "DBMS name = {}\nLength is {}",
-                String::from_utf16_lossy(slice::from_raw_parts(
-                    output_buffer,
-                    *str_len_ptr as usize
-                )),
-                *str_len_ptr
+        }
+    }
+
+    // Test PowerBI driver information retrieval
+    // This test is limited by the available InfoType values in odbc_sys
+    #[test]
+    fn test_get_driver_info() {
+        let env_handle: HEnv = setup();
+        let (conn_handle, _, _, _) = power_bi_connect(env_handle);
+
+        unsafe {
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::IdentifierQuoteChar,
+                modify_string_value
             );
 
-            outcome = SQLGetInfoW(
-                conn_handle as HDbc,
-                InfoType::DbmsVer,
-                output_buffer as Pointer,
-                BUFFER_LENGTH,
-                str_len_ptr,
+            // SQL-1177: Investigate how to test missing InfoType values
+            // InfoType::SQL_OWNER_USAGE
+            // InfoType::SQL_CATALOG_USAGE
+            // InfoType::SQL_CATALOG_NAME_SEPARATOR
+            // InfoType::SQL_CATALOG_LOCATION
+            // InfoType::SQL_SQL_CONFORMANCE
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::MaxColumnsInOrderBy,
+                modify_u16_value
             );
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                outcome,
-                "Expected {}, got {}. Diagnostic message is: {}",
-                sql_return_to_string(SqlReturn::SUCCESS),
-                sql_return_to_string(outcome),
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::MaxIdentifierLen,
+                modify_u16_value
             );
-            println!(
-                "DBMS version = {}\nLength is {}",
-                String::from_utf16_lossy(slice::from_raw_parts(
-                    output_buffer,
-                    *str_len_ptr as usize
-                )),
-                *str_len_ptr
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::MaxColumnsInGroupBy,
+                modify_u16_value
             );
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::MaxColumnsInSelect,
+                modify_u16_value
+            );
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::OrderByColumnsInSelect,
+                modify_string_value
+            );
+            // InfoType::SQL_STRING_FUNCTIONS
+            // InfoType::SQL_AGGREGATE_FUNCTIONS
+            // InfoType::SQL_SQL92_PREDICATES
+            // InfoType::SQL_SQL92_RELATIONAL_JOIN_OPERATORS
+            // InfoType::SQL_COLUMN_ALIAS
+            // InfoType::SQL_GROUP_BY
+            // InfoType::SQL_NUMERIC_FUNCTIONS
+            // InfoType::SQL_TIMEDATE_FUNCTIONS
+            // InfoType::SQL_SYSTEM_FUNCTIONS
+            // InfoType::SQL_TIMEDATE_ADD_INTERVALS
+            // InfoType::SQL_TIMEDATE_DIFF_INTERVALS
+            // InfoType::SQL_CONCAT_NULL_BEHAVIOR
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::CatalogName,
+                modify_string_value
+            );
+            // InfoType::SQL_CATALOG_TERM
+            // InfoType::SQL_OWNER_TERM
+            // InfoType::SQL_ODBC_INTERFACE_CONFORMANCE
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::SearchPatternEscape,
+                modify_string_value
+            );
+            // InfoType::SQL_CONVERT_FUNCTIONS
+            // InfoType::SQL_CONVERT_BIGINT
+            // InfoType::SQL_CONVERT_BINARY
+            // InfoType::SQL_CONVERT_BIT
+            // InfoType::SQL_CONVERT_CHAR
+            // InfoType::SQL_CONVERT_DECIMAL
+            // InfoType::SQL_CONVERT_DOUBLE
+            // InfoType::SQL_CONVERT_FLOAT
+            // InfoType::SQL_CONVERT_GUID
+            // InfoType::SQL_CONVERT_INTEGER
+            // InfoType::SQL_CONVERT_LONGVARBINARY
+            // InfoType::SQL_CONVERT_LONGVARCHAR
+            // InfoType::SQL_CONVERT_NUMERIC
+            // InfoType::SQL_CONVERT_REAL
+            // InfoType::SQL_CONVERT_SMALLINT
+            // InfoType::SQL_CONVERT_TIMESTAMP
+            // InfoType::SQL_CONVERT_TINYINT
+            // InfoType::SQL_CONVERT_DATE
+            // InfoType::SQL_CONVERT_TIME
+            // InfoType::SQL_CONVERT_VARBINARY
+            // InfoType::SQL_CONVERT_VARCHAR
+            // InfoType::SQL_CONVERT_WCHAR
+            // InfoType::SQL_CONVERT_WLONGVARCHAR
+            // InfoType::SQL_CONVERT_WVARCHAR
+            test_get_info!(
+                conn_handle,
+                env_handle,
+                InfoType::SpecialCharacters,
+                modify_string_value
+            );
+            // InfoType::SQL_RETURN_ESCAPE_CLAUSE
+            // InfoType::SQL_DRIVER_ODBC_VER
         }
     }
 }
