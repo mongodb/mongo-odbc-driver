@@ -33,7 +33,7 @@ mod unit {
 
     fn validate_message_text(handle_type: HandleType, handle: *mut MongoHandle) {
         const ERROR_MESSAGE: &str = "[MongoDB][API] The feature SQLDrivers is not implemented\0";
-        let message_text = &mut [0u16; 57] as *mut _ as *mut c_void;
+        let message_text = &mut [0u16; 114] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
         unsafe {
@@ -45,7 +45,7 @@ mod unit {
                     1,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
-                    57,
+                    114,
                     string_length_ptr
                 )
             );
@@ -58,7 +58,7 @@ mod unit {
     }
 
     fn validate_sql_state(handle_type: HandleType, handle: *mut MongoHandle) {
-        let message_text = &mut [0u16; 6] as *mut _ as *mut c_void;
+        let message_text = &mut [0u16; 12] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
         unsafe {
@@ -70,7 +70,7 @@ mod unit {
                     1,
                     4, //DiagType::SQL_DIAG_SQLSTATE
                     message_text,
-                    6,
+                    12,
                     string_length_ptr
                 )
             );
@@ -170,7 +170,7 @@ mod unit {
                     1,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
-                    15,
+                    30,
                     string_length_ptr
                 )
             );
@@ -189,7 +189,7 @@ mod unit {
                     2,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
-                    57,
+                    114,
                     string_length_ptr
                 )
             );

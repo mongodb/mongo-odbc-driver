@@ -389,7 +389,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 100;
+            let buffer_length: isize = 200;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16, expected: &str| {
@@ -503,7 +503,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 10;
+            let buffer_length: isize = 20;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16,

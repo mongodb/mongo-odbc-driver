@@ -357,7 +357,7 @@ mod unit {
             ] {
                 let char_buffer: *mut std::ffi::c_void =
                     Box::into_raw(Box::new([0u8; 40])) as *mut _;
-                let buffer_length: SmallInt = 20;
+                let buffer_length: SmallInt = 22;
                 let out_length = &mut 10;
                 let numeric_attr_ptr = &mut 10;
                 // test string attributes
@@ -373,7 +373,10 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                assert_eq!(2i16 * expected.len() as i16, *out_length);
+                assert_eq!(
+                    (std::mem::size_of::<mongo_odbc_core::WChar>() * expected.len()) as i16,
+                    *out_length
+                );
                 assert_eq!(
                     expected,
                     crate::api::data::input_wtext_to_string(

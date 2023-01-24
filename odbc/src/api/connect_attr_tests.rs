@@ -88,7 +88,7 @@ mod unit {
                 current_catalog: Some("test".to_string()),
                 ..Default::default()
             }),
-            buffer_length = 5,
+            buffer_length = 10,
             expected_length = 8,
             expected_value = "test".to_string(),
             actual_value_modifier = modify_string_attr,
