@@ -692,7 +692,7 @@ pub unsafe extern "C" fn SQLColumnsW(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog_string = input_wtext_to_string(catalog_name, catalog_name_length as usize);
-            let catalog = if catalog_name.is_null() {
+            let catalog = if catalog_name.is_null() || catalog_string.is_empty() {
                 None
             } else {
                 Some(catalog_string.as_str())

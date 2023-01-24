@@ -27,6 +27,8 @@ pub enum Error {
         test: String,
         expected: String,
         actual: String,
+        row: usize,
+        column: usize,
     },
     #[error("mismatch in row counts for test {test}: expected {expected}, actual {actual}")]
     RowCount {
@@ -120,17 +122,17 @@ impl fmt::Display for TestDef {
     }
 }
 
-/// integration_test runs the query and function tests contained in the TEST_FILE_DIR directory
+/// resultset_tests runs the query and function tests contained in the TEST_FILE_DIR directory
 #[test]
 #[ignore]
-pub fn integration_test() -> Result<()> {
-    run_integration_tests(false)
+pub fn resultset_tests() -> Result<()> {
+    run_resultset_tests(false)
 }
 
 /// Run an integration test. The generate argument indicates whether
 /// the test results should written to a file for baseline test file
 /// generation, or be asserted for correctness.
-pub fn run_integration_tests(generate: bool) -> Result<()> {
+pub fn run_resultset_tests(generate: bool) -> Result<()> {
     let env = create_environment_v3().unwrap();
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
     for path in paths {
@@ -199,18 +201,23 @@ fn str_or_null(value: &Value) -> *const u8 {
 }
 
 /// wstr_or_null converts value to a wide string or null_mut() if null
-fn wstr_or_null(value: &Value) -> *const u16 {
+/// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
+/// as the ptr.
+fn wstr_or_null(value: &Value) -> (*const u16, Vec<u16>) {
     if value.is_null() {
-        null_mut()
+        (null_mut(), Vec::new())
     } else {
         to_wstr_ptr(value.as_str().expect("Unable to cast value as string"))
     }
 }
 
-fn to_wstr_ptr(string: &str) -> *const u16 {
+/// to_wstr_ptr converts a &str into a *const u16.
+/// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
+/// as the ptr.
+fn to_wstr_ptr(string: &str) -> (*const u16, Vec<u16>) {
     let mut v: Vec<u16> = string.encode_utf16().collect();
     v.push(0);
-    v.as_ptr()
+    (v.as_ptr(), v)
 }
 
 fn to_i16(value: &Value) -> Result<i16> {
@@ -238,7 +245,7 @@ fn run_query_test(
     unsafe {
         match odbc_sys::SQLExecDirectW(
             stmt.handle() as *mut _,
-            to_wstr_ptr(query),
+            to_wstr_ptr(query).0,
             query.len() as i32,
         ) {
             SqlReturn::SUCCESS => {
@@ -302,13 +309,45 @@ fn run_function_test(
             unsafe {
                 Ok(odbc_sys::SQLTablesW(
                     statement.handle() as HStmt,
-                    wstr_or_null(&function[1]),
+                    wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
-                    wstr_or_null(&function[3]),
+                    wstr_or_null(&function[3]).0,
                     to_i16(&function[4])?,
-                    wstr_or_null(&function[5]),
+                    wstr_or_null(&function[5]).0,
                     to_i16(&function[6])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
+                    to_i16(&function[8])?,
+                ))
+            }
+        }
+        "sqlcolumns" => {
+            check_array_length(function, 9)?;
+            unsafe {
+                Ok(odbc_sys::SQLColumns(
+                    statement.handle() as HStmt,
+                    str_or_null(&function[1]),
+                    to_i16(&function[2])?,
+                    str_or_null(&function[3]),
+                    to_i16(&function[4])?,
+                    str_or_null(&function[5]),
+                    to_i16(&function[6])?,
+                    str_or_null(&function[7]),
+                    to_i16(&function[8])?,
+                ))
+            }
+        }
+        "sqlcolumnsw" => {
+            check_array_length(function, 9)?;
+            unsafe {
+                Ok(odbc_sys::SQLColumnsW(
+                    statement.handle() as HStmt,
+                    wstr_or_null(&function[1]).0,
+                    to_i16(&function[2])?,
+                    wstr_or_null(&function[3]).0,
+                    to_i16(&function[4])?,
+                    wstr_or_null(&function[5]).0,
+                    to_i16(&function[6])?,
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
                 ))
             }
@@ -318,18 +357,18 @@ fn run_function_test(
             unsafe {
                 Ok(odbc_sys::SQLForeignKeysW(
                     statement.handle() as HStmt,
-                    wstr_or_null(&function[1]),
+                    wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
-                    wstr_or_null(&function[3]),
+                    wstr_or_null(&function[3]).0,
                     to_i16(&function[4])?,
-                    wstr_or_null(&function[5]),
+                    wstr_or_null(&function[5]).0,
                     to_i16(&function[6])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
-                    wstr_or_null(&function[7]),
-                    to_i16(&function[8])?,
+                    wstr_or_null(&function[9]).0,
+                    to_i16(&function[10])?,
                 ))
             }
         }
@@ -422,6 +461,7 @@ fn validate_result_set(
     let column_count = get_column_count(&stmt)?;
     let mut row_counter = 0;
     if let Some(expected_result) = entry.expected_result.as_ref() {
+        let mut row_num = 0;
         while fetch_row(&stmt)? {
             let expected_row_check = expected_result.get(row_counter);
             // If there are no more expected rows, continue fetching to get actual row count
@@ -434,6 +474,7 @@ fn validate_result_set(
                         row: row_counter,
                     });
                 }
+                row_num += 1;
                 for i in 0..(column_count) {
                     let expected_field = expected_row.get(i).unwrap();
                     let expected_data_type = if expected_field.is_number() {
@@ -448,6 +489,8 @@ fn validate_result_set(
                             test: entry.description.clone(),
                             expected: expected_field.to_string(),
                             actual: actual_field.to_string(),
+                            row: row_num,
+                            column: i + 1,
                         });
                     }
                 }
