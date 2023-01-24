@@ -63,17 +63,18 @@ mod unit {
 
         unsafe {
             assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetDiagFieldW(
-                    handle_type,
-                    handle as *mut _,
-                    1,
-                    4, //DiagType::SQL_DIAG_SQLSTATE
-                    message_text,
-                    12,
-                    string_length_ptr
-                )
-            );
+                    SqlReturn::SUCCESS,
+                    SQLGetDiagFieldW(
+                        handle_type,
+                        handle as *mut _,
+                        1,
+                        4, //DiagType::SQL_DIAG_SQLSTATE
+                        message_text,
+                        12,
+            dbg!(buffer_len);
+                        string_length_ptr
+                    )
+                );
             assert_eq!(
                 UNIMPLEMENTED_FUNC,
                 String::from_utf16(&*(message_text as *const [u16; 6])).unwrap()
