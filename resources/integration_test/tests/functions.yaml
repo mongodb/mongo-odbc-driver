@@ -1,39 +1,4 @@
 tests:
-  - description: SQLTablesW function get all catalogs
-    test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "", 0 ]
-    db: integration_test
-    expected_result:
-      - ["db2", null, null, null, ""]
-      - ["integration_test", null, null, null, ""]
-      - ["integration_test_2", null, null, null, ""]
-    expected_bson_type: ["string", "string", "string", "string", "string"]
-    expected_case_sensitive: [ "", "", "", "", "" ]
-    expected_catalog_name: [ "", "", "", "", "" ]
-    expected_column_name: ["TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS"]
-    expected_display_size: [0, 0, 0, 0, 0]
-    expected_length: [0, 0, 0, 0, 0]
-    expected_is_searchable: [1, 1, 1, 1, 1]
-    expected_is_unsigned: [0, 0, 0, 0, 0]
-    expected_sql_type: [12, 12, 12, 12, 12]
-    expected_precision: [0, 0, 0, 0, 0]
-    expected_scale: [0, 0, 0, 0, 0]
-    expected_nullability: [0, 1, 1, 1, 1]
-  - description: SQLForeignKeysW function get all the foreign keys (there are none)
-    test_definition: [ "sqlforeignkeysw", "", 0, "", 0, "", 0, "", 0, "", 0, "", 0 ]
-    db: integration_test
-    expected_result: []
-    expected_bson_type: ["string", "string", "string", "string", "string", "string", "string", "string", "int", "int", "int", "string", "string", "int" ]
-    expected_case_sensitive: [ "", "", "", "", "", "", "", "", "", "", "", "", "", "" ]
-    expected_catalog_name:  [ "", "", "", "", "", "", "", "", "", "", "", "", "", "" ]
-    expected_column_name: ["PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME", "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"]
-    expected_display_size: [ 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 4 ]
-    expected_length: [ 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 4 ]
-    expected_is_searchable: [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ]
-    expected_is_unsigned: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
-    expected_sql_type: [ 12, 12, 12, 12, 12, 12, 12, 12, 4, 4, 4, 12, 12, 4 ]
-    expected_precision: [ 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 10, 0, 0, 10 ]
-    expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
-    expected_nullability: [ 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1 ]
   - description: SQLGetTypeInfo function with zero types returned
     test_definition: [ "sqlgettypeinfo", 111 ]
     db: integration_test
@@ -67,3 +32,38 @@ tests:
     expected_precision: [ 0, 10, 10, 0, 0, 0, 10, 10, 10, 10, 10, 10, 0, 10, 10, 10, 10, 10, 10 ]
     expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
     expected_nullability: [ 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1 ]
+  - description: SQLTablesW function get all catalogs
+    test_definition: [ "", "%", 1, "", 0, "", 0, "", 0 ]
+    db: integration_test
+    expected_result:
+      - ["db2", null, null, null, ""]
+      - ["integration_test", null, null, null, ""]
+      - ["integration_test_2", null, null, null, ""]
+    expected_bson_type: ["string", "string", "string", "string", "string"]
+    expected_case_sensitive: [ "", "", "", "", "" ]
+    expected_catalog_name: [ "", "", "", "", "" ]
+    expected_column_name: ["TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS"]
+    expected_display_size: [0, 0, 0, 0, 0]
+    expected_length: [0, 0, 0, 0, 0]
+    expected_is_searchable: [1, 1, 1, 1, 1]
+    expected_is_unsigned: [0, 0, 0, 0, 0]
+    expected_sql_type: [12, 12, 12, 12, 12]
+    expected_precision: [0, 0, 0, 0, 0]
+    expected_scale: [0, 0, 0, 0, 0]
+    expected_nullability: [0, 1, 1, 1, 1]
+  - description: SQLForeignKeysW function get all the foreign keys (there are none)
+    test_definition: [ "sqlforeignkeysw", "", 0, "", 0, "", 0, "", 0, "", 0, "", 0 ]
+    db: integration_test
+    expected_result: []
+    expected_bson_type: ["string", "string", "string", "string", "string", "string", "string", "string", "int", "int", "int", "string", "string", "int" ]
+    expected_case_sensitive: [ "", "", "", "", "", "", "", "", "", "", "", "", "", "" ]
+    expected_catalog_name:  [ "", "", "", "", "", "", "", "", "", "", "", "", "", "" ]
+    expected_column_name: ["PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME", "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"]
+    expected_display_size: [ 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 4 ]
+    expected_length: [ 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 4 ]
+    expected_is_searchable: [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ]
+    expected_is_unsigned: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    expected_sql_type: [ 12, 12, 12, 12, 12, 12, 12, 12, 4, 4, 4, 12, 12, 4 ]
+    expected_precision: [ 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 10, 0, 0, 10 ]
+    expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    expected_nullability: [ 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1 ]
