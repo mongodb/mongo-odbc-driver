@@ -5,8 +5,9 @@ use crate::{
     },
     errors::ODBCError,
 };
+use mongo_odbc_core::WChar;
 use odbc_sys::Pointer;
-use odbc_sys::{Char, Integer, SmallInt, SqlReturn, WChar};
+use odbc_sys::{Char, Integer, SmallInt, SqlReturn};
 use std::ptr::copy_nonoverlapping;
 
 ///

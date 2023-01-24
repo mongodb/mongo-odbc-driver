@@ -27,3 +27,9 @@ pub mod util;
 pub use primary_keys::MongoPrimaryKeys;
 mod foreign_keys;
 pub use foreign_keys::MongoForeignKeys;
+
+#[cfg(target_os = "macos")]
+pub type WChar = u32;
+
+#[cfg(not(target_os = "macos"))]
+pub type WChar = u16;

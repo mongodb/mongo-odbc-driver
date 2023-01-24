@@ -1,4 +1,5 @@
-use odbc_sys::{Handle, HandleType, SQLGetDiagRecW, SqlReturn, WChar};
+use mongo_odbc_core::WChar;
+use odbc_sys::{Handle, HandleType, SQLGetDiagRecW, SqlReturn};
 use std::{env, slice};
 
 /// Generate the default connection setting defined for the tests using a connection string

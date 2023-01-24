@@ -246,7 +246,7 @@ lazy_static! {
 }
 
 mod unit {
-    use odbc_sys::WChar;
+    use mongo_odbc_core::WChar;
 
     use super::*;
     // test unallocated_statement tests SQLFetch when the mongo_statement inside

@@ -10,7 +10,7 @@ mod unit {
     use std::sync::RwLock;
 
     mod get {
-        use odbc_sys::WChar;
+        use mongo_odbc_core::WChar;
 
         use super::*;
 

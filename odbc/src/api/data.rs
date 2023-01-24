@@ -6,9 +6,9 @@ use crate::{
 use bson::{spec::BinarySubtype, Bson};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use file_dbg_macros::dbg_write;
-use mongo_odbc_core::util::Decimal128Plus;
+use mongo_odbc_core::{util::Decimal128Plus, WChar};
 use odbc_sys::{
-    Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt, WChar,
+    Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
 use regex::Regex;
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};

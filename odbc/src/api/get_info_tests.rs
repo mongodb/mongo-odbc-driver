@@ -4,7 +4,8 @@ use crate::{
     handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
 };
-use odbc_sys::{Pointer, SmallInt, SqlReturn, UInteger, USmallInt, WChar};
+use mongo_odbc_core::WChar;
+use odbc_sys::{Pointer, SmallInt, SqlReturn, UInteger, USmallInt};
 
 macro_rules! test_get_info {
     ($func_name:ident,
