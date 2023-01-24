@@ -668,7 +668,7 @@ fn get_data(
                     data = json!(null);
                 } else if data_type == CDataType::Char {
                     data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
-                        [0..*out_len_or_ind as usize]
+                        [0..(*out_len_or_ind / 2) as usize]
                         .to_string());
                 } else if data_type == CDataType::SLong {
                     data = json!(*(buffer as *const i64));
