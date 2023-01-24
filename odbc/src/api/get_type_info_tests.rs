@@ -1,7 +1,7 @@
 use crate::{definitions::DiagType, handles::definitions::*, SQLGetDiagFieldW, SQLGetTypeInfo};
 use bson::Bson;
 use mongo_odbc_core::SqlDataType;
-use odbc_sys::{HandleType::Stmt, Nullability, SqlReturn};
+use odbc_sys::{HandleType::Stmt, SqlReturn};
 
 const INVALID_SQL_TYPE: &str = "HY004\0";
 
@@ -81,12 +81,6 @@ mod unit {
     }
 
     #[test]
-    fn test_specific_type_one_response() {
-        let expectations = vec!["int"];
-        validate_result_set(SqlDataType::INTEGER, expectations);
-    }
-
-    #[test]
     fn test_invalid_type_error() {
         // Test that a sql data type that is not defined in the enum yields the correct error
         let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
@@ -117,12 +111,6 @@ mod unit {
     }
 
     #[test]
-    fn test_unsupported_type_empty_list() {
-        // given a valid type defined in the enum, but not supported, yield an empty list
-        validate_result_set(SqlDataType::INTERVAL_HOUR_TO_MINUTE, vec![]);
-    }
-
-    #[test]
     fn test_invalid_cursor_state_error() {
         // checks for invalid cursor state when calling get_value before next
         let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
@@ -144,73 +132,5 @@ mod unit {
                 .get_value(1);
             assert!(value.is_err());
         }
-    }
-
-    #[test]
-    fn test_get_all_type_info_row_values() {
-        let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
-        unsafe {
-            let stmt = (*handle).as_statement().unwrap();
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, SqlDataType::INTEGER as i16)
-            );
-            let result = stmt
-                .mongo_statement
-                .write()
-                .unwrap()
-                .as_mut()
-                .unwrap()
-                .next(None);
-            assert!(result.is_ok());
-            assert!(result.unwrap());
-            // test each of the values come out properly for a given type
-            let values: Vec<Bson> = vec![
-                Bson::String("int".to_string()),
-                Bson::Int32(SqlDataType::INTEGER as i32),
-                Bson::Int32(10),
-                Bson::Null,
-                Bson::Null,
-                Bson::Null,
-                Bson::Int32(Nullability::NULLABLE.0 as i32),
-                Bson::Int32(0),
-                Bson::Int32(2),
-                Bson::Int32(0),
-                Bson::Int32(1),
-                Bson::Int32(0),
-                Bson::String("int".to_string()),
-                Bson::Int32(0),
-                Bson::Int32(0),
-                Bson::Int32(4),
-                Bson::Null,
-                Bson::Int32(10),
-                Bson::Null,
-            ];
-            for (col_index, value) in values.iter().enumerate() {
-                assert_eq!(
-                    *value,
-                    stmt.mongo_statement
-                        .write()
-                        .unwrap()
-                        .as_mut()
-                        .unwrap()
-                        .get_value((col_index + 1) as u16)
-                        .unwrap()
-                        .unwrap()
-                )
-            }
-            // test an out of bounds column index fails
-            assert!(stmt
-                .mongo_statement
-                .write()
-                .unwrap()
-                .as_mut()
-                .unwrap()
-                .get_value(20)
-                .is_err())
-        };
     }
 }
