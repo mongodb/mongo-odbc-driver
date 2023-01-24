@@ -122,7 +122,7 @@ impl fmt::Display for TestDef {
     }
 }
 
-/// integration_test runs the query and function tests contained in the TEST_FILE_DIR directory
+/// resultset_tests runs the query and function tests contained in the TEST_FILE_DIR directory
 #[test]
 #[ignore]
 pub fn resultset_tests() -> Result<()> {
