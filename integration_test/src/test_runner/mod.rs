@@ -18,7 +18,7 @@ use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
 const SQL_NULL_DATA: isize = -1;
-const BUFFER_LENGTH: usize = 200;
+const BUFFER_LENGTH: usize = 1000;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
@@ -210,7 +210,9 @@ fn wstr_or_null(value: &Value) -> *const u16 {
 fn to_wstr_ptr(string: &str) -> *const u16 {
     let mut v: Vec<u16> = string.encode_utf16().collect();
     v.push(0);
-    v.as_ptr()
+    let ret = v.as_ptr();
+    std::mem::forget(v);
+    ret
 }
 
 fn to_i16(value: &Value) -> Result<i16> {
@@ -631,7 +633,7 @@ fn get_column_attribute(
             SqlReturn::SUCCESS => Ok(match column_metadata_type {
                 Value::String(_) => json!((String::from_utf16_lossy(
                     &*(character_attrib_ptr as *const [u16; BUFFER_LENGTH])
-                ))[0..*string_length_ptr as usize]
+                ))[0..(*string_length_ptr as usize / std::mem::size_of::<u16>())]
                     .to_string()),
                 Value::Number(_) => json!(*numeric_attrib_ptr),
                 meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),
@@ -668,7 +670,7 @@ fn get_data(
                     data = json!(null);
                 } else if data_type == CDataType::Char {
                     data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
-                        [0..(*out_len_or_ind / 2) as usize]
+                        [0..*out_len_or_ind as usize]
                         .to_string());
                 } else if data_type == CDataType::SLong {
                     data = json!(*(buffer as *const i64));
