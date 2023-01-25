@@ -2830,14 +2830,9 @@ unsafe fn sql_get_stmt_attrw_helper(
                 SqlReturn::SUCCESS
             }
             // leave SQL_GET_BOOKMARK as unsupported since it is for ODBC < 3.0 drivers
-            StatementAttribute::SQL_GET_BOOKMARK => {
-                err = Some(ODBCError::UnsupportedStatementAttribute(
-                    statement_attribute_to_string(attribute),
-                ));
-                SqlReturn::ERROR
-            }
+            StatementAttribute::SQL_GET_BOOKMARK 
             // Not supported but still relevent to 3.0 drivers
-            StatementAttribute::SQL_ATTR_SAMPLE_SIZE
+            | StatementAttribute::SQL_ATTR_SAMPLE_SIZE
             | StatementAttribute::SQL_ATTR_DYNAMIC_COLUMNS
             | StatementAttribute::SQL_ATTR_TYPE_EXCEPTION_BEHAVIOR
             | StatementAttribute::SQL_ATTR_LENGTH_EXCEPTION_BEHAVIOR => {
