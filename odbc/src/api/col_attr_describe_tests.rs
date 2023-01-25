@@ -2,12 +2,12 @@ use crate::{
     handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW, SQLDescribeColW,
 };
-use mongo_odbc_core::MongoFields;
+use mongo_odbc_core::{MongoFields, SQL_SEARCHABLE};
 use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn};
 use std::sync::RwLock;
 
 mod unit {
-    use odbc_sys::SqlDataType;
+    use mongo_odbc_core::SqlDataType;
 
     use super::*;
     // test unallocated_statement tests SQLColAttributeW when the mongo_statement inside
@@ -349,8 +349,8 @@ mod unit {
                 (Desc::BaseTableName, ""),
                 (Desc::CatalogName, ""),
                 (Desc::Label, "TABLE_NAME"),
-                (Desc::LiteralPrefix, ""),
-                (Desc::LiteralSuffix, ""),
+                (Desc::LiteralPrefix, "'"),
+                (Desc::LiteralSuffix, "'"),
                 (Desc::Name, "TABLE_NAME"),
                 (Desc::TableName, ""),
                 (Desc::TypeName, "string"),
@@ -406,10 +406,10 @@ mod unit {
             (Desc::OctetLength, 0),
             (Desc::Precision, 0),
             (Desc::Scale, 0),
-            (Desc::Searchable, 1),
-            (Desc::Type, SqlDataType::VARCHAR.0 as isize),
-            (Desc::ConciseType, SqlDataType::VARCHAR.0 as isize),
-            (Desc::Unsigned, 0),
+            (Desc::Searchable, SQL_SEARCHABLE as isize),
+            (Desc::Type, SqlDataType::VARCHAR as isize),
+            (Desc::ConciseType, SqlDataType::VARCHAR as isize),
+            (Desc::Unsigned, 1),
         ] {
             unsafe {
                 let char_buffer: *mut std::ffi::c_void =

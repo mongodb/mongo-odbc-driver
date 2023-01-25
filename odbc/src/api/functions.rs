@@ -18,11 +18,12 @@ use file_dbg_macros::dbg_write;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
+    MongoTypesInfo, SqlDataType,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
     Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
-    Len, Nullability, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, ULen, USmallInt, WChar,
+    Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt, WChar,
 };
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 
@@ -469,13 +470,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                         mongo_stmt.as_ref().unwrap().get_resultset_metadata().len() as Len;
                     SqlReturn::SUCCESS
                 }
-                Desc::CaseSensitive => numeric_col_attr(&|x: &MongoColMetadata| {
-                    (if x.type_name == "string" {
-                        SqlBool::True
-                    } else {
-                        SqlBool::False
-                    }) as Len
-                }),
+                Desc::CaseSensitive => {
+                    numeric_col_attr(&|x: &MongoColMetadata| x.case_sensitive as Len)
+                }
                 Desc::BaseColumnName => {
                     string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref())
                 }
@@ -495,12 +492,18 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::Length => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len)
                 }
-                Desc::LiteralPrefix
-                | Desc::LiteralSuffix
-                | Desc::LocalTypeName
-                | Desc::SchemaName => string_col_attr(&|_| ""),
+                Desc::LiteralPrefix => {
+                    string_col_attr(&|x: &MongoColMetadata| x.literal_prefix.unwrap_or(""))
+                }
+                Desc::LiteralSuffix => {
+                    string_col_attr(&|x: &MongoColMetadata| x.literal_suffix.unwrap_or(""))
+                }
+                Desc::LocalTypeName | Desc::SchemaName => string_col_attr(&|_| ""),
                 Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
                 Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.nullability.0 as Len),
+                Desc::NumPrecRadix => {
+                    numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len)
+                }
                 Desc::OctetLength => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
                 }
@@ -510,13 +513,11 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::Scale => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len)
                 }
-                Desc::Searchable => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.is_searchable as Len)
-                }
+                Desc::Searchable => numeric_col_attr(&|x: &MongoColMetadata| x.searchable as Len),
                 Desc::TableName => string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref()),
                 Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref()),
                 Desc::Type | Desc::ConciseType => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.sql_type.0 as Len)
+                    numeric_col_attr(&|x: &MongoColMetadata| x.sql_type as Len)
                 }
                 Desc::Unsigned => numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len),
                 desc @ (Desc::OctetLengthPtr
@@ -531,7 +532,6 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 | Desc::DatetimeIntervalPrecision
                 | Desc::MaximumScale
                 | Desc::MinimumScale
-                | Desc::NumPrecRadix
                 | Desc::ParameterType
                 | Desc::RowsProcessedPtr
                 | Desc::RowVer) => {
@@ -2847,10 +2847,38 @@ unsafe fn sql_get_stmt_attrw_helper(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[no_mangle]
+pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
+    SQLGetTypeInfoW(handle, data_type)
+}
+
+///
+/// [`SQLGetTypeInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetTypeInfo-function
+///
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SmallInt) -> SqlReturn {
-    unimpl!(handle);
+pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> SqlReturn {
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(handle);
+            match FromPrimitive::from_i16(data_type) {
+                Some(sql_data_type) => {
+                    let stmt = must_be_valid!((*mongo_handle).as_statement());
+                    let types_info = MongoTypesInfo::new(sql_data_type);
+                    *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
+                    SqlReturn::SUCCESS
+                }
+                None => {
+                    mongo_handle.add_diag_info(ODBCError::InvalidSqlType(data_type.to_string()));
+                    SqlReturn::ERROR
+                }
+            }
+        },
+        handle
+    )
 }
 
 ///
