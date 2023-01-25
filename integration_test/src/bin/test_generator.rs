@@ -1,4 +1,4 @@
-use integration_test::test_runner::{run_integration_tests, Result};
+use integration_test::test_runner::{run_resultset_tests, Result};
 
 /// This is a standalone executable that generates baseline integration
 /// test files based on the description, db, and test_definition fields
@@ -9,5 +9,5 @@ use integration_test::test_runner::{run_integration_tests, Result};
 /// The actual code for generating the test files can be found in the
 /// test_runner module.
 fn main() -> Result<()> {
-    run_integration_tests(true)
+    run_resultset_tests(true)
 }

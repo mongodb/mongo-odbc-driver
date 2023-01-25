@@ -663,7 +663,7 @@ impl MongoStatement for MongoFields {
                     Some(_) => 0i32,
                 }
             }),
-            17 => Bson::Int32(self.current_field_for_collection as i32),
+            17 => Bson::Int32(1 + self.current_field_for_collection as i32),
             18 => Bson::String(
                 // odbc_sys should use an enum instead of constants...
                 match get_meta_data()?.nullability {
