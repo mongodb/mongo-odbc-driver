@@ -3678,7 +3678,7 @@ unsafe fn sql_set_stmt_attrw_helper(
             stmt.attributes.write().unwrap().rows_fetched_ptr = value_ptr as *mut ULen;
             SqlReturn::SUCCESS
         }
-        StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE => {
+        StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE | StatementAttribute::SQL_ROWSET_SIZE => {
             match FromPrimitive::from_i32(value_ptr as i32) {
                 Some(ras) => {
                     stmt.attributes.write().unwrap().row_array_size = ras;
@@ -3715,7 +3715,13 @@ unsafe fn sql_set_stmt_attrw_helper(
         StatementAttribute::SQL_ATTR_METADATA_ID => {
             todo!()
         }
-        _ => {
+        // leave SQL_GET_BOOKMARK as unsupported since it is for ODBC < 3.0 drivers
+              StatementAttribute::SQL_GET_BOOKMARK
+              // Not supported but still relevent to 3.0 drivers
+              | StatementAttribute::SQL_ATTR_SAMPLE_SIZE
+              | StatementAttribute::SQL_ATTR_DYNAMIC_COLUMNS
+              | StatementAttribute::SQL_ATTR_TYPE_EXCEPTION_BEHAVIOR
+              | StatementAttribute::SQL_ATTR_LENGTH_EXCEPTION_BEHAVIOR => {
             stmt_handle.add_diag_info(ODBCError::UnsupportedStatementAttribute(
                 statement_attribute_to_string(attribute),
             ));
