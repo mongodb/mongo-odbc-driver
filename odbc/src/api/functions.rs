@@ -2847,9 +2847,20 @@ unsafe fn sql_get_stmt_attrw_helper(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
-#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
+    SQLGetTypeInfoW(handle, data_type)
+}
+
+///
+/// [`SQLGetTypeInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetTypeInfo-function
+///
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
+#[named]
+#[no_mangle]
+pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> SqlReturn {
     panic_safe_exec!(
         || {
             let mongo_handle = MongoHandleRef::from(handle);

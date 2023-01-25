@@ -1,4 +1,4 @@
-use crate::{definitions::DiagType, handles::definitions::*, SQLGetDiagFieldW, SQLGetTypeInfo};
+use crate::{definitions::DiagType, handles::definitions::*, SQLGetDiagFieldW, SQLGetTypeInfoW};
 use bson::Bson;
 use mongo_odbc_core::SqlDataType;
 use odbc_sys::{HandleType::Stmt, SqlReturn};
@@ -26,7 +26,7 @@ mod unit {
             };
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, data_type as i16)
+                SQLGetTypeInfoW(handle as *mut _, data_type as i16)
             );
             let stmt = (*handle).as_statement().unwrap();
             // for each expectation, check that calling next succeeds and we get the expected value
@@ -88,7 +88,7 @@ mod unit {
             StatementState::Allocated,
         ));
         unsafe {
-            assert_eq!(SqlReturn::ERROR, SQLGetTypeInfo(handle as *mut _, 100));
+            assert_eq!(SqlReturn::ERROR, SQLGetTypeInfoW(handle as *mut _, 100));
             // use SQLGetDiagField to retreive and assert correct error message
             let message_text = &mut [0u16; 6] as *mut _ as *mut c_void;
             assert_eq!(
@@ -121,7 +121,7 @@ mod unit {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(handle as *mut _, SqlDataType::INTEGER as i16)
+                SQLGetTypeInfoW(handle as *mut _, SqlDataType::INTEGER as i16)
             );
             let value = stmt
                 .mongo_statement

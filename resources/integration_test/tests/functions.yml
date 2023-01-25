@@ -45,7 +45,7 @@ tests:
     expected_display_size: [ 0, 4, 4, 0, 0, 0, 4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4 ]
     expected_length: [ 0, 4, 4, 0, 0, 0, 4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4 ]
     expected_is_searchable: [ 3, 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2 ]
-    expected_is_unsigned: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    expected_is_unsigned: [ 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 ]
     expected_sql_type: [ 12, 4, 4, 12, 12, 12, 4, 4, 4, 4, 4, 4, 12, 4, 4, 4, 4, 4, 4 ]
     expected_precision: [ 0, 10, 10, 0, 0, 0, 10, 10, 10, 10, 10, 10, 0, 10, 10, 10, 10, 10, 10 ]
     expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
@@ -54,7 +54,7 @@ tests:
     test_definition: [ "sqlgettypeinfo", 4 ]
     db: integration_test
     expected_result: 
-    - [ "int", 4, 10, "", "", null, 1, 0, 2, 0, 1, 0, "int", 0, 0, 4, null, 10, null ]
+    - [ "int", 4, 10, null, null, null, 1, 0, 2, 0, 1, 0, "int", 0, 0, 4, null, 10, null ]
     expected_bson_type: [ "string", "int", "int", "string", "string", "string", "int", "int", "int", "int", "int", "int", "string", "int", "int", "int", "int", "int", "int" ]
     expected_case_sensitive: [ "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" ]
     expected_catalog_name:  [ "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" ]
@@ -62,7 +62,7 @@ tests:
     expected_display_size: [ 0, 4, 4, 0, 0, 0, 4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4 ]
     expected_length: [ 0, 4, 4, 0, 0, 0, 4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4 ]
     expected_is_searchable: [ 3, 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2 ]
-    expected_is_unsigned: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    expected_is_unsigned: [ 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 ]
     expected_sql_type: [ 12, 4, 4, 12, 12, 12, 4, 4, 4, 4, 4, 4, 12, 4, 4, 4, 4, 4, 4 ]
     expected_precision: [ 0, 10, 10, 0, 0, 0, 10, 10, 10, 10, 10, 10, 0, 10, 10, 10, 10, 10, 10 ]
     expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
