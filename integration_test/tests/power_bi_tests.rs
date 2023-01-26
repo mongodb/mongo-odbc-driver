@@ -12,8 +12,11 @@ mod integration {
         SQLFreeHandle, SQLGetData, SQLGetInfoW, SQLMoreResults, SQLNumResultCols,
         SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt, SqlReturn,
     };
+
     use std::ptr::null_mut;
     use std::slice;
+
+    const BUFFER_LENGTH: SmallInt = 300;
 
     /// Setup flow.
     /// This will allocate a new environment handle and set ODBC_VERSION and CONNECTION_POOLING environment attributes.
@@ -63,7 +66,7 @@ mod integration {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         let output_len;
-        let mut in_connection_string;
+        let in_connection_string;
         let out_connection_string;
         unsafe {
             assert_eq!(
@@ -89,7 +92,6 @@ mod integration {
 
             // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
             in_connection_string = generate_default_connection_str();
-            in_connection_string.push_str("DATABASE=integration_test;");
             let mut in_connection_string_encoded: Vec<u16> =
                 in_connection_string.encode_utf16().collect();
             in_connection_string_encoded.push(0);
@@ -295,7 +297,9 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS as i32)
+                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS as i32),
+                "{}",
+                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
             );
 
             // SQLGetFunctions is not available through odbc_sys
@@ -304,7 +308,6 @@ mod integration {
             */
 
             let str_len_ptr = &mut 0;
-            const BUFFER_LENGTH: SmallInt = 300;
             let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
 
             assert_eq!(
@@ -323,37 +326,51 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLNumResultCols(stmt as HStmt, column_count_ptr)
             );
+            assert_eq!(2, *column_count_ptr);
+
             let numeric_attribute_ptr = &mut 0;
-            const FIELD_TYPES: [Desc; 3] = [
+            const FIELD_IDS: [Desc; 7] = [
                 Desc::ConciseType,
                 Desc::Unsigned,
-                // SQL_COLUMN_NAME,
-                // SQL_COLUMN_NULLABLE,
+                Desc::Name,
+                Desc::Nullable,
                 Desc::TypeName,
-                // SQL_COLUMN_LENGTH,
-                // SQL_COLUMN_SCALE,
+                Desc::Length,
+                Desc::Scale,
             ];
             for col_num in 0..*column_count_ptr {
-                FIELD_TYPES.iter().for_each(|field_type| {
+                FIELD_IDS.iter().for_each(|field_type| {
+                    let outcome = SQLColAttributeW(
+                        stmt as HStmt,
+                        (col_num + 1) as u16,
+                        *field_type,
+                        output_buffer as Pointer,
+                        BUFFER_LENGTH,
+                        str_len_ptr,
+                        numeric_attribute_ptr,
+                    );
                     assert_eq!(
                         SqlReturn::SUCCESS,
-                        SQLColAttributeW(
-                            stmt as HStmt,
-                            (col_num + 1) as u16,
-                            *field_type,
-                            output_buffer as Pointer,
-                            BUFFER_LENGTH,
-                            str_len_ptr,
-                            numeric_attribute_ptr
-                        )
+                        outcome,
+                        "Expected {}, got {}. Diagnostic message is: {}",
+                        sql_return_to_string(SqlReturn::SUCCESS),
+                        sql_return_to_string(outcome),
+                        get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
                     );
                 });
             }
+
+            let mut successful_fetch_count = 0;
             loop {
                 let result = SQLFetch(stmt as HStmt);
-                assert!(result == SqlReturn::SUCCESS || result == SqlReturn::NO_DATA);
+                assert!(
+                    result == SqlReturn::SUCCESS || result == SqlReturn::NO_DATA,
+                    "{}",
+                    get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                );
                 match result {
                     SqlReturn::SUCCESS => {
+                        successful_fetch_count += 1;
                         assert_eq!(
                             SqlReturn::SUCCESS,
                             SQLGetData(
@@ -363,7 +380,9 @@ mod integration {
                                 output_buffer as Pointer,
                                 BUFFER_LENGTH as isize,
                                 &mut 0
-                            )
+                            ),
+                            "{}",
+                            get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
                         );
                         assert_eq!(
                             SqlReturn::SUCCESS,
@@ -374,13 +393,20 @@ mod integration {
                                 output_buffer as Pointer,
                                 BUFFER_LENGTH as isize,
                                 &mut 0
-                            )
+                            ),
+                            "{}",
+                            get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
                         );
                     }
                     // break if SQLFetch returns SQL_NO_DATA
                     _ => break,
                 }
             }
+            assert_eq!(
+                3, successful_fetch_count,
+                "Expected 3 successful calls to SQLFetch, got {}.",
+                successful_fetch_count
+            );
 
             assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt as HStmt));
             assert_eq!(

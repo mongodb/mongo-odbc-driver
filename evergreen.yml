@@ -49,6 +49,7 @@ functions:
             export ADF_TEST_LOCAL_AUTH_DB="${adf_test_local_auth_db}"
             export ADF_TEST_LOCAL_HOST="${adf_test_local_host}"
             export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
+            export ADF_TEST_LOCAL_DB="${adf_test_local_db}"
             # Non-Windows variables
             export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
