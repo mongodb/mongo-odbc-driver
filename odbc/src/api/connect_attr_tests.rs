@@ -10,6 +10,8 @@ mod unit {
     use std::sync::RwLock;
 
     mod get {
+        use std::mem::size_of;
+
         use mongo_odbc_core::WChar;
 
         use super::*;
@@ -88,8 +90,8 @@ mod unit {
                 current_catalog: Some("test".to_string()),
                 ..Default::default()
             }),
-            buffer_length = 10,
-            expected_length = 8,
+            buffer_length = 5 * size_of::<WChar>() as i32,
+            expected_length = 4 * size_of::<WChar>() as i32,
             expected_value = "test".to_string(),
             actual_value_modifier = modify_string_attr,
         );

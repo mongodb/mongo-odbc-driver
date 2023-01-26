@@ -356,8 +356,8 @@ mod unit {
                 (Desc::TypeName, "string"),
             ] {
                 let char_buffer: *mut std::ffi::c_void =
-                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
-                let buffer_length: SmallInt = 22;
+                    Box::into_raw(Box::new([0u8; 200])) as *mut _;
+                let buffer_length: SmallInt = 200;
                 let out_length = &mut 10;
                 let numeric_attr_ptr = &mut 10;
                 // test string attributes

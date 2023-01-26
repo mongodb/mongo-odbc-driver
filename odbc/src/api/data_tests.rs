@@ -488,6 +488,8 @@ mod unit {
         use crate::api::{
             data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
         };
+        use mongo_odbc_core::WChar;
+        use std::mem::size_of;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -503,7 +505,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 20;
+            let buffer_length: isize = 10 * size_of::<WChar>() as isize;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16,

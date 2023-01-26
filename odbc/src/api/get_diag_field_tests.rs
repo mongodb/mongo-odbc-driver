@@ -32,8 +32,10 @@ mod unit {
     }
 
     fn validate_message_text(handle_type: HandleType, handle: *mut MongoHandle) {
+        use mongo_odbc_core::WChar;
+        use std::mem::size_of;
         const ERROR_MESSAGE: &str = "[MongoDB][API] The feature SQLDrivers is not implemented\0";
-        let message_text = &mut [0u16; 114] as *mut _ as *mut c_void;
+        let message_text = &mut [0u16; 57 * size_of::<WChar>()] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
         unsafe {
@@ -45,7 +47,7 @@ mod unit {
                     1,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
-                    114,
+                    57 * size_of::<WChar>() as i16,
                     string_length_ptr
                 )
             );
@@ -53,12 +55,14 @@ mod unit {
                 ERROR_MESSAGE,
                 mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 57]))
             );
-            assert_eq!(112, *string_length_ptr);
+            assert_eq!(56 * size_of::<WChar>() as i16, *string_length_ptr);
         }
     }
 
     fn validate_sql_state(handle_type: HandleType, handle: *mut MongoHandle) {
-        let message_text = &mut [0u16; 12] as *mut _ as *mut c_void;
+        use mongo_odbc_core::WChar;
+        use std::mem::size_of;
+        let message_text = &mut [0u16; 6 * size_of::<WChar>()] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
         unsafe {
@@ -70,7 +74,7 @@ mod unit {
                     1,
                     4, //DiagType::SQL_DIAG_SQLSTATE
                     message_text,
-                    12,
+                    6 * size_of::<WChar>() as i16,
                     string_length_ptr
                 )
             );
@@ -78,7 +82,7 @@ mod unit {
                 UNIMPLEMENTED_FUNC,
                 mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 6]))
             );
-            assert_eq!(10, *string_length_ptr);
+            assert_eq!(5 * size_of::<WChar>() as i16, *string_length_ptr);
         }
     }
 
@@ -152,10 +156,13 @@ mod unit {
 
     #[test]
     fn test_error_message() {
+        use mongo_odbc_core::WChar;
+        use std::mem::size_of;
+
         let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         // Initialize buffers
-        let message_text = &mut [0u16; 57] as *mut _ as *mut c_void;
+        let message_text = &mut [0u16; 500] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
         unsafe {
@@ -170,7 +177,7 @@ mod unit {
                     1,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
-                    30,
+                    15 * size_of::<WChar>() as i16,
                     string_length_ptr
                 )
             );
@@ -189,7 +196,7 @@ mod unit {
                     2,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
                     message_text,
-                    114,
+                    57 * size_of::<WChar>() as i16,
                     string_length_ptr
                 )
             );
