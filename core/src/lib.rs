@@ -41,7 +41,7 @@ pub fn from_wchar_vec_lossy(v: Vec<u32>) -> String {
 
 #[cfg(target_os = "macos")]
 pub fn from_wchar_ref_lossy(v: &[u32]) -> String {
-    widestring::decode_utf32_lossy(v.iter().map(|u| *u)).collect::<String>()
+    widestring::decode_utf32_lossy(v.iter().copied()).collect::<String>()
 }
 
 #[cfg(target_os = "macos")]
@@ -56,7 +56,7 @@ pub fn from_wchar_vec_lossy(v: Vec<u16>) -> String {
 
 #[cfg(not(target_os = "macos"))]
 pub fn from_wchar_ref_lossy(v: &[u16]) -> String {
-    widestring::decode_utf16_lossy(v.iter().map(|u| *u)).collect::<String>()
+    widestring::decode_utf16_lossy(v.iter().copied()).collect::<String>()
 }
 
 #[cfg(not(target_os = "macos"))]
