@@ -183,11 +183,11 @@ mod unit {
             );
             assert_eq!(
                 OPTIONAL_VALUE_CHANGED,
-                String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
+                mongo_odbc_core::from_wchar_ref_lossy(&*(sql_state as *const [u16; 6]))
             );
             assert_eq!(
              "[MongoDB][API] Invalid value for attribute SQL_ATTR_CP_MATCH, changed to SQL_CP_STRICT_MATCH\0",
-                String::from_utf16(&*(message_text as *const [u16; 93])).unwrap()
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 93]))
             );
         }
     }

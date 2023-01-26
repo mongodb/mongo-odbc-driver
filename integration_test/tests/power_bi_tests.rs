@@ -88,8 +88,8 @@ mod integration {
 
             // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
             in_connection_string = generate_default_connection_str();
-            let mut in_connection_string_encoded: Vec<u16> =
-                in_connection_string.encode_utf16().collect();
+            let mut in_connection_string_encoded =
+                mongo_odbc_core::to_wchar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
@@ -113,7 +113,7 @@ mod integration {
             );
 
             output_len = *str_len_ptr;
-            out_connection_string = String::from_utf16_lossy(slice::from_raw_parts(
+            out_connection_string = mongo_odbc_core::from_wchar_ref_lossy(slice::from_raw_parts(
                 out_connection_string_buff,
                 output_len as usize,
             ));
@@ -212,7 +212,7 @@ mod integration {
             );
             println!(
                 "DBMS name = {}\nLength is {}",
-                String::from_utf16_lossy(slice::from_raw_parts(
+                mongo_odbc_core::from_wchar_ref_lossy(slice::from_raw_parts(
                     output_buffer,
                     *str_len_ptr as usize
                 )),
@@ -236,7 +236,7 @@ mod integration {
             );
             println!(
                 "DBMS version = {}\nLength is {}",
-                String::from_utf16_lossy(slice::from_raw_parts(
+                mongo_odbc_core::from_wchar_ref_lossy(slice::from_raw_parts(
                     output_buffer,
                     *str_len_ptr as usize
                 )),

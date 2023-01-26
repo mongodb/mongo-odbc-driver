@@ -818,7 +818,7 @@ pub unsafe fn format_bson_data(
             )
         }
         CDataType::SQL_C_WCHAR => {
-            let data = data.to_json().encode_utf16().collect::<Vec<u16>>();
+            let data = mongo_odbc_core::to_wchar_vec(&data.to_json());
             char_data!(
                 mongo_handle,
                 col_num,
@@ -957,6 +957,7 @@ pub unsafe fn input_text_to_string(text: *const Char, len: usize) -> String {
 ///
 #[allow(clippy::uninit_vec)]
 pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
+    use mongo_odbc_core::from_wchar_vec_lossy;
     if (len as isize) < 0 {
         let mut dst = Vec::new();
         let mut itr = text;
@@ -966,13 +967,13 @@ pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
                 itr = itr.offset(1);
             }
         }
-        return String::from_utf16_lossy(&dst);
+        return from_wchar_vec_lossy(dst);
     }
 
     let mut dst = Vec::with_capacity(len);
     dst.set_len(len);
     copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-    String::from_utf16_lossy(&dst)
+    from_wchar_vec_lossy(dst)
 }
 
 ///
@@ -1093,7 +1094,7 @@ pub mod i16_len {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = message.encode_utf16().collect::<Vec<u16>>();
+        let message = mongo_odbc_core::to_wchar_vec(message);
         let (len, ret) = set_output_wstring_helper(
             &message,
             output_ptr as *mut WChar,
@@ -1121,7 +1122,7 @@ pub mod i16_len {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = message.encode_utf16().collect::<Vec<u16>>();
+        let message = mongo_odbc_core::to_wchar_vec(message);
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len);
         // Only copy the length if the pointer is not null
         if !text_length_ptr.is_null() {
@@ -1195,7 +1196,7 @@ pub mod i32_len {
         text_length_ptr: *mut Integer,
     ) -> SqlReturn {
         let (len, ret) = set_output_wstring_helper(
-            &message.encode_utf16().collect::<Vec<_>>(),
+            &mongo_odbc_core::to_wchar_vec(message),
             output_ptr as *mut WChar,
             buffer_len / size_of::<WChar>(),
         );

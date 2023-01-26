@@ -35,11 +35,11 @@ mod unit {
                 );
                 assert_eq!(
                     UNIMPLEMENTED_FUNC,
-                    String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
+                    mongo_odbc_core::from_wchar_ref_lossy(&*(sql_state as *const [u16; 6]))
                 );
                 assert_eq!(
                     ERROR_MESSAGE,
-                    String::from_utf16(&*(message_text as *const [u16; 57])).unwrap()
+                    mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 57]))
                 );
                 // text_length_ptr includes a byte for null termination.
                 assert_eq!(56, *text_length_ptr);
@@ -92,7 +92,7 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API]\0",
-                String::from_utf16(&*(message_text as *const [u16; 15])).unwrap()
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 15]))
             );
             // Error message string where some characters are composed of more than one byte.
             // 1 < RecNumber =< number of diagnostic records.
@@ -112,7 +112,7 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API] The feature SQLDriv✐𑜲 is not implemented\0",
-                String::from_utf16(&*(message_text as *const [u16; 57])).unwrap()
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 57]))
             );
         }
     }

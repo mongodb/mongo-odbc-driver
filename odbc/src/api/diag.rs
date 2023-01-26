@@ -36,7 +36,7 @@ pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WChar) {
         return;
     }
     let sql_state = &format!("{}\0", sql_state);
-    let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>();
+    let state_u16 = mongo_odbc_core::to_wchar_vec(sql_state);
     copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
 }
 

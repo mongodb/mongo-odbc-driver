@@ -16,6 +16,7 @@ serde = { version = "1", features = ["derive"] }
 itertools = "0.10.4"
 lazy_static = "1.4.0"
 likely_stable = "0.1.2"
+widestring = "1.0.2"
 
 [dependencies.mongodb]
 version = "2.1"

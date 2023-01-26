@@ -22,11 +22,10 @@ macro_rules! test_connection_diagnostics {
             let mut env_handl: Handle = null_mut();
             let mut conn_handl: Handle = null_mut();
 
-            let mut expected_sql_state_encoded: Vec<u16> =
-                expected_sql_state.encode_utf16().collect();
+            let mut expected_sql_state_encoded = mongo_odbc_core::to_wchar_vec(expected_sql_state);
             expected_sql_state_encoded.push(0);
-            let mut in_connection_string_encoded: Vec<u16> =
-                in_connection_string.encode_utf16().collect();
+            let mut in_connection_string_encoded =
+                mongo_odbc_core::to_wchar_vec(in_connection_string);
             in_connection_string_encoded.push(0);
 
             unsafe {

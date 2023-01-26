@@ -1217,6 +1217,7 @@ dependencies = [
  "regex",
  "serde",
  "thiserror",
+ "widestring 1.0.2",
 ]
 
 [[package]]

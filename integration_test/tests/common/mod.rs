@@ -52,7 +52,7 @@ pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
         );
     };
     unsafe {
-        String::from_utf16_lossy(slice::from_raw_parts(
+        mongo_odbc_core::from_wchar_ref_lossy(slice::from_raw_parts(
             actual_message_text as *const WChar,
             *text_length_ptr as usize,
         ))

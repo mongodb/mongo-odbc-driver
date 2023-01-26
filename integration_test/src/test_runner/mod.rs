@@ -208,7 +208,7 @@ fn wstr_or_null(value: &Value) -> *const u16 {
 }
 
 fn to_wstr_ptr(string: &str) -> *const u16 {
-    let mut v: Vec<u16> = string.encode_utf16().collect();
+    let mut v = mongo_odbc_core::to_wchar_vec(string);
     v.push(0);
     v.as_ptr()
 }
@@ -629,7 +629,7 @@ fn get_column_attribute(
             numeric_attrib_ptr,
         ) {
             SqlReturn::SUCCESS => Ok(match column_metadata_type {
-                Value::String(_) => json!((String::from_utf16_lossy(
+                Value::String(_) => json!((mongo_odbc_core::from_wchar_ref_lossy(
                     &*(character_attrib_ptr as *const [u16; BUFFER_LENGTH])
                 ))[0..(*string_length_ptr as usize / std::mem::size_of::<u16>())]
                     .to_string()),
