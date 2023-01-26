@@ -45,7 +45,7 @@ pub fn from_wchar_ref_lossy(v: &[u32]) -> String {
 }
 
 #[cfg(target_os = "macos")]
-pub fn to_wchar_vec(s: &str) -> Vec<u16> {
+pub fn to_wchar_vec(s: &str) -> Vec<WChar> {
     widestring::encode_utf32(s.chars()).collect::<Vec<_>>()
 }
 
@@ -60,6 +60,6 @@ pub fn from_wchar_ref_lossy(v: &[u16]) -> String {
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn to_wchar_vec(s: &str) -> Vec<u16> {
+pub fn to_wchar_vec(s: &str) -> Vec<WChar> {
     widestring::encode_utf16(s.chars()).collect::<Vec<_>>()
 }
