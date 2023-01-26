@@ -739,18 +739,30 @@ mod unit {
                             buffer,
                             buffer_length,
                             out_len_or_ind,
-                        )
+                        ),
+                        "expected return"
                     );
                     if code == SqlReturn::SUCCESS {
-                        assert_eq!(expected.len() as isize, *out_len_or_ind);
+                        assert_eq!(expected.len() as isize, *out_len_or_ind, "expected len");
                         assert_eq!(
                             expected,
-                            std::slice::from_raw_parts(buffer as *const u8, expected.len())
+                            std::slice::from_raw_parts(buffer as *const u8, expected.len()),
+                            "expected contents for column {}",
+                            col
                         );
                     }
                 };
 
-                bin_val_test(ARRAY_COL, &[], SqlReturn::ERROR);
+                bin_val_test(
+                    ARRAY_COL,
+                    &[
+                        123, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 34, 58, 34, 49, 34,
+                        125, 123, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 34, 58, 34,
+                        50, 34, 125, 123, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 34,
+                        58, 34, 51, 34, 125,
+                    ],
+                    SqlReturn::SUCCESS,
+                );
                 bin_val_test(BIN_COL, &[5, 6, 42], SqlReturn::SUCCESS);
                 bin_val_test(BOOL_COL, &[1u8], SqlReturn::SUCCESS);
                 bin_val_test(
@@ -761,26 +773,13 @@ mod unit {
                     ],
                     SqlReturn::SUCCESS,
                 );
-                bin_val_test(DOC_COL, &[], SqlReturn::ERROR);
-                let errors_len = (*stmt_handle)
-                    .as_statement()
-                    .unwrap()
-                    .errors
-                    .read()
-                    .unwrap()
-                    .len();
-                assert_eq!(
-                    "[MongoDB][API] BSON type object cannot be converted to ODBC type Binary"
-                        .to_string(),
-                    format!(
-                        "{}",
-                        (*stmt_handle)
-                            .as_statement()
-                            .unwrap()
-                            .errors
-                            .read()
-                            .unwrap()[errors_len - 1]
-                    ),
+                bin_val_test(
+                    DOC_COL,
+                    &[
+                        123, 32, 34, 120, 34, 58, 32, 52, 50, 44, 32, 34, 121, 34, 58, 32, 52, 50,
+                        32, 125,
+                    ],
+                    SqlReturn::SUCCESS,
                 );
                 bin_val_test(
                     DOUBLE_COL,
@@ -789,12 +788,36 @@ mod unit {
                 );
                 bin_val_test(I32_COL, &[1, 0, 0, 0], SqlReturn::SUCCESS);
                 bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0], SqlReturn::SUCCESS);
-                bin_val_test(JS_COL, &[], SqlReturn::ERROR);
-                bin_val_test(JS_W_S_COL, &[], SqlReturn::ERROR);
-                bin_val_test(MAXKEY_COL, &[], SqlReturn::ERROR);
-                bin_val_test(MINKEY_COL, &[], SqlReturn::ERROR);
-                bin_val_test(OID_COL, &[], SqlReturn::ERROR);
-                bin_val_test(REGEX_COL, &[], SqlReturn::ERROR);
+                bin_val_test(
+                    JS_COL,
+                    &[
+                        108, 111, 103, 40, 34, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108,
+                        100, 34, 41,
+                    ],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(
+                    JS_W_S_COL,
+                    &[
+                        108, 111, 103, 40, 34, 104, 101, 108, 108, 111, 34, 32, 43, 32, 120, 32,
+                        43, 32, 34, 119, 111, 114, 108, 100, 34, 41,
+                    ],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(MAXKEY_COL, &[45, 105, 110, 102], SqlReturn::SUCCESS);
+                bin_val_test(MINKEY_COL, &[105, 110, 102], SqlReturn::SUCCESS);
+                bin_val_test(
+                    OID_COL,
+                    &[99, 68, 141, 254, 211, 132, 39, 163, 93, 83, 78, 64],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(
+                    REGEX_COL,
+                    &[
+                        47, 104, 101, 108, 108, 111, 32, 46, 42, 32, 119, 111, 114, 108, 100, 47,
+                    ],
+                    SqlReturn::SUCCESS,
+                );
                 bin_val_test(
                     STRING_COL,
                     &[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33],
