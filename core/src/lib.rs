@@ -28,38 +28,16 @@ pub use primary_keys::MongoPrimaryKeys;
 mod foreign_keys;
 pub use foreign_keys::MongoForeignKeys;
 
-#[cfg(target_os = "macos")]
-pub type WChar = u32;
-
-#[cfg(not(target_os = "macos"))]
 pub type WChar = u16;
 
-#[cfg(target_os = "macos")]
-pub fn from_wchar_vec_lossy(v: Vec<u32>) -> String {
-    widestring::decode_utf32_lossy(v).collect::<String>()
-}
-
-#[cfg(target_os = "macos")]
-pub fn from_wchar_ref_lossy(v: &[u32]) -> String {
-    widestring::decode_utf32_lossy(v.iter().copied()).collect::<String>()
-}
-
-#[cfg(target_os = "macos")]
-pub fn to_wchar_vec(s: &str) -> Vec<WChar> {
-    widestring::encode_utf32(s.chars()).collect::<Vec<_>>()
-}
-
-#[cfg(not(target_os = "macos"))]
 pub fn from_wchar_vec_lossy(v: Vec<u16>) -> String {
     widestring::decode_utf16_lossy(v).collect::<String>()
 }
 
-#[cfg(not(target_os = "macos"))]
 pub fn from_wchar_ref_lossy(v: &[u16]) -> String {
     widestring::decode_utf16_lossy(v.iter().copied()).collect::<String>()
 }
 
-#[cfg(not(target_os = "macos"))]
 pub fn to_wchar_vec(s: &str) -> Vec<WChar> {
     widestring::encode_utf16(s.chars()).collect::<Vec<_>>()
 }
