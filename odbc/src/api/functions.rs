@@ -3883,11 +3883,11 @@ fn sql_tables(
     table_t: &str,
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
-        (SQL_ALL_CATALOGS, "", "", _) => Ok(Box::new(MongoDatabases::list_all_catalogs(
+        (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
         ))),
-        ("", SQL_ALL_SCHEMAS, "", _) => Ok(Box::new(MongoCollections::all_schemas())),
+        ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas())),
         ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),
         _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,
