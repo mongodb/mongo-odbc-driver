@@ -7,14 +7,17 @@ mod unit {
     use super::*;
     #[test]
     fn test_simple() {
+        use mongo_odbc_core::WChar;
         fn validate_diag_rec(handle_type: HandleType, handle: *mut MongoHandle) {
             const ERROR_MESSAGE: &str =
                 "[MongoDB][API] The feature SQLDrivers is not implemented\0";
 
             // Initialize buffers
-            let sql_state = &mut [0u16; 6] as *mut _;
+            let mut sql_state: [WChar; 6] = [0; 6];
+            let sql_state = &mut sql_state as *mut WChar;
             // Note: len(ERROR_MESSAGE) = 57
-            let message_text = &mut [0u16; 57] as *mut _;
+            let mut message_text: [WChar; 57] = [0; 57];
+            let message_text = &mut message_text as *mut WChar;
             let text_length_ptr = &mut 0;
             let native_err_ptr = &mut 0;
 
@@ -35,11 +38,11 @@ mod unit {
                 );
                 assert_eq!(
                     UNIMPLEMENTED_FUNC,
-                    mongo_odbc_core::from_wchar_ref_lossy(&*(sql_state as *const [u16; 6]))
+                    mongo_odbc_core::from_wchar_ref_lossy(&*(sql_state as *const [WChar; 6]))
                 );
                 assert_eq!(
                     ERROR_MESSAGE,
-                    mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 57]))
+                    mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [WChar; 57]))
                 );
                 // text_length_ptr includes a byte for null termination.
                 assert_eq!(56, *text_length_ptr);
@@ -65,11 +68,14 @@ mod unit {
 
     #[test]
     fn test_error_message() {
+        use mongo_odbc_core::WChar;
         let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         // Initialize buffers
-        let sql_state = &mut [0u16; 6] as *mut _;
-        let message_text = &mut [0u16; 57] as *mut _;
+        let mut sql_state: [WChar; 6] = [0; 6];
+        let sql_state = &mut sql_state as *mut WChar;
+        let mut message_text: [WChar; 57] = [0; 57];
+        let message_text = &mut message_text as *mut WChar;
         let text_length_ptr = &mut 0;
         let native_err_ptr = &mut 0;
 
@@ -92,7 +98,7 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API]\0",
-                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 15]))
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [WChar; 15]))
             );
             // Error message string where some characters are composed of more than one byte.
             // 1 < RecNumber =< number of diagnostic records.
@@ -112,18 +118,24 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API] The feature SQLDriv✐𑜲 is not implemented\0",
-                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 57]))
+                mongo_odbc_core::from_wchar_ref_lossy(
+                    &*(message_text as *const [mongo_odbc_core::WChar; 57])
+                )
             );
         }
     }
 
     #[test]
     fn test_invalid_ops() {
+        use mongo_odbc_core::WChar;
+
         let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         // Initialize buffers
-        let sql_state = &mut [0u16; 6] as *mut _;
-        let message_text = &mut [0u16; 57] as *mut _;
+        let mut sql_state: [WChar; 6] = [0; 6];
+        let sql_state = &mut sql_state as *mut WChar;
+        let mut message_text: [WChar; 57] = [0; 57];
+        let message_text = &mut message_text as *mut WChar;
         let text_length_ptr = &mut 0;
         let native_err_ptr = &mut 0;
 

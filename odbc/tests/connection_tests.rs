@@ -9,6 +9,7 @@ macro_rules! test_connection_diagnostics {
         expected_error_message = $expected_error_message:expr) => {
         #[test]
         fn $func_name() {
+            use mongo_odbc_core::WChar;
             use odbc_sys::SmallInt;
             let in_connection_string = $in_connection_string;
             let driver_completion = $driver_completion;
@@ -16,7 +17,8 @@ macro_rules! test_connection_diagnostics {
             let expected_sql_return = $expected_sql_return;
             let expected_error_message = $expected_error_message;
 
-            let out_connection_string = &mut [0u16; 64] as *mut _;
+            let mut out_connection_string: [WChar; 64] = [0; 64];
+            let out_connection_string = &mut out_connection_string as *mut WChar;
             let string_length_2 = &mut 0;
             let buffer_length: SmallInt = 65;
             let mut env_handl: Handle = null_mut();

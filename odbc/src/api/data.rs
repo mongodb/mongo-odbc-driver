@@ -985,7 +985,7 @@ pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
 /// This writes to multiple raw C-pointers
 ///
 unsafe fn set_output_wstring_helper(
-    message: &[u16],
+    message: &[WChar],
     output_ptr: *mut WChar,
     buffer_len: usize,
 ) -> (usize, SqlReturn) {

@@ -614,9 +614,10 @@ fn get_column_attribute(
     field_identifier: Desc,
     column_metadata_type: &Value,
 ) -> Result<Value> {
+    use mongo_odbc_core::WChar;
     let string_length_ptr = &mut 0;
     let character_attrib_ptr: *mut std::ffi::c_void =
-        Box::into_raw(Box::new([0u16; BUFFER_LENGTH])) as *mut _;
+        Box::into_raw(Box::new([0; BUFFER_LENGTH])) as *mut _;
     let numeric_attrib_ptr = &mut 0;
     unsafe {
         match odbc_sys::SQLColAttributeW(
@@ -630,8 +631,8 @@ fn get_column_attribute(
         ) {
             SqlReturn::SUCCESS => Ok(match column_metadata_type {
                 Value::String(_) => json!((mongo_odbc_core::from_wchar_ref_lossy(
-                    &*(character_attrib_ptr as *const [u16; BUFFER_LENGTH])
-                ))[0..(*string_length_ptr as usize / std::mem::size_of::<u16>())]
+                    &*(character_attrib_ptr as *const [WChar; BUFFER_LENGTH])
+                ))[0..(*string_length_ptr as usize / std::mem::size_of::<WChar>())]
                     .to_string()),
                 Value::Number(_) => json!(*numeric_attrib_ptr),
                 meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),

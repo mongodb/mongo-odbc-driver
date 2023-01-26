@@ -59,6 +59,7 @@ mod integration {
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
     fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
+        use mongo_odbc_core::WChar;
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         let output_len;
@@ -94,7 +95,9 @@ mod integration {
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let out_connection_string_buff = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let mut out_connection_string_buff: [WChar; (BUFFER_LENGTH as usize - 1)] =
+                [0; (BUFFER_LENGTH as usize - 1)];
+            let out_connection_string_buff = &mut out_connection_string_buff as *mut WChar;
 
             assert_ne!(
                 SqlReturn::ERROR,
@@ -159,6 +162,7 @@ mod integration {
     /// - SQLGetInfoW(SQL_DBMS_VER)
     #[test]
     fn test_connection() {
+        use mongo_odbc_core::WChar;
         let env_handle: HEnv = setup();
         let (conn_handle, in_connection_string, out_connection_string, output_len) =
             power_bi_connect(env_handle);
@@ -179,7 +183,9 @@ mod integration {
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let mut output_buffer: [WChar; (BUFFER_LENGTH as usize - 1)] =
+                [0; (BUFFER_LENGTH as usize - 1)];
+            let output_buffer = &mut output_buffer as *mut WChar;
 
             // SQL_DRIVER_NAME is not accessible through odbc_sys
             /*

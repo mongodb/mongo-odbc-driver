@@ -35,7 +35,7 @@ mod unit {
         use mongo_odbc_core::WChar;
         use std::mem::size_of;
         const ERROR_MESSAGE: &str = "[MongoDB][API] The feature SQLDrivers is not implemented\0";
-        let message_text = &mut [0u16; 57 * size_of::<WChar>()] as *mut _ as *mut c_void;
+        let message_text = &mut [0; 57 * size_of::<WChar>()] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
         unsafe {
@@ -53,7 +53,7 @@ mod unit {
             );
             assert_eq!(
                 ERROR_MESSAGE,
-                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 57]))
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [WChar; 57]))
             );
             assert_eq!(56 * size_of::<WChar>() as i16, *string_length_ptr);
         }
@@ -62,7 +62,7 @@ mod unit {
     fn validate_sql_state(handle_type: HandleType, handle: *mut MongoHandle) {
         use mongo_odbc_core::WChar;
         use std::mem::size_of;
-        let message_text = &mut [0u16; 6 * size_of::<WChar>()] as *mut _ as *mut c_void;
+        let message_text = &mut [0; 6 * size_of::<WChar>()] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
         unsafe {
@@ -80,13 +80,14 @@ mod unit {
             );
             assert_eq!(
                 UNIMPLEMENTED_FUNC,
-                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 6]))
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [WChar; 6]))
             );
             assert_eq!(5 * size_of::<WChar>() as i16, *string_length_ptr);
         }
     }
 
     fn validate_return_code(handle_type: HandleType, handle: *mut MongoHandle) {
+        use mongo_odbc_core::WChar;
         /*
            The return code is always implemented by the driver manager, per the spec.
            Thus, calling SQLGetDiagField with type SQL_DIAG_RETURNCODE is essentially
@@ -110,7 +111,7 @@ mod unit {
             // checking input pointer was not altered in any way, and we just pass through SUCCESS
             assert_eq!(
                 "test\0",
-                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 5]))
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [WChar; 5]))
             );
             assert_eq!(0, *string_length_ptr);
         }
@@ -162,7 +163,7 @@ mod unit {
         let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         // Initialize buffers
-        let message_text = &mut [0u16; 500] as *mut _ as *mut c_void;
+        let message_text = &mut [0; 500 * size_of::<WChar>()] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
         unsafe {
@@ -183,7 +184,7 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API]\0",
-                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 15]))
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [WChar; 15]))
             );
             // Error message string where some characters are composed of more than one byte.
             // 1 < RecNumber =< number of diagnostic records.
@@ -202,13 +203,15 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API] The feature SQLDriv✐𑜲 is not implemented\0",
-                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [u16; 57]))
+                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [WChar; 57]))
             );
         }
     }
 
     #[test]
     fn test_invalid_ops() {
+        use mongo_odbc_core::WChar;
+        use std::mem::size_of;
         let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         unsafe {
@@ -221,7 +224,7 @@ mod unit {
                     env_handle as *mut _,
                     1,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
-                    (&mut [0u16; 6]) as *mut _ as *mut c_void,
+                    (&mut [0; 6 * size_of::<WChar>()]) as *mut _ as *mut c_void,
                     -1,
                     &mut 0
                 )
@@ -234,7 +237,7 @@ mod unit {
                     env_handle as *mut _,
                     0,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
-                    (&mut [0u16; 6]) as *mut _ as *mut c_void,
+                    (&mut [0; 6 * size_of::<WChar>()]) as *mut _ as *mut c_void,
                     57,
                     &mut 0
                 )
@@ -247,7 +250,7 @@ mod unit {
                     env_handle as *mut _,
                     3,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
-                    (&mut [0u16; 6]) as *mut _ as *mut c_void,
+                    (&mut [0; 6 * size_of::<WChar>()]) as *mut _ as *mut c_void,
                     57,
                     &mut 0
                 )

@@ -36,8 +36,10 @@ pub fn generate_default_connection_str() -> String {
 // the expected input
 pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
     let text_length_ptr = &mut 0;
-    let actual_sql_state = &mut [0u16; 6] as *mut _;
-    let actual_message_text = &mut [0u16; 512] as *mut _;
+    let mut actual_sql_state: [WChar; 6] = [0; 6];
+    let actual_sql_state = &mut actual_sql_state as *mut _;
+    let mut actual_message_text: [WChar; 512] = [0; 512];
+    let actual_message_text = &mut actual_message_text as *mut _;
     let actual_native_error = &mut 0;
     unsafe {
         let _ = SQLGetDiagRecW(
