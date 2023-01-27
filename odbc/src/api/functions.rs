@@ -13,7 +13,9 @@ use crate::{
 };
 use ::function_name::named;
 use bson::Bson;
-use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
+use constants::{
+    DBMS_NAME, DRIVER_NAME, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES,
+};
 use file_dbg_macros::dbg_write;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
@@ -2197,7 +2199,7 @@ unsafe fn sql_get_infow_helper(
                 InfoType::SQL_DRIVER_ODBC_VER => {
                     // This driver supports version 3.8.
                     i16_len::set_output_wstring(
-                        "03.08",
+                        ODBC_VERSION,
                         info_value_ptr as *mut WChar,
                         buffer_length as usize,
                         string_length_ptr,
