@@ -48,7 +48,7 @@ pub fn trace_call_and_outcome(function_name: &str, sql_return: &SqlReturn) -> St
         SqlReturn::STILL_EXECUTING => "STILL_EXECUTING",
         _ => "unknown sql_return",
     };
-    format!("{}, SQLReturn = {}", function_name, outcome)
+    format!("{function_name}, SQLReturn = {outcome}")
 }
 
 macro_rules! must_be_valid {
@@ -538,8 +538,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     let mongo_handle = MongoHandleRef::from(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
                     mongo_handle.add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!(
-                        "{:?}",
-                        desc
+                        "{desc:?}"
                     )));
                     SqlReturn::ERROR
                 }
@@ -1024,8 +1023,7 @@ pub unsafe extern "C" fn SQLDriverConnect(
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
             if driver_completion != DriverConnectOption::NoPrompt {
                 conn_handle.add_diag_info(ODBCError::UnsupportedDriverConnectOption(format!(
-                    "{:?}",
-                    driver_completion
+                    "{driver_completion:?}"
                 )));
                 return SqlReturn::ERROR;
             }
@@ -1077,8 +1075,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
             if driver_completion != DriverConnectOption::NoPrompt {
                 conn_handle.add_diag_info(ODBCError::UnsupportedDriverConnectOption(format!(
-                    "{:?}",
-                    driver_completion
+                    "{driver_completion:?}"
                 )));
                 return SqlReturn::ERROR;
             }

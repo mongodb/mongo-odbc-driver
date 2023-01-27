@@ -915,7 +915,7 @@ pub unsafe fn format_bson_data(
             data,
         ),
         other => {
-            mongo_handle.add_diag_info(ODBCError::UnimplementedDataType(format!("{:?}", other)));
+            mongo_handle.add_diag_info(ODBCError::UnimplementedDataType(format!("{other:?}")));
             SqlReturn::ERROR
         }
     }
@@ -1363,7 +1363,7 @@ pub mod isize_len {
 /// unsupported functions.
 ///
 pub fn unsupported_function(handle: &mut MongoHandle, name: &'static str) -> SqlReturn {
-    dbg_write!(format!("Unsupported Function: {}, SQLReturn = ERROR", name));
+    dbg_write!(format!("Unsupported Function: {name}, SQLReturn = ERROR"));
     handle.clear_diagnostics();
     handle.add_diag_info(ODBCError::Unimplemented(name));
     SqlReturn::ERROR

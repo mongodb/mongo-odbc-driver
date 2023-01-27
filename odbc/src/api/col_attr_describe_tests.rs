@@ -3,7 +3,7 @@ use crate::{
     SQLColAttributeW, SQLDescribeColW,
 };
 use mongo_odbc_core::{MongoFields, SQL_SEARCHABLE};
-use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn};
+use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn, WChar};
 use std::sync::RwLock;
 
 mod unit {
@@ -62,7 +62,7 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -123,7 +123,7 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -169,7 +169,7 @@ mod unit {
                         .unwrap()[0]
                 ),
             );
-            let _ = Box::from_raw(name_buffer);
+            let _ = Box::from_raw(name_buffer as *mut WChar);
         }
     }
 
@@ -229,7 +229,7 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -266,8 +266,7 @@ mod unit {
                 );
                 assert_eq!(
                     format!(
-                        "[MongoDB][API] The field index {} is out of bounds",
-                        col_index,
+                        "[MongoDB][API] The field index {col_index} is out of bounds",
                     ),
                     format!(
                         "{}",
@@ -279,7 +278,7 @@ mod unit {
                             .unwrap()[0]
                     )
                 );
-                let _ = Box::from_raw(name_buffer);
+                let _ = Box::from_raw(name_buffer as *mut WChar);
             }
         }
     }
@@ -317,8 +316,7 @@ mod unit {
                     );
                     assert_eq!(
                         format!(
-                            "[MongoDB][API] The field index {} is out of bounds",
-                            col_index,
+                            "[MongoDB][API] The field index {col_index} is out of bounds",
                         ),
                         format!(
                             "{}",
@@ -330,7 +328,7 @@ mod unit {
                                 .unwrap()[0]
                         )
                     );
-                    let _ = Box::from_raw(char_buffer);
+                    let _ = Box::from_raw(char_buffer as *mut WChar);
                 }
             }
         }
@@ -381,7 +379,7 @@ mod unit {
                         *out_length as usize
                     )
                 );
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -431,7 +429,7 @@ mod unit {
                     )
                 );
                 assert_eq!(expected, *numeric_attr_ptr);
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -484,7 +482,7 @@ mod unit {
                     *out_name_length as usize
                 )
             );
-            let _ = Box::from_raw(name_buffer);
+            let _ = Box::from_raw(name_buffer as *mut WChar);
         }
     }
 }
