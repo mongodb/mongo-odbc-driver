@@ -1,147 +1,145 @@
 use crate::{
+    bson_type_info::BsonTypeInfo,
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     conn::MongoConnection,
+    definitions::SqlDataType,
     err::{Error, Result},
-    json_schema::{
-        simplified::{Atomic, Schema},
-        BsonTypeName,
-    },
     stmt::MongoStatement,
     util::to_name_regex,
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
 use mongodb::{results::CollectionSpecification, sync::Cursor};
-use odbc_sys::{Nullability, SqlDataType};
+use odbc_sys::Nullability;
 use regex::Regex;
 use std::collections::VecDeque;
 
 lazy_static! {
     static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "COLUMN_NAME".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "DATA_TYPE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TYPE_NAME".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "COLUMN_SIZE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "BUFFER_LENGTH".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "DECIMAL_DIGITS".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "NUM_PREC_RADIX".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "NULLABLE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "COLUMN_DEF".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "SQL_DATA_TYPE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "SQL_DATETIME_SUB".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "CHAR_OCTET_LENGTH".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "ORDINAL_POSITION".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+            BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new(
+        MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "IS_NULLABLE".to_string(),
-            Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+            BsonTypeInfo::STRING,
             // the docs do not say 'not NULL', but they also say the only possible values for
             // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
             // the empty varchar... so NO_NULLS seems correct to me.
@@ -633,7 +631,7 @@ impl MongoStatement for MongoFields {
             2 => Bson::Null,
             3 => Bson::String(get_meta_data()?.table_name.clone()),
             4 => Bson::String(get_meta_data()?.col_name.clone()),
-            5 => Bson::Int32(get_meta_data()?.sql_type.0 as i32),
+            5 => Bson::Int32(get_meta_data()?.sql_type as i32),
             6 => Bson::String(get_meta_data()?.type_name.clone()),
             7 => Bson::Int32(get_meta_data()?.precision.unwrap_or(0) as i32),
             8 => Bson::Int32({
@@ -653,7 +651,7 @@ impl MongoStatement for MongoFields {
             11 => Bson::Int32(get_meta_data()?.nullability.0 as i32),
             12 => Bson::String("".to_string()),
             13 => Bson::Null,
-            14 => Bson::Int32(get_meta_data()?.non_concise_type.0 as i32),
+            14 => Bson::Int32(get_meta_data()?.non_concise_type as i32),
             15 => match get_meta_data()?.sql_code {
                 None => Bson::Null,
                 Some(x) => Bson::Int32(x),
@@ -665,7 +663,7 @@ impl MongoStatement for MongoFields {
                     Some(_) => 0i32,
                 }
             }),
-            17 => Bson::Int32(self.current_field_for_collection as i32),
+            17 => Bson::Int32(1 + self.current_field_for_collection as i32),
             18 => Bson::String(
                 // odbc_sys should use an enum instead of constants...
                 match get_meta_data()?.nullability {

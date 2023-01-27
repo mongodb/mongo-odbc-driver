@@ -88,6 +88,7 @@ impl From<BsonTypeName> for BsonTypeInfo {
 }
 
 pub mod simplified {
+
     use crate::{
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
@@ -232,12 +233,17 @@ pub mod simplified {
                     additional_properties: None,
                     items: None,
                     any_of: Some(any_of),
-                } => Ok(Schema::AnyOf(
-                    any_of
-                        .into_iter()
-                        .map(Atomic::try_from)
-                        .collect::<Result<BTreeSet<Atomic>>>()?,
-                )),
+                } => match any_of.len() {
+                    0 => Err(Error::InvalidResultSetJsonSchema),
+                    // AnyOf with a single schema is equivalent to the schema.
+                    1 => Schema::try_from(any_of.into_iter().next().unwrap()),
+                    _ => Ok(Schema::AnyOf(
+                        any_of
+                            .into_iter()
+                            .map(Atomic::try_from)
+                            .collect::<Result<BTreeSet<Atomic>>>()?,
+                    )),
+                },
                 _ => Err(Error::InvalidResultSetJsonSchema),
             }
         }
@@ -504,6 +510,19 @@ mod unit {
                         ..Default::default()
                     }
                 ]),
+                ..Default::default()
+            }
+        );
+
+        try_from_test!(
+            any_of_one,
+            variant = Schema,
+            expected = Ok(Schema::Atomic(Atomic::Scalar(BsonTypeName::Int))),
+            input = json_schema::Schema {
+                any_of: Some(vec![json_schema::Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                    ..Default::default()
+                }]),
                 ..Default::default()
             }
         );

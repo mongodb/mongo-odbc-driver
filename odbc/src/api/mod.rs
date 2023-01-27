@@ -21,6 +21,8 @@ mod get_diag_rec_tests;
 #[cfg(test)]
 mod get_info_tests;
 #[cfg(test)]
+mod get_type_info_tests;
+#[cfg(test)]
 mod panic_safe_exec_tests;
 #[cfg(test)]
 mod stmt_attr_tests;

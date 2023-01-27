@@ -170,16 +170,10 @@ mod integration {
         unsafe {
             let input_len = in_connection_string.len() as SmallInt;
 
-            println!(
-                "Input connection string = {}\nLength is {}",
-                in_connection_string, input_len
-            );
-            println!(
-                "Output connection string = {}\nLength is {}",
-                out_connection_string, output_len
-            );
+            println!("Input connection string = {in_connection_string}\nLength is {input_len}");
+            println!("Output connection string = {out_connection_string}\nLength is {output_len}");
             // The output string should be the same as the input string except with extra curly braces around the driver name
-            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and ouptput connection string have the same length but input string length is {} and output string length is {}",input_len, output_len);
+            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and ouptput connection string have the same length but input string length is {input_len} and output string length is {output_len}");
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
