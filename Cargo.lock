@@ -996,6 +996,7 @@ dependencies = [
  "serde_json",
  "serde_yaml 0.9.13",
  "thiserror",
+ "widechar",
 ]
 
 [[package]]
@@ -1217,7 +1218,6 @@ dependencies = [
  "regex",
  "serde",
  "thiserror",
- "widestring 1.0.2",
 ]
 
 [[package]]
@@ -1240,6 +1240,7 @@ dependencies = [
  "serde",
  "serde_yaml 0.8.26",
  "thiserror",
+ "widechar",
 ]
 
 [[package]]
@@ -2578,6 +2579,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d743fdedc5c64377b5fc2bc036b01c7fd642205a0d96356034ae3404d49eb7fb"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "widechar"
+version = "0.1.0"
+dependencies = [
+ "widestring 1.0.2",
 ]
 
 [[package]]

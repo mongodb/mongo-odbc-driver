@@ -59,7 +59,7 @@ mod integration {
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
     fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
-        use mongo_odbc_core::WChar;
+        use widechar::WideChar;
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         let output_len;
@@ -89,15 +89,14 @@ mod integration {
 
             // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
             in_connection_string = generate_default_connection_str();
-            let mut in_connection_string_encoded =
-                mongo_odbc_core::to_wchar_vec(&in_connection_string);
+            let mut in_connection_string_encoded = widechar::to_widechar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let mut out_connection_string_buff: [WChar; (BUFFER_LENGTH as usize - 1)] =
+            let mut out_connection_string_buff: [WideChar; (BUFFER_LENGTH as usize - 1)] =
                 [0; (BUFFER_LENGTH as usize - 1)];
-            let out_connection_string_buff = &mut out_connection_string_buff as *mut WChar;
+            let out_connection_string_buff = &mut out_connection_string_buff as *mut WideChar;
 
             assert_ne!(
                 SqlReturn::ERROR,
@@ -116,7 +115,7 @@ mod integration {
             );
 
             output_len = *str_len_ptr;
-            out_connection_string = mongo_odbc_core::from_wchar_ref_lossy(slice::from_raw_parts(
+            out_connection_string = widechar::from_widechar_ref_lossy(slice::from_raw_parts(
                 out_connection_string_buff,
                 output_len as usize,
             ));
@@ -162,7 +161,7 @@ mod integration {
     /// - SQLGetInfoW(SQL_DBMS_VER)
     #[test]
     fn test_connection() {
-        use mongo_odbc_core::WChar;
+        use widechar::WideChar;
         let env_handle: HEnv = setup();
         let (conn_handle, in_connection_string, out_connection_string, output_len) =
             power_bi_connect(env_handle);
@@ -183,9 +182,9 @@ mod integration {
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let mut output_buffer: [WChar; (BUFFER_LENGTH as usize - 1)] =
+            let mut output_buffer: [WideChar; (BUFFER_LENGTH as usize - 1)] =
                 [0; (BUFFER_LENGTH as usize - 1)];
-            let output_buffer = &mut output_buffer as *mut WChar;
+            let output_buffer = &mut output_buffer as *mut WideChar;
 
             // SQL_DRIVER_NAME is not accessible through odbc_sys
             /*
@@ -218,7 +217,7 @@ mod integration {
             );
             println!(
                 "DBMS name = {}\nLength is {}",
-                mongo_odbc_core::from_wchar_ref_lossy(slice::from_raw_parts(
+                widechar::from_widechar_ref_lossy(slice::from_raw_parts(
                     output_buffer,
                     *str_len_ptr as usize
                 )),
@@ -242,7 +241,7 @@ mod integration {
             );
             println!(
                 "DBMS version = {}\nLength is {}",
-                mongo_odbc_core::from_wchar_ref_lossy(slice::from_raw_parts(
+                widechar::from_widechar_ref_lossy(slice::from_raw_parts(
                     output_buffer,
                     *str_len_ptr as usize
                 )),

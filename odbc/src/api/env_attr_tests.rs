@@ -154,7 +154,7 @@ mod unit {
     // 01S02: Optional value changed.
     #[test]
     fn test_optional_value_changed() {
-        use mongo_odbc_core::WChar;
+        use widechar::WideChar;
         unsafe {
             let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
             assert_eq!(
@@ -167,10 +167,10 @@ mod unit {
                 )
             );
 
-            let mut sql_state: [WChar; 6] = [0; 6];
-            let sql_state = &mut sql_state as *mut WChar;
-            let mut message_text: [WChar; 93] = [0; 93];
-            let message_text = &mut message_text as *mut WChar;
+            let mut sql_state: [WideChar; 6] = [0; 6];
+            let sql_state = &mut sql_state as *mut WideChar;
+            let mut message_text: [WideChar; 93] = [0; 93];
+            let message_text = &mut message_text as *mut WideChar;
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetDiagRecW(
@@ -186,11 +186,11 @@ mod unit {
             );
             assert_eq!(
                 OPTIONAL_VALUE_CHANGED,
-                mongo_odbc_core::from_wchar_ref_lossy(&*(sql_state as *const [WChar; 6]))
+                widechar::from_widechar_ref_lossy(&*(sql_state as *const [WideChar; 6]))
             );
             assert_eq!(
              "[MongoDB][API] Invalid value for attribute SQL_ATTR_CP_MATCH, changed to SQL_CP_STRICT_MATCH\0",
-                mongo_odbc_core::from_wchar_ref_lossy(&*(message_text as *const [WChar; 93]))
+                widechar::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 93]))
             );
         }
     }

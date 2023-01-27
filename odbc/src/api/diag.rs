@@ -5,10 +5,10 @@ use crate::{
     },
     errors::ODBCError,
 };
-use mongo_odbc_core::WChar;
 use odbc_sys::Pointer;
 use odbc_sys::{Char, Integer, SmallInt, SqlReturn};
 use std::ptr::copy_nonoverlapping;
+use widechar::WideChar;
 
 ///
 /// set_sql_state writes the given sql state to the [`output_ptr`].
@@ -31,12 +31,12 @@ pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut Char) {
 /// # Safety
 /// This writes to a raw C-pointer
 ///
-pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WChar) {
+pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WideChar) {
     if output_ptr.is_null() {
         return;
     }
     let sql_state = &format!("{}\0", sql_state);
-    let state_u16 = mongo_odbc_core::to_wchar_vec(sql_state);
+    let state_u16 = widechar::to_widechar_vec(sql_state);
     copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
 }
 
@@ -77,8 +77,8 @@ pub unsafe fn get_diag_rec(
 ///
 pub unsafe fn get_diag_recw(
     error: &ODBCError,
-    state: *mut WChar,
-    message_text: *mut WChar,
+    state: *mut WideChar,
+    message_text: *mut WideChar,
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
     native_error_ptr: *mut Integer,

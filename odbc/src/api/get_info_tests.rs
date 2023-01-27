@@ -4,8 +4,8 @@ use crate::{
     handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
 };
-use mongo_odbc_core::WChar;
 use odbc_sys::{Pointer, SmallInt, SqlReturn, UInteger, USmallInt};
+use widechar::WideChar;
 
 macro_rules! test_get_info {
     ($func_name:ident,
@@ -77,7 +77,7 @@ macro_rules! test_get_info_expect_u32_zero {
 unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
     input_wtext_to_string(
         value_ptr as *const _,
-        out_length / std::mem::size_of::<WChar>(),
+        out_length / std::mem::size_of::<WideChar>(),
     )
 }
 
@@ -92,15 +92,15 @@ unsafe fn modify_u16_value(value_ptr: Pointer, _: usize) -> u16 {
 mod unit {
     use super::*;
     use constants::{DBMS_NAME, DRIVER_NAME};
-    use mongo_odbc_core::WChar;
     use std::mem::size_of;
+    use widechar::WideChar;
 
     test_get_info!(
         driver_name,
         info_type = InfoType::SQL_DRIVER_NAME as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 40 * size_of::<WChar>() as i16,
-        expected_length = 39 * size_of::<WChar>() as i16,
+        buffer_length = 40 * size_of::<WideChar>() as i16,
+        expected_length = 39 * size_of::<WideChar>() as i16,
         expected_value = DRIVER_NAME,
         actual_value_modifier = modify_string_value,
     );
@@ -109,8 +109,8 @@ mod unit {
         driver_ver,
         info_type = InfoType::SQL_DRIVER_VER as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 11 * size_of::<WChar>() as i16,
-        expected_length = 10 * size_of::<WChar>() as i16,
+        buffer_length = 11 * size_of::<WideChar>() as i16,
+        expected_length = 10 * size_of::<WideChar>() as i16,
         expected_value = "00.01.0000",
         actual_value_modifier = modify_string_value,
     );
@@ -119,8 +119,8 @@ mod unit {
         driver_odbc_ver,
         info_type = InfoType::SQL_DRIVER_ODBC_VER as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 6 * size_of::<WChar>() as i16,
-        expected_length = 5 * size_of::<WChar>() as i16,
+        buffer_length = 6 * size_of::<WideChar>() as i16,
+        expected_length = 5 * size_of::<WideChar>() as i16,
         expected_value = "03.08",
         actual_value_modifier = modify_string_value,
     );
@@ -129,7 +129,7 @@ mod unit {
         search_pattern_escape,
         info_type = InfoType::SQL_SEARCH_PATTERN_ESCAPE as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 1 * size_of::<WChar>() as i16,
+        buffer_length = 1 * size_of::<WideChar>() as i16,
         expected_length = 0,
         expected_value = "",
         actual_value_modifier = modify_string_value,
@@ -139,8 +139,8 @@ mod unit {
         dbms_name,
         info_type = InfoType::SQL_DBMS_NAME as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 14 * size_of::<WChar>() as i16,
-        expected_length = 13 * size_of::<WChar>() as i16,
+        buffer_length = 14 * size_of::<WideChar>() as i16,
+        expected_length = 13 * size_of::<WideChar>() as i16,
         expected_value = DBMS_NAME,
         actual_value_modifier = modify_string_value,
     );
@@ -160,8 +160,8 @@ mod unit {
         identifier_quote_char,
         info_type = InfoType::SQL_IDENTIFIER_QUOTE_CHAR as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 2 * size_of::<WChar>() as i16,
-        expected_length = 1 * size_of::<WChar>() as i16,
+        buffer_length = 2 * size_of::<WideChar>() as i16,
+        expected_length = 1 * size_of::<WideChar>() as i16,
         expected_value = "`",
         actual_value_modifier = modify_string_value,
     );
@@ -170,7 +170,7 @@ mod unit {
         owner_term,
         info_type = InfoType::SQL_OWNER_TERM as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 1 * size_of::<WChar>() as i16,
+        buffer_length = 1 * size_of::<WideChar>() as i16,
         expected_length = 0,
         expected_value = "",
         actual_value_modifier = modify_string_value,
@@ -180,8 +180,8 @@ mod unit {
         catalog_name_separator,
         info_type = InfoType::SQL_CATALOG_NAME_SEPARATOR as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 2 * size_of::<WChar>() as i16,
-        expected_length = 1 * size_of::<WChar>() as i16,
+        buffer_length = 2 * size_of::<WideChar>() as i16,
+        expected_length = 1 * size_of::<WideChar>() as i16,
         expected_value = ".",
         actual_value_modifier = modify_string_value,
     );
@@ -190,8 +190,8 @@ mod unit {
         catalog_term,
         info_type = InfoType::SQL_CATALOG_TERM as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 9 * size_of::<WChar>() as i16,
-        expected_length = 8 * size_of::<WChar>() as i16,
+        buffer_length = 9 * size_of::<WideChar>() as i16,
+        expected_length = 8 * size_of::<WideChar>() as i16,
         expected_value = "database",
         actual_value_modifier = modify_string_value,
     );
@@ -366,8 +366,8 @@ mod unit {
         column_alias,
         info_type = InfoType::SQL_COLUMN_ALIAS as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 2 * size_of::<WChar>() as i16,
-        expected_length = 1 * size_of::<WChar>() as i16,
+        buffer_length = 2 * size_of::<WideChar>() as i16,
+        expected_length = 1 * size_of::<WideChar>() as i16,
         expected_value = "Y",
         actual_value_modifier = modify_string_value,
     );
@@ -385,8 +385,8 @@ mod unit {
         order_by_columns_in_select,
         info_type = InfoType::SQL_ORDER_BY_COLUMNS_IN_SELECT as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 2 * size_of::<WChar>() as i16,
-        expected_length = 1 * size_of::<WChar>() as i16,
+        buffer_length = 2 * size_of::<WideChar>() as i16,
+        expected_length = 1 * size_of::<WideChar>() as i16,
         expected_value = "Y",
         actual_value_modifier = modify_string_value,
     );
@@ -406,8 +406,8 @@ mod unit {
         datasource_ready_only,
         info_type = InfoType::SQL_DATA_SOURCE_READ_ONLY as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 2 * size_of::<WChar>() as i16,
-        expected_length = 1 * size_of::<WChar>() as i16,
+        buffer_length = 2 * size_of::<WideChar>() as i16,
+        expected_length = 1 * size_of::<WideChar>() as i16,
         expected_value = "Y",
         actual_value_modifier = modify_string_value,
     );
@@ -416,8 +416,8 @@ mod unit {
         special_characters,
         info_type = InfoType::SQL_SPECIAL_CHARACTERS as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 22 * size_of::<WChar>() as i16,
-        expected_length = 21 * size_of::<WChar>() as i16,
+        buffer_length = 22 * size_of::<WideChar>() as i16,
+        expected_length = 21 * size_of::<WideChar>() as i16,
         expected_value = "`\"'.$+-*/|:<>!={}[]()",
         actual_value_modifier = modify_string_value,
     );
@@ -555,8 +555,8 @@ mod unit {
         catalog_name,
         info_type = InfoType::SQL_CATALOG_NAME as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 2 * size_of::<WChar>() as i16,
-        expected_length = 1 * size_of::<WChar>() as i16,
+        buffer_length = 2 * size_of::<WideChar>() as i16,
+        expected_length = 1 * size_of::<WideChar>() as i16,
         expected_value = "Y",
         actual_value_modifier = modify_string_value,
     );

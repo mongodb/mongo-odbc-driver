@@ -12,7 +12,7 @@ mod unit {
     mod get {
         use std::mem::size_of;
 
-        use mongo_odbc_core::WChar;
+        use widechar::WideChar;
 
         use super::*;
 
@@ -68,7 +68,7 @@ mod unit {
         unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String {
             input_wtext_to_string(
                 value_ptr as *const _,
-                out_length / std::mem::size_of::<WChar>(),
+                out_length / std::mem::size_of::<WideChar>(),
             )
         }
 
@@ -90,8 +90,8 @@ mod unit {
                 current_catalog: Some("test".to_string()),
                 ..Default::default()
             }),
-            buffer_length = 5 * size_of::<WChar>() as i32,
-            expected_length = 4 * size_of::<WChar>() as i32,
+            buffer_length = 5 * size_of::<WideChar>() as i32,
+            expected_length = 4 * size_of::<WideChar>() as i32,
             expected_value = "test".to_string(),
             actual_value_modifier = modify_string_attr,
         );

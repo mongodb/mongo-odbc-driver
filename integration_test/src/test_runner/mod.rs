@@ -208,7 +208,7 @@ fn wstr_or_null(value: &Value) -> *const u16 {
 }
 
 fn to_wstr_ptr(string: &str) -> *const u16 {
-    let mut v = mongo_odbc_core::to_wchar_vec(string);
+    let mut v = widechar::to_widechar_vec(string);
     v.push(0);
     v.as_ptr()
 }
@@ -614,7 +614,7 @@ fn get_column_attribute(
     field_identifier: Desc,
     column_metadata_type: &Value,
 ) -> Result<Value> {
-    use mongo_odbc_core::WChar;
+    use widechar::WideChar;
     let string_length_ptr = &mut 0;
     let character_attrib_ptr: *mut std::ffi::c_void =
         Box::into_raw(Box::new([0; BUFFER_LENGTH])) as *mut _;
@@ -630,9 +630,9 @@ fn get_column_attribute(
             numeric_attrib_ptr,
         ) {
             SqlReturn::SUCCESS => Ok(match column_metadata_type {
-                Value::String(_) => json!((mongo_odbc_core::from_wchar_ref_lossy(
-                    &*(character_attrib_ptr as *const [WChar; BUFFER_LENGTH])
-                ))[0..(*string_length_ptr as usize / std::mem::size_of::<WChar>())]
+                Value::String(_) => json!((widechar::from_widechar_ref_lossy(
+                    &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH])
+                ))[0..(*string_length_ptr as usize / std::mem::size_of::<WideChar>())]
                     .to_string()),
                 Value::Number(_) => json!(*numeric_attrib_ptr),
                 meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),

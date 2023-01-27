@@ -9,25 +9,24 @@ macro_rules! test_connection_diagnostics {
         expected_error_message = $expected_error_message:expr) => {
         #[test]
         fn $func_name() {
-            use mongo_odbc_core::WChar;
             use odbc_sys::SmallInt;
+            use widechar::WideChar;
             let in_connection_string = $in_connection_string;
             let driver_completion = $driver_completion;
             let expected_sql_state = $expected_sql_state;
             let expected_sql_return = $expected_sql_return;
             let expected_error_message = $expected_error_message;
 
-            let mut out_connection_string: [WChar; 64] = [0; 64];
-            let out_connection_string = &mut out_connection_string as *mut WChar;
+            let mut out_connection_string: [WideChar; 64] = [0; 64];
+            let out_connection_string = &mut out_connection_string as *mut WideChar;
             let string_length_2 = &mut 0;
             let buffer_length: SmallInt = 65;
             let mut env_handl: Handle = null_mut();
             let mut conn_handl: Handle = null_mut();
 
-            let mut expected_sql_state_encoded = mongo_odbc_core::to_wchar_vec(expected_sql_state);
+            let mut expected_sql_state_encoded = widechar::to_widechar_vec(expected_sql_state);
             expected_sql_state_encoded.push(0);
-            let mut in_connection_string_encoded =
-                mongo_odbc_core::to_wchar_vec(in_connection_string);
+            let mut in_connection_string_encoded = widechar::to_widechar_vec(in_connection_string);
             in_connection_string_encoded.push(0);
 
             unsafe {

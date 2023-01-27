@@ -6,12 +6,13 @@ use crate::{
 use bson::{spec::BinarySubtype, Bson};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use file_dbg_macros::dbg_write;
-use mongo_odbc_core::{util::Decimal128Plus, WChar};
+use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
 use regex::Regex;
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
+use widechar::WideChar;
 
 const BINARY: &str = "Binary";
 const DOUBLE: &str = "Double";
@@ -818,7 +819,7 @@ pub unsafe fn format_bson_data(
             )
         }
         CDataType::SQL_C_WCHAR => {
-            let data = mongo_odbc_core::to_wchar_vec(&data.to_json());
+            let data = widechar::to_widechar_vec(&data.to_json());
             char_data!(
                 mongo_handle,
                 col_num,
@@ -956,8 +957,8 @@ pub unsafe fn input_text_to_string(text: *const Char, len: usize) -> String {
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
-    use mongo_odbc_core::from_wchar_vec_lossy;
+pub unsafe fn input_wtext_to_string(text: *const WideChar, len: usize) -> String {
+    use widechar::from_widechar_vec_lossy;
     if (len as isize) < 0 {
         let mut dst = Vec::new();
         let mut itr = text;
@@ -967,17 +968,17 @@ pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
                 itr = itr.offset(1);
             }
         }
-        return from_wchar_vec_lossy(dst);
+        return from_widechar_vec_lossy(dst);
     }
 
     let mut dst = Vec::with_capacity(len);
     dst.set_len(len);
     copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-    from_wchar_vec_lossy(dst)
+    from_widechar_vec_lossy(dst)
 }
 
 ///
-/// set_output_wstring_helper writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+/// set_output_wstring_helper writes [`message`] to the *WideChar [`output_ptr`]. [`buffer_len`] is the
 /// length of the [`output_ptr`] buffer in characters; the message should be truncated
 /// if it is longer than the buffer length.
 ///
@@ -985,8 +986,8 @@ pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
 /// This writes to multiple raw C-pointers
 ///
 unsafe fn set_output_wstring_helper(
-    message: &[WChar],
-    output_ptr: *mut WChar,
+    message: &[WideChar],
+    output_ptr: *mut WideChar,
     buffer_len: usize,
 ) -> (usize, SqlReturn) {
     // If the output_ptr is null or no buffer space has been allocated, we need
@@ -1094,21 +1095,21 @@ pub mod i16_len {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = mongo_odbc_core::to_wchar_vec(message);
+        let message = widechar::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(
             &message,
-            output_ptr as *mut WChar,
-            buffer_len / size_of::<WChar>(),
+            output_ptr as *mut WideChar,
+            buffer_len / size_of::<WideChar>(),
         );
         // Only copy the length if the pointer is not null
         if !text_length_ptr.is_null() {
-            *text_length_ptr = (size_of::<WChar>() * len) as SmallInt;
+            *text_length_ptr = (size_of::<WideChar>() * len) as SmallInt;
         }
         ret
     }
 
     ///
-    /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+    /// set_output_wstring writes [`message`] to the *WideChar [`output_ptr`]. [`buffer_len`] is the
     /// length of the [`output_ptr`] buffer in characters; the message should be truncated
     /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
@@ -1118,11 +1119,11 @@ pub mod i16_len {
     ///
     pub unsafe fn set_output_wstring(
         message: &str,
-        output_ptr: *mut WChar,
+        output_ptr: *mut WideChar,
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = mongo_odbc_core::to_wchar_vec(message);
+        let message = widechar::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len);
         // Only copy the length if the pointer is not null
         if !text_length_ptr.is_null() {
@@ -1196,11 +1197,11 @@ pub mod i32_len {
         text_length_ptr: *mut Integer,
     ) -> SqlReturn {
         let (len, ret) = set_output_wstring_helper(
-            &mongo_odbc_core::to_wchar_vec(message),
-            output_ptr as *mut WChar,
-            buffer_len / size_of::<WChar>(),
+            &widechar::to_widechar_vec(message),
+            output_ptr as *mut WideChar,
+            buffer_len / size_of::<WideChar>(),
         );
-        *text_length_ptr = (size_of::<WChar>() * len) as Integer;
+        *text_length_ptr = (size_of::<WideChar>() * len) as Integer;
         ret
     }
 
@@ -1266,7 +1267,7 @@ pub mod isize_len {
         message: Vec<u16>,
         col_num: USmallInt,
         index: usize,
-        output_ptr: *mut WChar,
+        output_ptr: *mut WideChar,
         buffer_len: usize,
         text_length_ptr: *mut Len,
     ) -> SqlReturn {
@@ -1283,10 +1284,10 @@ pub mod isize_len {
         let (len, ret) = set_output_wstring_helper(
             message.get(index..).unwrap(),
             output_ptr,
-            buffer_len / size_of::<WChar>(),
+            buffer_len / size_of::<WideChar>(),
         );
         // the returned length should always be the total length of the data.
-        *text_length_ptr = (size_of::<WChar>() * (message.len() - index)) as Len;
+        *text_length_ptr = (size_of::<WideChar>() * (message.len() - index)) as Len;
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret
     }

@@ -13,6 +13,7 @@ odbc = "0.17.0"
 lazy_static = "1"
 odbc-sys = { version = "0.21.2", default-features = false }
 mongo-odbc-core = { path = "../core" }
+widechar = { path = "../widechar" }
 
 [dependencies.mongodb]
 version = "2.3"

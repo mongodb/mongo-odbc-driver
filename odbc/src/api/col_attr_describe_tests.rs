@@ -374,7 +374,7 @@ mod unit {
                     )
                 );
                 assert_eq!(
-                    (std::mem::size_of::<mongo_odbc_core::WChar>() * expected.len()) as i16,
+                    (std::mem::size_of::<widechar::WideChar>() * expected.len()) as i16,
                     *out_length
                 );
                 assert_eq!(

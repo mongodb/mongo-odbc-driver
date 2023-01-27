@@ -246,7 +246,7 @@ lazy_static! {
 }
 
 mod unit {
-    use mongo_odbc_core::WChar;
+    use widechar::WideChar;
 
     use super::*;
     // test unallocated_statement tests SQLFetch when the mongo_statement inside
@@ -405,7 +405,7 @@ mod unit {
                         )
                     );
                     assert_eq!(
-                        (std::mem::size_of::<WChar>() * expected.len()) as isize,
+                        (std::mem::size_of::<WideChar>() * expected.len()) as isize,
                         *out_len_or_ind
                     );
                     assert_eq!(
@@ -488,8 +488,8 @@ mod unit {
         use crate::api::{
             data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
         };
-        use mongo_odbc_core::WChar;
         use std::mem::size_of;
+        use widechar::WideChar;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -505,7 +505,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 10 * size_of::<WChar>() as isize;
+            let buffer_length: isize = 10 * size_of::<WideChar>() as isize;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16,
@@ -541,7 +541,7 @@ mod unit {
                         );
                     }
                     assert_eq!(
-                        std::mem::size_of::<WChar>() as isize * expected_out_len,
+                        std::mem::size_of::<WideChar>() as isize * expected_out_len,
                         *out_len_or_ind
                     );
                     assert_eq!(

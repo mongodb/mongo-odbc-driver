@@ -27,17 +27,3 @@ pub mod util;
 pub use primary_keys::MongoPrimaryKeys;
 mod foreign_keys;
 pub use foreign_keys::MongoForeignKeys;
-
-pub type WChar = u16;
-
-pub fn from_wchar_vec_lossy(v: Vec<u16>) -> String {
-    widestring::decode_utf16_lossy(v).collect::<String>()
-}
-
-pub fn from_wchar_ref_lossy(v: &[u16]) -> String {
-    widestring::decode_utf16_lossy(v.iter().copied()).collect::<String>()
-}
-
-pub fn to_wchar_vec(s: &str) -> Vec<WChar> {
-    widestring::encode_utf16(s.chars()).collect::<Vec<_>>()
-}
