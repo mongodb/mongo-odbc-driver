@@ -127,7 +127,7 @@ impl IntoCData for Bson {
             Bson::DbPointer(p) => Ok(serde_json::to_string(&p).unwrap().into_bytes()),
             Bson::JavaScriptCode(j) => Ok(j.into_bytes()),
             Bson::JavaScriptCodeWithScope(j) => Ok(j.to_string().into_bytes()),
-            Bson::Symbol(s) => Ok(s.to_string().into_bytes()),
+            Bson::Symbol(s) => Ok(s.into_bytes()),
             Bson::MinKey => Ok(self.to_json().into_bytes()),
             Bson::MaxKey => Ok(self.to_json().into_bytes()),
             Bson::Timestamp(_) => Ok(self.to_json().into_bytes()),
