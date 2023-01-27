@@ -740,15 +740,18 @@ mod unit {
                             buffer_length,
                             out_len_or_ind,
                         ),
-                        "expected return"
+                        "expected return for column {col}"
                     );
                     if code == SqlReturn::SUCCESS {
-                        assert_eq!(expected.len() as isize, *out_len_or_ind, "expected len");
+                        assert_eq!(
+                            expected.len() as isize,
+                            *out_len_or_ind,
+                            "expected len for column {col}"
+                        );
                         assert_eq!(
                             expected,
                             std::slice::from_raw_parts(buffer as *const u8, expected.len()),
-                            "expected contents for column {}",
-                            col
+                            "expected contents for column {col}",
                         );
                     }
                 };
@@ -756,10 +759,11 @@ mod unit {
                 bin_val_test(
                     ARRAY_COL,
                     &[
-                        123, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 34, 58, 34, 49, 34,
-                        125, 123, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 34, 58, 34,
-                        50, 34, 125, 123, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 34,
-                        58, 34, 51, 34, 125,
+                        91, 34, 123, 92, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 92, 34,
+                        58, 92, 34, 49, 92, 34, 125, 34, 44, 34, 123, 92, 34, 36, 110, 117, 109,
+                        98, 101, 114, 73, 110, 116, 92, 34, 58, 92, 34, 50, 92, 34, 125, 34, 44,
+                        34, 123, 92, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 92, 34, 58,
+                        92, 34, 51, 92, 34, 125, 34, 93,
                     ],
                     SqlReturn::SUCCESS,
                 );
@@ -804,11 +808,18 @@ mod unit {
                     ],
                     SqlReturn::SUCCESS,
                 );
-                bin_val_test(MAXKEY_COL, &[45, 105, 110, 102], SqlReturn::SUCCESS);
-                bin_val_test(MINKEY_COL, &[105, 110, 102], SqlReturn::SUCCESS);
+                bin_val_test(MAXKEY_COL, &[77, 97, 120, 75, 101, 121], SqlReturn::SUCCESS);
+                bin_val_test(
+                    MINKEY_COL,
+                    &[77, 105, 110, 75, 101, 121],
+                    SqlReturn::SUCCESS,
+                );
                 bin_val_test(
                     OID_COL,
-                    &[99, 68, 141, 254, 211, 132, 39, 163, 93, 83, 78, 64],
+                    &[
+                        54, 51, 52, 52, 56, 100, 102, 101, 100, 51, 56, 52, 50, 55, 97, 51, 53,
+                        100, 53, 51, 52, 101, 52, 48,
+                    ],
                     SqlReturn::SUCCESS,
                 );
                 bin_val_test(

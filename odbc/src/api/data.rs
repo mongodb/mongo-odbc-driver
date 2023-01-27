@@ -115,12 +115,13 @@ impl IntoCData for Bson {
             Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Binary(b) => Ok(b.bytes),
             Bson::Decimal128(d) => Ok(d.bytes().to_vec()),
-            Bson::Array(a) => Ok(a
-                .into_iter()
-                .flat_map(|b| b.to_json().as_bytes().to_owned())
-                .collect()),
             Bson::Document(d) => Ok(d.to_string().into_bytes()),
-            Bson::ObjectId(o) => Ok(o.bytes().to_vec()),
+            Bson::Array(a) => Ok(serde_json::to_string(
+                &a.into_iter().map(|b| b.to_json()).collect::<Vec<String>>(),
+            )
+            .unwrap()
+            .into_bytes()),
+            Bson::ObjectId(o) => Ok(o.to_string().into_bytes()),
             Bson::Undefined => Ok(char::from(0).to_string().into_bytes()),
             Bson::Null => Ok(char::from(0).to_string().into_bytes()),
             Bson::RegularExpression(r) => Ok(r.to_string().into_bytes()),
@@ -128,8 +129,8 @@ impl IntoCData for Bson {
             Bson::JavaScriptCode(j) => Ok(j.into_bytes()),
             Bson::JavaScriptCodeWithScope(j) => Ok(j.to_string().into_bytes()),
             Bson::Symbol(s) => Ok(s.into_bytes()),
-            Bson::MinKey => Ok(f64::INFINITY.to_string().into_bytes()),
-            Bson::MaxKey => Ok(f64::NEG_INFINITY.to_string().into_bytes()),
+            Bson::MinKey => Ok("MinKey".to_string().into_bytes()),
+            Bson::MaxKey => Ok("MaxKey".to_string().into_bytes()),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BINARY)),
         }
     }
