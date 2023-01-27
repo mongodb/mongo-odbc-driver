@@ -13,7 +13,6 @@ use odbc_sys::{
 use regex::Regex;
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
 
-const BINARY: &str = "Binary";
 const DOUBLE: &str = "Double";
 const INT32: &str = "Int32";
 const INT64: &str = "Int64";
@@ -121,17 +120,17 @@ impl IntoCData for Bson {
             )
             .unwrap()
             .into_bytes()),
-            Bson::ObjectId(o) => Ok(o.to_string().into_bytes()),
-            Bson::Undefined => Ok(char::from(0).to_string().into_bytes()),
-            Bson::Null => Ok(char::from(0).to_string().into_bytes()),
+            Bson::ObjectId(_) => Ok(self.to_json().into_bytes()),
+            Bson::Undefined => Ok(self.to_json().into_bytes()),
+            Bson::Null => Ok(self.to_json().into_bytes()),
             Bson::RegularExpression(r) => Ok(r.to_string().into_bytes()),
-            Bson::DbPointer(_) => Ok(char::from(0).to_string().into_bytes()),
+            Bson::DbPointer(p) => Ok(serde_json::to_string(&p).unwrap().into_bytes()),
             Bson::JavaScriptCode(j) => Ok(j.into_bytes()),
             Bson::JavaScriptCodeWithScope(j) => Ok(j.to_string().into_bytes()),
             Bson::Symbol(s) => Ok(s.into_bytes()),
-            Bson::MinKey => Ok("MinKey".to_string().into_bytes()),
-            Bson::MaxKey => Ok("MaxKey".to_string().into_bytes()),
-            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BINARY)),
+            Bson::MinKey => Ok(self.to_json().into_bytes()),
+            Bson::MaxKey => Ok(self.to_json().into_bytes()),
+            Bson::Timestamp(_) => Ok(self.to_json().into_bytes()),
         }
     }
 
