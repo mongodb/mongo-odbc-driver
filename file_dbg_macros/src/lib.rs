@@ -26,7 +26,7 @@ lazy_static! {
         .create(true)
         .append(true)
         .open(&*FILE_PATH) {
-                    Err(why) => panic!("couldn't open log file {:?}: {}", FILE_PATH, why),
+                    Err(why) => panic!("couldn't open log file {FILE_PATH:?}: {why}"),
                     Ok(file) => Mutex::new(file),
         };
 }
