@@ -16,9 +16,8 @@ pub fn generate_default_connection_str() -> String {
         Err(_e) => "ADF_ODBC_DRIVER".to_string(), //Default driver name
     };
 
-    let mut connection_string = format!(
-        "Driver={{{driver}}};USER={user_name};PWD={password};SERVER={host};"
-    );
+    let mut connection_string =
+        format!("Driver={{{driver}}};USER={user_name};PWD={password};SERVER={host};");
 
     // If a db is specified add it to the connection string
     match db {

@@ -157,7 +157,8 @@ impl<'a> ODBCUri<'a> {
         self.remove(names).ok_or_else(|| {
             if names.len() == 1 {
                 Error::InvalidUriFormat(format!(
-                    "{} is required for a valid Mongo ODBC Uri", names[0]
+                    "{} is required for a valid Mongo ODBC Uri",
+                    names[0]
                 ))
             } else {
                 Error::InvalidUriFormat(format!(

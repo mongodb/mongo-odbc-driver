@@ -537,9 +537,8 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 | Desc::RowVer) => {
                     let mongo_handle = MongoHandleRef::from(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
-                    mongo_handle.add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!(
-                        "{desc:?}"
-                    )));
+                    mongo_handle
+                        .add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!("{desc:?}")));
                     SqlReturn::ERROR
                 }
             }
