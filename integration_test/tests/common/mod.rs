@@ -17,8 +17,7 @@ pub fn generate_default_connection_str() -> String {
     };
 
     let mut connection_string = format!(
-        "Driver={{{}}};USER={};PWD={};SERVER={};",
-        driver, user_name, password, host,
+        "Driver={{{driver}}};USER={user_name};PWD={password};SERVER={host};"
     );
 
     // If a db is specified add it to the connection string
@@ -67,7 +66,7 @@ pub fn sql_return_to_string(return_code: SqlReturn) -> String {
         SqlReturn::NO_DATA => "NO_DATA".to_string(),
         SqlReturn::ERROR => "ERROR".to_string(),
         _ => {
-            format!("{:?}", return_code)
+            format!("{return_code:?}")
         }
     }
 }

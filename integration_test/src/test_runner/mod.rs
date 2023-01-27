@@ -118,7 +118,7 @@ pub enum TestDef {
 
 impl fmt::Display for TestDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -140,7 +140,7 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
 
         for test in yaml.tests {
             match test.skip_reason {
-                Some(sr) => println!("Skip Reason: {}", sr),
+                Some(sr) => println!("Skip Reason: {sr}"),
                 None => {
                     let mut conn_str = crate::common::generate_default_connection_str();
                     conn_str.push_str(&("DATABASE=".to_owned() + &test.db));
@@ -166,7 +166,7 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
 /// path names.
 pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>> {
     let mut paths: Vec<String> = vec![];
-    let entries = fs::read_dir(dir).map_err(|e| Error::InvalidDirectory(format!("{:?}", e)))?;
+    let entries = fs::read_dir(dir).map_err(|e| Error::InvalidDirectory(format!("{e:?}")))?;
     for entry in entries {
         match entry {
             Ok(de) => {
@@ -175,7 +175,7 @@ pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>> {
                     paths.push(path.to_str().unwrap().to_string());
                 }
             }
-            Err(e) => return Err(Error::InvalidFilePath(format!("{:?}", e))),
+            Err(e) => return Err(Error::InvalidFilePath(format!("{e:?}"))),
         };
     }
     Ok(paths)
@@ -184,9 +184,9 @@ pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>> {
 /// parse_test_file_yaml deserializes the given YAML file into a
 /// IntegrationTest struct.
 pub fn parse_test_file_yaml(path: &str) -> Result<IntegrationTest> {
-    let f = fs::File::open(path).map_err(|e| Error::InvalidFile(format!("{:?}", e)))?;
+    let f = fs::File::open(path).map_err(|e| Error::InvalidFile(format!("{e:?}")))?;
     let integration_test: IntegrationTest =
-        serde_yaml::from_reader(f).map_err(|e| Error::CannotDeserializeYaml(format!("{:?}", e)))?;
+        serde_yaml::from_reader(f).map_err(|e| Error::CannotDeserializeYaml(format!("{e:?}")))?;
     Ok(integration_test)
 }
 
@@ -523,7 +523,7 @@ fn validate_result_set_metadata_helper(
                 test: description,
                 expected: exp_metadata.len(),
                 actual: column_count,
-                descriptor: format!("{:?}", descriptor),
+                descriptor: format!("{descriptor:?}"),
             });
         }
         for (i, current_exp_metadata) in exp_metadata.iter().enumerate().take(column_count) {
@@ -536,7 +536,7 @@ fn validate_result_set_metadata_helper(
                             test: description,
                             expected: n.to_string(),
                             actual: actual_value.to_string(),
-                            descriptor: format!("{:?}", descriptor),
+                            descriptor: format!("{descriptor:?}"),
                             column: i,
                         });
                     }
@@ -547,12 +547,12 @@ fn validate_result_set_metadata_helper(
                             test: description,
                             expected: s.to_string(),
                             actual: actual_value.to_string(),
-                            descriptor: format!("{:?}", descriptor),
+                            descriptor: format!("{descriptor:?}"),
                             column: i,
                         });
                     }
                 }
-                meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),
+                meta_type => return Err(Error::UnexpectedMetadataType(format!("{meta_type:?}"))),
             }
         }
     }
@@ -677,7 +677,7 @@ fn get_column_attribute(
                 ))[0..*string_length_ptr as usize]
                     .to_string()),
                 Value::Number(_) => json!(*numeric_attrib_ptr),
-                meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),
+                meta_type => return Err(Error::UnexpectedMetadataType(format!("{meta_type:?}"))),
             }),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLColAttributeW".to_string(),
