@@ -55,7 +55,7 @@ macro_rules! test_get_info {
                     _ => ()
                 }
 
-                let _ = Box::from_raw(value_ptr);
+                let _ = Box::from_raw(value_ptr as *mut USmallInt);
             }
         }
     }
@@ -90,8 +90,10 @@ unsafe fn modify_u16_value(value_ptr: Pointer, _: usize) -> u16 {
 }
 
 mod unit {
+    use crate::util::format_version;
+
     use super::*;
-    use constants::{DBMS_NAME, DRIVER_NAME};
+    use constants::{DBMS_NAME, DRIVER_NAME, ODBC_VERSION};
     use std::mem::size_of;
     use widechar::WideChar;
 
@@ -111,7 +113,11 @@ mod unit {
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 11 * size_of::<WideChar>() as i16,
         expected_length = 10 * size_of::<WideChar>() as i16,
-        expected_value = "00.01.0000",
+        expected_value = format_version(
+            env!("CARGO_PKG_VERSION_MAJOR"),
+            env!("CARGO_PKG_VERSION_MINOR"),
+            env!("CARGO_PKG_VERSION_PATCH"),
+        ),
         actual_value_modifier = modify_string_value,
     );
 
@@ -121,7 +127,7 @@ mod unit {
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 6 * size_of::<WideChar>() as i16,
         expected_length = 5 * size_of::<WideChar>() as i16,
-        expected_value = "03.08",
+        expected_value = ODBC_VERSION,
         actual_value_modifier = modify_string_value,
     );
 

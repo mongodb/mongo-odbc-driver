@@ -13,16 +13,19 @@ use crate::{
 };
 use ::function_name::named;
 use bson::Bson;
-use constants::{DBMS_NAME, DRIVER_NAME, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES};
+use constants::{
+    DBMS_NAME, DRIVER_NAME, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES,
+};
 use file_dbg_macros::dbg_write;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
+    MongoTypesInfo, SqlDataType,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
     Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
-    Len, Nullability, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, ULen, USmallInt,
+    Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 use widechar::WideChar;
@@ -48,7 +51,7 @@ pub fn trace_call_and_outcome(function_name: &str, sql_return: &SqlReturn) -> St
         SqlReturn::STILL_EXECUTING => "STILL_EXECUTING",
         _ => "unknown sql_return",
     };
-    format!("{}, SQLReturn = {}", function_name, outcome)
+    format!("{function_name}, SQLReturn = {outcome}")
 }
 
 macro_rules! must_be_valid {
@@ -470,13 +473,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                         mongo_stmt.as_ref().unwrap().get_resultset_metadata().len() as Len;
                     SqlReturn::SUCCESS
                 }
-                Desc::CaseSensitive => numeric_col_attr(&|x: &MongoColMetadata| {
-                    (if x.type_name == "string" {
-                        SqlBool::True
-                    } else {
-                        SqlBool::False
-                    }) as Len
-                }),
+                Desc::CaseSensitive => {
+                    numeric_col_attr(&|x: &MongoColMetadata| x.case_sensitive as Len)
+                }
                 Desc::BaseColumnName => {
                     string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref())
                 }
@@ -496,12 +495,18 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::Length => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len)
                 }
-                Desc::LiteralPrefix
-                | Desc::LiteralSuffix
-                | Desc::LocalTypeName
-                | Desc::SchemaName => string_col_attr(&|_| ""),
+                Desc::LiteralPrefix => {
+                    string_col_attr(&|x: &MongoColMetadata| x.literal_prefix.unwrap_or(""))
+                }
+                Desc::LiteralSuffix => {
+                    string_col_attr(&|x: &MongoColMetadata| x.literal_suffix.unwrap_or(""))
+                }
+                Desc::LocalTypeName | Desc::SchemaName => string_col_attr(&|_| ""),
                 Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
                 Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.nullability.0 as Len),
+                Desc::NumPrecRadix => {
+                    numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len)
+                }
                 Desc::OctetLength => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
                 }
@@ -511,13 +516,11 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::Scale => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len)
                 }
-                Desc::Searchable => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.is_searchable as Len)
-                }
+                Desc::Searchable => numeric_col_attr(&|x: &MongoColMetadata| x.searchable as Len),
                 Desc::TableName => string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref()),
                 Desc::TypeName => string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref()),
                 Desc::Type | Desc::ConciseType => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.sql_type.0 as Len)
+                    numeric_col_attr(&|x: &MongoColMetadata| x.sql_type as Len)
                 }
                 Desc::Unsigned => numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len),
                 desc @ (Desc::OctetLengthPtr
@@ -532,16 +535,13 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 | Desc::DatetimeIntervalPrecision
                 | Desc::MaximumScale
                 | Desc::MinimumScale
-                | Desc::NumPrecRadix
                 | Desc::ParameterType
                 | Desc::RowsProcessedPtr
                 | Desc::RowVer) => {
                     let mongo_handle = MongoHandleRef::from(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
-                    mongo_handle.add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!(
-                        "{:?}",
-                        desc
-                    )));
+                    mongo_handle
+                        .add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!("{desc:?}")));
                     SqlReturn::ERROR
                 }
             }
@@ -693,7 +693,7 @@ pub unsafe extern "C" fn SQLColumnsW(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog_string = input_wtext_to_string(catalog_name, catalog_name_length as usize);
-            let catalog = if catalog_name.is_null() {
+            let catalog = if catalog_name.is_null() || catalog_string.is_empty() {
                 None
             } else {
                 Some(catalog_string.as_str())
@@ -1025,8 +1025,7 @@ pub unsafe extern "C" fn SQLDriverConnect(
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
             if driver_completion != DriverConnectOption::NoPrompt {
                 conn_handle.add_diag_info(ODBCError::UnsupportedDriverConnectOption(format!(
-                    "{:?}",
-                    driver_completion
+                    "{driver_completion:?}"
                 )));
                 return SqlReturn::ERROR;
             }
@@ -1078,8 +1077,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
             if driver_completion != DriverConnectOption::NoPrompt {
                 conn_handle.add_diag_info(ODBCError::UnsupportedDriverConnectOption(format!(
-                    "{:?}",
-                    driver_completion
+                    "{driver_completion:?}"
                 )));
                 return SqlReturn::ERROR;
             }
@@ -2201,9 +2199,9 @@ unsafe fn sql_get_infow_helper(
                 }
                 InfoType::SQL_DRIVER_ODBC_VER => {
                     // This driver supports version 3.8.
-                    i16_len::set_output_wstring_as_bytes(
-                        "03.08",
-                        info_value_ptr,
+                    i16_len::set_output_wstring(
+                        ODBC_VERSION,
+                        info_value_ptr as *mut WideChar,
                         buffer_length as usize,
                         string_length_ptr,
                     )
@@ -2848,10 +2846,38 @@ unsafe fn sql_get_stmt_attrw_helper(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[no_mangle]
+pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
+    SQLGetTypeInfoW(handle, data_type)
+}
+
+///
+/// [`SQLGetTypeInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetTypeInfo-function
+///
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, _data_type: SmallInt) -> SqlReturn {
-    unimpl!(handle);
+pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> SqlReturn {
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(handle);
+            match FromPrimitive::from_i16(data_type) {
+                Some(sql_data_type) => {
+                    let stmt = must_be_valid!((*mongo_handle).as_statement());
+                    let types_info = MongoTypesInfo::new(sql_data_type);
+                    *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
+                    SqlReturn::SUCCESS
+                }
+                None => {
+                    mongo_handle.add_diag_info(ODBCError::InvalidSqlType(data_type.to_string()));
+                    SqlReturn::ERROR
+                }
+            }
+        },
+        handle
+    )
 }
 
 ///
@@ -3856,11 +3882,11 @@ fn sql_tables(
     table_t: &str,
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
-        (SQL_ALL_CATALOGS, "", "", _) => Ok(Box::new(MongoDatabases::list_all_catalogs(
+        (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
         ))),
-        ("", SQL_ALL_SCHEMAS, "", _) => Ok(Box::new(MongoCollections::all_schemas())),
+        ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas())),
         ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),
         _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,

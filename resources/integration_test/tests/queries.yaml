@@ -12,10 +12,10 @@ tests:
     expected_column_name: ["_id", "b"]
     expected_display_size: [ 4, 0 ]
     expected_length: [ 4, 0 ]
-    expected_is_searchable: [ 1, 1 ]
-    expected_is_unsigned: [ 0, 0 ]
+    expected_is_searchable: [ 2, 3 ]
+    expected_is_unsigned: [ 0, 1 ]
+    expected_sql_type: [4, 12]
     expected_sql_type: [4, -9]
     expected_precision: [10, 0]
     expected_scale: [0, 0]
     expected_nullability: [1, 1]
-

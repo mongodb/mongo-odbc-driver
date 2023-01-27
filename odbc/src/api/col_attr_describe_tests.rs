@@ -2,12 +2,12 @@ use crate::{
     handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW, SQLDescribeColW,
 };
-use mongo_odbc_core::MongoFields;
-use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn};
+use mongo_odbc_core::{MongoFields, SQL_SEARCHABLE};
+use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn, WChar};
 use std::sync::RwLock;
 
 mod unit {
-    use odbc_sys::SqlDataType;
+    use mongo_odbc_core::SqlDataType;
 
     use super::*;
     // test unallocated_statement tests SQLColAttributeW when the mongo_statement inside
@@ -62,7 +62,7 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -123,7 +123,7 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -169,7 +169,7 @@ mod unit {
                         .unwrap()[0]
                 ),
             );
-            let _ = Box::from_raw(name_buffer);
+            let _ = Box::from_raw(name_buffer as *mut WChar);
         }
     }
 
@@ -229,7 +229,7 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -265,10 +265,7 @@ mod unit {
                     )
                 );
                 assert_eq!(
-                    format!(
-                        "[MongoDB][API] The field index {} is out of bounds",
-                        col_index,
-                    ),
+                    format!("[MongoDB][API] The field index {col_index} is out of bounds",),
                     format!(
                         "{}",
                         (*stmt_handle)
@@ -279,7 +276,7 @@ mod unit {
                             .unwrap()[0]
                     )
                 );
-                let _ = Box::from_raw(name_buffer);
+                let _ = Box::from_raw(name_buffer as *mut WChar);
             }
         }
     }
@@ -316,10 +313,7 @@ mod unit {
                         )
                     );
                     assert_eq!(
-                        format!(
-                            "[MongoDB][API] The field index {} is out of bounds",
-                            col_index,
-                        ),
+                        format!("[MongoDB][API] The field index {col_index} is out of bounds",),
                         format!(
                             "{}",
                             (*mongo_handle)
@@ -330,7 +324,7 @@ mod unit {
                                 .unwrap()[0]
                         )
                     );
-                    let _ = Box::from_raw(char_buffer);
+                    let _ = Box::from_raw(char_buffer as *mut WChar);
                 }
             }
         }
@@ -349,8 +343,8 @@ mod unit {
                 (Desc::BaseTableName, ""),
                 (Desc::CatalogName, ""),
                 (Desc::Label, "TABLE_NAME"),
-                (Desc::LiteralPrefix, ""),
-                (Desc::LiteralSuffix, ""),
+                (Desc::LiteralPrefix, "'"),
+                (Desc::LiteralSuffix, "'"),
                 (Desc::Name, "TABLE_NAME"),
                 (Desc::TableName, ""),
                 (Desc::TypeName, "string"),
@@ -384,7 +378,7 @@ mod unit {
                         expected.len(),
                     )
                 );
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -409,10 +403,10 @@ mod unit {
             (Desc::OctetLength, 0),
             (Desc::Precision, 0),
             (Desc::Scale, 0),
-            (Desc::Searchable, 1),
+            (Desc::Searchable, SQL_SEARCHABLE as isize),
             (Desc::Type, SqlDataType::EXT_W_VARCHAR.0 as isize),
             (Desc::ConciseType, SqlDataType::EXT_W_VARCHAR.0 as isize),
-            (Desc::Unsigned, 0),
+            (Desc::Unsigned, 1),
         ] {
             unsafe {
                 let char_buffer: *mut std::ffi::c_void =
@@ -434,7 +428,7 @@ mod unit {
                     )
                 );
                 assert_eq!(expected, *numeric_attr_ptr);
-                let _ = Box::from_raw(char_buffer);
+                let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
     }
@@ -487,7 +481,7 @@ mod unit {
                     *out_name_length as usize
                 )
             );
-            let _ = Box::from_raw(name_buffer);
+            let _ = Box::from_raw(name_buffer as *mut WChar);
         }
     }
 }

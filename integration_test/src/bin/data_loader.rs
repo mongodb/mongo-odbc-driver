@@ -122,7 +122,7 @@ fn read_data_files(dir_path: &str) -> Result<Vec<TestData>> {
                 if ext == "yml" || ext == "yaml" {
                     return Some(path);
                 } else {
-                    println!("Ignoring file without '.y[a]ml' extension: {:?}", path);
+                    println!("Ignoring file without '.y[a]ml' extension: {path:?}");
                 }
             }
             None
@@ -170,7 +170,7 @@ fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
     for (db, c) in namespaces_to_drop {
         let database = client.database(db.as_str());
         database.collection::<Bson>(c.as_str()).drop(None)?;
-        println!("Dropped {}.{}", db, c)
+        println!("Dropped {db}.{c}")
     }
 
     Ok(())

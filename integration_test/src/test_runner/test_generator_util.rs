@@ -116,12 +116,12 @@ pub fn generate_baseline_test_file(
         .unwrap()
         .as_millis();
     let desc = entry.description.clone().replace(' ', "_");
-    let file_name = format!("{}-{}.yml", desc, now);
+    let file_name = format!("{desc}-{now}.yml");
 
     let writer = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
-        .open(format!("{}/{}", GENERATED_TEST_DIR, file_name))
+        .open(format!("{GENERATED_TEST_DIR}/{file_name}"))
         .expect("could not open or create test file");
 
     serde_yaml::to_writer(writer, &test_entry).map_err(|err| Error::Yaml(err.to_string()))

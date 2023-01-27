@@ -59,7 +59,7 @@ mod unit {
                     $(assert_eq!($expected_length, *out_length);)?
                     $(assert_eq!($expected_value, $actual_value_modifier(value_ptr, *out_length as usize));)?
 
-                    let _ = Box::from_raw(value_ptr);
+                    let _ = Box::from_raw(value_ptr as *mut UInteger);
                 }
             }
         };
@@ -253,7 +253,7 @@ mod unit {
             ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
                 assert_eq!(connection_attribute_to_string(attr), *actual_attr)
             }
-            _ => panic!("unexpected err: {:?}", actual_err),
+            _ => panic!("unexpected err: {actual_err:?}"),
         }
     }
 }
