@@ -310,9 +310,11 @@ mod integration {
                     conn_handle,
                     InfoType::GetDataExtensions,
                     output_buffer as Pointer,
-                    BUFFER_LENGTH,
+                    10,
                     str_len_ptr
-                )
+                ),
+                "{}",
+                get_sql_diagnostics(HandleType::Dbc, conn_handle as Handle)
             );
 
             let column_count_ptr = &mut 0;
@@ -334,21 +336,18 @@ mod integration {
             ];
             for col_num in 0..*column_count_ptr {
                 FIELD_IDS.iter().for_each(|field_type| {
-                    let outcome = SQLColAttributeW(
-                        stmt as HStmt,
-                        (col_num + 1) as u16,
-                        *field_type,
-                        output_buffer as Pointer,
-                        BUFFER_LENGTH,
-                        str_len_ptr,
-                        numeric_attribute_ptr,
-                    );
                     assert_eq!(
                         SqlReturn::SUCCESS,
-                        outcome,
-                        "Expected {}, got {}. Diagnostic message is: {}",
-                        sql_return_to_string(SqlReturn::SUCCESS),
-                        sql_return_to_string(outcome),
+                        SQLColAttributeW(
+                            stmt as HStmt,
+                            (col_num + 1) as u16,
+                            *field_type,
+                            output_buffer as Pointer,
+                            14,
+                            str_len_ptr,
+                            numeric_attribute_ptr,
+                        ),
+                        "{}",
                         get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
                     );
                 });
@@ -372,7 +371,7 @@ mod integration {
                                 1,
                                 odbc_sys::CDataType::SLong,
                                 output_buffer as Pointer,
-                                BUFFER_LENGTH as isize,
+                                10,
                                 &mut 0
                             ),
                             "{}",
@@ -385,7 +384,7 @@ mod integration {
                                 2,
                                 odbc_sys::CDataType::Char,
                                 output_buffer as Pointer,
-                                BUFFER_LENGTH as isize,
+                                4,
                                 &mut 0
                             ),
                             "{}",
@@ -398,8 +397,7 @@ mod integration {
             }
             assert_eq!(
                 3, successful_fetch_count,
-                "Expected 3 successful calls to SQLFetch, got {}.",
-                successful_fetch_count
+                "Expected 3 successful calls to SQLFetch, got {successful_fetch_count}."
             );
 
             assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt as HStmt));
