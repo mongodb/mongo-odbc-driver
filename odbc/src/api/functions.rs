@@ -48,7 +48,7 @@ pub fn trace_call_and_outcome(function_name: &str, sql_return: &SqlReturn) -> St
         SqlReturn::STILL_EXECUTING => "STILL_EXECUTING",
         _ => "unknown sql_return",
     };
-    format!("{}, SQLReturn = {}", function_name, outcome)
+    format!("{function_name}, SQLReturn = {outcome}")
 }
 
 macro_rules! must_be_valid {
@@ -537,10 +537,8 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 | Desc::RowVer) => {
                     let mongo_handle = MongoHandleRef::from(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
-                    mongo_handle.add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!(
-                        "{:?}",
-                        desc
-                    )));
+                    mongo_handle
+                        .add_diag_info(ODBCError::UnsupportedFieldDescriptor(format!("{desc:?}")));
                     SqlReturn::ERROR
                 }
             }
@@ -1024,8 +1022,7 @@ pub unsafe extern "C" fn SQLDriverConnect(
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
             if driver_completion != DriverConnectOption::NoPrompt {
                 conn_handle.add_diag_info(ODBCError::UnsupportedDriverConnectOption(format!(
-                    "{:?}",
-                    driver_completion
+                    "{driver_completion:?}"
                 )));
                 return SqlReturn::ERROR;
             }
@@ -1077,8 +1074,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
             if driver_completion != DriverConnectOption::NoPrompt {
                 conn_handle.add_diag_info(ODBCError::UnsupportedDriverConnectOption(format!(
-                    "{:?}",
-                    driver_completion
+                    "{driver_completion:?}"
                 )));
                 return SqlReturn::ERROR;
             }
@@ -3883,11 +3879,11 @@ fn sql_tables(
     table_t: &str,
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
-        (SQL_ALL_CATALOGS, "", "", _) => Ok(Box::new(MongoDatabases::list_all_catalogs(
+        (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
         ))),
-        ("", SQL_ALL_SCHEMAS, "", _) => Ok(Box::new(MongoCollections::all_schemas())),
+        ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas())),
         ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),
         _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,

@@ -320,8 +320,8 @@ mod unit {
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema) => (),
-                Err(e) => panic!("unexpected error: {:?}", e),
-                Ok(ok) => panic!("unexpected result: {:?}", ok),
+                Err(e) => panic!("unexpected error: {e:?}"),
+                Ok(ok) => panic!("unexpected result: {ok:?}"),
             }
         }
 
@@ -348,8 +348,8 @@ mod unit {
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema) => (),
-                Err(e) => panic!("unexpected error: {:?}", e),
-                Ok(ok) => panic!("unexpected result: {:?}", ok),
+                Err(e) => panic!("unexpected error: {e:?}"),
+                Ok(ok) => panic!("unexpected result: {ok:?}"),
             }
         }
 
@@ -395,7 +395,7 @@ mod unit {
             let res = input.process_result_metadata("test_db");
 
             match res {
-                Err(e) => panic!("unexpected error: {:?}", e),
+                Err(e) => panic!("unexpected error: {e:?}"),
                 Ok(actual) => {
                     // There should be 3 fields
                     assert_eq!(3, actual.len());
@@ -558,8 +558,8 @@ mod unit {
             let nullability = input_schema.get_field_nullability("a".to_string());
             match nullability {
                 Err(Error::UnknownColumn(_)) => (),
-                Err(e) => panic!("unexpected error: {:?}", e),
-                Ok(ok) => panic!("unexpected result: {:?}", ok),
+                Err(e) => panic!("unexpected error: {e:?}"),
+                Ok(ok) => panic!("unexpected result: {ok:?}"),
             }
         }
     }

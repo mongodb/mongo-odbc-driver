@@ -54,7 +54,7 @@ macro_rules! test_get_info {
                     _ => ()
                 }
 
-                let _ = Box::from_raw(value_ptr);
+                let _ = Box::from_raw(value_ptr as *mut USmallInt);
             }
         }
     }
