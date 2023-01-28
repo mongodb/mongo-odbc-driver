@@ -1,0 +1,6 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps]
+"DumpFolder"="%$DUMP_PATH%"
+"DumpCount"=dword:0000000a
+"DumpType"=dword:00000002

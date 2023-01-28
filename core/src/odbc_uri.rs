@@ -78,8 +78,7 @@ impl<'a> ODBCUri<'a> {
         let rest = rest.get(1..).unwrap();
         if !KEYWORDS.is_match(keyword) {
             return Err(Error::InvalidUriFormat(format!(
-                "'{}' is not a valid URI keyword",
-                keyword
+                "'{keyword}' is not a valid URI keyword"
             )));
         }
         let (value, rest) = if rest.starts_with('{') {
@@ -163,8 +162,7 @@ impl<'a> ODBCUri<'a> {
                 ))
             } else {
                 Error::InvalidUriFormat(format!(
-                    "One of {:?} is required for a valid Mongo ODBC Uri",
-                    names
+                    "One of {names:?} is required for a valid Mongo ODBC Uri"
                 ))
             }
         })
@@ -189,8 +187,7 @@ impl<'a> ODBCUri<'a> {
             .is_none()
         {
             return Err(Error::InvalidUriFormat(format!(
-                "One of {:?} is required for a valid Mongo ODBC Uri",
-                USER_KWS,
+                "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri"
             )));
         }
         if client_options
@@ -201,8 +198,7 @@ impl<'a> ODBCUri<'a> {
             .is_none()
         {
             return Err(Error::InvalidUriFormat(format!(
-                "One of {:?} is required for a valid Mongo ODBC Uri",
-                PWD_KWS,
+                "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri"
             )));
         }
         Ok(())

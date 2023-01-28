@@ -37,6 +37,10 @@ functions:
           export UNIX_ODBC_PATH="$PWD/unixodbc/install"
           export LD_LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
           export PATH="$LD_LIBRARY_PATH:$PATH:$HOME/.cargo/bin"
+          export DUMP_FOLDER=dumps
+          export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
+          export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
+          export SCRIPT_FOLDER=resources
 
           cat <<EOT > expansions.yml
           prepare_shell: |
@@ -50,6 +54,14 @@ functions:
             export ADF_TEST_LOCAL_HOST="${adf_test_local_host}"
             export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
             export ADF_TEST_LOCAL_DB="${adf_test_local_db}"
+
+            export SCRIPT_FOLDER="$SCRIPT_FOLDER"
+            export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
+            # Windows variables
+            export LOCAL_DUMP_ORIGINAL_REG_VAL="$LOCAL_DUMP_ORIGINAL_REG_VAL"
+            export DUMP_FOLDER="$DUMP_FOLDER"
+            export DUMP_PATH="$(pwd)/$DUMP_FOLDER"
+            export MONGOODBC_DEBUGGING_INFO_ARCHIVE=$MONGOODBC_DEBUGGING_INFO_ARCHIVE
             # Non-Windows variables
             export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
@@ -162,6 +174,19 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
 
+  "upload symbols":
+    - command: s3.put
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.pdb
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
   "download artifact":
     - command: s3.get
       params:
@@ -183,10 +208,10 @@ functions:
           sed -i 's@%DRIVER_DLL_PATH%@'"$(echo "$(cygpath -w $(pwd))" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           reg import "setup\setupDSN.reg"
           echo "----- Registry entries after setup ----"
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> /dev/null
           echo "-------------------------"
 
   "setup driver with UnixODBC":
@@ -208,6 +233,38 @@ functions:
           cat setup/odbcinst.ini
           echo "-------------------------"  
 
+  "setup crash dump collection":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script:  |
+          ${prepare_shell}
+          mkdir $DUMP_PATH
+          set +e
+          echo "----- Registry entries before setup ----"
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps"
+          REGQUERY_EXITCODE=$?
+          if [ $REGQUERY_EXITCODE -eq 0 ]; then
+            # The key exists, save the values
+            echo "Saving values in $LOCAL_DUMP_ORIGINAL_REG_VAL"
+            reg export "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps" $LOCAL_DUMP_ORIGINAL_REG_VAL
+            echo "----- Saved entries ----"
+            cat $LOCAL_DUMP_ORIGINAL_REG_VAL
+            echo "-------------------------"
+          fi
+          set -e
+          sed -i 's@%$DUMP_PATH%@'"$(echo "$(cygpath -w $(pwd))\\$DUMP_FOLDER" | sed s',\\,\\\\\\\\,g')"'@' setup/setup_dumps_collection.reg
+          echo "----- setup_dumps_collection.reg content -----"
+          cat setup/setup_dumps_collection.reg
+          echo "-------------------------"
+          reg import "setup\setup_dumps_collection.reg"
+          echo "----- Registry entries after setup ----"
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps" -s 2> /dev/null
+          echo "-------------------------"
+          echo "App Data = $AppData"
+          
+
   "clean-up driver on Windows":
     - command: shell.exec
       params:
@@ -216,15 +273,47 @@ functions:
         script:  |
           ${prepare_shell}
           if [ 'windows-32' == '${build_variant}' ]; then
-            sed -i 's@SOFTWARE@'"SOFTWARE\\\\Wow6432Node"'@' setup/cleanup.reg
+            sed -i 's@SOFTWARE@'"SOFTWARE\\\\Wow6432Node"'@' setup/cleanup_driver.reg
           fi
-          reg import "setup\cleanup.reg"
+          reg import "setup\cleanup_driver.reg"
           echo "----- Registry entries after clean-up----"
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> nul
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> nul
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> /dev/null
           echo "-------------------------"
+
+  "clean-up crash dump collection":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script:  |        
+          ${prepare_shell}
+          set +e
+          # See what crash dump has been created. Checking the default path just in case
+          echo "----- Dumps collected stored in $DUMP_PATH ----"
+          ls -lrt $DUMP_PATH
+          echo "-------------------------"
+          echo "----- Dumps collected stored in the default dump folder %LOCALAPPDATA%\CrashDumps ----"
+          ls -lrt /cygdrive/c/Users/Administrator/AppData/Local/CrashDumps
+          echo "-------------------------"
+          echo "----- Registry entries before clean-up ----"
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps"
+          echo "-------------------------"
+          if [ -f "$LOCAL_DUMP_ORIGINAL_REG_VAL" ]; then
+            echo "Resetting initial registry values"
+            cat $LOCAL_DUMP_ORIGINAL_REG_VAL
+            reg import $LOCAL_DUMP_ORIGINAL_REG_VAL
+          else
+            echo "Resetting initial registry values - Deleting entry"
+            reg import setup/cleanup_dumps_collection.reg
+          fi
+          EXITCODE=$?
+          echo "----- Registry entries after clean-up ----"
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps" -s 2> /dev/null
+          echo "-------------------------"
+          exit $EXITCODE
 
   "run unit tests":
     - command: shell.exec
@@ -250,6 +339,20 @@ functions:
           cargo run --bin data_loader &&
           cargo test integration -- --nocapture
           EXITCODE=$?
+          echo "****** ls -l ./target/debug/deps *******"
+          ls -l ./target/debug/deps
+          echo "****************************************"
+          # The execution termimated with a segfault
+          if [ $EXITCODE -eq 139 ]; then
+            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
+            SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
+            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
+            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
+            tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
+            
+            echo "ls -l $DUMP_PATH"
+            ls -l $DUMP_PATH
+          fi
           ./resources/run_adf.sh stop
           exit $EXITCODE
 
@@ -336,6 +439,14 @@ functions:
         cargo run --bin data_loader &&
         cargo test -- --ignored
         EXITCODE=$?
+        # The execution termimated with a segfault
+        if [ $EXITCODE -eq 139 ]; then
+            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
+            SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
+            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
+            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
+            tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
+        fi
         ./resources/run_adf.sh stop
         exit $EXITCODE
 
@@ -359,6 +470,21 @@ functions:
          permissions: public-read
          content_type: application/octet-stream
 
+  "upload crash debugging info":
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_files_include_filter_prefix: mongosql-odbc-driver/dumps
+        local_files_include_filter:
+          - "*.dmp"
+          - "*.tar.gz"
+        remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+        display_name: crash-dump-
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -380,6 +506,7 @@ tasks:
     commands:
       - func: "compile release"
       - func: "upload artifact"
+      - func: "upload symbols"
 
   - name: unit-test
     commands:
@@ -428,8 +555,11 @@ task_groups:
       - func: "generate expansions"
       - func: "download artifact"
       - func: "setup driver on Windows"
+      - func: "setup crash dump collection"
     teardown_group:
+      - func: "upload crash debugging info"
       - func: "clean-up driver on Windows"
+      - func: "clean-up crash dump collection"
     tasks:
       - integration-test
 
@@ -440,8 +570,11 @@ task_groups:
       - func: "generate expansions"
       - func: "download artifact"
       - func: "setup driver on Windows"
+      - func: "setup crash dump collection"
     teardown_group:
+      - func: "upload crash debugging info"
       - func: "clean-up driver on Windows"
+      - func: "clean-up crash dump collection"
     tasks:
       - result-set-test
 

@@ -19,7 +19,7 @@ pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut Char) {
     if output_ptr.is_null() {
         return;
     }
-    let sql_state = &format!("{}\0", sql_state);
+    let sql_state = &format!("{sql_state}\0");
     let state_u8 = sql_state.bytes().collect::<Vec<u8>>();
     copy_nonoverlapping(state_u8.as_ptr(), output_ptr, 6);
 }
@@ -34,7 +34,7 @@ pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WChar) {
     if output_ptr.is_null() {
         return;
     }
-    let sql_state = &format!("{}\0", sql_state);
+    let sql_state = &format!("{sql_state}\0");
     let state_u16 = sql_state.encode_utf16().collect::<Vec<u16>>();
     copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
 }
@@ -58,7 +58,7 @@ pub unsafe fn get_diag_rec(
         *native_error_ptr = error.get_native_err_code();
     }
     set_sql_state(error.get_sql_state(), state);
-    let message = format!("{}", error);
+    let message = format!("{error}");
     i16_len::set_output_string(
         &message,
         message_text,
@@ -86,7 +86,7 @@ pub unsafe fn get_diag_recw(
         *native_error_ptr = error.get_native_err_code();
     }
     set_sql_statew(error.get_sql_state(), state);
-    let message = format!("{}", error);
+    let message = format!("{error}");
     i16_len::set_output_wstring(
         &message,
         message_text,
@@ -169,7 +169,7 @@ pub unsafe fn get_diag_field(
                         std::ptr::null_mut::<i16>(),
                     ),
                     DiagType::SQL_DIAG_MESSAGE_TEXT => {
-                        let message = format!("{}", error);
+                        let message = format!("{error}");
                         match is_wstring {
                             true => i16_len::set_output_wstring(
                                 &message,
