@@ -27,7 +27,6 @@ mod integration {
             let mut buffer = OutputBuffer {
                 output_buffer: output_buffer as Pointer,
                 data_length: *&mut 0,
-                data_type: info_value_type,
             };
 
             let outcome = SQLGetInfoW(
@@ -49,7 +48,7 @@ mod integration {
             let length = buffer.data_length.clone();
             println!(
                 "{info_type:?} = {}\nLength is {length}",
-                match buffer.data_type {
+                match info_value_type {
                     DataType::WChar => Into::<String>::into(buffer),
                     DataType::USmallInt => Into::<u16>::into(buffer).to_string(),
                 }
@@ -65,7 +64,6 @@ mod integration {
     pub struct OutputBuffer {
         pub output_buffer: Pointer,
         pub data_length: i16,
-        pub data_type: DataType,
     }
 
     impl From<OutputBuffer> for String {
