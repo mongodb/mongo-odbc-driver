@@ -8,7 +8,8 @@ const INVALID_SQL_TYPE: &str = "HY004\0";
 mod unit {
     use super::*;
     use mongo_odbc_core::Error;
-    use std::ffi::c_void;
+    use std::{ffi::c_void, mem::size_of};
+    use widechar::WideChar;
 
     fn validate_result_set(data_type: SqlDataType, expectations: Vec<&str>) {
         let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
@@ -99,7 +100,7 @@ mod unit {
                     1,
                     DiagType::SQL_DIAG_SQLSTATE as i16,
                     message_text,
-                    6,
+                    6 * size_of::<WideChar>() as i16,
                     &mut 0
                 )
             );

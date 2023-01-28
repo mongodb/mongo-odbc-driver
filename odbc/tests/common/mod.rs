@@ -11,9 +11,12 @@ pub fn verify_sql_diagnostics(
     expected_message_text: &str,
     mut expected_native_err: i32,
 ) {
+    use widechar::WideChar;
     let text_length_ptr = &mut 0;
-    let actual_sql_state = &mut [0u16; 6] as *mut _;
-    let actual_message_text = &mut [0u16; 512] as *mut _;
+    let mut actual_sql_state: [WideChar; 6] = [0; 6];
+    let actual_sql_state = &mut actual_sql_state as *mut _;
+    let mut actual_message_text: [WideChar; 512] = [0; 512];
+    let actual_message_text = &mut actual_message_text as *mut _;
     let actual_native_error = &mut 0;
     unsafe {
         let _ = SQLGetDiagRecW(
@@ -27,18 +30,20 @@ pub fn verify_sql_diagnostics(
             text_length_ptr,
         );
     };
-    let mut expected_sql_state_encoded: Vec<u16> = expected_sql_state.encode_utf16().collect();
+    let mut expected_sql_state_encoded = widechar::to_widechar_vec(expected_sql_state);
     expected_sql_state_encoded.push(0);
     let actual_message_length = *text_length_ptr as usize;
     unsafe {
         assert_eq!(
             expected_message_text,
-            &(String::from_utf16_lossy(&*(actual_message_text as *const [u16; 256])))
+            &(widechar::from_widechar_ref_lossy(&*(actual_message_text as *const [u16; 256])))
                 [0..actual_message_length],
         );
         assert_eq!(
-            String::from_utf16(&*(expected_sql_state_encoded.as_ptr() as *const [u16; 6])).unwrap(),
-            String::from_utf16(&*(actual_sql_state as *const [u16; 6])).unwrap()
+            widechar::from_widechar_ref_lossy(
+                &*(expected_sql_state_encoded.as_ptr() as *const [u16; 6])
+            ),
+            widechar::from_widechar_ref_lossy(&*(actual_sql_state as *const [u16; 6]))
         );
     }
     assert_eq!(&mut expected_native_err as &mut i32, actual_native_error);
