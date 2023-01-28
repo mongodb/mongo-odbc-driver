@@ -49,8 +49,8 @@ impl MongoConnection {
             current_db: current_db.map(String::from),
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
         };
-
-        MongoQuery::execute(&connection, login_timeout, "select 1")?;
+        // Verify that the connection is working and the user has access to the default DB
+        MongoQuery::execute(&connection, None, "select 1")?;
         Ok(connection)
     }
 
