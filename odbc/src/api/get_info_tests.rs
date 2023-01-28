@@ -139,7 +139,7 @@ mod unit {
         search_pattern_escape,
         info_type = InfoType::SQL_SEARCH_PATTERN_ESCAPE as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 1 * size_of::<WideChar>() as i16,
+        buffer_length = size_of::<WideChar>() as i16,
         expected_length = 0,
         expected_value = "",
         actual_value_modifier = modify_string_value,
@@ -171,7 +171,7 @@ mod unit {
         info_type = InfoType::SQL_IDENTIFIER_QUOTE_CHAR as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 2 * size_of::<WideChar>() as i16,
-        expected_length = 1 * size_of::<WideChar>() as i16,
+        expected_length = size_of::<WideChar>() as i16,
         expected_value = "`",
         actual_value_modifier = modify_string_value,
     );
@@ -180,7 +180,7 @@ mod unit {
         owner_term,
         info_type = InfoType::SQL_OWNER_TERM as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 1 * size_of::<WideChar>() as i16,
+        buffer_length = size_of::<WideChar>() as i16,
         expected_length = 0,
         expected_value = "",
         actual_value_modifier = modify_string_value,
@@ -191,7 +191,7 @@ mod unit {
         info_type = InfoType::SQL_CATALOG_NAME_SEPARATOR as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 2 * size_of::<WideChar>() as i16,
-        expected_length = 1 * size_of::<WideChar>() as i16,
+        expected_length = size_of::<WideChar>() as i16,
         expected_value = ".",
         actual_value_modifier = modify_string_value,
     );
@@ -377,7 +377,7 @@ mod unit {
         info_type = InfoType::SQL_COLUMN_ALIAS as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 2 * size_of::<WideChar>() as i16,
-        expected_length = 1 * size_of::<WideChar>() as i16,
+        expected_length = size_of::<WideChar>() as i16,
         expected_value = "Y",
         actual_value_modifier = modify_string_value,
     );
@@ -396,7 +396,7 @@ mod unit {
         info_type = InfoType::SQL_ORDER_BY_COLUMNS_IN_SELECT as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 2 * size_of::<WideChar>() as i16,
-        expected_length = 1 * size_of::<WideChar>() as i16,
+        expected_length = size_of::<WideChar>() as i16,
         expected_value = "Y",
         actual_value_modifier = modify_string_value,
     );
@@ -417,7 +417,7 @@ mod unit {
         info_type = InfoType::SQL_DATA_SOURCE_READ_ONLY as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 2 * size_of::<WideChar>() as i16,
-        expected_length = 1 * size_of::<WideChar>() as i16,
+        expected_length = size_of::<WideChar>() as i16,
         expected_value = "Y",
         actual_value_modifier = modify_string_value,
     );
@@ -566,7 +566,7 @@ mod unit {
         info_type = InfoType::SQL_CATALOG_NAME as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 2 * size_of::<WideChar>() as i16,
-        expected_length = 1 * size_of::<WideChar>() as i16,
+        expected_length = size_of::<WideChar>() as i16,
         expected_value = "Y",
         actual_value_modifier = modify_string_value,
     );
