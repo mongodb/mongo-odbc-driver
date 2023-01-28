@@ -5,32 +5,30 @@ mod integration {
         generate_default_connection_str, get_sql_diagnostics, sql_return_to_string,
     };
     use odbc::ffi::SQL_NTS;
-    use odbc_sys::{
-        AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, DriverConnectOption,
-        EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, InfoType, Pointer, SQLAllocHandle,
-        SQLDriverConnectW, SQLFreeHandle, SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt,
-        SqlReturn, USmallInt,
-    };
+    use odbc_sys::{AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, InfoType, Pointer, SQLAllocHandle, SQLDriverConnectW, SQLFreeHandle, SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt, SqlReturn};
     use std::ptr::null_mut;
     use std::slice;
 
-    macro_rules! test_get_info {
-        ($conn_handle:expr, $env_handle: expr, $info_type: expr , $actual_value_modifier: ident) => {{
-            let conn_handle = $conn_handle;
-            let env_handle = $env_handle;
-            let info_type = $info_type;
-            let actual_value_modifier = $actual_value_modifier;
+    const BUFFER_LENGTH: SmallInt = 300;
 
-            let str_len_ptr = &mut 0;
-            const BUFFER_LENGTH: SmallInt = 300;
+    macro_rules! test_get_info {
+        ($conn_handle:expr, $info_type: expr, $info_value_buffer_length: expr, $info_value_type: expr) => {{
+            let conn_handle = $conn_handle;
+            let info_type = $info_type;
+            let info_value_buffer_length = $info_value_buffer_length;
+            let info_value_type = $info_value_type;
+
             let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let mut buffer = OutputBuffer{output_buffer: output_buffer as Pointer,
+            data_length: *&mut 0,
+            data_type: info_value_type};
 
             let outcome = SQLGetInfoW(
                 conn_handle as HDbc,
                 info_type,
-                output_buffer as Pointer,
-                BUFFER_LENGTH,
-                str_len_ptr,
+                buffer.output_buffer,
+                info_value_buffer_length,
+                &mut buffer.data_length as &mut _,
             );
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -38,23 +36,46 @@ mod integration {
                 "Expected {}, got {}. Diagnostic message is: {}",
                 sql_return_to_string(SqlReturn::SUCCESS),
                 sql_return_to_string(outcome),
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+                get_sql_diagnostics(HandleType::Dbc, conn_handle as Handle)
             );
+
+            let length = buffer.data_length.clone();
             println!(
-                "{:?} = {}\nLength is {}",
-                info_type,
-                actual_value_modifier(output_buffer as Pointer, *str_len_ptr as usize),
-                *str_len_ptr
-            );
+                 "{info_type:?} = {}\nLength is {length}",
+                 match buffer.data_type {
+                     DataType::WChar => Into::<String>::into(buffer),
+                     DataType::USmallInt => Into::<u16>::into(buffer).to_string()
+                 }
+             );
         }};
     }
 
-    unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
-        String::from_utf16_lossy(slice::from_raw_parts(value_ptr as *const _, out_length))
+    pub enum DataType {
+        USmallInt,
+        WChar
     }
 
-    unsafe fn modify_u16_value(value_ptr: Pointer, _: usize) -> u16 {
-        *(value_ptr as *mut USmallInt)
+    pub struct OutputBuffer {
+        pub output_buffer: Pointer,
+        pub data_length: i16,
+        pub data_type: DataType
+    }
+
+    impl Into<String> for OutputBuffer {
+        fn into(self) -> String {
+            unsafe {
+                String::from_utf16_lossy(slice::from_raw_parts(
+                    self.output_buffer as *const _,
+                    (self.data_length/2) as usize,
+                ))
+            }
+        }
+    }
+
+    impl Into<u16> for OutputBuffer {
+        fn into(self) -> u16 {
+            unsafe { *(self.output_buffer as *mut u16) }
+        }
     }
 
     /// Setup flow.
@@ -236,15 +257,16 @@ mod integration {
 
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::DbmsName,
-                modify_string_value
+                28,
+                DataType::WChar
             );
+
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::DbmsVer,
-                modify_string_value
+                58,
+                DataType::WChar
             );
         }
     }
@@ -259,11 +281,10 @@ mod integration {
         unsafe {
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::IdentifierQuoteChar,
-                modify_string_value
+                4,
+                DataType::WChar
             );
-
             // SQL-1177: Investigate how to test missing InfoType values
             // InfoType::SQL_OWNER_USAGE
             // InfoType::SQL_CATALOG_USAGE
@@ -272,33 +293,33 @@ mod integration {
             // InfoType::SQL_SQL_CONFORMANCE
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::MaxColumnsInOrderBy,
-                modify_u16_value
+                2,
+                DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::MaxIdentifierLen,
-                modify_u16_value
+                2,
+                DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::MaxColumnsInGroupBy,
-                modify_u16_value
+                2,
+                DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::MaxColumnsInSelect,
-                modify_u16_value
+                2,
+                DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::OrderByColumnsInSelect,
-                modify_string_value
+                4,
+                DataType::WChar
             );
             // InfoType::SQL_STRING_FUNCTIONS
             // InfoType::SQL_AGGREGATE_FUNCTIONS
@@ -314,18 +335,18 @@ mod integration {
             // InfoType::SQL_CONCAT_NULL_BEHAVIOR
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::CatalogName,
-                modify_string_value
+                4,
+                DataType::WChar
             );
             // InfoType::SQL_CATALOG_TERM
             // InfoType::SQL_OWNER_TERM
             // InfoType::SQL_ODBC_INTERFACE_CONFORMANCE
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::SearchPatternEscape,
-                modify_string_value
+                2,
+                DataType::WChar
             );
             // InfoType::SQL_CONVERT_FUNCTIONS
             // InfoType::SQL_CONVERT_BIGINT
@@ -353,9 +374,9 @@ mod integration {
             // InfoType::SQL_CONVERT_WVARCHAR
             test_get_info!(
                 conn_handle,
-                env_handle,
                 InfoType::SpecialCharacters,
-                modify_string_value
+                44,
+                DataType::WChar
             );
             // InfoType::SQL_RETURN_ESCAPE_CLAUSE
             // InfoType::SQL_DRIVER_ODBC_VER
