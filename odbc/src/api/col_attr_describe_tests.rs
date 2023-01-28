@@ -404,8 +404,8 @@ mod unit {
             (Desc::Precision, 0),
             (Desc::Scale, 0),
             (Desc::Searchable, SQL_SEARCHABLE as isize),
-            (Desc::Type, SqlDataType::EXT_W_VARCHAR.0 as isize),
-            (Desc::ConciseType, SqlDataType::EXT_W_VARCHAR.0 as isize),
+            (Desc::Type, SqlDataType::EXT_W_VARCHAR as isize),
+            (Desc::ConciseType, SqlDataType::EXT_W_VARCHAR as isize),
             (Desc::Unsigned, 1),
         ] {
             unsafe {

@@ -2846,9 +2846,27 @@ unsafe fn sql_get_stmt_attrw_helper(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
-    SQLGetTypeInfoW(handle, data_type)
+    panic_safe_exec!(
+        || {
+            let mongo_handle = MongoHandleRef::from(handle);
+            match FromPrimitive::from_i16(data_type) {
+                Some(sql_data_type) => {
+                    let stmt = must_be_valid!((*mongo_handle).as_statement());
+                    let types_info = MongoTypesInfo::new(sql_data_type);
+                    *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
+                    SqlReturn::SUCCESS
+                }
+                None => {
+                    mongo_handle.add_diag_info(ODBCError::InvalidSqlType(data_type.to_string()));
+                    SqlReturn::ERROR
+                }
+            }
+        },
+        handle
+    )
 }
 
 ///

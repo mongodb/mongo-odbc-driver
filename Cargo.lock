@@ -987,7 +987,6 @@ name = "integration_test"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
- "mongo-odbc-core",
  "mongodb",
  "odbc",
  "odbc-api",

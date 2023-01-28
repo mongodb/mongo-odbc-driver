@@ -94,7 +94,7 @@ mod integration {
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let mut out_connection_string_buff: [WideChar; (BUFFER_LENGTH as usize - 1)] =
+            let mut out_connection_string_buff: [WideChar; BUFFER_LENGTH as usize - 1] =
                 [0; (BUFFER_LENGTH as usize - 1)];
             let out_connection_string_buff = &mut out_connection_string_buff as *mut WideChar;
 
@@ -176,8 +176,8 @@ mod integration {
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let mut output_buffer: [WideChar; (BUFFER_LENGTH as usize - 1)] =
-                [0; (BUFFER_LENGTH as usize - 1)];
+            let mut output_buffer: [WideChar; BUFFER_LENGTH as usize - 1] =
+                [0; BUFFER_LENGTH as usize - 1];
             let output_buffer = &mut output_buffer as *mut WideChar;
 
             // SQL_DRIVER_NAME is not accessible through odbc_sys

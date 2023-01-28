@@ -23,7 +23,7 @@ tests:
     expected_length: [ 0, 0, 0, 0, 0 ]
     expected_is_searchable: [ 3, 3, 3, 3, 3 ]
     expected_is_unsigned: [ 1, 1, 1, 1, 1 ]
-    expected_sql_type: [ 12, 12, 12, 12, 12 ]
+    expected_sql_type: [ -9, -9, -9, -9, -9 ]
     expected_precision: [ 0, 0, 0, 0, 0 ]
     expected_scale: [ 0, 0, 0, 0, 0 ]
     expected_nullability: [ 0, 1, 1, 1, 1 ]

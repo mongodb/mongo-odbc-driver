@@ -81,6 +81,10 @@ unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
     )
 }
 
+unsafe fn modify_string_value_from_runes(value_ptr: Pointer, out_length: usize) -> String {
+    input_wtext_to_string(value_ptr as *const _, out_length)
+}
+
 unsafe fn modify_u32_value(value_ptr: Pointer, _: usize) -> u32 {
     *(value_ptr as *mut UInteger)
 }
@@ -125,10 +129,10 @@ mod unit {
         driver_odbc_ver,
         info_type = InfoType::SQL_DRIVER_ODBC_VER as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 6 * size_of::<WideChar>() as i16,
-        expected_length = 5 * size_of::<WideChar>() as i16,
+        buffer_length = 6,
+        expected_length = 5,
         expected_value = ODBC_VERSION,
-        actual_value_modifier = modify_string_value,
+        actual_value_modifier = modify_string_value_from_runes,
     );
 
     test_get_info!(
