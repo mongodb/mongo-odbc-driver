@@ -1,8 +1,9 @@
 use constants::{
     FRACTIONAL_TRUNCATION, GENERAL_ERROR, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
-    INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
-    INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER,
-    NO_RESULTSET, OPTION_CHANGED, RESTRICTED_DATATYPE, RIGHT_TRUNCATED,
+    INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE,
+    INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX,
+    INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET,
+    OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE, RIGHT_TRUNCATED,
     UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
@@ -27,6 +28,11 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     UnsupportedConnectionAttribute(String),
+    #[error(
+        "[{}][API] The statement attribute {0} is not supported",
+        VENDOR_IDENTIFIER
+    )]
+    UnsupportedStatementAttribute(String),
     #[error(
         "[{}][API] A schema pattern was specified, and the driver does not support schemas",
         VENDOR_IDENTIFIER
@@ -53,10 +59,16 @@ pub enum ODBCError {
     InvalidDescriptorIndex(u16),
     #[error("[{}][API] No ResultSet", VENDOR_IDENTIFIER)]
     InvalidCursorState,
+    #[error("[{}][API] Invalid SQL Type: {0}", VENDOR_IDENTIFIER)]
+    InvalidSqlType(String),
     #[error("[{}][API] Invalid handle type, expected {0}", VENDOR_IDENTIFIER)]
     InvalidHandleType(&'static str),
     #[error("[{}][API] Invalid value for attribute {0}", VENDOR_IDENTIFIER)]
     InvalidAttrValue(&'static str),
+    #[error("[{}][API] Invalid attribute identifier {0}", VENDOR_IDENTIFIER)]
+    InvalidAttrIdentifier(i32),
+    #[error("[{}][API] Invalid target type {0}", VENDOR_IDENTIFIER)]
+    InvalidTargetType(i16),
     #[error(
         "[{}][API] Missing property \"Driver\" or \"DSN\" in connection string",
         VENDOR_IDENTIFIER
@@ -125,17 +137,21 @@ impl ODBCError {
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::UnsupportedConnectionAttribute(_)
+            | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedInfoTypeRetrieval(_) => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidAttrValue(_) => INVALID_ATTR_VALUE,
+            ODBCError::InvalidAttrIdentifier(_) => INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER,
             ODBCError::InvalidCursorState => INVALID_CURSOR_STATE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
+            ODBCError::InvalidTargetType(_) => PROGRAM_TYPE_OUT_OF_RANGE,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
             ODBCError::UnsupportedFieldDescriptor(_) => UNSUPPORTED_FIELD_DESCRIPTOR,
             ODBCError::InvalidDescriptorIndex(_) => INVALID_DESCRIPTOR_INDEX,
+            ODBCError::InvalidSqlType(_) => INVALID_SQL_TYPE,
             ODBCError::RestrictedDataType(_, _) => RESTRICTED_DATATYPE,
             ODBCError::FractionalTruncation(_) => FRACTIONAL_TRUNCATION,
             ODBCError::FractionalSecondsTruncation(_) => FRACTIONAL_TRUNCATION,
@@ -160,12 +176,15 @@ impl ODBCError {
             | ODBCError::Panic(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::InvalidAttrValue(_)
+            | ODBCError::InvalidAttrIdentifier(_)
             | ODBCError::InvalidCursorState
             | ODBCError::InvalidHandleType(_)
+            | ODBCError::InvalidTargetType(_)
             | ODBCError::MissingDriverOrDSNProperty
             | ODBCError::OutStringTruncated(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
             | ODBCError::UnsupportedConnectionAttribute(_)
+            | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)
@@ -177,6 +196,7 @@ impl ODBCError {
             | ODBCError::TimeTruncation(_)
             | ODBCError::IntegralTruncation(_)
             | ODBCError::InvalidDatetimeFormat(_)
+            | ODBCError::InvalidSqlType(_)
             | ODBCError::UnsupportedFieldDescriptor(_)
             | ODBCError::InvalidCharacterValue(_, _)
             | ODBCError::NoResultSet

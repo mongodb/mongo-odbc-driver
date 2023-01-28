@@ -2,6 +2,7 @@ mod test_generator_util;
 
 use odbc::{create_environment_v3, Allocated, Connection, Handle, NoResult, Statement};
 use odbc_sys::{CDataType, Desc, HStmt, HandleType, SmallInt, SqlReturn, USmallInt};
+use widechar::WideChar;
 
 use odbc::safe::AutocommitOn;
 use serde::{Deserialize, Serialize};
@@ -18,7 +19,7 @@ use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
 const SQL_NULL_DATA: isize = -1;
-const BUFFER_LENGTH: usize = 200;
+const BUFFER_LENGTH: usize = 1000;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
@@ -27,6 +28,8 @@ pub enum Error {
         test: String,
         expected: String,
         actual: String,
+        row: usize,
+        column: usize,
     },
     #[error("mismatch in row counts for test {test}: expected {expected}, actual {actual}")]
     RowCount {
@@ -116,21 +119,21 @@ pub enum TestDef {
 
 impl fmt::Display for TestDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
-/// integration_test runs the query and function tests contained in the TEST_FILE_DIR directory
+/// resultset_tests runs the query and function tests contained in the TEST_FILE_DIR directory
 #[test]
 #[ignore]
-pub fn integration_test() -> Result<()> {
-    run_integration_tests(false)
+pub fn resultset_tests() -> Result<()> {
+    run_resultset_tests(false)
 }
 
 /// Run an integration test. The generate argument indicates whether
 /// the test results should written to a file for baseline test file
 /// generation, or be asserted for correctness.
-pub fn run_integration_tests(generate: bool) -> Result<()> {
+pub fn run_resultset_tests(generate: bool) -> Result<()> {
     let env = create_environment_v3().unwrap();
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
     for path in paths {
@@ -138,7 +141,7 @@ pub fn run_integration_tests(generate: bool) -> Result<()> {
 
         for test in yaml.tests {
             match test.skip_reason {
-                Some(sr) => println!("Skip Reason: {}", sr),
+                Some(sr) => println!("Skip Reason: {sr}"),
                 None => {
                     let mut conn_str = crate::common::generate_default_connection_str();
                     conn_str.push_str(&("DATABASE=".to_owned() + &test.db));
@@ -164,7 +167,7 @@ pub fn run_integration_tests(generate: bool) -> Result<()> {
 /// path names.
 pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>> {
     let mut paths: Vec<String> = vec![];
-    let entries = fs::read_dir(dir).map_err(|e| Error::InvalidDirectory(format!("{:?}", e)))?;
+    let entries = fs::read_dir(dir).map_err(|e| Error::InvalidDirectory(format!("{e:?}")))?;
     for entry in entries {
         match entry {
             Ok(de) => {
@@ -173,7 +176,7 @@ pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>> {
                     paths.push(path.to_str().unwrap().to_string());
                 }
             }
-            Err(e) => return Err(Error::InvalidFilePath(format!("{:?}", e))),
+            Err(e) => return Err(Error::InvalidFilePath(format!("{e:?}"))),
         };
     }
     Ok(paths)
@@ -182,9 +185,9 @@ pub fn load_file_paths(dir: PathBuf) -> Result<Vec<String>> {
 /// parse_test_file_yaml deserializes the given YAML file into a
 /// IntegrationTest struct.
 pub fn parse_test_file_yaml(path: &str) -> Result<IntegrationTest> {
-    let f = fs::File::open(path).map_err(|e| Error::InvalidFile(format!("{:?}", e)))?;
+    let f = fs::File::open(path).map_err(|e| Error::InvalidFile(format!("{e:?}")))?;
     let integration_test: IntegrationTest =
-        serde_yaml::from_reader(f).map_err(|e| Error::CannotDeserializeYaml(format!("{:?}", e)))?;
+        serde_yaml::from_reader(f).map_err(|e| Error::CannotDeserializeYaml(format!("{e:?}")))?;
     Ok(integration_test)
 }
 
@@ -199,18 +202,23 @@ fn str_or_null(value: &Value) -> *const u8 {
 }
 
 /// wstr_or_null converts value to a wide string or null_mut() if null
-fn wstr_or_null(value: &Value) -> *const u16 {
+/// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
+/// as the ptr.
+fn wstr_or_null(value: &Value) -> (*const u16, Vec<u16>) {
     if value.is_null() {
-        null_mut()
+        (null_mut(), Vec::new())
     } else {
         to_wstr_ptr(value.as_str().expect("Unable to cast value as string"))
     }
 }
 
-fn to_wstr_ptr(string: &str) -> *const u16 {
-    let mut v: Vec<u16> = string.encode_utf16().collect();
+/// to_wstr_ptr converts a &str into a *const u16.
+/// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
+/// as the ptr.
+fn to_wstr_ptr(string: &str) -> (*const u16, Vec<WideChar>) {
+    let mut v = widechar::to_widechar_vec(string);
     v.push(0);
-    v.as_ptr()
+    (v.as_ptr(), v)
 }
 
 fn to_i16(value: &Value) -> Result<i16> {
@@ -238,7 +246,7 @@ fn run_query_test(
     unsafe {
         match odbc_sys::SQLExecDirectW(
             stmt.handle() as *mut _,
-            to_wstr_ptr(query),
+            to_wstr_ptr(query).0,
             query.len() as i32,
         ) {
             SqlReturn::SUCCESS => {
@@ -302,13 +310,45 @@ fn run_function_test(
             unsafe {
                 Ok(odbc_sys::SQLTablesW(
                     statement.handle() as HStmt,
-                    wstr_or_null(&function[1]),
+                    wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
-                    wstr_or_null(&function[3]),
+                    wstr_or_null(&function[3]).0,
                     to_i16(&function[4])?,
-                    wstr_or_null(&function[5]),
+                    wstr_or_null(&function[5]).0,
                     to_i16(&function[6])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
+                    to_i16(&function[8])?,
+                ))
+            }
+        }
+        "sqlcolumns" => {
+            check_array_length(function, 9)?;
+            unsafe {
+                Ok(odbc_sys::SQLColumns(
+                    statement.handle() as HStmt,
+                    str_or_null(&function[1]),
+                    to_i16(&function[2])?,
+                    str_or_null(&function[3]),
+                    to_i16(&function[4])?,
+                    str_or_null(&function[5]),
+                    to_i16(&function[6])?,
+                    str_or_null(&function[7]),
+                    to_i16(&function[8])?,
+                ))
+            }
+        }
+        "sqlcolumnsw" => {
+            check_array_length(function, 9)?;
+            unsafe {
+                Ok(odbc_sys::SQLColumnsW(
+                    statement.handle() as HStmt,
+                    wstr_or_null(&function[1]).0,
+                    to_i16(&function[2])?,
+                    wstr_or_null(&function[3]).0,
+                    to_i16(&function[4])?,
+                    wstr_or_null(&function[5]).0,
+                    to_i16(&function[6])?,
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
                 ))
             }
@@ -318,18 +358,18 @@ fn run_function_test(
             unsafe {
                 Ok(odbc_sys::SQLForeignKeysW(
                     statement.handle() as HStmt,
-                    wstr_or_null(&function[1]),
+                    wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
-                    wstr_or_null(&function[3]),
+                    wstr_or_null(&function[3]).0,
                     to_i16(&function[4])?,
-                    wstr_or_null(&function[5]),
+                    wstr_or_null(&function[5]).0,
                     to_i16(&function[6])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
-                    wstr_or_null(&function[7]),
+                    wstr_or_null(&function[7]).0,
                     to_i16(&function[8])?,
-                    wstr_or_null(&function[7]),
-                    to_i16(&function[8])?,
+                    wstr_or_null(&function[9]).0,
+                    to_i16(&function[10])?,
                 ))
             }
         }
@@ -422,6 +462,7 @@ fn validate_result_set(
     let column_count = get_column_count(&stmt)?;
     let mut row_counter = 0;
     if let Some(expected_result) = entry.expected_result.as_ref() {
+        let mut row_num = 0;
         while fetch_row(&stmt)? {
             let expected_row_check = expected_result.get(row_counter);
             // If there are no more expected rows, continue fetching to get actual row count
@@ -434,6 +475,7 @@ fn validate_result_set(
                         row: row_counter,
                     });
                 }
+                row_num += 1;
                 for i in 0..(column_count) {
                     let expected_field = expected_row.get(i).unwrap();
                     let expected_data_type = if expected_field.is_number() {
@@ -448,6 +490,8 @@ fn validate_result_set(
                             test: entry.description.clone(),
                             expected: expected_field.to_string(),
                             actual: actual_field.to_string(),
+                            row: row_num,
+                            column: i + 1,
                         });
                     }
                 }
@@ -480,7 +524,7 @@ fn validate_result_set_metadata_helper(
                 test: description,
                 expected: exp_metadata.len(),
                 actual: column_count,
-                descriptor: format!("{:?}", descriptor),
+                descriptor: format!("{descriptor:?}"),
             });
         }
         for (i, current_exp_metadata) in exp_metadata.iter().enumerate().take(column_count) {
@@ -493,7 +537,7 @@ fn validate_result_set_metadata_helper(
                             test: description,
                             expected: n.to_string(),
                             actual: actual_value.to_string(),
-                            descriptor: format!("{:?}", descriptor),
+                            descriptor: format!("{descriptor:?}"),
                             column: i,
                         });
                     }
@@ -504,12 +548,12 @@ fn validate_result_set_metadata_helper(
                             test: description,
                             expected: s.to_string(),
                             actual: actual_value.to_string(),
-                            descriptor: format!("{:?}", descriptor),
+                            descriptor: format!("{descriptor:?}"),
                             column: i,
                         });
                     }
                 }
-                meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),
+                meta_type => return Err(Error::UnexpectedMetadataType(format!("{meta_type:?}"))),
             }
         }
     }
@@ -616,7 +660,7 @@ fn get_column_attribute(
 ) -> Result<Value> {
     let string_length_ptr = &mut 0;
     let character_attrib_ptr: *mut std::ffi::c_void =
-        Box::into_raw(Box::new([0u16; BUFFER_LENGTH])) as *mut _;
+        Box::into_raw(Box::new([0; BUFFER_LENGTH])) as *mut _;
     let numeric_attrib_ptr = &mut 0;
     unsafe {
         match odbc_sys::SQLColAttributeW(
@@ -629,12 +673,12 @@ fn get_column_attribute(
             numeric_attrib_ptr,
         ) {
             SqlReturn::SUCCESS => Ok(match column_metadata_type {
-                Value::String(_) => json!((String::from_utf16_lossy(
-                    &*(character_attrib_ptr as *const [u16; BUFFER_LENGTH])
-                ))[0..*string_length_ptr as usize]
+                Value::String(_) => json!((widechar::from_widechar_ref_lossy(
+                    &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH])
+                ))[0..(*string_length_ptr as usize / std::mem::size_of::<WideChar>())]
                     .to_string()),
                 Value::Number(_) => json!(*numeric_attrib_ptr),
-                meta_type => return Err(Error::UnexpectedMetadataType(format!("{:?}", meta_type))),
+                meta_type => return Err(Error::UnexpectedMetadataType(format!("{meta_type:?}"))),
             }),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLColAttributeW".to_string(),

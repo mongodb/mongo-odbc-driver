@@ -4,7 +4,7 @@ use crate::{
     handles::definitions::{Env, EnvState, MongoHandle},
     SQLGetDiagRecW, SQLGetEnvAttrW, SQLSetEnvAttrW,
 };
-use odbc_sys::{EnvironmentAttribute, HEnv, HandleType, Integer, Pointer, SqlReturn};
+use odbc_sys::{HEnv, HandleType, Integer, Pointer, SqlReturn};
 use std::{collections::BTreeMap, ffi::c_void, mem::size_of};
 
 const OPTIONAL_VALUE_CHANGED: &str = "01S02\0";
@@ -17,6 +17,7 @@ fn get_set_env_attr(
 ) {
     let attr_buffer = Box::into_raw(Box::new(0));
     let string_length_ptr = &mut 0;
+    let attr = attribute as i32;
 
     unsafe {
         // Test the environment attribute's default value
@@ -24,7 +25,7 @@ fn get_set_env_attr(
             SqlReturn::SUCCESS,
             SQLGetEnvAttrW(
                 handle as *mut _,
-                attribute,
+                attr,
                 attr_buffer as Pointer,
                 0,
                 string_length_ptr
@@ -41,13 +42,13 @@ fn get_set_env_attr(
                 let value = discriminant as Pointer;
                 assert_eq!(
                     expected_return,
-                    SQLSetEnvAttrW(handle as HEnv, attribute, value, 0)
+                    SQLSetEnvAttrW(handle as HEnv, attr, value, 0)
                 );
                 assert_eq!(
                     SqlReturn::SUCCESS,
                     SQLGetEnvAttrW(
                         handle as *mut _,
-                        attribute,
+                        attr,
                         attr_buffer as Pointer,
                         0,
                         string_length_ptr
@@ -80,7 +81,7 @@ mod unit {
 
             get_set_env_attr(
                 env_handle,
-                EnvironmentAttribute::OdbcVersion,
+                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
                 map! {
                     OdbcVersion::Odbc3 as i32 => SqlReturn::SUCCESS,
                     OdbcVersion::Odbc3_80 as i32 => SqlReturn::SUCCESS,
@@ -91,7 +92,7 @@ mod unit {
 
             get_set_env_attr(
                 env_handle,
-                EnvironmentAttribute::OutputNts,
+                EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS,
                 map! {
                     SqlBool::True as i32 => SqlReturn::SUCCESS,
                     SqlBool::False as i32 => SqlReturn::ERROR
@@ -101,7 +102,7 @@ mod unit {
 
             get_set_env_attr(
                 env_handle,
-                EnvironmentAttribute::ConnectionPooling,
+                EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING,
                 map! {
                     ConnectionPooling::Off as i32 => SqlReturn::SUCCESS,
                     ConnectionPooling::OnePerHEnv as i32 => SqlReturn::SUCCESS_WITH_INFO,
@@ -113,7 +114,7 @@ mod unit {
 
             get_set_env_attr(
                 env_handle,
-                EnvironmentAttribute::CpMatch,
+                EnvironmentAttribute::SQL_ATTR_CP_MATCH,
                 map! {
                     CpMatch::Strict as i32 => SqlReturn::SUCCESS,
                     CpMatch::Relaxed as i32 => SqlReturn::SUCCESS_WITH_INFO,
@@ -127,7 +128,7 @@ mod unit {
                 SqlReturn::SUCCESS,
                 SQLGetEnvAttrW(
                     env_handle as *mut _,
-                    EnvironmentAttribute::OutputNts,
+                    EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
                     std::ptr::null_mut() as *mut c_void,
                     0,
                     string_length_ptr
@@ -140,7 +141,7 @@ mod unit {
                 SqlReturn::SUCCESS,
                 SQLGetEnvAttrW(
                     env_handle as *mut _,
-                    EnvironmentAttribute::OutputNts,
+                    EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
                     std::ptr::null_mut() as *mut c_void,
                     0,
                     std::ptr::null_mut()
@@ -153,20 +154,23 @@ mod unit {
     // 01S02: Optional value changed.
     #[test]
     fn test_optional_value_changed() {
+        use widechar::WideChar;
         unsafe {
             let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLSetEnvAttrW(
                     handle as HEnv,
-                    EnvironmentAttribute::CpMatch,
+                    EnvironmentAttribute::SQL_ATTR_CP_MATCH as i32,
                     CpMatch::Relaxed as i32 as Pointer,
                     0
                 )
             );
 
-            let sql_state = &mut [0u16; 6] as *mut _;
-            let message_text = &mut [0u16; 93] as *mut _;
+            let mut sql_state: [WideChar; 6] = [0; 6];
+            let sql_state = &mut sql_state as *mut WideChar;
+            let mut message_text: [WideChar; 93] = [0; 93];
+            let message_text = &mut message_text as *mut WideChar;
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetDiagRecW(
@@ -182,11 +186,11 @@ mod unit {
             );
             assert_eq!(
                 OPTIONAL_VALUE_CHANGED,
-                String::from_utf16(&*(sql_state as *const [u16; 6])).unwrap()
+                widechar::from_widechar_ref_lossy(&*(sql_state as *const [WideChar; 6]))
             );
             assert_eq!(
              "[MongoDB][API] Invalid value for attribute SQL_ATTR_CP_MATCH, changed to SQL_CP_STRICT_MATCH\0",
-                String::from_utf16(&*(message_text as *const [u16; 93])).unwrap()
+                widechar::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 93]))
             );
         }
     }

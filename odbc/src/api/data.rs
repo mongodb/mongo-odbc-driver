@@ -1,4 +1,5 @@
 use crate::{
+    api::definitions::CDataType,
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle, Statement},
 };
@@ -6,10 +7,12 @@ use bson::{spec::BinarySubtype, Bson};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use file_dbg_macros::dbg_write;
 use mongo_odbc_core::util::Decimal128Plus;
-use odbc_sys::{CDataType, Date, Len, Pointer, Time, Timestamp, USmallInt};
-use odbc_sys::{Char, Integer, SmallInt, SqlReturn, WChar};
+use odbc_sys::{
+    Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
+};
 use regex::Regex;
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
+use widechar::WideChar;
 
 const BINARY: &str = "Binary";
 const DOUBLE: &str = "Double";
@@ -696,7 +699,7 @@ pub unsafe fn format_cached_data(
             SqlReturn::NO_DATA
         }
         CachedData::Char(index, data) => {
-            if target_type != CDataType::Char {
+            if target_type != CDataType::SQL_C_CHAR {
                 let stmt = (*mongo_handle).as_statement().unwrap();
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::Char(index, data));
                 return SqlReturn::NO_DATA;
@@ -713,7 +716,7 @@ pub unsafe fn format_cached_data(
             )
         }
         CachedData::WChar(index, data) => {
-            if target_type != CDataType::WChar {
+            if target_type != CDataType::SQL_C_WCHAR {
                 let stmt = (*mongo_handle).as_statement().unwrap();
 
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::WChar(index, data));
@@ -727,11 +730,11 @@ pub unsafe fn format_cached_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_wstring
+                isize_len::set_output_wstring_as_bytes
             )
         }
         CachedData::Bin(index, data) => {
-            if target_type != CDataType::Binary {
+            if target_type != CDataType::SQL_C_BINARY {
                 let stmt = (*mongo_handle).as_statement().unwrap();
 
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::Bin(index, data));
@@ -778,8 +781,8 @@ pub unsafe fn format_bson_data(
         _ => {}
     }
     match target_type {
-        CDataType::Binary | CDataType::Guid => {
-            let data = if target_type == CDataType::Guid {
+        CDataType::SQL_C_BINARY | CDataType::SQL_C_GUID => {
+            let data = if target_type == CDataType::SQL_C_GUID {
                 data.to_guid()
             } else {
                 data.to_binary()
@@ -802,7 +805,7 @@ pub unsafe fn format_bson_data(
                 }
             }
         }
-        CDataType::Char => {
+        CDataType::SQL_C_CHAR => {
             let data = data.to_json().bytes().collect::<Vec<u8>>();
             char_data!(
                 mongo_handle,
@@ -815,8 +818,8 @@ pub unsafe fn format_bson_data(
                 isize_len::set_output_string
             )
         }
-        CDataType::WChar => {
-            let data = data.to_json().encode_utf16().collect::<Vec<u16>>();
+        CDataType::SQL_C_WCHAR => {
+            let data = widechar::to_widechar_vec(&data.to_json());
             char_data!(
                 mongo_handle,
                 col_num,
@@ -825,10 +828,10 @@ pub unsafe fn format_bson_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_wstring
+                isize_len::set_output_wstring_as_bytes
             )
         }
-        CDataType::Bit => {
+        CDataType::SQL_C_BIT => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -837,7 +840,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::Double => {
+        CDataType::SQL_C_DOUBLE => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -846,7 +849,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::Float => {
+        CDataType::SQL_C_FLOAT => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -855,7 +858,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::SBigInt => {
+        CDataType::SQL_C_SBIGINT => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -864,7 +867,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::UBigInt => {
+        CDataType::SQL_C_UBIGINT => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -873,7 +876,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::SLong => {
+        CDataType::SQL_C_SLONG => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -882,7 +885,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::ULong => {
+        CDataType::SQL_C_ULONG => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
@@ -891,21 +894,21 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::TimeStamp | CDataType::TypeTimestamp => format_datetime(
+        CDataType::SQL_C_TIMESTAMP | CDataType::SQL_C_TYPE_TIMESTAMP => format_datetime(
             mongo_handle,
             col_num,
             target_value_ptr,
             str_len_or_ind_ptr,
             data,
         ),
-        CDataType::Time | CDataType::TypeTime => format_time(
+        CDataType::SQL_C_TIME | CDataType::SQL_C_TYPE_TIME => format_time(
             mongo_handle,
             col_num,
             target_value_ptr,
             str_len_or_ind_ptr,
             data,
         ),
-        CDataType::Date | CDataType::TypeDate => format_date(
+        CDataType::SQL_C_DATE | CDataType::SQL_C_TYPE_DATE => format_date(
             mongo_handle,
             col_num,
             target_value_ptr,
@@ -913,7 +916,7 @@ pub unsafe fn format_bson_data(
             data,
         ),
         other => {
-            mongo_handle.add_diag_info(ODBCError::UnimplementedDataType(format!("{:?}", other)));
+            mongo_handle.add_diag_info(ODBCError::UnimplementedDataType(format!("{other:?}")));
             SqlReturn::ERROR
         }
     }
@@ -954,7 +957,8 @@ pub unsafe fn input_text_to_string(text: *const Char, len: usize) -> String {
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
+pub unsafe fn input_wtext_to_string(text: *const WideChar, len: usize) -> String {
+    use widechar::from_widechar_vec_lossy;
     if (len as isize) < 0 {
         let mut dst = Vec::new();
         let mut itr = text;
@@ -964,17 +968,17 @@ pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
                 itr = itr.offset(1);
             }
         }
-        return String::from_utf16_lossy(&dst);
+        return from_widechar_vec_lossy(dst);
     }
 
     let mut dst = Vec::with_capacity(len);
     dst.set_len(len);
     copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-    String::from_utf16_lossy(&dst)
+    from_widechar_vec_lossy(dst)
 }
 
 ///
-/// set_output_wstring_helper writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+/// set_output_wstring_helper writes [`message`] to the *WideChar [`output_ptr`]. [`buffer_len`] is the
 /// length of the [`output_ptr`] buffer in characters; the message should be truncated
 /// if it is longer than the buffer length.
 ///
@@ -982,8 +986,8 @@ pub unsafe fn input_wtext_to_string(text: *const WChar, len: usize) -> String {
 /// This writes to multiple raw C-pointers
 ///
 unsafe fn set_output_wstring_helper(
-    message: &[u16],
-    output_ptr: *mut WChar,
+    message: &[WideChar],
+    output_ptr: *mut WideChar,
     buffer_len: usize,
 ) -> (usize, SqlReturn) {
     // If the output_ptr is null or no buffer space has been allocated, we need
@@ -1077,7 +1081,35 @@ unsafe fn set_output_binary_helper(
 pub mod i16_len {
     use super::*;
     ///
-    /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+    /// set_output_wstring_as_bytes writes [`message`] to the Pointer [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of *BYTES* written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_wstring_as_bytes(
+        message: &str,
+        output_ptr: Pointer,
+        buffer_len: usize,
+        text_length_ptr: *mut SmallInt,
+    ) -> SqlReturn {
+        let message = widechar::to_widechar_vec(message);
+        let (len, ret) = set_output_wstring_helper(
+            &message,
+            output_ptr as *mut WideChar,
+            buffer_len / size_of::<WideChar>(),
+        );
+        // Only copy the length if the pointer is not null
+        if !text_length_ptr.is_null() {
+            *text_length_ptr = (size_of::<WideChar>() * len) as SmallInt;
+        }
+        ret
+    }
+
+    ///
+    /// set_output_wstring writes [`message`] to the *WideChar [`output_ptr`]. [`buffer_len`] is the
     /// length of the [`output_ptr`] buffer in characters; the message should be truncated
     /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
@@ -1087,11 +1119,11 @@ pub mod i16_len {
     ///
     pub unsafe fn set_output_wstring(
         message: &str,
-        output_ptr: *mut WChar,
+        output_ptr: *mut WideChar,
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = message.encode_utf16().collect::<Vec<u16>>();
+        let message = widechar::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len);
         // Only copy the length if the pointer is not null
         if !text_length_ptr.is_null() {
@@ -1150,26 +1182,26 @@ pub mod i16_len {
 pub mod i32_len {
     use super::*;
     ///
-    /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
-    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
-    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// set_output_wstring_as_bytes writes [`message`] to the Pointer [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in *BYTES*; the message should be truncated
+    /// if it is longer than the buffer length. The number of *BYTES* written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
     ///
     /// # Safety
     /// This writes to multiple raw C-pointers
     ///
-    pub unsafe fn set_output_wstring(
+    pub unsafe fn set_output_wstring_as_bytes(
         message: &str,
-        output_ptr: *mut WChar,
+        output_ptr: Pointer,
         buffer_len: usize,
         text_length_ptr: *mut Integer,
     ) -> SqlReturn {
         let (len, ret) = set_output_wstring_helper(
-            &message.encode_utf16().collect::<Vec<_>>(),
-            output_ptr,
-            buffer_len,
+            &widechar::to_widechar_vec(message),
+            output_ptr as *mut WideChar,
+            buffer_len / size_of::<WideChar>(),
         );
-        *text_length_ptr = len as Integer;
+        *text_length_ptr = (size_of::<WideChar>() * len) as Integer;
         ret
     }
 
@@ -1222,20 +1254,20 @@ pub mod i32_len {
 pub mod isize_len {
     use super::*;
     ///
-    /// set_output_wstring writes [`message`] to the *WChar [`output_ptr`]. [`buffer_len`] is the
+    /// set_output_wstring writes [`message`] to the Pointer [`output_ptr`]. [`buffer_len`] is the
     /// length of the [`output_ptr`] buffer in characters; the message should be truncated
-    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
+    /// if it is longer than the buffer length. The number of *BYTES* written to [`output_ptr`]
     /// should be stored in [`text_length_ptr`].
     ///
     /// # Safety
     /// This writes to multiple raw C-pointers
     ///
-    pub unsafe fn set_output_wstring(
+    pub unsafe fn set_output_wstring_as_bytes(
         stmt: &Statement,
         message: Vec<u16>,
         col_num: USmallInt,
         index: usize,
-        output_ptr: *mut WChar,
+        output_ptr: *mut WideChar,
         buffer_len: usize,
         text_length_ptr: *mut Len,
     ) -> SqlReturn {
@@ -1249,10 +1281,13 @@ pub mod isize_len {
             *text_length_ptr = 0;
             return SqlReturn::NO_DATA;
         }
-        let (len, ret) =
-            set_output_wstring_helper(message.get(index..).unwrap(), output_ptr, buffer_len);
+        let (len, ret) = set_output_wstring_helper(
+            message.get(index..).unwrap(),
+            output_ptr,
+            buffer_len / size_of::<WideChar>(),
+        );
         // the returned length should always be the total length of the data.
-        *text_length_ptr = (message.len() - index) as Len;
+        *text_length_ptr = (size_of::<WideChar>() * (message.len() - index)) as Len;
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret
     }
@@ -1361,7 +1396,7 @@ pub mod isize_len {
 /// unsupported functions.
 ///
 pub fn unsupported_function(handle: &mut MongoHandle, name: &'static str) -> SqlReturn {
-    dbg_write!(format!("Unsupported Function: {}, SQLReturn = ERROR", name));
+    dbg_write!(format!("Unsupported Function: {name}, SQLReturn = ERROR"));
     handle.clear_diagnostics();
     handle.add_diag_info(ODBCError::Unimplemented(name));
     SqlReturn::ERROR

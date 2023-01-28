@@ -5,7 +5,12 @@ mod integration {
         generate_default_connection_str, get_sql_diagnostics, sql_return_to_string,
     };
     use odbc::ffi::SQL_NTS;
-    use odbc_sys::{AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, InfoType, Pointer, SQLAllocHandle, SQLDriverConnectW, SQLFreeHandle, SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt, SqlReturn};
+    use odbc_sys::{
+        AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, DriverConnectOption,
+        EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, InfoType, Pointer, SQLAllocHandle,
+        SQLDriverConnectW, SQLFreeHandle, SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt,
+        SqlReturn,
+    };
     use std::ptr::null_mut;
     use std::slice;
 
@@ -19,9 +24,11 @@ mod integration {
             let info_value_type = $info_value_type;
 
             let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
-            let mut buffer = OutputBuffer{output_buffer: output_buffer as Pointer,
-            data_length: *&mut 0,
-            data_type: info_value_type};
+            let mut buffer = OutputBuffer {
+                output_buffer: output_buffer as Pointer,
+                data_length: *&mut 0,
+                data_type: info_value_type,
+            };
 
             let outcome = SQLGetInfoW(
                 conn_handle as HDbc,
@@ -41,40 +48,40 @@ mod integration {
 
             let length = buffer.data_length.clone();
             println!(
-                 "{info_type:?} = {}\nLength is {length}",
-                 match buffer.data_type {
-                     DataType::WChar => Into::<String>::into(buffer),
-                     DataType::USmallInt => Into::<u16>::into(buffer).to_string()
-                 }
-             );
+                "{info_type:?} = {}\nLength is {length}",
+                match buffer.data_type {
+                    DataType::WChar => Into::<String>::into(buffer),
+                    DataType::USmallInt => Into::<u16>::into(buffer).to_string(),
+                }
+            );
         }};
     }
 
     pub enum DataType {
         USmallInt,
-        WChar
+        WChar,
     }
 
     pub struct OutputBuffer {
         pub output_buffer: Pointer,
         pub data_length: i16,
-        pub data_type: DataType
+        pub data_type: DataType,
     }
 
-    impl Into<String> for OutputBuffer {
-        fn into(self) -> String {
+    impl From<OutputBuffer> for String {
+        fn from(val: OutputBuffer) -> Self {
             unsafe {
                 String::from_utf16_lossy(slice::from_raw_parts(
-                    self.output_buffer as *const _,
-                    (self.data_length/2) as usize,
+                    val.output_buffer as *const _,
+                    (val.data_length / 2) as usize,
                 ))
             }
         }
     }
 
-    impl Into<u16> for OutputBuffer {
-        fn into(self) -> u16 {
-            unsafe { *(self.output_buffer as *mut u16) }
+    impl From<OutputBuffer> for u16 {
+        fn from(val: OutputBuffer) -> Self {
+            unsafe { *(val.output_buffer as *mut u16) }
         }
     }
 
@@ -123,6 +130,7 @@ mod integration {
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
     fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
+        use widechar::WideChar;
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         let output_len;
@@ -152,13 +160,14 @@ mod integration {
 
             // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
             in_connection_string = generate_default_connection_str();
-            let mut in_connection_string_encoded: Vec<u16> =
-                in_connection_string.encode_utf16().collect();
+            let mut in_connection_string_encoded = widechar::to_widechar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let out_connection_string_buff = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let mut out_connection_string_buff: [WideChar; BUFFER_LENGTH as usize - 1] =
+                [0; (BUFFER_LENGTH as usize - 1)];
+            let out_connection_string_buff = &mut out_connection_string_buff as *mut WideChar;
 
             assert_ne!(
                 SqlReturn::ERROR,
@@ -177,7 +186,7 @@ mod integration {
             );
 
             output_len = *str_len_ptr;
-            out_connection_string = String::from_utf16_lossy(slice::from_raw_parts(
+            out_connection_string = widechar::from_widechar_ref_lossy(slice::from_raw_parts(
                 out_connection_string_buff,
                 output_len as usize,
             ));
@@ -230,16 +239,10 @@ mod integration {
         unsafe {
             let input_len = in_connection_string.len() as SmallInt;
 
-            println!(
-                "Input connection string = {}\nLength is {}",
-                in_connection_string, input_len
-            );
-            println!(
-                "Output connection string = {}\nLength is {}",
-                out_connection_string, output_len
-            );
+            println!("Input connection string = {in_connection_string}\nLength is {input_len}");
+            println!("Output connection string = {out_connection_string}\nLength is {output_len}");
             // The output string should be the same as the input string except with extra curly braces around the driver name
-            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and output connection string have the same length but input string length is {} and output string length is {}",input_len, output_len);
+            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and output connection string have the same length but input string length is {input_len} and output string length is {output_len}");
 
             // SQL_DRIVER_NAME is not accessible through odbc_sys
             /*
@@ -255,19 +258,9 @@ mod integration {
             );
              */
 
-            test_get_info!(
-                conn_handle,
-                InfoType::DbmsName,
-                28,
-                DataType::WChar
-            );
+            test_get_info!(conn_handle, InfoType::DbmsName, 28, DataType::WChar);
 
-            test_get_info!(
-                conn_handle,
-                InfoType::DbmsVer,
-                58,
-                DataType::WChar
-            );
+            test_get_info!(conn_handle, InfoType::DbmsVer, 58, DataType::WChar);
         }
     }
 
@@ -333,12 +326,7 @@ mod integration {
             // InfoType::SQL_TIMEDATE_ADD_INTERVALS
             // InfoType::SQL_TIMEDATE_DIFF_INTERVALS
             // InfoType::SQL_CONCAT_NULL_BEHAVIOR
-            test_get_info!(
-                conn_handle,
-                InfoType::CatalogName,
-                4,
-                DataType::WChar
-            );
+            test_get_info!(conn_handle, InfoType::CatalogName, 4, DataType::WChar);
             // InfoType::SQL_CATALOG_TERM
             // InfoType::SQL_OWNER_TERM
             // InfoType::SQL_ODBC_INTERFACE_CONFORMANCE
