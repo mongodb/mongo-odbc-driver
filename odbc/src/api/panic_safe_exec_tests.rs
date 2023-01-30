@@ -72,7 +72,7 @@ mod unit {
             // Using a substring of the error because directory format differs for windows and linux
             // and to not depend on line number.
             assert!(
-                PANIC_ERROR_MSG.is_match(&actual_error.as_str()),
+                PANIC_ERROR_MSG.is_match(actual_error.as_str()),
                 "Expected an error due to panic, but got {}",
                 &actual_error
             );
