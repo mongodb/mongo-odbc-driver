@@ -274,7 +274,7 @@ pub mod simplified {
                             .then(|| atomics.first().unwrap().to_owned().into())
                             .unwrap_or(BsonTypeInfo::BSON)
                     })
-                    .unwrap(),
+                    .unwrap_or(BsonTypeInfo::BSON),
             }
         }
     }
