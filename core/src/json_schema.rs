@@ -252,7 +252,7 @@ pub mod simplified {
     impl From<Atomic> for BsonTypeInfo {
         fn from(a: Atomic) -> Self {
             match a {
-                Atomic::Any => BsonTypeInfo::ARRAY,
+                Atomic::Any => BsonTypeInfo::BSON,
                 Atomic::Scalar(t) => t.into(),
                 Atomic::Object(_) => BsonTypeInfo::OBJECT,
                 Atomic::Array(_) => BsonTypeInfo::ARRAY,
