@@ -163,9 +163,9 @@ impl Decimal128Plus for [u8; 16] {
             // Exponent
             str_out.push('E');
             if scientific_exponent > 0 {
-                str_out.push_str(format!("+{}", scientific_exponent).as_str());
+                str_out.push_str(format!("+{scientific_exponent}").as_str());
             } else {
-                str_out.push_str(format!("{}", scientific_exponent).as_str());
+                str_out.push_str(format!("{scientific_exponent}").as_str());
             }
             return str_out;
         }

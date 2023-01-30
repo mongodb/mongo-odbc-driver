@@ -59,6 +59,7 @@ mod integration {
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
     fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
+        use widechar::WideChar;
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         let output_len;
@@ -88,13 +89,14 @@ mod integration {
 
             // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
             in_connection_string = generate_default_connection_str();
-            let mut in_connection_string_encoded: Vec<u16> =
-                in_connection_string.encode_utf16().collect();
+            let mut in_connection_string_encoded = widechar::to_widechar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let out_connection_string_buff = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let mut out_connection_string_buff: [WideChar; BUFFER_LENGTH as usize - 1] =
+                [0; (BUFFER_LENGTH as usize - 1)];
+            let out_connection_string_buff = &mut out_connection_string_buff as *mut WideChar;
 
             assert_ne!(
                 SqlReturn::ERROR,
@@ -113,7 +115,7 @@ mod integration {
             );
 
             output_len = *str_len_ptr;
-            out_connection_string = String::from_utf16_lossy(slice::from_raw_parts(
+            out_connection_string = widechar::from_widechar_ref_lossy(slice::from_raw_parts(
                 out_connection_string_buff,
                 output_len as usize,
             ));
@@ -159,6 +161,7 @@ mod integration {
     /// - SQLGetInfoW(SQL_DBMS_VER)
     #[test]
     fn test_connection() {
+        use widechar::WideChar;
         let env_handle: HEnv = setup();
         let (conn_handle, in_connection_string, out_connection_string, output_len) =
             power_bi_connect(env_handle);
@@ -166,20 +169,16 @@ mod integration {
         unsafe {
             let input_len = in_connection_string.len() as SmallInt;
 
-            println!(
-                "Input connection string = {}\nLength is {}",
-                in_connection_string, input_len
-            );
-            println!(
-                "Output connection string = {}\nLength is {}",
-                out_connection_string, output_len
-            );
+            println!("Input connection string = {in_connection_string}\nLength is {input_len}");
+            println!("Output connection string = {out_connection_string}\nLength is {output_len}");
             // The output string should be the same as the input string except with extra curly braces around the driver name
-            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and ouptput connection string have the same length but input string length is {} and output string length is {}",input_len, output_len);
+            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and ouptput connection string have the same length but input string length is {input_len} and output string length is {output_len}");
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let mut output_buffer: [WideChar; BUFFER_LENGTH as usize - 1] =
+                [0; BUFFER_LENGTH as usize - 1];
+            let output_buffer = &mut output_buffer as *mut WideChar;
 
             // SQL_DRIVER_NAME is not accessible through odbc_sys
             /*
@@ -212,7 +211,7 @@ mod integration {
             );
             println!(
                 "DBMS name = {}\nLength is {}",
-                String::from_utf16_lossy(slice::from_raw_parts(
+                widechar::from_widechar_ref_lossy(slice::from_raw_parts(
                     output_buffer,
                     *str_len_ptr as usize
                 )),
@@ -236,7 +235,7 @@ mod integration {
             );
             println!(
                 "DBMS version = {}\nLength is {}",
-                String::from_utf16_lossy(slice::from_raw_parts(
+                widechar::from_widechar_ref_lossy(slice::from_raw_parts(
                     output_buffer,
                     *str_len_ptr as usize
                 )),

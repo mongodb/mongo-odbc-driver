@@ -135,8 +135,8 @@ mod unit {
     format_version_test!(
         format_cargo_version,
         expected = "00.01.0000",
-        major = env!("CARGO_PKG_VERSION_MAJOR"),
-        minor = env!("CARGO_PKG_VERSION_MINOR"),
-        patch = env!("CARGO_PKG_VERSION_PATCH")
+        major = "0",
+        minor = "1",
+        patch = "0"
     );
 }

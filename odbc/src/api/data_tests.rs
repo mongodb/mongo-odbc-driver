@@ -18,7 +18,7 @@ use mongo_odbc_core::{
     },
     mock_query::MongoQuery,
 };
-use odbc_sys::{Date, Nullability, SqlReturn, Time, Timestamp};
+use odbc_sys::{Date, Nullability, SqlReturn, Time, Timestamp, WChar};
 
 const ARRAY_COL: u16 = 1;
 const BIN_COL: u16 = 2;
@@ -246,6 +246,8 @@ lazy_static! {
 }
 
 mod unit {
+    use widechar::WideChar;
+
     use super::*;
     // test unallocated_statement tests SQLFetch when the mongo_statement inside
     // of the statement handle has not been allocated (before an execute or tables function
@@ -276,8 +278,8 @@ mod unit {
                         .unwrap()[0]
                 ),
             );
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -312,8 +314,8 @@ mod unit {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt_handle as *mut _,));
             assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt_handle as *mut _,));
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -361,9 +363,9 @@ mod unit {
                         .unwrap()[0],
                 ),
             );
-            let _ = Box::from_raw(char_buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(char_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -387,7 +389,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 100;
+            let buffer_length: isize = 200;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16, expected: &str| {
@@ -402,7 +404,10 @@ mod unit {
                             out_len_or_ind,
                         )
                     );
-                    assert_eq!(expected.len() as isize, *out_len_or_ind);
+                    assert_eq!(
+                        (std::mem::size_of::<WideChar>() * expected.len()) as isize,
+                        *out_len_or_ind
+                    );
                     assert_eq!(
                         expected.to_string(),
                         input_wtext_to_string(char_buffer as *const _, expected.len())
@@ -472,9 +477,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(char_buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(char_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -483,6 +488,8 @@ mod unit {
         use crate::api::{
             data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
         };
+        use std::mem::size_of;
+        use widechar::WideChar;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -498,7 +505,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 10;
+            let buffer_length: isize = 10 * size_of::<WideChar>() as isize;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16,
@@ -519,8 +526,7 @@ mod unit {
                     if code == SqlReturn::SUCCESS_WITH_INFO {
                         assert_eq!(
                             format!(
-                                "[MongoDB][API] Buffer size \"{}\" not large enough for data",
-                                buffer_length
+                                "[MongoDB][API] Buffer size \"{buffer_length}\" not large enough for data"
                             ),
                             format!(
                                 "{}",
@@ -533,7 +539,10 @@ mod unit {
                             ),
                         );
                     }
-                    assert_eq!(expected_out_len, *out_len_or_ind);
+                    assert_eq!(
+                        std::mem::size_of::<WideChar>() as isize * expected_out_len,
+                        *out_len_or_ind
+                    );
                     assert_eq!(
                         expected.to_string(),
                         input_wtext_to_string(char_buffer as *const _, expected.chars().count())
@@ -562,9 +571,9 @@ mod unit {
                 str_val_test(UNICODE_COL, 5, "个中文句子", SqlReturn::SUCCESS);
                 str_val_test(UNICODE_COL, 0, "", SqlReturn::NO_DATA);
             }
-            let _ = Box::from_raw(char_buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(char_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -645,9 +654,9 @@ mod unit {
                     SqlReturn::SUCCESS,
                 );
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -703,9 +712,9 @@ mod unit {
                 str_val_test(ARRAY_COL, 4, "3\"}]", SqlReturn::SUCCESS);
                 str_val_test(ARRAY_COL, 0, "", SqlReturn::NO_DATA);
             }
-            let _ = Box::from_raw(char_buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(char_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -835,9 +844,9 @@ mod unit {
                 null_val_test(UNDEFINED_COL);
             }
 
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -903,9 +912,9 @@ mod unit {
                 bin_val_test(BIN_COL, 1, &[42u8], SqlReturn::SUCCESS);
                 bin_val_test(BIN_COL, 0, &[], SqlReturn::NO_DATA);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -1014,9 +1023,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(char_buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(char_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -1209,9 +1218,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -1402,9 +1411,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -1601,9 +1610,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -1794,9 +1803,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -1993,9 +2002,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -2179,9 +2188,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -2365,9 +2374,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -2576,9 +2585,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -2780,9 +2789,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -2983,9 +2992,9 @@ mod unit {
                 null_val_test(NULL_COL);
                 null_val_test(UNDEFINED_COL);
             }
-            let _ = Box::from_raw(buffer);
-            let _ = Box::from_raw(conn);
-            let _ = Box::from_raw(env);
+            let _ = Box::from_raw(buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 }

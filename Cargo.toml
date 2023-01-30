@@ -2,6 +2,7 @@
 
 members = [
   "constants",
+  "widechar",
   "odbc",
   "core",
   "integration_test",
