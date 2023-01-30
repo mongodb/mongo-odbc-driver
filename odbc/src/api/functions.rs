@@ -1713,7 +1713,9 @@ unsafe fn sql_get_data_helper(
         };
         match bson {
             Err(e) => error = Some(e),
-            Ok(None) => error = Some(ODBCError::InvalidDescriptorIndex(col_or_param_num)),
+            Ok(None) => {
+                ret = Bson::Null;
+            }
             Ok(Some(d)) => {
                 ret = d;
             }
