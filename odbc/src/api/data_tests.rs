@@ -758,13 +758,13 @@ mod unit {
 
                 bin_val_test(
                     ARRAY_COL,
-                    &[
-                        91, 34, 123, 92, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 92, 34,
-                        58, 92, 34, 49, 92, 34, 125, 34, 44, 34, 123, 92, 34, 36, 110, 117, 109,
-                        98, 101, 114, 73, 110, 116, 92, 34, 58, 92, 34, 50, 92, 34, 125, 34, 44,
-                        34, 123, 92, 34, 36, 110, 117, 109, 98, 101, 114, 73, 110, 116, 92, 34, 58,
-                        92, 34, 51, 92, 34, 125, 34, 93,
-                    ],
+                    serde_json::to_string(&[
+                        "{\"$numberInt\":\"1\"}",
+                        "{\"$numberInt\":\"2\"}",
+                        "{\"$numberInt\":\"3\"}",
+                    ])
+                    .unwrap()
+                    .as_bytes(),
                     SqlReturn::SUCCESS,
                 );
                 bin_val_test(BIN_COL, &[5, 6, 42], SqlReturn::SUCCESS);
@@ -779,10 +779,7 @@ mod unit {
                 );
                 bin_val_test(
                     DOC_COL,
-                    &[
-                        123, 32, 34, 120, 34, 58, 32, 52, 50, 44, 32, 34, 121, 34, 58, 32, 52, 50,
-                        32, 125,
-                    ],
+                    "{\"x\":{\"$numberInt\":\"42\"},\"y\":{\"$numberInt\":\"42\"}}".as_bytes(),
                     SqlReturn::SUCCESS,
                 );
                 bin_val_test(
@@ -794,20 +791,10 @@ mod unit {
                 bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0], SqlReturn::SUCCESS);
                 bin_val_test(
                     JS_COL,
-                    &[
-                        108, 111, 103, 40, 34, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108,
-                        100, 34, 41,
-                    ],
+                    "{\"$code\":\"log(\\\"hello world\\\")\"}".as_bytes(),
                     SqlReturn::SUCCESS,
                 );
-                bin_val_test(
-                    JS_W_S_COL,
-                    &[
-                        108, 111, 103, 40, 34, 104, 101, 108, 108, 111, 34, 32, 43, 32, 120, 32,
-                        43, 32, 34, 119, 111, 114, 108, 100, 34, 41,
-                    ],
-                    SqlReturn::SUCCESS,
-                );
+                bin_val_test(JS_W_S_COL, "{\"$code\":\"log(\\\"hello\\\" + x + \\\"world\\\")\",\"$scope\":{\"x\":{\"$numberInt\":\"42\"}}}".as_bytes(), SqlReturn::SUCCESS);
                 bin_val_test(
                     MAXKEY_COL,
                     &[123, 34, 36, 109, 97, 120, 75, 101, 121, 34, 58, 49, 125],
@@ -820,17 +807,13 @@ mod unit {
                 );
                 bin_val_test(
                     OID_COL,
-                    &[
-                        123, 34, 36, 111, 105, 100, 34, 58, 34, 54, 51, 52, 52, 56, 100, 102, 101,
-                        100, 51, 56, 52, 50, 55, 97, 51, 53, 100, 53, 51, 52, 101, 52, 48, 34, 125,
-                    ],
+                    "{\"$oid\":\"63448dfed38427a35d534e40\"}".as_bytes(),
                     SqlReturn::SUCCESS,
                 );
                 bin_val_test(
                     REGEX_COL,
-                    &[
-                        47, 104, 101, 108, 108, 111, 32, 46, 42, 32, 119, 111, 114, 108, 100, 47,
-                    ],
+                    "{\"$regularExpression\":{\"pattern\":\"hello .* world\",\"options\":\"\"}}"
+                        .as_bytes(),
                     SqlReturn::SUCCESS,
                 );
                 bin_val_test(

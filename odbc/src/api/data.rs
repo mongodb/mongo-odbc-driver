@@ -114,23 +114,12 @@ impl IntoCData for Bson {
             Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Binary(b) => Ok(b.bytes),
             Bson::Decimal128(d) => Ok(d.bytes().to_vec()),
-            Bson::Document(d) => Ok(d.to_string().into_bytes()),
             Bson::Array(a) => Ok(serde_json::to_string(
                 &a.into_iter().map(|b| b.to_json()).collect::<Vec<String>>(),
             )
             .unwrap()
             .into_bytes()),
-            Bson::ObjectId(_) => Ok(self.to_json().into_bytes()),
-            Bson::Undefined => Ok(self.to_json().into_bytes()),
-            Bson::Null => Ok(self.to_json().into_bytes()),
-            Bson::RegularExpression(r) => Ok(r.to_string().into_bytes()),
-            Bson::DbPointer(p) => Ok(serde_json::to_string(&p).unwrap().into_bytes()),
-            Bson::JavaScriptCode(j) => Ok(j.into_bytes()),
-            Bson::JavaScriptCodeWithScope(j) => Ok(j.to_string().into_bytes()),
-            Bson::Symbol(s) => Ok(s.into_bytes()),
-            Bson::MinKey => Ok(self.to_json().into_bytes()),
-            Bson::MaxKey => Ok(self.to_json().into_bytes()),
-            Bson::Timestamp(_) => Ok(self.to_json().into_bytes()),
+            _ => Ok(self.to_json().into_bytes()),
         }
     }
 
