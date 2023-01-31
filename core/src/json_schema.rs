@@ -552,7 +552,7 @@ mod unit {
         };
 
         #[test]
-        fn simplified_schemas_when_any_of_has_two_elements_but_one_is_null() {
+        fn any_of_has_two_elements_but_one_is_null_resolves_to_concrete_bson_type_info() {
             let input_schema = json_schema::Schema {
                 any_of: Some(vec![
                     json_schema::Schema {
@@ -573,7 +573,7 @@ mod unit {
         }
 
         #[test]
-        fn simplified_schemas_with_multiple_non_null_elements() {
+        fn any_of_with_multiple_non_null_elements_is_not_concrete_bson_type_info() {
             let input_schema = json_schema::Schema {
                 any_of: Some(vec![
                     json_schema::Schema {
