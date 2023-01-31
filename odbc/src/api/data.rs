@@ -113,7 +113,6 @@ impl IntoCData for Bson {
             Bson::Int32(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Binary(b) => Ok(b.bytes),
-            Bson::Decimal128(d) => Ok(d.bytes().to_vec()),
             _ => Ok(self.to_json().into_bytes()),
         }
     }
