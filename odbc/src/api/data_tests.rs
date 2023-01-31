@@ -758,13 +758,8 @@ mod unit {
 
                 bin_val_test(
                     ARRAY_COL,
-                    serde_json::to_string(&[
-                        "{\"$numberInt\":\"1\"}",
-                        "{\"$numberInt\":\"2\"}",
-                        "{\"$numberInt\":\"3\"}",
-                    ])
-                    .unwrap()
-                    .as_bytes(),
+                    "[{\"$numberInt\":\"1\"},{\"$numberInt\":\"2\"},{\"$numberInt\":\"3\"}]"
+                        .as_bytes(),
                     SqlReturn::SUCCESS,
                 );
                 bin_val_test(BIN_COL, &[5, 6, 42], SqlReturn::SUCCESS);
