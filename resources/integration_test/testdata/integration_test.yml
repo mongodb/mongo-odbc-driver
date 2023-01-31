@@ -34,6 +34,38 @@ dataset:
       - {_id: 2, studentid: 303,  name: "Mike", enrolled: true, startdate: 2000-01-01}
       - {_id: 3, studentid: 204323,  name: "Mary", enrolled: false, startdate: 2000-03-01}
       - {_id: 4, studentid: 10,  name: "Pete", enrolled: false, startdate: 2000-01-01}
+    schema: {
+      "bsonType":[
+          "object"
+      ],
+      "properties":{
+        "_id":{
+          "bsonType":[
+              "int"
+          ]
+        },
+        "studentid":{
+          "bsonType":[
+              "int"
+          ]
+        },
+        "name":{
+          "bsonType":[
+              "string"
+          ]
+        },
+        "enrolled":{
+          "bsonType":[
+              "bool"
+          ]
+        },
+        "startdate":{
+          "bsonType":[
+              "date"
+          ]
+        },
+      }
+    }
 
   - db: integration_test
     collection: grades
