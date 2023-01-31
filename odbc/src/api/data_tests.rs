@@ -790,16 +790,8 @@ mod unit {
                     SqlReturn::SUCCESS,
                 );
                 bin_val_test(JS_W_S_COL, "{\"$code\":\"log(\\\"hello\\\" + x + \\\"world\\\")\",\"$scope\":{\"x\":{\"$numberInt\":\"42\"}}}".as_bytes(), SqlReturn::SUCCESS);
-                bin_val_test(
-                    MAXKEY_COL,
-                    &[123, 34, 36, 109, 97, 120, 75, 101, 121, 34, 58, 49, 125],
-                    SqlReturn::SUCCESS,
-                );
-                bin_val_test(
-                    MINKEY_COL,
-                    &[123, 34, 36, 109, 105, 110, 75, 101, 121, 34, 58, 49, 125],
-                    SqlReturn::SUCCESS,
-                );
+                bin_val_test(MAXKEY_COL, "{\"$maxKey\":1}".as_bytes(), SqlReturn::SUCCESS);
+                bin_val_test(MINKEY_COL, "{\"$minKey\":1}".as_bytes(), SqlReturn::SUCCESS);
                 bin_val_test(
                     OID_COL,
                     "{\"$oid\":\"63448dfed38427a35d534e40\"}".as_bytes(),
