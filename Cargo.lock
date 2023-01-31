@@ -1238,7 +1238,6 @@ dependencies = [
  "odbc-sys 0.21.2",
  "regex",
  "serde",
- "serde_json",
  "serde_yaml 0.8.26",
  "thiserror",
 ]
