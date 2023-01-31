@@ -249,14 +249,32 @@ pub mod simplified {
         }
     }
 
+    impl From<Atomic> for BsonTypeInfo {
+        fn from(a: Atomic) -> Self {
+            match a {
+                Atomic::Any => BsonTypeInfo::BSON,
+                Atomic::Scalar(t) => t.into(),
+                Atomic::Object(_) => BsonTypeInfo::OBJECT,
+                Atomic::Array(_) => BsonTypeInfo::ARRAY,
+            }
+        }
+    }
+
     impl From<Schema> for BsonTypeInfo {
         fn from(v: Schema) -> Self {
             match v {
-                Schema::Atomic(Atomic::Any) => BsonTypeInfo::BSON,
-                Schema::Atomic(Atomic::Scalar(t)) => t.into(),
-                Schema::Atomic(Atomic::Object(_)) => BsonTypeInfo::OBJECT,
-                Schema::Atomic(Atomic::Array(_)) => BsonTypeInfo::ARRAY,
-                Schema::AnyOf(_) => BsonTypeInfo::BSON,
+                Schema::Atomic(a) => a.into(),
+                Schema::AnyOf(b) => (b.len() == 2)
+                    .then(|| {
+                        let atomics = b
+                            .into_iter()
+                            .filter(|a| !matches!(a, Atomic::Scalar(BsonTypeName::Null)))
+                            .collect::<Vec<Atomic>>();
+                        (atomics.len() == 1)
+                            .then(|| atomics.first().unwrap().to_owned().into())
+                            .unwrap_or(BsonTypeInfo::BSON)
+                    })
+                    .unwrap_or(BsonTypeInfo::BSON),
             }
         }
     }
@@ -526,5 +544,53 @@ mod unit {
                 ..Default::default()
             }
         );
+    }
+    mod bson_type_info {
+        use crate::{
+            bson_type_info::BsonTypeInfo,
+            json_schema::{self, simplified, BsonType, BsonTypeName},
+        };
+
+        #[test]
+        fn any_of_has_two_elements_but_one_is_null_resolves_to_concrete_bson_type_info() {
+            let input_schema = json_schema::Schema {
+                any_of: Some(vec![
+                    json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                        ..Default::default()
+                    },
+                    json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Null)),
+                        ..Default::default()
+                    },
+                ]),
+                ..Default::default()
+            };
+
+            let input = simplified::Schema::try_from(input_schema).unwrap();
+
+            assert_eq!(BsonTypeInfo::INT, BsonTypeInfo::from(input));
+        }
+
+        #[test]
+        fn any_of_with_multiple_non_null_elements_is_not_concrete_bson_type_info() {
+            let input_schema = json_schema::Schema {
+                any_of: Some(vec![
+                    json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                        ..Default::default()
+                    },
+                    json_schema::Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::String)),
+                        ..Default::default()
+                    },
+                ]),
+                ..Default::default()
+            };
+
+            let input = simplified::Schema::try_from(input_schema).unwrap();
+
+            assert_eq!(BsonTypeInfo::BSON, BsonTypeInfo::from(input));
+        }
     }
 }

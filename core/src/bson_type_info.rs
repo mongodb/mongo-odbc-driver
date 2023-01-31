@@ -1,7 +1,7 @@
 use crate::definitions::SqlDataType;
 
 #[non_exhaustive]
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct BsonTypeInfo {
     pub type_name: &'static str,
     pub sql_type: SqlDataType,
