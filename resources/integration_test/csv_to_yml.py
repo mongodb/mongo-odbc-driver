@@ -1,7 +1,8 @@
 import yaml
 import csv
+import sys
 
-for file in ["Batters_headers.csv", "Calcs_headers.csv", "Staples_utf8_headers.csv"]:
+for file in sys.argv[1:]:
     with open(file) as csvfile:
         r = csv.DictReader(csvfile, dialect='excel')
         data = [x for x in r]
