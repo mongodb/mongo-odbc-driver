@@ -86,8 +86,6 @@ mod integration {
         }
     }
 
-    const BUFFER_LENGTH: SmallInt = 300;
-
     /// Setup flow.
     /// This will allocate a new environment handle and set ODBC_VERSION and CONNECTION_POOLING environment attributes.
     /// Setup flow is:
@@ -434,17 +432,11 @@ mod integration {
             let str_len_ptr = &mut 0;
             let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
 
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetInfoW(
-                    conn_handle,
-                    InfoType::GetDataExtensions,
-                    output_buffer as Pointer,
-                    10,
-                    str_len_ptr
-                ),
-                "{}",
-                get_sql_diagnostics(HandleType::Dbc, conn_handle as Handle)
+            test_get_info!(
+                conn_handle,
+                InfoType::GetDataExtensions,
+                2,
+                DataType::USmallInt
             );
 
             let column_count_ptr = &mut 0;
@@ -501,7 +493,7 @@ mod integration {
                                 1,
                                 odbc_sys::CDataType::SLong,
                                 output_buffer as Pointer,
-                                10,
+                                2,
                                 &mut 0
                             ),
                             "{}",
