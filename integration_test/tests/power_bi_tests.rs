@@ -13,6 +13,7 @@ mod integration {
     };
     use std::ptr::null_mut;
     use std::slice;
+    use widechar::WideChar;
 
     const BUFFER_LENGTH: SmallInt = 300;
 
@@ -71,7 +72,7 @@ mod integration {
             unsafe {
                 String::from_utf16_lossy(slice::from_raw_parts(
                     val.output_buffer as *const _,
-                    (val.data_length / 2) as usize,
+                    val.data_length as usize / std::mem::size_of::<WideChar>(),
                 ))
             }
         }
@@ -128,7 +129,6 @@ mod integration {
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
     fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
-        use widechar::WideChar;
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         let output_len;
