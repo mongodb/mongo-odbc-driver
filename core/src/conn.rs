@@ -1,4 +1,5 @@
 use crate::err::Result;
+use crate::MongoQuery;
 use bson::doc;
 use mongodb::{options::ClientOptions, sync::Client};
 use serde::{Deserialize, Serialize};
@@ -42,28 +43,15 @@ impl MongoConnection {
         login_timeout: Option<u32>,
     ) -> Result<Self> {
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
-        // set application name, note that users can set their own application name, or we default
-        // to mongo-odbc-driver.
-        let auth_src = if let Some(ref cred) = client_options.credential {
-            if let Some(ref auth_src) = cred.source {
-                auth_src.clone()
-            } else {
-                "admin".to_string()
-            }
-        } else {
-            "admin".to_string()
-        };
         let client = Client::with_options(client_options)?;
-        // run the "ping" command on the `auth_src` database. We assume this requires the
-        // fewest permissions of anything we can do to verify a connection.
-        client
-            .database(&auth_src)
-            .run_command(doc! {"ping": 1}, None)?;
-        Ok(MongoConnection {
+        let connection = MongoConnection {
             client,
             current_db: current_db.map(String::from),
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
-        })
+        };
+        // Verify that the connection is working and the user has access to the default DB
+        MongoQuery::execute(&connection, None, "select 1")?;
+        Ok(connection)
     }
 
     /// Gets the ADF version the client is connected to.

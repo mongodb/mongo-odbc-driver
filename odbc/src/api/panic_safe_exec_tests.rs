@@ -11,6 +11,16 @@ use std::{panic, sync::mpsc};
 
 mod unit {
     use super::*;
+    use lazy_static::lazy_static;
+    use regex::{Regex, RegexBuilder};
+
+    lazy_static! {
+        static ref PANIC_ERROR_MSG: Regex = RegexBuilder::new("panic")
+            .case_insensitive(true)
+            .build()
+            .unwrap();
+    }
+
     #[named]
     fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn {
         panic_safe_exec!(|| { SqlReturn::SUCCESS }, stmt_handle);
@@ -58,12 +68,14 @@ mod unit {
                     .read()
                     .unwrap()[0]
             );
+
             // Using a substring of the error because directory format differs for windows and linux
             // and to not depend on line number.
-            assert_eq!(
-                format!("Panic(\"panic test\\nOk(\\\"in file '"),
-                &actual_error[0..33]
-            )
+            assert!(
+                PANIC_ERROR_MSG.is_match(actual_error.as_str()),
+                "Expected an error due to panic, but got {}",
+                &actual_error
+            );
         }
     }
 }

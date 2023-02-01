@@ -51,13 +51,20 @@ impl MongoQuery {
             "statement": query,
         }}];
 
-        let options = query_timeout.map(|i| {
-            AggregateOptions::builder()
-                .max_time(Duration::from_millis(i as u64))
-                .build()
-        });
-
-        let cursor = db.aggregate(pipeline, options)?;
+        let cursor: Cursor<Document> = match query_timeout {
+            Some(i) => {
+                if i > 0 {
+                    let opt = AggregateOptions::builder()
+                        .max_time(Duration::from_millis(i as u64))
+                        .build();
+                    db.aggregate(pipeline, opt)?
+                } else {
+                    // If the query timeout is 0, it means "no timeout"
+                    db.aggregate(pipeline, None)?
+                }
+            }
+            _ => db.aggregate(pipeline, None)?,
+        };
         Ok(MongoQuery {
             resultset_cursor: cursor,
             resultset_metadata: metadata,
