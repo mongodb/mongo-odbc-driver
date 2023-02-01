@@ -7,6 +7,9 @@ tests:
       - [ "integration_test", null, "foo", "TABLE", "" ]
       - [ "integration_test", null, "baz", "VIEW", "" ]
       - [ "integration_test_2", null, "example_2", "TABLE", "" ]
+      - [ "tdvt", null, "batters", "TABLE", "" ]
+      - [ "tdvt", null, "calcs", "TABLE", "" ]
+      - [ "tdvt", null, "staples", "TABLE", "" ]
 
   - description: SQLTablesW function get all catalogs
     test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "", 0 ]
@@ -15,6 +18,7 @@ tests:
       - [ "db2", null, null, null, "" ]
       - [ "integration_test", null, null, null, "" ]
       - [ "integration_test_2", null, null, null, "" ]
+      - [ "tdvt", null, null, null, "" ]
     expected_bson_type: [ "string", "string", "string", "string", "string" ]
     expected_case_sensitive: [ "", "", "", "", "" ]
     expected_catalog_name: [ "", "", "", "", "" ]
