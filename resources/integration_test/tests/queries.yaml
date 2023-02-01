@@ -237,20 +237,19 @@ tests:
   - description: select_null_and_missing_field
     test_definition: SELECT a FROM null_and_missing
     db: integration_test
-    skip_reason: SQL-1188
     expected_result:
-      - [ "1" ]
+      - [ '{"$numberInt":"1"}' ]
       - [ null ]
       - [ null ]
-    expected_bson_type: ["bson"]
+    expected_bson_type: ["int"]
     expected_case_sensitive: [""]
     expected_catalog_name: [""]
     expected_column_label: [ "a" ]
-    expected_display_size: [0]
-    expected_length: [0]
-    expected_is_searchable: [0]
-    expected_is_unsigned: [1]
-    expected_sql_type: [0]
-    expected_precision: [0]
+    expected_display_size: [4]
+    expected_length: [4]
+    expected_is_searchable: [2]
+    expected_is_unsigned: [0]
+    expected_sql_type: [4]
+    expected_precision: [10]
     expected_scale: [0]
     expected_is_nullable: [1]
