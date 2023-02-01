@@ -350,8 +350,8 @@ mod unit {
                 (Desc::TypeName, "string"),
             ] {
                 let char_buffer: *mut std::ffi::c_void =
-                    Box::into_raw(Box::new([0u8; 40])) as *mut _;
-                let buffer_length: SmallInt = 20;
+                    Box::into_raw(Box::new([0u8; 200])) as *mut _;
+                let buffer_length: SmallInt = 200;
                 let out_length = &mut 10;
                 let numeric_attr_ptr = &mut 10;
                 // test string attributes
@@ -367,12 +367,15 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                assert_eq!(expected.len() as i16, *out_length);
+                assert_eq!(
+                    (std::mem::size_of::<widechar::WideChar>() * expected.len()) as i16,
+                    *out_length
+                );
                 assert_eq!(
                     expected,
                     crate::api::data::input_wtext_to_string(
                         char_buffer as *const _,
-                        *out_length as usize
+                        expected.len(),
                     )
                 );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
@@ -401,8 +404,8 @@ mod unit {
             (Desc::Precision, 0),
             (Desc::Scale, 0),
             (Desc::Searchable, SQL_SEARCHABLE as isize),
-            (Desc::Type, SqlDataType::VARCHAR as isize),
-            (Desc::ConciseType, SqlDataType::VARCHAR as isize),
+            (Desc::Type, SqlDataType::EXT_W_VARCHAR as isize),
+            (Desc::ConciseType, SqlDataType::EXT_W_VARCHAR as isize),
             (Desc::Unsigned, 1),
         ] {
             unsafe {
@@ -463,7 +466,7 @@ mod unit {
             // out_name_length should be 10
             assert_eq!(10, *out_name_length);
             // data_type should be VARCHAR
-            assert_eq!(SqlDataType::VARCHAR, data_type);
+            assert_eq!(SqlDataType::EXT_W_VARCHAR, data_type);
             // col_size should be 0
             assert_eq!(0usize, *col_size);
             // decimal_digits should be 0

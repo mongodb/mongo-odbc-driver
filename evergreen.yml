@@ -56,11 +56,13 @@ functions:
             export ADF_TEST_LOCAL_DB="${adf_test_local_db}"
             export SCRIPT_FOLDER="$SCRIPT_FOLDER"
             export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
+          
             # Windows variables
             export LOCAL_DUMP_ORIGINAL_REG_VAL="$LOCAL_DUMP_ORIGINAL_REG_VAL"
             export DUMP_FOLDER="$DUMP_FOLDER"
             export DUMP_PATH="$(pwd)/$DUMP_FOLDER"
             export MONGOODBC_DEBUGGING_INFO_ARCHIVE=$MONGOODBC_DEBUGGING_INFO_ARCHIVE
+          
             # Non-Windows variables
             export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"

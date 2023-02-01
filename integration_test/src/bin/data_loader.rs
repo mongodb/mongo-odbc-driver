@@ -114,7 +114,6 @@ fn main() -> Result<()> {
 fn read_data_files(dir_path: &str) -> Result<Vec<TestData>> {
     // Read the directory and iterate over each entry
     fs::read_dir(dir_path)?
-        .into_iter()
         // Only retain paths to '.y[a]ml' files
         .filter_map(|file| {
             let path = file.unwrap().path();

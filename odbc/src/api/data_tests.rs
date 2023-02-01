@@ -246,6 +246,8 @@ lazy_static! {
 }
 
 mod unit {
+    use widechar::WideChar;
+
     use super::*;
     // test unallocated_statement tests SQLFetch when the mongo_statement inside
     // of the statement handle has not been allocated (before an execute or tables function
@@ -387,7 +389,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 100;
+            let buffer_length: isize = 200;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16, expected: &str| {
@@ -402,7 +404,10 @@ mod unit {
                             out_len_or_ind,
                         )
                     );
-                    assert_eq!(expected.len() as isize, *out_len_or_ind);
+                    assert_eq!(
+                        (std::mem::size_of::<WideChar>() * expected.len()) as isize,
+                        *out_len_or_ind
+                    );
                     assert_eq!(
                         expected.to_string(),
                         input_wtext_to_string(char_buffer as *const _, expected.len())
@@ -483,6 +488,8 @@ mod unit {
         use crate::api::{
             data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
         };
+        use std::mem::size_of;
+        use widechar::WideChar;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -498,7 +505,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 10;
+            let buffer_length: isize = 10 * size_of::<WideChar>() as isize;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16,
@@ -532,7 +539,10 @@ mod unit {
                             ),
                         );
                     }
-                    assert_eq!(expected_out_len, *out_len_or_ind);
+                    assert_eq!(
+                        std::mem::size_of::<WideChar>() as isize * expected_out_len,
+                        *out_len_or_ind
+                    );
                     assert_eq!(
                         expected.to_string(),
                         input_wtext_to_string(char_buffer as *const _, expected.chars().count())
@@ -739,18 +749,29 @@ mod unit {
                             buffer,
                             buffer_length,
                             out_len_or_ind,
-                        )
+                        ),
+                        "expected return for column {col}"
                     );
                     if code == SqlReturn::SUCCESS {
-                        assert_eq!(expected.len() as isize, *out_len_or_ind);
+                        assert_eq!(
+                            expected.len() as isize,
+                            *out_len_or_ind,
+                            "expected len for column {col}"
+                        );
                         assert_eq!(
                             expected,
-                            std::slice::from_raw_parts(buffer as *const u8, expected.len())
+                            std::slice::from_raw_parts(buffer as *const u8, expected.len()),
+                            "expected contents for column {col}",
                         );
                     }
                 };
 
-                bin_val_test(ARRAY_COL, &[], SqlReturn::ERROR);
+                bin_val_test(
+                    ARRAY_COL,
+                    "[{\"$numberInt\":\"1\"},{\"$numberInt\":\"2\"},{\"$numberInt\":\"3\"}]"
+                        .as_bytes(),
+                    SqlReturn::SUCCESS,
+                );
                 bin_val_test(BIN_COL, &[5, 6, 42], SqlReturn::SUCCESS);
                 bin_val_test(BOOL_COL, &[1u8], SqlReturn::SUCCESS);
                 bin_val_test(
@@ -761,26 +782,10 @@ mod unit {
                     ],
                     SqlReturn::SUCCESS,
                 );
-                bin_val_test(DOC_COL, &[], SqlReturn::ERROR);
-                let errors_len = (*stmt_handle)
-                    .as_statement()
-                    .unwrap()
-                    .errors
-                    .read()
-                    .unwrap()
-                    .len();
-                assert_eq!(
-                    "[MongoDB][API] BSON type object cannot be converted to ODBC type Binary"
-                        .to_string(),
-                    format!(
-                        "{}",
-                        (*stmt_handle)
-                            .as_statement()
-                            .unwrap()
-                            .errors
-                            .read()
-                            .unwrap()[errors_len - 1]
-                    ),
+                bin_val_test(
+                    DOC_COL,
+                    "{\"x\":{\"$numberInt\":\"42\"},\"y\":{\"$numberInt\":\"42\"}}".as_bytes(),
+                    SqlReturn::SUCCESS,
                 );
                 bin_val_test(
                     DOUBLE_COL,
@@ -789,12 +794,25 @@ mod unit {
                 );
                 bin_val_test(I32_COL, &[1, 0, 0, 0], SqlReturn::SUCCESS);
                 bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0], SqlReturn::SUCCESS);
-                bin_val_test(JS_COL, &[], SqlReturn::ERROR);
-                bin_val_test(JS_W_S_COL, &[], SqlReturn::ERROR);
-                bin_val_test(MAXKEY_COL, &[], SqlReturn::ERROR);
-                bin_val_test(MINKEY_COL, &[], SqlReturn::ERROR);
-                bin_val_test(OID_COL, &[], SqlReturn::ERROR);
-                bin_val_test(REGEX_COL, &[], SqlReturn::ERROR);
+                bin_val_test(
+                    JS_COL,
+                    "{\"$code\":\"log(\\\"hello world\\\")\"}".as_bytes(),
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(JS_W_S_COL, "{\"$code\":\"log(\\\"hello\\\" + x + \\\"world\\\")\",\"$scope\":{\"x\":{\"$numberInt\":\"42\"}}}".as_bytes(), SqlReturn::SUCCESS);
+                bin_val_test(MAXKEY_COL, "{\"$maxKey\":1}".as_bytes(), SqlReturn::SUCCESS);
+                bin_val_test(MINKEY_COL, "{\"$minKey\":1}".as_bytes(), SqlReturn::SUCCESS);
+                bin_val_test(
+                    OID_COL,
+                    "{\"$oid\":\"63448dfed38427a35d534e40\"}".as_bytes(),
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(
+                    REGEX_COL,
+                    "{\"$regularExpression\":{\"pattern\":\"hello .* world\",\"options\":\"\"}}"
+                        .as_bytes(),
+                    SqlReturn::SUCCESS,
+                );
                 bin_val_test(
                     STRING_COL,
                     &[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33],

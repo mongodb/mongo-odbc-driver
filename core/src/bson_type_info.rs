@@ -1,7 +1,7 @@
 use crate::definitions::SqlDataType;
 
 #[non_exhaustive]
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct BsonTypeInfo {
     pub type_name: &'static str,
     pub sql_type: SqlDataType,
@@ -46,7 +46,7 @@ impl BsonTypeInfo {
     };
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
-        sql_type: SqlDataType::VARCHAR,
+        sql_type: SqlDataType::EXT_W_VARCHAR,
         non_concise_type: SqlDataType::VARCHAR,
         searchable: SQL_SEARCHABLE,
         is_case_sensitive: true,

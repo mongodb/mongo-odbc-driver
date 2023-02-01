@@ -2,6 +2,7 @@ mod test_generator_util;
 
 use odbc::{create_environment_v3, Allocated, Connection, Handle, NoResult, Statement};
 use odbc_sys::{CDataType, Desc, HStmt, HandleType, SmallInt, SqlReturn, USmallInt};
+use widechar::WideChar;
 
 use odbc::safe::AutocommitOn;
 use serde::{Deserialize, Serialize};
@@ -18,7 +19,7 @@ use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
 const SQL_NULL_DATA: isize = -1;
-const BUFFER_LENGTH: usize = 200;
+const BUFFER_LENGTH: usize = 1000;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
@@ -214,8 +215,8 @@ fn wstr_or_null(value: &Value) -> (*const u16, Vec<u16>) {
 /// to_wstr_ptr converts a &str into a *const u16.
 /// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
 /// as the ptr.
-fn to_wstr_ptr(string: &str) -> (*const u16, Vec<u16>) {
-    let mut v: Vec<u16> = string.encode_utf16().collect();
+fn to_wstr_ptr(string: &str) -> (*const u16, Vec<WideChar>) {
+    let mut v = widechar::to_widechar_vec(string);
     v.push(0);
     (v.as_ptr(), v)
 }
@@ -659,7 +660,7 @@ fn get_column_attribute(
 ) -> Result<Value> {
     let string_length_ptr = &mut 0;
     let character_attrib_ptr: *mut std::ffi::c_void =
-        Box::into_raw(Box::new([0u16; BUFFER_LENGTH])) as *mut _;
+        Box::into_raw(Box::new([0; BUFFER_LENGTH])) as *mut _;
     let numeric_attrib_ptr = &mut 0;
     unsafe {
         match odbc_sys::SQLColAttributeW(
@@ -672,9 +673,9 @@ fn get_column_attribute(
             numeric_attrib_ptr,
         ) {
             SqlReturn::SUCCESS => Ok(match column_metadata_type {
-                Value::String(_) => json!((String::from_utf16_lossy(
-                    &*(character_attrib_ptr as *const [u16; BUFFER_LENGTH])
-                ))[0..*string_length_ptr as usize]
+                Value::String(_) => json!((widechar::from_widechar_ref_lossy(
+                    &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH])
+                ))[0..(*string_length_ptr as usize / std::mem::size_of::<WideChar>())]
                     .to_string()),
                 Value::Number(_) => json!(*numeric_attrib_ptr),
                 meta_type => return Err(Error::UnexpectedMetadataType(format!("{meta_type:?}"))),

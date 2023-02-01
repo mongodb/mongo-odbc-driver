@@ -31,6 +31,8 @@ pub(crate) fn connection_attribute_to_string(attr: ConnectionAttribute) -> Strin
 
 pub(crate) fn statement_attribute_to_string(attr: StatementAttribute) -> String {
     match attr {
+        StatementAttribute::SQL_ROWSET_SIZE => "ROWSET_SIZE".to_string(),
+        StatementAttribute::SQL_GET_BOOKMARK => "GET_BOOKMARK".to_string(),
         StatementAttribute::SQL_ATTR_APP_ROW_DESC => "APP_ROW_DESC".to_string(),
         StatementAttribute::SQL_ATTR_APP_PARAM_DESC => "APP_PARAM_DESC".to_string(),
         StatementAttribute::SQL_ATTR_IMP_ROW_DESC => "IMP_ROW_DESC".to_string(),
@@ -133,8 +135,8 @@ mod unit {
     format_version_test!(
         format_cargo_version,
         expected = "00.01.0000",
-        major = env!("CARGO_PKG_VERSION_MAJOR"),
-        minor = env!("CARGO_PKG_VERSION_MINOR"),
-        patch = env!("CARGO_PKG_VERSION_PATCH")
+        major = "0",
+        minor = "1",
+        patch = "0"
     );
 }

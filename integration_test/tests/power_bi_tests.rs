@@ -15,6 +15,76 @@ mod integration {
 
     use std::ptr::null_mut;
     use std::slice;
+    use widechar::WideChar;
+
+    const BUFFER_LENGTH: SmallInt = 300;
+
+    macro_rules! test_get_info {
+        ($conn_handle:expr, $info_type: expr, $info_value_buffer_length: expr, $info_value_type: expr) => {{
+            let conn_handle = $conn_handle;
+            let info_type = $info_type;
+            let info_value_buffer_length = $info_value_buffer_length;
+            let info_value_type = $info_value_type;
+
+            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let mut buffer = OutputBuffer {
+                output_buffer: output_buffer as Pointer,
+                data_length: *&mut 0,
+            };
+
+            let outcome = SQLGetInfoW(
+                conn_handle as HDbc,
+                info_type,
+                buffer.output_buffer,
+                info_value_buffer_length,
+                &mut buffer.data_length as &mut _,
+            );
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                outcome,
+                "Expected {}, got {}. Diagnostic message is: {}",
+                sql_return_to_string(SqlReturn::SUCCESS),
+                sql_return_to_string(outcome),
+                get_sql_diagnostics(HandleType::Dbc, conn_handle as Handle)
+            );
+
+            let length = buffer.data_length.clone();
+            println!(
+                "{info_type:?} = {}\nLength is {length}",
+                match info_value_type {
+                    DataType::WChar => Into::<String>::into(buffer),
+                    DataType::USmallInt => Into::<u16>::into(buffer).to_string(),
+                }
+            );
+        }};
+    }
+
+    pub enum DataType {
+        USmallInt,
+        WChar,
+    }
+
+    pub struct OutputBuffer {
+        pub output_buffer: Pointer,
+        pub data_length: i16,
+    }
+
+    impl From<OutputBuffer> for String {
+        fn from(val: OutputBuffer) -> Self {
+            unsafe {
+                String::from_utf16_lossy(slice::from_raw_parts(
+                    val.output_buffer as *const _,
+                    val.data_length as usize / std::mem::size_of::<WideChar>(),
+                ))
+            }
+        }
+    }
+
+    impl From<OutputBuffer> for u16 {
+        fn from(val: OutputBuffer) -> Self {
+            unsafe { *(val.output_buffer as *mut u16) }
+        }
+    }
 
     const BUFFER_LENGTH: SmallInt = 300;
 
@@ -92,13 +162,14 @@ mod integration {
 
             // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
             in_connection_string = generate_default_connection_str();
-            let mut in_connection_string_encoded: Vec<u16> =
-                in_connection_string.encode_utf16().collect();
+            let mut in_connection_string_encoded = widechar::to_widechar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
-            let out_connection_string_buff = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let mut out_connection_string_buff: [WideChar; BUFFER_LENGTH as usize - 1] =
+                [0; (BUFFER_LENGTH as usize - 1)];
+            let out_connection_string_buff = &mut out_connection_string_buff as *mut WideChar;
 
             assert_ne!(
                 SqlReturn::ERROR,
@@ -117,7 +188,7 @@ mod integration {
             );
 
             output_len = *str_len_ptr;
-            out_connection_string = String::from_utf16_lossy(slice::from_raw_parts(
+            out_connection_string = widechar::from_widechar_ref_lossy(slice::from_raw_parts(
                 out_connection_string_buff,
                 output_len as usize,
             ));
@@ -173,11 +244,7 @@ mod integration {
             println!("Input connection string = {in_connection_string}\nLength is {input_len}");
             println!("Output connection string = {out_connection_string}\nLength is {output_len}");
             // The output string should be the same as the input string except with extra curly braces around the driver name
-            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and ouptput connection string have the same length but input string length is {input_len} and output string length is {output_len}");
-
-            let str_len_ptr = &mut 0;
-            const BUFFER_LENGTH: SmallInt = 300;
-            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and output connection string have the same length but input string length is {input_len} and output string length is {output_len}");
 
             // SQL_DRIVER_NAME is not accessible through odbc_sys
             /*
@@ -193,53 +260,116 @@ mod integration {
             );
              */
 
-            let mut outcome = SQLGetInfoW(
-                conn_handle as HDbc,
-                InfoType::DbmsName,
-                output_buffer as Pointer,
-                BUFFER_LENGTH,
-                str_len_ptr,
-            );
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                outcome,
-                "Expected {}, got {}. Diagnostic message is: {}",
-                sql_return_to_string(SqlReturn::SUCCESS),
-                sql_return_to_string(outcome),
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
-            );
-            println!(
-                "DBMS name = {}\nLength is {}",
-                String::from_utf16_lossy(slice::from_raw_parts(
-                    output_buffer,
-                    *str_len_ptr as usize
-                )),
-                *str_len_ptr
-            );
+            test_get_info!(conn_handle, InfoType::DbmsName, 28, DataType::WChar);
 
-            outcome = SQLGetInfoW(
-                conn_handle as HDbc,
-                InfoType::DbmsVer,
-                output_buffer as Pointer,
-                BUFFER_LENGTH,
-                str_len_ptr,
+            test_get_info!(conn_handle, InfoType::DbmsVer, 58, DataType::WChar);
+        }
+    }
+
+    // Test PowerBI driver information retrieval
+    // This test is limited by the available InfoType values in odbc_sys
+    #[test]
+    fn test_get_driver_info() {
+        let env_handle: HEnv = setup();
+        let (conn_handle, _, _, _) = power_bi_connect(env_handle);
+
+        unsafe {
+            test_get_info!(
+                conn_handle,
+                InfoType::IdentifierQuoteChar,
+                4,
+                DataType::WChar
             );
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                outcome,
-                "Expected {}, got {}. Diagnostic message is: {}",
-                sql_return_to_string(SqlReturn::SUCCESS),
-                sql_return_to_string(outcome),
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+            // SQL-1177: Investigate how to test missing InfoType values
+            // InfoType::SQL_OWNER_USAGE
+            // InfoType::SQL_CATALOG_USAGE
+            // InfoType::SQL_CATALOG_NAME_SEPARATOR
+            // InfoType::SQL_CATALOG_LOCATION
+            // InfoType::SQL_SQL_CONFORMANCE
+            test_get_info!(
+                conn_handle,
+                InfoType::MaxColumnsInOrderBy,
+                2,
+                DataType::USmallInt
             );
-            println!(
-                "DBMS version = {}\nLength is {}",
-                String::from_utf16_lossy(slice::from_raw_parts(
-                    output_buffer,
-                    *str_len_ptr as usize
-                )),
-                *str_len_ptr
+            test_get_info!(
+                conn_handle,
+                InfoType::MaxIdentifierLen,
+                2,
+                DataType::USmallInt
             );
+            test_get_info!(
+                conn_handle,
+                InfoType::MaxColumnsInGroupBy,
+                2,
+                DataType::USmallInt
+            );
+            test_get_info!(
+                conn_handle,
+                InfoType::MaxColumnsInSelect,
+                2,
+                DataType::USmallInt
+            );
+            test_get_info!(
+                conn_handle,
+                InfoType::OrderByColumnsInSelect,
+                4,
+                DataType::WChar
+            );
+            // InfoType::SQL_STRING_FUNCTIONS
+            // InfoType::SQL_AGGREGATE_FUNCTIONS
+            // InfoType::SQL_SQL92_PREDICATES
+            // InfoType::SQL_SQL92_RELATIONAL_JOIN_OPERATORS
+            // InfoType::SQL_COLUMN_ALIAS
+            // InfoType::SQL_GROUP_BY
+            // InfoType::SQL_NUMERIC_FUNCTIONS
+            // InfoType::SQL_TIMEDATE_FUNCTIONS
+            // InfoType::SQL_SYSTEM_FUNCTIONS
+            // InfoType::SQL_TIMEDATE_ADD_INTERVALS
+            // InfoType::SQL_TIMEDATE_DIFF_INTERVALS
+            // InfoType::SQL_CONCAT_NULL_BEHAVIOR
+            test_get_info!(conn_handle, InfoType::CatalogName, 4, DataType::WChar);
+            // InfoType::SQL_CATALOG_TERM
+            // InfoType::SQL_OWNER_TERM
+            // InfoType::SQL_ODBC_INTERFACE_CONFORMANCE
+            test_get_info!(
+                conn_handle,
+                InfoType::SearchPatternEscape,
+                2,
+                DataType::WChar
+            );
+            // InfoType::SQL_CONVERT_FUNCTIONS
+            // InfoType::SQL_CONVERT_BIGINT
+            // InfoType::SQL_CONVERT_BINARY
+            // InfoType::SQL_CONVERT_BIT
+            // InfoType::SQL_CONVERT_CHAR
+            // InfoType::SQL_CONVERT_DECIMAL
+            // InfoType::SQL_CONVERT_DOUBLE
+            // InfoType::SQL_CONVERT_FLOAT
+            // InfoType::SQL_CONVERT_GUID
+            // InfoType::SQL_CONVERT_INTEGER
+            // InfoType::SQL_CONVERT_LONGVARBINARY
+            // InfoType::SQL_CONVERT_LONGVARCHAR
+            // InfoType::SQL_CONVERT_NUMERIC
+            // InfoType::SQL_CONVERT_REAL
+            // InfoType::SQL_CONVERT_SMALLINT
+            // InfoType::SQL_CONVERT_TIMESTAMP
+            // InfoType::SQL_CONVERT_TINYINT
+            // InfoType::SQL_CONVERT_DATE
+            // InfoType::SQL_CONVERT_TIME
+            // InfoType::SQL_CONVERT_VARBINARY
+            // InfoType::SQL_CONVERT_VARCHAR
+            // InfoType::SQL_CONVERT_WCHAR
+            // InfoType::SQL_CONVERT_WLONGVARCHAR
+            // InfoType::SQL_CONVERT_WVARCHAR
+            test_get_info!(
+                conn_handle,
+                InfoType::SpecialCharacters,
+                44,
+                DataType::WChar
+            );
+            // InfoType::SQL_RETURN_ESCAPE_CLAUSE
+            // InfoType::SQL_DRIVER_ODBC_VER
         }
     }
 

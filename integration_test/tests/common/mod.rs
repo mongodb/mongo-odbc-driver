@@ -1,5 +1,6 @@
-use odbc_sys::{Handle, HandleType, SQLGetDiagRecW, SqlReturn, WChar};
+use odbc_sys::{Handle, HandleType, SQLGetDiagRecW, SqlReturn};
 use std::{env, slice};
+use widechar::WideChar;
 
 /// Generate the default connection setting defined for the tests using a connection string
 /// of the form 'Driver={};PWD={};USER={};SERVER={}'.
@@ -33,8 +34,10 @@ pub fn generate_default_connection_str() -> String {
 // the expected input
 pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
     let text_length_ptr = &mut 0;
-    let actual_sql_state = &mut [0u16; 6] as *mut _;
-    let actual_message_text = &mut [0u16; 512] as *mut _;
+    let mut actual_sql_state: [WideChar; 6] = [0; 6];
+    let actual_sql_state = &mut actual_sql_state as *mut _;
+    let mut actual_message_text: [WideChar; 512] = [0; 512];
+    let actual_message_text = &mut actual_message_text as *mut _;
     let actual_native_error = &mut 0;
     unsafe {
         let _ = SQLGetDiagRecW(
@@ -49,8 +52,8 @@ pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
         );
     };
     unsafe {
-        String::from_utf16_lossy(slice::from_raw_parts(
-            actual_message_text as *const WChar,
+        widechar::from_widechar_ref_lossy(slice::from_raw_parts(
+            actual_message_text as *const WideChar,
             *text_length_ptr as usize,
         ))
     }
