@@ -129,6 +129,13 @@ dataset:
     }
 
   - db: integration_test
+    collection: null_and_missing
+    docs:
+      - { _id: 0, "a": 1}
+      - { _id: 1, "a": null }
+      - { _id: 2 }
+
+  - db: integration_test
     collection: a_non_lexicographic_field_order
     docs:
       - { _id: 4, "c": 7, "b": 6, "a":5, "A":1, "B": 2, "C": 3 }
