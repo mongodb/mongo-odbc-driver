@@ -14,7 +14,6 @@ use regex::Regex;
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
 use widechar::WideChar;
 
-const BINARY: &str = "Binary";
 const DOUBLE: &str = "Double";
 const INT32: &str = "Int32";
 const INT64: &str = "Int64";
@@ -115,8 +114,7 @@ impl IntoCData for Bson {
             Bson::Int32(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Binary(b) => Ok(b.bytes),
-            Bson::Decimal128(d) => Ok(d.bytes().to_vec()),
-            o => Err(ODBCError::RestrictedDataType(o.to_type_str(), BINARY)),
+            _ => Ok(self.to_json().into_bytes()),
         }
     }
 
