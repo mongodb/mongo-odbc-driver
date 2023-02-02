@@ -11,7 +11,7 @@ use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
 use regex::Regex;
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
 use widechar::WideChar;
 
@@ -88,9 +88,9 @@ impl IntoCData for Bson {
             Bson::Document(v) => {
                 Value::Object(v.into_iter().map(|(k, v)| (k, v.to_json_val())).collect())
             }
-            Bson::Decimal128(d) => json!({ "$numberDecimal": d.to_formatted_string() }),
+            Bson::Decimal128(d) => Value::String(d.to_formatted_string()),
             Bson::String(s) => Value::String(s),
-            _ => self.into_canonical_extjson(),
+            _ => self.into_relaxed_extjson(),
         }
     }
     fn to_json(self) -> String {
