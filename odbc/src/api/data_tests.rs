@@ -931,14 +931,12 @@ mod unit {
                     assert_eq!(
                         expected.len() as isize,
                         *out_len_or_ind,
-                        "Expected column type {}",
-                        col
+                        "Expected column type {col}",
                     );
                     assert_eq!(
                         expected.to_string(),
                         input_text_to_string(char_buffer as *const _, expected.len()),
-                        "Expected column type {}",
-                        col
+                        "Expected column type {col}",
                     );
                 };
 
