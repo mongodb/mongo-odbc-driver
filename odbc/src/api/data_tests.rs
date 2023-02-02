@@ -680,7 +680,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 10;
+            let buffer_length = 3;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test =
@@ -703,13 +703,10 @@ mod unit {
                         );
                     };
 
-                str_val_test(ARRAY_COL, 58, "[{\"$numbe", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 49, "rInt\":\"1\"", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 40, "},{\"$numb", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 31, "erInt\":\"2", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 22, "\"},{\"$num", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 13, "berInt\":\"", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 4, "3\"}]", SqlReturn::SUCCESS);
+                str_val_test(ARRAY_COL, 7, "[1", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 5, ",2", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 3, ",3", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 1, "]", SqlReturn::SUCCESS);
                 str_val_test(ARRAY_COL, 0, "", SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(char_buffer as *mut WChar);

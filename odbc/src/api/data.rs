@@ -1011,7 +1011,7 @@ unsafe fn set_output_wstring_helper(
     *output_ptr.add(num_chars - 1) = 0u16;
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars < message.len() {
+    if num_chars <= message.len() {
         (num_chars - 1, SqlReturn::SUCCESS_WITH_INFO)
     } else {
         (message.len(), SqlReturn::SUCCESS)
@@ -1043,7 +1043,7 @@ unsafe fn set_output_string_helper(
     *output_ptr.add(num_chars - 1) = 0u8;
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars < message.len() {
+    if num_chars <= message.len() {
         (num_chars - 1, SqlReturn::SUCCESS_WITH_INFO)
     } else {
         (message.len(), SqlReturn::SUCCESS)
