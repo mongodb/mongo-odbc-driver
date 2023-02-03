@@ -64,6 +64,11 @@ impl Schema {
 
     fn multiple_to_any_of(mut self) -> Self {
         if let Some(BsonType::Multiple(v)) = self.bson_type.as_ref() {
+            // We don't want to generate an AnyOf with only one variant, just convert
+            if v.len() == 1 {
+                self.bson_type = Some(BsonType::Single(v[0].clone()));
+                return self;
+            }
             self.any_of = Some(
                 v.into_iter()
                     .map(|x| match x {
@@ -405,6 +410,32 @@ mod unit {
                 ])),
                 properties: None,
                 required: None,
+                additional_properties: Some(false),
+                items: None,
+                any_of: None,
+            }
+        );
+
+        remove_multiple_test!(
+            false_multiple,
+            expected = Schema {
+                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                properties: Some(map! {
+                    "x".into() => Schema::default(),
+                    "y".into() => Schema::default(),
+                }),
+                required: Some(vec!["x".into(), "y".into()]),
+                additional_properties: Some(false),
+                items: None,
+                any_of: None,
+            },
+            input = Schema {
+                bson_type: Some(BsonType::Multiple(vec![BsonTypeName::Object,])),
+                properties: Some(map! {
+                    "x".into() => Schema::default(),
+                    "y".into() => Schema::default(),
+                }),
+                required: Some(vec!["x".into(), "y".into()]),
                 additional_properties: Some(false),
                 items: None,
                 any_of: None,
