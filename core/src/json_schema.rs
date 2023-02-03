@@ -1,4 +1,4 @@
-use crate::BsonTypeInfo;
+use crate::{BsonTypeInfo, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -21,22 +21,24 @@ pub struct Schema {
 
 impl Schema {
     // Remove multiple recursively removes Multiple Bson Type entries.
-    pub fn remove_multiple(mut self) -> Self {
+    pub fn remove_multiple(mut self) -> Result<Self, Error> {
         // it is invalid for both any_of and bson_type to be set because
         // any_of is a top level constructor.
-        assert!(self.bson_type.is_none() || self.any_of.is_none());
+        if !(self.bson_type.is_none() || self.any_of.is_none()) {
+            return Err(Error::InvalidResultSetJsonSchema);
+        }
         if let Some(props) = self.properties {
             self.properties = Some(
                 props
                     .into_iter()
-                    .map(|(k, x)| (k, x.remove_multiple()))
-                    .collect(),
+                    .map(|(k, x)| Ok((k, x.remove_multiple()?)))
+                    .collect::<Result<_, Error>>()?,
             );
         }
         if let Some(items) = self.items {
             match items {
                 Items::Single(s) => {
-                    self.items = Some(Items::Single(Box::new((*s).remove_multiple())));
+                    self.items = Some(Items::Single(Box::new((*s).remove_multiple()?)));
                 }
                 // The multiple-schema variant of the `items`
                 // field only asserts the schemas for the
@@ -59,7 +61,7 @@ impl Schema {
         // Now that we have remove_multiple called in any items or properties fields, we can
         // convert Multiple bson_type into an any_of. If we did that first we would need
         // to simplify the properties and items potentially many times!
-        self.multiple_to_any_of()
+        Ok(self.multiple_to_any_of())
     }
 
     fn multiple_to_any_of(mut self) -> Self {
@@ -309,7 +311,7 @@ pub mod simplified {
         type Error = Error;
 
         fn try_from(schema: json_schema::Schema) -> std::result::Result<Self, Self::Error> {
-            let schema = schema.remove_multiple();
+            let schema = schema.remove_multiple()?;
             match schema.any_of {
                 None => Ok(Schema::Atomic(schema.try_into()?)),
                 Some(any_of) => match any_of.len() {
@@ -364,7 +366,7 @@ mod unit {
         ($func_name:ident, expected = $expected:expr, input = $input:expr) => {
             #[test]
             fn $func_name() {
-                let res = $input.remove_multiple();
+                let res = $input.remove_multiple().unwrap();
 
                 assert_eq!(res, $expected);
             }
