@@ -504,7 +504,7 @@ mod integration {
                             SQLGetData(
                                 stmt as HStmt,
                                 2,
-                                odbc_sys::CDataType::Char,
+                                odbc_sys::CDataType::WChar,
                                 output_buffer as Pointer,
                                 4,
                                 &mut 0
