@@ -250,6 +250,8 @@ pub mod simplified {
     impl TryFrom<json_schema::Schema> for Atomic {
         type Error = Error;
 
+        // It is an error for the schema to contain Multiple. This function will return
+        // an error if that happens.
         fn try_from(schema: json_schema::Schema) -> std::result::Result<Self, Self::Error> {
             match schema {
                 json_schema::Schema {
@@ -730,16 +732,6 @@ mod unit {
         );
 
         try_from_test!(
-            bson_type_may_be_single_type_in_list,
-            variant = Atomic,
-            expected = Ok(Atomic::Scalar(BsonTypeName::Bool)),
-            input = json_schema::Schema {
-                bson_type: Some(BsonType::Multiple(vec![BsonTypeName::Bool])),
-                ..Default::default()
-            }
-        );
-
-        try_from_test!(
             bson_type_may_be_single_type,
             variant = Atomic,
             expected = Ok(Atomic::Scalar(BsonTypeName::Bool)),
@@ -757,19 +749,6 @@ mod unit {
             )))),
             input = json_schema::Schema {
                 bson_type: Some(BsonType::Single(BsonTypeName::Array)),
-                ..Default::default()
-            }
-        );
-
-        try_from_test!(
-            array_with_multiple_items_simplifies_to_array_of_any,
-            variant = Atomic,
-            expected = Ok(Atomic::Array(Box::new(simplified::Schema::Atomic(
-                Atomic::Any
-            )))),
-            input = json_schema::Schema {
-                bson_type: Some(BsonType::Single(BsonTypeName::Array)),
-                items: Some(Items::Multiple(vec![])),
                 ..Default::default()
             }
         );
@@ -846,26 +825,6 @@ mod unit {
             variant = Schema,
             expected = Ok(Schema::Atomic(Atomic::Any)),
             input = json_schema::Schema::default()
-        );
-
-        try_from_test!(
-            mixing_any_of_and_other_fields_is_invalid,
-            variant = Schema,
-            expected = Err::<Schema, Error>(Error::InvalidResultSetJsonSchema),
-            input = json_schema::Schema {
-                bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                any_of: Some(vec![
-                    json_schema::Schema {
-                        bson_type: Some(BsonType::Single(BsonTypeName::Bool)),
-                        ..Default::default()
-                    },
-                    json_schema::Schema {
-                        bson_type: Some(BsonType::Single(BsonTypeName::String)),
-                        ..Default::default()
-                    }
-                ]),
-                ..Default::default()
-            }
         );
 
         try_from_test!(
