@@ -366,7 +366,10 @@ mod unit {
 
     // Testing TryFrom<json_schema::Schema> for json_schema::simplified::Atomic
     mod remove_multiple {
-        use crate::json_schema::{BsonType, BsonTypeName, Schema};
+        use crate::{
+            json_schema::{BsonType, BsonTypeName, Items, Schema},
+            map,
+        };
 
         remove_multiple_test!(
             multiple_atomic,
@@ -404,6 +407,92 @@ mod unit {
                 required: None,
                 additional_properties: Some(false),
                 items: None,
+                any_of: None,
+            }
+        );
+
+        remove_multiple_test!(
+            nullable_object,
+            expected = Schema {
+                bson_type: None,
+                properties: None,
+                required: None,
+                additional_properties: None,
+                items: None,
+                any_of: Some(vec![
+                    Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                        properties: Some(map! {
+                            "x".into() => Schema::default(),
+                            "y".into() => Schema::default(),
+                        }),
+                        required: Some(vec!["x".into(), "y".into()]),
+                        additional_properties: Some(false),
+                        items: None,
+                        any_of: None,
+                    },
+                    Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Null)),
+                        properties: None,
+                        required: None,
+                        additional_properties: None,
+                        items: None,
+                        any_of: None,
+                    }
+                ]),
+            },
+            input = Schema {
+                bson_type: Some(BsonType::Multiple(vec![
+                    BsonTypeName::Object,
+                    BsonTypeName::Null
+                ])),
+                properties: Some(map! {
+                    "x".into() => Schema::default(),
+                    "y".into() => Schema::default(),
+                }),
+                required: Some(vec!["x".into(), "y".into()]),
+                additional_properties: Some(false),
+                items: None,
+                any_of: None,
+            }
+        );
+
+        remove_multiple_test!(
+            nullable_array,
+            expected = Schema {
+                bson_type: None,
+                properties: None,
+                required: None,
+                additional_properties: None,
+                items: None,
+                any_of: Some(vec![
+                    Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Array)),
+                        properties: None,
+                        required: None,
+                        additional_properties: None,
+                        items: Some(Items::Single(Box::new(Schema::default()))),
+                        any_of: None,
+                    },
+                    Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Null)),
+                        properties: None,
+                        required: None,
+                        additional_properties: None,
+                        items: None,
+                        any_of: None,
+                    }
+                ]),
+            },
+            input = Schema {
+                bson_type: Some(BsonType::Multiple(vec![
+                    BsonTypeName::Array,
+                    BsonTypeName::Null
+                ])),
+                properties: None,
+                required: None,
+                additional_properties: None,
+                items: Some(Items::Single(Box::new(Schema::default()))),
                 any_of: None,
             }
         );
