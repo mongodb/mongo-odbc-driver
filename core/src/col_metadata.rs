@@ -274,7 +274,7 @@ impl ObjectSchema {
 
         match field_schema.unwrap() {
             // Case 2: field is Any schema
-            Schema::Atomic(Atomic::Any) => Ok(Nullability::NULLABLE),
+            Schema::Atomic(Atomic::Scalar(BsonTypeName::Any)) => Ok(Nullability::NULLABLE),
             // Case 3: field is scalar/array/object schema
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Null))
             | Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)) => Ok(Nullability::NULLABLE),
@@ -319,7 +319,7 @@ mod unit {
             let actual = input.process_result_metadata("test_db");
 
             match actual {
-                Err(Error::InvalidResultSetJsonSchema) => (),
+                Err(Error::InvalidResultSetJsonSchema(_)) => (),
                 Err(e) => panic!("unexpected error: {e:?}"),
                 Ok(ok) => panic!("unexpected result: {ok:?}"),
             }
@@ -347,7 +347,7 @@ mod unit {
             let actual = input.process_result_metadata("test_db");
 
             match actual {
-                Err(Error::InvalidResultSetJsonSchema) => (),
+                Err(Error::InvalidResultSetJsonSchema(_)) => (),
                 Err(e) => panic!("unexpected error: {e:?}"),
                 Ok(ok) => panic!("unexpected result: {ok:?}"),
             }
@@ -461,7 +461,7 @@ mod unit {
             expected = Nullability::NULLABLE,
             input_schema = ObjectSchema {
                 properties: map! {
-                    "a".to_string() => Schema::Atomic(Atomic::Any)
+                    "a".to_string() => Schema::Atomic(Atomic::Scalar(BsonTypeName::Any))
                 },
                 required: set! {},
                 additional_properties: false

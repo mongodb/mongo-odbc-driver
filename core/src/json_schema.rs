@@ -25,7 +25,9 @@ impl Schema {
         // it is invalid for both any_of and bson_type to be set because
         // any_of is a top level constructor.
         if !(self.bson_type.is_none() || self.any_of.is_none()) {
-            return Err(Error::InvalidResultSetJsonSchema);
+            return Err(Error::InvalidResultSetJsonSchema(
+                "Schema with bsonType and anyOf both defined is invalid",
+            ));
         }
         if let Some(props) = self.properties {
             self.properties = Some(
@@ -186,7 +188,7 @@ impl From<BsonTypeName> for BsonTypeInfo {
             BsonTypeName::MinKey => BsonTypeInfo::MINKEY,
             BsonTypeName::MaxKey => BsonTypeInfo::MAXKEY,
             BsonTypeName::Undefined => BsonTypeInfo::UNDEFINED,
-            BsonTypeName::Any => BsonTypeInfo::OBJECT,
+            BsonTypeName::Any => BsonTypeInfo::BSON,
         }
     }
 }
@@ -216,7 +218,6 @@ pub mod simplified {
     // simplified::Schema to disallow nested AnyOfs.
     #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
     pub enum Atomic {
-        Any,
         Scalar(BsonTypeName),
         Object(ObjectSchema),
         Array(Box<Schema>),
@@ -235,12 +236,14 @@ pub mod simplified {
         pub fn assert_object_schema(&self) -> Result<&ObjectSchema> {
             match self {
                 Schema::Atomic(Atomic::Object(s)) => Ok(s),
-                _ => Err(Error::InvalidResultSetJsonSchema),
+                _ => Err(Error::InvalidResultSetJsonSchema(
+                    "Result set metadata JSON schema must be object with properties",
+                )),
             }
         }
 
         pub fn is_any(&self) -> bool {
-            matches!(self, Schema::Atomic(Atomic::Any))
+            matches!(self, Schema::Atomic(Atomic::Scalar(BsonTypeName::Any)))
         }
     }
 
@@ -263,7 +266,7 @@ pub mod simplified {
                     additional_properties: None,
                     items: None,
                     any_of: None,
-                } => Ok(Atomic::Any),
+                } => Ok(Atomic::Scalar(BsonTypeName::Any)),
                 json_schema::Schema {
                     bson_type: Some(bson_type),
                     properties,
@@ -271,34 +274,33 @@ pub mod simplified {
                     additional_properties,
                     items,
                     any_of: None,
-                } => {
-                    let construct_obj = || {
-                        Ok(Atomic::Object(ObjectSchema {
-                            properties: properties
-                                .unwrap_or_default()
-                                .into_iter()
-                                .map(|(prop, prop_schema)| {
-                                    Ok((prop, Schema::try_from(prop_schema)?))
-                                })
-                                .collect::<Result<_>>()?,
-                            required: required.unwrap_or_default().into_iter().collect(),
-                            additional_properties: additional_properties.unwrap_or(true),
-                        }))
-                    };
-                    match bson_type {
-                        BsonType::Single(BsonTypeName::Array) => {
-                            Ok(Atomic::Array(Box::new(match items {
-                                Some(Items::Single(s)) => Schema::try_from(*s)?,
-                                None => Schema::Atomic(Atomic::Any),
-                                _ => Err(Error::InvalidResultSetJsonSchema)?,
-                            })))
-                        }
-                        BsonType::Single(BsonTypeName::Object) => construct_obj(),
-                        BsonType::Single(t) => Ok(Atomic::Scalar(t)),
-                        BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema),
+                } => match bson_type {
+                    BsonType::Single(BsonTypeName::Array) => {
+                        Ok(Atomic::Array(Box::new(match items {
+                            Some(Items::Single(s)) => Schema::try_from(*s)?,
+                            None => Schema::Atomic(Atomic::Scalar(BsonTypeName::Any)),
+                            _ => Err(Error::InvalidResultSetJsonSchema(
+                                "Multiple bsonType found in atomic context",
+                            ))?,
+                        })))
                     }
-                }
-                _ => Err(Error::InvalidResultSetJsonSchema),
+                    BsonType::Single(BsonTypeName::Object) => Ok(Atomic::Object(ObjectSchema {
+                        properties: properties
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|(prop, prop_schema)| Ok((prop, Schema::try_from(prop_schema)?)))
+                            .collect::<Result<_>>()?,
+                        required: required.unwrap_or_default().into_iter().collect(),
+                        additional_properties: additional_properties.unwrap_or(true),
+                    })),
+                    BsonType::Single(t) => Ok(Atomic::Scalar(t)),
+                    BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema(
+                        "Multiple bsonType found in atomic context",
+                    )),
+                },
+                _ => Err(Error::InvalidResultSetJsonSchema(
+                    "Invalid schema for conversion to Atomic",
+                )),
             }
         }
     }
@@ -315,7 +317,7 @@ pub mod simplified {
             match schema.any_of {
                 None => Ok(Schema::Atomic(schema.try_into()?)),
                 Some(any_of) => match any_of.len() {
-                    0 => Err(Error::InvalidResultSetJsonSchema),
+                    0 => Err(Error::InvalidResultSetJsonSchema("Empty anyOf is invalid")),
                     // AnyOf with a single schema is equivalent to the schema.
                     1 => Schema::try_from(any_of.into_iter().next().unwrap()),
                     _ => Ok(Schema::AnyOf(
@@ -332,7 +334,6 @@ pub mod simplified {
     impl From<Atomic> for BsonTypeInfo {
         fn from(a: Atomic) -> Self {
             match a {
-                Atomic::Any => BsonTypeInfo::BSON,
                 Atomic::Scalar(t) => t.into(),
                 Atomic::Object(_) => BsonTypeInfo::OBJECT,
                 Atomic::Array(_) => BsonTypeInfo::ARRAY,
@@ -668,8 +669,8 @@ mod unit {
                     }
                     (Err(e), Ok(_)) => panic!("expected result but got error: {:?}", e),
                     (
-                        Err(Error::InvalidResultSetJsonSchema),
-                        Err(Error::InvalidResultSetJsonSchema),
+                        Err(Error::InvalidResultSetJsonSchema(_)),
+                        Err(Error::InvalidResultSetJsonSchema(_)),
                     ) => (),
                     (Err(e_actual), Err(e_expected)) => panic!(
                         "unexpected error: actual = {:?}, expected = {:?}",
@@ -694,14 +695,14 @@ mod unit {
         try_from_test!(
             any_schema,
             variant = Atomic,
-            expected = Ok(Atomic::Any),
+            expected = Ok(Atomic::Scalar(BsonTypeName::Any)),
             input = json_schema::Schema::default()
         );
 
         try_from_test!(
             invalid_if_any_of_is_set,
             variant = Atomic,
-            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema),
+            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema("")),
             input = json_schema::Schema {
                 any_of: Some(vec![json_schema::Schema::default()]),
                 ..Default::default()
@@ -711,7 +712,7 @@ mod unit {
         try_from_test!(
             bson_type_must_not_be_none,
             variant = Atomic,
-            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema),
+            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema("")),
             input = json_schema::Schema {
                 bson_type: None,
                 required: Some(vec!["a".to_string()]),
@@ -723,7 +724,7 @@ mod unit {
         try_from_test!(
             bson_type_must_not_contain_multiple_types,
             variant = Atomic,
-            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema),
+            expected = Err::<Atomic, Error>(Error::InvalidResultSetJsonSchema("")),
             input = json_schema::Schema {
                 bson_type: Some(BsonType::Multiple(vec![
                     BsonTypeName::Bool,
@@ -747,7 +748,7 @@ mod unit {
             array_with_no_items_simplifies_to_array_of_any,
             variant = Atomic,
             expected = Ok(Atomic::Array(Box::new(simplified::Schema::Atomic(
-                Atomic::Any
+                Atomic::Scalar(BsonTypeName::Any)
             )))),
             input = json_schema::Schema {
                 bson_type: Some(BsonType::Single(BsonTypeName::Array)),
@@ -825,14 +826,14 @@ mod unit {
         try_from_test!(
             any_schema,
             variant = Schema,
-            expected = Ok(Schema::Atomic(Atomic::Any)),
+            expected = Ok(Schema::Atomic(Atomic::Scalar(BsonTypeName::Any))),
             input = json_schema::Schema::default()
         );
 
         try_from_test!(
             missing_bson_type_with_other_fields_is_invalid,
             variant = Schema,
-            expected = Err::<Schema, Error>(Error::InvalidResultSetJsonSchema),
+            expected = Err::<Schema, Error>(Error::InvalidResultSetJsonSchema("")),
             input = json_schema::Schema {
                 additional_properties: Some(true),
                 ..Default::default()

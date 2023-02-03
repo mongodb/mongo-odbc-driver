@@ -15,8 +15,8 @@ pub enum Error {
     ColIndexOutOfBounds(u16),
     #[error("Invalid cursor state: cursor not advanced")]
     InvalidCursorState,
-    #[error("Result set metadata JSON schema must be object with properties")]
-    InvalidResultSetJsonSchema,
+    #[error("{0}")]
+    InvalidResultSetJsonSchema(&'static str),
     #[error("Invalid Uri: {0}")]
     InvalidUriFormat(String),
     #[error("Field '{0}' schema missing BSON type")]
@@ -53,7 +53,7 @@ impl Error {
             Error::BsonDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_)
-            | Error::InvalidResultSetJsonSchema
+            | Error::InvalidResultSetJsonSchema(_)
             | Error::MissingConnection(_)
             | Error::MissingFieldBsonType(_) => GENERAL_ERROR,
         }
@@ -78,7 +78,7 @@ impl Error {
             Error::NoDatabase
             | Error::InvalidUriFormat(_)
             | Error::InvalidCursorState
-            | Error::InvalidResultSetJsonSchema
+            | Error::InvalidResultSetJsonSchema(_)
             | Error::UnknownColumn(_)
             | Error::MissingFieldBsonType(_)
             | Error::ColIndexOutOfBounds(_)
