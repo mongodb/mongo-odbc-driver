@@ -280,7 +280,7 @@ pub mod simplified {
                             Some(Items::Single(s)) => Schema::try_from(*s)?,
                             None => Schema::Atomic(Atomic::Scalar(BsonTypeName::Any)),
                             _ => Err(Error::InvalidResultSetJsonSchema(
-                                "Multiple bsonType found in atomic context",
+                                "Multiple bsonType found in Atomic context",
                             ))?,
                         })))
                     }
@@ -295,7 +295,7 @@ pub mod simplified {
                     })),
                     BsonType::Single(t) => Ok(Atomic::Scalar(t)),
                     BsonType::Multiple(_) => Err(Error::InvalidResultSetJsonSchema(
-                        "Multiple bsonType found in atomic context",
+                        "Multiple bsonType found in Atomic context",
                     )),
                 },
                 _ => Err(Error::InvalidResultSetJsonSchema(
