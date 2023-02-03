@@ -66,28 +66,28 @@ impl Schema {
         if let Some(BsonType::Multiple(v)) = self.bson_type.as_ref() {
             // We don't want to generate an AnyOf with only one variant, just convert
             if v.len() == 1 {
-                self.bson_type = Some(BsonType::Single(v[0].clone()));
+                self.bson_type = Some(BsonType::Single(v[0]));
                 return self;
             }
             self.any_of = Some(
-                v.into_iter()
+                v.iter()
                     .map(|x| match x {
                         // properties, required, and additional_properties only make sense for
                         // Object
-                        &BsonTypeName::Object => {
+                        BsonTypeName::Object => {
                             Schema {
-                                bson_type: Some(BsonType::Single(x.clone())),
+                                bson_type: Some(BsonType::Single(*x)),
                                 properties: self.properties.clone(),
                                 required: self.required.clone(),
-                                additional_properties: self.additional_properties.clone(),
+                                additional_properties: self.additional_properties,
                                 items: None,
                                 any_of: None, // must be None due to assert
                             }
                         }
                         // items only make sense for Array
-                        &BsonTypeName::Array => {
+                        BsonTypeName::Array => {
                             Schema {
-                                bson_type: Some(BsonType::Single(x.clone())),
+                                bson_type: Some(BsonType::Single(*x)),
                                 properties: None,
                                 required: None,
                                 additional_properties: None,
@@ -98,7 +98,7 @@ impl Schema {
                         // No fields make sense for atomic types besides bson_type.
                         _ => {
                             Schema {
-                                bson_type: Some(BsonType::Single(x.clone())),
+                                bson_type: Some(BsonType::Single(*x)),
                                 properties: None,
                                 required: None,
                                 additional_properties: None,
@@ -502,7 +502,7 @@ mod unit {
                         properties: None,
                         required: None,
                         additional_properties: None,
-                        items: Some(Items::Single(Box::new(Schema::default()))),
+                        items: Some(Items::Single(Box::default())),
                         any_of: None,
                     },
                     Schema {
@@ -523,7 +523,7 @@ mod unit {
                 properties: None,
                 required: None,
                 additional_properties: None,
-                items: Some(Items::Single(Box::new(Schema::default()))),
+                items: Some(Items::Single(Box::default())),
                 any_of: None,
             }
         );
