@@ -82,6 +82,8 @@ fn from_string(s: &str, conversion_error_type: &'static str) -> Result<f64> {
 }
 
 impl IntoCData for Bson {
+    // TODO SQL-1068: This is a temporary solution to allow us to display Decimal128 values
+    // to the user. This should be removed once the driver has first-class Decimal128 support.
     fn to_json_val(self) -> Value {
         match self {
             Bson::Array(v) => Value::Array(v.into_iter().map(|b| b.to_json_val()).collect()),
