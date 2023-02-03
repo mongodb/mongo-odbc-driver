@@ -11,6 +11,7 @@ use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
 use regex::Regex;
+use serde_json::Value;
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
 use widechar::WideChar;
 
@@ -28,6 +29,7 @@ type Result<T> = std::result::Result<T, ODBCError>;
 /// IntoCData is just used for adding methods to bson::Bson.
 trait IntoCData {
     fn to_json(self) -> String;
+    fn to_json_val(self) -> Value;
     fn to_binary(self) -> Result<Vec<u8>>;
     fn to_guid(self) -> Result<Vec<u8>>;
     fn to_f64(&self) -> Result<(f64, Option<ODBCError>)>;
@@ -80,16 +82,23 @@ fn from_string(s: &str, conversion_error_type: &'static str) -> Result<f64> {
 }
 
 impl IntoCData for Bson {
+    // TODO SQL-1068: This is a temporary solution to allow us to display Decimal128 values
+    // to the user. This should be removed once the driver has first-class Decimal128 support.
+    fn to_json_val(self) -> Value {
+        match self {
+            Bson::Array(v) => Value::Array(v.into_iter().map(|b| b.to_json_val()).collect()),
+            Bson::Document(v) => {
+                Value::Object(v.into_iter().map(|(k, v)| (k, v.to_json_val())).collect())
+            }
+            Bson::Decimal128(d) => Value::String(d.to_formatted_string()),
+            Bson::String(s) => Value::String(s),
+            _ => self.into_relaxed_extjson(),
+        }
+    }
     fn to_json(self) -> String {
         match self {
             Bson::String(s) => s,
-            // TODO SQL-1068 :we will have to test this manually because there is no way to create a Decimal128
-            // in a unit test at this time. We could load a bson file, but since Decimal128 support
-            // will be added soon, it's fine to wait on full support.
-            Bson::Decimal128(d) => {
-                format!("{{$numberDecimal: \"{}\"}}", d.to_formatted_string())
-            }
-            _ => self.into_canonical_extjson().to_string(),
+            _ => self.to_json_val().to_string(),
         }
     }
 
@@ -1004,7 +1013,7 @@ unsafe fn set_output_wstring_helper(
     *output_ptr.add(num_chars - 1) = 0u16;
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars < message.len() {
+    if num_chars <= message.len() {
         (num_chars - 1, SqlReturn::SUCCESS_WITH_INFO)
     } else {
         (message.len(), SqlReturn::SUCCESS)
@@ -1036,7 +1045,7 @@ unsafe fn set_output_string_helper(
     *output_ptr.add(num_chars - 1) = 0u8;
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars < message.len() {
+    if num_chars <= message.len() {
         (num_chars - 1, SqlReturn::SUCCESS_WITH_INFO)
     } else {
         (message.len(), SqlReturn::SUCCESS)

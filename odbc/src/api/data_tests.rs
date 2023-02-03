@@ -42,6 +42,32 @@ const NEGATIVE_COL: u16 = 19;
 const UNIT_STR_COL: u16 = 20;
 const GUID_COL: u16 = 21;
 
+const ARRAY_STR_VAL: (u16, &str) = (ARRAY_COL, "[1,2,3]");
+const BIN_STR_VAL: (u16, &str) = (
+    BIN_COL,
+    "{\"$binary\":{\"base64\":\"BQYq\",\"subType\":\"00\"}}",
+);
+const BOOL_STR_VAL: (u16, &str) = (BOOL_COL, "true");
+const DATETIME_STR_VAL: (u16, &str) = (DATETIME_COL, "{\"$date\":\"2014-11-28T12:00:09Z\"}");
+const DOC_STR_VAL: (u16, &str) = (DOC_COL, "{\"x\":42,\"y\":42}");
+const DOUBLE_STR_VAL: (u16, &str) = (DOUBLE_COL, "1.3");
+const I32_STR_VAL: (u16, &str) = (I32_COL, "1");
+const I64_STR_VAL: (u16, &str) = (I64_COL, "0");
+const JS_STR_VAL: (u16, &str) = (JS_COL, "{\"$code\":\"log(\\\"hello world\\\")\"}");
+const JS_W_S_STR_VAL: (u16, &str) = (
+    JS_W_S_COL,
+    "{\"$code\":\"log(\\\"hello\\\" + x + \\\"world\\\")\",\"$scope\":{\"x\":42}}",
+);
+const MAXKEY_STR_VAL: (u16, &str) = (MAXKEY_COL, "{\"$maxKey\":1}");
+const MINKEY_STR_VAL: (u16, &str) = (MINKEY_COL, "{\"$minKey\":1}");
+const OID_STR_VAL: (u16, &str) = (OID_COL, "{\"$oid\":\"63448dfed38427a35d534e40\"}");
+const REGEX_STR_VAL: (u16, &str) = (
+    REGEX_COL,
+    "{\"$regularExpression\":{\"pattern\":\"hello .* world\",\"options\":\"\"}}",
+);
+const STRING_STR_VAL: (u16, &str) = (STRING_COL, "hello world!");
+const UNIT_STR_STR_VAL: (u16, &str) = (UNIT_STR_COL, "a");
+
 lazy_static! {
     static ref CHRONO_TIME: chrono::DateTime<Utc> = "2014-11-28T12:00:09Z".parse().unwrap();
     static ref MQ: MongoQuery = MongoQuery::new(
@@ -414,37 +440,22 @@ mod unit {
                     );
                 };
 
-                str_val_test(
-                    ARRAY_COL,
-                    "[{\"$numberInt\":\"1\"},{\"$numberInt\":\"2\"},{\"$numberInt\":\"3\"}]",
-                );
-                str_val_test(
-                    BIN_COL,
-                    "{\"$binary\":{\"base64\":\"BQYq\",\"subType\":\"00\"}}",
-                );
-                str_val_test(BOOL_COL, "true");
-                str_val_test(
-                    DATETIME_COL,
-                    "{\"$date\":{\"$numberLong\":\"1417176009000\"}}",
-                );
-                str_val_test(
-                    DOC_COL,
-                    "{\"x\":{\"$numberInt\":\"42\"},\"y\":{\"$numberInt\":\"42\"}}",
-                );
-                str_val_test(DOUBLE_COL, "{\"$numberDouble\":\"1.3\"}");
-                str_val_test(I32_COL, "{\"$numberInt\":\"1\"}");
-                str_val_test(I64_COL, "{\"$numberLong\":\"0\"}");
-                str_val_test(JS_COL, "{\"$code\":\"log(\\\"hello world\\\")\"}");
-                str_val_test(JS_W_S_COL, "{\"$code\":\"log(\\\"hello\\\" + x + \\\"world\\\")\",\"$scope\":{\"x\":{\"$numberInt\":\"42\"}}}");
-                str_val_test(MAXKEY_COL, "{\"$maxKey\":1}");
-                str_val_test(MINKEY_COL, "{\"$minKey\":1}");
-                str_val_test(OID_COL, "{\"$oid\":\"63448dfed38427a35d534e40\"}");
-                str_val_test(
-                    REGEX_COL,
-                    "{\"$regularExpression\":{\"pattern\":\"hello .* world\",\"options\":\"\"}}",
-                );
-                str_val_test(STRING_COL, "hello world!");
-                str_val_test(UNIT_STR_COL, "a");
+                str_val_test(ARRAY_STR_VAL.0, ARRAY_STR_VAL.1);
+                str_val_test(BIN_STR_VAL.0, BIN_STR_VAL.1);
+                str_val_test(BOOL_STR_VAL.0, BOOL_STR_VAL.1);
+                str_val_test(DATETIME_STR_VAL.0, DATETIME_STR_VAL.1);
+                str_val_test(DOC_STR_VAL.0, DOC_STR_VAL.1);
+                str_val_test(DOUBLE_STR_VAL.0, DOUBLE_STR_VAL.1);
+                str_val_test(I32_STR_VAL.0, I32_STR_VAL.1);
+                str_val_test(I64_STR_VAL.0, I64_STR_VAL.1);
+                str_val_test(JS_STR_VAL.0, JS_STR_VAL.1);
+                str_val_test(JS_W_S_STR_VAL.0, JS_W_S_STR_VAL.1);
+                str_val_test(MAXKEY_STR_VAL.0, MAXKEY_STR_VAL.1);
+                str_val_test(MINKEY_STR_VAL.0, MINKEY_STR_VAL.1);
+                str_val_test(OID_STR_VAL.0, OID_STR_VAL.1);
+                str_val_test(REGEX_STR_VAL.0, REGEX_STR_VAL.1);
+                str_val_test(STRING_STR_VAL.0, STRING_STR_VAL.1);
+                str_val_test(UNIT_STR_STR_VAL.0, UNIT_STR_STR_VAL.1);
             }
 
             {
@@ -505,7 +516,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 10 * size_of::<WideChar>() as isize;
+            let buffer_length: isize = 3 * size_of::<WideChar>() as isize;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test = |col: u16,
@@ -547,28 +558,21 @@ mod unit {
                         expected.to_string(),
                         input_wtext_to_string(char_buffer as *const _, expected.chars().count())
                     );
-                    assert_eq!(
-                        expected.to_string(),
-                        input_wtext_to_string(char_buffer as *const _, expected.chars().count())
-                    );
                 };
 
-                str_val_test(ARRAY_COL, 58, "[{\"$numbe", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 49, "rInt\":\"1\"", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 40, "},{\"$numb", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 31, "erInt\":\"2", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 22, "\"},{\"$num", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 13, "berInt\":\"", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 4, "3\"}]", SqlReturn::SUCCESS);
+                str_val_test(ARRAY_COL, 7, "[1", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 5, ",2", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 3, ",3", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 1, "]", SqlReturn::SUCCESS);
                 str_val_test(ARRAY_COL, 0, "", SqlReturn::NO_DATA);
 
-                str_val_test(
-                    UNICODE_COL,
-                    14,
-                    "你好，世界，这是一",
-                    SqlReturn::SUCCESS_WITH_INFO,
-                );
-                str_val_test(UNICODE_COL, 5, "个中文句子", SqlReturn::SUCCESS);
+                str_val_test(UNICODE_COL, 14, "你好", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(UNICODE_COL, 12, "，世", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(UNICODE_COL, 10, "界，", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(UNICODE_COL, 8, "这是", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(UNICODE_COL, 6, "一个", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(UNICODE_COL, 4, "中文", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(UNICODE_COL, 2, "句子", SqlReturn::SUCCESS);
                 str_val_test(UNICODE_COL, 0, "", SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(char_buffer as *mut WChar);
@@ -680,7 +684,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 10;
+            let buffer_length = 3;
             let out_len_or_ind = &mut 0;
             {
                 let mut str_val_test =
@@ -703,13 +707,10 @@ mod unit {
                         );
                     };
 
-                str_val_test(ARRAY_COL, 58, "[{\"$numbe", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 49, "rInt\":\"1\"", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 40, "},{\"$numb", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 31, "erInt\":\"2", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 22, "\"},{\"$num", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 13, "berInt\":\"", SqlReturn::SUCCESS_WITH_INFO);
-                str_val_test(ARRAY_COL, 4, "3\"}]", SqlReturn::SUCCESS);
+                str_val_test(ARRAY_COL, 7, "[1", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 5, ",2", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 3, ",3", SqlReturn::SUCCESS_WITH_INFO);
+                str_val_test(ARRAY_COL, 1, "]", SqlReturn::SUCCESS);
                 str_val_test(ARRAY_COL, 0, "", SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(char_buffer as *mut WChar);
@@ -739,9 +740,9 @@ mod unit {
             let buffer_length: isize = 100;
             let out_len_or_ind = &mut 0;
             {
-                let mut bin_val_test = |col: u16, expected: &[u8], code: SqlReturn| {
+                let mut bin_val_test = |col: u16, expected: &[u8]| {
                     assert_eq!(
-                        code,
+                        SqlReturn::SUCCESS,
                         SQLGetData(
                             stmt_handle as *mut _,
                             col,
@@ -750,75 +751,41 @@ mod unit {
                             buffer_length,
                             out_len_or_ind,
                         ),
-                        "expected return for column {col}"
                     );
-                    if code == SqlReturn::SUCCESS {
-                        assert_eq!(
-                            expected.len() as isize,
-                            *out_len_or_ind,
-                            "expected len for column {col}"
-                        );
-                        assert_eq!(
-                            expected,
-                            std::slice::from_raw_parts(buffer as *const u8, expected.len()),
-                            "expected contents for column {col}",
-                        );
-                    }
+                    assert_eq!(
+                        expected.len() as isize,
+                        *out_len_or_ind,
+                        "expected len for column {col}"
+                    );
+                    assert_eq!(
+                        expected,
+                        std::slice::from_raw_parts(buffer as *const u8, expected.len()),
+                        "expected contents for column {col}",
+                    );
                 };
 
-                bin_val_test(
-                    ARRAY_COL,
-                    "[{\"$numberInt\":\"1\"},{\"$numberInt\":\"2\"},{\"$numberInt\":\"3\"}]"
-                        .as_bytes(),
-                    SqlReturn::SUCCESS,
-                );
-                bin_val_test(BIN_COL, &[5, 6, 42], SqlReturn::SUCCESS);
-                bin_val_test(BOOL_COL, &[1u8], SqlReturn::SUCCESS);
+                bin_val_test(ARRAY_STR_VAL.0, ARRAY_STR_VAL.1.as_bytes());
+                bin_val_test(BIN_COL, &[5, 6, 42]);
+                bin_val_test(BOOL_COL, &[1]);
                 bin_val_test(
                     DATETIME_COL,
                     &[
                         222, 7, 0, 0, 11, 0, 0, 0, 28, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0,
                         0, 0, 0, 0, 0,
                     ],
-                    SqlReturn::SUCCESS,
                 );
-                bin_val_test(
-                    DOC_COL,
-                    "{\"x\":{\"$numberInt\":\"42\"},\"y\":{\"$numberInt\":\"42\"}}".as_bytes(),
-                    SqlReturn::SUCCESS,
-                );
-                bin_val_test(
-                    DOUBLE_COL,
-                    &[205, 204, 204, 204, 204, 204, 244, 63],
-                    SqlReturn::SUCCESS,
-                );
-                bin_val_test(I32_COL, &[1, 0, 0, 0], SqlReturn::SUCCESS);
-                bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0], SqlReturn::SUCCESS);
-                bin_val_test(
-                    JS_COL,
-                    "{\"$code\":\"log(\\\"hello world\\\")\"}".as_bytes(),
-                    SqlReturn::SUCCESS,
-                );
-                bin_val_test(JS_W_S_COL, "{\"$code\":\"log(\\\"hello\\\" + x + \\\"world\\\")\",\"$scope\":{\"x\":{\"$numberInt\":\"42\"}}}".as_bytes(), SqlReturn::SUCCESS);
-                bin_val_test(MAXKEY_COL, "{\"$maxKey\":1}".as_bytes(), SqlReturn::SUCCESS);
-                bin_val_test(MINKEY_COL, "{\"$minKey\":1}".as_bytes(), SqlReturn::SUCCESS);
-                bin_val_test(
-                    OID_COL,
-                    "{\"$oid\":\"63448dfed38427a35d534e40\"}".as_bytes(),
-                    SqlReturn::SUCCESS,
-                );
-                bin_val_test(
-                    REGEX_COL,
-                    "{\"$regularExpression\":{\"pattern\":\"hello .* world\",\"options\":\"\"}}"
-                        .as_bytes(),
-                    SqlReturn::SUCCESS,
-                );
-                bin_val_test(
-                    STRING_COL,
-                    &[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33],
-                    SqlReturn::SUCCESS,
-                );
-                bin_val_test(UNIT_STR_COL, &[97], SqlReturn::SUCCESS);
+                bin_val_test(DOC_STR_VAL.0, DOC_STR_VAL.1.as_bytes());
+                bin_val_test(DOUBLE_COL, &[205, 204, 204, 204, 204, 204, 244, 63]);
+                bin_val_test(I32_COL, &[1, 0, 0, 0]);
+                bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0]);
+                bin_val_test(JS_STR_VAL.0, JS_STR_VAL.1.as_bytes());
+                bin_val_test(JS_W_S_STR_VAL.0, JS_W_S_STR_VAL.1.as_bytes());
+                bin_val_test(MAXKEY_STR_VAL.0, MAXKEY_STR_VAL.1.as_bytes());
+                bin_val_test(MINKEY_STR_VAL.0, MINKEY_STR_VAL.1.as_bytes());
+                bin_val_test(OID_STR_VAL.0, OID_STR_VAL.1.as_bytes());
+                bin_val_test(REGEX_STR_VAL.0, REGEX_STR_VAL.1.as_bytes());
+                bin_val_test(STRING_STR_VAL.0, STRING_STR_VAL.1.as_bytes());
+                bin_val_test(UNIT_STR_STR_VAL.0, UNIT_STR_STR_VAL.1.as_bytes());
             }
 
             {
@@ -961,44 +928,34 @@ mod unit {
                             out_len_or_ind,
                         )
                     );
-                    assert_eq!(expected.len() as isize, *out_len_or_ind);
+                    assert_eq!(
+                        expected.len() as isize,
+                        *out_len_or_ind,
+                        "Expected column type {col}",
+                    );
                     assert_eq!(
                         expected.to_string(),
-                        input_text_to_string(char_buffer as *const _, expected.len())
+                        input_text_to_string(char_buffer as *const _, expected.len()),
+                        "Expected column type {col}",
                     );
                 };
 
-                str_val_test(
-                    ARRAY_COL,
-                    "[{\"$numberInt\":\"1\"},{\"$numberInt\":\"2\"},{\"$numberInt\":\"3\"}]",
-                );
-                str_val_test(
-                    BIN_COL,
-                    "{\"$binary\":{\"base64\":\"BQYq\",\"subType\":\"00\"}}",
-                );
-                str_val_test(BOOL_COL, "true");
-                str_val_test(
-                    DATETIME_COL,
-                    "{\"$date\":{\"$numberLong\":\"1417176009000\"}}",
-                );
-                str_val_test(
-                    DOC_COL,
-                    "{\"x\":{\"$numberInt\":\"42\"},\"y\":{\"$numberInt\":\"42\"}}",
-                );
-                str_val_test(DOUBLE_COL, "{\"$numberDouble\":\"1.3\"}");
-                str_val_test(I32_COL, "{\"$numberInt\":\"1\"}");
-                str_val_test(I64_COL, "{\"$numberLong\":\"0\"}");
-                str_val_test(JS_COL, "{\"$code\":\"log(\\\"hello world\\\")\"}");
-                str_val_test(JS_W_S_COL, "{\"$code\":\"log(\\\"hello\\\" + x + \\\"world\\\")\",\"$scope\":{\"x\":{\"$numberInt\":\"42\"}}}");
-                str_val_test(MAXKEY_COL, "{\"$maxKey\":1}");
-                str_val_test(MINKEY_COL, "{\"$minKey\":1}");
-                str_val_test(OID_COL, "{\"$oid\":\"63448dfed38427a35d534e40\"}");
-                str_val_test(
-                    REGEX_COL,
-                    "{\"$regularExpression\":{\"pattern\":\"hello .* world\",\"options\":\"\"}}",
-                );
-                str_val_test(STRING_COL, "hello world!");
-                str_val_test(UNIT_STR_COL, "a");
+                str_val_test(ARRAY_STR_VAL.0, ARRAY_STR_VAL.1);
+                str_val_test(BIN_STR_VAL.0, BIN_STR_VAL.1);
+                str_val_test(BOOL_STR_VAL.0, BOOL_STR_VAL.1);
+                str_val_test(DATETIME_STR_VAL.0, DATETIME_STR_VAL.1);
+                str_val_test(DOC_STR_VAL.0, DOC_STR_VAL.1);
+                str_val_test(DOUBLE_STR_VAL.0, DOUBLE_STR_VAL.1);
+                str_val_test(I32_STR_VAL.0, I32_STR_VAL.1);
+                str_val_test(I64_STR_VAL.0, I64_STR_VAL.1);
+                str_val_test(JS_STR_VAL.0, JS_STR_VAL.1);
+                str_val_test(JS_W_S_STR_VAL.0, JS_W_S_STR_VAL.1);
+                str_val_test(MAXKEY_STR_VAL.0, MAXKEY_STR_VAL.1);
+                str_val_test(MINKEY_STR_VAL.0, MINKEY_STR_VAL.1);
+                str_val_test(OID_STR_VAL.0, OID_STR_VAL.1);
+                str_val_test(REGEX_STR_VAL.0, REGEX_STR_VAL.1);
+                str_val_test(STRING_STR_VAL.0, STRING_STR_VAL.1);
+                str_val_test(UNIT_STR_STR_VAL.0, UNIT_STR_STR_VAL.1);
             }
 
             {
