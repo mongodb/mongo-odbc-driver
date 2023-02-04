@@ -574,7 +574,17 @@ mod integration {
             table_view.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLTablesW(stmt as HStmt, null_mut(), 0, null_mut(), 0, null_mut(), 0, table_view.as_ptr(), 11),
+                SQLTablesW(
+                    stmt as HStmt,
+                    null_mut(),
+                    0,
+                    null_mut(),
+                    0,
+                    null_mut(),
+                    0,
+                    table_view.as_ptr(),
+                    10
+                ),
                 "{}",
                 get_sql_diagnostics(HandleType::Env, env_handle as Handle)
             );
@@ -608,12 +618,11 @@ mod integration {
                 &[12, 12, 22, 22, 12, 12, 12],
                 &[12, 12, 20, 20, 12, 12, 12],
                 &[12, 12, 20, 20, 12, 12, 12],
-                &[12, 12, 14, 14, 12, 12, 12]
+                &[12, 12, 14, 14, 12, 12, 12],
             ];
             for col_num in 0..*column_count_ptr {
-                let mut field_num : usize = 0;
+                let mut field_num: usize = 0;
                 FIELD_IDS.iter().for_each(|field_type| {
-
                     assert_eq!(
                         SqlReturn::SUCCESS,
                         SQLColAttributeW(
@@ -629,8 +638,7 @@ mod integration {
                         get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
                     );
                     assert_eq!(
-                        expected_col_attr_string_lengths[col_num as usize][field_num],
-                        *str_len_ptr,
+                        expected_col_attr_string_lengths[col_num as usize][field_num], *str_len_ptr,
                         "mismatch for string_length_ptr value for row:{field_num} col:{col_num}"
                     );
                     field_num += 1;
@@ -639,6 +647,7 @@ mod integration {
             let expected_get_data_string_lengths = [
                 &[32, -1, 14, 10, 0],
                 &[32, -1, 6, 10, 0],
+                &[32, -1, 6, 8, 0],
                 &[36, -1, 18, 10, 0],
                 &[8, -1, 14, 10, 0],
                 &[8, -1, 10, 10, 0],
@@ -694,8 +703,7 @@ mod integration {
                             get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
                         );
                         assert_eq!(
-                            expected_get_data_string_lengths[row_num][4],
-                            *str_len_ptr,
+                            expected_get_data_string_lengths[row_num][4], *str_len_ptr,
                             "mismatch for string_length_ptr value for row:{row_num} col:4"
                         );
 
@@ -707,8 +715,8 @@ mod integration {
             }
 
             assert_eq!(
-                6, successful_fetch_count,
-                "Expected 6 successful calls to SQLFetch, got {successful_fetch_count}."
+                7, successful_fetch_count,
+                "Expected 7 successful calls to SQLFetch, got {successful_fetch_count}."
             );
 
             assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt as HStmt));
