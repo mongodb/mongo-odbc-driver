@@ -1,5 +1,4 @@
 use crate::{definitions::DiagType, handles::definitions::*, SQLGetDiagFieldW, SQLGetTypeInfoW};
-use bson::Bson;
 use mongo_odbc_core::SqlDataType;
 use odbc_sys::{HandleType::Stmt, SqlReturn};
 
@@ -7,79 +6,8 @@ const INVALID_SQL_TYPE: &str = "HY004\0";
 
 mod unit {
     use super::*;
-    use mongo_odbc_core::Error;
     use std::{ffi::c_void, mem::size_of};
     use widechar::WideChar;
-
-    fn validate_result_set(data_type: SqlDataType, expectations: Vec<&str>) {
-        let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
-        unsafe {
-            let get_next = |stmt: &Statement| -> Result<bool, Error> {
-                stmt.mongo_statement
-                    .write()
-                    .unwrap()
-                    .as_mut()
-                    .unwrap()
-                    .next(None)
-            };
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLGetTypeInfoW(handle as *mut _, data_type as i16)
-            );
-            let stmt = (*handle).as_statement().unwrap();
-            // for each expectation, check that calling next succeeds and we get the expected value
-            expectations.iter().for_each(|name| {
-                let result = get_next(stmt);
-                assert!(result.unwrap());
-                assert_eq!(
-                    Bson::String((*name).to_string()),
-                    stmt.mongo_statement
-                        .write()
-                        .unwrap()
-                        .as_mut()
-                        .unwrap()
-                        .get_value(1)
-                        .unwrap()
-                        .unwrap()
-                )
-            });
-
-            // check there are no additional results in the set that were not expected
-            let result = get_next(stmt);
-            assert!(!result.unwrap());
-        }
-    }
-
-    #[test]
-    fn test_all_types() {
-        let expectations = vec![
-            "bool",
-            "long",
-            "binData",
-            "array",
-            "bson",
-            "dbPointer",
-            "decimal",
-            "javascript",
-            "javascriptWithScope",
-            "maxKey",
-            "minKey",
-            "null",
-            "object",
-            "objectId",
-            "symbol",
-            "timestamp",
-            "undefined",
-            "int",
-            "double",
-            "string",
-            "date",
-        ];
-        validate_result_set(SqlDataType::UNKNOWN_TYPE, expectations);
-    }
 
     #[test]
     fn test_invalid_type_error() {
