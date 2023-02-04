@@ -666,13 +666,17 @@ mod integration {
                 match result {
                     SqlReturn::SUCCESS => {
                         successful_fetch_count += 1;
-
-                        for col_num in 1..5 {
+                        let mut expected_sql_return = SqlReturn::SUCCESS;
+                        for col_num in 0..=4 {
+                            if col_num == 4 {
+                                // REMARKS columns are an empty string, NO_DATA is returned
+                                expected_sql_return = SqlReturn::NO_DATA;
+                            }
                             assert_eq!(
-                                SqlReturn::SUCCESS,
+                                expected_sql_return,
                                 SQLGetData(
                                     stmt as HStmt,
-                                    col_num,
+                                    col_num + 1,
                                     odbc_sys::CDataType::WChar,
                                     output_buffer as Pointer,
                                     BUFFER_LENGTH as Len,
@@ -682,31 +686,11 @@ mod integration {
                                 get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
                             );
                             assert_eq!(
-                                expected_get_data_string_lengths[row_num][(col_num - 1) as usize],
+                                expected_get_data_string_lengths[row_num][col_num as usize],
                                 *str_len_ptr,
                                 "mismatch for string_length_ptr value for row:{row_num} col:{col_num}"
                             );
                         }
-
-                        // REMARKS columns are an empty string, NO_DATA is returned
-                        assert_eq!(
-                            SqlReturn::NO_DATA,
-                            SQLGetData(
-                                stmt as HStmt,
-                                5,
-                                odbc_sys::CDataType::WChar,
-                                output_buffer as Pointer,
-                                BUFFER_LENGTH as Len,
-                                str_len_ptr
-                            ),
-                            "{}",
-                            get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
-                        );
-                        assert_eq!(
-                            expected_get_data_string_lengths[row_num][4], *str_len_ptr,
-                            "mismatch for string_length_ptr value for row:{row_num} col:4"
-                        );
-
                         row_num += 1;
                     }
                     // break if SQLFetch returns SQL_NO_DATA
