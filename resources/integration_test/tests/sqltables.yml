@@ -36,8 +36,16 @@ tests:
     test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "TABLE,VIEW", 10 ]
     db: integration_test
     expected_result:
+      - [ "integration_test", null, "a_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "any_collection", "TABLE", "" ]
+      - [ "integration_test", null, "anyof_collection", "TABLE", "" ]
+      - [ "integration_test", null, "b_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "class", "TABLE", "" ]
       - [ "integration_test", null, "example", "TABLE", "" ]
       - [ "integration_test", null, "foo", "TABLE", "" ]
+      - [ "integration_test", null, "grades", "TABLE", "" ]
+      - [ "integration_test", null, "null_and_missing", "TABLE", "" ]
+      - [ "integration_test", null, "types_other", "TABLE", "" ]
       - [ "integration_test", null, "baz", "VIEW", "" ]
       - [ "integration_test_2", null, "example_2", "TABLE", "" ]
       - [ "tdvt", null, "batters", "TABLE", "" ]
@@ -48,8 +56,16 @@ tests:
     test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "TABLE", 5 ]
     db: integration_test
     expected_result:
+      - [ "integration_test", null, "a_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "any_collection", "TABLE", "" ]
+      - [ "integration_test", null, "anyof_collection", "TABLE", "" ]
+      - [ "integration_test", null, "b_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "class", "TABLE", "" ]
       - [ "integration_test", null, "example", "TABLE", "" ]
       - [ "integration_test", null, "foo", "TABLE", "" ]
+      - [ "integration_test", null, "grades", "TABLE", "" ]
+      - [ "integration_test", null, "null_and_missing", "TABLE", "" ]
+      - [ "integration_test", null, "types_other", "TABLE", "" ]
       - [ "integration_test_2", null, "example_2", "TABLE", "" ]
       - [ "tdvt", null, "batters", "TABLE", "" ]
       - [ "tdvt", null, "calcs", "TABLE", "" ]
@@ -71,6 +87,8 @@ tests:
     test_definition: [ "sqltablesw", "%", 1, "", 0, "%x%", 3, "TABLE,VIEW", 10 ]
     db: integration_test
     expected_result:
+      - [ "integration_test", null, "a_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "b_non_lexicographic_field_order", "TABLE", "" ]
       - [ "integration_test", null, "example", "TABLE", "" ]
       - [ "integration_test_2", null, "example_2", "TABLE", "" ]
 
@@ -78,4 +96,6 @@ tests:
     test_definition: [ "sqltablesw", "test$", 5, "", 0, "%x%", 3, "TABLE,VIEW", 10 ]
     db: integration_test
     expected_result:
+      - [ "integration_test", null, "a_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "b_non_lexicographic_field_order", "TABLE", "" ]
       - [ "integration_test", null, "example", "TABLE", "" ]

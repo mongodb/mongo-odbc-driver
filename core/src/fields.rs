@@ -533,16 +533,20 @@ impl MongoFields {
                         continue;
                     }
                     let current_col_metadata_response = current_col_metadata_response.unwrap();
-                    let current_col_metadata = current_col_metadata_response
-                        .process_collection_metadata(
-                            &self.current_db_name,
-                            collection_name.as_str(),
-                        )
-                        .unwrap();
-                    if !current_col_metadata.is_empty() {
-                        self.current_col_metadata = current_col_metadata;
-                        self.current_field_for_collection = 0;
-                        return true;
+                    match current_col_metadata_response.process_collection_metadata(
+                        &self.current_db_name,
+                        collection_name.as_str(),
+                    ) {
+                        Ok(current_col_metadata) => {
+                            if !current_col_metadata.is_empty() {
+                                self.current_col_metadata = current_col_metadata;
+                                self.current_field_for_collection = 0;
+                                return true;
+                            }
+                        }
+                        // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
+                        // TODO: Add a log or warning
+                        Err(_) => continue,
                     }
                 }
             }
