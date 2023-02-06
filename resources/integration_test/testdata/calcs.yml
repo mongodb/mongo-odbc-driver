@@ -1,0 +1,463 @@
+dataset:
+- collection: calcs
+  db: tdvt
+  docs:
+  - bool0: '1'
+    bool1: '1'
+    bool2: '0'
+    bool3: '1'
+    date0: '2004-04-15'
+    date1: '2004-04-01'
+    date2: '1977-04-20'
+    date3: '1986-03-20'
+    datetime0: '2004-07-09 10:17:35'
+    datetime1: ''
+    int0: '1'
+    int1: '-3'
+    int2: '5'
+    int3: '8'
+    key: key00
+    num0: '12.3'
+    num1: '8.42'
+    num2: '17.86'
+    num3: '-11.52'
+    num4: ''
+    str0: FURNITURE
+    str1: CLAMP ON LAMPS
+    str2: one
+    str3: e
+    time0: '1899-12-30 21:07:32'
+    time1: '19:36:22'
+    zzz: a
+  - bool0: '0'
+    bool1: '1'
+    bool2: '0'
+    bool3: ''
+    date0: '1972-07-04'
+    date1: '2004-04-02'
+    date2: '1995-09-03'
+    date3: ''
+    datetime0: '2004-07-26 12:30:34'
+    datetime1: ''
+    int0: ''
+    int1: '-6'
+    int2: '-4'
+    int3: '13'
+    key: key01
+    num0: '-12.3'
+    num1: '6.71'
+    num2: '16.73'
+    num3: '-9.31'
+    num4: '10.85'
+    str0: FURNITURE
+    str1: CLOCKS
+    str2: two
+    str3: e
+    time0: '1900-01-01 13:48:48'
+    time1: 02:05:25
+    zzz: b
+  - bool0: ''
+    bool1: '1'
+    bool2: '0'
+    bool3: ''
+    date0: '1975-11-12'
+    date1: '2004-04-03'
+    date2: '1997-09-19'
+    date3: '1997-02-02'
+    datetime0: '2004-08-02 07:59:23'
+    datetime1: ''
+    int0: ''
+    int1: ''
+    int2: '5'
+    int3: '2'
+    key: key02
+    num0: '15.7'
+    num1: '9.78'
+    num2: ''
+    num3: '-12.17'
+    num4: '-13.47'
+    str0: OFFICE SUPPLIES
+    str1: AIR PURIFIERS
+    str2: three
+    str3: e
+    time0: '1900-01-01 18:21:08'
+    time1: 09:33:31
+    zzz: c
+  - bool0: '1'
+    bool1: '0'
+    bool2: '0'
+    bool3: ''
+    date0: '2004-06-04'
+    date1: '2004-04-04'
+    date2: '1980-07-26'
+    date3: ''
+    datetime0: '2004-07-05 13:14:20'
+    datetime1: ''
+    int0: ''
+    int1: '-4'
+    int2: '-5'
+    int3: '5'
+    key: key03
+    num0: '-15.7'
+    num1: '7.43'
+    num2: '8.51'
+    num3: '-7.25'
+    num4: '-6.05'
+    str0: OFFICE SUPPLIES
+    str1: BINDER ACCESSORIES
+    str2: ''
+    str3: e
+    time0: '1900-01-01 18:51:48'
+    time1: '22:50:16'
+    zzz: d
+  - bool0: '0'
+    bool1: '0'
+    bool2: '1'
+    bool3: '1'
+    date0: '2004-06-19'
+    date1: '2004-04-05'
+    date2: '1997-05-30'
+    date3: '1996-03-07'
+    datetime0: '2004-07-28 23:30:22'
+    datetime1: ''
+    int0: '7'
+    int1: ''
+    int2: '3'
+    int3: '9'
+    key: key04
+    num0: '3.5'
+    num1: '9.05'
+    num2: '6.46'
+    num3: '12.93'
+    num4: '8.32'
+    str0: OFFICE SUPPLIES
+    str1: BINDER CLIPS
+    str2: five
+    str3: ''
+    time0: '1900-01-01 15:01:19'
+    time1: ''
+    zzz: e
+  - bool0: ''
+    bool1: '0'
+    bool2: '1'
+    bool3: '0'
+    date0: ''
+    date1: '2004-04-06'
+    date2: '1980-11-07'
+    date3: '1979-04-01'
+    datetime0: '2004-07-22 00:30:23'
+    datetime1: ''
+    int0: '3'
+    int1: ''
+    int2: '2'
+    int3: '7'
+    key: key05
+    num0: '-3.5'
+    num1: '9.38'
+    num2: '8.98'
+    num3: '-19.96'
+    num4: '10.71'
+    str0: OFFICE SUPPLIES
+    str1: BINDING MACHINES
+    str2: six
+    str3: ''
+    time0: '1900-01-01 08:59:39'
+    time1: '19:57:33'
+    zzz: f
+  - bool0: '1'
+    bool1: ''
+    bool2: '0'
+    bool3: ''
+    date0: ''
+    date1: '2004-04-07'
+    date2: '1977-02-08'
+    date3: ''
+    datetime0: '2004-07-28 06:54:50'
+    datetime1: ''
+    int0: '8'
+    int1: ''
+    int2: '9'
+    int3: '18'
+    key: key06
+    num0: '0'
+    num1: '16.42'
+    num2: '11.69'
+    num3: '10.93'
+    num4: ''
+    str0: OFFICE SUPPLIES
+    str1: BINDING SUPPLIES
+    str2: ''
+    str3: e
+    time0: '1900-01-01 07:37:48'
+    time1: ''
+    zzz: g
+  - bool0: '0'
+    bool1: ''
+    bool2: '1'
+    bool3: '0'
+    date0: ''
+    date1: '2004-04-08'
+    date2: '1974-05-03'
+    date3: ''
+    datetime0: '2004-07-12 17:30:16'
+    datetime1: ''
+    int0: ''
+    int1: '2'
+    int2: '0'
+    int3: '3'
+    key: key07
+    num0: ''
+    num1: '11.38'
+    num2: '17.25'
+    num3: '3.64'
+    num4: '-10.24'
+    str0: OFFICE SUPPLIES
+    str1: BUSINESS ENVELOPES
+    str2: eight
+    str3: e
+    time0: '1900-01-01 19:45:54'
+    time1: '19:48:23'
+    zzz: h
+  - bool0: ''
+    bool1: ''
+    bool2: '0'
+    bool3: '0'
+    date0: ''
+    date1: '2004-04-09'
+    date2: '1976-09-09'
+    date3: '1983-05-22'
+    datetime0: '2004-07-04 22:49:28'
+    datetime1: ''
+    int0: ''
+    int1: '3'
+    int2: '-6'
+    int3: '17'
+    key: key08
+    num0: '10'
+    num1: '9.47'
+    num2: ''
+    num3: '-13.38'
+    num4: '4.77'
+    str0: TECHNOLOGY
+    str1: ANSWERING MACHINES
+    str2: nine
+    str3: ''
+    time0: '1900-01-01 09:00:59'
+    time1: '22:20:14'
+    zzz: i
+  - bool0: ''
+    bool1: '1'
+    bool2: '0'
+    bool3: ''
+    date0: ''
+    date1: '2004-04-10'
+    date2: '1998-08-12'
+    date3: ''
+    datetime0: '2004-07-23 21:13:37'
+    datetime1: ''
+    int0: '8'
+    int1: '3'
+    int2: '-9'
+    int3: '2'
+    key: key09
+    num0: ''
+    num1: '12.4'
+    num2: '11.5'
+    num3: '-10.56'
+    num4: ''
+    str0: TECHNOLOGY
+    str1: BUSINESS COPIERS
+    str2: ten
+    str3: e
+    time0: '1900-01-01 20:36:00'
+    time1: ''
+    zzz: j
+  - bool0: '1'
+    bool1: '1'
+    bool2: '0'
+    bool3: ''
+    date0: ''
+    date1: '2004-04-11'
+    date2: '1974-03-17'
+    date3: '1999-08-20'
+    datetime0: '2004-07-14 08:16:44'
+    datetime1: ''
+    int0: '4'
+    int1: ''
+    int2: '-3'
+    int3: '11'
+    key: key10
+    num0: ''
+    num1: '10.32'
+    num2: '6.8'
+    num3: '-4.79'
+    num4: '19.39'
+    str0: TECHNOLOGY
+    str1: CD-R MEDIA
+    str2: eleven
+    str3: e
+    time0: '1900-01-01 01:31:32'
+    time1: 00:05:57
+    zzz: k
+  - bool0: '0'
+    bool1: '1'
+    bool2: '1'
+    bool3: ''
+    date0: ''
+    date1: '2004-04-12'
+    date2: '1994-04-20'
+    date3: ''
+    datetime0: '2004-07-25 15:22:26'
+    datetime1: ''
+    int0: '10'
+    int1: '-8'
+    int2: '-4'
+    int3: '2'
+    key: key11
+    num0: ''
+    num1: '2.47'
+    num2: '3.79'
+    num3: '-10.81'
+    num4: '3.82'
+    str0: TECHNOLOGY
+    str1: CONFERENCE PHONES
+    str2: twelve
+    str3: ''
+    time0: '1899-12-30 22:15:40'
+    time1: 04:40:49
+    zzz: l
+  - bool0: ''
+    bool1: '0'
+    bool2: '1'
+    bool3: '1'
+    date0: ''
+    date1: '2004-04-13'
+    date2: '2001-02-04'
+    date3: ''
+    datetime0: '2004-07-17 14:01:56'
+    datetime1: ''
+    int0: ''
+    int1: ''
+    int2: '0'
+    int3: '11'
+    key: key12
+    num0: ''
+    num1: '12.05'
+    num2: ''
+    num3: '-6.62'
+    num4: '3.38'
+    str0: TECHNOLOGY
+    str1: CORDED KEYBOARDS
+    str2: ''
+    str3: ''
+    time0: '1900-01-01 13:53:46'
+    time1: 04:48:07
+    zzz: m
+  - bool0: ''
+    bool1: '0'
+    bool2: '1'
+    bool3: '1'
+    date0: ''
+    date1: '2004-04-14'
+    date2: '1988-01-05'
+    date3: '1996-05-13'
+    datetime0: '2004-07-19 22:21:31'
+    datetime1: ''
+    int0: '4'
+    int1: ''
+    int2: '4'
+    int3: '18'
+    key: key13
+    num0: ''
+    num1: '10.37'
+    num2: '13.04'
+    num3: '-18.43'
+    num4: ''
+    str0: TECHNOLOGY
+    str1: CORDLESS KEYBOARDS
+    str2: fourteen
+    str3: ''
+    time0: '1900-01-01 04:57:51'
+    time1: ''
+    zzz: n
+  - bool0: '1'
+    bool1: '0'
+    bool2: '1'
+    bool3: ''
+    date0: ''
+    date1: '2004-04-15'
+    date2: '1972-07-12'
+    date3: '1986-11-08'
+    datetime0: '2004-07-31 11:57:52'
+    datetime1: ''
+    int0: '11'
+    int1: ''
+    int2: '-8'
+    int3: '18'
+    key: key14
+    num0: ''
+    num1: '7.1'
+    num2: ''
+    num3: '6.84'
+    num4: '-14.21'
+    str0: TECHNOLOGY
+    str1: DOT MATRIX PRINTERS
+    str2: fifteen
+    str3: e
+    time0: '1899-12-30 22:42:43'
+    time1: '18:58:41'
+    zzz: o
+  - bool0: '0'
+    bool1: ''
+    bool2: '0'
+    bool3: '1'
+    date0: ''
+    date1: '2004-04-16'
+    date2: '1995-06-04'
+    date3: ''
+    datetime0: '2004-07-14 07:43:00'
+    datetime1: ''
+    int0: '4'
+    int1: ''
+    int2: '-9'
+    int3: '11'
+    key: key15
+    num0: ''
+    num1: '16.81'
+    num2: '10.98'
+    num3: '-10.98'
+    num4: '6.75'
+    str0: TECHNOLOGY
+    str1: DVD
+    str2: sixteen
+    str3: e
+    time0: '1899-12-30 22:24:08'
+    time1: ''
+    zzz: p
+  - bool0: ''
+    bool1: ''
+    bool2: '0'
+    bool3: ''
+    date0: ''
+    date1: '2004-04-17'
+    date2: '2002-04-27'
+    date3: '1992-01-18'
+    datetime0: '2004-07-28 12:34:28'
+    datetime1: ''
+    int0: '8'
+    int1: '-9'
+    int2: '6'
+    int3: '0'
+    key: key16
+    num0: ''
+    num1: '7.12'
+    num2: '7.87'
+    num3: '-2.6'
+    num4: ''
+    str0: TECHNOLOGY
+    str1: ERICSSON
+    str2: ''
+    str3: ''
+    time0: '1900-01-01 11:58:29'
+    time1: '12:33:57'
+    zzz: q
