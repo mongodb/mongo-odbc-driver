@@ -490,7 +490,7 @@ mod unit {
         );
 
         remove_multiple_test!(
-            nullable_array,
+            array_and_other,
             expected = Schema {
                 bson_type: None,
                 properties: None,
