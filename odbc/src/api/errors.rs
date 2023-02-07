@@ -104,13 +104,13 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     IntegralTruncation(String),
-    #[error("[{}][API] invalid datetime format: \"{0}\"", VENDOR_IDENTIFIER)]
-    InvalidDatetimeFormat(String),
+    #[error("[{}][API] invalid datetime format", VENDOR_IDENTIFIER)]
+    InvalidDatetimeFormat,
     #[error(
-        "[{}][API] invalid character value: \"{0}\" for cast to type: {1}",
+        "[{}][API] invalid character value for cast to type: {0}",
         VENDOR_IDENTIFIER
     )]
-    InvalidCharacterValue(String, &'static str),
+    InvalidCharacterValue(&'static str),
     #[error(
         "[{}][API] Invalid value for attribute {0}, changed to {1}",
         VENDOR_IDENTIFIER
@@ -158,8 +158,8 @@ impl ODBCError {
             ODBCError::SecondsTruncation(_) => FRACTIONAL_TRUNCATION,
             ODBCError::TimeTruncation(_) => FRACTIONAL_TRUNCATION,
             ODBCError::IntegralTruncation(_) => INTEGRAL_TRUNCATION,
-            ODBCError::InvalidDatetimeFormat(_) => INVALID_DATETIME_FORMAT,
-            ODBCError::InvalidCharacterValue(_, _) => INVALID_CHARACTER_VALUE,
+            ODBCError::InvalidDatetimeFormat => INVALID_DATETIME_FORMAT,
+            ODBCError::InvalidCharacterValue(_) => INVALID_CHARACTER_VALUE,
             ODBCError::IndicatorVariableRequiredButNotSupplied => INDICATOR_VARIABLE_REQUIRED,
             ODBCError::NoResultSet => NO_RESULTSET,
             ODBCError::UnknownInfoType(_) => INVALID_INFO_TYPE_VALUE,
@@ -195,10 +195,10 @@ impl ODBCError {
             | ODBCError::SecondsTruncation(_)
             | ODBCError::TimeTruncation(_)
             | ODBCError::IntegralTruncation(_)
-            | ODBCError::InvalidDatetimeFormat(_)
+            | ODBCError::InvalidDatetimeFormat
             | ODBCError::InvalidSqlType(_)
             | ODBCError::UnsupportedFieldDescriptor(_)
-            | ODBCError::InvalidCharacterValue(_, _)
+            | ODBCError::InvalidCharacterValue(_)
             | ODBCError::NoResultSet
             | ODBCError::UnsupportedInfoTypeRetrieval(_)
             | ODBCError::UnknownInfoType(_) => 0,
