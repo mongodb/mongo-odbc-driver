@@ -392,11 +392,7 @@ mod unit {
                 any_of: Some(vec![
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                        properties: None,
-                        required: None,
-                        additional_properties: None,
-                        items: None,
-                        any_of: None,
+                        ..Default::default()
                     },
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Null)),
