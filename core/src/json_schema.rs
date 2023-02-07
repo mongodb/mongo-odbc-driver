@@ -24,7 +24,7 @@ impl Schema {
     pub fn remove_multiple(mut self) -> Result<Self, Error> {
         // it is invalid for both any_of and bson_type to be set because
         // any_of is a top level constructor.
-        if !(self.bson_type.is_none() || self.any_of.is_none()) {
+        if self.bson_type.is_some() && self.any_of.is_some() {
             return Err(Error::InvalidResultSetJsonSchema(
                 "Schema with bsonType and anyOf both defined is invalid",
             ));
