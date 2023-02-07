@@ -36,6 +36,21 @@
     "views": null
   },
   {
+    "name" : "supplies",
+    "collections" : [
+      {
+        "name": "*",
+        "dataSources" : [
+          {
+            "storeName" : "localmongo",
+            "database" : "tdvt"
+          }
+        ]
+      }
+    ],
+    "views": null
+  },
+  {
     "name" : "tdvt",
     "collections" : [
       {
