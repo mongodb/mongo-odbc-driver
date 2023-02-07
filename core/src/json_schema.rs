@@ -648,7 +648,7 @@ mod unit {
             }
         );
     }
-// Testing TryFrom<json_schema::Schema> for json_schema::simplified::Atomic
+    // Testing TryFrom<json_schema::Schema> for json_schema::simplified::Atomic
     macro_rules! try_from_test {
         ($func_name:ident, variant = $variant:ident, expected = $expected:expr, input = $input:expr) => {
             #[test]
