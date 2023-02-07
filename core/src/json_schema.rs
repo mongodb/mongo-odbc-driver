@@ -374,7 +374,6 @@ mod unit {
         };
     }
 
-    // Testing TryFrom<json_schema::Schema> for json_schema::simplified::Atomic
     mod remove_multiple {
         use crate::{
             json_schema::{BsonType, BsonTypeName, Items, Schema},
