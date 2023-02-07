@@ -43,7 +43,7 @@
         "dataSources" : [
           {
             "storeName" : "localmongo",
-            "database" : "tdvt"
+            "database" : "supplies"
           }
         ]
       }
