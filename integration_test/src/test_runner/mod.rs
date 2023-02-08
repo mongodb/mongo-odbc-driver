@@ -709,7 +709,7 @@ fn get_data(
                                 [0..*out_len_or_ind as usize]
                                 .to_string());
                         }
-                        CDataType::SLong => data = json!(*(buffer as *const i64)),
+                        CDataType::SLong => data = json!(*(buffer as *const i32)),
                         CDataType::Double => data = json!(*(buffer as *const f64)),
                         CDataType::Bit => data = json!(*(buffer as *const bool)),
                         _ => {}
