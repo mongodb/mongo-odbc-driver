@@ -48,7 +48,7 @@ tests:
     expected_precision: [ 0, 10, 10, 0, 0, 0, 10, 10, 10, 10, 10, 10, 0, 10, 10, 10, 10, 10, 10 ]
     expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
     expected_nullability: [ 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1 ]
-  - description: SQLGetTypeInfo function getall types
+  - description: SQLGetTypeInfo function get all types
     test_definition: [ "sqlgettypeinfo", 0 ]
     db: integration_test
     expected_result:

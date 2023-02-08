@@ -421,19 +421,6 @@ fn run_function_test(
                 ))
             }
         }
-        "sqltableprivileges" => {
-            unsafe {
-                Ok(odbc_sys::SQLTablePrivileges(
-                    statement.handle() as HStmt,
-                    str_or_null(&function[1]),
-                    to_i16(&function[2]),
-                    str_or_null(&function[3]),
-                    to_i16(&function[4]),
-                    str_or_null(&function[5]),
-                    to_i16(&function[6]),
-                ))
-            }
-        }
          */
         _ => Err(Error::UnsupportedFunction(function_name.clone())),
     };
