@@ -1,11 +1,13 @@
 use crate::{
+    add_diag_with_function,
     api::definitions::CDataType,
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle, Statement},
+    trace_odbc,
 };
 use bson::{spec::BinarySubtype, Bson};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
-use file_dbg_macros::dbg_write;
+use file_dbg_macros::{dbg_write, msg_to_file};
 use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
@@ -537,7 +539,11 @@ pub unsafe fn format_binary(
         )
     };
     if sql_return == SqlReturn::SUCCESS_WITH_INFO {
-        mongo_handle.add_diag_info(ODBCError::OutStringTruncated(buffer_len as usize));
+        add_diag_with_function!(
+            mongo_handle,
+            ODBCError::OutStringTruncated(buffer_len as usize),
+            "SQLGetData"
+        );
     }
     sql_return
 }
@@ -559,7 +565,11 @@ macro_rules! char_data {
             )
         };
         if sql_return == SqlReturn::SUCCESS_WITH_INFO {
-            mongo_handle.add_diag_info(ODBCError::OutStringTruncated(buffer_len as usize));
+            add_diag_with_function!(
+                mongo_handle,
+                ODBCError::OutStringTruncated(buffer_len as usize),
+                "SQLGetData"
+            );
         }
         sql_return
     }};
@@ -923,7 +933,11 @@ pub unsafe fn format_bson_data(
             data,
         ),
         other => {
-            mongo_handle.add_diag_info(ODBCError::UnimplementedDataType(format!("{other:?}")));
+            add_diag_with_function!(
+                mongo_handle,
+                ODBCError::UnimplementedDataType(format!("{other:?}")),
+                "SQLGetData"
+            );
             SqlReturn::ERROR
         }
     }
@@ -1396,17 +1410,6 @@ pub mod isize_len {
         copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
         SqlReturn::SUCCESS
     }
-}
-
-///
-/// unsupported_function is a helper function for correctly setting the state for
-/// unsupported functions.
-///
-pub fn unsupported_function(handle: &mut MongoHandle, name: &'static str) -> SqlReturn {
-    dbg_write!(format!("Unsupported Function: {name}, SQLReturn = ERROR"));
-    handle.clear_diagnostics();
-    handle.add_diag_info(ODBCError::Unimplemented(name));
-    SqlReturn::ERROR
 }
 
 ///

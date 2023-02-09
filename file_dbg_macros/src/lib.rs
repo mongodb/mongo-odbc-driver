@@ -32,8 +32,8 @@ lazy_static! {
 }
 
 #[macro_export]
-macro_rules! dbg_write {
-    () => {
+macro_rules! msg_to_file {
+    ($val:expr) => {
         #[cfg(debug_assertions)]
         {
             use chrono::{Local, SecondsFormat};
@@ -45,15 +45,7 @@ macro_rules! dbg_write {
                 logger_file = LOGGER_FILE.lock();
             }
             let mut logger_file = logger_file.unwrap();
-            match (*logger_file).write_all(
-                format!(
-                    "{}: {}:{}\n",
-                    Local::now().to_rfc3339_opts(SecondsFormat::Millis, false),
-                    file!(),
-                    line!()
-                )
-                .as_bytes(),
-            ) {
+            match (*logger_file).write_all(format!("{}\n", $val).as_bytes()) {
                 Err(why) => panic!("couldn't write to log file {FILE_PATH:?}: {why}"),
                 Ok(_) => (),
             };
@@ -63,35 +55,31 @@ macro_rules! dbg_write {
             }
         }
     };
-    ( $val:expr ) => {
+}
+
+#[macro_export]
+macro_rules! dbg_write {
+    () => {
         #[cfg(debug_assertions)]
         {
-            use chrono::{Local, SecondsFormat};
-            use file_dbg_macros::{FILE_PATH, LOGGER_FILE};
-            use std::io::Write;
-
-            let mut logger_file = LOGGER_FILE.lock();
-            while logger_file.is_err() {
-                logger_file = LOGGER_FILE.lock();
-            }
-            let mut logger_file = logger_file.unwrap();
-            match (*logger_file).write_all(
-                format!(
-                    "{}: {}:{} - {:?}\n",
-                    Local::now().to_rfc3339_opts(SecondsFormat::Millis, false),
-                    file!(),
-                    line!(),
-                    $val
-                )
-                .as_bytes(),
-            ) {
-                Err(why) => panic!("couldn't write to log file {FILE_PATH:?}: {why}"),
-                Ok(_) => (),
-            };
-            match (*logger_file).flush() {
-                Err(why) => panic!("couldn't flush log file {FILE_PATH:?}: {why}"),
-                Ok(_) => (),
-            }
+            msg_to_file!(format!(
+                "{} {}:{}",
+                Local::now().to_rfc3339_opts(SecondsFormat::Millis, false),
+                file!(),
+                line!()
+            ));
+        }
+    };
+    ( $msg:expr ) => {
+        #[cfg(debug_assertions)]
+        {
+            msg_to_file!(format!(
+                "{} {}:{} - {}",
+                Local::now().to_rfc3339_opts(SecondsFormat::Millis, false),
+                file!(),
+                line!(),
+                $msg
+            ));
         }
     };
 }
