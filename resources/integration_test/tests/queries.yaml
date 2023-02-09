@@ -3,18 +3,253 @@ tests:
     test_definition: "select * from example"
     db: integration_test
     expected_result:
-      - ['{"$numberInt":"0"}', "a"]
+      - ["0", "a"]
       - [1, "b"]
-      - ['{"$numberInt":"2"}', "c"]
+      - ["2", "c"]
     expected_bson_type: ["int", "string"]
-    expected_case_sensitive: [ "", "" ]
+    expected_case_sensitive: ["", ""]
     expected_catalog_name: ["", ""]
     expected_column_name: ["_id", "b"]
-    expected_display_size: [ 4, 0 ]
-    expected_length: [ 4, 0 ]
-    expected_is_searchable: [ 2, 3 ]
-    expected_is_unsigned: [ 0, 1 ]
+    expected_display_size: [4, 0]
+    expected_length: [4, 0]
+    expected_is_searchable: [2, 3]
+    expected_is_unsigned: [0, 1]
     expected_sql_type: [4, -9]
     expected_precision: [10, 0]
     expected_scale: [0, 0]
     expected_nullability: [1, 1]
+
+  - description: select_star_ordered
+    test_definition: SELECT * FROM grades ORDER BY _id
+    db: integration_test
+    expected_result:
+      - [0, 84.5, 303, 3]
+      - [1, 97.4, 10329, 3]
+      - [2, 89.3, 342, 3]
+      - [3, 91.9, 204323, 3]
+      - [4, 87.5, 303, 5]
+      - [5, 74.4, 10329, 5]
+      - [6, 80.1, 342, 5]
+      - [7, 83.3, 204323, 5]
+      - [8, 78.5, 200, 5]
+    expected_bson_type: ["int", "double", "int", "int"]
+    expected_case_sensitive: ["", "", "", ""]
+    expected_catalog_name: ["", "", "", ""]
+    expected_column_label: ["_id", "score", "studentid", "testid"]
+    expected_display_size: [4, 8, 4, 4]
+    expected_length: [4, 8, 4, 4]
+    expected_is_searchable: [2, 2, 2, 2]
+    expected_is_unsigned: [0, 0, 0, 0]
+    expected_sql_type: [4, 8, 4, 4]
+    expected_precision: [10, 15, 10, 10]
+    expected_scale: [0, 15, 0, 0]
+    expected_is_nullable: [1, 1, 1, 1]
+
+  - description: select_star_unordered
+    test_definition: SELECT * FROM class
+    db: integration_test
+    expected_result:
+      - [ 0, true, John, 2000-01-01, 10329 ]
+      - [ 1, false, Jane, 2000-02-01, 342 ]
+      - [ 2, true, Mike, 2000-01-01, 303 ]
+      - [ 3, false, Mary, 2000-03-01, 204323 ]
+      - [ 4, false, Pete, 2000-01-01, 10 ]
+    expected_bson_type: ["int", "bool", "string", "date", "int"]
+    expected_case_sensitive: ["", "", "", "", ""]
+    expected_catalog_name: ["", "", "", "", ""]
+    expected_column_label: [ "_id", "enrolled", "name", "startdate", "studentid" ]
+    expected_display_size: [ 4, 1, 0, 16, 4 ]
+    expected_length: [ 4, 1, 0, 16, 4 ]
+    expected_is_searchable: [ 2, 2, 3, 2, 2 ]
+    expected_is_unsigned: [0, 1, 1, 1, 0]
+    expected_sql_type: [ 4, -7, -9, 93, 4 ]
+    expected_precision: [ 10, 1, 0, 23, 10 ]
+    expected_scale: [ 0, 0, 0, 3, 0 ]
+    expected_is_nullable: [ 1, 1, 1, 1, 1 ]
+
+  - description: select_as_confirm_column_label
+    test_definition: SELECT enrolled AS e, studentid AS s, name AS n FROM class
+    db: integration_test
+    expected_result:
+      - [ true, John, 10329 ]
+      - [ false, Jane, 342 ]
+      - [ true, Mike, 303 ]
+      - [ false, Mary, 204323 ]
+      - [ false, Pete, 10 ]
+    expected_bson_type: ["bool", "string", "int"]
+    expected_case_sensitive: ["", "", ""]
+    expected_catalog_name: ["", "", ""]
+    expected_column_label: [ "e", "n", "s" ]
+    expected_display_size: [1, 0, 4]
+    expected_length: [1, 0, 4]
+    expected_is_searchable: [2, 3, 2]
+    expected_is_unsigned: [1, 1, 0]
+    expected_sql_type: [-7, -9, 4]
+    expected_precision: [ 1, 0, 10 ]
+    expected_scale: [ 0, 0, 0 ]
+    expected_is_nullable: [1, 1, 1]
+
+  - description: inner_join
+    test_definition: "SELECT class.name, grades.testid, grades.score FROM grades INNER JOIN class ON grades.studentid\
+      = class.studentid"
+    db: integration_test
+    expected_result:
+      - [Mike, 84.5, 3]
+      - [John, 97.4, 3]
+      - [Jane, 89.3, 3]
+      - [Mary, 91.9, 3]
+      - [Mike, 87.5, 5]
+      - [John, 74.4, 5]
+      - [Jane, 80.1, 5]
+      - [Mary, 83.3, 5]
+    expected_bson_type: ["string", "double", "int"]
+    expected_case_sensitive: ["", "", ""]
+    expected_catalog_name: ["", "", ""]
+    expected_column_label: ["name", "score", "testid"]
+    expected_display_size: [0, 8, 4]
+    expected_length: [0, 8, 4]
+    expected_is_searchable: [3, 2, 2]
+    expected_is_unsigned: [1, 0, 0]
+    expected_sql_type: [-9, 8, 4]
+    expected_precision: [0, 15, 10]
+    expected_scale: [0, 15, 0]
+    expected_is_nullable: [1, 1, 1]
+
+  - description: driver_does_not_alter_result_set_row_order
+    test_definition: SELECT grades.score AS score FROM grades ORDER BY score DESC
+    db: integration_test
+    expected_result:
+      - [97.4]
+      - [91.9]
+      - [89.3]
+      - [87.5]
+      - [84.5]
+      - [83.3]
+      - [80.1]
+      - [78.5]
+      - [74.4]
+    expected_bson_type: ["double"]
+    expected_case_sensitive: [""]
+    expected_catalog_name: [""]
+    expected_column_label: [ "score" ]
+    expected_display_size: [8]
+    expected_length: [8]
+    expected_is_searchable: [2]
+    expected_is_unsigned: [0]
+    expected_sql_type: [8]
+    expected_precision: [15]
+    expected_scale: [15]
+    expected_is_nullable: [1]
+
+  - description: select_star_from_anyof
+    test_definition: SELECT * FROM anyof_collection
+    db: integration_test
+    expected_result:
+      - [ 0, "3" ]
+      - [ 1, "3000000000" ]
+      - [ 2, "4.5" ]
+    expected_bson_type: ["int", "bson"]
+    expected_case_sensitive: ["", ""]
+    expected_catalog_name: ["", ""]
+    expected_column_label: [ "_id", "a" ]
+    expected_display_size: [4, 0]
+    expected_length: [4, 0]
+    expected_is_searchable: [2, 0]
+    expected_is_unsigned: [0, 1]
+    expected_sql_type: [4, 0]
+    expected_precision: [ 10, 0 ]
+    expected_scale: [ 0, 0 ]
+    expected_is_nullable: [1, 1]
+
+  - description: select_polymorphic_field
+    test_definition: SELECT b from any_collection
+    db: integration_test
+    expected_result:
+      - [ "3" ]
+      - [ "b" ]
+      - [ "4.5" ]
+    expected_bson_type: ["bson"]
+    expected_case_sensitive: [""]
+    expected_catalog_name: [""]
+    expected_column_label: [ "b" ]
+    expected_display_size: [0]
+    expected_length: [0]
+    expected_is_searchable: [0]
+    expected_is_unsigned: [1]
+    expected_sql_type: [0]
+    expected_precision: [0]
+    expected_scale: [0]
+    expected_is_nullable: [1]
+
+  - description: lexicographical_column_ordering
+    test_definition: select * from b_non_lexicographic_field_order inner join a_non_lexicographic_field_order
+    db: integration_test
+    expected_result:
+      - [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    expected_bson_type: ["int", "int", "int", "int", "int", "int", "int", "int", "int"]
+    expected_case_sensitive: ["", "", "", "", "", "", "", "", ""]
+    expected_catalog_name: ["", "", "", "", "", "", "", "", ""]
+    expected_column_label: ["A", "B", "C", "_id", "a", "b", "c", "_id", "a"]
+    expected_display_size: [4, 4, 4, 4, 4, 4, 4, 4, 4]
+    expected_length: [4, 4, 4, 4, 4, 4, 4, 4, 4]
+    expected_is_searchable: [2, 2, 2, 2, 2, 2, 2, 2, 2]
+    expected_is_unsigned: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    expected_sql_type: [4, 4, 4, 4, 4, 4, 4, 4, 4]
+    expected_precision: [10, 10, 10, 10, 10, 10, 10, 10, 10]
+    expected_scale: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    expected_is_nullable: [1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+  - description: select_star_from_any
+    db: integration_test
+    test_definition: SELECT * from any_collection
+    expected_result:
+      - [0]
+      - [1]
+      - [2]
+
+  - description: query_types_other
+    test_definition: SELECT * FROM types_other
+    db: integration_test
+    expected_result:
+      - [
+        "0", '[1,2,3,{"$oid":"000000000000000000000003"},{"$timestamp":{"t":200,"i":0}}]',
+        '{"$dbPointer":{"$ref":"namespace","$id":{"$oid":"000000000000000000000001"}}}',
+        '{"$code":"function(){ }"}',
+        '{"$code":"function(){ }","$scope":{"foo":"bar"}}',
+        '{"$maxKey":1}',
+        '{"$minKey":1}',
+        '{"foo":"bar","objId":{"$oid":"000000000000000000000002"},"value":3,"time":{"$timestamp":{"t":200,"i":0}}}',
+        '{"$oid":"000000000000000000000001"}',
+        '{"$regularExpression":{"pattern":"a(bc)*","options":""}}',
+        '{"$symbol":"symbol"}',
+        '{"$timestamp":{"t":100,"i":0}}'
+          # Skip reason: SQL-395
+          # 11: {"$undefined":true},
+      ]
+
+  - description: query_array_and_document_as_string
+    test_definition: SELECT `array`, `object` FROM types_other
+    db: integration_test
+    expected_result:
+      - ['[1,2,3,{"$oid":"000000000000000000000003"},{"$timestamp":{"t":200,"i":0}}]',
+         '{"foo":"bar","objId":{"$oid":"000000000000000000000002"},"value":3,"time":{"$timestamp":{"t":200,"i":0}}}']
+
+  - description: select_null_and_missing_field
+    test_definition: SELECT a FROM null_and_missing
+    db: integration_test
+    expected_result:
+      - [ "1" ]
+      - [ null ]
+      - [ null ]
+    expected_bson_type: ["int"]
+    expected_case_sensitive: [""]
+    expected_catalog_name: [""]
+    expected_column_label: [ "a" ]
+    expected_display_size: [4]
+    expected_length: [4]
+    expected_is_searchable: [2]
+    expected_is_unsigned: [0]
+    expected_sql_type: [4]
+    expected_precision: [10]
+    expected_scale: [0]
+    expected_is_nullable: [1]

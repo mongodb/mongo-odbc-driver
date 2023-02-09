@@ -23,6 +23,7 @@ mongo-odbc-core = { path = "../core" }
 file_dbg_macros = { path = "../file_dbg_macros" }
 widechar = { path = "../widechar" }
 function_name = "0.3.0"
+serde_json = "1.0.68"
 
 [dependencies.mongodb]
 version = "2.0.2"
