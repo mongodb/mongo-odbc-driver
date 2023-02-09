@@ -299,7 +299,7 @@ mod integration {
                                     (col_num + 1) as USmallInt,
                                     target_types[col_num],
                                     output_buffer as Pointer,
-                                    BUFFER_LENGTH as Len,
+                                    (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
                                     str_len_ptr
                                 ),
                                 "{}",
@@ -599,7 +599,6 @@ mod integration {
                     &mut stmt as *mut Handle
                 )
             );
-            // let column_count_ptr = &mut 0;
             let mut table_view: Vec<u16> = "TABLE,VIEW".encode_utf16().collect();
             table_view.push(0);
             assert_eq!(
