@@ -88,7 +88,7 @@ impl MongoHandle {
         loop {
             let handle_ptr: *mut MongoHandle = handle;
             match handle {
-                MongoHandle::Env(e) => {
+                MongoHandle::Env(_) => {
                     handle_info = format!("[Env_{:?}]{handle_info}", handle_ptr);
                     return handle_info;
                 }

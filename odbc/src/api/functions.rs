@@ -26,7 +26,6 @@ use odbc_sys::{
     Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
     Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
-use std::borrow::BorrowMut;
 use std::ptr::null_mut;
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 use widechar::WideChar;
