@@ -1149,7 +1149,7 @@ mod unit {
                     STRING_COL,
                     false,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Bit",
+                    "[MongoDB][API] invalid character value for cast to type: Bit",
                 );
             }
 
@@ -1342,7 +1342,7 @@ mod unit {
                     STRING_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Int64",
+                    "[MongoDB][API] invalid character value for cast to type: Int64",
                 );
             }
 
@@ -1535,7 +1535,7 @@ mod unit {
                     STRING_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: UInt64",
+                    "[MongoDB][API] invalid character value for cast to type: UInt64",
                 );
                 u64_val_test(
                     NEGATIVE_COL,
@@ -1734,7 +1734,7 @@ mod unit {
                     STRING_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Int32",
+                    "[MongoDB][API] invalid character value for cast to type: Int32",
                 );
             }
 
@@ -1927,7 +1927,7 @@ mod unit {
                     STRING_COL,
                     0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: UInt32",
+                    "[MongoDB][API] invalid character value for cast to type: UInt32",
                 );
                 u32_val_test(
                     NEGATIVE_COL,
@@ -2119,7 +2119,7 @@ mod unit {
                     STRING_COL,
                     0.0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Double",
+                    "[MongoDB][API] invalid character value for cast to type: Double",
                 );
             }
 
@@ -2305,7 +2305,7 @@ mod unit {
                     STRING_COL,
                     0.0,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid character value: \"hello world!\" for cast to type: Double",
+                    "[MongoDB][API] invalid character value for cast to type: Double",
                 );
             }
 
@@ -2516,7 +2516,7 @@ mod unit {
                     STRING_COL,
                     empty,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid datetime format: \"hello world!\"",
+                    "[MongoDB][API] invalid datetime format",
                 );
             }
 
@@ -2720,7 +2720,7 @@ mod unit {
                     STRING_COL,
                     empty,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid datetime format: \"hello world!\"",
+                    "[MongoDB][API] invalid datetime format",
                 );
             }
 
@@ -2923,7 +2923,7 @@ mod unit {
                     STRING_COL,
                     empty,
                     SqlReturn::ERROR,
-                    "[MongoDB][API] invalid datetime format: \"hello world!\"",
+                    "[MongoDB][API] invalid datetime format",
                 );
             }
 

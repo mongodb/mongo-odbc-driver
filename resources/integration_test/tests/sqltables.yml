@@ -1,5 +1,38 @@
 tests:
-  - description: SQLTablesW all catalogs with TableType
+  - description: SQLTablesW SQL_ALL_CATALOGS lists valid catalogs
+    test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "", 0 ]
+    db: integration_test
+    expected_result:
+      - [ "db2", null, null, null, null ]
+      - [ "integration_test", null, null, null, null ]
+      - [ "integration_test_2", null, null, null, null ]
+      - [ "tdvt", null, null, null, null ]
+    expected_bson_type: [ "string", "string", "string", "string", "string" ]
+    expected_case_sensitive: [ "", "", "", "", "" ]
+    expected_catalog_name: [ "", "", "", "", "" ]
+    expected_column_name: [ "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS" ]
+    expected_display_size: [ 0, 0, 0, 0, 0 ]
+    expected_length: [ 0, 0, 0, 0, 0 ]
+    expected_is_searchable: [ 3, 3, 3, 3, 3 ]
+    expected_is_unsigned: [ 1, 1, 1, 1, 1 ]
+    expected_sql_type: [ -9, -9, -9, -9, -9 ]
+    expected_precision: [ 0, 0, 0, 0, 0 ]
+    expected_scale: [ 0, 0, 0, 0, 0 ]
+    expected_nullability: [ 0, 1, 1, 1, 1 ]
+
+  - description: SQLTablesW SQL_ALL_SCHEMA returns empty list
+    test_definition: [ "sqltablesw", "", 0, "%", 1, "", 0, "", 0 ]
+    db: integration_test
+    expected_result: []
+
+  - description: SQLTablesW SQL_ALL_TABLE_TYPES lists valid types
+    test_definition: [ "sqltablesw", "", 0, "", 0, "", 0, "%", 1 ]
+    db: integration_test
+    expected_result:
+      - [ null, null, null, "TABLE", null ]
+      - [ null, null, null, "VIEW", null ]
+
+  - description: SQLTablesW all catalogs with table and view TableTypes
     test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "TABLE,VIEW", 10 ]
     db: integration_test
     expected_result:
@@ -18,24 +51,51 @@ tests:
       - [ "tdvt", null, "batters", "TABLE", "" ]
       - [ "tdvt", null, "calcs", "TABLE", "" ]
       - [ "tdvt", null, "staples", "TABLE", "" ]
-
-  - description: SQLTablesW function get all catalogs
-    test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "", 0 ]
+  
+  - description: SQLTablesW all catalogs with table TableType
+    test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "TABLE", 5 ]
     db: integration_test
     expected_result:
-      - [ "db2", null, null, null, "" ]
-      - [ "integration_test", null, null, null, "" ]
-      - [ "integration_test_2", null, null, null, "" ]
-      - [ "tdvt", null, null, null, "" ]
-    expected_bson_type: [ "string", "string", "string", "string", "string" ]
-    expected_case_sensitive: [ "", "", "", "", "" ]
-    expected_catalog_name: [ "", "", "", "", "" ]
-    expected_column_name: [ "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS" ]
-    expected_display_size: [ 0, 0, 0, 0, 0 ]
-    expected_length: [ 0, 0, 0, 0, 0 ]
-    expected_is_searchable: [ 3, 3, 3, 3, 3 ]
-    expected_is_unsigned: [ 1, 1, 1, 1, 1 ]
-    expected_sql_type: [ -9, -9, -9, -9, -9 ]
-    expected_precision: [ 0, 0, 0, 0, 0 ]
-    expected_scale: [ 0, 0, 0, 0, 0 ]
-    expected_nullability: [ 0, 1, 1, 1, 1 ]
+      - [ "integration_test", null, "a_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "any_collection", "TABLE", "" ]
+      - [ "integration_test", null, "anyof_collection", "TABLE", "" ]
+      - [ "integration_test", null, "b_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "class", "TABLE", "" ]
+      - [ "integration_test", null, "example", "TABLE", "" ]
+      - [ "integration_test", null, "foo", "TABLE", "" ]
+      - [ "integration_test", null, "grades", "TABLE", "" ]
+      - [ "integration_test", null, "null_and_missing", "TABLE", "" ]
+      - [ "integration_test", null, "types_other", "TABLE", "" ]
+      - [ "integration_test_2", null, "example_2", "TABLE", "" ]
+      - [ "tdvt", null, "batters", "TABLE", "" ]
+      - [ "tdvt", null, "calcs", "TABLE", "" ]
+      - [ "tdvt", null, "staples", "TABLE", "" ]
+
+  - description: SQLTablesW all catalogs with view TableTypes
+    test_definition: [ "sqltablesw", "%", 1, "", 0, "", 0, "VIEW", 4 ]
+    db: integration_test
+    expected_result:
+      - [ "integration_test", null, "baz", "VIEW", "" ]
+
+  - description: SQLTablesW catalog filter
+    test_definition: [ "sqltablesw", "%2", 2, "", 0, "", 0, "TABLE,VIEW", 10 ]
+    db: integration_test
+    expected_result:
+      - [ "integration_test_2", null, "example_2", "TABLE", "" ]
+
+  - description: SQLTablesW table filter
+    test_definition: [ "sqltablesw", "%", 1, "", 0, "%x%", 3, "TABLE,VIEW", 10 ]
+    db: integration_test
+    expected_result:
+      - [ "integration_test", null, "a_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "b_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "example", "TABLE", "" ]
+      - [ "integration_test_2", null, "example_2", "TABLE", "" ]
+
+  - description: SQLTablesW catalog and table filter
+    test_definition: [ "sqltablesw", "test$", 5, "", 0, "%x%", 3, "TABLE,VIEW", 10 ]
+    db: integration_test
+    expected_result:
+      - [ "integration_test", null, "a_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "b_non_lexicographic_field_order", "TABLE", "" ]
+      - [ "integration_test", null, "example", "TABLE", "" ]

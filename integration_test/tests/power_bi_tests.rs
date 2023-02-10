@@ -6,11 +6,11 @@ mod integration {
     };
     use odbc::ffi::SQL_NTS;
     use odbc_sys::{
-        AttrConnectionPooling, AttrOdbcVersion, ConnectionAttribute, Desc, DriverConnectOption,
-        EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType, Pointer,
-        SQLAllocHandle, SQLColAttributeW, SQLDriverConnectW, SQLExecDirectW, SQLFetch,
-        SQLFreeHandle, SQLGetData, SQLGetInfoW, SQLMoreResults, SQLNumResultCols,
-        SQLSetConnectAttrW, SQLSetEnvAttr, SmallInt, SqlReturn,
+        AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute, Desc,
+        DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
+        Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDriverConnectW, SQLExecDirectW,
+        SQLFetch, SQLFreeHandle, SQLGetData, SQLGetInfoW, SQLMoreResults, SQLNumResultCols,
+        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, USmallInt,
     };
 
     use std::ptr::null_mut;
@@ -199,6 +199,136 @@ mod integration {
         )
     }
 
+    ///  Helper function for the following Power BI flow
+    ///  - SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
+    ///  - SQLGetInfoW(SQL_GETDATA_EXTENSIONS)
+    ///  - SQLNumResultCols()
+    ///  - For columns 1 to {numCols}
+    ///      - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
+    ///      - SQLColAttributeW(SQL_DESC_UNSIGNED)
+    ///      - SQLColAttributeW(SQL_COLUMN_NAME)
+    ///      - SQLColAttributeW(SQL_COLUMN_NULLABLE)
+    ///      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
+    ///      - SQLColAttributeW(SQL_COLUMN_LENGTH)
+    ///      - SQLColAttributeW(SQL_COLUMN_SCALE)
+    fn get_column_attributes(conn_handle: HDbc, stmt: Handle, expected_col_count: SmallInt) {
+        // SQLGetFunctions is not available through odbc_sys
+        /*
+        SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
+        */
+        let str_len_ptr = &mut 0;
+        let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+        unsafe {
+            test_get_info!(
+                conn_handle,
+                InfoType::GetDataExtensions,
+                2,
+                DataType::USmallInt
+            );
+
+            let column_count_ptr = &mut 0;
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLNumResultCols(stmt as HStmt, column_count_ptr)
+            );
+            assert_eq!(expected_col_count, *column_count_ptr);
+
+            let numeric_attribute_ptr = &mut 0;
+            const FIELD_IDS: [Desc; 7] = [
+                Desc::ConciseType,
+                Desc::Unsigned,
+                Desc::Name,
+                Desc::Nullable,
+                Desc::TypeName,
+                Desc::Length,
+                Desc::Scale,
+            ];
+            for col_num in 0..*column_count_ptr {
+                FIELD_IDS.iter().for_each(|field_type| {
+                    assert_eq!(
+                        SqlReturn::SUCCESS,
+                        SQLColAttributeW(
+                            stmt as HStmt,
+                            (col_num + 1) as u16,
+                            *field_type,
+                            output_buffer as Pointer,
+                            BUFFER_LENGTH,
+                            str_len_ptr,
+                            numeric_attribute_ptr,
+                        ),
+                        "{}",
+                        get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                    );
+                });
+            }
+        }
+    }
+
+    ///  Helper function for fetching and getting data
+    ///  - Until SQLFetch returns SQL_NO_DATA
+    ///      - SQLFetch()
+    ///      - For columns 1 to {numCols}
+    ///          - SQLGetData({colIndex}, {defaultCtoSqlType})
+    ///  - SQLMoreResults()
+    ///  -SQLFreeHandle(SQL_HANDLE_STMT)
+    fn fetch_and_get_data(
+        stmt: Handle,
+        expected_fetch_count: Option<SmallInt>,
+        expected_sql_returns: Vec<SqlReturn>,
+        target_types: Vec<CDataType>,
+    ) {
+        let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+        let mut successful_fetch_count = 0;
+        let str_len_ptr = &mut 0;
+        unsafe {
+            loop {
+                let result = SQLFetch(stmt as HStmt);
+                assert!(
+                    result == SqlReturn::SUCCESS || result == SqlReturn::NO_DATA,
+                    "{}",
+                    get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                );
+                match result {
+                    SqlReturn::SUCCESS => {
+                        successful_fetch_count += 1;
+                        for col_num in 0..target_types.len() {
+                            assert_eq!(
+                                expected_sql_returns[col_num],
+                                SQLGetData(
+                                    stmt as HStmt,
+                                    (col_num + 1) as USmallInt,
+                                    target_types[col_num],
+                                    output_buffer as Pointer,
+                                    (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
+                                    str_len_ptr
+                                ),
+                                "{}",
+                                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                            );
+                        }
+                    }
+                    // break if SQLFetch returns SQL_NO_DATA
+                    _ => break,
+                }
+            }
+
+            if let Some(exp_fetch_count) = expected_fetch_count {
+                assert_eq!(
+                    exp_fetch_count, successful_fetch_count,
+                    "Expected {exp_fetch_count:?} successful calls to SQLFetch, got {successful_fetch_count}."
+                );
+            }
+
+            assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt as HStmt));
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLFreeHandle(HandleType::Stmt, stmt as Handle),
+                "{}",
+                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+            );
+        }
+    }
+
     /// Test PowerBI Setup flow
     #[test]
     fn test_setup() {
@@ -372,7 +502,7 @@ mod integration {
     }
 
     /// Test PowerBi data retrieval flow (setup and connection flows are prerequisites)
-    /// data retreival flow is:
+    /// data retrieval flow is:
     ///     - SQLAllocHandle(SQL_HANDLE_STMT)
     ///     - SQLGetInfoW(SQL_DRIVER_ODBC_VER)
     ///     - SQLGetInfoW(SQL_DRIVER_NAME)
@@ -424,110 +554,82 @@ mod integration {
                 get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
             );
 
-            // SQLGetFunctions is not available through odbc_sys
-            /*
-            SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
-            */
-
-            let str_len_ptr = &mut 0;
-            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
-
-            test_get_info!(
-                conn_handle,
-                InfoType::GetDataExtensions,
-                2,
-                DataType::USmallInt
+            get_column_attributes(conn_handle, stmt, 2);
+            fetch_and_get_data(
+                stmt,
+                Some(3),
+                vec![SqlReturn::SUCCESS; 2],
+                vec![CDataType::SLong, CDataType::WChar],
             );
+        }
+    }
 
-            let column_count_ptr = &mut 0;
+    ///  Test PowerBI flow for listing tables
+    ///  - SQLAllocHandle(SQL_HANDLE_STMT)
+    ///  - SQLTablesW(null pointer, null pointer, null pointer, "TABLE,VIEW")
+    ///  - SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
+    ///  - SQLGetInfoW(SQL_GETDATA_EXTENSIONS)
+    ///  - SQLNumResultCols()
+    ///  - For columns 1 to {numCols}
+    ///      - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
+    ///      - SQLColAttributeW(SQL_DESC_UNSIGNED)
+    ///      - SQLColAttributeW(SQL_COLUMN_NAME)
+    ///      - SQLColAttributeW(SQL_COLUMN_NULLABLE)
+    ///      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
+    ///      - SQLColAttributeW(SQL_COLUMN_LENGTH)
+    ///      - SQLColAttributeW(SQL_COLUMN_SCALE)
+    ///  - Until SQLFetch returns SQL_NO_DATA
+    ///      - SQLFetch()
+    ///      - For columns 1 to {numCols}
+    ///          - SQLGetData({colIndex}, {defaultCtoSqlType})
+    ///  - SQLMoreResults()
+    ///  -SQLFreeHandle(SQL_HANDLE_STMT)
+    #[test]
+    fn test_table_listing() {
+        let env_handle: HEnv = setup();
+        let (conn_handle, _, _, _) = power_bi_connect(env_handle);
+        let mut stmt: Handle = null_mut();
+
+        unsafe {
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLNumResultCols(stmt as HStmt, column_count_ptr)
+                SQLAllocHandle(
+                    HandleType::Stmt,
+                    conn_handle as *mut _,
+                    &mut stmt as *mut Handle
+                )
             );
-            assert_eq!(2, *column_count_ptr);
-
-            let numeric_attribute_ptr = &mut 0;
-            const FIELD_IDS: [Desc; 7] = [
-                Desc::ConciseType,
-                Desc::Unsigned,
-                Desc::Name,
-                Desc::Nullable,
-                Desc::TypeName,
-                Desc::Length,
-                Desc::Scale,
-            ];
-            for col_num in 0..*column_count_ptr {
-                FIELD_IDS.iter().for_each(|field_type| {
-                    assert_eq!(
-                        SqlReturn::SUCCESS,
-                        SQLColAttributeW(
-                            stmt as HStmt,
-                            (col_num + 1) as u16,
-                            *field_type,
-                            output_buffer as Pointer,
-                            14,
-                            str_len_ptr,
-                            numeric_attribute_ptr,
-                        ),
-                        "{}",
-                        get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
-                    );
-                });
-            }
-
-            let mut successful_fetch_count = 0;
-            loop {
-                let result = SQLFetch(stmt as HStmt);
-                assert!(
-                    result == SqlReturn::SUCCESS || result == SqlReturn::NO_DATA,
-                    "{}",
-                    get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
-                );
-                match result {
-                    SqlReturn::SUCCESS => {
-                        successful_fetch_count += 1;
-                        assert_eq!(
-                            SqlReturn::SUCCESS,
-                            SQLGetData(
-                                stmt as HStmt,
-                                1,
-                                odbc_sys::CDataType::SLong,
-                                output_buffer as Pointer,
-                                2,
-                                &mut 0
-                            ),
-                            "{}",
-                            get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
-                        );
-                        assert_eq!(
-                            SqlReturn::SUCCESS,
-                            SQLGetData(
-                                stmt as HStmt,
-                                2,
-                                odbc_sys::CDataType::WChar,
-                                output_buffer as Pointer,
-                                4,
-                                &mut 0
-                            ),
-                            "{}",
-                            get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
-                        );
-                    }
-                    // break if SQLFetch returns SQL_NO_DATA
-                    _ => break,
-                }
-            }
-            assert_eq!(
-                3, successful_fetch_count,
-                "Expected 3 successful calls to SQLFetch, got {successful_fetch_count}."
-            );
-
-            assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt as HStmt));
+            let mut table_view: Vec<u16> = "TABLE,VIEW".encode_utf16().collect();
+            table_view.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLFreeHandle(HandleType::Stmt, stmt as Handle),
+                SQLTablesW(
+                    stmt as HStmt,
+                    null_mut(),
+                    0,
+                    null_mut(),
+                    0,
+                    null_mut(),
+                    0,
+                    table_view.as_ptr(),
+                    table_view.len() as SmallInt - 1
+                ),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+            );
+
+            get_column_attributes(conn_handle, stmt, 5);
+            fetch_and_get_data(
+                stmt,
+                None,
+                vec![
+                    SqlReturn::SUCCESS,
+                    SqlReturn::SUCCESS,
+                    SqlReturn::SUCCESS,
+                    SqlReturn::SUCCESS,
+                    SqlReturn::NO_DATA,
+                ],
+                vec![CDataType::WChar; 5],
             );
         }
     }

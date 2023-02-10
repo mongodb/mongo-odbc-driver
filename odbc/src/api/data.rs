@@ -77,8 +77,7 @@ fn string_contains_fractional_precision_micros(s: &str) -> bool {
 }
 
 fn from_string(s: &str, conversion_error_type: &'static str) -> Result<f64> {
-    f64::from_str(s)
-        .map_err(|_| ODBCError::InvalidCharacterValue(s.to_string(), conversion_error_type))
+    f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(conversion_error_type))
 }
 
 impl IntoCData for Bson {
@@ -194,10 +193,10 @@ impl IntoCData for Bson {
                     Ok((*f as i64, info))
                 }
             }
-            Bson::String(s) => Bson::Double(
-                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), INT64))?,
-            )
-            .to_i64(),
+            Bson::String(s) => {
+                Bson::Double(f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(INT64))?)
+                    .to_i64()
+            }
             Bson::Boolean(b) => Ok((i64::from(*b), None)),
             Bson::Int32(i) => Ok((*i as i64, None)),
             Bson::Int64(i) => Ok((*i, None)),
@@ -247,18 +246,18 @@ impl IntoCData for Bson {
                     ))
                 }
             }
-            Bson::String(s) => Bson::Double(
-                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), INT32))?,
-            )
-            .to_i32(),
+            Bson::String(s) => {
+                Bson::Double(f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(INT32))?)
+                    .to_i32()
+            }
             _ => self.to_i64().map_or_else(
                 |e| {
                     Err(match e {
                         ODBCError::RestrictedDataType(s, _) => {
                             ODBCError::RestrictedDataType(s, INT32)
                         }
-                        ODBCError::InvalidCharacterValue(s, _) => {
-                            ODBCError::InvalidCharacterValue(s, INT32)
+                        ODBCError::InvalidCharacterValue(_) => {
+                            ODBCError::InvalidCharacterValue(INT32)
                         }
                         _ => e,
                     })
@@ -285,8 +284,7 @@ impl IntoCData for Bson {
                 }
             }
             Bson::String(s) => Bson::Double(
-                f64::from_str(s)
-                    .map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), UINT64))?,
+                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(UINT64))?,
             )
             .to_u64(),
             Bson::Boolean(b) => Ok((u64::from(*b), None)),
@@ -352,8 +350,7 @@ impl IntoCData for Bson {
             }
             Bson::Int32(i) if *i < 0i32 => Err(ODBCError::IntegralTruncation(i.to_string())),
             Bson::String(s) => Bson::Double(
-                f64::from_str(s)
-                    .map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), UINT32))?,
+                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(UINT32))?,
             )
             .to_u32(),
             _ => self.to_i64().map_or_else(
@@ -362,8 +359,8 @@ impl IntoCData for Bson {
                         ODBCError::RestrictedDataType(s, _) => {
                             ODBCError::RestrictedDataType(s, UINT32)
                         }
-                        ODBCError::InvalidCharacterValue(s, _) => {
-                            ODBCError::InvalidCharacterValue(s, UINT32)
+                        ODBCError::InvalidCharacterValue(_) => {
+                            ODBCError::InvalidCharacterValue(UINT32)
                         }
                         _ => e,
                     })
@@ -376,10 +373,10 @@ impl IntoCData for Bson {
     fn to_bit(&self) -> Result<(u8, Option<ODBCError>)> {
         match self {
             Bson::Double(f) => f64_to_bit(*f),
-            Bson::String(s) => Bson::Double(
-                f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(s.clone(), BIT))?,
-            )
-            .to_bit(),
+            Bson::String(s) => {
+                Bson::Double(f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(BIT))?)
+                    .to_bit()
+            }
             Bson::Boolean(b) => Ok((u8::from(*b), None)),
             Bson::Int32(i) => i64_to_bit(*i as i64),
             Bson::Int64(i) => i64_to_bit(*i),
@@ -400,17 +397,17 @@ impl IntoCData for Bson {
                 let (date, time) = if s.contains('-') && s.contains(':') {
                     let dt = NaiveDateTime::parse_from_str(s, "%F %T%.f")
                         .or_else(|_| NaiveDateTime::parse_from_str(s, "%+"))
-                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat)?;
                     (dt.date(), dt.time())
                 } else if s.contains('-') {
                     (
                         NaiveDate::parse_from_str(s, "%F")
-                            .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?,
+                            .map_err(|_| ODBCError::InvalidDatetimeFormat)?,
                         NaiveTime::from_hms(0, 0, 0),
                     )
                 } else {
                     let time = NaiveTime::parse_from_str(s, "%T%.f")
-                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?;
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat)?;
                     (Utc::today().naive_utc(), time)
                 };
                 Ok((
@@ -437,10 +434,10 @@ impl IntoCData for Bson {
                 let dt = if s.contains(':') {
                     NaiveDateTime::parse_from_str(s, "%F %T%.f")
                         .or_else(|_| NaiveDateTime::parse_from_str(s, "%+"))
-                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat)?
                 } else {
                     NaiveDate::parse_from_str(s, "%F")
-                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat)?
                         .and_hms(0, 0, 0)
                 };
                 Ok((
@@ -467,16 +464,16 @@ impl IntoCData for Bson {
                 let time = if s.contains('-') {
                     NaiveDateTime::parse_from_str(s, "%F %T%.f")
                         .or_else(|_| NaiveDateTime::parse_from_str(s, "%+"))
-                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat)?
                         .time()
                 } else {
                     NaiveTime::parse_from_str(s, "%T%.f")
-                        .map_err(|_| ODBCError::InvalidDatetimeFormat(s.clone()))?
+                        .map_err(|_| ODBCError::InvalidDatetimeFormat)?
                 };
 
                 // time strings with fractional seconds are invalid; timestamps with fractional seconds yield truncation
                 if time.nanosecond() > 0 && !s.contains('-') {
-                    Err(ODBCError::InvalidDatetimeFormat(s.clone()))
+                    Err(ODBCError::InvalidDatetimeFormat)
                 } else {
                     Ok((
                         time.with_nanosecond(0).unwrap(),

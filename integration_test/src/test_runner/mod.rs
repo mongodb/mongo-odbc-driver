@@ -421,19 +421,6 @@ fn run_function_test(
                 ))
             }
         }
-        "sqltableprivileges" => {
-            unsafe {
-                Ok(odbc_sys::SQLTablePrivileges(
-                    statement.handle() as HStmt,
-                    str_or_null(&function[1]),
-                    to_i16(&function[2]),
-                    str_or_null(&function[3]),
-                    to_i16(&function[4]),
-                    str_or_null(&function[5]),
-                    to_i16(&function[6]),
-                ))
-            }
-        }
          */
         _ => Err(Error::UnsupportedFunction(function_name.clone())),
     };
@@ -722,7 +709,7 @@ fn get_data(
                                 [0..*out_len_or_ind as usize]
                                 .to_string());
                         }
-                        CDataType::SLong => data = json!(*(buffer as *const i64)),
+                        CDataType::SLong => data = json!(*(buffer as *const i32)),
                         CDataType::Double => data = json!(*(buffer as *const f64)),
                         CDataType::Bit => data = json!(*(buffer as *const bool)),
                         _ => {}
