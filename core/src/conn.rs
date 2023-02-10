@@ -1,5 +1,5 @@
-use crate::err::Result;
 use crate::MongoQuery;
+use crate::{err::Result, Error};
 use bson::doc;
 use mongodb::{options::ClientOptions, sync::Client};
 use serde::{Deserialize, Serialize};
@@ -58,7 +58,8 @@ impl MongoConnection {
     pub fn get_adf_version(&self) -> Result<String> {
         let db = self.client.database("admin");
         let cmd_res = db.run_command(doc! {"buildInfo": 1}, None)?;
-        let build_info: BuildInfoResult = bson::from_document(cmd_res)?;
+        let build_info: BuildInfoResult = bson::from_document(cmd_res)
+            .map_err(|e| Error::BsonDeserialization(e, "ADF version".to_string()))?;
         Ok(build_info.data_lake.version)
     }
 }

@@ -40,7 +40,7 @@ impl MongoQuery {
 
         let get_result_schema_response: SqlGetSchemaResponse =
             bson::from_document(db.run_command(get_result_schema_cmd, None)?)
-                .map_err(Error::BsonDeserialization)?;
+                .map_err(|e| Error::BsonDeserialization(e, "query result set".to_string()))?;
 
         let metadata = get_result_schema_response.process_result_metadata(current_db)?;
 

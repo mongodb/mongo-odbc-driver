@@ -9,8 +9,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, Clone)]
 pub enum Error {
-    #[error(transparent)]
-    BsonDeserialization(#[from] bson::de::Error),
+    #[error("{0} while parsing metadata for {1}")]
+    BsonDeserialization(bson::de::Error, String),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
     #[error("Invalid cursor state: cursor not advanced")]
@@ -29,7 +29,7 @@ pub enum Error {
     NoDatabase,
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
-    #[error("{0}: trying to access collection: '{1}'")]
+    #[error("{0} while trying to access collection: '{1}'")]
     ValueAccess(bson::document::ValueAccessError, String),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
@@ -50,7 +50,7 @@ impl Error {
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
             Error::InvalidCursorState => INVALID_CURSOR_STATE,
-            Error::BsonDeserialization(_)
+            Error::BsonDeserialization(_, _)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
             | Error::InvalidResultSetJsonSchema
@@ -82,7 +82,7 @@ impl Error {
             | Error::UnknownColumn(_)
             | Error::MissingFieldBsonType(_)
             | Error::ColIndexOutOfBounds(_)
-            | Error::BsonDeserialization(_)
+            | Error::BsonDeserialization(_, _)
             | Error::MissingConnection(_)
             | Error::ValueAccess(_, _) => 0,
         }
