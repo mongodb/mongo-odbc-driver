@@ -238,8 +238,7 @@ impl MongoStatement for MongoDatabases {
                     .unwrap()
                     .to_string(),
             ))),
-            2..=4 => Ok(Some(Bson::Null)),
-            5 => Ok(Some(Bson::String("".to_string()))),
+            2..=5 => Ok(Some(Bson::Null)),
             _ => Err(Error::ColIndexOutOfBounds(col_index)),
         }
     }

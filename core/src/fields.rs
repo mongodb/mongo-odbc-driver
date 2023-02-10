@@ -545,7 +545,7 @@ impl MongoFields {
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
-                        // TODO: Add a log or warning
+                        // TODO: SQL-1198: Add a log or warning
                         Err(_) => continue,
                     }
                 }
