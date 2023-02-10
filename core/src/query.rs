@@ -5,7 +5,7 @@ use crate::{
     stmt::MongoStatement,
     Error,
 };
-use bson::{doc, Bson, Document};
+use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use std::time::Duration;
 
@@ -95,7 +95,7 @@ impl MongoStatement for MongoQuery {
         let md = self.get_col_metadata(col_index)?;
         let datasource = current
             .get_document(&md.table_name)
-            .map_err(Error::ValueAccess)?;
+            .map_err(|e: ValueAccessError| Error::ValueAccess(e, md.table_name.to_string()))?;
         let column = datasource.get(&md.col_name);
         Ok(column.cloned())
     }

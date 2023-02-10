@@ -1,7 +1,7 @@
 use crate::{
     col_metadata::MongoColMetadata, err::Result, stmt::MongoStatement, Error, MongoConnection,
 };
-use bson::{Bson, Document};
+use bson::{document::ValueAccessError, Bson, Document};
 
 #[derive(Debug, Clone)]
 pub struct MongoQuery {
@@ -45,7 +45,7 @@ impl MongoStatement for MongoQuery {
         let md = self.get_col_metadata(col_index)?;
         let datasource = self.resultset[self.current.ok_or(Error::InvalidCursorState)?]
             .get_document(&md.table_name)
-            .map_err(Error::ValueAccess)?;
+            .map_err(|e: ValueAccessError| Error::ValueAccess(e, md.table_name.to_string()))?;
         let column = datasource.get(&md.col_name);
         Ok(column.cloned())
     }

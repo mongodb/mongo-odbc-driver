@@ -29,8 +29,8 @@ pub enum Error {
     NoDatabase,
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
-    #[error(transparent)]
-    ValueAccess(bson::document::ValueAccessError),
+    #[error("{0}: trying to access collection: '{1}'")]
+    ValueAccess(bson::document::ValueAccessError, String),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
 }
@@ -52,7 +52,7 @@ impl Error {
             Error::InvalidCursorState => INVALID_CURSOR_STATE,
             Error::BsonDeserialization(_)
             | Error::UnknownColumn(_)
-            | Error::ValueAccess(_)
+            | Error::ValueAccess(_, _)
             | Error::InvalidResultSetJsonSchema
             | Error::MissingConnection(_)
             | Error::MissingFieldBsonType(_) => GENERAL_ERROR,
@@ -84,7 +84,7 @@ impl Error {
             | Error::ColIndexOutOfBounds(_)
             | Error::BsonDeserialization(_)
             | Error::MissingConnection(_)
-            | Error::ValueAccess(_) => 0,
+            | Error::ValueAccess(_, _) => 0,
         }
     }
 }
