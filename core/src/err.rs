@@ -9,8 +9,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, Clone)]
 pub enum Error {
-    #[error("{0} while parsing metadata for {1}")]
-    BsonDeserialization(bson::de::Error, String),
+    #[error("Parsing metadata for {0} gave: {1}")]
+    BsonDeserialization(String, bson::de::Error),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
     #[error("Invalid cursor state: cursor not advanced")]
@@ -23,14 +23,14 @@ pub enum Error {
     MissingFieldBsonType(String),
     #[error("Invalid connection string. Parse error: {0}")]
     MongoParseConnectionString(mongodb::error::Error),
-    #[error(transparent)]
-    Mongo(#[from] mongodb::error::Error),
+    #[error("Trying to {0} gave: {1}")]
+    Mongo(String, mongodb::error::Error),
     #[error("No database provided for query")]
     NoDatabase,
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
-    #[error("{0} while trying to access collection: '{1}'")]
-    ValueAccess(bson::document::ValueAccessError, String),
+    #[error("Trying to access collection '{0}' gave: {1}")]
+    ValueAccess(String, bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
 }
@@ -38,7 +38,7 @@ pub enum Error {
 impl Error {
     pub fn get_sql_state(&self) -> &'static str {
         match self {
-            Error::Mongo(err) => {
+            Error::Mongo(_, err) => {
                 if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
                     return TIMEOUT_EXPIRED;
@@ -62,7 +62,7 @@ impl Error {
     pub fn code(&self) -> i32 {
         // using `match` instead of `if let` in case we add future variants
         match self {
-            Error::Mongo(m) | Error::MongoParseConnectionString(m) => {
+            Error::Mongo(_, m) | Error::MongoParseConnectionString(m) => {
                 match m.kind.as_ref() {
                     ErrorKind::Command(command_error) => command_error.code,
                     // errors other than command errors probably will not concern us, but

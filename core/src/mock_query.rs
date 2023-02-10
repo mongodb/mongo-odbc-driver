@@ -45,7 +45,7 @@ impl MongoStatement for MongoQuery {
         let md = self.get_col_metadata(col_index)?;
         let datasource = self.resultset[self.current.ok_or(Error::InvalidCursorState)?]
             .get_document(&md.table_name)
-            .map_err(|e: ValueAccessError| Error::ValueAccess(e, md.table_name.to_string()))?;
+            .map_err(|e: ValueAccessError| Error::ValueAccess(md.table_name.to_string(), e))?;
         let column = datasource.get(&md.col_name);
         Ok(column.cloned())
     }
