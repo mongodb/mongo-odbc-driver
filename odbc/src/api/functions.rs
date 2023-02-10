@@ -26,6 +26,8 @@ use odbc_sys::{
     Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
     Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
+use std::borrow::BorrowMut;
+use std::ptr::null_mut;
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 use widechar::WideChar;
 
@@ -146,7 +148,11 @@ macro_rules! panic_safe_exec {
                 if handle.is_null() {
                     trace_odbc!(ODBCError::Panic(panic_msg.clone()), fct_name);
                 } else {
-                    add_diag_with_function!(handle_ref, ODBCError::Panic(panic_msg.clone()), fct_name);
+                    add_diag_with_function!(
+                        handle_ref,
+                        ODBCError::Panic(panic_msg.clone()),
+                        fct_name
+                    );
                 }
                 let sql_return = SqlReturn::ERROR;
                 #[allow(unused_variables)]
@@ -1461,6 +1467,11 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
+    trace_odbc!(
+        *(handle as *mut MongoHandle),
+        format!("Freeing handle {:?}", handle as *mut MongoHandle),
+        "SQLFreeHandle"
+    );
     panic_safe_exec!(
         || {
             match sql_free_handle(handle_type, handle as *mut _) {
@@ -1468,7 +1479,7 @@ pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) 
                 Err(_) => SqlReturn::INVALID_HANDLE,
             }
         },
-        handle
+        null_mut() as Handle
     );
 }
 

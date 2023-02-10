@@ -83,19 +83,18 @@ impl MongoHandle {
     /// Generate a String containing the current handle and its parents address.
     ///
     pub(crate) unsafe fn get_handle_info(&mut self) -> String {
-        let mut handle = self;
         let mut handle_info = String::new();
+        let mut handle = self;
         loop {
+            let handle_ptr: *mut MongoHandle = handle;
             match handle {
                 MongoHandle::Env(e) => {
-                    let ptr = Box::into_raw(Box::new(e)) as *mut _;
-                    handle_info = format!("[Env_{:?}]{handle_info}", ptr);
+                    handle_info = format!("[Env_{:?}]{handle_info}", handle_ptr);
                     return handle_info;
                 }
                 MongoHandle::Connection(c) => {
                     let env = c.env;
-                    let ptr = Box::into_raw(Box::new(c)) as *mut _;
-                    handle_info = format!("[Conn_{:?}]{handle_info}", ptr);
+                    handle_info = format!("[Conn_{:?}]{handle_info}", handle_ptr);
                     if env.is_null() {
                         return handle_info;
                     }
@@ -103,8 +102,7 @@ impl MongoHandle {
                 }
                 MongoHandle::Statement(s) => {
                     let conn = s.connection;
-                    let ptr = Box::into_raw(Box::new(s)) as *mut _;
-                    handle_info = format!("[Stmt_{:?}]{handle_info}", ptr);
+                    handle_info = format!("[Stmt_{:?}]{handle_info}", handle_ptr);
                     if conn.is_null() {
                         return handle_info;
                     }
@@ -112,8 +110,7 @@ impl MongoHandle {
                 }
                 MongoHandle::Descriptor(d) => {
                     let conn = d.connection;
-                    let ptr = Box::into_raw(Box::new(d)) as *mut _;
-                    handle_info = format!("[Desc_{:?}]{handle_info}", ptr);
+                    handle_info = format!("[Desc_{:?}]{handle_info}", handle_ptr);
                     if conn.is_null() {
                         return handle_info;
                     }
