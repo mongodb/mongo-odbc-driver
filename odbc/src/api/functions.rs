@@ -1664,7 +1664,7 @@ unsafe fn sql_get_connect_attrw_helper(
     };
 
     if let Some(e) = err {
-        add_diag_with_function!(conn_handle, e.clone(), "SQLGetConnectAttrW");
+        add_diag_with_function!(conn_handle, e, "SQLGetConnectAttrW");
     }
     sql_return
 }
@@ -1794,7 +1794,7 @@ unsafe fn sql_get_data_helper(
         }
     }
     if let Some(e) = error {
-        add_diag_with_function!(mongo_handle, e.clone(), "SQLGetData");
+        add_diag_with_function!(mongo_handle, e, "SQLGetData");
         return SqlReturn::ERROR;
     }
     crate::api::data::format_bson_data(
@@ -2676,7 +2676,7 @@ unsafe fn sql_get_infow_helper(
     };
 
     if let Some(error) = err {
-        add_diag_with_function!(conn_handle, error.clone(), "SQLGetInfoW");
+        add_diag_with_function!(conn_handle, error, "SQLGetInfoW");
     }
     sql_return
 }
@@ -2926,7 +2926,7 @@ unsafe fn sql_get_stmt_attrw_helper(
     };
 
     if let Some(error) = err {
-        add_diag_with_function!(stmt_handle, error.clone(), "SQLGetStmtAttrW");
+        add_diag_with_function!(stmt_handle, error, "SQLGetStmtAttrW");
     }
     sql_return
 }
@@ -3409,7 +3409,7 @@ unsafe fn set_connect_attrw_helper(
     };
 
     if let Some(error) = err {
-        add_diag_with_function!(conn_handle, error.clone(), "SQLSetConnectAttrW");
+        add_diag_with_function!(conn_handle, error, "SQLSetConnectAttrW");
     }
     sql_return
 }

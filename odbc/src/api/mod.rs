@@ -78,6 +78,6 @@ macro_rules! add_diag_with_function {
     ($handle:expr, $error:expr, $fct_name:expr) => {
         let err = $error;
         trace_odbc!($handle, format!("{err}"), $fct_name);
-        $handle.add_diag_info($error);
+        $handle.add_diag_info(err);
     };
 }
