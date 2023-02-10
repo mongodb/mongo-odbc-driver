@@ -41,10 +41,17 @@ functions:
           export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
           export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
           export SCRIPT_FOLDER=resources
+          if [[ "${triggered_by_git_tag}" != "" ]]; then
+            export release_version=$(echo ${triggered_by_git_tag} | sed s/v//)
+          else
+            export release_version=test_release
+          fi
 
           cat <<EOT > expansions.yml
+          release_version: "$release_version"
           prepare_shell: |
             set -o errexit
+            export release_version="$release_version"
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
@@ -170,7 +177,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.dll
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -183,8 +190,26 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.pdb
         bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "upload release":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.dll
+        local_file: mongosql-odbc-driver/mongoodbc.dll
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/windows/${release_version}/mongoodbc.dll
+        bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
 
@@ -195,7 +220,7 @@ functions:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.dll
         local_file: mongosql-odbc-driver/mongoodbc.dll
         bucket: mciuploads
 
@@ -540,6 +565,13 @@ tasks:
       - func: "setup driver with UnixODBC"
       - func: "run asan integration tests"
 
+  - name: release
+    git_tag_only: true
+    depends_on:
+      - name: compile
+    commands:
+      - func: "upload release"
+
 task_groups:
   - name: test-unit-group
     setup_group_can_fail_task: false
@@ -603,3 +635,9 @@ buildvariants:
     tasks:
       - name: asan-unit-test
       - name: asan-integration-test
+
+  - name: release
+    display_name: "Release"
+    run_on: [ ubuntu2004-medium ]
+    tasks:
+      - name: release
