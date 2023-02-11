@@ -200,7 +200,7 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/mongoodbc.dll
         local_file: mongosql-odbc-driver/mongoodbc.dll
         bucket: mciuploads
     - command: s3.put
@@ -569,6 +569,7 @@ tasks:
     git_tag_only: true
     depends_on:
       - name: compile
+        variant: '*'
     commands:
       - func: "upload release"
 
