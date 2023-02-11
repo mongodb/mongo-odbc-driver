@@ -169,16 +169,29 @@ macro_rules! panic_safe_exec {
 pub(crate) use panic_safe_exec;
 
 ///
-/// unsupported_function is a helper function for correctly setting the state for
-/// unsupported functions.
+/// unsupported_function is a macro for correctly setting the state for unsupported functions.
+/// This macro is used for the SQL functions which the driver has no plan to support in the future.
 ///
 macro_rules! unsupported_function {
-    ($handle:expr) => {{
-        $handle.clear_diagnostics();
-        let name = function_name!();
-        add_diag_with_function!($handle, ODBCError::Unimplemented(name), name);
-        SqlReturn::ERROR
-    }};
+    ($handle:expr) => {
+        panic_safe_exec!(|| {
+            $handle.clear_diagnostics();
+            let name = function_name!();
+            let mongo_handle = MongoHandleRef::from($handle);
+            add_diag_info!(mongo_handle, DBCError::Unimplemented(name));
+            SqlReturn::ERROR
+        })
+    };
+}
+
+///
+/// unimpl is a macro for correctly handling the error coming from the Rust unimplemented! panic.
+/// This macro is used for the SQL functions which we plan to support but did not implement yet.
+///
+macro_rules! unimpl {
+    ($handle:expr) => {
+        panic_safe_exec!(|| { unimplemented!() }, $handle);
+    };
 }
 
 macro_rules! add_diag_info {
@@ -298,7 +311,7 @@ pub unsafe extern "C" fn SQLBindCol(
     _buffer_length: Len,
     _length_or_indicatior: *mut Len,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(hstmt))
+    unimpl!(hstmt);
 }
 
 ///
@@ -321,7 +334,7 @@ pub unsafe extern "C" fn SQLBindParameter(
     _buffer_length: Len,
     _str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(hstmt))
+    unsupported_function!(hstmt)
 }
 
 ///
@@ -340,7 +353,7 @@ pub unsafe extern "C" fn SQLBrowseConnect(
     _buffer_length: SmallInt,
     _out_buffer_length: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unsupported_function!(connection_handle)
 }
 
 ///
@@ -361,7 +374,7 @@ pub unsafe extern "C" fn SQLBrowseConnectW(
     _buffer_length: SmallInt,
     _out_buffer_length: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unimpl!(connection_handle);
 }
 
 ///
@@ -376,7 +389,7 @@ pub unsafe extern "C" fn SQLBulkOperations(
     statement_handle: HStmt,
     _operation: USmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -388,7 +401,7 @@ pub unsafe extern "C" fn SQLBulkOperations(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unimpl!(statement_handle);
 }
 
 ///
@@ -400,7 +413,7 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, handle: Handle) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(handle))
+    unimpl!(handle);
 }
 
 ///
@@ -432,7 +445,7 @@ pub unsafe extern "C" fn SQLColAttribute(
     _string_length_ptr: *mut SmallInt,
     _numeric_attribute_ptr: *mut Len,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -609,7 +622,7 @@ pub unsafe extern "C" fn SQLColumnPrivileges(
     _column_name: *const Char,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -633,7 +646,7 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
     _column_name: *const WideChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unimpl!(statement_handle);
 }
 
 ///
@@ -698,17 +711,6 @@ pub unsafe extern "C" fn SQLColumns(
                 column,
             );
             let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
-            /*
-            let mongo_statement = {
-                let value = mongo_statement;
-                if let Err(error) = value {
-                    let odbcErr: ODBCError = error.into();
-                    add_diag_info!(mongo_handle, odbcErr);
-                    return SqlReturn::ERROR;
-                }
-                value.unwrap()
-            };
-            */
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
             SqlReturn::SUCCESS
         },
@@ -813,7 +815,7 @@ pub unsafe extern "C" fn SQLCompleteAsync(
     handle: Handle,
     _async_ret_code_ptr: *mut RetCode,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(handle))
+    unsupported_function!(handle)
 }
 
 ///
@@ -833,7 +835,7 @@ pub unsafe extern "C" fn SQLConnect(
     _authentication: *const Char,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unsupported_function!(connection_handle)
 }
 
 ///
@@ -855,7 +857,7 @@ pub unsafe extern "C" fn SQLConnectW(
     _authentication: *const WideChar,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unsupported_function!(connection_handle)
 }
 
 ///
@@ -870,7 +872,7 @@ pub unsafe extern "C" fn SQLCopyDesc(
     _source_desc_handle: HDesc,
     _target_desc_handle: HDesc,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(_source_desc_handle))
+    unsupported_function!(_source_desc_handle)
 }
 
 ///
@@ -891,7 +893,7 @@ pub unsafe extern "C" fn SQLDataSources(
     _buffer_length_2: SmallInt,
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(environment_handle))
+    unsupported_function!(environment_handle)
 }
 
 ///
@@ -914,7 +916,7 @@ pub unsafe extern "C" fn SQLDataSourcesW(
     _buffer_length_2: SmallInt,
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(environment_handle))
+    unsupported_function!(environment_handle)
 }
 
 ///
@@ -936,7 +938,7 @@ pub unsafe extern "C" fn SQLDescribeCol(
     _decimal_digits: *mut SmallInt,
     _nullable: *mut Nullability,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(hstmt))
+    unsupported_function!(hstmt)
 }
 
 ///
@@ -1009,7 +1011,7 @@ pub unsafe extern "C" fn SQLDescribeParam(
     _decimal_digits_ptr: *mut SmallInt,
     _nullable_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -1182,7 +1184,7 @@ pub unsafe extern "C" fn SQLDrivers(
     _drvr_attr_max: SmallInt,
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(henv))
+    unsupported_function!(henv)
 }
 
 ///
@@ -1205,7 +1207,7 @@ pub unsafe extern "C" fn SQLDriversW(
     _drvr_attr_max: SmallInt,
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(henv))
+    unsupported_function!(henv)
 }
 
 ///
@@ -1221,7 +1223,7 @@ pub unsafe extern "C" fn SQLEndTran(
     handle: Handle,
     _completion_type: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(handle))
+    unimpl!(handle);
 }
 
 ///
@@ -1315,7 +1317,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
 #[no_mangle]
 #[named]
 pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -1382,7 +1384,7 @@ pub unsafe extern "C" fn SQLFetchScroll(
     _fetch_orientation: USmallInt,
     _fetch_offset: Len,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unimpl!(statement_handle);
 }
 
 ///
@@ -1575,7 +1577,7 @@ pub unsafe extern "C" fn SQLGetConnectAttr(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unsupported_function!(connection_handle)
 }
 
 ///
@@ -1683,7 +1685,7 @@ pub unsafe extern "C" fn SQLGetCursorName(
     _buffer_length: SmallInt,
     _name_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -1702,7 +1704,7 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
     _buffer_length: SmallInt,
     _name_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unimpl!(statement_handle);
 }
 
 ///
@@ -1824,7 +1826,7 @@ pub unsafe extern "C" fn SQLGetDescField(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(_descriptor_handle))
+    unsupported_function!(_descriptor_handle)
 }
 
 ///
@@ -1845,7 +1847,7 @@ pub unsafe extern "C" fn SQLGetDescFieldW(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(_descriptor_handle))
+    unsupported_function!(_descriptor_handle)
 }
 
 ///
@@ -1869,7 +1871,7 @@ pub unsafe extern "C" fn SQLGetDescRec(
     _scale_ptr: *mut SmallInt,
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(_descriptor_handle))
+    unsupported_function!(_descriptor_handle)
 }
 
 ///
@@ -1895,7 +1897,7 @@ pub unsafe extern "C" fn SQLGetDescRecW(
     _scale_ptr: *mut SmallInt,
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(_descriptor_handle))
+    unsupported_function!(_descriptor_handle)
 }
 
 ///
@@ -1915,7 +1917,7 @@ pub unsafe extern "C" fn SQLGetDiagField(
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(handle))
+    unsupported_function!(handle)
 }
 
 ///
@@ -2124,7 +2126,7 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
     _buffer_length: Integer,
     _string_length: *mut Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(environment_handle))
+    unsupported_function!(environment_handle)
 }
 
 ///
@@ -2208,7 +2210,7 @@ pub unsafe extern "C" fn SQLGetInfo(
     _buffer_length: SmallInt,
     _string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unsupported_function!(connection_handle)
 }
 
 ///
@@ -2696,7 +2698,7 @@ pub unsafe extern "C" fn SQLGetStmtAttr(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(handle))
+    unsupported_function!(handle)
 }
 
 ///
@@ -3024,7 +3026,7 @@ pub unsafe extern "C" fn SQLNativeSql(
     _buffer_len: Integer,
     _out_statement_len: *mut Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unsupported_function!(connection_handle)
 }
 
 ///
@@ -3045,7 +3047,7 @@ pub unsafe extern "C" fn SQLNativeSqlW(
     _buffer_len: Integer,
     _out_statement_len: *mut Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unimpl!(connection_handle);
 }
 
 ///
@@ -3060,7 +3062,7 @@ pub unsafe extern "C" fn SQLNumParams(
     statement_handle: HStmt,
     _param_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3106,7 +3108,7 @@ pub unsafe extern "C" fn SQLNumResultCols(
 #[no_mangle]
 #[named]
 pub unsafe extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(hstmt))
+    unsupported_function!(hstmt)
 }
 
 ///
@@ -3122,7 +3124,7 @@ pub unsafe extern "C" fn SQLPrepare(
     _statement_text: *const Char,
     _text_length: Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(hstmt))
+    unsupported_function!(hstmt)
 }
 
 ///
@@ -3140,7 +3142,7 @@ pub unsafe extern "C" fn SQLPrepareW(
     _statement_text: *const WideChar,
     _text_length: Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(hstmt))
+    unsupported_function!(hstmt)
 }
 
 ///
@@ -3222,7 +3224,7 @@ pub unsafe extern "C" fn SQLProcedureColumns(
     _column_name: *const Char,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3246,7 +3248,7 @@ pub unsafe extern "C" fn SQLProcedureColumnsW(
     _column_name: *const WideChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3266,7 +3268,7 @@ pub unsafe extern "C" fn SQLProcedures(
     _proc_name: *const Char,
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3288,7 +3290,7 @@ pub unsafe extern "C" fn SQLProceduresW(
     _proc_name: *const WideChar,
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3304,7 +3306,7 @@ pub unsafe extern "C" fn SQLPutData(
     _data_ptr: Pointer,
     _str_len_or_ind_ptr: Len,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3346,7 +3348,7 @@ pub unsafe extern "C" fn SQLSetConnectAttr(
     _value_ptr: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(connection_handle))
+    unsupported_function!(connection_handle)
 }
 
 ///
@@ -3427,7 +3429,7 @@ pub unsafe extern "C" fn SQLSetCursorName(
     _cursor_name: *const Char,
     _name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3445,7 +3447,7 @@ pub unsafe extern "C" fn SQLSetCursorNameW(
     _cursor_name: *const WideChar,
     _name_length: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unimpl!(statement_handle);
 }
 
 ///
@@ -3463,7 +3465,7 @@ pub unsafe extern "C" fn SQLSetDescField(
     _value_ptr: Pointer,
     _buffer_length: Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(_desc_handle))
+    unsupported_function!(_desc_handle)
 }
 
 ///
@@ -3486,7 +3488,7 @@ pub unsafe extern "C" fn SQLSetDescRec(
     _string_length_ptr: *const Len,
     _indicator_ptr: *const Len,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(desc_handle))
+    unimpl!(desc_handle)
 }
 
 ///
@@ -3503,7 +3505,7 @@ pub unsafe extern "C" fn SQLSetPos(
     _operation: USmallInt,
     _lock_type: USmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3628,7 +3630,7 @@ pub unsafe extern "C" fn SQLSetStmtAttr(
     _value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(hstmt))
+    unsupported_function!(hstmt)
 }
 
 ///
@@ -3862,12 +3864,12 @@ unsafe fn sql_set_stmt_attrw_helper(
             todo!()
         }
         // leave SQL_GET_BOOKMARK as unsupported since it is for ODBC < 3.0 drivers
-              StatementAttribute::SQL_GET_BOOKMARK
-              // Not supported but still relevent to 3.0 drivers
-              | StatementAttribute::SQL_ATTR_SAMPLE_SIZE
-              | StatementAttribute::SQL_ATTR_DYNAMIC_COLUMNS
-              | StatementAttribute::SQL_ATTR_TYPE_EXCEPTION_BEHAVIOR
-              | StatementAttribute::SQL_ATTR_LENGTH_EXCEPTION_BEHAVIOR => {
+        StatementAttribute::SQL_GET_BOOKMARK
+        // Not supported but still relevent to 3.0 drivers
+        | StatementAttribute::SQL_ATTR_SAMPLE_SIZE
+        | StatementAttribute::SQL_ATTR_DYNAMIC_COLUMNS
+        | StatementAttribute::SQL_ATTR_TYPE_EXCEPTION_BEHAVIOR
+        | StatementAttribute::SQL_ATTR_LENGTH_EXCEPTION_BEHAVIOR => {
             stmt_handle.add_diag_info(ODBCError::UnsupportedStatementAttribute(
                 statement_attribute_to_string(attribute),
             ));
@@ -3896,7 +3898,7 @@ pub unsafe extern "C" fn SQLSpecialColumns(
     _scope: SmallInt,
     _nullable: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3921,7 +3923,7 @@ pub unsafe extern "C" fn SQLSpecialColumnsW(
     _scope: SmallInt,
     _nullable: Nullability,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unimpl!(statement_handle);
 }
 
 ///
@@ -3943,7 +3945,7 @@ pub unsafe extern "C" fn SQLStatistics(
     _unique: SmallInt,
     _reserved: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3963,7 +3965,7 @@ pub unsafe extern "C" fn SQLTablePrivileges(
     _table_name: *const Char,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 ///
@@ -3985,7 +3987,7 @@ pub unsafe extern "C" fn SQLTablesPrivilegesW(
     _table_name: *const WideChar,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unimpl!(statement_handle);
 }
 
 ///
@@ -4007,7 +4009,7 @@ pub unsafe extern "C" fn SQLTables(
     _table_type: *const Char,
     _name_length_4: SmallInt,
 ) -> SqlReturn {
-    unsupported_function!(MongoHandleRef::from(statement_handle))
+    unsupported_function!(statement_handle)
 }
 
 fn sql_tables(
