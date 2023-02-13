@@ -1,11 +1,15 @@
-# Versioning
+# Releasing the MongoDB Atlas SQL interface ODBC Driver
+
+This document describes the version policy and release process for the MongoDB Atlas SQL interface ODBC Driver.
+
+## Versioning
 Versions will follow the [semantic versioning](https://semver.org/) system.  
 The following guidelines will be used to determine when each version component will be updated:
 - **major**: backwards-breaking changes
 - **minor**: functionality added in a backwards compatible manner
 - **patch**: backwards compatible bug fixes
 
-# Release Process
+## Release Process
 ### Pre-Release Tasks
 
 #### Start Release Ticket
