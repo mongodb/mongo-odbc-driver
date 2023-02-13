@@ -148,8 +148,25 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          if [[ "${triggered_by_git_tag}" != "" ]]; then
+            cargo install cargo-edit
+            cargo set-version ${release-version}
+          fi
+          cargo install cargo-get
           cargo build --release
-
+          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
+          
+          if [[ "${triggered_by_git_tag}" == "" ]]; then
+            EXPECTED_RELEASE_VERSION="0.0.0"
+          else
+            EXPECTED_RELEASE_VERSION="${release-version}"
+          fi
+          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
+            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
+            exit 1
+          fi
+          # Verify the version is the expected one from the driver perspective too
+          cargo test api::get_info_tests::unit::driver_ver -- --nocapture
   "compile release with debug info":
     - command: shell.exec
       params:
@@ -566,7 +583,7 @@ tasks:
       - func: "run asan integration tests"
 
   - name: release
-    git_tag_only: true
+    #git_tag_only: true
     depends_on:
       - name: compile
         variant: '*'
