@@ -583,7 +583,6 @@ tasks:
       - func: "run asan integration tests"
 
   - name: release
-    #git_tag_only: true
     depends_on:
       - name: compile
         variant: '*'
