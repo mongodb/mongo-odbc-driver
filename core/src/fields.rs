@@ -528,7 +528,7 @@ impl MongoFields {
                         bson::from_document(db.run_command(get_schema_cmd, None).unwrap()).map_err(
                             |e| {
                                 Error::BsonDeserialization(
-                                    "collection '{collection_name}'".to_string(),
+                                    format!("collection '{collection_name}'"),
                                     e,
                                 )
                             },
