@@ -85,11 +85,16 @@ pub(crate) fn format_driver_version() -> String {
     let version_major = env!("CARGO_PKG_VERSION_MAJOR");
     let version_minor = env!("CARGO_PKG_VERSION_MINOR");
     let version_patch = env!("CARGO_PKG_VERSION_PATCH");
+
+    format_version(version_major, version_minor, version_patch)
+}
+
+pub(crate) fn format_version(major: &str, minor: &str, patch: &str) -> String {
     format!(
         "{}.{}.{}",
-        format_version_part(version_major, 2),
-        format_version_part(version_minor, 2),
-        format_version_part(version_patch, 4)
+        format_version_part(major, 2),
+        format_version_part(minor, 2),
+        format_version_part(patch, 4)
     )
 }
 
@@ -102,7 +107,7 @@ fn format_version_part(part: &str, len: usize) -> String {
 
 mod unit {
     #[cfg(test)]
-    use super::format_driver_version;
+    use super::format_version;
 
     macro_rules! format_version_test {
         ($func_name:ident, expected = $expected:expr, major = $major:expr, minor = $minor:expr, patch = $patch:expr) => {
