@@ -78,6 +78,17 @@ pub(crate) fn statement_attribute_to_string(attr: StatementAttribute) -> String 
     }
 }
 
+pub(crate) fn format_driver_version() -> String {
+    // The driver version can be obtained from the Cargo.toml file.
+    // The env! macro call below gets the version from the Cargo file
+    // at compile time.
+    let version_major = env!("CARGO_PKG_VERSION_MAJOR");
+    let version_minor = env!("CARGO_PKG_VERSION_MINOR");
+    let version_patch = env!("CARGO_PKG_VERSION_PATCH");
+
+    format_version(version_major, version_minor, version_patch)
+}
+
 pub(crate) fn format_version(major: &str, minor: &str, patch: &str) -> String {
     format!(
         "{}.{}.{}",

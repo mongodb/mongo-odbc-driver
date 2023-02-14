@@ -78,6 +78,47 @@ impl MongoHandle {
             }
         }
     }
+
+    ///
+    /// Generate a String containing the current handle and its parents address.
+    ///
+    pub(crate) unsafe fn get_handle_info(&mut self) -> String {
+        let mut handle_info = String::new();
+        let mut handle = self;
+        loop {
+            let handle_ptr: *mut MongoHandle = handle;
+            match handle {
+                MongoHandle::Env(_) => {
+                    handle_info = format!("[Env_{:?}]{handle_info}", handle_ptr);
+                    return handle_info;
+                }
+                MongoHandle::Connection(c) => {
+                    let env = c.env;
+                    handle_info = format!("[Conn_{:?}]{handle_info}", handle_ptr);
+                    if env.is_null() {
+                        return handle_info;
+                    }
+                    handle = &mut *env;
+                }
+                MongoHandle::Statement(s) => {
+                    let conn = s.connection;
+                    handle_info = format!("[Stmt_{:?}]{handle_info}", handle_ptr);
+                    if conn.is_null() {
+                        return handle_info;
+                    }
+                    handle = &mut *conn;
+                }
+                MongoHandle::Descriptor(d) => {
+                    let conn = d.connection;
+                    handle_info = format!("[Desc_{:?}]{handle_info}", handle_ptr);
+                    if conn.is_null() {
+                        return handle_info;
+                    }
+                    handle = &mut *conn;
+                }
+            }
+        }
+    }
 }
 
 pub type MongoHandleRef = &'static mut MongoHandle;

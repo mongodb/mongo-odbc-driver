@@ -1,11 +1,12 @@
-use crate::trace_call_and_outcome;
+use crate::trace_outcome;
 use crate::{
+    add_diag_with_function,
     errors::ODBCError,
     handles::definitions::{MongoHandle, MongoHandleRef, Statement, StatementState},
-    panic_safe_exec,
+    panic_safe_exec, trace_odbc,
 };
 use ::function_name::named;
-use file_dbg_macros::dbg_write;
+use file_dbg_macros::{dbg_write, msg_to_file};
 use odbc_sys::{HStmt, SqlReturn};
 use std::{panic, sync::mpsc};
 
@@ -22,12 +23,12 @@ mod unit {
     }
 
     #[named]
-    fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn {
+    unsafe fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn {
         panic_safe_exec!(|| { SqlReturn::SUCCESS }, stmt_handle);
     }
 
     #[named]
-    fn panic_fn(stmt_handle: HStmt) -> SqlReturn {
+    unsafe fn panic_fn(stmt_handle: HStmt) -> SqlReturn {
         panic_safe_exec!(|| { panic!("panic test") }, stmt_handle);
     }
 
@@ -37,9 +38,9 @@ mod unit {
             std::ptr::null_mut(),
             StatementState::Allocated,
         ));
-        let sql_return = non_panic_fn(stmt_handle as *mut _);
-        assert_eq!(SqlReturn::SUCCESS, sql_return);
         unsafe {
+            let sql_return = non_panic_fn(stmt_handle as *mut _);
+            assert_eq!(SqlReturn::SUCCESS, sql_return);
             assert!((*stmt_handle)
                 .as_statement()
                 .unwrap()
@@ -56,9 +57,9 @@ mod unit {
             std::ptr::null_mut(),
             StatementState::Allocated,
         ));
-        let sql_return = panic_fn(stmt_handle as *mut _);
-        assert_eq!(SqlReturn::ERROR, sql_return);
         unsafe {
+            let sql_return = panic_fn(stmt_handle as *mut _);
+            assert_eq!(SqlReturn::ERROR, sql_return);
             let actual_error = format!(
                 "{:?}",
                 (*stmt_handle)
