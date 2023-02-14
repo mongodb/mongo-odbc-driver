@@ -5,7 +5,9 @@ use crate::{
         definitions::*,
         diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
-        util::{connection_attribute_to_string, format_version, statement_attribute_to_string},
+        util::{
+            connection_attribute_to_string, format_driver_version, statement_attribute_to_string,
+        },
     },
     handles::definitions::*,
     trace_odbc,
@@ -174,13 +176,16 @@ pub(crate) use panic_safe_exec;
 ///
 macro_rules! unsupported_function {
     ($handle:expr) => {
-        panic_safe_exec!(|| {
-            $handle.clear_diagnostics();
-            let name = function_name!();
-            let mongo_handle = MongoHandleRef::from($handle);
-            add_diag_info!(mongo_handle, DBCError::Unimplemented(name));
-            SqlReturn::ERROR
-        })
+        panic_safe_exec!(
+            || {
+                let mongo_handle = MongoHandleRef::from($handle);
+                mongo_handle.clear_diagnostics();
+                let name = function_name!();
+                add_diag_info!(mongo_handle, ODBCError::Unimplemented(name));
+                SqlReturn::ERROR
+            },
+            $handle
+        )
     };
 }
 
@@ -190,7 +195,7 @@ macro_rules! unsupported_function {
 ///
 macro_rules! unimpl {
     ($handle:expr) => {
-        panic_safe_exec!(|| { unimplemented!() }, $handle);
+        panic_safe_exec!(|| { unimplemented!() }, $handle)
     };
 }
 
@@ -1136,6 +1141,14 @@ pub unsafe extern "C" fn SQLDriverConnectW(
     panic_safe_exec!(
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
+            trace_odbc!(
+                conn_handle,
+                format!(
+                    "Connecting using {DRIVER_NAME} {} ",
+                    format_driver_version()
+                ),
+                function_name!()
+            );
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
             if driver_completion != DriverConnectOption::NoPrompt {
                 add_diag_info!(
@@ -1471,7 +1484,7 @@ pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) 
     trace_odbc!(
         *(handle as *mut MongoHandle),
         format!("Freeing handle {:?}", handle as *mut MongoHandle),
-        "SQLFreeHandle"
+        function_name!()
     );
     panic_safe_exec!(
         || {
@@ -1554,12 +1567,7 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
-    panic_safe_exec!(
-        || {
-            unimplemented!();
-        },
-        statement_handle
-    );
+    unimpl!(statement_handle);
 }
 
 ///
@@ -2264,14 +2272,7 @@ unsafe fn sql_get_infow_helper(
                     )
                 }
                 InfoType::SQL_DRIVER_VER => {
-                    // The driver version can be obtained from the Cargo.toml file.
-                    // The env! macro call below gets the version from the Cargo file
-                    // at compile time.
-                    let version_major = env!("CARGO_PKG_VERSION_MAJOR");
-                    let version_minor = env!("CARGO_PKG_VERSION_MINOR");
-                    let version_patch = env!("CARGO_PKG_VERSION_PATCH");
-
-                    let version = format_version(version_major, version_minor, version_patch);
+                    let version = format_driver_version();
 
                     i16_len::set_output_wstring_as_bytes(
                         version.as_str(),
