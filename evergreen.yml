@@ -44,7 +44,7 @@ functions:
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             export release_version=$(echo ${triggered_by_git_tag} | sed s/v//)
           else
-            export release_version=test_release
+            export release_version=snapshot
           fi
 
           cat <<EOT > expansions.yml
@@ -583,8 +583,22 @@ tasks:
       - func: "run asan integration tests"
 
   - name: release
+    git_tag_only: true
     depends_on:
       - name: compile
+        variant: '*'
+    commands:
+      - func: "upload release"
+
+  - name: snapshot
+    depends_on:
+      - name: compile
+        variant: '*'
+      - name: unit-test
+        variant: '*'
+      - name: integration-test
+        variant: '*'
+      - name: result-set-test
         variant: '*'
     commands:
       - func: "upload release"
