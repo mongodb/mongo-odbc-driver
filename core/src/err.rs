@@ -9,7 +9,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, Clone)]
 pub enum Error {
-    #[error("Parsing metadata for {0} gave: {1}")]
+    #[error("Retrieving information for {0} failed with error: {1}")]
     BsonDeserialization(String, bson::de::Error),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
@@ -29,7 +29,7 @@ pub enum Error {
     NoDatabase,
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
-    #[error("Trying to access collection '{0}' gave: {1}")]
+    #[error("Error retreiving data for field {0}: {1}")]
     ValueAccess(String, bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),

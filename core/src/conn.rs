@@ -60,9 +60,9 @@ impl MongoConnection {
         let db = self.client.database("admin");
         let cmd_res = db
             .run_command(doc! {"buildInfo": 1}, None)
-            .map_err(|e| Error::Mongo("get ADF version".to_string(), e))?;
+            .map_err(|e| Error::Mongo("get database version".to_string(), e))?;
         let build_info: BuildInfoResult = bson::from_document(cmd_res)
-            .map_err(|e| Error::BsonDeserialization("ADF version".to_string(), e))?;
+            .map_err(|e| Error::BsonDeserialization("database".to_string(), e))?;
         Ok(build_info.data_lake.version)
     }
 }
