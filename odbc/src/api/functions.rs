@@ -3558,7 +3558,6 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
     );
 }
 
-#[named]
 unsafe fn sql_set_env_attrw_helper(
     env_handle: &mut MongoHandle,
     attribute: EnvironmentAttribute,
@@ -3573,9 +3572,10 @@ unsafe fn sql_set_env_attrw_helper(
                     SqlReturn::SUCCESS
                 }
                 None => {
-                    add_diag_info!(
+                    add_diag_with_function!(
                         env_handle,
-                        ODBCError::InvalidAttrValue("SQL_ATTR_ODBC_VERSION")
+                        ODBCError::InvalidAttrValue("SQL_ATTR_ODBC_VERSION"),
+                        "SQLSetEnvAttrW"
                     );
                     SqlReturn::ERROR
                 }
@@ -3585,7 +3585,11 @@ unsafe fn sql_set_env_attrw_helper(
             match FromPrimitive::from_i32(value_ptr as i32) {
                 Some(SqlBool::True) => SqlReturn::SUCCESS,
                 _ => {
-                    add_diag_info!(env_handle, ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"));
+                    add_diag_with_function!(
+                        env_handle,
+                        ODBCError::Unimplemented("OUTPUT_NTS=SQL_FALSE"),
+                        "SQLSetEnvAttrW"
+                    );
                     SqlReturn::ERROR
                 }
             }
