@@ -1101,7 +1101,6 @@ pub unsafe extern "C" fn SQLDriverConnect(
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
-            dbg!(&driver_completion);
             if driver_completion != DriverConnectOption::NoPrompt {
                 add_diag_info!(
                     conn_handle,
