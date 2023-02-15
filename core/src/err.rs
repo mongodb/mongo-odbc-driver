@@ -19,7 +19,7 @@ pub enum Error {
     DatabaseVersionRetreival(mongodb::error::Error),
     #[error("Getting database metadata failed with error: {0}")]
     DatabaseVersionDeserialization(bson::de::Error),
-    #[error("Setting connection options failed with: {0}")]
+    #[error("Setting connection options failed with error: {0}")]
     InvalidClientOptions(mongodb::error::Error),
     #[error("Invalid cursor state: cursor not advanced")]
     InvalidCursorState,
