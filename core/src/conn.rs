@@ -43,8 +43,7 @@ impl MongoConnection {
         login_timeout: Option<u32>,
     ) -> Result<Self> {
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
-        let client = Client::with_options(client_options)
-            .map_err(|e| Error::Mongo("create mongo client".to_string(), e))?;
+        let client = Client::with_options(client_options).map_err(Error::InvalidClientOptions)?;
         let connection = MongoConnection {
             client,
             current_db: current_db.map(String::from),
@@ -60,9 +59,9 @@ impl MongoConnection {
         let db = self.client.database("admin");
         let cmd_res = db
             .run_command(doc! {"buildInfo": 1}, None)
-            .map_err(|e| Error::Mongo("get database version".to_string(), e))?;
-        let build_info: BuildInfoResult = bson::from_document(cmd_res)
-            .map_err(|e| Error::BsonDeserialization("database".to_string(), e))?;
+            .map_err(Error::DatabaseVersionRetreival)?;
+        let build_info: BuildInfoResult =
+            bson::from_document(cmd_res).map_err(Error::DatabaseVersionDeserialization)?;
         Ok(build_info.data_lake.version)
     }
 }

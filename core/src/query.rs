@@ -40,9 +40,9 @@ impl MongoQuery {
 
         let get_result_schema_response: SqlGetSchemaResponse = bson::from_document(
             db.run_command(get_result_schema_cmd, None)
-                .map_err(|e| Error::Mongo("get resultset metadata".to_string(), e))?,
+                .map_err(Error::QueryExecutionFailed)?,
         )
-        .map_err(|e| Error::BsonDeserialization("query result set".to_string(), e))?;
+        .map_err(Error::QueryDeserialization)?;
 
         let metadata = get_result_schema_response.process_result_metadata(current_db)?;
 
@@ -60,16 +60,16 @@ impl MongoQuery {
                         .max_time(Duration::from_millis(i as u64))
                         .build();
                     db.aggregate(pipeline, opt)
-                        .map_err(|e| Error::Mongo("execute query".to_string(), e))?
+                        .map_err(Error::QueryExecutionFailed)?
                 } else {
                     // If the query timeout is 0, it means "no timeout"
                     db.aggregate(pipeline, None)
-                        .map_err(|e| Error::Mongo("execute query".to_string(), e))?
+                        .map_err(Error::QueryExecutionFailed)?
                 }
             }
             _ => db
                 .aggregate(pipeline, None)
-                .map_err(|e| Error::Mongo("execute query".to_string(), e))?,
+                .map_err(Error::QueryExecutionFailed)?,
         };
         Ok(MongoQuery {
             resultset_cursor: cursor,
@@ -87,7 +87,7 @@ impl MongoStatement for MongoQuery {
         let res = self
             .resultset_cursor
             .advance()
-            .map_err(|e| Error::Mongo("get next query result".to_string(), e));
+            .map_err(Error::QueryCursorUpdate);
         if let Ok(false) = res {
             // deserialize_current unwraps None if we do not check the value of advance.
             self.current = None;
@@ -96,7 +96,7 @@ impl MongoStatement for MongoQuery {
         self.current = Some(
             self.resultset_cursor
                 .deserialize_current()
-                .map_err(|e| Error::Mongo("get next query result".to_string(), e))?,
+                .map_err(Error::QueryCursorUpdate)?,
         );
         res
     }

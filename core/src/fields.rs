@@ -526,12 +526,7 @@ impl MongoFields {
                     let db = mongo_connection.client.database(&self.current_db_name);
                     let current_col_metadata_response: Result<SqlGetSchemaResponse> =
                         bson::from_document(db.run_command(get_schema_cmd, None).unwrap()).map_err(
-                            |e| {
-                                Error::BsonDeserialization(
-                                    format!("collection '{collection_name}'"),
-                                    e,
-                                )
-                            },
+                            |e| Error::CollectionDeserialization(collection_name.clone(), e),
                         );
                     if current_col_metadata_response.is_err() {
                         // If there is an Error while deserialization the schema, we don't show the column
