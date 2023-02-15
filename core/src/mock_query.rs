@@ -26,7 +26,7 @@ impl MongoQuery {
 impl MongoStatement for MongoQuery {
     // Move the current index to the next Document in the Vec.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Error>)> {
         if let Some(current) = self.current {
             self.current = Some(current + 1);
         } else {
@@ -34,9 +34,9 @@ impl MongoStatement for MongoQuery {
         }
         let current = self.current.unwrap();
         if current < self.resultset.len() {
-            return Ok(true);
+            return Ok((true, None));
         }
-        Ok(false)
+        Ok((false, None))
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.

@@ -8,7 +8,8 @@ use std::fmt::Debug;
 pub trait MongoStatement: Debug {
     // Move the cursor to the next item.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self, mongo_connection: Option<&MongoConnection>) -> Result<bool>;
+    fn next(&mut self, mongo_connection: Option<&MongoConnection>)
+        -> Result<(bool, Option<Error>)>;
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row has not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>>;
@@ -31,8 +32,11 @@ pub struct EmptyStatement {
 }
 
 impl MongoStatement for EmptyStatement {
-    fn next(&mut self, _mongo_connection: Option<&MongoConnection>) -> Result<bool> {
-        Ok(false)
+    fn next(
+        &mut self,
+        _mongo_connection: Option<&MongoConnection>,
+    ) -> Result<(bool, Option<Error>)> {
+        Ok((false, None))
     }
 
     fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
@@ -77,7 +81,7 @@ mod unit {
             "TABLE_CAT",
             test_empty.get_col_metadata(1).unwrap().col_name
         );
-        assert!(!test_empty.next(None).unwrap());
+        assert!(!test_empty.next(None).unwrap().0);
         assert!(test_empty.get_value(1).is_err());
     }
 }

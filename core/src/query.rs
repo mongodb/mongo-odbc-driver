@@ -77,15 +77,18 @@ impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     // This method deserializes the current row and stores it in self.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Error>)> {
         let res = self.resultset_cursor.advance().map_err(Error::Mongo);
         if let Ok(false) = res {
             // deserialize_current unwraps None if we do not check the value of advance.
             self.current = None;
-            return res;
+            return Ok((false, None));
         }
         self.current = Some(self.resultset_cursor.deserialize_current()?);
-        res
+        match res {
+            Ok(b) => Ok((b, None)),
+            Err(e) => Err(e),
+        }
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.

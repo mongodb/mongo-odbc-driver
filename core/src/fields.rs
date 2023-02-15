@@ -569,14 +569,18 @@ impl MongoFields {
 impl MongoStatement for MongoFields {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self, mongo_connection: Option<&MongoConnection>) -> Result<bool> {
+    fn next(
+        &mut self,
+        mongo_connection: Option<&MongoConnection>,
+    ) -> Result<(bool, Option<Error>)> {
         match self.field_name_filter.as_ref() {
             None => {
                 self.current_field_for_collection += 1;
-                Ok(
+                Ok((
                     (self.current_field_for_collection as usize) < self.current_col_metadata.len()
                         || self.get_next_metadata(mongo_connection.unwrap()),
-                )
+                    None,
+                ))
             }
             Some(filter) => {
                 let filter = filter.clone();
@@ -586,7 +590,7 @@ impl MongoStatement for MongoFields {
                         >= self.current_col_metadata.len())
                         && !self.get_next_metadata(mongo_connection.unwrap())
                     {
-                        return Ok(false);
+                        return Ok((false, None));
                     }
 
                     if filter.is_match(
@@ -596,7 +600,7 @@ impl MongoStatement for MongoFields {
                             .unwrap()
                             .col_name,
                     ) {
-                        return Ok(true);
+                        return Ok((true, None));
                     }
                 }
             }

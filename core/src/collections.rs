@@ -138,10 +138,10 @@ impl MongoStatement for MongoCollections {
     // Move the cursor to the next CollectionSpecification.
     // When cursor is exhausted move to next database in list
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Error>)> {
         if self.current_database_index.is_none() {
             if self.collections_for_db_list.is_empty() {
-                return Ok(false);
+                return Ok((false, None));
             }
             self.current_database_index = Some(0);
         }
@@ -177,13 +177,13 @@ impl MongoStatement for MongoCollections {
                 {
                     // Cursor advance succeeded and the collection matches the filters, update current CollectionSpecification
                     self.current_collection = Some(collection);
-                    return Ok(true);
+                    return Ok((true, None));
                 }
             }
 
             self.current_database_index = Some(self.current_database_index.unwrap() + 1);
             if self.current_database_index.unwrap() >= self.collections_for_db_list.len() {
-                return Ok(false);
+                return Ok((false, None));
             }
         }
     }

@@ -1367,7 +1367,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
                     stmt.errors.write().unwrap().push(e.into());
                     return SqlReturn::ERROR;
                 }
-                Ok(b) => {
+                Ok((b, _)) => {
                     let mut stmt_attrs = stmt.attributes.write().unwrap();
                     if !b {
                         stmt_attrs.row_index_is_valid = false;
