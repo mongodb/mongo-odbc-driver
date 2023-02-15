@@ -506,7 +506,11 @@ impl MongoFields {
         }
     }
 
-    fn get_next_metadata(&mut self, mongo_connection: &MongoConnection) -> bool {
+    fn get_next_metadata(
+        &mut self,
+        mongo_connection: &MongoConnection,
+    ) -> Result<(bool, Option<Error>)> {
+        let mut e: Option<Error> = None;
         loop {
             if self.collections_for_db.is_some() {
                 for current_collection in self.collections_for_db.as_mut().unwrap() {
@@ -527,9 +531,9 @@ impl MongoFields {
                     let current_col_metadata_response: Result<SqlGetSchemaResponse> =
                         bson::from_document(db.run_command(get_schema_cmd, None).unwrap())
                             .map_err(Error::BsonDeserialization);
-                    if current_col_metadata_response.is_err() {
+                    if let Err(error) = current_col_metadata_response {
                         // If there is an Error while deserialization the schema, we don't show the column
-                        // TODO : Add a log or warning
+                        e = Some(error);
                         continue;
                     }
                     let current_col_metadata_response = current_col_metadata_response.unwrap();
@@ -541,7 +545,7 @@ impl MongoFields {
                             if !current_col_metadata.is_empty() {
                                 self.current_col_metadata = current_col_metadata;
                                 self.current_field_for_collection = 0;
-                                return true;
+                                return Ok((true, e));
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
@@ -551,7 +555,7 @@ impl MongoFields {
                 }
             }
             if self.dbs.is_empty() {
-                return false;
+                return Ok((false, e));
             }
             let db_name = self.dbs.pop_front().unwrap();
             self.collections_for_db = Some(
@@ -576,21 +580,22 @@ impl MongoStatement for MongoFields {
         match self.field_name_filter.as_ref() {
             None => {
                 self.current_field_for_collection += 1;
-                Ok((
-                    (self.current_field_for_collection as usize) < self.current_col_metadata.len()
-                        || self.get_next_metadata(mongo_connection.unwrap()),
-                    None,
-                ))
+                match (self.current_field_for_collection as usize) < self.current_col_metadata.len()
+                {
+                    true => Ok((true, None)),
+                    false => self.get_next_metadata(mongo_connection.unwrap()),
+                }
             }
             Some(filter) => {
                 let filter = filter.clone();
                 loop {
                     self.current_field_for_collection += 1;
-                    if (self.current_field_for_collection as usize
-                        >= self.current_col_metadata.len())
-                        && !self.get_next_metadata(mongo_connection.unwrap())
+                    if self.current_field_for_collection as usize >= self.current_col_metadata.len()
                     {
-                        return Ok((false, None));
+                        let next = self.get_next_metadata(mongo_connection.unwrap());
+                        if next.is_ok() & !next.unwrap().0 {
+                            return Ok((false, None));
+                        }
                     }
 
                     if filter.is_match(
