@@ -66,7 +66,7 @@ Check that the released file is available at the URL:
 ##### Verify that the driver works with PowerBI
 Download and install the driver file.
 
-Verify that it is able to connect to Atlas Data Lake with PowerBI, extract data,
+Verify that it is able to connect to Atlas Data Federation with PowerBI, extract data,
 and add columns to the worksheet.
 
 #### Close Release Ticket
