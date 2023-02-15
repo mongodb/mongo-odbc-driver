@@ -17,4 +17,4 @@ widechar = { path = "../widechar" }
 [dependencies.mongodb]
 version = "2.3"
 default-features = false
-features = ["sync"]
+features = ["tokio-sync"]
