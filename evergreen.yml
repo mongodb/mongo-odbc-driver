@@ -536,7 +536,6 @@ post:
   - func: "upload start_adf logs"
 
 tasks:
-
   - name: clippy
     commands:
       - func: "check clippy"
@@ -582,24 +581,30 @@ tasks:
       - func: "setup driver with UnixODBC"
       - func: "run asan integration tests"
 
+  - name: snapshot
+    depends_on:
+      - name: clippy
+        variant: "*"
+      - name: rustfmt
+        variant: "*"
+      - name: unit-test
+        variant: "windows-64"
+      - name: integration-test
+        variant: "windows-64"
+      - name: result-set-test
+        variant: "windows-64"
+      - name: asan-unit-test
+        variant: "*"
+      - name: asan-integration-test
+        variant: "*"
+    commands:
+      - func: "upload release"
+
   - name: release
     git_tag_only: true
     depends_on:
       - name: compile
-        variant: '*'
-    commands:
-      - func: "upload release"
-
-  - name: snapshot
-    depends_on:
-      - name: compile
-        variant: '*'
-      - name: unit-test
-        variant: '*'
-      - name: integration-test
-        variant: '*'
-      - name: result-set-test
-        variant: '*'
+        variant: "*"
     commands:
       - func: "upload release"
 
@@ -672,3 +677,4 @@ buildvariants:
     run_on: [ ubuntu2004-medium ]
     tasks:
       - name: release
+      - name: snapshot
