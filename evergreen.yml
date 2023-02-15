@@ -41,10 +41,17 @@ functions:
           export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
           export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
           export SCRIPT_FOLDER=resources
+          if [[ "${triggered_by_git_tag}" != "" ]]; then
+            export release_version=$(echo ${triggered_by_git_tag} | sed s/v//)
+          else
+            export release_version=snapshot
+          fi
 
           cat <<EOT > expansions.yml
+          release_version: "$release_version"
           prepare_shell: |
             set -o errexit
+            export release_version="$release_version"
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
@@ -141,8 +148,25 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          if [[ "${triggered_by_git_tag}" != "" ]]; then
+            cargo install cargo-edit
+            cargo set-version ${release-version}
+          fi
+          cargo install cargo-get
           cargo build --release
-
+          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
+          
+          if [[ "${triggered_by_git_tag}" == "" ]]; then
+            EXPECTED_RELEASE_VERSION="0.0.0"
+          else
+            EXPECTED_RELEASE_VERSION="${release-version}"
+          fi
+          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
+            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
+            exit 1
+          fi
+          # Verify the version is the expected one from the driver perspective too
+          cargo test api::get_info_tests::unit::driver_ver -- --nocapture
   "compile release with debug info":
     - command: shell.exec
       params:
@@ -170,7 +194,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.dll
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -183,8 +207,26 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.pdb
         bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "upload release":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/mongoodbc.dll
+        local_file: mongosql-odbc-driver/mongoodbc.dll
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/windows/${release_version}/mongoodbc.dll
+        bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
 
@@ -195,7 +237,7 @@ functions:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/test/${version_id}/${build_variant}/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.dll
         local_file: mongosql-odbc-driver/mongoodbc.dll
         bucket: mciuploads
 
@@ -494,7 +536,6 @@ post:
   - func: "upload start_adf logs"
 
 tasks:
-
   - name: clippy
     commands:
       - func: "check clippy"
@@ -539,6 +580,33 @@ tasks:
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
       - func: "run asan integration tests"
+
+  - name: snapshot
+    depends_on:
+      - name: clippy
+        variant: "*"
+      - name: rustfmt
+        variant: "*"
+      - name: unit-test
+        variant: "windows-64"
+      - name: integration-test
+        variant: "windows-64"
+      - name: result-set-test
+        variant: "windows-64"
+      - name: asan-unit-test
+        variant: "*"
+      - name: asan-integration-test
+        variant: "*"
+    commands:
+      - func: "upload release"
+
+  - name: release
+    git_tag_only: true
+    depends_on:
+      - name: compile
+        variant: "*"
+    commands:
+      - func: "upload release"
 
 task_groups:
   - name: test-unit-group
@@ -603,3 +671,10 @@ buildvariants:
     tasks:
       - name: asan-unit-test
       - name: asan-integration-test
+
+  - name: release
+    display_name: "Release"
+    run_on: [ ubuntu2004-medium ]
+    tasks:
+      - name: release
+      - name: snapshot

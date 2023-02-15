@@ -380,7 +380,7 @@ checksum = "fbdcdcb6d86f71c5e97409ad45898af11cbc995b4ee8112d59095a28d376c935"
 
 [[package]]
 name = "constants"
-version = "0.1.0"
+version = "0.0.0"
 
 [[package]]
 name = "core-foundation"
@@ -686,7 +686,7 @@ dependencies = [
 
 [[package]]
 name = "file_dbg_macros"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "lazy_static",
  "thiserror",
@@ -984,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "integration_test"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "lazy_static",
  "mongodb",
@@ -1205,7 +1205,7 @@ dependencies = [
 
 [[package]]
 name = "mongo-odbc-core"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "bson",
  "constants",
@@ -1223,7 +1223,7 @@ dependencies = [
 
 [[package]]
 name = "mongo-odbc-driver"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "bson",
  "chrono",
@@ -2585,7 +2585,7 @@ dependencies = [
 
 [[package]]
 name = "widechar"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "widestring 1.0.2",
 ]

@@ -49,6 +49,9 @@ macro_rules! test_get_info {
                 // assert that the resulting value and length are correct
                 match $expected_sql_return {
                     SqlReturn::SUCCESS => {
+                        if info_type==InfoType::SQL_DRIVER_VER as u16 {
+                            $(dbg!($expected_value);)?
+                        }
                         $(assert_eq!($expected_length, *out_length);)?
                         $(assert_eq!($expected_value, $actual_value_modifier(value_ptr, *out_length as usize));)?
                     },
