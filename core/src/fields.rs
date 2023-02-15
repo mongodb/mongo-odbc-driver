@@ -590,14 +590,20 @@ impl MongoStatement for MongoFields {
                 let filter = filter.clone();
                 loop {
                     self.current_field_for_collection += 1;
+                    let mut e: Option<Error> = None;
                     if self.current_field_for_collection as usize >= self.current_col_metadata.len()
                     {
                         let next = self.get_next_metadata(mongo_connection.unwrap());
-                        if next.is_ok() & !next.unwrap().0 {
-                            return Ok((false, None));
+                        if let Ok((b, error)) = next {
+                            // store the first error we see from get_next_metadata, to return at conclusion of function
+                            if e.is_none() && error.is_some() {
+                                e = error;
+                            }
+                            if !b {
+                                return Ok((false, e));
+                            }
                         }
                     }
-
                     if filter.is_match(
                         &self
                             .current_col_metadata
@@ -605,7 +611,7 @@ impl MongoStatement for MongoFields {
                             .unwrap()
                             .col_name,
                     ) {
-                        return Ok((true, None));
+                        return Ok((true, e));
                     }
                 }
             }
