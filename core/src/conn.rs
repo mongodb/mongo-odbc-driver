@@ -43,6 +43,8 @@ impl MongoConnection {
         login_timeout: Option<u32>,
     ) -> Result<Self> {
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
+        client_options.max_pool_size = Some(1);
+        client_options.min_pool_size = Some(1);
         let client = Client::with_options(client_options)?;
         let connection = MongoConnection {
             client,
