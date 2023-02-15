@@ -1365,20 +1365,26 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
             match res {
                 Err(e) => {
                     stmt.errors.write().unwrap().push(e.into());
-                    return SqlReturn::ERROR;
+                    SqlReturn::ERROR
                 }
-                Ok((b, _)) => {
+                Ok((b, e)) => {
                     let mut stmt_attrs = stmt.attributes.write().unwrap();
+                    if let Some(error) = e.clone() {
+                        stmt.errors.write().unwrap().push(ODBCError::Core(error));
+                    }
                     if !b {
                         stmt_attrs.row_index_is_valid = false;
                         return SqlReturn::NO_DATA;
                     }
                     stmt_attrs.row_index_is_valid = true;
+                    *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
+                    if e.is_some() {
+                        SqlReturn::SUCCESS_WITH_INFO
+                    } else {
+                        SqlReturn::SUCCESS
+                    }
                 }
             }
-
-            *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
-            SqlReturn::SUCCESS
         },
         statement_handle
     );
