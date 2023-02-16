@@ -152,7 +152,7 @@ impl MongoStatement for MongoCollections {
                 .unwrap()
                 .collection_list
                 .advance()
-                .map_err(Error::Mongo)?
+                .map_err(Error::CollectionCursorUpdate)?
             {
                 let collection = self
                     .collections_for_db_list
@@ -160,7 +160,7 @@ impl MongoStatement for MongoCollections {
                     .unwrap()
                     .collection_list
                     .deserialize_current()
-                    .map_err(Error::Mongo)?;
+                    .map_err(Error::CollectionCursorUpdate)?;
                 // Filter the collection matching the types and names specified by the user
                 if (self.table_types_filter.is_none()
                     || self

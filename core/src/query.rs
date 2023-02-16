@@ -5,7 +5,7 @@ use crate::{
     stmt::MongoStatement,
     Error,
 };
-use bson::{doc, Bson, Document};
+use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use std::time::Duration;
 
@@ -38,9 +38,11 @@ impl MongoQuery {
         let get_result_schema_cmd =
             doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
-        let get_result_schema_response: SqlGetSchemaResponse =
-            bson::from_document(db.run_command(get_result_schema_cmd, None)?)
-                .map_err(Error::BsonDeserialization)?;
+        let get_result_schema_response: SqlGetSchemaResponse = bson::from_document(
+            db.run_command(get_result_schema_cmd, None)
+                .map_err(Error::QueryExecutionFailed)?,
+        )
+        .map_err(Error::QueryDeserialization)?;
 
         let metadata = get_result_schema_response.process_result_metadata(current_db)?;
 
@@ -57,13 +59,17 @@ impl MongoQuery {
                     let opt = AggregateOptions::builder()
                         .max_time(Duration::from_millis(i as u64))
                         .build();
-                    db.aggregate(pipeline, opt)?
+                    db.aggregate(pipeline, opt)
+                        .map_err(Error::QueryExecutionFailed)?
                 } else {
                     // If the query timeout is 0, it means "no timeout"
-                    db.aggregate(pipeline, None)?
+                    db.aggregate(pipeline, None)
+                        .map_err(Error::QueryExecutionFailed)?
                 }
             }
-            _ => db.aggregate(pipeline, None)?,
+            _ => db
+                .aggregate(pipeline, None)
+                .map_err(Error::QueryExecutionFailed)?,
         };
         Ok(MongoQuery {
             resultset_cursor: cursor,
@@ -78,13 +84,20 @@ impl MongoStatement for MongoQuery {
     // Return true if moving was successful, false otherwise.
     // This method deserializes the current row and stores it in self.
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
-        let res = self.resultset_cursor.advance().map_err(Error::Mongo);
+        let res = self
+            .resultset_cursor
+            .advance()
+            .map_err(Error::QueryCursorUpdate);
         if let Ok(false) = res {
             // deserialize_current unwraps None if we do not check the value of advance.
             self.current = None;
             return res;
         }
-        self.current = Some(self.resultset_cursor.deserialize_current()?);
+        self.current = Some(
+            self.resultset_cursor
+                .deserialize_current()
+                .map_err(Error::QueryCursorUpdate)?,
+        );
         res
     }
 
@@ -95,7 +108,7 @@ impl MongoStatement for MongoQuery {
         let md = self.get_col_metadata(col_index)?;
         let datasource = current
             .get_document(&md.table_name)
-            .map_err(Error::ValueAccess)?;
+            .map_err(|e: ValueAccessError| Error::ValueAccess(col_index.to_string(), e))?;
         let column = datasource.get(&md.col_name);
         Ok(column.cloned())
     }
