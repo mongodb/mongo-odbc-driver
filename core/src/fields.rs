@@ -532,8 +532,10 @@ impl MongoFields {
                         bson::from_document(db.run_command(get_schema_cmd, None).unwrap())
                             .map_err(Error::BsonDeserialization);
                     if let Err(error) = current_col_metadata_response {
-                        // If there is an Error while deserialization the schema, we don't show the column
-                        e = Some(error);
+                        // If there is an Error while deserializing the schema, we don't show the column
+                        if e.is_none() {
+                            e = Some(error);
+                        }
                         continue;
                     }
                     let current_col_metadata_response = current_col_metadata_response.unwrap();
