@@ -7,12 +7,16 @@ use crate::{
     stmt::MongoStatement,
     util::to_name_regex,
 };
+use ::function_name::named;
 use bson::{doc, Bson};
+use file_dbg_macros::{dbg_write, msg_to_file};
 use lazy_static::lazy_static;
 use mongodb::{results::CollectionSpecification, sync::Cursor};
 use odbc_sys::Nullability;
 use regex::Regex;
 use std::collections::VecDeque;
+use crate::col_metadata::VersionedJsonSchema;
+use crate::json_schema::{BsonType, BsonTypeName, Schema};
 
 lazy_static! {
     static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
@@ -506,6 +510,7 @@ impl MongoFields {
         }
     }
 
+    #[named]
     fn get_next_metadata(&mut self, mongo_connection: &MongoConnection) -> bool {
         loop {
             if self.collections_for_db.is_some() {
@@ -529,8 +534,9 @@ impl MongoFields {
                             |e| Error::CollectionDeserialization(collection_name.clone(), e),
                         );
                     if current_col_metadata_response.is_err() {
+                        // TODO: SQL-1149: Return the error to populate the warning list
                         // If there is an Error while deserialization the schema, we don't show the column
-                        // TODO : Add a log or warning
+                        dbg_write!(format!("{}:: Failed deserializing schema for {}.{collection_name} with error {}", function_name!(),&self.current_db_name, current_col_metadata_response.unwrap_err()));
                         continue;
                     }
                     let current_col_metadata_response = current_col_metadata_response.unwrap();
@@ -546,8 +552,11 @@ impl MongoFields {
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
-                        // TODO: SQL-1198: Add a log or warning
-                        Err(_) => continue,
+                        // TODO: SQL-1149: Return the error to populate the warning list
+                        Err(e) => {
+                            dbg_write!(format!("{}:: Failed simplifying schema for {}.{collection_name} with error {}", function_name!(),&self.current_db_name, e));
+                            continue;
+                        }
                     }
                 }
             }

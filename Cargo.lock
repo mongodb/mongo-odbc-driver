@@ -1208,7 +1208,10 @@ name = "mongo-odbc-core"
 version = "0.0.0"
 dependencies = [
  "bson",
+ "chrono",
  "constants",
+ "file_dbg_macros",
+ "function_name",
  "itertools",
  "lazy_static",
  "likely_stable",
