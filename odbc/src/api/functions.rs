@@ -1369,8 +1369,13 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
                 }
                 Ok((b, e)) => {
                     let mut stmt_attrs = stmt.attributes.write().unwrap();
-                    if let Some(error) = e.clone() {
-                        stmt.errors.write().unwrap().push(ODBCError::Core(error));
+                    if let Some(errors) = e.clone() {
+                        errors.iter().for_each(|error| {
+                            stmt.errors
+                                .write()
+                                .unwrap()
+                                .push(ODBCError::Core(error.clone()))
+                        });
                     }
                     if !b {
                         stmt_attrs.row_index_is_valid = false;

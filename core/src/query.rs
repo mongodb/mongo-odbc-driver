@@ -77,7 +77,7 @@ impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     // This method deserializes the current row and stores it in self.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Error>)> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Vec<Error>>)> {
         let res = self.resultset_cursor.advance().map_err(Error::Mongo);
         if let Ok(false) = res {
             // deserialize_current unwraps None if we do not check the value of advance.

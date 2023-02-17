@@ -138,7 +138,7 @@ impl MongoStatement for MongoCollections {
     // Move the cursor to the next CollectionSpecification.
     // When cursor is exhausted move to next database in list
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Error>)> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Vec<Error>>)> {
         if self.current_database_index.is_none() {
             if self.collections_for_db_list.is_empty() {
                 return Ok((false, None));

@@ -26,7 +26,7 @@ impl MongoQuery {
 impl MongoStatement for MongoQuery {
     // Move the current index to the next Document in the Vec.
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Error>)> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Vec<Error>>)> {
         if let Some(current) = self.current {
             self.current = Some(current + 1);
         } else {
