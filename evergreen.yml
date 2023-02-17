@@ -51,7 +51,7 @@ functions:
           release_version: "$release_version"
           prepare_shell: |
             set -o errexit
-            export release_version="$release_version"
+            export RELEASE_VERSION="$release_version"
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
@@ -151,7 +151,7 @@ functions:
           #no-op when not triggered by a tag
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             cargo install cargo-edit
-            cargo set-version ${release-version}
+            cargo set-version $RELEASE_VERSION
           fi
 
   "compile release":
@@ -168,7 +168,7 @@ functions:
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             EXPECTED_RELEASE_VERSION="0.0.0"
           else
-            EXPECTED_RELEASE_VERSION="${release-version}"
+            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION
           fi
           if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
             echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
@@ -195,7 +195,7 @@ functions:
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             EXPECTED_RELEASE_VERSION="0.0.0"
           else
-            EXPECTED_RELEASE_VERSION="${release-version}"
+            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
           fi
           if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
             echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
