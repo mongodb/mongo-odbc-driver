@@ -1030,14 +1030,6 @@ pub unsafe extern "C" fn SQLDescribeParam(
 pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
     panic_safe_exec!(
         || {
-            trace_odbc!(
-                *(connection_handle as *mut MongoHandle),
-                format!(
-                    "Disconnecting handle {:?}",
-                    connection_handle as *mut MongoHandle
-                ),
-                function_name!()
-            );
             let conn_handle = MongoHandleRef::from(connection_handle);
             let conn = must_be_valid!((*conn_handle).as_connection());
             // set the mongo_connection to None. This will cause the previous mongo_connection
