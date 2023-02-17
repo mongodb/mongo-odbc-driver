@@ -149,7 +149,7 @@ functions:
         script: |
           ${prepare_shell}
           #no-op when not triggered by a tag
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
+          if [[ "${triggered_by_git_tag}" != "" ]]; then
             cargo install cargo-edit
             cargo set-version $RELEASE_VERSION
           fi
