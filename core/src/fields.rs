@@ -545,7 +545,7 @@ impl MongoFields {
                             if !current_col_metadata.is_empty() {
                                 self.current_col_metadata = current_col_metadata;
                                 self.current_field_for_collection = 0;
-                                return Ok((true, e.is_empty().then_some(e)));
+                                return Ok((true, (!e.is_empty()).then_some(e)));
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
@@ -555,7 +555,7 @@ impl MongoFields {
                 }
             }
             if self.dbs.is_empty() {
-                return Ok((false, e.is_empty().then_some(e)));
+                return Ok((false, (!e.is_empty()).then_some(e)));
             }
             let db_name = self.dbs.pop_front().unwrap();
             self.collections_for_db = Some(
@@ -600,7 +600,7 @@ impl MongoStatement for MongoFields {
                                 e.extend(errors_vec);
                             }
                             if !b {
-                                return Ok((false, e.is_empty().then_some(e)));
+                                return Ok((false, (!e.is_empty()).then_some(e)));
                             }
                         }
                     }
@@ -611,7 +611,7 @@ impl MongoStatement for MongoFields {
                             .unwrap()
                             .col_name,
                     ) {
-                        return Ok((true, e.is_empty().then_some(e)));
+                        return Ok((true, (!e.is_empty()).then_some(e)));
                     }
                 }
             }

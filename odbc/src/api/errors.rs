@@ -1,10 +1,10 @@
 use constants::{
-    FRACTIONAL_TRUNCATION, GENERAL_ERROR, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
-    INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE,
-    INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX,
-    INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET,
-    OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE, RIGHT_TRUNCATED,
-    UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    FRACTIONAL_TRUNCATION, GENERAL_ERROR, GENERAL_WARNING, INDICATOR_VARIABLE_REQUIRED,
+    INTEGRAL_TRUNCATION, INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE,
+    INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
+    INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED,
+    NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE,
+    RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -12,6 +12,8 @@ use thiserror::Error;
 pub enum ODBCError {
     #[error("[{}][API] {0}", VENDOR_IDENTIFIER)]
     General(&'static str),
+    #[error("[{}][API] {0}", VENDOR_IDENTIFIER)]
+    GeneralWarning(String),
     #[error("[{}][API] Caught panic: {0}", VENDOR_IDENTIFIER)]
     Panic(String),
     #[error("[{}][API] The feature {0} is not implemented", VENDOR_IDENTIFIER)]
@@ -140,6 +142,7 @@ impl ODBCError {
             | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedInfoTypeRetrieval(_) => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
+            ODBCError::GeneralWarning(_) => GENERAL_WARNING,
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidAttrValue(_) => INVALID_ATTR_VALUE,
             ODBCError::InvalidAttrIdentifier(_) => INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER,
@@ -173,6 +176,7 @@ impl ODBCError {
             // code to propagate.
             ODBCError::Unimplemented(_)
             | ODBCError::General(_)
+            | ODBCError::GeneralWarning(_)
             | ODBCError::Panic(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::InvalidAttrValue(_)

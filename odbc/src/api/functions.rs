@@ -1374,7 +1374,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
                             stmt.errors
                                 .write()
                                 .unwrap()
-                                .push(ODBCError::Core(error.clone()))
+                                .push(ODBCError::GeneralWarning(error.to_string()))
                         });
                     }
                     if !b {
