@@ -148,7 +148,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          #no-op when no triggered by a tag
+          #no-op when not triggered by a tag
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             cargo install cargo-edit
             cargo set-version ${release-version}
