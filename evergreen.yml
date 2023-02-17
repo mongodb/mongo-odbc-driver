@@ -140,6 +140,20 @@ functions:
           ${prepare_shell}
           cargo fmt --all --  --check
 
+  "set packages version":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          #no-op when no triggered by a tag
+          if [[ "${triggered_by_git_tag}" == "" ]]; then
+            cargo install cargo-edit
+            cargo set-version ${release-version}
+          fi
+
   "compile release":
     - command: shell.exec
       type: test
@@ -148,12 +162,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          if [[ "${triggered_by_git_tag}" != "" ]]; then
-            cargo install cargo-edit
-            cargo set-version ${release-version}
-          fi
           cargo install cargo-get
-          cargo build --release
           CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
           
           if [[ "${triggered_by_git_tag}" == "" ]]; then
@@ -165,8 +174,37 @@ functions:
             echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
             exit 1
           fi
+          
+          # Compile release build
+          cargo build --release
+          
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
+
+  "compile debug":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cargo install cargo-get
+          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
+          
+          if [[ "${triggered_by_git_tag}" == "" ]]; then
+            EXPECTED_RELEASE_VERSION="0.0.0"
+          else
+            EXPECTED_RELEASE_VERSION="${release-version}"
+          fi
+          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
+            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
+            exit 1
+          fi
+          
+          # Compile debug build
+          cargo build
+
   "compile release with debug info":
     - command: shell.exec
       params:
@@ -186,7 +224,7 @@ functions:
       params:
         file: mongosql-odbc-driver/expansions.yml
 
-  "upload artifact":
+  "mciuploads release build and symbols":
     - command: s3.put
       params:
         build_variants:
@@ -194,12 +232,10 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dll
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
-
-  "upload symbols":
     - command: s3.put
       params:
         build_variants:
@@ -207,7 +243,31 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.pdb
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "mciuploads debug build and symbols":
+    - command: s3.put
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/debug/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/mongoodbc.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/debug/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/mongoodbc.pdb
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -217,15 +277,65 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/mongoodbc.dll
-        local_file: mongosql-odbc-driver/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc.dll
+        local_file: mongosql-odbc-driver/release/mongoodbc.dll
         bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/windows/${release_version}/mongoodbc.dll
+        local_file: mongosql-odbc-driver/release/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.dll
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc.pdb
+        local_file: mongosql-odbc-driver/release/mongoodbc.pdb
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.pdb
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "upload debug":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/debug/mongoodbc.dll
+        local_file: mongosql-odbc-driver/debug/mongoodbc.dll
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/debug/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/windows/${release_version}/debug/mongoodbc.dll
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/debug/mongoodbc.pdb
+        local_file: mongosql-odbc-driver/debug/mongoodbc.pdb
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/debug/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/windows/${release_version}/debug/mongoodbc.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -237,7 +347,7 @@ functions:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dll
         local_file: mongosql-odbc-driver/mongoodbc.dll
         bucket: mciuploads
 
@@ -546,9 +656,15 @@ tasks:
 
   - name: compile
     commands:
+      - func: "set packages version"
       - func: "compile release"
-      - func: "upload artifact"
-      - func: "upload symbols"
+      - func: "mciuploads release build and symbols"
+
+  - name: compile-debug
+    commands:
+      - func: "set packages version"
+      - func: "compile debug"
+      - func: "mciuploads debug build and symbols"
 
   - name: unit-test
     commands:
@@ -583,6 +699,10 @@ tasks:
 
   - name: snapshot
     depends_on:
+      - name: compile
+        variant: "*"
+      - name: compile-debug
+        variant: "*"
       - name: clippy
         variant: "*"
       - name: rustfmt
@@ -599,14 +719,18 @@ tasks:
         variant: "*"
     commands:
       - func: "upload release"
+      - func: "upload debug"
 
   - name: release
     git_tag_only: true
     depends_on:
       - name: compile
         variant: "*"
+      - name: compile-debug
+        variant: "*"
     commands:
       - func: "upload release"
+      - func: "upload debug"
 
 task_groups:
   - name: test-unit-group
@@ -661,6 +785,7 @@ buildvariants:
     run_on: [ windows-64-vs2019-large ]
     tasks:
       - name: compile
+      - name: compile-debug
       - name: test-unit-group
       - name: test-integration-group
       - name: test-result-set-group

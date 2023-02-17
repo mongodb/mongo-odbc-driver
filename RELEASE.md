@@ -59,9 +59,15 @@ priority.
 Wait for the evergreen version to finish, and ensure that the release task completes successfully.
 
 #### Verify release artifacts
-Check that the released file is available at the URL:
-- Windows
-`https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/mongoodbc.dll`
+Check that the released files, library and symbols, are available at the following URLs:
+- Windows  
+  - Release build
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.dll`  
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.pdb`
+  - Debug build with logging capabilities
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/debug/mongoodbc.dll`
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/debug/mongoodbc.pdb`
+ 
 
 ##### Verify that the driver works with PowerBI
 Download and install the driver file.
