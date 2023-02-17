@@ -168,7 +168,7 @@ functions:
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             EXPECTED_RELEASE_VERSION="0.0.0"
           else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION
+            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
           fi
           if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
             echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
@@ -285,7 +285,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/windows/${RELEASE-VERSION}/release/mongoodbc.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -301,7 +301,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/windows/${RELEASE-VERSION}/release/mongoodbc.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -319,7 +319,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/debug/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/windows/${release_version}/debug/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/windows/${RELEASE-VERSION}/debug/mongoodbc.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -335,7 +335,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/debug/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/windows/${release_version}/debug/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/windows/${RELEASE-VERSION}/debug/mongoodbc.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
