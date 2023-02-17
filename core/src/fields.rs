@@ -15,8 +15,6 @@ use mongodb::{results::CollectionSpecification, sync::Cursor};
 use odbc_sys::Nullability;
 use regex::Regex;
 use std::collections::VecDeque;
-use crate::col_metadata::VersionedJsonSchema;
-use crate::json_schema::{BsonType, BsonTypeName, Schema};
 
 lazy_static! {
     static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
