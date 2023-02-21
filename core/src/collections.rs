@@ -146,44 +146,65 @@ impl MongoStatement for MongoCollections {
             self.current_database_index = Some(0);
         }
         loop {
-            while self
-                .collections_for_db_list
-                .get_mut(self.current_database_index.unwrap())
-                .unwrap()
-                .collection_list
-                .advance()
-                .map_err(Error::Mongo)?
-            {
-                let collection = self
+            let mut e: Vec<Error> = vec![];
+            loop {
+                match self
                     .collections_for_db_list
-                    .get(self.current_database_index.unwrap())
+                    .get_mut(self.current_database_index.unwrap())
                     .unwrap()
                     .collection_list
-                    .deserialize_current()
-                    .map_err(Error::Mongo)?;
-                // Filter the collection matching the types and names specified by the user
-                if (self.table_types_filter.is_none()
-                    || self
-                        .table_types_filter
-                        .as_ref()
-                        .unwrap()
-                        .contains(&collection.collection_type))
-                    && (self.collection_name_filter.is_none()
-                        || self
-                            .collection_name_filter
-                            .as_ref()
-                            .unwrap()
-                            .is_match(&collection.name))
+                    .advance()
                 {
-                    // Cursor advance succeeded and the collection matches the filters, update current CollectionSpecification
-                    self.current_collection = Some(collection);
-                    return Ok((true, None));
+                    Ok(b) => {
+                        match b {
+                            true => {
+                                match self
+                                    .collections_for_db_list
+                                    .get(self.current_database_index.unwrap())
+                                    .unwrap()
+                                    .collection_list
+                                    .deserialize_current()
+                                {
+                                    Ok(collection) => {
+                                        // Filter the collection matching the types and names specified by the user
+                                        if (self.table_types_filter.is_none()
+                                            || self
+                                                .table_types_filter
+                                                .as_ref()
+                                                .unwrap()
+                                                .contains(&collection.collection_type))
+                                            && (self.collection_name_filter.is_none()
+                                                || self
+                                                    .collection_name_filter
+                                                    .as_ref()
+                                                    .unwrap()
+                                                    .is_match(&collection.name))
+                                        {
+                                            // Cursor advance succeeded and the collection matches the filters, update current CollectionSpecification
+                                            self.current_collection = Some(collection);
+                                            return Ok((true, (!e.is_empty()).then_some(e)));
+                                        }
+                                    }
+                                    Err(error) => {
+                                        e.push(Error::Mongo(error));
+                                    }
+                                }
+                            }
+                            false => {
+                                self.current_database_index =
+                                    Some(self.current_database_index.unwrap() + 1);
+                                if self.current_database_index.unwrap()
+                                    >= self.collections_for_db_list.len()
+                                {
+                                    return Ok((false, (!e.is_empty()).then_some(e)));
+                                }
+                            }
+                        }
+                    }
+                    Err(error) => {
+                        e.push(Error::Mongo(error));
+                    }
                 }
-            }
-
-            self.current_database_index = Some(self.current_database_index.unwrap() + 1);
-            if self.current_database_index.unwrap() >= self.collections_for_db_list.len() {
-                return Ok((false, None));
             }
         }
     }
