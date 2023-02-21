@@ -211,7 +211,7 @@ impl<'a> ODBCUri<'a> {
     ) -> Result<()> {
         // server should supercede that specified in the uri, if specified.
         if let Some(server) = server {
-            opts.hosts = vec![ServerAddress::parse(server)?];
+            opts.hosts = vec![ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?];
         }
         if source.is_some() {
             opts.credential.as_mut().unwrap().source = source.map(String::from);
@@ -224,7 +224,7 @@ impl<'a> ODBCUri<'a> {
         let source = AUTH_SOURCE_REGEX
             .captures(uri)
             .and_then(|cap| cap.name("source").map(|s| s.as_str()));
-        let mut client_options = ClientOptions::parse(uri)?;
+        let mut client_options = ClientOptions::parse(uri).map_err(Error::InvalidClientOptions)?;
         if client_options.credential.is_some() {
             // user name set as attribute should supercede mongo uri
             let user = self.remove(USER_KWS);
@@ -262,7 +262,9 @@ impl<'a> ODBCUri<'a> {
             .password(pwd.to_string())
             .build();
         Ok(ClientOptions::builder()
-            .hosts(vec![ServerAddress::parse(server)?])
+            .hosts(vec![
+                ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
+            ])
             .credential(cred)
             .build())
     }

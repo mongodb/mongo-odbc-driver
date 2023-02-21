@@ -9,10 +9,18 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, Clone)]
 pub enum Error {
-    #[error(transparent)]
-    BsonDeserialization(#[from] bson::de::Error),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
+    #[error("Trying to access collection metadata failed with: {0}")]
+    CollectionCursorUpdate(mongodb::error::Error),
+    #[error("Getting metadata for collection '{0}' failed with error: {1}")]
+    CollectionDeserialization(String, bson::de::Error),
+    #[error("Retrieving information for database failed with error: {0}")]
+    DatabaseVersionRetreival(mongodb::error::Error),
+    #[error("Getting database metadata failed with error: {0}")]
+    DatabaseVersionDeserialization(bson::de::Error),
+    #[error("Setting connection options failed with error: {0}")]
+    InvalidClientOptions(mongodb::error::Error),
     #[error("Invalid cursor state: cursor not advanced")]
     InvalidCursorState,
     #[error("{0}")]
@@ -23,14 +31,18 @@ pub enum Error {
     MissingFieldBsonType(String),
     #[error("Invalid connection string. Parse error: {0}")]
     MongoParseConnectionString(mongodb::error::Error),
-    #[error(transparent)]
-    Mongo(#[from] mongodb::error::Error),
     #[error("No database provided for query")]
     NoDatabase,
+    #[error("Getting query result failed with error: {0}")]
+    QueryCursorUpdate(mongodb::error::Error),
+    #[error("Getting metadata for query failed with error: {0}")]
+    QueryDeserialization(bson::de::Error),
+    #[error("Trying to execute query failed with error: {0}")]
+    QueryExecutionFailed(mongodb::error::Error),
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
-    #[error(transparent)]
-    ValueAccess(bson::document::ValueAccessError),
+    #[error("Error retreiving data for field {0}: {1}")]
+    ValueAccess(String, bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
 }
@@ -38,7 +50,11 @@ pub enum Error {
 impl Error {
     pub fn get_sql_state(&self) -> &'static str {
         match self {
-            Error::Mongo(err) => {
+            Error::CollectionCursorUpdate(err)
+            | Error::DatabaseVersionRetreival(err)
+            | Error::InvalidClientOptions(err)
+            | Error::QueryCursorUpdate(err)
+            | Error::QueryExecutionFailed(err) => {
                 if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
                     return TIMEOUT_EXPIRED;
@@ -50,19 +66,26 @@ impl Error {
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
             Error::InvalidCursorState => INVALID_CURSOR_STATE,
-            Error::BsonDeserialization(_)
-            | Error::UnknownColumn(_)
-            | Error::ValueAccess(_)
+            Error::CollectionDeserialization(_, _)
+            | Error::DatabaseVersionDeserialization(_)
             | Error::InvalidResultSetJsonSchema(_)
             | Error::MissingConnection(_)
-            | Error::MissingFieldBsonType(_) => GENERAL_ERROR,
+            | Error::MissingFieldBsonType(_)
+            | Error::QueryDeserialization(_)
+            | Error::UnknownColumn(_)
+            | Error::ValueAccess(_, _) => GENERAL_ERROR,
         }
     }
 
     pub fn code(&self) -> i32 {
         // using `match` instead of `if let` in case we add future variants
         match self {
-            Error::Mongo(m) | Error::MongoParseConnectionString(m) => {
+            Error::CollectionCursorUpdate(m)
+            | Error::DatabaseVersionRetreival(m)
+            | Error::InvalidClientOptions(m)
+            | Error::QueryCursorUpdate(m)
+            | Error::QueryExecutionFailed(m)
+            | Error::MongoParseConnectionString(m) => {
                 match m.kind.as_ref() {
                     ErrorKind::Command(command_error) => command_error.code,
                     // errors other than command errors probably will not concern us, but
@@ -75,16 +98,18 @@ impl Error {
                     _ => 0,
                 }
             }
-            Error::NoDatabase
-            | Error::InvalidUriFormat(_)
+            Error::ColIndexOutOfBounds(_)
+            | Error::CollectionDeserialization(_, _)
+            | Error::DatabaseVersionDeserialization(_)
             | Error::InvalidCursorState
             | Error::InvalidResultSetJsonSchema(_)
-            | Error::UnknownColumn(_)
-            | Error::MissingFieldBsonType(_)
-            | Error::ColIndexOutOfBounds(_)
-            | Error::BsonDeserialization(_)
+            | Error::InvalidUriFormat(_)
             | Error::MissingConnection(_)
-            | Error::ValueAccess(_) => 0,
+            | Error::MissingFieldBsonType(_)
+            | Error::NoDatabase
+            | Error::QueryDeserialization(_)
+            | Error::UnknownColumn(_)
+            | Error::ValueAccess(_, _) => 0,
         }
     }
 }

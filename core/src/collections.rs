@@ -186,7 +186,7 @@ impl MongoStatement for MongoCollections {
                                         }
                                     }
                                     Err(error) => {
-                                        e.push(Error::Mongo(error));
+                                        e.push(Error::CollectionCursorUpdate(error));
                                     }
                                 }
                             }
@@ -202,7 +202,7 @@ impl MongoStatement for MongoCollections {
                         }
                     }
                     Err(error) => {
-                        e.push(Error::Mongo(error));
+                        e.push(Error::CollectionCursorUpdate(error));
                     }
                 }
             }

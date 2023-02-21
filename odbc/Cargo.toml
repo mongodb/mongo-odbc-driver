@@ -1,6 +1,6 @@
 [package]
 name = "mongo-odbc-driver"
-version = "0.1.0"
+version = "0.0.0"
 authors = [
     "Ryan Chipman <ryan@ryanchipman.com>",
     "Natacha Bagnard <natacha.bagnard@mongodb.com>",
@@ -26,9 +26,9 @@ function_name = "0.3.0"
 serde_json = "1.0.68"
 
 [dependencies.mongodb]
-version = "2.0.2"
+version = "2.3"
 default-features = false
-features = ["sync"]
+features = ["tokio-sync"]
 
 [dependencies.bson]
 version = "2.0.1"

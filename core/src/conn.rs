@@ -1,5 +1,5 @@
-use crate::err::Result;
 use crate::MongoQuery;
+use crate::{err::Result, Error};
 use bson::doc;
 use mongodb::{options::ClientOptions, sync::Client};
 use serde::{Deserialize, Serialize};
@@ -43,7 +43,7 @@ impl MongoConnection {
         login_timeout: Option<u32>,
     ) -> Result<Self> {
         client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
-        let client = Client::with_options(client_options)?;
+        let client = Client::with_options(client_options).map_err(Error::InvalidClientOptions)?;
         let connection = MongoConnection {
             client,
             current_db: current_db.map(String::from),
@@ -57,8 +57,11 @@ impl MongoConnection {
     /// Gets the ADF version the client is connected to.
     pub fn get_adf_version(&self) -> Result<String> {
         let db = self.client.database("admin");
-        let cmd_res = db.run_command(doc! {"buildInfo": 1}, None)?;
-        let build_info: BuildInfoResult = bson::from_document(cmd_res)?;
+        let cmd_res = db
+            .run_command(doc! {"buildInfo": 1}, None)
+            .map_err(Error::DatabaseVersionRetreival)?;
+        let build_info: BuildInfoResult =
+            bson::from_document(cmd_res).map_err(Error::DatabaseVersionDeserialization)?;
         Ok(build_info.data_lake.version)
     }
 }

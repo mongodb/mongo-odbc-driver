@@ -1,6 +1,6 @@
 [package]
 name = "integration_test"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
 
 [dependencies]
@@ -17,4 +17,4 @@ widechar = { path = "../widechar" }
 [dependencies.mongodb]
 version = "2.3"
 default-features = false
-features = ["sync"]
+features = ["tokio-sync"]

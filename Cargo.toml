@@ -6,6 +6,7 @@ members = [
   "odbc",
   "core",
   "integration_test",
+  "file_dbg_macros",
 ]
 
 [profile.release-with-debug]
