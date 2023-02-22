@@ -1372,23 +1372,23 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
                     stmt.errors.write().unwrap().push(e.into());
                     SqlReturn::ERROR
                 }
-                Ok((b, e)) => {
+                Ok((has_next, warnings)) => {
                     let mut stmt_attrs = stmt.attributes.write().unwrap();
-                    if let Some(errors) = e.clone() {
-                        errors.iter().for_each(|error| {
+                    if let Some(ws) = warnings.clone() {
+                        ws.iter().for_each(|warning| {
                             stmt.errors
                                 .write()
                                 .unwrap()
-                                .push(ODBCError::GeneralWarning(error.to_string()))
+                                .push(ODBCError::GeneralWarning(warning.to_string()))
                         });
                     }
-                    if !b {
+                    if !has_next {
                         stmt_attrs.row_index_is_valid = false;
                         return SqlReturn::NO_DATA;
                     }
                     stmt_attrs.row_index_is_valid = true;
                     *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
-                    if e.is_some() {
+                    if warnings.is_some() {
                         SqlReturn::SUCCESS_WITH_INFO
                     } else {
                         SqlReturn::SUCCESS

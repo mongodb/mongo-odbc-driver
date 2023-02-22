@@ -510,7 +510,7 @@ impl MongoFields {
         &mut self,
         mongo_connection: &MongoConnection,
     ) -> Result<(bool, Option<Vec<Error>>)> {
-        let mut e: Vec<Error> = vec![];
+        let mut warnings: Vec<Error> = vec![];
         loop {
             if self.collections_for_db.is_some() {
                 for current_collection in self.collections_for_db.as_mut().unwrap() {
@@ -534,7 +534,7 @@ impl MongoFields {
                         );
                     if let Err(error) = current_col_metadata_response {
                         // If there is an Error while deserializing the schema, we don't show the column
-                        e.push(error);
+                        warnings.push(error);
                         continue;
                     }
                     let current_col_metadata_response = current_col_metadata_response.unwrap();
@@ -546,7 +546,7 @@ impl MongoFields {
                             if !current_col_metadata.is_empty() {
                                 self.current_col_metadata = current_col_metadata;
                                 self.current_field_for_collection = 0;
-                                return Ok((true, (!e.is_empty()).then_some(e)));
+                                return Ok((true, (!warnings.is_empty()).then_some(warnings)));
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
@@ -556,7 +556,7 @@ impl MongoFields {
                 }
             }
             if self.dbs.is_empty() {
-                return Ok((false, (!e.is_empty()).then_some(e)));
+                return Ok((false, (!warnings.is_empty()).then_some(warnings)));
             }
             let db_name = self.dbs.pop_front().unwrap();
             self.collections_for_db = Some(
@@ -589,21 +589,23 @@ impl MongoStatement for MongoFields {
             }
             Some(filter) => {
                 let filter = filter.clone();
+                let mut warnings: Vec<Error> = vec![];
                 loop {
                     self.current_field_for_collection += 1;
-                    let mut e: Vec<Error> = vec![];
-                    if self.current_field_for_collection as usize >= self.current_col_metadata.len()
+                    let parse_warnings = |res: (bool, Option<Vec<Error>>)| {
+                        if let Some(w) = res.1 {
+                            warnings.extend(w)
+                        };
+                        res.0
+                    };
+                    if (self.current_field_for_collection as usize
+                        >= self.current_col_metadata.len())
+                        && !self
+                            .get_next_metadata(mongo_connection.unwrap())
+                            .map(parse_warnings)
+                            .unwrap()
                     {
-                        let next = self.get_next_metadata(mongo_connection.unwrap());
-                        if let Ok((b, errors)) = next {
-                            // store the first error we see from get_next_metadata, to return at conclusion of function
-                            if let Some(errors_vec) = errors {
-                                e.extend(errors_vec);
-                            }
-                            if !b {
-                                return Ok((false, (!e.is_empty()).then_some(e)));
-                            }
-                        }
+                        return Ok((false, (!warnings.is_empty()).then_some(warnings)));
                     }
                     if filter.is_match(
                         &self
@@ -612,7 +614,7 @@ impl MongoStatement for MongoFields {
                             .unwrap()
                             .col_name,
                     ) {
-                        return Ok((true, (!e.is_empty()).then_some(e)));
+                        return Ok((true, (!warnings.is_empty()).then_some(warnings)));
                     }
                 }
             }

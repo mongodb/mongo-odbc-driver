@@ -98,10 +98,7 @@ impl MongoStatement for MongoQuery {
                 .deserialize_current()
                 .map_err(Error::QueryCursorUpdate)?,
         );
-        match res {
-            Ok(b) => Ok((b, None)),
-            Err(e) => Err(e),
-        }
+        Ok((res?, None))
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
