@@ -281,7 +281,7 @@ impl<'a> ODBCUri<'a> {
             APP_NAME_REGEX
                 .captures(uri)
                 .and_then(|cap| cap.name("appname").map(|s| s.as_str()))
-                .map_or(self.remove(&[APPNAME]), |s| Some(s))
+                .map_or(self.remove(&[APPNAME]), Some)
         } else {
             self.remove(&[APPNAME])
         }
