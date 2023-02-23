@@ -255,7 +255,9 @@ impl<'a> ODBCUri<'a> {
             );
         }
         Self::set_server_and_source(&mut client_options, server, source)?;
-        client_options.app_name = self.get_app_name(Some(uri));
+        if client_options.app_name.is_none() {
+            client_options.app_name = self.remove(&[APPNAME]).map(String::from);
+        }
         Ok(client_options)
     }
 
@@ -272,20 +274,8 @@ impl<'a> ODBCUri<'a> {
                 ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
             ])
             .credential(cred)
-            .app_name(self.get_app_name(None))
+            .app_name(self.remove(&[APPNAME]).map(String::from))
             .build())
-    }
-
-    fn get_app_name(&mut self, uri: Option<&str>) -> Option<String> {
-        if let Some(uri) = uri {
-            APP_NAME_REGEX
-                .captures(uri)
-                .and_then(|cap| cap.name("appname").map(|s| s.as_str()))
-                .map_or(self.remove(&[APPNAME]), Some)
-        } else {
-            self.remove(&[APPNAME])
-        }
-        .map(String::from)
     }
 }
 
