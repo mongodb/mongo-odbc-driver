@@ -38,6 +38,10 @@ lazy_static! {
         .case_insensitive(true)
         .build()
         .unwrap();
+    static ref APP_NAME_REGEX: Regex = RegexBuilder::new(r#"[&?]appName=(?P<appname>[^&]*)"#)
+        .case_insensitive(true)
+        .build()
+        .unwrap();
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -251,13 +255,8 @@ impl<'a> ODBCUri<'a> {
             );
         }
         Self::set_server_and_source(&mut client_options, server, source)?;
-        client_options.app_name = self.get_app_name();
+        client_options.app_name = self.get_app_name(Some(uri));
         Ok(client_options)
-    }
-
-    fn get_app_name(&mut self) -> Option<String> {
-        let app_name = self.remove(&[APPNAME]);
-        app_name.map(String::from)
     }
 
     fn handle_no_uri(&mut self) -> Result<ClientOptions> {
@@ -273,8 +272,20 @@ impl<'a> ODBCUri<'a> {
                 ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
             ])
             .credential(cred)
-            .app_name(self.get_app_name())
+            .app_name(self.get_app_name(None))
             .build())
+    }
+
+    fn get_app_name(&mut self, uri: Option<&str>) -> Option<String> {
+        if let Some(uri) = uri {
+            APP_NAME_REGEX
+                .captures(uri)
+                .and_then(|cap| cap.name("appname").map(|s| s.as_str()))
+                .map_or(self.remove(&[APPNAME]), |s| Some(s))
+        } else {
+            self.remove(&[APPNAME])
+        }
+        .map(String::from)
     }
 }
 
@@ -709,6 +720,20 @@ mod unit {
             ] {
             assert_eq!(
                 source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().credential.unwrap().source);
+            }
+        }
+
+        #[test]
+        fn app_name_correctness() {
+            use crate::odbc_uri::ODBCUri;
+            for (source, uri) in [
+                (Some("app".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar;appname=app"),
+                (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
+                (Some("powerbi-connector".to_string()), "URI=mongodb://localhost/?aPpNaMe=powerbi-connector;UID=foo;PWD=bar"),
+                (Some("powerbi-connector".to_string()), "URI=mongodb://localhost/?ssl=true&APPNAME=powerbi-connector&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME=overriden-by-uri" ),
+            ] {
+            assert_eq!(
+                source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().app_name);
             }
         }
 
