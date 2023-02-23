@@ -17,6 +17,7 @@ const SERVER: &str = "server";
 const USER: &str = "user";
 const UID: &str = "uid";
 const URI: &str = "uri";
+const APPNAME: &str = "appname";
 
 const URI_KWS: &[&str] = &[URI];
 const USER_KWS: &[&str] = &[UID, USER];
@@ -25,7 +26,7 @@ const SERVER_KWS: &[&str] = &[SERVER];
 
 lazy_static! {
     static ref KEYWORDS: RegexSet = RegexSetBuilder::new(
-        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI,]
+        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME]
             .into_iter()
             .map(|x| "^".to_string() + x + "$")
             .collect::<Vec<_>>()
@@ -250,7 +251,13 @@ impl<'a> ODBCUri<'a> {
             );
         }
         Self::set_server_and_source(&mut client_options, server, source)?;
+        client_options.app_name = self.get_app_name();
         Ok(client_options)
+    }
+
+    fn get_app_name(&mut self) -> Option<String> {
+        let app_name = self.remove(&[APPNAME]);
+        app_name.map(String::from)
     }
 
     fn handle_no_uri(&mut self) -> Result<ClientOptions> {
@@ -266,6 +273,7 @@ impl<'a> ODBCUri<'a> {
                 ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
             ])
             .credential(cred)
+            .app_name(self.get_app_name())
             .build())
     }
 }
