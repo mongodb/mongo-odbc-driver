@@ -42,16 +42,16 @@ functions:
           export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
           export SCRIPT_FOLDER=resources
           if [[ "${triggered_by_git_tag}" != "" ]]; then
-            export release_version=$(echo ${triggered_by_git_tag} | sed s/v//)
+            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
           else
-            export release_version=snapshot
+            export RELEASE_VERSION=snapshot
           fi
 
           cat <<EOT > expansions.yml
-          release_version: "$release_version"
+          RELEASE_VERSION: "$RELEASE_VERSION"
           prepare_shell: |
             set -o errexit
-            export RELEASE_VERSION="$release_version"
+            export RELEASE_VERSION="$RELEASE_VERSION"
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
@@ -285,7 +285,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/windows/${RELEASE-VERSION}/release/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/mongoodbc.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -301,7 +301,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/windows/${RELEASE-VERSION}/release/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/mongoodbc.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -319,7 +319,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/debug/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/windows/${RELEASE-VERSION}/debug/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/debug/mongoodbc.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -335,7 +335,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/debug/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/windows/${RELEASE-VERSION}/debug/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/debug/mongoodbc.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
