@@ -39,10 +39,6 @@ lazy_static! {
         .case_insensitive(true)
         .build()
         .unwrap();
-    static ref APP_NAME_REGEX: Regex = RegexBuilder::new(r#"[&?]appName=(?P<appname>[^&]*)"#)
-        .case_insensitive(true)
-        .build()
-        .unwrap();
 }
 
 #[derive(Debug, PartialEq, Eq)]
