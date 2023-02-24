@@ -1,4 +1,5 @@
 use crate::err::{Error, Result};
+use constants::DEFAULT_APP_NAME;
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
@@ -255,9 +256,10 @@ impl<'a> ODBCUri<'a> {
             );
         }
         Self::set_server_and_source(&mut client_options, server, source)?;
-        if client_options.app_name.is_none() {
-            client_options.app_name = self.remove(&[APPNAME]).map(String::from);
-        }
+        client_options.app_name = client_options.app_name.or(self
+            .remove(&[APPNAME])
+            .map(String::from)
+            .or(Some(String::from(DEFAULT_APP_NAME))));
         Ok(client_options)
     }
 
@@ -274,7 +276,11 @@ impl<'a> ODBCUri<'a> {
                 ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
             ])
             .credential(cred)
-            .app_name(self.remove(&[APPNAME]).map(String::from))
+            .app_name(
+                self.remove(&[APPNAME])
+                    .map(String::from)
+                    .or(Some(String::from(DEFAULT_APP_NAME))),
+            )
             .build())
     }
 }
@@ -718,7 +724,7 @@ mod unit {
             use crate::odbc_uri::ODBCUri;
             for (source, uri) in [
                 (Some("app".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar;appname=app"),
-                (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
+                (Some("odbc-driver".to_string()), "URI=mongodb://localhost/;UID=foo;PWD=bar"),
                 (Some("powerbi-connector".to_string()), "URI=mongodb://localhost/?aPpNaMe=powerbi-connector;UID=foo;PWD=bar"),
                 (Some("powerbi-connector".to_string()), "URI=mongodb://localhost/?ssl=true&APPNAME=powerbi-connector&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME=overriden-by-uri" ),
             ] {
