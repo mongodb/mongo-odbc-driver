@@ -1,5 +1,5 @@
 use crate::err::{Error, Result};
-use constants::DEFAULT_APP_NAME;
+use constants::{DEFAULT_APP_NAME, DRIVER_VERSION};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
@@ -19,6 +19,8 @@ const USER: &str = "user";
 const UID: &str = "uid";
 const URI: &str = "uri";
 const APPNAME: &str = "appname";
+
+const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
 const URI_KWS: &[&str] = &[URI];
 const USER_KWS: &[&str] = &[UID, USER];
@@ -252,10 +254,7 @@ impl<'a> ODBCUri<'a> {
             );
         }
         Self::set_server_and_source(&mut client_options, server, source)?;
-        client_options.app_name = client_options.app_name.or(self
-            .remove(&[APPNAME])
-            .map(String::from)
-            .or(Some(String::from(DEFAULT_APP_NAME))));
+        client_options.app_name = client_options.app_name.or(self.handle_app_name());
         Ok(client_options)
     }
 
@@ -272,12 +271,20 @@ impl<'a> ODBCUri<'a> {
                 ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
             ])
             .credential(cred)
-            .app_name(
-                self.remove(&[APPNAME])
-                    .map(String::from)
-                    .or(Some(String::from(DEFAULT_APP_NAME))),
-            )
+            .app_name(self.handle_app_name())
             .build())
+    }
+
+    fn handle_app_name(&mut self) -> Option<String> {
+        self.remove(&[APPNAME])
+            .map(|s| {
+                if s == POWERBI_CONNECTOR {
+                    format!("{}+{}", POWERBI_CONNECTOR, DRIVER_VERSION.as_str())
+                } else {
+                    s.to_string()
+                }
+            })
+            .or(Some(DEFAULT_APP_NAME.to_string()))
     }
 }
 
@@ -509,6 +516,8 @@ mod unit {
     mod try_into_client_options {
         use mongodb::options::ClientOptions;
 
+        use crate::odbc_uri::POWERBI_CONNECTOR;
+
         #[test]
         fn missing_server_is_err() {
             use crate::odbc_uri::ODBCUri;
@@ -717,12 +726,14 @@ mod unit {
 
         #[test]
         fn app_name_correctness() {
-            use crate::odbc_uri::ODBCUri;
+            use crate::odbc_uri::{ODBCUri, DEFAULT_APP_NAME};
+            use constants::DRIVER_VERSION;
             for (source, uri) in [
                 (Some("app".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar;appname=app"),
-                (Some("odbc-driver".to_string()), "URI=mongodb://localhost/;UID=foo;PWD=bar"),
-                (Some("powerbi-connector".to_string()), "URI=mongodb://localhost/?aPpNaMe=powerbi-connector;UID=foo;PWD=bar"),
-                (Some("powerbi-connector".to_string()), "URI=mongodb://localhost/?ssl=true&APPNAME=powerbi-connector&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME=overriden-by-uri" ),
+                (Some(DEFAULT_APP_NAME.to_string()), "URI=mongodb://localhost/;UID=foo;PWD=bar"),
+                (Some("powerbi".to_string()), "URI=mongodb://localhost/?aPpNaMe=powerbi;UID=foo;PWD=bar"),
+                (Some("encabulator".to_string()), "URI=mongodb://localhost/?ssl=true&APPNAME=encabulator&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME=powerbi-connector"),
+                (Some(format!("{}+{}",POWERBI_CONNECTOR, DRIVER_VERSION.as_str())), format!("URI=mongodb://localhost/?ssl=true&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME={}", POWERBI_CONNECTOR).as_str()),
             ] {
             assert_eq!(
                 source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().app_name);

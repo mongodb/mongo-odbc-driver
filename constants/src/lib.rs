@@ -1,8 +1,21 @@
+use lazy_static::lazy_static;
+
 pub const VENDOR_IDENTIFIER: &str = "MongoDB";
 pub const DRIVER_NAME: &str = "MongoDB Atlas SQL interface ODBC Driver";
 pub const DBMS_NAME: &str = "MongoDB Atlas";
 pub const ODBC_VERSION: &str = "03.80";
-pub const DEFAULT_APP_NAME: &str = "odbc-driver";
+pub const DRIVER_SHORT_NAME: &str = "mongodb-odbc";
+
+lazy_static! {
+    pub static ref DRIVER_VERSION: String = format!(
+        "{}.{}.{}",
+        env!("CARGO_PKG_VERSION_MAJOR"),
+        env!("CARGO_PKG_VERSION_MINOR"),
+        env!("CARGO_PKG_VERSION_PATCH")
+    );
+    pub static ref DEFAULT_APP_NAME: String =
+        format!("{}+{}", DRIVER_SHORT_NAME, DRIVER_VERSION.as_str());
+}
 
 // SQL states
 pub const NOT_IMPLEMENTED: &str = "HYC00";

@@ -5,3 +5,6 @@ authors = ["Ryan Chipman <ryan@ryanchipman.com>",
     "Natacha Bagnard <natacha.bagnard@mongodb.com>",
     "Patrick Meredith <pmeredit@protonmail.com>"]
 edition = "2021"
+
+[dependencies]
+lazy_static = "1.4.0"
