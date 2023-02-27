@@ -170,7 +170,7 @@ mod version {
     #[test]
     fn ensure_version_sync() {
         let members = get_member_versions();
-        if members.len() == 0 {
+        if members.is_empty() {
             panic!("didn't get any workspace members")
         }
         assert!(
