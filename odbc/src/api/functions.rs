@@ -1147,10 +1147,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             let conn_handle = MongoHandleRef::from(connection_handle);
             trace_odbc!(
                 conn_handle,
-                format!(
-                    "Connecting using {DRIVER_NAME} {} ",
-                    DRIVER_ODBC_VERSION.to_string()
-                ),
+                format!("Connecting using {DRIVER_NAME} {} ", *DRIVER_ODBC_VERSION),
                 function_name!()
             );
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
