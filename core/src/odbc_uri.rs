@@ -1,5 +1,5 @@
 use crate::err::{Error, Result};
-use constants::{DEFAULT_APP_NAME, DRIVER_VERSION};
+use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
@@ -279,7 +279,7 @@ impl<'a> ODBCUri<'a> {
         self.remove(&[APPNAME])
             .map(|s| {
                 if s == POWERBI_CONNECTOR {
-                    format!("{}+{}", POWERBI_CONNECTOR, DRIVER_VERSION.as_str())
+                    format!("{}+{}", POWERBI_CONNECTOR, DRIVER_METRICS_VERSION.as_str())
                 } else {
                     s.to_string()
                 }
@@ -727,13 +727,13 @@ mod unit {
         #[test]
         fn app_name_correctness() {
             use crate::odbc_uri::{ODBCUri, DEFAULT_APP_NAME};
-            use constants::DRIVER_VERSION;
+            use constants::DRIVER_METRICS_VERSION;
             for (source, uri) in [
                 (Some("app".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar;appname=app"),
                 (Some(DEFAULT_APP_NAME.to_string()), "URI=mongodb://localhost/;UID=foo;PWD=bar"),
                 (Some("powerbi".to_string()), "URI=mongodb://localhost/?aPpNaMe=powerbi;UID=foo;PWD=bar"),
                 (Some("encabulator".to_string()), "URI=mongodb://localhost/?ssl=true&APPNAME=encabulator&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME=powerbi-connector"),
-                (Some(format!("{}+{}",POWERBI_CONNECTOR, DRIVER_VERSION.as_str())), format!("URI=mongodb://localhost/?ssl=true&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME={}", POWERBI_CONNECTOR).as_str()),
+                (Some(format!("{}+{}",POWERBI_CONNECTOR, DRIVER_METRICS_VERSION.as_str())), format!("URI=mongodb://localhost/?ssl=true&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME={}", POWERBI_CONNECTOR).as_str()),
             ] {
             assert_eq!(
                 source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().app_name);

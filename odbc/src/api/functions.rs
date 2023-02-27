@@ -5,9 +5,7 @@ use crate::{
         definitions::*,
         diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
-        util::{
-            connection_attribute_to_string, format_driver_version, statement_attribute_to_string,
-        },
+        util::{connection_attribute_to_string, statement_attribute_to_string},
     },
     handles::definitions::*,
     trace_odbc,
@@ -15,7 +13,8 @@ use crate::{
 use ::function_name::named;
 use bson::Bson;
 use constants::{
-    DBMS_NAME, DRIVER_NAME, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES,
+    DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
+    SQL_ALL_TABLE_TYPES,
 };
 use file_dbg_macros::{dbg_write, msg_to_file};
 use mongo_odbc_core::{
@@ -1150,7 +1149,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
                 conn_handle,
                 format!(
                     "Connecting using {DRIVER_NAME} {} ",
-                    format_driver_version()
+                    DRIVER_ODBC_VERSION.to_string()
                 ),
                 function_name!()
             );
@@ -2276,16 +2275,12 @@ unsafe fn sql_get_infow_helper(
                         string_length_ptr,
                     )
                 }
-                InfoType::SQL_DRIVER_VER => {
-                    let version = format_driver_version();
-
-                    i16_len::set_output_wstring_as_bytes(
-                        version.as_str(),
-                        info_value_ptr,
-                        buffer_length as usize,
-                        string_length_ptr,
-                    )
-                }
+                InfoType::SQL_DRIVER_VER => i16_len::set_output_wstring_as_bytes(
+                    DRIVER_ODBC_VERSION.as_str(),
+                    info_value_ptr,
+                    buffer_length as usize,
+                    string_length_ptr,
+                ),
                 InfoType::SQL_DRIVER_ODBC_VER => {
                     // This driver supports version 3.8.
                     i16_len::set_output_wstring(
