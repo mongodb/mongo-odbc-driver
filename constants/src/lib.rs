@@ -155,7 +155,6 @@ mod version {
         path.push("Cargo.toml");
         let manifest = Manifest::from_path(path).unwrap();
         let members = manifest.workspace.unwrap().members;
-        // let members = manifest.workspace.unwrap().members.unwrap();
         let mut versions = Vec::new();
         for member in members {
             let mut path = workspace.clone();
