@@ -578,6 +578,36 @@ functions:
           ./resources/run_adf.sh stop
           exit $EXITCODE
 
+  "run asan result-set tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          echo "-------- ODBC related env variable ----------"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "LIBRARY_PATH = $LIBRARY_PATH"
+          echo "ODBCSYSINI = $ODBCSYSINI"
+          echo "----------------------------------------------"
+          
+          ~/.cargo/bin/rustup default nightly
+          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+                    
+          export RUST_BACKTRACE=1
+          # Start a local ADF
+          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+
+          # Run integration tests with asan
+          cargo test --target x86_64-unknown-linux-gnu -- --ignored
+          EXITCODE=$?
+          
+          # Stop the local ADF
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
+
   "run result set test":
     command: shell.exec
     type: test
@@ -697,6 +727,13 @@ tasks:
       - func: "setup driver with UnixODBC"
       - func: "run asan integration tests"
 
+  - name: asan-result-set-test
+    commands:
+      - func: "install unix odbc"
+      - func: "compile release with debug info"
+      - func: "setup driver with UnixODBC"
+      - func: "run asan result-set tests"
+
   - name: snapshot
     depends_on:
       - name: compile
@@ -775,7 +812,7 @@ buildvariants:
 
   - name: static-analysis
     display_name: "* Static Analysis"
-    run_on: [ ubuntu1804-test ]
+    run_on: [ ubuntu2004-test ]
     tasks:
       - name: clippy
       - name: rustfmt
@@ -791,11 +828,17 @@ buildvariants:
       - name: test-result-set-group
 
   - name: ubuntu2004
-    display_name: Ubuntu 20.04
-    run_on: [ ubuntu2004-large ]
+    display_name: Ubuntu 22.04
+    run_on: [ ubuntu2204-large ]
     tasks:
+      - name: compile
+      - name: compile-debug
+      - name: test-unit-group
+      - name: test-integration-group
+      - name: test-result-set-group
       - name: asan-unit-test
       - name: asan-integration-test
+      - name: asan-result-set-test
 
   - name: release
     display_name: "Release"
