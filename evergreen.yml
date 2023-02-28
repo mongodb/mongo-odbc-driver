@@ -827,7 +827,7 @@ buildvariants:
       - name: test-integration-group
       - name: test-result-set-group
 
-  - name: ubuntu2004
+  - name: ubuntu2204
     display_name: Ubuntu 22.04
     run_on: [ ubuntu2204-large ]
     tasks:
