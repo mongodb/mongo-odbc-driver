@@ -828,6 +828,8 @@ tasks:
       - func: "run ubuntu unit tests"
 
   - name: ubuntu-integration-test
+    depends_on:
+      - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
       - func: "compile release"
@@ -835,6 +837,8 @@ tasks:
       - func: "run ubuntu integration tests"
 
   - name: ubuntu-result-set-test
+    depends_on:
+      - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
       - func: "compile release"
