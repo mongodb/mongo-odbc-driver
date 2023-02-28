@@ -242,8 +242,8 @@ functions:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/mongoodbc.so
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.so
+        local_file: mongosql-odbc-driver/target/release/libmongoodbc.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libmongoodbc.so
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -268,6 +268,17 @@ functions:
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/debug/mongoodbc.dll
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/mongoodbc.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - ubuntu2204
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/debug/libmongoodbc.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/libmongoodbc.so
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
