@@ -154,7 +154,7 @@ functions:
             cargo set-version $RELEASE_VERSION
           fi
 
-  "compile windows release":
+  "compile release":
     - command: shell.exec
       type: test
       params:
@@ -181,7 +181,7 @@ functions:
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
 
-  "compile windows debug":
+  "compile debug":
     - command: shell.exec
       type: test
       params:
@@ -233,6 +233,17 @@ functions:
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.dll
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - ubuntu2204
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.so
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -758,13 +769,13 @@ tasks:
   - name: windows-compile
     commands:
       - func: "set packages version"
-      - func: "compile windows release"
+      - func: "compile release"
       - func: "mciuploads release build and symbols"
 
   - name: windows-compile-debug
     commands:
       - func: "set packages version"
-      - func: "compile windows debug"
+      - func: "compile debug"
       - func: "mciuploads debug build and symbols"
 
   - name: windows-unit-test
@@ -786,6 +797,18 @@ tasks:
       - func: "install rust toolchain"
       - func: "run windows result set test"
 
+  - name: ubuntu-compile
+    commands:
+      - func: "set packages version"
+      - func: "compile release"
+      - func: "mciuploads release build and symbols"
+
+  - name: ubuntu-compile-debug
+    commands:
+      - func: "set packages version"
+      - func: "compile debug"
+      - func: "mciuploads debug build and symbols"
+
   - name: ubuntu-unit-test
     commands:
       - func: "install unix odbc"
@@ -794,14 +817,14 @@ tasks:
   - name: ubuntu-integration-test
     commands:
       - func: "install unix odbc"
-      - func: "compile windows release with debug info"
+      - func: "compile release"
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu integration tests"
 
   - name: ubuntu-result-set-test
     commands:
       - func: "install unix odbc"
-      - func: "compile windows release with debug info"
+      - func: "compile release"
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu result-set tests"
 
@@ -813,14 +836,14 @@ tasks:
   - name: asan-integration-test
     commands:
       - func: "install unix odbc"
-      - func: "compile windows release with debug info"
+      - func: "compile release"
       - func: "setup driver with UnixODBC"
       - func: "run asan integration tests"
 
   - name: asan-result-set-test
     commands:
       - func: "install unix odbc"
-      - func: "compile windows release with debug info"
+      - func: "compile release"
       - func: "setup driver with UnixODBC"
       - func: "run asan result-set tests"
 
@@ -923,8 +946,8 @@ buildvariants:
     tasks:
       - name: ubuntu-compile
       - name: ubuntu-compile-debug
-      - name: ubuntu-windows-test-unit-group
-      - name: ubuntu-test-integration-group
+      - name: ubuntu-unit-test
+      - name: ubuntu-integration-test
       - name: test-result-set-group
       - name: asan-unit-test
       - name: asan-integration-test
