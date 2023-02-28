@@ -66,8 +66,10 @@ TIMEOUT=180
 JQ=$TMP_DIR/jq
 
 MONGO_DOWNLOAD_BASE=https://fastdl.mongodb.org
-# Ubuntu 18.04
-MONGO_DOWNLOAD_UBUNTU=mongodb-linux-x86_64-ubuntu1804-5.0.4.tgz
+# Ubuntu 22.04
+MONGO_DOWNLOAD_UBUNTU=mongodb-linux-x86_64-ubuntu2204-6.0.4.tgz
+MONGOSH_DOWNLOAD_LINUX_BASE=https://downloads.mongodb.com/compass
+MONGOSH_DOWNLOAD_LINUX_FILE=mongosh-1.8.0-linux-x64.tgz
 # RedHat 7
 MONGO_DOWNLOAD_REDHAT=mongodb-linux-x86_64-rhel70-5.0.4.tgz
 # macOS
@@ -89,8 +91,9 @@ check_procname() {
 }
 
 check_version() {
-  VERSION=`$2/bin/mongo --port $1 --eval "version"`
+  VERSION=`$MONGOSH_DOWNLOAD_DIR/bin/mongosh --port $1 --eval 'db.version()'`
   result=$?
+  VERSION=$(echo $VERSION | tail -n 1)
   echo "check_version() output"
   echo $VERSION
 
@@ -104,7 +107,7 @@ check_version() {
 check_mongod() {
   check_procname $MONGOD
   process_check_result=$?
-  check_version $MONGOD_PORT $1
+  check_version $MONGOD_PORT
   port_check_result=$?
 
   if [[ $process_check_result -eq 0 ]] && [[ $port_check_result -eq 0 ]]; then
@@ -127,7 +130,7 @@ get_jq() {
 }
 
 check_mongohoused() {
-  check_version $MONGOHOUSED_PORT $1
+  check_version $MONGOHOUSED_PORT
   return $?
 }
 
@@ -139,10 +142,14 @@ if [ $OS = "Linux" ]; then
     export VARIANT=rhel7
     MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/linux/$MONGO_DOWNLOAD_REDHAT
     MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_REDHAT
+    MONGOSH_DOWNLOAD_FILE=$MONGOSH_DOWNLOAD_LINUX_FILE
+    MONGOSH_DOWNLOAD_LINK=$MONGOSH_DOWNLOAD_LINUX_BASE/$MONGOSH_DOWNLOAD_FILE
   elif [ "$distro" = "\"Ubuntu\"" ]; then
-    export VARIANT=ubuntu1804
+    export VARIANT=ubuntu2204
     MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/linux/$MONGO_DOWNLOAD_UBUNTU
     MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_UBUNTU
+    MONGOSH_DOWNLOAD_FILE=$MONGOSH_DOWNLOAD_LINUX_FILE
+    MONGOSH_DOWNLOAD_LINK=$MONGOSH_DOWNLOAD_LINUX_BASE/$MONGOSH_DOWNLOAD_FILE
   else
     echo ${distro} not supported
     exit 1
@@ -174,7 +181,24 @@ install_mongodb() {
     fi
 }
 
+install_mongosh() {
+    (cd $LOCAL_INSTALL_DIR && curl -O $MONGOSH_DOWNLOAD_LINK)
+    if [[ $OS =~ ^CYGWIN ]]; then
+      unzip -qo $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE -d $LOCAL_INSTALL_DIR 2> /dev/null
+
+      # Obtain unzipped directory name
+      MONGOSH_UNZIP_DIR=$(unzip -lq $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE | grep mongod.exe | tr -s ' ' \
+	          | cut -d ' ' -f 5 | cut -d/ -f1)
+      chmod -R +x $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR/bin/
+      echo $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR
+    else
+      tar zxf $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR
+      echo $LOCAL_INSTALL_DIR/${MONGOSH_DOWNLOAD_FILE:0:$((${#MONGOSH_DOWNLOAD_FILE} - 4))}
+    fi
+}
+
 MONGO_DOWNLOAD_DIR=$(install_mongodb)
+MONGOSH_DOWNLOAD_DIR=$(install_mongosh)
 
 check_mongod $MONGO_DOWNLOAD_DIR
 if [[ $? -ne 0 ]]; then
@@ -200,6 +224,20 @@ if [[ $? -ne 0 ]]; then
       $MONGO_DOWNLOAD_DIR/bin/mongod --port $MONGOD_PORT --dbpath $MONGO_DB_PATH \
         --logpath $LOGS_PATH/mongodb_test.log --pidfilepath $TMP_DIR/${MONGOD}.pid --fork
     fi
+
+    waitCounter=0
+    while : ; do
+        check_mongod $MONGO_DOWNLOAD_DIR
+        if [[ $? -eq 0 ]]; then
+            break
+        fi
+        if [[ "$waitCounter" -gt $TIMEOUT ]]; then
+            echo "ERROR: Local mongod did not start under $TIMEOUT seconds"
+            exit 1
+        fi
+        let waitCounter=waitCounter+1
+        sleep 1
+    done
   fi
 else
   if [ $ARG = $STOP ]; then
@@ -209,7 +247,7 @@ else
   fi
 fi
 
-check_mongohoused $MONGO_DOWNLOAD_DIR
+check_mongohoused $MONGOSH_DOWNLOAD_DIR
 if [[ $? -ne 0 ]]; then
   if [ $ARG = $START ]; then
     echo "Starting $MONGOHOUSED"
@@ -290,7 +328,7 @@ if [[ $? -ne 0 ]]; then
 
     waitCounter=0
     while : ; do
-        check_mongohoused $MONGO_DOWNLOAD_DIR
+        check_mongohoused $MONGOSH_DOWNLOAD_DIR
         if [[ $? -eq 0 ]]; then
             break
         fi
