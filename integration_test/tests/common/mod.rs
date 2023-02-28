@@ -4,7 +4,7 @@ use widechar::WideChar;
 
 /// Generate the default connection setting defined for the tests using a connection string
 /// of the form 'Driver={};PWD={};USER={};SERVER={}'.
-/// The default driver is 'ADF_ODBC_DRIVER' if not specified.
+/// The default driver is 'MONGODB_ODBC_DRIVER' if not specified.
 /// The default auth db is 'admin' if not specified.
 pub fn generate_default_connection_str() -> String {
     let user_name = env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set");
@@ -14,7 +14,7 @@ pub fn generate_default_connection_str() -> String {
     let db = env::var("ADF_TEST_LOCAL_DB");
     let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
         Ok(val) => val,
-        Err(_e) => "ADF_ODBC_DRIVER".to_string(), //Default driver name
+        Err(_e) => "MONGODB_ODBC_DRIVER".to_string(), //Default driver name
     };
 
     let mut connection_string =
