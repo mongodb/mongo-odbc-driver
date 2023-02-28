@@ -533,7 +533,7 @@ impl MongoFields {
                             |e| Error::CollectionDeserialization(collection_name.clone(), e),
                         );
                     if let Err(error) = current_col_metadata_response {
-                        // If there is an Error while deserializing the schema, we don't show the column
+                        // If there is an Error while deserializing the schema, we skip the colleciton
                         warnings.push(error);
                         continue;
                     }
