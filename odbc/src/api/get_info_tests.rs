@@ -97,10 +97,9 @@ unsafe fn modify_u16_value(value_ptr: Pointer, _: usize) -> u16 {
 }
 
 mod unit {
-    use crate::util::format_version;
 
     use super::*;
-    use constants::{DBMS_NAME, DRIVER_NAME, ODBC_VERSION};
+    use constants::{DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION};
     use std::mem::size_of;
     use widechar::WideChar;
 
@@ -120,11 +119,7 @@ mod unit {
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 11 * size_of::<WideChar>() as i16,
         expected_length = 10 * size_of::<WideChar>() as i16,
-        expected_value = format_version(
-            env!("CARGO_PKG_VERSION_MAJOR"),
-            env!("CARGO_PKG_VERSION_MINOR"),
-            env!("CARGO_PKG_VERSION_PATCH"),
-        ),
+        expected_value = DRIVER_ODBC_VERSION.to_string(),
         actual_value_modifier = modify_string_value,
     );
 
