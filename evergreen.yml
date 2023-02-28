@@ -799,12 +799,14 @@ tasks:
 
   - name: ubuntu-compile
     commands:
+      - func: "install unix odbc"
       - func: "set packages version"
       - func: "compile release"
       - func: "mciuploads release build and symbols"
 
   - name: ubuntu-compile-debug
     commands:
+      - func: "install unix odbc"
       - func: "set packages version"
       - func: "compile debug"
       - func: "mciuploads debug build and symbols"
@@ -948,7 +950,7 @@ buildvariants:
       - name: ubuntu-compile-debug
       - name: ubuntu-unit-test
       - name: ubuntu-integration-test
-      - name: test-result-set-group
+      - name: ubuntu-result-set-test
       - name: asan-unit-test
       - name: asan-integration-test
       - name: asan-result-set-test
