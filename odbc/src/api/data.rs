@@ -25,6 +25,7 @@ const UINT64: &str = "UInt64";
 const BIT: &str = "Bit";
 const DATETIME: &str = "DateTime";
 const GUID: &str = "GUID";
+const UUID_REPR: &str = "UUID_REPRESENTATION";
 
 type Result<T> = std::result::Result<T, ODBCError>;
 
@@ -96,6 +97,18 @@ impl IntoCData for Bson {
             Bson::Binary(b) if b.subtype == BinarySubtype::Uuid => {
                 json!({"$uuid": b.to_uuid().unwrap().to_string()})
             }
+            Bson::Binary(b) if b.subtype == BinarySubtype::UuidOld => {
+                dbg_write!(format!("ENV UUID_REPR: {:?}", std::env::var(UUID_REPR)));
+                let uuid_repr = match std::env::var(UUID_REPR)
+                    .unwrap_or("pythonLegacy".to_string())
+                    .as_str()
+                {
+                    "csharpLegacy" => bson::UuidRepresentation::CSharpLegacy,
+                    "javaLegacy" => bson::UuidRepresentation::JavaLegacy,
+                    _ => bson::UuidRepresentation::PythonLegacy,
+                };
+                json!({"$uuid": b.to_uuid_with_representation(uuid_repr).unwrap().to_string()})
+            }
             _ => self.into_relaxed_extjson(),
         }
     }
@@ -126,7 +139,6 @@ impl IntoCData for Bson {
             }
             Bson::Int32(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
-            Bson::Binary(b) if b.subtype != BinarySubtype::Uuid => Ok(b.bytes),
             _ => Ok(self.to_json().into_bytes()),
         }
     }
