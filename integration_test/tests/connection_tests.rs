@@ -7,7 +7,7 @@ mod integration {
     fn test_invalid_connection() {
         let env = create_environment_v3().unwrap();
         // Missing PWD
-        let conn_str = "Driver=MONGODB_ODBC_DRIVER;USER=N_A;SERVER=N_A";
+        let conn_str = "Driver=MongoDB Atlas SQL ODBC Driver;USER=N_A;SERVER=N_A";
         let result = env.connect_with_connection_string(conn_str);
         assert!(
             result.is_err(),

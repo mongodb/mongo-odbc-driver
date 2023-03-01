@@ -19,7 +19,7 @@ Note: users can utilize the built-in driver manager.
 
 ## Validate setup
 ### 64-bit
-Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers"` to verify that `MONGODB_ODBC_DRIVER` has been installed successfully.
+Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers"` to verify that `MongoDB Atlas SQL ODBC Driver` has been installed successfully.
 
 There should be a new entry called `ADF_TEST` under `ODBC/ODBC.INI` with the following subentries:
 
@@ -30,7 +30,7 @@ There should be a new entry called `ADF_TEST` under `ODBC/ODBC.INI` with the fol
 	user: <user>
 	
 
-Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MONGODB_ODBC_DRIVER"` to determine if the registry editor was updated successfully. There should also be a new entry called `ADF_ODBC` under `ODBC/ODBCINST.INI` with the following subentries:
+Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver"` to determine if the registry editor was updated successfully. There should also be a new entry called `ADF_ODBC` under `ODBC/ODBCINST.INI` with the following subentries:
 
 	
     Driver: <path to dll>
@@ -38,7 +38,7 @@ Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MONGODB_ODBC_DRIVE
 	
 
 
-Open the Microsoft ODBC Administrator (64-bit) and verify that "MONGODB_ODBC_DRIVER" appears under "System DSN".
+Open the Microsoft ODBC Administrator (64-bit) and verify that "MongoDB Atlas SQL ODBC Driver" appears under "System DSN".
 
 ### 32-bit
 Follow the validation steps listed in the 64-bit section, but make sure to use the 32-bit Microsoft ODBC Administrator. Additionally, the registry keys should be listed under `HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC` instead of `HKEY_LOCAL_MACHINE\SOFTWARE\ODBC`, and the dll path must point to the 32-bit version of the driver.

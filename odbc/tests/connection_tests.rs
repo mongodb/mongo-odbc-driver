@@ -70,7 +70,7 @@ mod integration {
 
     test_connection_diagnostics! (
             missing_user_in_connection_string,
-            in_connection_string = "Driver=MONGODB_ODBC_DRIVER;SERVER=N_A;PWD=N_A",
+            in_connection_string = "Driver=MongoDB Atlas SQL ODBC Driver;SERVER=N_A;PWD=N_A",
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
@@ -78,7 +78,7 @@ mod integration {
         );
     test_connection_diagnostics! (
             missing_pwd_in_connection_string,
-            in_connection_string = "Driver=MONGODB_ODBC_DRIVER;SERVER=N_A;USER=N_A",
+            in_connection_string = "Driver=MongoDB Atlas SQL ODBC Driver;SERVER=N_A;USER=N_A",
             driver_completion = DriverConnectOption::NoPrompt,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
