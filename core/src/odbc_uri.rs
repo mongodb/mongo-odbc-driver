@@ -733,7 +733,7 @@ mod unit {
                 (Some(DEFAULT_APP_NAME.to_string()), "URI=mongodb://localhost/;UID=foo;PWD=bar"),
                 (Some("powerbi".to_string()), "URI=mongodb://localhost/?aPpNaMe=powerbi;UID=foo;PWD=bar"),
                 (Some("encabulator".to_string()), "URI=mongodb://localhost/?ssl=true&APPNAME=encabulator&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME=powerbi-connector"),
-                (Some(format!("{}+{}",POWERBI_CONNECTOR, DRIVER_METRICS_VERSION.as_str())), format!("URI=mongodb://localhost/?ssl=true&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME={}", POWERBI_CONNECTOR).as_str()),
+                (Some(format!("{}+{}",POWERBI_CONNECTOR, DRIVER_METRICS_VERSION.as_str())), format!("URI=mongodb://localhost/?ssl=true&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME={POWERBI_CONNECTOR}").as_str()),
             ] {
             assert_eq!(
                 source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().app_name);
