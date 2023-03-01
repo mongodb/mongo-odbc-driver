@@ -13,7 +13,7 @@ use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
 use regex::Regex;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
 use widechar::WideChar;
 
@@ -93,6 +93,9 @@ impl IntoCData for Bson {
             }
             Bson::Decimal128(d) => Value::String(d.to_formatted_string()),
             Bson::String(s) => Value::String(s),
+            Bson::Binary(b) if b.subtype == BinarySubtype::Uuid => {
+                json!({"$uuid": b.to_uuid().unwrap().to_string()})
+            }
             _ => self.into_relaxed_extjson(),
         }
     }
@@ -123,7 +126,7 @@ impl IntoCData for Bson {
             }
             Bson::Int32(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
-            Bson::Binary(b) => Ok(b.bytes),
+            Bson::Binary(b) if b.subtype != BinarySubtype::Uuid => Ok(b.bytes),
             _ => Ok(self.to_json().into_bytes()),
         }
     }
