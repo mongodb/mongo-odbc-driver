@@ -71,12 +71,14 @@ MONGOSH_DOWNLOAD_BASE=https://downloads.mongodb.com/compass
 # Ubuntu 22.04
 MONGO_DOWNLOAD_UBUNTU=mongodb-linux-x86_64-ubuntu2204-6.0.4.tgz
 # RedHat 7
-MONGO_DOWNLOAD_REDHAT=mongodb-linux-x86_64-rhel70-5.0.4.tgz
+MONGO_DOWNLOAD_REDHAT=mongodb-linux-x86_64-rhel70-6.0.4.tgz
 # Linux mongosh
 MONGOSH_DOWNLOAD_LINUX_FILE=mongosh-1.8.0-linux-x64.tgz
 
+MONGO_DOWNLOAD_REDHAT=mongodb-linux-x86_64-rhel70-6.0.4.tgz
 # macOS
-MONGO_DOWNLOAD_MAC=mongodb-macos-x86_64-5.0.4.tgz
+MONGO_DOWNLOAD_MAC=mongodb-macos-x86_64-6.0.4.tgz
+MONGOSH_DOWNLOAD_MAC_FILE=mongosh-1.8.0-macos-x64.zip
 # Windows
 MONGO_DOWNLOAD_WIN=mongodb-windows-x86_64-6.0.4.zip
 MONGOSH_DOWNLOAD_WINDOWS_FILE=mongosh-1.8.0-win32-x64.zip
