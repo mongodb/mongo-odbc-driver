@@ -23,6 +23,7 @@ const UINT64: &str = "UInt64";
 const BIT: &str = "Bit";
 const DATETIME: &str = "DateTime";
 const GUID: &str = "GUID";
+const UUID_REPR: &str = "UUID_REPRESENTATION";
 
 type Result<T> = std::result::Result<T, ODBCError>;
 
@@ -93,6 +94,17 @@ impl IntoCData for Bson {
             Bson::String(s) => Value::String(s),
             Bson::Binary(b) if b.subtype == BinarySubtype::Uuid => {
                 json!({"$uuid": b.to_uuid().unwrap().to_string()})
+            }
+            Bson::Binary(b) if b.subtype == BinarySubtype::UuidOld => {
+                let uuid_repr = match std::env::var(UUID_REPR)
+                    .unwrap_or("pythonLegacy".to_string())
+                    .as_str()
+                {
+                    "csharpLegacy" => bson::UuidRepresentation::CSharpLegacy,
+                    "javaLegacy" => bson::UuidRepresentation::JavaLegacy,
+                    _ => bson::UuidRepresentation::PythonLegacy,
+                };
+                json!({"$uuid": b.to_uuid_with_representation(uuid_repr).unwrap().to_string()})
             }
             _ => self.into_relaxed_extjson(),
         }
