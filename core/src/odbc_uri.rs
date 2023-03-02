@@ -1,6 +1,5 @@
 use crate::err::{Error, Result};
 use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
-use file_dbg_macros::{dbg_write, msg_to_file};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
