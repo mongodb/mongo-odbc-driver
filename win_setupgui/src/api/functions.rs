@@ -1,5 +1,5 @@
 use crate::gui::{config::config_dsn, remove::remove_dsn};
-use mongo_odbc_core::util::dsn::DSNOpts;
+use mongo_odbc_core::util::dsn::windows::DSNOpts;
 use mongoodbc::{input_text_to_string, input_wtext_to_string};
 use windows::Win32::{
     Foundation::HWND,

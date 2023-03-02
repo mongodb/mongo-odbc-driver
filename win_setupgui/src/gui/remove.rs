@@ -2,7 +2,7 @@
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
-use mongo_odbc_core::util::dsn::DSNOpts;
+use mongo_odbc_core::util::dsn::windows::DSNOpts;
 use nwd::NwgUi;
 use nwg::NativeUi;
 

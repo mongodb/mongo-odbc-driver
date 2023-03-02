@@ -1,5 +1,6 @@
 mod decimal128;
 pub mod dsn;
+#[cfg(target_os = "windows")]
 pub mod registry;
 use bson::doc;
 use constants::SQL_ALL_TABLE_TYPES;

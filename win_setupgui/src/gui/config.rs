@@ -1,7 +1,7 @@
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
-use mongo_odbc_core::util::dsn::DSNOpts;
+use mongo_odbc_core::util::dsn::windows::DSNOpts;
 use nwd::NwgUi;
 use nwg::NativeUi;
 use std::{cell::RefCell, thread};
@@ -131,35 +131,36 @@ impl ConfigGui {
             driver_name: self.driver.text(),
             ..Default::default()
         };
-        if self.gui_opts.op == ODBC_ADD_DSN && !unsafe { SQLValidDSN(dsn_opts.dsn.as_ptr()) } {
-            nwg::modal_error_message(
+        match self.gui_opts.op == ODBC_ADD_DSN && unsafe { SQLValidDSN(dsn_opts.dsn.as_ptr()) } {
+            false => {
+                nwg::modal_error_message(
                     &self.window,
                     "Error",
                     &format!("Invalid DSN: {dsn}.\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", dsn = dsn_opts.dsn),
                 );
-            return;
-        }
-        match dsn_opts.write_to_registry() {
-            Ok(_) => {
-                nwg::modal_info_message(
-                    &self.window,
-                    "Success",
-                    &format!(
-                        "DSN {dsn} {verbed} successfully",
-                        dsn = dsn_opts.dsn,
-                        verbed = self.gui_opts.verbed
-                    ),
-                );
             }
-            Err(e) => {
-                nwg::modal_error_message(
-                    &self.window,
-                    "Error",
-                    &format!("Could not {verb} DSN: {e}", verb = self.gui_opts.verb),
-                );
-            }
+            true => match dsn_opts.write_to_registry() {
+                Ok(_) => {
+                    nwg::modal_info_message(
+                        &self.window,
+                        "Success",
+                        &format!(
+                            "DSN {dsn} {verbed} successfully",
+                            dsn = dsn_opts.dsn,
+                            verbed = self.gui_opts.verbed
+                        ),
+                    );
+                    self.close();
+                }
+                Err(e) => {
+                    nwg::modal_error_message(
+                        &self.window,
+                        "Error",
+                        &format!("Could not {verb} DSN: {e}", verb = self.gui_opts.verb),
+                    );
+                }
+            },
         }
-        self.close();
     }
 }
 
