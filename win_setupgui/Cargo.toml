@@ -15,13 +15,12 @@ mongo-odbc-driver = { path = "../odbc" }
 file_dbg_macros = { path = "../file_dbg_macros" }
 widechar = { path = "../widechar" }
 function_name = "0.3.0"
-native-windows-gui = "1.0.12"
-native-windows-derive = "1.0.3"
 chrono = "0.4.22"
 
-[dependencies.windows]
-version = "0.44.0"
-features = ["Win32_System_Search"]
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.44.0", features = ["Win32_System_Search"] }
+native-windows-gui = "1.0.12"
+native-windows-derive = "1.0.3"
 
 [lib]
 name = "mongoodbc_s"
