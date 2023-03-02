@@ -1,4 +1,6 @@
 mod decimal128;
+pub mod dsn;
+pub mod registry;
 use bson::doc;
 use constants::SQL_ALL_TABLE_TYPES;
 pub use decimal128::Decimal128Plus;

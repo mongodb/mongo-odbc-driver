@@ -1,0 +1,28 @@
+[package]
+name = "win_setupgui"
+version = "0.1.0"
+authors = [
+    "Patrick Meredith <pmeredit@protonmail.com>",
+    "Nathan Leniz <nathan.leniz@mongodb.com>",
+]
+edition = "2021"
+
+[dependencies]
+odbc-sys = "0.21.2"
+constants = { path = "../constants" }
+mongo-odbc-core = { path = "../core" }
+mongo-odbc-driver = { path = "../odbc" }
+file_dbg_macros = { path = "../file_dbg_macros" }
+widechar = { path = "../widechar" }
+function_name = "0.3.0"
+native-windows-gui = "1.0.12"
+native-windows-derive = "1.0.3"
+chrono = "0.4.22"
+
+[dependencies.windows]
+version = "0.44.0"
+features = ["Win32_System_Search"]
+
+[lib]
+name = "mongoodbc_s"
+crate-type = ["cdylib", "lib"]

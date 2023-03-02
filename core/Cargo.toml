@@ -1,9 +1,12 @@
 [package]
 name = "mongo-odbc-core"
 version = "0.0.0"
-authors = ["Ryan Chipman <ryan@ryanchipman.com>",
+authors = [
+    "Ryan Chipman <ryan@ryanchipman.com>",
     "Natacha Bagnard <natacha.bagnard@mongodb.com>",
-    "Patrick Meredith <pmeredit@protonmail.com>"]
+    "Patrick Meredith <pmeredit@protonmail.com>",
+    "Nathan Leniz <nathan.leniz@mongodb.com>",
+]
 edition = "2021"
 
 [dependencies]
@@ -18,8 +21,15 @@ lazy_static = "1.4.0"
 likely_stable = "0.1.2"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
+file_dbg_macros = { path = "../file_dbg_macros" }
+chrono = "0.4.22"
+winreg = { version = "0.11", features = ["serialization-serde"] }
 
 [dependencies.mongodb]
 version = "2.3"
 default-features = false
 features = ["tokio-sync"]
+
+[dependencies.windows]
+version = "0.44.0"
+features = ["Win32_Foundation", "Win32_System_Search"]

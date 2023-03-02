@@ -1,5 +1,6 @@
 use crate::err::{Error, Result};
 use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
+use file_dbg_macros::{dbg_write, msg_to_file};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
@@ -9,16 +10,16 @@ const EMPTY_URI_ERROR: &str = "URI must not be empty";
 const INVALID_ATTR_FORMAT_ERROR: &str = "all URI attributes must be of the form keyword=value";
 const MISSING_CLOSING_BRACE_ERROR: &str = "attribute value beginning with '{' must end with '}'";
 
-const DATABASE: &str = "database";
-const DRIVER: &str = "driver";
-const DSN: &str = "dsn";
-const PASSWORD: &str = "password";
-const PWD: &str = "pwd";
-const SERVER: &str = "server";
-const USER: &str = "user";
-const UID: &str = "uid";
-const URI: &str = "uri";
-const APPNAME: &str = "appname";
+pub const DATABASE: &str = "database";
+pub const DRIVER: &str = "driver";
+pub const DSN: &str = "dsn";
+pub const PASSWORD: &str = "password";
+pub const PWD: &str = "pwd";
+pub const SERVER: &str = "server";
+pub const USER: &str = "user";
+pub const UID: &str = "uid";
+pub const URI: &str = "uri";
+pub const APPNAME: &str = "appname";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
@@ -44,7 +45,7 @@ lazy_static! {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct ODBCUri<'a>(HashMap<String, &'a str>);
+pub struct ODBCUri<'a>(pub HashMap<String, &'a str>);
 
 impl<'a> ODBCUri<'a> {
     pub fn new(odbc_uri: &'a str) -> Result<ODBCUri<'a>> {
