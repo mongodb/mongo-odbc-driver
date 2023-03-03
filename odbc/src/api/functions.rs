@@ -1380,7 +1380,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 
                 *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
 
-                if warnings_opt.len() > 0 {
+                if !warnings_opt.is_empty() {
                     // No warnings and there is a next row
                     SqlReturn::SUCCESS_WITH_INFO
                 } else {
