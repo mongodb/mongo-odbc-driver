@@ -509,7 +509,7 @@ impl MongoFields {
     fn get_next_metadata(
         &mut self,
         mongo_connection: &MongoConnection,
-    ) -> Result<(bool, Option<Vec<Error>>)> {
+    ) -> Result<(bool, Vec<Error>)> {
         let mut warnings: Vec<Error> = vec![];
         loop {
             if self.collections_for_db.is_some() {
@@ -546,7 +546,7 @@ impl MongoFields {
                             if !current_col_metadata.is_empty() {
                                 self.current_col_metadata = current_col_metadata;
                                 self.current_field_for_collection = 0;
-                                return Ok((true, (!warnings.is_empty()).then_some(warnings)));
+                                return Ok((true, warnings));
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
@@ -556,7 +556,7 @@ impl MongoFields {
                 }
             }
             if self.dbs.is_empty() {
-                return Ok((false, (!warnings.is_empty()).then_some(warnings)));
+                return Ok((false, warnings));
             }
             let db_name = self.dbs.pop_front().unwrap();
             self.collections_for_db = Some(
@@ -574,16 +574,13 @@ impl MongoFields {
 impl MongoStatement for MongoFields {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
-    fn next(
-        &mut self,
-        mongo_connection: Option<&MongoConnection>,
-    ) -> Result<(bool, Option<Vec<Error>>)> {
+    fn next(&mut self, mongo_connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         match self.field_name_filter.as_ref() {
             None => {
                 self.current_field_for_collection += 1;
                 match (self.current_field_for_collection as usize) < self.current_col_metadata.len()
                 {
-                    true => Ok((true, None)),
+                    true => Ok((true, vec![])),
                     false => self.get_next_metadata(mongo_connection.unwrap()),
                 }
             }
@@ -591,11 +588,8 @@ impl MongoStatement for MongoFields {
                 let filter = filter.clone();
                 let mut warnings: Vec<Error> = vec![];
                 loop {
-                    self.current_field_for_collection += 1;
-                    let parse_warnings = |res: (bool, Option<Vec<Error>>)| {
-                        if let Some(w) = res.1 {
-                            warnings.extend(w)
-                        };
+                    let parse_warnings = |res: (bool, Vec<Error>)| {
+                        warnings.extend(res.1);
                         res.0
                     };
                     if (self.current_field_for_collection as usize
@@ -605,7 +599,7 @@ impl MongoStatement for MongoFields {
                             .map(parse_warnings)
                             .unwrap()
                     {
-                        return Ok((false, (!warnings.is_empty()).then_some(warnings)));
+                        return Ok((false, warnings));
                     }
                     if filter.is_match(
                         &self
@@ -614,7 +608,7 @@ impl MongoStatement for MongoFields {
                             .unwrap()
                             .col_name,
                     ) {
-                        return Ok((true, (!warnings.is_empty()).then_some(warnings)));
+                        return Ok((true, warnings));
                     }
                 }
             }

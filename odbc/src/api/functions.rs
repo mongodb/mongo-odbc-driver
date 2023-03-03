@@ -1364,13 +1364,13 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
             if let Ok((has_next, warnings_opt)) = move_to_next_result {
                 let mut stmt_attrs = stmt.attributes.write().unwrap();
 
-                // Add the warning to the diagnostic records and log them
-                let has_warnings = warnings_opt.is_some();
-                if let Some(warnings) = warnings_opt {
-                    warnings.iter().for_each(|warning| {
-                        add_diag_info!(MongoHandleRef::from(statement_handle), ODBCError::GeneralWarning(warning.to_string()));
-                    });
-                }
+                // Add any warnings to the diagnostic records and log them
+                warnings_opt.iter().for_each(|warning| {
+                    add_diag_info!(
+                        MongoHandleRef::from(statement_handle),
+                        ODBCError::GeneralWarning(warning.to_string())
+                    );
+                });
                 if !has_next {
                     stmt_attrs.row_index_is_valid = false;
                     // No more rows
@@ -1380,7 +1380,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 
                 *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
 
-                if has_warnings {
+                if warnings_opt.len() > 0 {
                     // No warnings and there is a next row
                     SqlReturn::SUCCESS_WITH_INFO
                 } else {

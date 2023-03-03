@@ -139,10 +139,10 @@ impl MongoStatement for MongoCollections {
     // When cursor is exhausted move to next database in list
     // Return true if moving was successful, false otherwise.
     #[allow(clippy::blocks_in_if_conditions)]
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Option<Vec<Error>>)> {
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         if self.current_database_index.is_none() {
             if self.collections_for_db_list.is_empty() {
-                return Ok((false, None));
+                return Ok((false, vec![]));
             }
             self.current_database_index = Some(0);
         }
@@ -182,7 +182,7 @@ impl MongoStatement for MongoCollections {
                         {
                             // Cursor advance succeeded and the collection matches the filters, update current CollectionSpecification
                             self.current_collection = Some(collection);
-                            return Ok((true, (!warnings.is_empty()).then_some(warnings)));
+                            return Ok((true, warnings));
                         }
                     }
                     Err(warning) => {
@@ -193,7 +193,7 @@ impl MongoStatement for MongoCollections {
             }
             self.current_database_index = Some(self.current_database_index.unwrap() + 1);
             if self.current_database_index.unwrap() >= self.collections_for_db_list.len() {
-                return Ok((false, (!warnings.is_empty()).then_some(warnings)));
+                return Ok((false, warnings));
             }
         }
     }
