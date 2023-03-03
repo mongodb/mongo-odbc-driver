@@ -205,7 +205,7 @@ functions:
           # Compile debug build
           cargo build
 
-  "compile windows release with debug info":
+  "compile release with debug info":
     - command: shell.exec
       params:
         shell: bash
@@ -837,20 +837,16 @@ tasks:
       - func: "run ubuntu unit tests"
 
   - name: ubuntu-integration-test
-    depends_on:
-      - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
-      - func: "download artifact"
+      - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu integration tests"
 
   - name: ubuntu-result-set-test
-    depends_on:
-      - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
-      - func: "download artifact"
+      - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu result-set tests"
 
@@ -860,20 +856,16 @@ tasks:
       - func: "run asan unit tests"
 
   - name: asan-integration-test
-    depends_on:
-      - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
-      - func: "download artifact"
+      - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
       - func: "run asan integration tests"
 
   - name: asan-result-set-test
-    depends_on:
-      - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
-      - func: "download artifact"
+      - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
       - func: "run asan result-set tests"
 
