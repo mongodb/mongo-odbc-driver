@@ -372,6 +372,15 @@ functions:
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dll
         local_file: mongosql-odbc-driver/mongoodbc.dll
         bucket: mciuploads
+    - command: s3.get
+      params:
+        build_variants:
+          - ubuntu2204
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libmongoodbc.so
+        local_file: mongosql-odbc-driver/libmongoodbc.so
+        bucket: mciuploads
 
   "setup driver on Windows":
     - command: shell.exec
@@ -832,7 +841,7 @@ tasks:
       - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
-      - func: "compile release"
+      - func: "download artifact"
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu integration tests"
 
@@ -841,7 +850,7 @@ tasks:
       - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
-      - func: "compile release"
+      - func: "download artifact"
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu result-set tests"
 
@@ -851,16 +860,20 @@ tasks:
       - func: "run asan unit tests"
 
   - name: asan-integration-test
+    depends_on:
+      - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
-      - func: "compile release"
+      - func: "download artifact"
       - func: "setup driver with UnixODBC"
       - func: "run asan integration tests"
 
   - name: asan-result-set-test
+    depends_on:
+      - name: "ubuntu-compile"
     commands:
       - func: "install unix odbc"
-      - func: "compile release"
+      - func: "download artifact"
       - func: "setup driver with UnixODBC"
       - func: "run asan result-set tests"
 
@@ -923,7 +936,7 @@ task_groups:
     tasks:
       - windows-integration-test
 
-  - name: test-result-set-group
+  - name: windows-test-result-set-group
     setup_group_can_fail_task: false
     setup_group:
       - func: "fetch source"
@@ -955,7 +968,7 @@ buildvariants:
       - name: windows-compile-debug
       - name: windows-windows-test-unit-group
       - name: windows-test-integration-group
-      - name: test-result-set-group
+      - name: windows-test-result-set-group
 
   - name: ubuntu2204
     display_name: Ubuntu 22.04
