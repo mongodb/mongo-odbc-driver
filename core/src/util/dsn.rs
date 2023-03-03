@@ -1,7 +1,9 @@
 #[cfg(target_os = "windows")]
 pub mod windows {
     use crate::{
-        odbc_uri::{ODBCUri, DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, UID, URI, USER},
+        odbc_uri::{
+            ODBCUri, DATABASE, DRIVER, DSN, LOGPATH, PASSWORD, PWD, SERVER, UID, URI, USER,
+        },
         util::registry::windows::{add_datasource, get_driver_dll_path, remove_dsn, set_dsn},
     };
     use serde::{Deserialize, Serialize};
@@ -55,7 +57,7 @@ pub mod windows {
             let mut server = String::new();
             let mut user = String::new();
             let mut logpath = String::new();
-            for (key, value) in value.0 {
+            for (key, value) in value.into_iter() {
                 match key.to_lowercase().as_str() {
                     DATABASE => database = value.to_string(),
                     DRIVER => driver = value.to_string(),
@@ -66,7 +68,7 @@ pub mod windows {
                     URI => server = value.to_string(),
                     USER => user = value.to_string(),
                     UID => user = value.to_string(),
-                    "logpath" => logpath = value.to_string(),
+                    LOGPATH => logpath = value.to_string(),
                     _ => {}
                 }
             }
