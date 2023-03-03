@@ -42,7 +42,8 @@ GO="$GOBINDIR/go"
 PATH=$GOBINDIR:$PATH
 
 LOCAL_INSTALL_DIR=$(pwd)/local_adf
-MONGOHOUSE_URI=git@github.com:10gen/mongohouse.git
+# TODO: Unfork this once mongohouse is updated
+MONGOHOUSE_URI=git@github.com:pmeredit/mongohouse.git
 MONGO_DB_PATH=$LOCAL_INSTALL_DIR/test_db
 LOGS_PATH=$LOCAL_INSTALL_DIR/logs
 DB_CONFIG_PATH=$(pwd)/resources/integration_test/testdata/adf_db_config.json
@@ -66,20 +67,23 @@ TIMEOUT=180
 JQ=$TMP_DIR/jq
 
 
+## OS Agnostic definitions
 MONGO_DOWNLOAD_BASE=https://fastdl.mongodb.org
 MONGOSH_DOWNLOAD_BASE=https://downloads.mongodb.com/compass
+
+## Linux
 # Ubuntu 22.04
 MONGO_DOWNLOAD_UBUNTU=mongodb-linux-x86_64-ubuntu2204-6.0.4.tgz
 # RedHat 7
 MONGO_DOWNLOAD_REDHAT=mongodb-linux-x86_64-rhel70-6.0.4.tgz
-# Linux mongosh
+# Shared Linux mongosh
 MONGOSH_DOWNLOAD_LINUX_FILE=mongosh-1.8.0-linux-x64.tgz
 
-MONGO_DOWNLOAD_REDHAT=mongodb-linux-x86_64-rhel70-6.0.4.tgz
-# macOS
+## macOS
 MONGO_DOWNLOAD_MAC=mongodb-macos-x86_64-6.0.4.tgz
 MONGOSH_DOWNLOAD_MAC_FILE=mongosh-1.8.0-macos-x64.zip
-# Windows
+
+## Windows
 MONGO_DOWNLOAD_WIN=mongodb-windows-x86_64-6.0.4.zip
 MONGOSH_DOWNLOAD_WINDOWS_FILE=mongosh-1.8.0-win32-x64.zip
 
