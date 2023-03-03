@@ -1,7 +1,7 @@
 use crate::{
     add_diag_with_function,
     api::{
-        data::{i16_len, i32_len, input_text_to_string, input_wtext_to_string, set_str_length},
+        data::{i16_len, i32_len, set_str_length},
         definitions::*,
         diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
@@ -16,6 +16,8 @@ use constants::{
     DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
     SQL_ALL_TABLE_TYPES,
 };
+use cstr::WideChar;
+use cstr::{input_text_to_string, input_wtext_to_string};
 use file_dbg_macros::{dbg_write, msg_to_file};
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
@@ -29,7 +31,6 @@ use odbc_sys::{
 };
 use std::ptr::null_mut;
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
-use widechar::WideChar;
 
 const NULL_HANDLE_ERROR: &str = "handle cannot be null";
 const HANDLE_MUST_BE_ENV_ERROR: &str = "handle must be env";

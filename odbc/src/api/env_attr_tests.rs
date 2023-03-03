@@ -154,7 +154,7 @@ mod unit {
     // 01S02: Optional value changed.
     #[test]
     fn test_optional_value_changed() {
-        use widechar::WideChar;
+        use cstr::WideChar;
         unsafe {
             let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
             assert_eq!(
@@ -186,11 +186,11 @@ mod unit {
             );
             assert_eq!(
                 OPTIONAL_VALUE_CHANGED,
-                widechar::from_widechar_ref_lossy(&*(sql_state as *const [WideChar; 6]))
+                cstr::from_widechar_ref_lossy(&*(sql_state as *const [WideChar; 6]))
             );
             assert_eq!(
              "[MongoDB][API] Invalid value for attribute SQL_ATTR_CP_MATCH, changed to SQL_CP_STRICT_MATCH\0",
-                widechar::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 93]))
+                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 93]))
             );
         }
     }

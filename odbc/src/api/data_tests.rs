@@ -272,7 +272,7 @@ lazy_static! {
 }
 
 mod unit {
-    use widechar::WideChar;
+    use cstr::WideChar;
 
     use super::*;
     // test unallocated_statement tests SQLFetch when the mongo_statement inside
@@ -397,9 +397,8 @@ mod unit {
 
     #[test]
     fn sql_get_wstring_data() {
-        use crate::api::{
-            data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
-        };
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
+        use cstr::input_wtext_to_string;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -496,11 +495,9 @@ mod unit {
 
     #[test]
     fn sql_get_wstring_data_by_pieces() {
-        use crate::api::{
-            data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
-        };
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
+        use cstr::{input_wtext_to_string, WideChar};
         use std::mem::size_of;
-        use widechar::WideChar;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -666,9 +663,8 @@ mod unit {
 
     #[test]
     fn sql_get_string_data_by_pieces() {
-        use crate::api::{
-            data::input_text_to_string, definitions::CDataType, functions::SQLGetData,
-        };
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
+        use cstr::input_text_to_string;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -895,9 +891,8 @@ mod unit {
 
     #[test]
     fn sql_get_string_data() {
-        use crate::api::{
-            data::input_text_to_string, definitions::CDataType, functions::SQLGetData,
-        };
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
+        use cstr::input_text_to_string;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,

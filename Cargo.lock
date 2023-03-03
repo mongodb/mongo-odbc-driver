@@ -325,6 +325,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cstr"
+version = "0.0.0"
+dependencies = [
+ "odbc-sys 0.21.3",
+ "widestring 1.0.2",
+]
+
+[[package]]
 name = "cty"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -766,6 +774,7 @@ dependencies = [
 name = "integration_test"
 version = "0.0.0"
 dependencies = [
+ "cstr",
  "lazy_static",
  "mongodb",
  "odbc",
@@ -775,7 +784,6 @@ dependencies = [
  "serde_json",
  "serde_yaml 0.9.13",
  "thiserror",
- "widechar",
 ]
 
 [[package]]
@@ -1008,6 +1016,7 @@ dependencies = [
  "bson",
  "chrono",
  "constants",
+ "cstr",
  "file_dbg_macros",
  "function_name",
  "lazy_static",
@@ -1022,7 +1031,6 @@ dependencies = [
  "serde_json",
  "serde_yaml 0.8.26",
  "thiserror",
- "widechar",
 ]
 
 [[package]]
@@ -2409,13 +2417,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "widechar"
-version = "0.0.0"
-dependencies = [
- "widestring 1.0.2",
-]
-
-[[package]]
 name = "widestring"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2429,10 +2430,11 @@ checksum = "653f141f39ec16bba3c5abe400a0c60da7468261cc2cbf36805022876bc721a8"
 
 [[package]]
 name = "win_setupgui"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "chrono",
  "constants",
+ "cstr",
  "file_dbg_macros",
  "function_name",
  "mongo-odbc-core",
@@ -2440,7 +2442,6 @@ dependencies = [
  "native-windows-derive",
  "native-windows-gui",
  "odbc-sys 0.21.3",
- "widechar",
  "windows",
 ]
 

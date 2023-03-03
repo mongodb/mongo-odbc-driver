@@ -21,7 +21,7 @@ chrono = "0.4.22"
 constants = { path = "../constants" }
 mongo-odbc-core = { path = "../core" }
 file_dbg_macros = { path = "../file_dbg_macros" }
-widechar = { path = "../widechar" }
+cstr = { path = "../cstr" }
 function_name = "0.3.0"
 serde_json = "1.0.68"
 

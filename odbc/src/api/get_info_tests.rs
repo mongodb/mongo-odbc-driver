@@ -1,11 +1,10 @@
 use crate::{
-    api::data::input_wtext_to_string,
     definitions::*,
     handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
 };
+use cstr::{input_wtext_to_string, WideChar};
 use odbc_sys::{Pointer, SmallInt, SqlReturn, UInteger, USmallInt};
-use widechar::WideChar;
 
 macro_rules! test_get_info {
     ($func_name:ident,
@@ -100,8 +99,8 @@ mod unit {
 
     use super::*;
     use constants::{DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION};
+    use cstr::WideChar;
     use std::mem::size_of;
-    use widechar::WideChar;
 
     test_get_info!(
         driver_name,

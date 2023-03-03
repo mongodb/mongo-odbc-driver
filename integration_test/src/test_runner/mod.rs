@@ -1,8 +1,8 @@
 mod test_generator_util;
 
+use cstr::WideChar;
 use odbc::{create_environment_v3, Allocated, Connection, Handle, NoResult, Statement};
 use odbc_sys::{CDataType, Desc, HStmt, HandleType, SmallInt, SqlReturn, USmallInt};
-use widechar::WideChar;
 
 use odbc::safe::AutocommitOn;
 use serde::{Deserialize, Serialize};
@@ -216,7 +216,7 @@ fn wstr_or_null(value: &Value) -> (*const u16, Vec<u16>) {
 /// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
 /// as the ptr.
 fn to_wstr_ptr(string: &str) -> (*const u16, Vec<WideChar>) {
-    let mut v = widechar::to_widechar_vec(string);
+    let mut v = cstr::to_widechar_vec(string);
     v.push(0);
     (v.as_ptr(), v)
 }
@@ -665,7 +665,7 @@ fn get_column_attribute(
             numeric_attrib_ptr,
         ) {
             SqlReturn::SUCCESS => Ok(match column_metadata_type {
-                Value::String(_) => json!((widechar::from_widechar_ref_lossy(
+                Value::String(_) => json!((cstr::from_widechar_ref_lossy(
                     &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH])
                 ))[0..(*string_length_ptr as usize / std::mem::size_of::<WideChar>())]
                     .to_string()),

@@ -1,0 +1,14 @@
+[package]
+name = "cstr"
+version = "0.0.0"
+authors = [
+    "Ryan Chipman <ryan@ryanchipman.com>",
+    "Natacha Bagnard <natacha.bagnard@mongodb.com>",
+    "Patrick Meredith <pmeredit@protonmail.com>",
+    "Nathan Leniz <nathan.leniz@mongodb.com>",
+]
+edition = "2021"
+
+[dependencies]
+widestring = "1.0.2"
+odbc-sys = "0.21.2"

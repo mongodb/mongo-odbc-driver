@@ -5,10 +5,10 @@ use crate::{
     },
     errors::ODBCError,
 };
+use cstr::WideChar;
 use odbc_sys::Pointer;
 use odbc_sys::{Char, Integer, SmallInt, SqlReturn};
 use std::ptr::copy_nonoverlapping;
-use widechar::WideChar;
 
 ///
 /// set_sql_state writes the given sql state to the [`output_ptr`].
@@ -36,7 +36,7 @@ pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WideChar) {
         return;
     }
     let sql_state = &format!("{sql_state}\0");
-    let state_u16 = widechar::to_widechar_vec(sql_state);
+    let state_u16 = cstr::to_widechar_vec(sql_state);
     copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
 }
 

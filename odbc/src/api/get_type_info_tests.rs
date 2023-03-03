@@ -6,8 +6,8 @@ const INVALID_SQL_TYPE: &str = "HY004\0";
 
 mod unit {
     use super::*;
+    use cstr::WideChar;
     use std::{ffi::c_void, mem::size_of};
-    use widechar::WideChar;
 
     #[test]
     fn test_invalid_type_error() {

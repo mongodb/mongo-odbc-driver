@@ -2,12 +2,12 @@
 
 members = [
   "constants",
-  "widechar",
+  "cstr",
   "odbc",
   "core",
   "integration_test",
   "file_dbg_macros",
-  "win_setupgui"
+  "win_setupgui",
 ]
 
 [profile.release-with-debug]

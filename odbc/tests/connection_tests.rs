@@ -9,8 +9,8 @@ macro_rules! test_connection_diagnostics {
         expected_error_message = $expected_error_message:expr) => {
         #[test]
         fn $func_name() {
+            use cstr::WideChar;
             use odbc_sys::SmallInt;
-            use widechar::WideChar;
             let in_connection_string = $in_connection_string;
             let driver_completion = $driver_completion;
             let expected_sql_state = $expected_sql_state;
@@ -24,9 +24,9 @@ macro_rules! test_connection_diagnostics {
             let mut env_handl: Handle = null_mut();
             let mut conn_handl: Handle = null_mut();
 
-            let mut expected_sql_state_encoded = widechar::to_widechar_vec(expected_sql_state);
+            let mut expected_sql_state_encoded = cstr::to_widechar_vec(expected_sql_state);
             expected_sql_state_encoded.push(0);
-            let mut in_connection_string_encoded = widechar::to_widechar_vec(in_connection_string);
+            let mut in_connection_string_encoded = cstr::to_widechar_vec(in_connection_string);
             in_connection_string_encoded.push(0);
 
             unsafe {

@@ -11,7 +11,7 @@ pub fn verify_sql_diagnostics(
     expected_message_text: &str,
     mut expected_native_err: i32,
 ) {
-    use widechar::WideChar;
+    use cstr::WideChar;
     let text_length_ptr = &mut 0;
     let mut actual_sql_state: [WideChar; 6] = [0; 6];
     let actual_sql_state = &mut actual_sql_state as *mut _;
@@ -30,20 +30,20 @@ pub fn verify_sql_diagnostics(
             text_length_ptr,
         );
     };
-    let mut expected_sql_state_encoded = widechar::to_widechar_vec(expected_sql_state);
+    let mut expected_sql_state_encoded = cstr::to_widechar_vec(expected_sql_state);
     expected_sql_state_encoded.push(0);
     let actual_message_length = *text_length_ptr as usize;
     unsafe {
         assert_eq!(
             expected_message_text,
-            &(widechar::from_widechar_ref_lossy(&*(actual_message_text as *const [u16; 256])))
+            &(cstr::from_widechar_ref_lossy(&*(actual_message_text as *const [u16; 256])))
                 [0..actual_message_length],
         );
         assert_eq!(
-            widechar::from_widechar_ref_lossy(
+            cstr::from_widechar_ref_lossy(
                 &*(expected_sql_state_encoded.as_ptr() as *const [u16; 6])
             ),
-            widechar::from_widechar_ref_lossy(&*(actual_sql_state as *const [u16; 6]))
+            cstr::from_widechar_ref_lossy(&*(actual_sql_state as *const [u16; 6]))
         );
     }
     assert_eq!(&mut expected_native_err as &mut i32, actual_native_error);

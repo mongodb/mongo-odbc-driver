@@ -1,6 +1,6 @@
 use crate::gui::{config::config_dsn, remove::remove_dsn};
+use cstr::{input_wtext_to_string, parse_string_a, parse_string_w};
 use mongo_odbc_core::util::dsn::windows::DSNOpts;
-use mongoodbc::{input_text_to_string, input_wtext_to_string};
 use windows::Win32::{
     Foundation::HWND,
     System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN, ODBC_REMOVE_DSN},
@@ -15,8 +15,8 @@ const INVALID_DSN_TOKENS: [&str; 14] = [
 pub extern "C" fn ConfigDSNW(
     _: HWND,
     request: u32,
-    driver: *mut widechar::WideChar,
-    attributes: *mut widechar::WideChar,
+    driver: *mut cstr::WideChar,
+    attributes: *mut cstr::WideChar,
 ) -> bool {
     let uri_opts = DSNOpts::new(parse_attributes(attributes)).map_or(
         DSNOpts {
@@ -54,7 +54,7 @@ pub extern "C" fn SQLValidDSN(lpszdsn: *mut odbc_sys::Char) -> bool {
     }
 }
 
-fn parse_attributes(attributes: *mut widechar::WideChar) -> String {
+fn parse_attributes(attributes: *mut cstr::WideChar) -> String {
     let attributes = unsafe { input_wtext_to_string(attributes, 1024) }
         .split_once("\0\0")
         .unwrap()
@@ -63,23 +63,7 @@ fn parse_attributes(attributes: *mut widechar::WideChar) -> String {
     attributes.replace(char::from(0), ";")
 }
 
-fn parse_string_a(str: *mut odbc_sys::Char) -> Option<String> {
-    let string = unsafe { input_text_to_string(str, 1024) };
-    match string.split_once(char::from(0)) {
-        Some((string, _)) => Some(string.to_string()),
-        _ => None,
-    }
-}
-
-fn parse_string_w(str: *mut widechar::WideChar) -> Option<String> {
-    let string = unsafe { input_wtext_to_string(str, 1024) };
-    match string.split_once(char::from(0)) {
-        Some((string, _)) => Some(string.to_string()),
-        _ => None,
-    }
-}
-
-fn parse_driver(driver: *mut widechar::WideChar) -> Option<String> {
+fn parse_driver(driver: *mut cstr::WideChar) -> Option<String> {
     parse_string_w(driver)
 }
 

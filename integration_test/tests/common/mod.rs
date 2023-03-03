@@ -1,6 +1,6 @@
+use cstr::WideChar;
 use odbc_sys::{Handle, HandleType, SQLGetDiagRecW, SqlReturn};
 use std::{env, slice};
-use widechar::WideChar;
 
 /// Generate the default connection setting defined for the tests using a connection string
 /// of the form 'Driver={};PWD={};USER={};SERVER={}'.
@@ -14,7 +14,7 @@ pub fn generate_default_connection_str() -> String {
     let db = env::var("ADF_TEST_LOCAL_DB");
     let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
         Ok(val) => val,
-        Err(_e) => "ADF_ODBC_DRIVER".to_string(), //Default driver name
+        Err(_e) => "MongoDB Atlas SQL ODBC DRIVER".to_string(), //Default driver name
     };
 
     let mut connection_string =
@@ -52,7 +52,7 @@ pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
         );
     };
     unsafe {
-        widechar::from_widechar_ref_lossy(slice::from_raw_parts(
+        cstr::from_widechar_ref_lossy(slice::from_raw_parts(
             actual_message_text as *const WideChar,
             *text_length_ptr as usize,
         ))

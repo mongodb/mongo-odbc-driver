@@ -32,8 +32,8 @@ mod unit {
     }
 
     fn validate_message_text(handle_type: HandleType, handle: *mut MongoHandle) {
+        use cstr::WideChar;
         use std::mem::size_of;
-        use widechar::WideChar;
         const ERROR_MESSAGE: &str = "[MongoDB][API] The feature SQLDrivers is not implemented\0";
         let message_text = &mut [0; 57 * size_of::<WideChar>()] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
@@ -53,15 +53,15 @@ mod unit {
             );
             assert_eq!(
                 ERROR_MESSAGE,
-                widechar::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 57]))
+                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 57]))
             );
             assert_eq!(56 * size_of::<WideChar>() as i16, *string_length_ptr);
         }
     }
 
     fn validate_sql_state(handle_type: HandleType, handle: *mut MongoHandle) {
+        use cstr::WideChar;
         use std::mem::size_of;
-        use widechar::WideChar;
         let message_text = &mut [0; 6 * size_of::<WideChar>()] as *mut _ as *mut c_void;
         let string_length_ptr = &mut 0;
 
@@ -80,14 +80,14 @@ mod unit {
             );
             assert_eq!(
                 UNIMPLEMENTED_FUNC,
-                widechar::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 6]))
+                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 6]))
             );
             assert_eq!(5 * size_of::<WideChar>() as i16, *string_length_ptr);
         }
     }
 
     fn validate_return_code(handle_type: HandleType, handle: *mut MongoHandle) {
-        use widechar::WideChar;
+        use cstr::WideChar;
         /*
            The return code is always implemented by the driver manager, per the spec.
            Thus, calling SQLGetDiagField with type SQL_DIAG_RETURNCODE is essentially
@@ -111,7 +111,7 @@ mod unit {
             // checking input pointer was not altered in any way, and we just pass through SUCCESS
             assert_eq!(
                 "test\0",
-                widechar::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 5]))
+                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 5]))
             );
             assert_eq!(0, *string_length_ptr);
         }
@@ -157,8 +157,8 @@ mod unit {
 
     #[test]
     fn test_error_message() {
+        use cstr::WideChar;
         use std::mem::size_of;
-        use widechar::WideChar;
 
         let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
@@ -184,7 +184,7 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API]\0",
-                widechar::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 15]))
+                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 15]))
             );
             // Error message string where some characters are composed of more than one byte.
             // 1 < RecNumber =< number of diagnostic records.
@@ -203,15 +203,15 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API] The feature SQLDriv✐𑜲 is not implemented\0",
-                widechar::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 57]))
+                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 57]))
             );
         }
     }
 
     #[test]
     fn test_invalid_ops() {
+        use cstr::WideChar;
         use std::mem::size_of;
-        use widechar::WideChar;
         let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         unsafe {

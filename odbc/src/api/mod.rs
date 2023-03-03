@@ -8,7 +8,6 @@ mod col_attr_describe_tests;
 #[cfg(test)]
 mod connect_attr_tests;
 pub(crate) mod data;
-pub use data::{input_text_to_string, input_wtext_to_string};
 #[cfg(test)]
 mod data_tests;
 #[cfg(test)]
