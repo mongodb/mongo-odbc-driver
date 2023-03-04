@@ -588,6 +588,7 @@ impl MongoStatement for MongoFields {
                 let filter = filter.clone();
                 let mut warnings: Vec<Error> = vec![];
                 loop {
+                    self.current_field_for_collection += 1;
                     let parse_warnings = |res: (bool, Vec<Error>)| {
                         warnings.extend(res.1);
                         res.0
