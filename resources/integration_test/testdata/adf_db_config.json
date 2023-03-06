@@ -15,7 +15,7 @@
     "views" : [
       {
         "name": "baz",
-        "source": "bar",
+        "source": "foo",
         "pipeline": "[{\"$project\": {\"a\": \"$a\", \"a_type\": {\"$type\": \"$a\"}, \"a_string\": {\"$toString\": \"$a\"}}}]"
       }
     ]
