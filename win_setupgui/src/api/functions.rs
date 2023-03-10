@@ -13,8 +13,11 @@ const INVALID_DSN_TOKENS: [&str; 14] = [
 
 /// ConfigDSN adds, modifies, or deletes data sources from the system information. It may prompt the user for connection information.
 /// It can be in the driver DLL or a separate setup DLL.
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 #[no_mangle]
-pub extern "C" fn ConfigDSNW(
+pub unsafe extern "C" fn ConfigDSNW(
     hwnd: HWND,
     request: u32,
     driver: *mut cstr::WideChar,
@@ -51,6 +54,9 @@ pub extern "C" fn ConfigDSNW(
 }
 
 /// SQLValidDSN checks the length and validity of the data source name before the name is added to the system information.
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 #[no_mangle]
 pub unsafe extern "C" fn SQLValidDSN(lpszdsn: *mut odbc_sys::Char) -> bool {
     match parse_string_a(lpszdsn) {
@@ -63,6 +69,9 @@ pub unsafe extern "C" fn SQLValidDSN(lpszdsn: *mut odbc_sys::Char) -> bool {
 }
 
 /// SQLWriteDSNToIni adds a data source to the system information.
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 #[no_mangle]
 pub unsafe extern "C" fn SQLWriteDSNToIni(
     lpszdsn: *mut cstr::Char,
@@ -82,6 +91,9 @@ pub unsafe extern "C" fn SQLWriteDSNToIni(
 }
 
 /// SQLRemoveDSNFromIni removes a data source from the system information.
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 #[no_mangle]
 pub unsafe extern "C" fn SQLRemoveDSNFromIni(lpszdsn: *mut cstr::WideChar) -> bool {
     let dsn = parse_string_w(lpszdsn).unwrap();
@@ -93,6 +105,9 @@ pub unsafe extern "C" fn SQLRemoveDSNFromIni(lpszdsn: *mut cstr::WideChar) -> bo
 }
 
 /// SQLWritePrivateProfileString writes a value name and data to the Odbc.ini subkey of the system information.
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 #[no_mangle]
 pub unsafe extern "C" fn SQLWritePrivateProfileString(
     _lpszsection: *mut cstr::Char,

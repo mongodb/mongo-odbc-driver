@@ -16,6 +16,9 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 }
 
 /// Converts a c char string to a rust string.
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 pub unsafe fn parse_string_a(str: *mut odbc_sys::Char) -> Option<String> {
     let string = unsafe { input_text_to_string(str, 1024) };
     match string.split_once(char::from(0)) {
@@ -25,6 +28,9 @@ pub unsafe fn parse_string_a(str: *mut odbc_sys::Char) -> Option<String> {
 }
 
 /// Converts a c wide char string to a rust string.
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
 pub unsafe fn parse_string_w(str: *mut WideChar) -> Option<String> {
     let string = unsafe { input_wtext_to_string(str, 1024) };
     match string.split_once(char::from(0)) {
