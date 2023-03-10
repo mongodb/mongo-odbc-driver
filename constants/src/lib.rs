@@ -28,6 +28,7 @@ pub const INVALID_SQL_TYPE: &str = "HY004";
 pub const INVALID_ATTR_VALUE: &str = "HY024";
 pub const INVALID_INFO_TYPE_VALUE: &str = "HY096";
 pub const NO_DSN_OR_DRIVER: &str = "IM007";
+pub const GENERAL_WARNING: &str = "01000";
 pub const RIGHT_TRUNCATED: &str = "01004";
 pub const OPTION_CHANGED: &str = "01S02";
 pub const FRACTIONAL_TRUNCATION: &str = "01S07";

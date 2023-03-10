@@ -743,7 +743,7 @@ fn get_column_count(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Resu
 fn fetch_row(stmt: &Statement<Allocated, NoResult, AutocommitOn>) -> Result<bool> {
     unsafe {
         match odbc_sys::SQLFetch(stmt.handle() as HStmt) {
-            SqlReturn::SUCCESS => Ok(true),
+            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(true),
             SqlReturn::NO_DATA => Ok(false),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLFetch".to_string(),

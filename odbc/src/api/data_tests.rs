@@ -67,6 +67,10 @@ const REGEX_STR_VAL: (u16, &str) = (
 );
 const STRING_STR_VAL: (u16, &str) = (STRING_COL, "hello world!");
 const UNIT_STR_STR_VAL: (u16, &str) = (UNIT_STR_COL, "a");
+const GUID_STR_VAL: (u16, &str) = (
+    GUID_COL,
+    "{\"$uuid\":\"d5e3ac31-fd29-49e3-8759-08d116e98b29\"}",
+);
 
 lazy_static! {
     static ref CHRONO_TIME: chrono::DateTime<Utc> = "2014-11-28T12:00:09Z".parse().unwrap();
@@ -107,7 +111,7 @@ lazy_static! {
                 "unit_str": "a",
                 "guid": Bson::Binary(Binary {
                     subtype: BinarySubtype::Uuid,
-                    bytes: vec![0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8, 15u8],
+                    bytes: vec![0xd5, 0xe3, 0xac, 0x31, 0xfd, 0x29, 0x49, 0xe3, 0x87, 0x59, 0x08, 0xd1, 0x16, 0xe9, 0x8b, 0x29],
                 }),
             }}],
             vec![
@@ -649,8 +653,7 @@ mod unit {
                 guid_val_test(
                     GUID_COL,
                     &[
-                        0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8,
-                        15u8,
+                        213, 227, 172, 49, 253, 41, 73, 227, 135, 89, 8, 209, 22, 233, 139,
                     ],
                     SqlReturn::SUCCESS,
                 );
@@ -782,6 +785,7 @@ mod unit {
                 bin_val_test(REGEX_STR_VAL.0, REGEX_STR_VAL.1.as_bytes());
                 bin_val_test(STRING_STR_VAL.0, STRING_STR_VAL.1.as_bytes());
                 bin_val_test(UNIT_STR_STR_VAL.0, UNIT_STR_STR_VAL.1.as_bytes());
+                bin_val_test(GUID_STR_VAL.0, GUID_STR_VAL.1.as_bytes());
             }
 
             {

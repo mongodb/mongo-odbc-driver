@@ -138,13 +138,15 @@ impl MongoStatement for MongoCollections {
     // Move the cursor to the next CollectionSpecification.
     // When cursor is exhausted move to next database in list
     // Return true if moving was successful, false otherwise.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
+    #[allow(clippy::blocks_in_if_conditions)]
+    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         if self.current_database_index.is_none() {
             if self.collections_for_db_list.is_empty() {
-                return Ok(false);
+                return Ok((false, vec![]));
             }
             self.current_database_index = Some(0);
         }
+        let mut warnings: Vec<Error> = vec![];
         loop {
             while self
                 .collections_for_db_list
@@ -152,38 +154,46 @@ impl MongoStatement for MongoCollections {
                 .unwrap()
                 .collection_list
                 .advance()
-                .map_err(Error::CollectionCursorUpdate)?
+                .unwrap_or_else(|err| {
+                    warnings.push(Error::CollectionCursorUpdate(err));
+                    false
+                })
             {
-                let collection = self
+                match self
                     .collections_for_db_list
                     .get(self.current_database_index.unwrap())
                     .unwrap()
                     .collection_list
                     .deserialize_current()
-                    .map_err(Error::CollectionCursorUpdate)?;
-                // Filter the collection matching the types and names specified by the user
-                if (self.table_types_filter.is_none()
-                    || self
-                        .table_types_filter
-                        .as_ref()
-                        .unwrap()
-                        .contains(&collection.collection_type))
-                    && (self.collection_name_filter.is_none()
-                        || self
-                            .collection_name_filter
-                            .as_ref()
-                            .unwrap()
-                            .is_match(&collection.name))
                 {
-                    // Cursor advance succeeded and the collection matches the filters, update current CollectionSpecification
-                    self.current_collection = Some(collection);
-                    return Ok(true);
+                    Ok(collection) => {
+                        if (self.table_types_filter.is_none()
+                            || self
+                                .table_types_filter
+                                .as_ref()
+                                .unwrap()
+                                .contains(&collection.collection_type))
+                            && (self.collection_name_filter.is_none()
+                                || self
+                                    .collection_name_filter
+                                    .as_ref()
+                                    .unwrap()
+                                    .is_match(&collection.name))
+                        {
+                            // Cursor advance succeeded and the collection matches the filters, update current CollectionSpecification
+                            self.current_collection = Some(collection);
+                            return Ok((true, warnings));
+                        }
+                    }
+                    Err(warning) => {
+                        warnings.push(Error::CollectionCursorUpdate(warning));
+                        continue;
+                    }
                 }
             }
-
             self.current_database_index = Some(self.current_database_index.unwrap() + 1);
             if self.current_database_index.unwrap() >= self.collections_for_db_list.len() {
-                return Ok(false);
+                return Ok((false, warnings));
             }
         }
     }

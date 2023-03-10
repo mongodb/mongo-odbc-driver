@@ -4,7 +4,7 @@ use std::{env, slice};
 
 /// Generate the default connection setting defined for the tests using a connection string
 /// of the form 'Driver={};PWD={};USER={};SERVER={}'.
-/// The default driver is 'ADF_ODBC_DRIVER' if not specified.
+/// The default driver is 'MongoDB Atlas SQL ODBC Driver' if not specified.
 /// The default auth db is 'admin' if not specified.
 pub fn generate_default_connection_str() -> String {
     let user_name = env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set");
