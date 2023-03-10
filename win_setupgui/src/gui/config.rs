@@ -1,6 +1,7 @@
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
+use file_dbg_macros::*;
 use mongo_odbc_core::util::dsn::windows::DSNOpts;
 use nwd::NwgUi;
 use nwg::NativeUi;
@@ -66,8 +67,16 @@ pub struct ConfigGui {
     #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 2)]
     log_path_field: nwg::Label,
 
+    #[nwg_resource(title: "Select Directory", action: nwg::FileDialogAction::OpenDirectory)]
+    dialog: nwg::FileDialog,
+
+    #[nwg_control(flags: "VISIBLE")]
+    #[nwg_layout_item(layout: grid,  row: 6, col: 2, col_span: 1)]
+    #[nwg_events( OnButtonClick: [ConfigGui::open_dir_picker] )]
+    directory_button: nwg::Button,
+
     #[nwg_control(flags: "VISIBLE", text: "")]
-    #[nwg_layout_item(layout: grid,  row: 6, col: 2, col_span: 7)]
+    #[nwg_layout_item(layout: grid,  row: 6, col: 3, col_span: 6)]
     log_path_input: nwg::TextInput,
 
     #[nwg_control(flags: "VISIBLE", text: "Test")]
@@ -85,7 +94,7 @@ pub struct ConfigGui {
     ok_button: nwg::Button,
 
     #[nwg_control(flags: "DISABLED", text: "")]
-    driver: nwg::TextInput,
+    driver_name: nwg::Label,
 
     #[nwg_control()]
     #[nwg_events( OnNotice: [ConfigGui::read_confirm_output] )]
@@ -97,6 +106,24 @@ pub struct ConfigGui {
 impl ConfigGui {
     fn close(&self) {
         nwg::stop_thread_dispatch();
+    }
+
+    fn open_dir_picker(&self) {
+        if let Ok(d) = std::env::current_dir() {
+            if let Some(d) = d.to_str() {
+                self.dialog
+                    .set_default_folder(d)
+                    .expect("Failed to set default folder.");
+            }
+        }
+
+        if self.dialog.run(Some(&self.window)) {
+            self.log_path_input.set_text("");
+            if let Ok(directory) = self.dialog.get_selected_item() {
+                let dir = directory.into_string().unwrap();
+                self.log_path_input.set_text(&dir);
+            }
+        }
     }
 
     fn open_confirm(&self) {
@@ -128,18 +155,23 @@ impl ConfigGui {
             user: self.user_input.text(),
             password: self.password_input.text(),
             logpath: self.log_path_input.text(),
-            driver_name: self.driver.text(),
+            driver_name: self.driver_name.text(),
             ..Default::default()
         };
-        match self.gui_opts.op == ODBC_ADD_DSN && unsafe { SQLValidDSN(dsn_opts.dsn.as_ptr()) } {
+        match self.gui_opts.op == ODBC_CONFIG_DSN
+            || (self.gui_opts.op == ODBC_ADD_DSN && unsafe { SQLValidDSN(dsn_opts.dsn.as_ptr()) })
+        {
             false => {
                 nwg::modal_error_message(
                     &self.window,
                     "Error",
-                    &format!("Invalid DSN: {dsn}.\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", dsn = dsn_opts.dsn),
+                    &format!("Invalid DSN: {dsn}\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", dsn = dsn_opts.dsn),
                 );
             }
-            true => match dsn_opts.write_to_registry() {
+            true => match dsn_opts
+                .write_dsn_to_registry()
+                .and_then(|()| dsn_opts.add_datasource())
+            {
                 Ok(_) => {
                     nwg::modal_info_message(
                         &self.window,
@@ -153,6 +185,10 @@ impl ConfigGui {
                     self.close();
                 }
                 Err(e) => {
+                    dbg_write!(format!(
+                        "Could not {verb} DSN: {e}",
+                        verb = self.gui_opts.verb
+                    ));
                     nwg::modal_error_message(
                         &self.window,
                         "Error",
@@ -178,14 +214,20 @@ pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) {
     match dsn_op {
         ODBC_ADD_DSN => {}
         ODBC_CONFIG_DSN => {
-            app.driver.set_text(&dsn_opts.driver);
             app.dsn_input.set_text(&dsn_opts.dsn);
             app.dsn_input.set_readonly(true);
+            app.database_input.set_text(&dsn_opts.database);
+            app.mongodb_uri_input.set_text(&dsn_opts.server);
+            app.log_path_input.set_text(&dsn_opts.logpath);
+            app.user_input.set_text(&dsn_opts.user);
+            app.password_input.set_text(&dsn_opts.password);
         }
         _ => unreachable!(),
     }
 
-    app.driver.set_text(&dsn_opts.driver);
+    app.driver_name.set_text(&dsn_opts.driver_name);
+    app.directory_button
+        .set_text(String::from_utf16(&[0xD83D, 0xDCC1]).unwrap().as_str());
     nwg::dispatch_thread_events();
 }
 

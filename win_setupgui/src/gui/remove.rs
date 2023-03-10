@@ -2,6 +2,7 @@
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
+use file_dbg_macros::*;
 use mongo_odbc_core::util::dsn::windows::DSNOpts;
 use nwd::NwgUi;
 use nwg::NativeUi;
@@ -23,7 +24,10 @@ pub fn remove_dsn(opts: DSNOpts) {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
     let app = RemoveGui::build_ui(Default::default()).expect("Failed to build UI");
-    match opts.remove_from_registry() {
+    match opts
+        .remove_datasource()
+        .and_then(|()| opts.delete_dsn_from_registry())
+    {
         Ok(_) => {
             nwg::modal_info_message(
                 &app.window,
@@ -32,6 +36,7 @@ pub fn remove_dsn(opts: DSNOpts) {
             );
         }
         Err(e) => {
+            dbg_write!(format!("Failed to remove DSN: {}. Error: {}", &opts.dsn, e));
             nwg::modal_error_message(
                 &app.window,
                 "Error",

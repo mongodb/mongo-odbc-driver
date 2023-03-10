@@ -4,63 +4,84 @@ pub mod windows {
         odbc_uri::{
             ODBCUri, DATABASE, DRIVER, DSN, LOGPATH, PASSWORD, PWD, SERVER, UID, URI, USER,
         },
-        util::registry::windows::{add_datasource, get_driver_dll_path, remove_dsn, set_dsn},
+        util::registry::windows::{
+            add_dsn, add_to_datasources, datasource_exists, get_driver_dll_path, get_dsn,
+            remove_dsn, remove_from_datasources,
+        },
     };
     use serde::{Deserialize, Serialize};
     #[derive(Debug, Default, Serialize, Deserialize)]
     pub struct DSNOpts {
-        #[serde(rename = "Database")]
+        #[serde(rename = "Database", default = "String::new")]
         pub database: String,
-        #[serde(rename = "Driver")]
-        pub driver: String,
-        #[serde(rename = "DSN")]
+        #[serde(rename = "Driver", default = "String::new")]
+        pub driver_path: String,
+        #[serde(rename = "DSN", default = "String::new")]
         pub dsn: String,
-        #[serde(rename = "Password")]
+        #[serde(rename = "Password", default = "String::new")]
         pub password: String,
-        #[serde(rename = "Server")]
+        #[serde(rename = "Server", default = "String::new")]
         pub server: String,
-        #[serde(rename = "User")]
+        #[serde(rename = "User", default = "String::new")]
         pub user: String,
-        #[serde(rename = "Logpath")]
+        #[serde(rename = "Logpath", default = "String::new")]
         pub logpath: String,
-        #[serde(skip_serializing)]
+        #[serde(skip_serializing, skip_deserializing)]
         pub driver_name: String,
     }
 
     impl DSNOpts {
-        pub fn new<T: Into<String>>(attribs: T) -> Option<Self> {
-            match ODBCUri::new(&attribs.into().replace(char::from(0), ";")) {
+        pub fn new(attribs: String) -> Option<Self> {
+            match ODBCUri::new(&attribs.replace(char::from(0), ";")) {
                 Ok(uri) => Some(Self::from(uri)),
                 Err(_) => None,
             }
         }
 
-        pub fn write_to_registry(&mut self) -> std::io::Result<()> {
-            if self.driver.is_empty() {
-                self.driver = get_driver_dll_path(&self.driver_name);
+        pub fn write_dsn_to_registry(&mut self) -> std::io::Result<()> {
+            if self.driver_path.is_empty() {
+                self.driver_path = get_driver_dll_path(&self.driver_name);
             }
-            set_dsn(self)?;
-            add_datasource(&self.dsn, &self.driver_name)
+            add_dsn(self)
         }
 
-        pub fn remove_from_registry(&self) -> std::io::Result<()> {
-            remove_dsn(&self.dsn)
+        pub fn delete_dsn_from_registry(&self) -> std::io::Result<()> {
+            remove_dsn(self)
+        }
+
+        pub fn from_registry(&mut self) -> Option<Self> {
+            if self.dsn.is_empty() {
+                return None;
+            }
+            get_dsn(self)
+        }
+
+        pub fn remove_datasource(&self) -> std::io::Result<()> {
+            remove_from_datasources(&self.dsn)
+        }
+
+        pub fn add_datasource(&mut self) -> std::io::Result<()> {
+            add_to_datasources(&self.dsn, &self.driver_name)
+        }
+
+        pub fn datasource_exists(&self) -> bool {
+            datasource_exists(&self.dsn).is_ok()
         }
     }
 
     impl From<ODBCUri<'_>> for DSNOpts {
         fn from(value: ODBCUri) -> Self {
             let mut database = String::new();
-            let mut driver = String::new();
+            let mut driver_path = String::new();
             let mut dsn = String::new();
             let mut password = String::new();
             let mut server = String::new();
             let mut user = String::new();
             let mut logpath = String::new();
-            for (key, value) in value.into_iter() {
+            for (key, value) in value.iter() {
                 match key.to_lowercase().as_str() {
                     DATABASE => database = value.to_string(),
-                    DRIVER => driver = value.to_string(),
+                    DRIVER => driver_path = value.to_string(),
                     DSN => dsn = value.to_string(),
                     PASSWORD => password = value.to_string(),
                     PWD => password = value.to_string(),
@@ -74,7 +95,7 @@ pub mod windows {
             }
             DSNOpts {
                 database,
-                driver,
+                driver_path,
                 dsn,
                 password,
                 server,

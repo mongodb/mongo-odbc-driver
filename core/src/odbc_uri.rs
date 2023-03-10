@@ -47,11 +47,11 @@ lazy_static! {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ODBCUri<'a>(HashMap<String, &'a str>);
 
-impl<'a> Iterator for ODBCUri<'a> {
-    type Item = (String, &'a str);
+impl<'a> std::ops::Deref for ODBCUri<'a> {
+    type Target = HashMap<String, &'a str>;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.iter().next().map(|(k, v)| (k.into(), *v))
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
