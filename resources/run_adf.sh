@@ -42,8 +42,7 @@ GO="$GOBINDIR/go"
 PATH=$GOBINDIR:$PATH
 
 LOCAL_INSTALL_DIR=$(pwd)/local_adf
-# TODO: Unfork this once mongohouse is updated
-MONGOHOUSE_URI=git@github.com:pmeredit/mongohouse.git
+MONGOHOUSE_URI=git@github.com:10gen/mongohouse.git
 MONGO_DB_PATH=$LOCAL_INSTALL_DIR/test_db
 LOGS_PATH=$LOCAL_INSTALL_DIR/logs
 DB_CONFIG_PATH=$(pwd)/resources/integration_test/testdata/adf_db_config.json
