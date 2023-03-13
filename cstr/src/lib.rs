@@ -92,3 +92,46 @@ pub unsafe fn input_wtext_to_string(text: *const WideChar, len: usize) -> String
     copy_nonoverlapping(text, dst.as_mut_ptr(), len);
     from_widechar_vec_lossy(dst)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_input_atext_to_string() {
+        let expected = "test";
+        let test = expected.as_bytes();
+        let test = test.as_ptr();
+        let test = unsafe { input_text_to_string(test, expected.len()) };
+        assert_eq!(expected, test);
+    }
+
+    #[test]
+    fn test_input_wtext_to_srtring() {
+        let expected = "test";
+        let test = to_widechar_vec(expected);
+        let test = test.as_ptr();
+        let test = unsafe { input_wtext_to_string(test, expected.len()) };
+        assert_eq!(expected, test);
+    }
+
+    #[test]
+    fn test_parse_string_a() {
+        let expected = "test";
+        let mut test = Vec::from(expected.as_bytes());
+        test.push(0);
+        let test = test.as_mut_ptr() as *mut Char;
+        let test = unsafe { parse_string_a(test) };
+        assert_eq!(expected, test.unwrap());
+    }
+
+    #[test]
+    fn test_parse_string_w() {
+        let expected = "test";
+        let mut test = to_widechar_vec(expected);
+        test.push(0);
+        let test = test.as_mut_ptr() as *mut WideChar;
+        let test = unsafe { parse_string_w(test) };
+        assert_eq!(expected, test.unwrap());
+    }
+}
