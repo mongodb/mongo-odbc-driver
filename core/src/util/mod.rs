@@ -23,12 +23,27 @@ lazy_static! {
 }
 
 // Converts SQL pattern characters (% and _) into proper regex patterns.
+// SQL-1308: Handle SQL_ATTR_METADATA_ID
 // SQL-1060: Improve SQL-to-Rust regex pattern method
 // Returns regex for a filter
 pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
     match filter {
         "%" => None,
-        _ => Some(Regex::new(&filter.replace('%', ".*").replace('_', ".")).unwrap()),
+        _ => {
+            if filter.is_empty() {
+                return None;
+            }
+            let filter = "^".to_owned() + &filter.replace('%', ".*").replace('_', ".") + "$";
+
+            Some(Regex::new(&filter).unwrap())
+        }
+    }
+}
+
+pub(crate) fn is_match(name: &str, filter: &Option<Regex>) -> bool {
+    match filter {
+        Some(regex) => regex.is_match(name),
+        None => true,
     }
 }
 
@@ -79,3 +94,30 @@ macro_rules! set {
             ].into_iter())
         };
     }
+
+#[cfg(test)]
+mod filtering {
+    use super::{is_match, to_name_regex};
+
+    #[test]
+    fn test_to_name_regex() {
+        assert!(to_name_regex("%").is_none());
+        assert!(to_name_regex("").is_none());
+        assert!(to_name_regex("filter").is_some());
+        assert!(to_name_regex("customers").is_some());
+    }
+
+    #[test]
+    fn test_is_match() {
+        assert!(is_match("filter", &to_name_regex("%")));
+        assert!(is_match("filter", &to_name_regex("filter")));
+        assert!(is_match("downtimes", &to_name_regex("downtimes")));
+        assert!(is_match("status", &to_name_regex("status")));
+        assert!(is_match("customer_sales", &to_name_regex("customer_sales")));
+        assert!(is_match("field_name", &to_name_regex("field_name")));
+
+        assert!(!is_match("filter", &to_name_regex("filt")));
+        assert!(!is_match("downtimestatus", &to_name_regex("downtimes")));
+        assert!(!is_match("downtimestatus", &to_name_regex("status")));
+    }
+}
