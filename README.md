@@ -47,7 +47,7 @@ Follow the validation steps listed in the 64-bit section, but make sure to use t
 
 ## Unsupported Functions
 
-The following ODBC functions are currently not supported by the driver. It is possible that some may be supported in future releases. Note that some unsupported ANSI functions have supported Unicode versions.
+The following ODBC functions are currently not supported by the driver. Note that some unsupported ANSI functions have Unicode analogs. If the version of the function suffixed with 'W', e.g., `SQLTablesW`, is not mentioned, the Unicode version is either supported or may be supported in the future.
 
 | function |
 | --- |
