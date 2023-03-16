@@ -258,7 +258,7 @@ else
   fi
 fi
 
-check_mongohoused $MONGOSH_DOWNLOAD_DIR
+check_mongohoused
 if [[ $? -ne 0 ]]; then
   if [ $ARG = $START ]; then
     echo "Starting $MONGOHOUSED"
