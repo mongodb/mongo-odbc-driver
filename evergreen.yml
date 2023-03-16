@@ -63,13 +63,13 @@ functions:
             export ADF_TEST_LOCAL_DB="${adf_test_local_db}"
             export SCRIPT_FOLDER="$SCRIPT_FOLDER"
             export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
-          
+
             # Windows variables
             export LOCAL_DUMP_ORIGINAL_REG_VAL="$LOCAL_DUMP_ORIGINAL_REG_VAL"
             export DUMP_FOLDER="$DUMP_FOLDER"
             export DUMP_PATH="$(pwd)/$DUMP_FOLDER"
             export MONGOODBC_DEBUGGING_INFO_ARCHIVE=$MONGOODBC_DEBUGGING_INFO_ARCHIVE
-          
+
             # Non-Windows variables
             export UNIX_ODBC_PATH="$PWD/unixodbc/install"
             export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
@@ -164,7 +164,7 @@ functions:
           ${prepare_shell}
           cargo install cargo-get
           CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-          
+
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             EXPECTED_RELEASE_VERSION="0.0.0"
           else
@@ -174,10 +174,10 @@ functions:
             echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
             exit 1
           fi
-          
+
           # Compile release build
           cargo build --release
-          
+
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
 
@@ -191,7 +191,7 @@ functions:
           ${prepare_shell}
           cargo install cargo-get
           CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-          
+
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             EXPECTED_RELEASE_VERSION="0.0.0"
           else
@@ -201,7 +201,7 @@ functions:
             echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
             exit 1
           fi
-          
+
           # Compile debug build
           cargo build
 
@@ -216,7 +216,7 @@ functions:
           # Build a release driver with debug information
           cargo build --profile=release-with-debug
           export DRIVER_LIB_PATH=$PWD/target/release-with-debug
-          
+
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
           EOT
@@ -233,6 +233,17 @@ functions:
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.dll
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - ubuntu2204
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libmongoodbc.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libmongoodbc.so
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -257,6 +268,17 @@ functions:
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/debug/mongoodbc.dll
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/mongoodbc.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - ubuntu2204
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/debug/libmongoodbc.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/libmongoodbc.so
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -350,6 +372,15 @@ functions:
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dll
         local_file: mongosql-odbc-driver/mongoodbc.dll
         bucket: mciuploads
+    - command: s3.get
+      params:
+        build_variants:
+          - ubuntu2204
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libmongoodbc.so
+        local_file: mongosql-odbc-driver/libmongoodbc.so
+        bucket: mciuploads
 
   "setup driver on Windows":
     - command: shell.exec
@@ -384,7 +415,7 @@ functions:
           sed -i "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/odbcinst.ini
           echo "-------------------------"
           cat setup/odbcinst.ini
-          echo "-------------------------"  
+          echo "-------------------------"
 
   "setup crash dump collection":
     - command: shell.exec
@@ -416,7 +447,7 @@ functions:
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps" -s 2> /dev/null
           echo "-------------------------"
           echo "App Data = $AppData"
-          
+
 
   "clean-up driver on Windows":
     - command: shell.exec
@@ -441,7 +472,7 @@ functions:
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
-        script:  |        
+        script:  |
           ${prepare_shell}
           set +e
           # See what crash dump has been created. Checking the default path just in case
@@ -468,7 +499,7 @@ functions:
           echo "-------------------------"
           exit $EXITCODE
 
-  "run unit tests":
+  "run windows unit tests":
     - command: shell.exec
       type: test
       params:
@@ -478,7 +509,7 @@ functions:
           ${prepare_shell}
           RUST_BACKTRACE=1 cargo test unit
 
-  "run integration tests":
+  "run windows integration tests":
     - command: shell.exec
       type: test
       params:
@@ -502,7 +533,7 @@ functions:
             PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
             echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
             tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
-            
+
             echo "ls -l $DUMP_PATH"
             ls -l $DUMP_PATH
           fi
@@ -533,6 +564,77 @@ functions:
           make
           make install
 
+  "run ubuntu unit tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          ~/.cargo/bin/rustup default stable
+
+          # we only run ubuntu on the unit tests for now
+          cargo test unit
+
+  "run ubuntu integration tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          echo "-------- ODBC related env variable ----------"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "LIBRARY_PATH = $LIBRARY_PATH"
+          echo "ODBCSYSINI = $ODBCSYSINI"
+          echo "----------------------------------------------"
+
+          ~/.cargo/bin/rustup default stable
+
+          export RUST_BACKTRACE=1
+          # Start a local ADF
+          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+
+          # Run integration tests with ubuntu
+          cargo test integration
+          EXITCODE=$?
+
+          # Stop the local ADF
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
+
+  "run ubuntu result-set tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          echo "-------- ODBC related env variable ----------"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "LIBRARY_PATH = $LIBRARY_PATH"
+          echo "ODBCSYSINI = $ODBCSYSINI"
+          echo "----------------------------------------------"
+
+          ~/.cargo/bin/rustup default stable
+
+          export RUST_BACKTRACE=1
+          # Start a local ADF
+          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+
+          # Run integration tests with ubuntu
+          cargo test -- --ignored
+          EXITCODE=$?
+
+          # Stop the local ADF
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
+
   "run asan unit tests":
     - command: shell.exec
       type: test
@@ -543,7 +645,7 @@ functions:
           ${prepare_shell}
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-                  
+
           export RUSTFLAGS="-Z sanitizer=address"
           # we only run asan on the unit tests for now
           cargo test --target x86_64-unknown-linux-gnu unit
@@ -562,10 +664,10 @@ functions:
           echo "LIBRARY_PATH = $LIBRARY_PATH"
           echo "ODBCSYSINI = $ODBCSYSINI"
           echo "----------------------------------------------"
-          
+
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-                    
+
           export RUST_BACKTRACE=1
           # Start a local ADF
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
@@ -573,12 +675,42 @@ functions:
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration
           EXITCODE=$?
-          
+
           # Stop the local ADF
           ./resources/run_adf.sh stop
           exit $EXITCODE
 
-  "run result set test":
+  "run asan result-set tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          echo "-------- ODBC related env variable ----------"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "LIBRARY_PATH = $LIBRARY_PATH"
+          echo "ODBCSYSINI = $ODBCSYSINI"
+          echo "----------------------------------------------"
+
+          ~/.cargo/bin/rustup default nightly
+          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+
+          export RUST_BACKTRACE=1
+          # Start a local ADF
+          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+
+          # Run integration tests with asan
+          cargo test --target x86_64-unknown-linux-gnu -- --ignored
+          EXITCODE=$?
+
+          # Stop the local ADF
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
+
+  "run windows result set test":
     command: shell.exec
     type: test
     params:
@@ -655,35 +787,59 @@ tasks:
       - func: "check rustfmt"
 
   - name: compile
+    depends_on:
     commands:
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
       - func: "set packages version"
       - func: "compile release"
       - func: "mciuploads release build and symbols"
 
   - name: compile-debug
     commands:
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
       - func: "set packages version"
       - func: "compile debug"
       - func: "mciuploads debug build and symbols"
 
-  - name: unit-test
+  - name: windows-unit-test
     commands:
       - func: "install rust toolchain"
-      - func: "run unit tests"
+      - func: "run windows unit tests"
 
-  - name: integration-test
+  - name: windows-integration-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
-      - func: "run integration tests"
+      - func: "run windows integration tests"
 
-  - name: result-set-test
+  - name: windows-result-set-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
-      - func: "run result set test"
+      - func: "run windows result set test"
+
+  - name: ubuntu-unit-test
+    commands:
+      - func: "install unix odbc"
+      - func: "run ubuntu unit tests"
+
+  - name: ubuntu-integration-test
+    commands:
+      - func: "install unix odbc"
+      - func: "compile release with debug info"
+      - func: "setup driver with UnixODBC"
+      - func: "run ubuntu integration tests"
+
+  - name: ubuntu-result-set-test
+    commands:
+      - func: "install unix odbc"
+      - func: "compile release with debug info"
+      - func: "setup driver with UnixODBC"
+      - func: "run ubuntu result-set tests"
 
   - name: asan-unit-test
     commands:
@@ -697,6 +853,13 @@ tasks:
       - func: "setup driver with UnixODBC"
       - func: "run asan integration tests"
 
+  - name: asan-result-set-test
+    commands:
+      - func: "install unix odbc"
+      - func: "compile release with debug info"
+      - func: "setup driver with UnixODBC"
+      - func: "run asan result-set tests"
+
   - name: snapshot
     depends_on:
       - name: compile
@@ -707,11 +870,11 @@ tasks:
         variant: "*"
       - name: rustfmt
         variant: "*"
-      - name: unit-test
+      - name: windows-unit-test
         variant: "windows-64"
-      - name: integration-test
+      - name: windows-integration-test
         variant: "windows-64"
-      - name: result-set-test
+      - name: windows-result-set-test
         variant: "windows-64"
       - name: asan-unit-test
         variant: "*"
@@ -733,15 +896,15 @@ tasks:
       - func: "upload debug"
 
 task_groups:
-  - name: test-unit-group
+  - name: windows-windows-test-unit-group
     setup_group_can_fail_task: false
     setup_group:
       - func: "fetch source"
       - func: "generate expansions"
     tasks:
-      - unit-test
+      - windows-unit-test
 
-  - name: test-integration-group
+  - name: windows-test-integration-group
     setup_group_can_fail_task: false
     setup_group:
       - func: "fetch source"
@@ -754,9 +917,9 @@ task_groups:
       - func: "clean-up driver on Windows"
       - func: "clean-up crash dump collection"
     tasks:
-      - integration-test
+      - windows-integration-test
 
-  - name: test-result-set-group
+  - name: windows-test-result-set-group
     setup_group_can_fail_task: false
     setup_group:
       - func: "fetch source"
@@ -769,13 +932,13 @@ task_groups:
       - func: "clean-up driver on Windows"
       - func: "clean-up crash dump collection"
     tasks:
-      - result-set-test
+      - windows-result-set-test
 
 buildvariants:
 
   - name: static-analysis
     display_name: "* Static Analysis"
-    run_on: [ ubuntu1804-test ]
+    run_on: [ ubuntu2004-test ]
     tasks:
       - name: clippy
       - name: rustfmt
@@ -786,16 +949,22 @@ buildvariants:
     tasks:
       - name: compile
       - name: compile-debug
-      - name: test-unit-group
-      - name: test-integration-group
-      - name: test-result-set-group
+      - name: windows-windows-test-unit-group
+      - name: windows-test-integration-group
+      - name: windows-test-result-set-group
 
-  - name: ubuntu2004
-    display_name: Ubuntu 20.04
-    run_on: [ ubuntu2004-large ]
+  - name: ubuntu2204
+    display_name: Ubuntu 22.04
+    run_on: [ ubuntu2204-large ]
     tasks:
+      - name: compile
+      - name: compile-debug
+      - name: ubuntu-unit-test
+      - name: ubuntu-integration-test
+      - name: ubuntu-result-set-test
       - name: asan-unit-test
       - name: asan-integration-test
+      - name: asan-result-set-test
 
   - name: release
     display_name: "Release"
