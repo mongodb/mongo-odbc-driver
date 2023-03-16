@@ -5,9 +5,7 @@ use crate::{
         definitions::*,
         diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
-        util::{
-            connection_attribute_to_string, format_driver_version, statement_attribute_to_string,
-        },
+        util::{connection_attribute_to_string, statement_attribute_to_string},
     },
     handles::definitions::*,
     trace_odbc,
@@ -15,7 +13,8 @@ use crate::{
 use ::function_name::named;
 use bson::Bson;
 use constants::{
-    DBMS_NAME, DRIVER_NAME, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS, SQL_ALL_TABLE_TYPES,
+    DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
+    SQL_ALL_TABLE_TYPES,
 };
 use file_dbg_macros::{dbg_write, msg_to_file};
 use mongo_odbc_core::{
@@ -1148,10 +1147,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             let conn_handle = MongoHandleRef::from(connection_handle);
             trace_odbc!(
                 conn_handle,
-                format!(
-                    "Connecting using {DRIVER_NAME} {} ",
-                    format_driver_version()
-                ),
+                format!("Connecting using {DRIVER_NAME} {} ", *DRIVER_ODBC_VERSION),
                 function_name!()
             );
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
@@ -1350,40 +1346,50 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
     panic_safe_exec!(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
-            let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mut mongo_stmt = stmt.mongo_statement.write().unwrap();
-            let connection = must_be_valid!((*stmt.connection).as_connection());
-
-            if mongo_stmt.is_none() {
-                stmt.errors
-                    .write()
-                    .unwrap()
-                    .push(ODBCError::InvalidCursorState);
-                return SqlReturn::ERROR;
-            }
-
-            let res = mongo_stmt
-                .as_mut()
-                .unwrap()
-                .next(connection.mongo_connection.read().unwrap().as_ref());
-
-            match res {
-                Err(e) => {
-                    stmt.errors.write().unwrap().push(e.into());
-                    return SqlReturn::ERROR;
+            let stmt = must_be_valid!(mongo_handle.as_statement());
+            let move_to_next_result = {
+                let connection = must_be_valid!((*stmt.connection).as_connection());
+                match stmt.mongo_statement.write().unwrap().as_mut() {
+                    Some(mongo_stmt) => mongo_stmt
+                        .next(connection.mongo_connection.read().unwrap().as_ref())
+                        .map_err(|e| e.into()),
+                    None => Err(ODBCError::InvalidCursorState),
                 }
-                Ok(b) => {
-                    let mut stmt_attrs = stmt.attributes.write().unwrap();
-                    if !b {
-                        stmt_attrs.row_index_is_valid = false;
-                        return SqlReturn::NO_DATA;
-                    }
-                    stmt_attrs.row_index_is_valid = true;
-                }
-            }
+            };
 
-            *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
-            SqlReturn::SUCCESS
+            if let Ok((has_next, warnings_opt)) = move_to_next_result {
+                let mut stmt_attrs = stmt.attributes.write().unwrap();
+
+                // Add any warnings to the diagnostic records and log them
+                warnings_opt.iter().for_each(|warning| {
+                    add_diag_info!(
+                        MongoHandleRef::from(statement_handle),
+                        ODBCError::GeneralWarning(warning.to_string())
+                    );
+                });
+                if !has_next {
+                    stmt_attrs.row_index_is_valid = false;
+                    // No more rows
+                    return SqlReturn::NO_DATA;
+                }
+                stmt_attrs.row_index_is_valid = true;
+
+                *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
+
+                if !warnings_opt.is_empty() {
+                    // No warnings and there is a next row
+                    SqlReturn::SUCCESS_WITH_INFO
+                } else {
+                    SqlReturn::SUCCESS
+                }
+            } else {
+                add_diag_info!(
+                    mongo_handle,
+                    move_to_next_result.as_ref().unwrap_err().clone()
+                );
+                // An error happened
+                SqlReturn::ERROR
+            }
         },
         statement_handle
     );
@@ -2276,16 +2282,12 @@ unsafe fn sql_get_infow_helper(
                         string_length_ptr,
                     )
                 }
-                InfoType::SQL_DRIVER_VER => {
-                    let version = format_driver_version();
-
-                    i16_len::set_output_wstring_as_bytes(
-                        version.as_str(),
-                        info_value_ptr,
-                        buffer_length as usize,
-                        string_length_ptr,
-                    )
-                }
+                InfoType::SQL_DRIVER_VER => i16_len::set_output_wstring_as_bytes(
+                    DRIVER_ODBC_VERSION.as_str(),
+                    info_value_ptr,
+                    buffer_length as usize,
+                    string_length_ptr,
+                ),
                 InfoType::SQL_DRIVER_ODBC_VER => {
                     // This driver supports version 3.8.
                     i16_len::set_output_wstring(

@@ -394,8 +394,8 @@ functions:
           echo "----- Registry entries after setup ----"
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null
           echo "-------------------------"
 
   "setup driver with UnixODBC":
@@ -463,8 +463,8 @@ functions:
           echo "----- Registry entries after clean-up----"
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> /dev/null
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ADF_ODBC_DRIVER" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null
           echo "-------------------------"
 
   "clean-up crash dump collection":

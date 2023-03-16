@@ -23,8 +23,6 @@ pub struct MongoConnection {
     pub operation_timeout: Option<Duration>,
 }
 
-const MONGODB_ODBC_DRIVER: &str = "mongo_odbc_driver";
-
 impl MongoConnection {
     /// Creates a new MongoConnection with the given settings and runs a command to make
     /// sure that the MongoConnection is valid.
