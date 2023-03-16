@@ -339,7 +339,7 @@ if [[ $? -ne 0 ]]; then
 
     waitCounter=0
     while : ; do
-        check_mongohoused $MONGOSH_DOWNLOAD_DIR
+        check_mongohoused
         if [[ $? -eq 0 ]]; then
             break
         fi
