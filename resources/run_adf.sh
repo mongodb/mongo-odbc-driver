@@ -238,7 +238,7 @@ if [[ $? -ne 0 ]]; then
 
     waitCounter=0
     while : ; do
-        check_mongod $MONGO_DOWNLOAD_DIR
+        check_mongod 
         if [[ $? -eq 0 ]]; then
             break
         fi
