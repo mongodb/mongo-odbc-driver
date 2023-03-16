@@ -28,11 +28,8 @@ lazy_static! {
 // Returns regex for a filter
 pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
     match filter {
-        "%" => None,
+        "%" | "" => None,
         _ => {
-            if filter.is_empty() {
-                return None;
-            }
             let filter = "^".to_owned() + &filter.replace('%', ".*").replace('_', ".") + "$";
 
             Some(Regex::new(&filter).unwrap())
@@ -108,16 +105,21 @@ mod filtering {
     }
 
     #[test]
-    fn test_is_match() {
+    fn test_is_positive_match() {
         assert!(is_match("filter", &to_name_regex("%")));
         assert!(is_match("filter", &to_name_regex("filter")));
         assert!(is_match("downtimes", &to_name_regex("downtimes")));
         assert!(is_match("status", &to_name_regex("status")));
         assert!(is_match("customer_sales", &to_name_regex("customer_sales")));
         assert!(is_match("field_name", &to_name_regex("field_name")));
+        assert!(is_match("integration_test", &to_name_regex("%test")));
+    }
 
+    #[test]
+    fn test_is_negative_match() {
         assert!(!is_match("filter", &to_name_regex("filt")));
         assert!(!is_match("downtimestatus", &to_name_regex("downtimes")));
         assert!(!is_match("downtimestatus", &to_name_regex("status")));
+        assert!(!is_match("integration_test_2", &to_name_regex("%test")));
     }
 }
