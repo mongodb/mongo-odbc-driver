@@ -801,22 +801,25 @@ tasks:
         variants: [ubuntu2204]
       - func: "set packages version"
       - func: "compile debug"
-      - func: "mciuploads release build and symbols"
+      - func: "mciuploads debug build and symbols"
 
   - name: windows-unit-test
     commands:
+      - func: "install rust toolchain"
       - func: "run windows unit tests"
 
   - name: windows-integration-test
     depends_on:
       - name: compile
     commands:
+      - func: "install rust toolchain"
       - func: "run windows integration tests"
 
   - name: windows-result-set-test
     depends_on:
       - name: compile
     commands:
+      - func: "install rust toolchain"
       - func: "run windows result set test"
 
   - name: ubuntu-unit-test
