@@ -1,11 +1,10 @@
 use lazy_static::lazy_static;
 
 pub const VENDOR_IDENTIFIER: &str = "MongoDB";
-pub const DRIVER_NAME: &str = "MongoDB Atlas SQL interface ODBC Driver";
+pub const DRIVER_NAME: &str = "MongoDB Atlas SQL ODBC Driver";
 pub const DBMS_NAME: &str = "MongoDB Atlas";
 pub const ODBC_VERSION: &str = "03.80";
 pub const DRIVER_SHORT_NAME: &str = "mongodb-odbc";
-pub const DRIVER_INI_NAME: &str = "MongoDB Atlas SQL ODBC Driver";
 
 lazy_static! {
     pub static ref DRIVER_METRICS_VERSION: String = format!(

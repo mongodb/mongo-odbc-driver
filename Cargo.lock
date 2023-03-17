@@ -774,6 +774,7 @@ dependencies = [
 name = "integration_test"
 version = "0.0.0"
 dependencies = [
+ "constants",
  "cstr",
  "lazy_static",
  "mongodb",

@@ -1,3 +1,4 @@
+use constants::DRIVER_NAME;
 use cstr::WideChar;
 use odbc_sys::{Handle, HandleType, SQLGetDiagRecW, SqlReturn};
 use std::{env, slice};
@@ -14,7 +15,7 @@ pub fn generate_default_connection_str() -> String {
     let db = env::var("ADF_TEST_LOCAL_DB");
     let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
         Ok(val) => val,
-        Err(_e) => "MongoDB Atlas SQL ODBC DRIVER".to_string(), //Default driver name
+        Err(_e) => DRIVER_NAME.to_string(), //Default driver name
     };
 
     let mut connection_string =

@@ -3,6 +3,7 @@ use crate::{
         ODBCUri,
         DATABASE,
         DSN,
+        // SQL-1281
         // LOGPATH,
         PASSWORD,
         PWD,
@@ -13,7 +14,7 @@ use crate::{
     },
     util::odbcinst::*,
 };
-use cstr::{input_wtext_to_string, to_widechar_ptr};
+use cstr::{input_text_to_string_w, to_widechar_ptr};
 use serde::{Deserialize, Serialize};
 
 const ODBCINI: &str = "ODBC.INI";
@@ -25,6 +26,7 @@ pub struct DSNOpts {
     pub password: String,
     pub server: String,
     pub user: String,
+    // SQL-1281
     // pub logpath: String,
     pub driver_name: String,
 }
@@ -75,7 +77,7 @@ impl DSNOpts {
                     to_widechar_ptr(ODBCINI).0,
                 )
             };
-            let value = unsafe { input_wtext_to_string(buffer.as_mut_ptr(), len as usize) };
+            let value = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
             dsn_opts.set_field(key, &value);
         });
         dsn_opts.driver_name = self.driver_name.clone();
@@ -93,6 +95,7 @@ impl DSNOpts {
             URI => self.server = value.to_string(),
             USER => self.user = value.to_string(),
             UID => self.user = value.to_string(),
+            // SQL-1281
             // LOGPATH => self.logpath = value.to_string(),
             _ => {}
         }
@@ -114,6 +117,7 @@ impl From<ODBCUri<'_>> for DSNOpts {
         let mut password = String::new();
         let mut server = String::new();
         let mut user = String::new();
+        // SQL-1281
         // let mut logpath = String::new();
         for (key, value) in value.iter() {
             match key.to_lowercase().as_str() {
@@ -125,6 +129,7 @@ impl From<ODBCUri<'_>> for DSNOpts {
                 URI => server = value.to_string(),
                 USER => user = value.to_string(),
                 UID => user = value.to_string(),
+                // SQL-1281
                 // LOGPATH => logpath = value.to_string(),
                 _ => {}
             }
@@ -135,6 +140,7 @@ impl From<ODBCUri<'_>> for DSNOpts {
             password,
             server,
             user,
+            // SQL-1281
             // logpath,
             ..Default::default()
         }
@@ -153,6 +159,7 @@ impl<'a> DSNIterator<'a> {
                 ("Password", &dsn_opts.password),
                 ("Server", &dsn_opts.server),
                 ("User", &dsn_opts.user),
+                // SQL-1281
                 // ("Logpath", &dsn_opts.logpath),
             ],
         }

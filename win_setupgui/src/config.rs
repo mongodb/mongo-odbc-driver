@@ -1,5 +1,5 @@
 use crate::gui::config_dsn;
-use cstr::{input_wtext_to_string, parse_string_w};
+use cstr::{input_text_to_string_w, parse_registry_string_w};
 use mongo_odbc_core::util::dsn::DSNOpts;
 use windows::Win32::{
     Foundation::HWND,
@@ -25,7 +25,7 @@ unsafe extern "C" fn ConfigDSNW(
     // If it matches an existing name and hwndParent is not null, ConfigDSN prompts the user to overwrite the existing name.
 
     // driver can never be null. If it is, we should panic.
-    dsn_opts.driver_name = unsafe { parse_string_w(driver).unwrap() };
+    dsn_opts.driver_name = unsafe { parse_registry_string_w(driver).unwrap() };
     if !dsn_opts.dsn.is_empty() && !dsn_opts.is_valid_dsn() {
         return false;
     }
@@ -46,7 +46,7 @@ unsafe extern "C" fn ConfigDSNW(
 }
 
 fn parse_attributes(attributes: *mut cstr::WideChar) -> String {
-    let attributes = unsafe { input_wtext_to_string(attributes, 1024) }
+    let attributes = unsafe { input_text_to_string_w(attributes, 1024) }
         .split_once("\0\0")
         .unwrap()
         .0

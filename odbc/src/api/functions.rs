@@ -17,7 +17,7 @@ use constants::{
     SQL_ALL_TABLE_TYPES,
 };
 use cstr::WideChar;
-use cstr::{input_text_to_string, input_wtext_to_string};
+use cstr::{input_text_to_string_w, input_text_to_string_w};
 use file_dbg_macros::{dbg_write, msg_to_file};
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
@@ -681,20 +681,21 @@ pub unsafe extern "C" fn SQLColumns(
                 return SqlReturn::ERROR;
             }
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog_string = input_text_to_string(catalog_name, catalog_name_length as usize);
+            let catalog_string = input_text_to_string_w(catalog_name, catalog_name_length as usize);
             let catalog = if catalog_name.is_null() {
                 None
             } else {
                 Some(catalog_string.as_str())
             };
             // ignore schema
-            let table_string = input_text_to_string(table_name, table_name_length as usize);
+            let table_string = input_text_to_string_w(table_name, table_name_length as usize);
             let table = if table_name.is_null() {
                 None
             } else {
                 Some(table_string.as_str())
             };
-            let column_name_string = input_text_to_string(column_name, column_name_length as usize);
+            let column_name_string =
+                input_text_to_string_w(column_name, column_name_length as usize);
             let column = if column_name.is_null() {
                 None
             } else {
@@ -748,21 +749,21 @@ pub unsafe extern "C" fn SQLColumnsW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog_string = input_wtext_to_string(catalog_name, catalog_name_length as usize);
+            let catalog_string = input_text_to_string_w(catalog_name, catalog_name_length as usize);
             let catalog = if catalog_name.is_null() || catalog_string.is_empty() {
                 None
             } else {
                 Some(catalog_string.as_str())
             };
             // ignore schema
-            let table_string = input_wtext_to_string(table_name, table_name_length as usize);
+            let table_string = input_text_to_string_w(table_name, table_name_length as usize);
             let table = if table_name.is_null() {
                 None
             } else {
                 Some(table_string.as_str())
             };
             let column_name_string =
-                input_wtext_to_string(column_name, column_name_length as usize);
+                input_text_to_string_w(column_name, column_name_length as usize);
             let column = if column_name.is_null() {
                 None
             } else {
@@ -1103,7 +1104,7 @@ pub unsafe extern "C" fn SQLDriverConnect(
             }
             let conn = must_be_valid!((*conn_handle).as_connection());
             let odbc_uri_string =
-                input_text_to_string(in_connection_string, string_length_1 as usize);
+                input_text_to_string_w(in_connection_string, string_length_1 as usize);
             let mongo_connection =
                 odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
             *conn.mongo_connection.write().unwrap() = Some(mongo_connection);
@@ -1161,7 +1162,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             }
             let conn = must_be_valid!((*conn_handle).as_connection());
             let odbc_uri_string =
-                input_wtext_to_string(in_connection_string, string_length_1 as usize);
+                input_text_to_string_w(in_connection_string, string_length_1 as usize);
             let mongo_connection =
                 odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
             *conn.mongo_connection.write().unwrap() = Some(mongo_connection);
@@ -1256,7 +1257,7 @@ pub unsafe extern "C" fn SQLExecDirect(
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
-            let query = input_text_to_string(statement_text, text_length as usize);
+            let query = input_text_to_string_w(statement_text, text_length as usize);
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let mongo_statement = {
@@ -1298,7 +1299,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
-            let query = input_wtext_to_string(statement_text, text_length as usize);
+            let query = input_text_to_string_w(statement_text, text_length as usize);
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let mongo_statement = {
@@ -4075,10 +4076,10 @@ pub unsafe extern "C" fn SQLTablesW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog = input_wtext_to_string(catalog_name, name_length_1 as usize);
-            let schema = input_wtext_to_string(schema_name, name_length_2 as usize);
-            let table = input_wtext_to_string(table_name, name_length_3 as usize);
-            let table_t = input_wtext_to_string(table_type, name_length_4 as usize);
+            let catalog = input_text_to_string_w(catalog_name, name_length_1 as usize);
+            let schema = input_text_to_string_w(schema_name, name_length_2 as usize);
+            let table = input_text_to_string_w(table_name, name_length_3 as usize);
+            let table_t = input_text_to_string_w(table_type, name_length_4 as usize);
             let connection = stmt.connection;
             let mongo_statement = sql_tables(
                 (*connection)

@@ -26,7 +26,7 @@ pub struct ConfigGui {
     #[nwg_layout_item(layout: grid, row: 1, col: 2, col_span: 7)]
     dsn_input: nwg::TextInput,
 
-    #[nwg_control(flags: "VISIBLE", text: "User")]
+    #[nwg_control(flags: "VISIBLE", text: "Username")]
     #[nwg_layout_item(layout: grid,  row: 2, col: 0, col_span: 2)]
     user_field: nwg::Label,
 
@@ -109,6 +109,7 @@ impl ConfigGui {
         nwg::stop_thread_dispatch();
     }
 
+    // SQL-1281
     // fn open_dir_picker(&self) {
     //     if let Ok(d) = std::env::current_dir() {
     //         if let Some(d) = d.to_str() {
@@ -155,6 +156,7 @@ impl ConfigGui {
             server: self.mongodb_uri_input.text(),
             user: self.user_input.text(),
             password: self.password_input.text(),
+            // SQL-1281
             // logpath: self.log_path_input.text(),
             driver_name: self.driver_name.text(),
         };
@@ -211,6 +213,7 @@ pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) -> bool {
             app.dsn_input.set_readonly(true);
             app.database_input.set_text(&dsn_opts.database);
             app.mongodb_uri_input.set_text(&dsn_opts.server);
+            // SQL-1281
             // app.log_path_input.set_text(&dsn_opts.logpath);
             app.user_input.set_text(&dsn_opts.user);
             app.password_input.set_text(&dsn_opts.password);

@@ -16,11 +16,14 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 }
 
 /// Converts a c char string to a rust string.
+///
+/// This function will attempt to read in up to the maximum length
+/// the registory allows. See https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-element-size-limits
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
-pub unsafe fn parse_string_a(str: *mut odbc_sys::Char) -> Option<String> {
-    let string = unsafe { input_text_to_string(str, 1024) };
+pub unsafe fn parse_registry_string_a(str: *mut odbc_sys::Char) -> Option<String> {
+    let string = unsafe { input_text_to_string_a(str, 16383) };
     match string.split_once(char::from(0)) {
         Some((string, _)) => Some(string.to_string()),
         _ => None,
@@ -28,11 +31,14 @@ pub unsafe fn parse_string_a(str: *mut odbc_sys::Char) -> Option<String> {
 }
 
 /// Converts a c wide char string to a rust string.
+///
+/// This function will attempt to read in up to the maximum length
+/// the registory allows. See https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-element-size-limits
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
-pub unsafe fn parse_string_w(str: *mut WideChar) -> Option<String> {
-    let string = unsafe { input_wtext_to_string(str, 1024) };
+pub unsafe fn parse_registry_string_w(str: *mut WideChar) -> Option<String> {
+    let string = unsafe { input_text_to_string_w(str, 16383) };
     match string.split_once(char::from(0)) {
         Some((string, _)) => Some(string.to_string()),
         _ => None,
@@ -40,14 +46,14 @@ pub unsafe fn parse_string_w(str: *mut WideChar) -> Option<String> {
 }
 
 ///
-/// input_text_to_string converts an input cstring to a rust String.
+/// input_text_to_string_a converts a u8 cstring to a rust String.
 /// It assumes nul termination if the supplied length is negative.
 ///
 /// # Safety
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_text_to_string(text: *const Char, len: usize) -> String {
+pub unsafe fn input_text_to_string_a(text: *const Char, len: usize) -> String {
     if (len as isize) < 0 {
         let mut dst = Vec::new();
         let mut itr = text;
@@ -67,14 +73,14 @@ pub unsafe fn input_text_to_string(text: *const Char, len: usize) -> String {
 }
 
 ///
-/// input_wtext_to_string converts an input cstring to a rust String.
+/// input_wtext_to_string converts a u16 cstring to a rust String.
 /// It assumes nul termination if the supplied length is negative.
 ///
 /// # Safety
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_wtext_to_string(text: *const WideChar, len: usize) -> String {
+pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> String {
     if (len as isize) < 0 {
         let mut dst = Vec::new();
         let mut itr = text;
@@ -114,7 +120,7 @@ mod test {
         let expected = "test";
         let test = expected.as_bytes();
         let test = test.as_ptr();
-        let test = unsafe { input_text_to_string(test, expected.len()) };
+        let test = unsafe { input_text_to_string_a(test, expected.len()) };
         assert_eq!(expected, test);
     }
 
@@ -123,17 +129,17 @@ mod test {
         let expected = "test";
         let test = to_widechar_vec(expected);
         let test = test.as_ptr();
-        let test = unsafe { input_wtext_to_string(test, expected.len()) };
+        let test = unsafe { input_text_to_string_w(test, expected.len()) };
         assert_eq!(expected, test);
     }
 
     #[test]
-    fn test_parse_string_a() {
+    fn test_parse_registry_string_a() {
         let expected = "test";
         let mut test = Vec::from(expected.as_bytes());
         test.push(0);
         let test = test.as_mut_ptr() as *mut Char;
-        let test = unsafe { parse_string_a(test) };
+        let test = unsafe { parse_registry_string_a(test) };
         assert_eq!(expected, test.unwrap());
     }
 
@@ -143,7 +149,7 @@ mod test {
         let mut test = to_widechar_vec(expected);
         test.push(0);
         let test = test.as_mut_ptr() as *mut WideChar;
-        let test = unsafe { parse_string_w(test) };
+        let test = unsafe { parse_registry_string_w(test) };
         assert_eq!(expected, test.unwrap());
     }
 }

@@ -13,6 +13,7 @@ odbc = "0.17.0"
 lazy_static = "1"
 odbc-sys = { version = "0.21.2", default-features = false }
 cstr = { path = "../cstr" }
+constants = { path = "../constants" }
 
 [dependencies.mongodb]
 version = "2.3"
