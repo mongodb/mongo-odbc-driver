@@ -795,7 +795,7 @@ dependencies = [
  "socket2",
  "widestring 0.5.1",
  "winapi",
- "winreg 0.7.0",
+ "winreg",
 ]
 
 [[package]]
@@ -842,9 +842,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.135"
+version = "0.2.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68783febc7782c6c5cb401fbda4de5a9898be1762314da0bb2c10ced61f18b0c"
+checksum = "99227334921fae1a979cf0bfdfcc6b3e5ce376ef57e16fb6fb3ea2ed6095f80c"
 
 [[package]]
 name = "libloading"
@@ -994,6 +994,7 @@ dependencies = [
  "bson",
  "chrono",
  "constants",
+ "cstr",
  "file_dbg_macros",
  "itertools",
  "lazy_static",
@@ -1005,8 +1006,6 @@ dependencies = [
  "regex",
  "serde",
  "thiserror",
- "windows",
- "winreg 0.11.0",
 ]
 
 [[package]]
@@ -2639,17 +2638,6 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0120db82e8a1e0b9fb3345a539c478767c0048d842860994d96113d5b667bd69"
 dependencies = [
- "winapi",
-]
-
-[[package]]
-name = "winreg"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76a1a57ff50e9b408431e8f97d5456f2807f8eb2a2cd79b06068fc87f8ecf189"
-dependencies = [
- "cfg-if 1.0.0",
- "serde",
  "winapi",
 ]
 

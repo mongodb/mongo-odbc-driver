@@ -93,6 +93,18 @@ pub unsafe fn input_wtext_to_string(text: *const WideChar, len: usize) -> String
     from_widechar_vec_lossy(dst)
 }
 
+pub fn to_widechar_ptr(s: &str) -> (*mut WideChar, Vec<u16>) {
+    let mut v = to_widechar_vec(s);
+    v.push(0);
+    (v.as_mut_ptr(), v)
+}
+
+pub fn to_char_ptr(s: &str) -> (*mut Char, Vec<u8>) {
+    let mut v = s.as_bytes().to_vec();
+    v.push(0);
+    (v.as_mut_ptr(), v)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -1,23 +1,18 @@
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
-use file_dbg_macros::*;
-use mongo_odbc_core::util::dsn::windows::DSNOpts;
+use mongo_odbc_core::util::dsn::DSNOpts;
 use nwd::NwgUi;
 use nwg::NativeUi;
 use std::{cell::RefCell, thread};
 use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
-
-extern "C" {
-    fn SQLValidDSN(dsn: *const odbc_sys::Char) -> bool;
-}
 
 #[derive(Default, NwgUi)]
 pub struct ConfigGui {
     dialog_data: RefCell<Option<thread::JoinHandle<String>>>,
 
     #[nwg_control(size: (600, 450), position: (500, 500), title: "MongoDB Atlas SQL ODBC Driver DSN Configuration", flags: "WINDOW|VISIBLE")]
-    #[nwg_events( OnWindowClose: [ConfigGui::close] )]
+    #[nwg_events( OnWindowClose: [ConfigGui::close_cancel] )]
     window: nwg::Window,
 
     #[nwg_layout(parent: window, spacing: 5)]
@@ -63,28 +58,27 @@ pub struct ConfigGui {
     #[nwg_layout_item(layout: grid,  row: 5, col: 2, col_span: 7)]
     database_input: nwg::TextInput,
 
-    #[nwg_control(flags: "VISIBLE", text: "Log Path")]
-    #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 2)]
-    log_path_field: nwg::Label,
+    // #[nwg_control(flags: "VISIBLE", text: "Log Path")]
+    // #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 2)]
+    // log_path_field: nwg::Label,
 
-    #[nwg_resource(title: "Select Directory", action: nwg::FileDialogAction::OpenDirectory)]
-    dialog: nwg::FileDialog,
+    // #[nwg_resource(title: "Select Directory", action: nwg::FileDialogAction::OpenDirectory)]
+    // dialog: nwg::FileDialog,
 
-    #[nwg_control(flags: "VISIBLE")]
-    #[nwg_layout_item(layout: grid,  row: 6, col: 2, col_span: 1)]
-    #[nwg_events( OnButtonClick: [ConfigGui::open_dir_picker] )]
-    directory_button: nwg::Button,
+    // #[nwg_control(flags: "VISIBLE")]
+    // #[nwg_layout_item(layout: grid,  row: 6, col: 2, col_span: 1)]
+    // #[nwg_events( OnButtonClick: [ConfigGui::open_dir_picker] )]
+    // directory_button: nwg::Button,
 
-    #[nwg_control(flags: "VISIBLE", text: "")]
-    #[nwg_layout_item(layout: grid,  row: 6, col: 3, col_span: 6)]
-    log_path_input: nwg::TextInput,
-
+    // #[nwg_control(flags: "VISIBLE", text: "")]
+    // #[nwg_layout_item(layout: grid,  row: 6, col: 3, col_span: 6)]
+    // log_path_input: nwg::TextInput,
     #[nwg_control(flags: "VISIBLE", text: "Test")]
     #[nwg_layout_item(layout: grid,  row: 10, col: 0, col_span: 1)]
     test_button: nwg::Button,
 
     #[nwg_control(flags: "VISIBLE", text: "Cancel")]
-    #[nwg_events( OnButtonClick: [ConfigGui::close] )]
+    #[nwg_events( OnButtonClick: [ConfigGui::close_cancel] )]
     #[nwg_layout_item(layout: grid,  row: 10, col: 6, col_span: 2)]
     close_button: nwg::Button,
 
@@ -101,30 +95,37 @@ pub struct ConfigGui {
     dialog_notice: nwg::Notice,
 
     gui_opts: GuiOpts,
+
+    close: RefCell<bool>,
 }
 
 impl ConfigGui {
-    fn close(&self) {
+    fn close_ok(&self) {
+        *self.close.borrow_mut() = true;
         nwg::stop_thread_dispatch();
     }
 
-    fn open_dir_picker(&self) {
-        if let Ok(d) = std::env::current_dir() {
-            if let Some(d) = d.to_str() {
-                self.dialog
-                    .set_default_folder(d)
-                    .expect("Failed to set default folder.");
-            }
-        }
-
-        if self.dialog.run(Some(&self.window)) {
-            self.log_path_input.set_text("");
-            if let Ok(directory) = self.dialog.get_selected_item() {
-                let dir = directory.into_string().unwrap();
-                self.log_path_input.set_text(&dir);
-            }
-        }
+    fn close_cancel(&self) {
+        nwg::stop_thread_dispatch();
     }
+
+    // fn open_dir_picker(&self) {
+    //     if let Ok(d) = std::env::current_dir() {
+    //         if let Some(d) = d.to_str() {
+    //             self.dialog
+    //                 .set_default_folder(d)
+    //                 .expect("Failed to set default folder.");
+    //         }
+    //     }
+
+    //     if self.dialog.run(Some(&self.window)) {
+    //         self.log_path_input.set_text("");
+    //         if let Ok(directory) = self.dialog.get_selected_item() {
+    //             let dir = directory.into_string().unwrap();
+    //             self.log_path_input.set_text(&dir);
+    //         }
+    //     }
+    // }
 
     fn open_confirm(&self) {
         // Disable the button to stop the user from spawning multiple dialogs
@@ -148,18 +149,17 @@ impl ConfigGui {
     }
 
     fn set_keys(&self) {
-        let mut dsn_opts = DSNOpts {
+        let dsn_opts = DSNOpts {
             dsn: self.dsn_input.text(),
             database: self.database_input.text(),
             server: self.mongodb_uri_input.text(),
             user: self.user_input.text(),
             password: self.password_input.text(),
-            logpath: self.log_path_input.text(),
+            // logpath: self.log_path_input.text(),
             driver_name: self.driver_name.text(),
-            ..Default::default()
         };
         match self.gui_opts.op == ODBC_CONFIG_DSN
-            || (self.gui_opts.op == ODBC_ADD_DSN && unsafe { SQLValidDSN(dsn_opts.dsn.as_ptr()) })
+            || (self.gui_opts.op == ODBC_ADD_DSN && dsn_opts.is_valid_dsn())
         {
             false => {
                 nwg::modal_error_message(
@@ -168,11 +168,8 @@ impl ConfigGui {
                     &format!("Invalid DSN: {dsn}\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", dsn = dsn_opts.dsn),
                 );
             }
-            true => match dsn_opts
-                .write_dsn_to_registry()
-                .and_then(|()| dsn_opts.add_datasource())
-            {
-                Ok(_) => {
+            true => match dsn_opts.write_dsn_to_registry() {
+                true => {
                     nwg::modal_info_message(
                         &self.window,
                         "Success",
@@ -182,17 +179,13 @@ impl ConfigGui {
                             verbed = self.gui_opts.verbed
                         ),
                     );
-                    self.close();
+                    self.close_ok();
                 }
-                Err(e) => {
-                    dbg_write!(format!(
-                        "Could not {verb} DSN: {e}",
-                        verb = self.gui_opts.verb
-                    ));
+                false => {
                     nwg::modal_error_message(
                         &self.window,
                         "Error",
-                        &format!("Could not {verb} DSN: {e}", verb = self.gui_opts.verb),
+                        &format!("Could not {verb} DSN", verb = self.gui_opts.verb),
                     );
                 }
             },
@@ -200,7 +193,7 @@ impl ConfigGui {
     }
 }
 
-pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) {
+pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) -> bool {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
 
@@ -218,7 +211,7 @@ pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) {
             app.dsn_input.set_readonly(true);
             app.database_input.set_text(&dsn_opts.database);
             app.mongodb_uri_input.set_text(&dsn_opts.server);
-            app.log_path_input.set_text(&dsn_opts.logpath);
+            // app.log_path_input.set_text(&dsn_opts.logpath);
             app.user_input.set_text(&dsn_opts.user);
             app.password_input.set_text(&dsn_opts.password);
         }
@@ -226,9 +219,10 @@ pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) {
     }
 
     app.driver_name.set_text(&dsn_opts.driver_name);
-    app.directory_button
-        .set_text(String::from_utf16(&[0xD83D, 0xDCC1]).unwrap().as_str());
+    // app.directory_button
+    //     .set_text(String::from_utf16(&[0xD83D, 0xDCC1]).unwrap().as_str());
     nwg::dispatch_thread_events();
+    app.close.take()
 }
 
 #[derive(Default, NwgUi)]

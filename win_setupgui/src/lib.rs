@@ -1,4 +1,4 @@
 #[cfg(target_os = "windows")]
-mod api;
+mod config;
 #[cfg(target_os = "windows")]
 mod gui;
