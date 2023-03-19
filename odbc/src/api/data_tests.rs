@@ -667,7 +667,7 @@ mod unit {
     #[test]
     fn sql_get_string_data_by_pieces() {
         use crate::api::{definitions::CDataType, functions::SQLGetData};
-        use cstr::input_text_to_string_w;
+        use cstr::input_text_to_string_a;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -704,7 +704,7 @@ mod unit {
                     assert_eq!(expected_out_len, *out_len_or_ind);
                     assert_eq!(
                         expected.to_string(),
-                        input_text_to_string_w(char_buffer as *const _, expected.chars().count())
+                        input_text_to_string_a(char_buffer as *const _, expected.chars().count())
                     );
                 };
 
@@ -898,7 +898,7 @@ mod unit {
     #[test]
     fn sql_get_string_data() {
         use crate::api::{definitions::CDataType, functions::SQLGetData};
-        use cstr::input_text_to_string_w;
+        use cstr::input_text_to_string_a;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -936,7 +936,7 @@ mod unit {
                     );
                     assert_eq!(
                         expected.to_string(),
-                        input_text_to_string_w(char_buffer as *const _, expected.len()),
+                        input_text_to_string_a(char_buffer as *const _, expected.len()),
                         "Expected column type {col}",
                     );
                 };

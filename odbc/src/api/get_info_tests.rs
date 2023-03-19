@@ -106,8 +106,8 @@ mod unit {
         driver_name,
         info_type = InfoType::SQL_DRIVER_NAME as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 40 * size_of::<WideChar>() as i16,
-        expected_length = 39 * size_of::<WideChar>() as i16,
+        buffer_length = (DRIVER_NAME.len() + 1) as i16 * size_of::<WideChar>() as i16,
+        expected_length = DRIVER_NAME.len() as i16 * size_of::<WideChar>() as i16,
         expected_value = DRIVER_NAME,
         actual_value_modifier = modify_string_value,
     );

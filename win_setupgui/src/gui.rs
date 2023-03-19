@@ -94,9 +94,9 @@ pub struct ConfigGui {
     #[nwg_events( OnNotice: [ConfigGui::read_confirm_output] )]
     dialog_notice: nwg::Notice,
 
-    gui_opts: GuiOpts,
-
     close: RefCell<bool>,
+
+    operation: RefCell<(String, String)>,
 }
 
 impl ConfigGui {
@@ -150,27 +150,20 @@ impl ConfigGui {
     }
 
     fn set_keys(&self) {
-        let dsn_opts = DSNOpts {
-            dsn: self.dsn_input.text(),
-            database: self.database_input.text(),
-            server: self.mongodb_uri_input.text(),
-            user: self.user_input.text(),
-            password: self.password_input.text(),
-            // SQL-1281
-            // logpath: self.log_path_input.text(),
-            driver_name: self.driver_name.text(),
-        };
-        match self.gui_opts.op == ODBC_CONFIG_DSN
-            || (self.gui_opts.op == ODBC_ADD_DSN && dsn_opts.is_valid_dsn())
-        {
-            false => {
-                nwg::modal_error_message(
-                    &self.window,
-                    "Error",
-                    &format!("Invalid DSN: {dsn}\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", dsn = dsn_opts.dsn),
-                );
+        let dsn_opts = DSNOpts::new(
+            self.database_input.text(),
+            self.dsn_input.text(),
+            self.password_input.text(),
+            self.mongodb_uri_input.text(),
+            self.user_input.text(),
+            self.driver_name.text(),
+        );
+
+        match dsn_opts {
+            Err(e) => {
+                nwg::modal_error_message(&self.window, "Error", &e.to_string());
             }
-            true => match dsn_opts.write_dsn_to_registry() {
+            Ok(dsn_opts) => match dsn_opts.write_dsn_to_registry() {
                 true => {
                     nwg::modal_info_message(
                         &self.window,
@@ -178,7 +171,7 @@ impl ConfigGui {
                         &format!(
                             "DSN {dsn} {verbed} successfully",
                             dsn = dsn_opts.dsn,
-                            verbed = self.gui_opts.verbed
+                            verbed = self.operation.borrow().1
                         ),
                     );
                     self.close_ok();
@@ -187,7 +180,7 @@ impl ConfigGui {
                     nwg::modal_error_message(
                         &self.window,
                         "Error",
-                        &format!("Could not {verb} DSN", verb = self.gui_opts.verb),
+                        &format!("Could not {verb} DSN", verb = self.operation.borrow().0),
                     );
                 }
             },
@@ -199,16 +192,17 @@ pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) -> bool {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
 
-    let gui_opts = GuiOpts::new(dsn_op);
     let app = ConfigGui::build_ui(ConfigGui {
-        gui_opts,
         ..Default::default()
     })
     .expect("Failed to build UI");
 
     match dsn_op {
-        ODBC_ADD_DSN => {}
+        ODBC_ADD_DSN => {
+            *app.operation.borrow_mut() = (String::from("add"), String::from("added"));
+        }
         ODBC_CONFIG_DSN => {
+            *app.operation.borrow_mut() = (String::from("configure"), String::from("configured"));
             app.dsn_input.set_text(&dsn_opts.dsn);
             app.dsn_input.set_readonly(true);
             app.database_input.set_text(&dsn_opts.database);
@@ -217,11 +211,13 @@ pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) -> bool {
             // app.log_path_input.set_text(&dsn_opts.logpath);
             app.user_input.set_text(&dsn_opts.user);
             app.password_input.set_text(&dsn_opts.password);
+            *app.operation.borrow_mut() = (String::from("add"), String::from("added"));
         }
         _ => unreachable!(),
     }
 
     app.driver_name.set_text(&dsn_opts.driver_name);
+    // SQL-1281
     // app.directory_button
     //     .set_text(String::from_utf16(&[0xD83D, 0xDCC1]).unwrap().as_str());
     nwg::dispatch_thread_events();
@@ -279,30 +275,5 @@ impl ConfirmCancelConfigDialog {
         }
 
         self.window.close();
-    }
-}
-
-#[derive(Default, Debug)]
-struct GuiOpts {
-    op: u32,
-    verb: String,
-    verbed: String,
-}
-
-impl GuiOpts {
-    fn new(op: u32) -> Self {
-        match op {
-            ODBC_ADD_DSN => GuiOpts {
-                op: ODBC_ADD_DSN,
-                verb: "add".to_string(),
-                verbed: "added".to_string(),
-            },
-            ODBC_CONFIG_DSN => GuiOpts {
-                op: ODBC_CONFIG_DSN,
-                verb: "configure".to_string(),
-                verbed: "configured".to_string(),
-            },
-            _ => unreachable!(),
-        }
     }
 }

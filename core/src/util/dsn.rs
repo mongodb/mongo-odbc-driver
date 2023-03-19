@@ -16,8 +16,26 @@ use crate::{
 };
 use cstr::{input_text_to_string_w, to_widechar_ptr};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 const ODBCINI: &str = "ODBC.INI";
+const BASE_SYSTEM_KEY: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\ODBC\\ODBC.INI\\";
+const BASE_USER_KEY: &str = "HKEY_CURRENT_USER\\SOFTWARE\\ODBC\\ODBC.INI\\";
+const MAX_KEY_LENGTH: usize = 255;
+const MAX_VALUE_LENGTH: usize = 16383;
+
+#[derive(Error, Debug)]
+pub enum DSNError {
+    #[error("Invalid DSN: {}\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", .0)]
+    DSN(String),
+    #[error(
+        "The maximum length of an allowed registry value is {} characters.",
+        MAX_VALUE_LENGTH
+    )]
+    Value,
+    #[error("{}", .0)]
+    Generic(String),
+}
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DSNOpts {
@@ -32,7 +50,35 @@ pub struct DSNOpts {
 }
 
 impl DSNOpts {
-    pub fn new(attribs: String) -> Option<Self> {
+    pub fn new(
+        database: String,
+        dsn: String,
+        password: String,
+        server: String,
+        user: String,
+        driver_name: String,
+    ) -> Result<Self, DSNError> {
+        match (
+            DSNOpts::check_value_length(&database),
+            unsafe { SQLValidDSNW(to_widechar_ptr(&dsn).0) },
+            DSNOpts::check_value_length(&password),
+            DSNOpts::check_value_length(&server),
+            DSNOpts::check_value_length(&user),
+            DSNOpts::check_value_length(&driver_name),
+        ) {
+            (true, true, true, true, true, true) => Ok(Self {
+                database,
+                dsn,
+                password,
+                server,
+                user,
+                driver_name,
+            }),
+            (_, false, _, _, _, _) => Err(DSNError::DSN(dsn)),
+            _ => Err(DSNError::Value),
+        }
+    }
+    pub fn from_attribute_string(attribs: String) -> Option<Self> {
         match ODBCUri::new(&attribs.replace(char::from(0), ";")) {
             Ok(uri) => Some(Self::from(uri)),
             Err(_) => None,
@@ -64,7 +110,7 @@ impl DSNOpts {
     }
 
     pub fn from_private_profile_string(&self) -> Self {
-        let buffer = &mut [0u16; 1024];
+        let buffer = &mut [0u16; MAX_VALUE_LENGTH];
         let mut dsn_opts = DSNOpts::default();
         self.iter().for_each(|(key, _)| {
             let len = unsafe {
@@ -108,6 +154,10 @@ impl DSNOpts {
     fn iter(&self) -> DSNIterator<'_> {
         DSNIterator::new(self)
     }
+
+    fn check_value_length(value: &str) -> bool {
+        value.len() < MAX_VALUE_LENGTH
+    }
 }
 
 impl From<ODBCUri<'_>> for DSNOpts {
@@ -142,7 +192,7 @@ impl From<ODBCUri<'_>> for DSNOpts {
             user,
             // SQL-1281
             // logpath,
-            ..Default::default()
+            driver_name: constants::DRIVER_NAME.to_string(),
         }
     }
 }
