@@ -23,8 +23,6 @@ lazy_static! {
         .unwrap();
     static ref NON_ESCAPED_UNDERSCORE: FancyRegex = FancyRegex::new(r"(?<!\\)_").unwrap();
     static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\)%").unwrap();
-    static ref ESCAPED_UNDERSCORE: FancyRegex = FancyRegex::new(r"\\_").unwrap();
-    static ref ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"\\%").unwrap();
 }
 
 // Converts SQL pattern characters (% and _) into proper regex patterns.
@@ -37,8 +35,7 @@ pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
         _ => {
             let filter = NON_ESCAPED_UNDERSCORE.replace_all(&filter, ".");
             let filter = NON_ESCAPED_PERCENT.replace_all(&filter, ".*");
-            let filter = ESCAPED_UNDERSCORE.replace_all(&filter, "_");
-            let filter = ESCAPED_PERCENT.replace_all(&filter, "%");
+            let filter = filter.replace("\\_", "_").replace("\\%", "%");
             let filter = if filter.starts_with("^") || filter.ends_with("$") {
                 filter.to_string()
             } else {
