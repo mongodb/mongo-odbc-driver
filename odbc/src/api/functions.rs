@@ -2300,7 +2300,7 @@ unsafe fn sql_get_infow_helper(
                 InfoType::SQL_SEARCH_PATTERN_ESCAPE => {
                     // TODO: SQL-1060: improve sql-to-rust regex pattern method and report escape character here
                     i16_len::set_output_wstring_as_bytes(
-                        "",
+                        "\\",
                         info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
