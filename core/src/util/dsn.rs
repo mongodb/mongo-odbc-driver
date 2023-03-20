@@ -21,10 +21,8 @@ use thiserror::Error;
 const ODBCINI: &str = "ODBC.INI";
 const BASE_SYSTEM_KEY: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\ODBC\\ODBC.INI\\";
 const BASE_USER_KEY: &str = "HKEY_CURRENT_USER\\SOFTWARE\\ODBC\\ODBC.INI\\";
-const MAX_KEY_LENGTH: usize = 255;
-// The registry allows up to 16383 characters for a value, but in practice
-// trying to read in this much was causing crashes.
-const MAX_VALUE_LENGTH: usize = 1024;
+// The maximum length of a registry value is 16383 characters.
+const MAX_VALUE_LENGTH: usize = 16383;
 
 #[derive(Error, Debug)]
 pub enum DSNError {
@@ -223,5 +221,88 @@ impl<'a> Iterator for DSNIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.pop()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn invalid_dsn_name() {
+        let dsn_opts = DSNOpts::new(
+            "test".into(),
+            "test!".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+        );
+        assert!(dsn_opts.is_err());
+    }
+
+    #[test]
+    fn invalid_value_length_in_database_field() {
+        let dsn_opts = DSNOpts::new(
+            "t".repeat(MAX_VALUE_LENGTH + 1).into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+        );
+        assert!(dsn_opts.is_err());
+    }
+
+    #[test]
+    fn invalid_value_length_in_password_field() {
+        let dsn_opts = DSNOpts::new(
+            "test".into(),
+            "test".into(),
+            "t".repeat(MAX_VALUE_LENGTH + 1).into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+        );
+        assert!(dsn_opts.is_err());
+    }
+
+    #[test]
+    fn invalid_value_length_in_server_field() {
+        let dsn_opts = DSNOpts::new(
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "t".repeat(MAX_VALUE_LENGTH + 1).into(),
+            "test".into(),
+            "test".into(),
+        );
+        assert!(dsn_opts.is_err());
+    }
+
+    #[test]
+    fn invalid_value_length_in_user_field() {
+        let dsn_opts = DSNOpts::new(
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "t".repeat(MAX_VALUE_LENGTH).into(),
+            "test".into(),
+        );
+        assert!(dsn_opts.is_err());
+    }
+
+    #[test]
+    fn valid_value_lengths_and_dsn() {
+        let dsn_opts = DSNOpts::new(
+            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
+            "test".into(),
+            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
+            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
+            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
+            "test".into(),
+        );
+        assert!(dsn_opts.is_ok());
     }
 }

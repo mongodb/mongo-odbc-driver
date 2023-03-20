@@ -15,42 +15,6 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
     widestring::encode_utf16(s.chars()).collect::<Vec<_>>()
 }
 
-/// Converts a c char string to a rust string.
-///
-/// This function will attempt to read in up to 1024 characters.
-///
-/// The maximum length value size the registy allows is 16,383, but attempting to do this
-/// results in crashes.
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-pub unsafe fn parse_registry_string_a(str: *mut odbc_sys::Char) -> Option<String> {
-    let string = unsafe { input_text_to_string_a(str, 1024) };
-    match string.split_once(char::from(0)) {
-        Some((string, _)) => Some(string.to_string()),
-        _ => None,
-    }
-}
-
-/// Converts a c wide char string to a rust string.
-///
-/// This function will attempt to read in up to 1024 characters.
-///
-/// The maximum length value size the registry allows is 16,383, but attempting to do this
-/// results in crashes.
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-pub unsafe fn parse_registry_string_w(str: *mut WideChar) -> Option<String> {
-    let string = unsafe { input_text_to_string_w(str, 1024) };
-    match string.split_once(char::from(0)) {
-        Some((string, _)) => Some(string.to_string()),
-        _ => None,
-    }
-}
-
 ///
 /// input_text_to_string_a converts a u8 cstring to a rust String.
 /// It assumes nul termination if the supplied length is negative.
@@ -79,7 +43,7 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: usize) -> String {
 }
 
 ///
-/// input_wtext_to_string converts a u16 cstring to a rust String.
+/// input_text_to_string_w converts a u16 cstring to a rust String.
 /// It assumes nul termination if the supplied length is negative.
 ///
 /// # Safety
@@ -102,6 +66,25 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> Strin
     let mut dst = Vec::with_capacity(len);
     dst.set_len(len);
     copy_nonoverlapping(text, dst.as_mut_ptr(), len);
+    from_widechar_vec_lossy(dst)
+}
+
+///
+/// parse_attribute_string converts a null-separted u16 doubly-null terminated cstring to a rust String.
+///
+/// # Safety
+/// This converts raw C-pointers to rust Strings, which requires unsafe operations
+///
+#[allow(clippy::uninit_vec)]
+pub unsafe fn parse_attribute_string(text: *const WideChar) -> String {
+    let mut dst = Vec::new();
+    let mut itr = text;
+    {
+        while *itr != 0 || *itr.offset(1) != 0 {
+            dst.push(*itr);
+            itr = itr.offset(1);
+        }
+    }
     from_widechar_vec_lossy(dst)
 }
 
@@ -137,25 +120,5 @@ mod test {
         let test = test.as_ptr();
         let test = unsafe { input_text_to_string_w(test, expected.len()) };
         assert_eq!(expected, test);
-    }
-
-    #[test]
-    fn test_parse_registry_string_a() {
-        let expected = "test";
-        let mut test = Vec::from(expected.as_bytes());
-        test.push(0);
-        let test = test.as_mut_ptr() as *mut Char;
-        let test = unsafe { parse_registry_string_a(test) };
-        assert_eq!(expected, test.unwrap());
-    }
-
-    #[test]
-    fn test_parse_string_w() {
-        let expected = "test";
-        let mut test = to_widechar_vec(expected);
-        test.push(0);
-        let test = test.as_mut_ptr() as *mut WideChar;
-        let test = unsafe { parse_registry_string_w(test) };
-        assert_eq!(expected, test.unwrap());
     }
 }

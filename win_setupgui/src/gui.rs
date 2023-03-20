@@ -211,7 +211,6 @@ pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) -> bool {
             // app.log_path_input.set_text(&dsn_opts.logpath);
             app.user_input.set_text(&dsn_opts.user);
             app.password_input.set_text(&dsn_opts.password);
-            *app.operation.borrow_mut() = (String::from("add"), String::from("added"));
         }
         _ => unreachable!(),
     }

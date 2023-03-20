@@ -1,5 +1,5 @@
 use crate::gui::config_dsn;
-use cstr::input_text_to_string_w;
+use cstr::{input_text_to_string_w, parse_attribute_string};
 use mongo_odbc_core::util::dsn::DSNOpts;
 use windows::Win32::{
     Foundation::HWND,
@@ -46,13 +46,5 @@ unsafe extern "C" fn ConfigDSNW(
 }
 
 fn parse_attributes(attributes: *mut cstr::WideChar) -> String {
-    // 1024 is chosen here based on experimentaiton. It's long enough to hold foreseeable attributes,
-    // but setting it too long causes crashes. Value lengths could technically be 16,313 characters,
-    // but setting this value too large causes crashes.
-    let attributes = unsafe { input_text_to_string_w(attributes, 1024) }
-        .split_once("\0\0")
-        .unwrap()
-        .0
-        .to_string();
-    attributes.replace(char::from(0), ";")
+    unsafe { parse_attribute_string(attributes) }.replace(char::from(0), ";")
 }
