@@ -32,13 +32,11 @@ pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
     match filter {
         "%" | "" => None,
         _ => {
-            let filter = NON_ESCAPED_UNDERSCORE.replace_all(&filter, ".");
+            let filter = NON_ESCAPED_UNDERSCORE.replace_all(filter, ".");
             let filter = NON_ESCAPED_PERCENT.replace_all(&filter, ".*");
-            let filter = filter.replace("\\_", "_").replace("\\%", "%");
-            let filter = if filter.starts_with("^") || filter.ends_with("$") {
-                filter.to_string()
-            } else {
-                format!("^{}$", filter)
+            let mut filter = filter.replace("\\_", "_").replace("\\%", "%");
+            if !filter.starts_with('^') || !filter.ends_with('$') {
+                filter = format!("^{}$", filter)
             };
 
             Some(Regex::new(&filter).unwrap())
