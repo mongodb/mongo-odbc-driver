@@ -17,13 +17,16 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 
 /// Converts a c char string to a rust string.
 ///
-/// This function will attempt to read in up to the maximum length
-/// the registory allows. See https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-element-size-limits
+/// This function will attempt to read in up to 1024 characters.
+///
+/// The maximum length value size the registy allows is 16,383, but attempting to do this
+/// results in crashes.
+///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 pub unsafe fn parse_registry_string_a(str: *mut odbc_sys::Char) -> Option<String> {
-    let string = unsafe { input_text_to_string_a(str, 16383) };
+    let string = unsafe { input_text_to_string_a(str, 1024) };
     match string.split_once(char::from(0)) {
         Some((string, _)) => Some(string.to_string()),
         _ => None,
@@ -32,13 +35,16 @@ pub unsafe fn parse_registry_string_a(str: *mut odbc_sys::Char) -> Option<String
 
 /// Converts a c wide char string to a rust string.
 ///
-/// This function will attempt to read in up to the maximum length
-/// the registory allows. See https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-element-size-limits
+/// This function will attempt to read in up to 1024 characters.
+///
+/// The maximum length value size the registry allows is 16,383, but attempting to do this
+/// results in crashes.
+///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 pub unsafe fn parse_registry_string_w(str: *mut WideChar) -> Option<String> {
-    let string = unsafe { input_text_to_string_w(str, 16383) };
+    let string = unsafe { input_text_to_string_w(str, 1024) };
     match string.split_once(char::from(0)) {
         Some((string, _)) => Some(string.to_string()),
         _ => None,

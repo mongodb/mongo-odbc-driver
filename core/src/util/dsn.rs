@@ -22,7 +22,9 @@ const ODBCINI: &str = "ODBC.INI";
 const BASE_SYSTEM_KEY: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\ODBC\\ODBC.INI\\";
 const BASE_USER_KEY: &str = "HKEY_CURRENT_USER\\SOFTWARE\\ODBC\\ODBC.INI\\";
 const MAX_KEY_LENGTH: usize = 255;
-const MAX_VALUE_LENGTH: usize = 16383;
+// The registry allows up to 16383 characters for a value, but in practice
+// trying to read in this much was causing crashes.
+const MAX_VALUE_LENGTH: usize = 1024;
 
 #[derive(Error, Debug)]
 pub enum DSNError {

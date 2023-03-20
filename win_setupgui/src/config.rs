@@ -46,9 +46,10 @@ unsafe extern "C" fn ConfigDSNW(
 }
 
 fn parse_attributes(attributes: *mut cstr::WideChar) -> String {
-    // 8192 is chosen here based on experimentaiton. It's long enough to hold foreseeable attributes,
-    // but setting it too long causes crashes.
-    let attributes = unsafe { input_text_to_string_w(attributes, 8192) }
+    // 1024 is chosen here based on experimentaiton. It's long enough to hold foreseeable attributes,
+    // but setting it too long causes crashes. Value lengths could technically be 16,313 characters,
+    // but setting this value too large causes crashes.
+    let attributes = unsafe { input_text_to_string_w(attributes, 1024) }
         .split_once("\0\0")
         .unwrap()
         .0
