@@ -27,7 +27,6 @@ lazy_static! {
 
 // Converts SQL pattern characters (% and _) into proper regex patterns.
 // SQL-1308: Handle SQL_ATTR_METADATA_ID
-// SQL-1060: Improve SQL-to-Rust regex pattern method
 // Returns regex for a filter
 pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
     match filter {

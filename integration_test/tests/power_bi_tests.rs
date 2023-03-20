@@ -463,7 +463,7 @@ mod integration {
             test_get_info!(
                 conn_handle,
                 InfoType::SearchPatternEscape,
-                2,
+                4,
                 DataType::WChar
             );
             // InfoType::SQL_CONVERT_FUNCTIONS
