@@ -768,7 +768,14 @@ mod unit {
                 };
 
                 bin_val_test(ARRAY_STR_VAL.0, ARRAY_STR_VAL.1.as_bytes());
-                bin_val_test(BIN_COL, &[5, 6, 42]);
+                bin_val_test(
+                    BIN_COL,
+                    &[
+                        123, 34, 36, 98, 105, 110, 97, 114, 121, 34, 58, 123, 34, 98, 97, 115, 101,
+                        54, 52, 34, 58, 34, 66, 81, 89, 113, 34, 44, 34, 115, 117, 98, 84, 121,
+                        112, 101, 34, 58, 34, 48, 48, 34, 125, 125,
+                    ],
+                );
                 bin_val_test(BOOL_COL, &[1]);
                 bin_val_test(
                     DATETIME_COL,
@@ -847,7 +854,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 2;
+            let buffer_length: isize = 5;
             let out_len_or_ind = &mut 0;
             {
                 let mut bin_val_test =
@@ -874,10 +881,14 @@ mod unit {
                             _ => (),
                         }
                     };
-
-                bin_val_test(BIN_COL, 3, &[5u8, 6u8], SqlReturn::SUCCESS_WITH_INFO);
+                bin_val_test(
+                    BIN_COL,
+                    44,
+                    &[123, 34, 36, 98, 105],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
                 assert_eq!(
-                    "[MongoDB][API] Buffer size \"2\" not large enough for data".to_string(),
+                    "[MongoDB][API] Buffer size \"5\" not large enough for data".to_string(),
                     format!(
                         "{}",
                         (*stmt_handle)
@@ -888,7 +899,49 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                bin_val_test(BIN_COL, 1, &[42u8], SqlReturn::SUCCESS);
+                bin_val_test(
+                    BIN_COL,
+                    39,
+                    &[110, 97, 114, 121, 34],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
+                bin_val_test(
+                    BIN_COL,
+                    34,
+                    &[58, 123, 34, 98, 97],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
+                bin_val_test(
+                    BIN_COL,
+                    29,
+                    &[115, 101, 54, 52, 34],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
+                bin_val_test(
+                    BIN_COL,
+                    24,
+                    &[58, 34, 66, 81, 89],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
+                bin_val_test(
+                    BIN_COL,
+                    19,
+                    &[113, 34, 44, 34, 115],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
+                bin_val_test(
+                    BIN_COL,
+                    14,
+                    &[117, 98, 84, 121, 112],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
+                bin_val_test(
+                    BIN_COL,
+                    9,
+                    &[101, 34, 58, 34, 48],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
+                bin_val_test(BIN_COL, 4, &[48, 34, 125, 125], SqlReturn::SUCCESS);
                 bin_val_test(BIN_COL, 0, &[], SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(buffer as *mut WChar);
