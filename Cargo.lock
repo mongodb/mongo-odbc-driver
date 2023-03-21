@@ -2366,6 +2366,18 @@ dependencies = [
 [[package]]
 name = "winres"
 version = "0.1.12"
+<<<<<<< HEAD
+=======
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b68db261ef59e9e52806f688020631e987592bd83619edccda9c47d42cde4f6c"
+dependencies = [
+ "toml 0.5.9",
+]
+
+[[package]]
+name = "x11-dl"
+version = "2.20.0"
+>>>>>>> 704c81b (update cargo lock)
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b68db261ef59e9e52806f688020631e987592bd83619edccda9c47d42cde4f6c"
 dependencies = [
