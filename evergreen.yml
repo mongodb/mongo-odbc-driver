@@ -224,6 +224,27 @@ functions:
       params:
         file: mongosql-odbc-driver/expansions.yml
 
+  "build msi":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          echo "env $(env)"
+          cp target/release/*.dll installer/msi
+          cd installer/msi
+          # unfortunately, using a variable to hold the path to powershell
+          # seems to not work properly with evergreen's bash
+          /cygdrive/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\
+              -NoProfile\
+              -NoLogo\
+              -NonInteractive\
+              -ExecutionPolicy ByPass\
+              -File ./build-msi.ps1\
+              -Arch x64\
+              -VersionLabel '0.1.0'
+
   "mciuploads release build and symbols":
     - command: s3.put
       params:
@@ -233,6 +254,17 @@ functions:
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/atsql.dll
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.msi
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -856,6 +888,8 @@ tasks:
         variants: [ubuntu2204]
       - func: "set packages version"
       - func: "compile release"
+      - func: "build msi"
+        variants: [windows-64]
       - func: "mciuploads release build and symbols"
 
   - name: compile-debug

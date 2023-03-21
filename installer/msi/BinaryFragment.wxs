@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2018, 2023-Present MongoDB Inc. -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="BIN">
+	    <?if $(var.Platform)=x64 ?>
+	       <?define win64Flag = "yes" ?>
+	    <?else ?>
+	       <?define win64Flag = "no" ?>
+	    <?endif ?>
+       <Component Guid="{02DA3AB6-9776-4B13-9D02-7874FE99050D}" Id="RegKeys" Win64="$(var.win64Flag)">
+           <RegistryKey ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Id="MongoDBKey" Key="SOFTWARE\MongoDB\[ProductName]" Root="HKLM" />
+           <RegistryValue Id="Version" Key="SOFTWARE\MongoDB\[ProductName]"  Name="Version" Root="HKLM" Type="string" Value="[ProductVersion]" />
+       </Component>
+       <Component Guid="{66D2AAC0-B5D9-40DB-9797-3A52014DC526}" Id="driver" SharedDllRefCount="yes" Win64="$(var.win64Flag)">
+            <File Checksum="yes" DiskId="1" Id="mongoodbc.dll" Name="mongoodbc.dll" Source="mongoodbc.dll" KeyPath="yes" />
+            <!-- TODO, change SetupFile once setupgui is merged -->
+            <ODBCDriver File="mongoodbc.dll" Id="MongoDB_Atlas_SQL_ODBC_0" Name="MongoDB Atlas SQL ODBC Driver 0.1.0" SetupFile="mongoodbc.dll" />
+       </Component>
+      </DirectoryRef>
+      <ComponentGroup Id="base">
+          <ComponentRef Id="RegKeys" />
+          <ComponentRef Id="driver" />
+       </ComponentGroup>
+  </Fragment>
+</Wix>
