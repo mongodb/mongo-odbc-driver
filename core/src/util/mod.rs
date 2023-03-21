@@ -21,8 +21,8 @@ lazy_static! {
         .case_insensitive(true)
         .build()
         .unwrap();
-    static ref NON_ESCAPED_UNDERSCORE: FancyRegex = FancyRegex::new(r"(?<!\\)_").unwrap();
-    static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\)%").unwrap();
+    static ref NON_ESCAPED_UNDERSCORE: FancyRegex = FancyRegex::new(r"(?<!\\\\)_").unwrap();
+    static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\\\)%").unwrap();
 }
 
 // Converts SQL pattern characters (% and _) into proper regex patterns.
@@ -32,14 +32,12 @@ pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
     match filter {
         "%" | "" => None,
         _ => {
-            let filter = NON_ESCAPED_UNDERSCORE.replace_all(filter, ".");
+            let filter = regex::escape(filter);
+            dbg!(&filter);
+            let filter = NON_ESCAPED_UNDERSCORE.replace_all(&filter, ".");
             let filter = NON_ESCAPED_PERCENT.replace_all(&filter, ".*");
-            let mut filter = filter.replace("\\_", "_").replace("\\%", "%");
-            if !filter.starts_with('^') || !filter.ends_with('$') {
-                filter = format!("^{}$", filter)
-            };
-
-            Some(Regex::new(&filter).unwrap())
+            let filter = &filter.replace("\\\\_", "_").replace("\\\\%", "%");
+            Some(Regex::new(&format!("^{filter}$")).unwrap())
         }
     }
 }
@@ -115,10 +113,12 @@ mod filtering {
         assert!(is_match("filter", &to_name_regex("%")));
         assert!(is_match("filter", &to_name_regex("filter")));
         assert!(is_match("downtimes", &to_name_regex("downtimes")));
-        assert!(is_match("customer_sales", &to_name_regex("customer_sales")));
+        assert!(is_match("customerssales", &to_name_regex("customer_sales")));
         assert!(is_match("myiphone", &to_name_regex("my_phone")));
         assert!(is_match("conversions2022", &to_name_regex("conversions%")));
         assert!(is_match("integration_test", &to_name_regex("%test")));
+        assert!(is_match("money$$bags", &to_name_regex("money$$bags")));
+        assert!(is_match("money$.bags", &to_name_regex("money$.bags")));
     }
 
     #[test]
@@ -128,6 +128,7 @@ mod filtering {
         assert!(!is_match("downtimestatus", &to_name_regex("downtimes")));
         assert!(!is_match("downtimestatus", &to_name_regex("status")));
         assert!(!is_match("integration_test_2", &to_name_regex("%test")));
+        assert!(!is_match("money$$bags", &to_name_regex("money$.bags")));
     }
 
     #[test]
