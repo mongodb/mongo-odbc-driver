@@ -42,8 +42,9 @@ pub struct DSNOpts {
     pub database: String,
     pub dsn: String,
     pub password: String,
-    pub server: String,
+    pub uri: String,
     pub user: String,
+    pub server: String,
     // SQL-1281
     // pub logpath: String,
     pub driver_name: String,
@@ -54,27 +55,33 @@ impl DSNOpts {
         database: String,
         dsn: String,
         password: String,
-        server: String,
+        uri: String,
         user: String,
+        server: String,
         driver_name: String,
     ) -> Result<Self, DSNError> {
         match (
             DSNOpts::check_value_length(&database),
             unsafe { SQLValidDSNW(to_widechar_ptr(&dsn).0) },
             DSNOpts::check_value_length(&password),
-            DSNOpts::check_value_length(&server),
+            DSNOpts::check_value_length(&uri),
             DSNOpts::check_value_length(&user),
+            DSNOpts::check_value_length(&server),
             DSNOpts::check_value_length(&driver_name),
         ) {
-            (true, true, true, true, true, true) => Ok(Self {
+            (true, true, true, true, true, true, true) => Ok(Self {
                 database,
                 dsn,
                 password,
-                server,
+                uri,
                 user,
+                server,
                 driver_name,
             }),
-            (_, false, _, _, _, _) => Err(DSNError::DSN(dsn)),
+            // SQLValidDSNW can post different errors that we could query for and return
+            // to the user. However, other players such as Postgres and MySql don't bother
+            // checking for error codes and just return false.
+            (_, false, _, _, _, _, _) => Err(DSNError::DSN(dsn)),
             _ => Err(DSNError::Value),
         }
     }
@@ -137,8 +144,8 @@ impl DSNOpts {
             DSN => self.dsn = value.to_string(),
             PASSWORD => self.password = value.to_string(),
             PWD => self.password = value.to_string(),
-            SERVER => self.server = value.to_string(),
-            URI => self.server = value.to_string(),
+            SERVER => self.uri = value.to_string(),
+            URI => self.uri = value.to_string(),
             USER => self.user = value.to_string(),
             UID => self.user = value.to_string(),
             // SQL-1281
@@ -166,6 +173,7 @@ impl From<ODBCUri<'_>> for DSNOpts {
         let mut dsn = String::new();
         let mut password = String::new();
         let mut server = String::new();
+        let mut uri: String = String::new();
         let mut user = String::new();
         // SQL-1281
         // let mut logpath = String::new();
@@ -176,7 +184,7 @@ impl From<ODBCUri<'_>> for DSNOpts {
                 PASSWORD => password = value.to_string(),
                 PWD => password = value.to_string(),
                 SERVER => server = value.to_string(),
-                URI => server = value.to_string(),
+                URI => uri = value.to_string(),
                 USER => user = value.to_string(),
                 UID => user = value.to_string(),
                 // SQL-1281
@@ -188,8 +196,9 @@ impl From<ODBCUri<'_>> for DSNOpts {
             database,
             dsn,
             password,
-            server,
+            uri,
             user,
+            server,
             // SQL-1281
             // logpath,
             driver_name: constants::DRIVER_NAME.to_string(),
@@ -207,7 +216,7 @@ impl<'a> DSNIterator<'a> {
             inner: vec![
                 ("Database", &dsn_opts.database),
                 ("Password", &dsn_opts.password),
-                ("Server", &dsn_opts.server),
+                ("Uri", &dsn_opts.uri),
                 ("User", &dsn_opts.user),
                 // SQL-1281
                 // ("Logpath", &dsn_opts.logpath),
@@ -237,6 +246,7 @@ mod test {
             "test".into(),
             "test".into(),
             "test".into(),
+            "test".into(),
         );
         assert!(dsn_opts.is_err());
     }
@@ -245,6 +255,7 @@ mod test {
     fn invalid_value_length_in_database_field() {
         let dsn_opts = DSNOpts::new(
             "t".repeat(MAX_VALUE_LENGTH + 1).into(),
+            "test".into(),
             "test".into(),
             "test".into(),
             "test".into(),
@@ -263,6 +274,7 @@ mod test {
             "test".into(),
             "test".into(),
             "test".into(),
+            "test".into(),
         );
         assert!(dsn_opts.is_err());
     }
@@ -274,6 +286,7 @@ mod test {
             "test".into(),
             "test".into(),
             "t".repeat(MAX_VALUE_LENGTH + 1).into(),
+            "test".into(),
             "test".into(),
             "test".into(),
         );
@@ -289,6 +302,7 @@ mod test {
             "test".into(),
             "t".repeat(MAX_VALUE_LENGTH).into(),
             "test".into(),
+            "test".into(),
         );
         assert!(dsn_opts.is_err());
     }
@@ -298,6 +312,7 @@ mod test {
         let dsn_opts = DSNOpts::new(
             "t".repeat(MAX_VALUE_LENGTH - 1).into(),
             "test".into(),
+            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
             "t".repeat(MAX_VALUE_LENGTH - 1).into(),
             "t".repeat(MAX_VALUE_LENGTH - 1).into(),
             "t".repeat(MAX_VALUE_LENGTH - 1).into(),

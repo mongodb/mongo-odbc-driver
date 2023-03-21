@@ -156,6 +156,7 @@ impl ConfigGui {
             self.password_input.text(),
             self.mongodb_uri_input.text(),
             self.user_input.text(),
+            "".to_string(),
             self.driver_name.text(),
         );
 
@@ -206,7 +207,7 @@ pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) -> bool {
             app.dsn_input.set_text(&dsn_opts.dsn);
             app.dsn_input.set_readonly(true);
             app.database_input.set_text(&dsn_opts.database);
-            app.mongodb_uri_input.set_text(&dsn_opts.server);
+            app.mongodb_uri_input.set_text(&dsn_opts.uri);
             // SQL-1281
             // app.log_path_input.set_text(&dsn_opts.logpath);
             app.user_input.set_text(&dsn_opts.user);

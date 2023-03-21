@@ -18,33 +18,37 @@ unsafe extern "C" fn ConfigDSNW(
     driver: *mut cstr::WideChar,
     attributes: *mut cstr::WideChar,
 ) -> bool {
-    let mut dsn_opts =
-        DSNOpts::from_attribute_string(parse_attributes(attributes)).unwrap_or_default();
+    match std::panic::catch_unwind(|| {
+        let mut dsn_opts =
+            DSNOpts::from_attribute_string(parse_attribute_string(attributes)).unwrap_or_default();
 
-    // If a data source name is passed to ConfigDSN in lpszAttributes, ConfigDSN checks that the name is valid. If the
-    // data source name matches an existing data source name and hwndParent is null, ConfigDSN overwrites the existing name.
-    // If it matches an existing name and hwndParent is not null, ConfigDSN prompts the user to overwrite the existing name.
+        // If a data source name is passed to ConfigDSN in lpszAttributes, ConfigDSN checks that the name is valid. If the
+        // data source name matches an existing data source name and hwndParent is null, ConfigDSN overwrites the existing name.
+        // If it matches an existing name and hwndParent is not null, ConfigDSN prompts the user to overwrite the existing name.
 
-    // driver can never be null. If it is, we should panic.
-    dsn_opts.driver_name = unsafe { input_text_to_string_w(driver, constants::DRIVER_NAME.len()) };
-    if dsn_opts.driver_name != constants::DRIVER_NAME {
-        return false;
-    }
+        dsn_opts.driver_name =
+            unsafe { input_text_to_string_w(driver, constants::DRIVER_NAME.len()) };
 
-    match request {
-        ODBC_ADD_DSN => {
-            if hwnd.0 == 0 && dsn_opts.is_valid_dsn() {
-                dsn_opts.write_dsn_to_registry()
-            } else {
-                config_dsn(dsn_opts, request)
+        match request {
+            ODBC_ADD_DSN => {
+                if hwnd.0 == 0 && dsn_opts.is_valid_dsn() {
+                    dsn_opts.write_dsn_to_registry()
+                } else {
+                    config_dsn(dsn_opts, request)
+                }
             }
+            ODBC_CONFIG_DSN => {
+                if let Ok(dsn_opts) = dsn_opts.from_private_profile_string() {
+                    config_dsn(dsn_opts, request)
+                } else {
+                    false
+                }
+            }
+            ODBC_REMOVE_DSN => dsn_opts.remove_dsn(),
+            _ => unreachable!(),
         }
-        ODBC_CONFIG_DSN => config_dsn(dsn_opts.from_private_profile_string(), request),
-        ODBC_REMOVE_DSN => dsn_opts.remove_dsn(),
-        _ => unreachable!(),
+    }) {
+        Ok(result) => result,
+        Err(_) => false,
     }
-}
-
-fn parse_attributes(attributes: *mut cstr::WideChar) -> String {
-    unsafe { parse_attribute_string(attributes) }.replace(char::from(0), ";")
 }

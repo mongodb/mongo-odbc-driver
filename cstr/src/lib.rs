@@ -70,10 +70,11 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> Strin
 }
 
 ///
-/// parse_attribute_string converts a null-separted u16 doubly-null terminated cstring to a rust String.
+/// parse_attribute_string converts a null-separted u16 doubly-null terminated cstring to a Rust
+/// string separated by `;`.
 ///
 /// # Safety
-/// This converts raw C-pointers to rust Strings, which requires unsafe operations
+/// This converts a raw c-pointer to a Rust string, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
 pub unsafe fn parse_attribute_string(text: *const WideChar) -> String {
@@ -85,15 +86,21 @@ pub unsafe fn parse_attribute_string(text: *const WideChar) -> String {
             itr = itr.offset(1);
         }
     }
-    from_widechar_vec_lossy(dst)
+    from_widechar_vec_lossy(dst).replace(char::from(0), ";")
 }
 
+///
+/// to_widechar_ptr converts the input string to a null terminated string encoded in UTF-16.
+///
 pub fn to_widechar_ptr(s: &str) -> (*mut WideChar, Vec<u16>) {
     let mut v = to_widechar_vec(s);
     v.push(0);
     (v.as_mut_ptr(), v)
 }
 
+///
+/// to_char_ptr converts the input string to a null terminated string encoded in UTF-8.
+///
 pub fn to_char_ptr(s: &str) -> (*mut Char, Vec<u8>) {
     let mut v = s.as_bytes().to_vec();
     v.push(0);
