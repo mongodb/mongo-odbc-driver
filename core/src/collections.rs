@@ -1,5 +1,5 @@
 use crate::stmt::EmptyStatement;
-use crate::util::{table_type_filter_to_vec, to_name_regex};
+use crate::util::{is_match, table_type_filter_to_vec, to_name_regex};
 use crate::{
     bson_type_info::BsonTypeInfo,
     col_metadata::MongoColMetadata,
@@ -93,10 +93,7 @@ impl MongoCollections {
             .list_database_names(None, None)
             .unwrap()
             .iter()
-            .filter(|db_name| match &db_name_filter_regex {
-                Some(val) => val.is_match(db_name.as_str()),
-                None => true,
-            })
+            .filter(|&db_name| is_match(db_name.as_str(), &db_name_filter_regex))
             .map(|val| CollectionsForDb {
                 database_name: val.to_string(),
                 collection_list: mongo_connection
