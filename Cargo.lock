@@ -2442,7 +2442,6 @@ dependencies = [
  "mongo-odbc-driver",
  "native-windows-derive",
  "native-windows-gui",
- "odbc-sys 0.21.3",
  "windows",
 ]
 

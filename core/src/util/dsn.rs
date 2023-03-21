@@ -119,7 +119,7 @@ impl DSNOpts {
     pub fn from_private_profile_string(&self) -> Result<Self, DSNError> {
         let buffer = &mut [0u16; MAX_VALUE_LENGTH];
         let mut dsn_opts = DSNOpts::default();
-        let mut error = false;
+        let mut error_key = "";
         self.iter().for_each(|(key, _)| {
             let len = unsafe {
                 SQLGetPrivateProfileStringW(
@@ -133,15 +133,16 @@ impl DSNOpts {
             };
 
             if len > MAX_VALUE_LENGTH as i32 {
-                error = true;
+                error_key = key;
+                return;
             }
 
             let value = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
             dsn_opts.set_field(key, &value);
         });
         // Somehow the registry value was too long. This should never happen unless Microsoft changes registry value rules.
-        if error {
-            return Err(DSNError::Generic("If you see this error, please report it. Attempted to read value from registry that was too long.".into()));
+        if !error_key.is_empty() {
+            return Err(DSNError::Generic(format!("If you see this error, please report it. Attempted to read a value from registry that was too long for key: `{error_key}`.")));
         }
         dsn_opts.driver_name = self.driver_name.clone();
         dsn_opts.dsn = self.dsn.clone();

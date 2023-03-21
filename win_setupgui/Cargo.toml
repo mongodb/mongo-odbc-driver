@@ -14,7 +14,6 @@ windows = { version = "0.44.0", features = [
 ] }
 native-windows-gui = "1.0.12"
 native-windows-derive = "1.0.3"
-odbc-sys = "0.21.2"
 constants = { path = "../constants" }
 mongo-odbc-core = { path = "../core" }
 mongo-odbc-driver = { path = "../odbc" }

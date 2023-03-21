@@ -17,7 +17,7 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 
 ///
 /// input_text_to_string_a converts a u8 cstring to a rust String.
-/// It assumes nul termination if the supplied length is negative.
+/// It assumes null termination if the supplied length is negative.
 ///
 /// # Safety
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
@@ -44,7 +44,7 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: usize) -> String {
 
 ///
 /// input_text_to_string_w converts a u16 cstring to a rust String.
-/// It assumes nul termination if the supplied length is negative.
+/// It assumes null termination if the supplied length is negative.
 ///
 /// # Safety
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
