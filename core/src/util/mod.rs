@@ -33,7 +33,6 @@ pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
         "%" | "" => None,
         _ => {
             let filter = regex::escape(filter);
-            dbg!(&filter);
             let filter = NON_ESCAPED_UNDERSCORE.replace_all(&filter, ".");
             let filter = NON_ESCAPED_PERCENT.replace_all(&filter, ".*");
             let filter = &filter.replace("\\\\_", "_").replace("\\\\%", "%");
