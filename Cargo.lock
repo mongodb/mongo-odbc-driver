@@ -1039,6 +1039,7 @@ dependencies = [
  "serde_yaml 0.8.26",
  "thiserror",
  "widechar",
+ "winres",
 ]
 
 [[package]]
@@ -2486,6 +2487,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0120db82e8a1e0b9fb3345a539c478767c0048d842860994d96113d5b667bd69"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "winres"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b68db261ef59e9e52806f688020631e987592bd83619edccda9c47d42cde4f6c"
+dependencies = [
+ "toml 0.5.9",
 ]
 
 [[package]]
