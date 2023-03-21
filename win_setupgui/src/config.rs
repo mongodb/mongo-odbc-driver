@@ -1,5 +1,6 @@
 use crate::gui::config_dsn;
 use cstr::{input_text_to_string_w, parse_attribute_string};
+use file_dbg_macros::*;
 use mongo_odbc_core::util::dsn::DSNOpts;
 use windows::Win32::{
     Foundation::HWND,
@@ -7,7 +8,13 @@ use windows::Win32::{
 };
 
 /// ConfigDSN adds, modifies, or deletes data sources from the system information. It may prompt the user for connection information.
-/// It can be in the driver DLL or a separate setup DLL.
+///
+/// We do not post any errors via SQLPostIntallerErrorW from this function. If the user supplies an invalid DSN via the UI,
+/// we show a message box and allow them to recover. This is better than our competitors who dump all input and return the
+/// user to the beginning of the flow with a simple message that says "Invalid DSN".
+///
+/// Other errors are not queried, and we will return false if any of the other Installer functions return false.
+///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
@@ -37,13 +44,15 @@ unsafe extern "C" fn ConfigDSNW(
                     config_dsn(dsn_opts, request)
                 }
             }
-            ODBC_CONFIG_DSN => {
-                if let Ok(dsn_opts) = dsn_opts.from_private_profile_string() {
-                    config_dsn(dsn_opts, request)
-                } else {
+            ODBC_CONFIG_DSN => match dsn_opts.from_private_profile_string() {
+                Ok(dsn) => config_dsn(dsn, request),
+                Err(e) => {
+                    // we've somehow attempted to read a value from the DSN
+                    // that is longer than the registry allows (at the time of writing!)
+                    dbg_write!(e.to_string());
                     false
                 }
-            }
+            },
             ODBC_REMOVE_DSN => dsn_opts.remove_dsn(),
             _ => unreachable!(),
         }

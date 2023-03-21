@@ -60,7 +60,7 @@ impl DSNOpts {
         server: String,
         driver_name: String,
     ) -> Result<Self, DSNError> {
-        match (
+        let validation = vec![
             DSNOpts::check_value_length(&database),
             unsafe { SQLValidDSNW(to_widechar_ptr(&dsn).0) },
             DSNOpts::check_value_length(&password),
@@ -68,8 +68,9 @@ impl DSNOpts {
             DSNOpts::check_value_length(&user),
             DSNOpts::check_value_length(&server),
             DSNOpts::check_value_length(&driver_name),
-        ) {
-            (true, true, true, true, true, true, true) => Ok(Self {
+        ];
+        if validation.iter().all(|&b| b) {
+            Ok(Self {
                 database,
                 dsn,
                 password,
@@ -77,12 +78,11 @@ impl DSNOpts {
                 user,
                 server,
                 driver_name,
-            }),
-            // SQLValidDSNW can post different errors that we could query for and return
-            // to the user. However, other players such as Postgres and MySql don't bother
-            // checking for error codes and just return false.
-            (_, false, _, _, _, _, _) => Err(DSNError::DSN(dsn)),
-            _ => Err(DSNError::Value),
+            })
+        } else if validation[1] == false {
+            Err(DSNError::DSN(dsn))
+        } else {
+            Err(DSNError::Value)
         }
     }
     pub fn from_attribute_string(attribs: String) -> Option<Self> {
@@ -116,9 +116,10 @@ impl DSNOpts {
         })
     }
 
-    pub fn from_private_profile_string(&self) -> Self {
+    pub fn from_private_profile_string(&self) -> Result<Self, DSNError> {
         let buffer = &mut [0u16; MAX_VALUE_LENGTH];
         let mut dsn_opts = DSNOpts::default();
+        let mut error = false;
         self.iter().for_each(|(key, _)| {
             let len = unsafe {
                 SQLGetPrivateProfileStringW(
@@ -130,12 +131,21 @@ impl DSNOpts {
                     to_widechar_ptr(ODBCINI).0,
                 )
             };
+
+            if len > MAX_VALUE_LENGTH as i32 {
+                error = true;
+            }
+
             let value = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
             dsn_opts.set_field(key, &value);
         });
+        // Somehow the registry value was too long. This should never happen unless Microsoft changes registry value rules.
+        if error {
+            return Err(DSNError::Generic("If you see this error, please report it. Attempted to read value from registry that was too long.".into()));
+        }
         dsn_opts.driver_name = self.driver_name.clone();
         dsn_opts.dsn = self.dsn.clone();
-        dsn_opts
+        Ok(dsn_opts)
     }
 
     fn set_field(&mut self, key: &str, value: &str) {
