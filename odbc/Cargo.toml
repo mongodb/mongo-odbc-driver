@@ -44,3 +44,6 @@ thiserror = "1"
 [lib]
 name = "mongoodbc"
 crate-type = ["cdylib", "lib"]
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
