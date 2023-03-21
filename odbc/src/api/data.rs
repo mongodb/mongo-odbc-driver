@@ -98,7 +98,6 @@ impl IntoCData for Bson {
                 json!({"$uuid": b.to_uuid().unwrap().to_string()})
             }
             Bson::Binary(b) if b.subtype == BinarySubtype::UuidOld => {
-                dbg_write!(format!("ENV UUID_REPR: {:?}", std::env::var(UUID_REPR)));
                 let uuid_repr = match std::env::var(UUID_REPR)
                     .unwrap_or("pythonLegacy".to_string())
                     .as_str()
