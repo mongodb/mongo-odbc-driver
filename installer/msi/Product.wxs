@@ -24,7 +24,7 @@
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFiles64Folder">
                 <Directory Id="MongoDB" Name="MongoDB">
-                    <Directory Id="Project" Name="ODBC">
+                    <Directory Id="Project" Name="Atlas SQL ODBC Driver">
                         <Directory Id="INSTALLLOCATION" Name="!(wix.InstallFolder)">
                             <Directory Id="BIN" Name="bin" />
                         </Directory>
