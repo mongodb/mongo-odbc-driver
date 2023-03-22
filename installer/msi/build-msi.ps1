@@ -19,7 +19,8 @@ $sourceDir = pwd
 $resourceDir = pwd
 $binDir = pwd
 $objDIr = ".\objs\"
-$WixPath = "C:\wixtools\bin\"
+#$WixPath = "C:\wixtools\bin\"
+$WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $wixUiExt = "$WixPath\WixUIExtension.dll"
 
 if (-not ($VersionLabel -match "(\d\.\d).*")) {
