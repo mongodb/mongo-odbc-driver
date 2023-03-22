@@ -25,7 +25,7 @@ unsafe extern "C" fn ConfigDSNW(
     driver: *mut cstr::WideChar,
     attributes: *mut cstr::WideChar,
 ) -> bool {
-    match std::panic::catch_unwind(|| {
+    std::panic::catch_unwind(|| {
         let mut dsn_opts =
             DSNOpts::from_attribute_string(parse_attribute_string(attributes)).unwrap_or_default();
 
@@ -56,8 +56,6 @@ unsafe extern "C" fn ConfigDSNW(
             ODBC_REMOVE_DSN => dsn_opts.remove_dsn(),
             _ => unreachable!(),
         }
-    }) {
-        Ok(result) => result,
-        Err(_) => false,
-    }
+    })
+    .unwrap_or(false)
 }

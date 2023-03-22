@@ -154,10 +154,7 @@ impl ConfigGui {
                     nwg::modal_error_message(
                         &self.window,
                         "Error",
-                        &format!(
-                            "Could not connect with supplied information: {}",
-                            e.to_string()
-                        ),
+                        &format!("Could not connect with supplied information: {e}",),
                     );
                 }
             },

@@ -80,7 +80,7 @@ impl DSNOpts {
                 server,
                 driver_name,
             })
-        } else if validation[1] == false {
+        } else if !validation[1] {
             Err(DSNError::DSN(dsn))
         } else {
             Err(DSNError::Value)
