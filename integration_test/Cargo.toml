@@ -12,7 +12,8 @@ odbc-api = { version = "0.45.1", features = ["narrow"] }
 odbc = "0.17.0"
 lazy_static = "1"
 odbc-sys = { version = "0.21.2", default-features = false }
-widechar = { path = "../widechar" }
+cstr = { path = "../cstr" }
+constants = { path = "../constants" }
 
 [dependencies.mongodb]
 version = "2.3"

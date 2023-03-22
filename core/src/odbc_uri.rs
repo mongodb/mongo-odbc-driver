@@ -9,16 +9,17 @@ const EMPTY_URI_ERROR: &str = "URI must not be empty";
 const INVALID_ATTR_FORMAT_ERROR: &str = "all URI attributes must be of the form keyword=value";
 const MISSING_CLOSING_BRACE_ERROR: &str = "attribute value beginning with '{' must end with '}'";
 
-const DATABASE: &str = "database";
-const DRIVER: &str = "driver";
-const DSN: &str = "dsn";
-const PASSWORD: &str = "password";
-const PWD: &str = "pwd";
-const SERVER: &str = "server";
-const USER: &str = "user";
-const UID: &str = "uid";
-const URI: &str = "uri";
-const APPNAME: &str = "appname";
+pub const DATABASE: &str = "database";
+pub const DRIVER: &str = "driver";
+pub const DSN: &str = "dsn";
+pub const PASSWORD: &str = "password";
+pub const PWD: &str = "pwd";
+pub const SERVER: &str = "server";
+pub const USER: &str = "user";
+pub const UID: &str = "uid";
+pub const URI: &str = "uri";
+pub const APPNAME: &str = "appname";
+pub const LOGPATH: &str = "logpath";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
@@ -29,7 +30,7 @@ const SERVER_KWS: &[&str] = &[SERVER];
 
 lazy_static! {
     static ref KEYWORDS: RegexSet = RegexSetBuilder::new(
-        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME]
+        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME, LOGPATH]
             .into_iter()
             .map(|x| "^".to_string() + x + "$")
             .collect::<Vec<_>>()
@@ -45,6 +46,14 @@ lazy_static! {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ODBCUri<'a>(HashMap<String, &'a str>);
+
+impl<'a> std::ops::Deref for ODBCUri<'a> {
+    type Target = HashMap<String, &'a str>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl<'a> ODBCUri<'a> {
     pub fn new(odbc_uri: &'a str) -> Result<ODBCUri<'a>> {

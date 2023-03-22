@@ -1,18 +1,19 @@
 mod unit {
     use crate::{
-        api::{data::input_wtext_to_string, definitions::ConnectionAttribute},
+        api::definitions::ConnectionAttribute,
         errors::ODBCError,
         handles::definitions::{Connection, ConnectionAttributes, ConnectionState, MongoHandle},
         util::connection_attribute_to_string,
         SQLGetConnectAttrW, SQLSetConnectAttrW,
     };
+    use cstr::input_text_to_string_w;
     use odbc_sys::{Integer, Pointer, SqlReturn, UInteger};
     use std::sync::RwLock;
 
     mod get {
         use std::mem::size_of;
 
-        use widechar::WideChar;
+        use cstr::WideChar;
 
         use super::*;
 
@@ -66,7 +67,7 @@ mod unit {
     }
 
         unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String {
-            input_wtext_to_string(
+            input_text_to_string_w(
                 value_ptr as *const _,
                 out_length / std::mem::size_of::<WideChar>(),
             )

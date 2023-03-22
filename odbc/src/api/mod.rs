@@ -7,7 +7,7 @@ pub use functions::*;
 mod col_attr_describe_tests;
 #[cfg(test)]
 mod connect_attr_tests;
-mod data;
+pub(crate) mod data;
 #[cfg(test)]
 mod data_tests;
 #[cfg(test)]

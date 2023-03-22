@@ -7,6 +7,7 @@ use crate::{
 };
 use bson::{spec::BinarySubtype, Bson};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
+use cstr::WideChar;
 use file_dbg_macros::{dbg_write, msg_to_file};
 use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{
@@ -15,7 +16,6 @@ use odbc_sys::{
 use regex::Regex;
 use serde_json::{json, Value};
 use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
-use widechar::WideChar;
 
 const DOUBLE: &str = "Double";
 const INT32: &str = "Int32";
@@ -836,7 +836,7 @@ pub unsafe fn format_bson_data(
             )
         }
         CDataType::SQL_C_WCHAR => {
-            let data = widechar::to_widechar_vec(&data.to_json());
+            let data = cstr::to_widechar_vec(&data.to_json());
             char_data!(
                 mongo_handle,
                 col_num,
@@ -941,61 +941,6 @@ pub unsafe fn format_bson_data(
             SqlReturn::ERROR
         }
     }
-}
-
-///
-/// input_text_to_string converts an input cstring to a rust String.
-/// It assumes nul termination if the supplied length is negative.
-///
-/// # Safety
-/// This converts raw C-pointers to rust Strings, which requires unsafe operations
-///
-#[allow(clippy::uninit_vec)]
-pub unsafe fn input_text_to_string(text: *const Char, len: usize) -> String {
-    if (len as isize) < 0 {
-        let mut dst = Vec::new();
-        let mut itr = text;
-        {
-            while *itr != 0 {
-                dst.push(*itr);
-                itr = itr.offset(1);
-            }
-        }
-        return String::from_utf8_unchecked(dst);
-    }
-
-    let mut dst = Vec::with_capacity(len);
-    dst.set_len(len);
-    copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-    String::from_utf8_unchecked(dst)
-}
-
-///
-/// input_wtext_to_string converts an input cstring to a rust String.
-/// It assumes nul termination if the supplied length is negative.
-///
-/// # Safety
-/// This converts raw C-pointers to rust Strings, which requires unsafe operations
-///
-#[allow(clippy::uninit_vec)]
-pub unsafe fn input_wtext_to_string(text: *const WideChar, len: usize) -> String {
-    use widechar::from_widechar_vec_lossy;
-    if (len as isize) < 0 {
-        let mut dst = Vec::new();
-        let mut itr = text;
-        {
-            while *itr != 0 {
-                dst.push(*itr);
-                itr = itr.offset(1);
-            }
-        }
-        return from_widechar_vec_lossy(dst);
-    }
-
-    let mut dst = Vec::with_capacity(len);
-    dst.set_len(len);
-    copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-    from_widechar_vec_lossy(dst)
 }
 
 ///
@@ -1116,7 +1061,7 @@ pub mod i16_len {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = widechar::to_widechar_vec(message);
+        let message = cstr::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(
             &message,
             output_ptr as *mut WideChar,
@@ -1144,7 +1089,7 @@ pub mod i16_len {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = widechar::to_widechar_vec(message);
+        let message = cstr::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len);
         // Only copy the length if the pointer is not null
         if !text_length_ptr.is_null() {
@@ -1218,7 +1163,7 @@ pub mod i32_len {
         text_length_ptr: *mut Integer,
     ) -> SqlReturn {
         let (len, ret) = set_output_wstring_helper(
-            &widechar::to_widechar_vec(message),
+            &cstr::to_widechar_vec(message),
             output_ptr as *mut WideChar,
             buffer_len / size_of::<WideChar>(),
         );

@@ -13,9 +13,9 @@ mod integration {
         SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, USmallInt,
     };
 
+    use cstr::WideChar;
     use std::ptr::null_mut;
     use std::slice;
-    use widechar::WideChar;
 
     const BUFFER_LENGTH: SmallInt = 300;
 
@@ -160,7 +160,7 @@ mod integration {
 
             // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
             in_connection_string = generate_default_connection_str();
-            let mut in_connection_string_encoded = widechar::to_widechar_vec(&in_connection_string);
+            let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
@@ -186,7 +186,7 @@ mod integration {
             );
 
             output_len = *str_len_ptr;
-            out_connection_string = widechar::from_widechar_ref_lossy(slice::from_raw_parts(
+            out_connection_string = cstr::from_widechar_ref_lossy(slice::from_raw_parts(
                 out_connection_string_buff,
                 output_len as usize,
             ));
