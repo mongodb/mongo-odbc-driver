@@ -136,9 +136,9 @@ mod unit {
         search_pattern_escape,
         info_type = InfoType::SQL_SEARCH_PATTERN_ESCAPE as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = size_of::<WideChar>() as i16,
-        expected_length = 0,
-        expected_value = "",
+        buffer_length = 3 * size_of::<WideChar>() as i16,
+        expected_length = 2,
+        expected_value = r"\",
         actual_value_modifier = modify_string_value,
     );
 

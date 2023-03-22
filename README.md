@@ -42,3 +42,57 @@ Open the Microsoft ODBC Administrator (64-bit) and verify that "MongoDB Atlas SQ
 
 ### 32-bit
 Follow the validation steps listed in the 64-bit section, but make sure to use the 32-bit Microsoft ODBC Administrator. Additionally, the registry keys should be listed under `HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC` instead of `HKEY_LOCAL_MACHINE\SOFTWARE\ODBC`, and the dll path must point to the 32-bit version of the driver.
+
+\<document field access expression\> ::= [\<compound identifier\>](#identifiers) \| [\<expression\>](#expressions) \".\" [\<compound identifier\>](#identifiers)</br>
+
+## Unsupported Functions
+
+The following ODBC functions are currently not supported by the driver. Note that some unsupported ANSI functions have Unicode analogs. If the version of the function suffixed with 'W', e.g., `SQLTablesW`, is not mentioned, the Unicode version is either supported or may be supported in the future.
+
+| function |
+| --- |
+| SQLBindParameter |
+| SQLBrowseConnect |
+| SQLBulkOperations |
+| SQLColAttribute |
+| SQLColumnPrivileges |
+| SQLCompleteAsync |
+| SQLConnect |
+| SQLConnectW |
+| SQLCopyDesc |
+| SQLDataSources |
+| SQLDataSourcesW |
+| SQLDescribeCol |
+| SQLDescribeParam |
+| SQLDrivers |
+| SQLDriversW |
+| SQLExecute |
+| SQLGetConnectAttr |
+| SQLGetCursorName |
+| SQLGetDescField |
+| SQLGetDescFieldW |
+| SQLGetDescRec |
+| SQLGetDescRecW |
+| SQLGetDiagField |
+| SQLGetEnvAttr |
+| SQLGetInfo |
+| SQLGetStmtAttr |
+| SQLNativeSql |
+| SQLNumParams |
+| SQLParamData |
+| SQLPrepare |
+| SQLPrepareW |
+| SQLProcedureColumns |
+| SQLProcedureColumnsW |
+| SQLProcedures |
+| SQLProceduresW |
+| SQLPutData |
+| SQLSetConnectAttr |
+| SQLSetCursorName |
+| SQLSetDescField |
+| SQLSetPos |
+| SQLSetStmtAttr |
+| SQLSpecialColumns |
+| SQLStatistics |
+| SQLTablePrivileges |
+| SQLTables |
