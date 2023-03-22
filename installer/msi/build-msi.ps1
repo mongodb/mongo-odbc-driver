@@ -14,7 +14,7 @@ Param(
 
 $ErrorActionPreference = 'Stop'
 
-$ProjectName = "Atlas SQL ODBC"
+$ProjectName = "Atlas SQL ODBC 0.1"
 $sourceDir = pwd
 $resourceDir = pwd
 $binDir = pwd
