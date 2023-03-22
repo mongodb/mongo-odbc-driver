@@ -74,6 +74,7 @@ pub struct ConfigGui {
     // #[nwg_layout_item(layout: grid,  row: 6, col: 3, col_span: 6)]
     // log_path_input: nwg::TextInput,
     #[nwg_control(flags: "VISIBLE", text: "Test")]
+    #[nwg_events( OnButtonClick: [ConfigGui::test_connection] )]
     #[nwg_layout_item(layout: grid,  row: 10, col: 0, col_span: 1)]
     test_button: nwg::Button,
 
@@ -107,6 +108,60 @@ impl ConfigGui {
 
     fn close_cancel(&self) {
         nwg::stop_thread_dispatch();
+    }
+
+    fn test_connection(&self) {
+        let dsn_opts = DSNOpts::new(
+            self.database_input.text(),
+            self.dsn_input.text(),
+            self.password_input.text(),
+            self.mongodb_uri_input.text(),
+            self.user_input.text(),
+            "".to_string(),
+            self.driver_name.text(),
+        );
+        match (
+            self.database_input.text().is_empty(),
+            self.dsn_input.text().is_empty(),
+            self.password_input.text().is_empty(),
+            self.mongodb_uri_input.text().is_empty(),
+            self.user_input.text().is_empty(),
+        ) {
+            (false, false, false, false, false) => {}
+            _ => {
+                nwg::modal_error_message(
+                    &self.window,
+                    "Error",
+                    "All fields are required and cannot be empty.",
+                );
+                return;
+            }
+        }
+
+        match dsn_opts {
+            Err(e) => {
+                nwg::modal_error_message(&self.window, "Error", &e.to_string());
+            }
+            Ok(opts) => match opts.test_connection() {
+                Ok(_) => {
+                    nwg::modal_info_message(
+                        &self.window,
+                        "Success",
+                        "Connected successfully with supplied information.",
+                    );
+                }
+                Err(e) => {
+                    nwg::modal_error_message(
+                        &self.window,
+                        "Error",
+                        &format!(
+                            "Could not connect with supplied information: {}",
+                            e.to_string()
+                        ),
+                    );
+                }
+            },
+        }
     }
 
     // SQL-1281
