@@ -24,6 +24,11 @@ $objDIr = ".\objs\"
 $WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $wixUiExt = "$WixPath\WixUIExtension.dll"
 
+if ($VersionLabel -eq "snapshot") {
+    # We use 0.1.0 as the default for a snapshot because Windows seems to think a newer version is installed if
+    # 0.0.0 is used even when nothing is installed.
+    $VersionLabel = "0.1.0"
+}
 if (-not ($VersionLabel -match "(\d\.\d).*")) {
     throw "invalid version specified: $VersionLabel"
 }
