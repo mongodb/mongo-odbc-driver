@@ -110,16 +110,7 @@ impl ConfigGui {
         nwg::stop_thread_dispatch();
     }
 
-    fn test_connection(&self) {
-        let dsn_opts = DSNOpts::new(
-            self.database_input.text(),
-            self.dsn_input.text(),
-            self.password_input.text(),
-            self.mongodb_uri_input.text(),
-            self.user_input.text(),
-            "".to_string(),
-            self.driver_name.text(),
-        );
+    fn validate_input(&self) -> Option<DSNOpts> {
         match (
             self.database_input.text().is_empty(),
             self.dsn_input.text().is_empty(),
@@ -134,15 +125,29 @@ impl ConfigGui {
                     "Error",
                     "All fields are required and cannot be empty.",
                 );
-                return;
+                return None;
             }
         }
-
-        match dsn_opts {
+        match DSNOpts::new(
+            self.database_input.text(),
+            self.dsn_input.text(),
+            self.password_input.text(),
+            self.mongodb_uri_input.text(),
+            self.user_input.text(),
+            "".to_string(),
+            self.driver_name.text(),
+        ) {
             Err(e) => {
                 nwg::modal_error_message(&self.window, "Error", &e.to_string());
+                None
             }
-            Ok(opts) => match opts.test_connection() {
+            Ok(opts) => Some(opts),
+        }
+    }
+
+    fn test_connection(&self) {
+        if let Some(opts) = self.validate_input() {
+            match opts.test_connection() {
                 Ok(_) => {
                     nwg::modal_info_message(
                         &self.window,
@@ -157,10 +162,35 @@ impl ConfigGui {
                         &format!("Could not connect with supplied information: {e}",),
                     );
                 }
-            },
+            }
         }
     }
 
+    fn set_keys(&self) {
+        if let Some(dsn_opts) = self.validate_input() {
+            match dsn_opts.write_dsn_to_registry() {
+                true => {
+                    nwg::modal_info_message(
+                        &self.window,
+                        "Success",
+                        &format!(
+                            "DSN {dsn} {verbed} successfully",
+                            dsn = dsn_opts.dsn,
+                            verbed = self.operation.borrow().1
+                        ),
+                    );
+                    self.close_ok();
+                }
+                false => {
+                    nwg::modal_error_message(
+                        &self.window,
+                        "Error",
+                        &format!("Could not {verb} DSN", verb = self.operation.borrow().0),
+                    );
+                }
+            }
+        }
+    }
     // SQL-1281
     // fn open_dir_picker(&self) {
     //     if let Ok(d) = std::env::current_dir() {
@@ -198,45 +228,6 @@ impl ConfigGui {
             if dialog_result == "Confirm" {
                 self.set_keys();
             }
-        }
-    }
-
-    fn set_keys(&self) {
-        let dsn_opts = DSNOpts::new(
-            self.database_input.text(),
-            self.dsn_input.text(),
-            self.password_input.text(),
-            self.mongodb_uri_input.text(),
-            self.user_input.text(),
-            "".to_string(),
-            self.driver_name.text(),
-        );
-
-        match dsn_opts {
-            Err(e) => {
-                nwg::modal_error_message(&self.window, "Error", &e.to_string());
-            }
-            Ok(dsn_opts) => match dsn_opts.write_dsn_to_registry() {
-                true => {
-                    nwg::modal_info_message(
-                        &self.window,
-                        "Success",
-                        &format!(
-                            "DSN {dsn} {verbed} successfully",
-                            dsn = dsn_opts.dsn,
-                            verbed = self.operation.borrow().1
-                        ),
-                    );
-                    self.close_ok();
-                }
-                false => {
-                    nwg::modal_error_message(
-                        &self.window,
-                        "Error",
-                        &format!("Could not {verb} DSN", verb = self.operation.borrow().0),
-                    );
-                }
-            },
         }
     }
 }
