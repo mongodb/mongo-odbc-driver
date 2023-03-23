@@ -14,14 +14,14 @@ Param(
 
 $ErrorActionPreference = 'Stop'
 
-$ProjectName = "Atlas SQL ODBC 0.1"
+$ProjectName = "Atlas SQL ODBC"
 $sourceDir = pwd
 $resourceDir = pwd
 $binDir = pwd
 $objDIr = ".\objs\"
-$WixPath = "C:\wixtools\bin\"
+#$WixPath = "C:\wixtools\bin\"
 # for local building, most installations will be in the directory below
-#$WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
+$WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $wixUiExt = "$WixPath\WixUIExtension.dll"
 
 if (-not ($VersionLabel -match "(\d\.\d).*")) {

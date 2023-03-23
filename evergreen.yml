@@ -233,6 +233,7 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           cp target/release/*.dll installer/msi
+          cp ./README.md installer/msi
           cd installer/msi
           # unfortunately, using a variable to hold the path to powershell
           # seems to not work properly with evergreen's bash
@@ -243,9 +244,9 @@ functions:
               -ExecutionPolicy ByPass\
               -File ./build-msi.ps1\
               -Arch x64\
-              -VersionLabel '0.1.0'
+              -VersionLabel "$RELEASE_VERSION"
 
-  "mciuploads release build and symbols":
+  "mciuploads release build and artifacts":
     - command: s3.put
       params:
         build_variants:
@@ -302,7 +303,7 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
 
-  "mciuploads debug build and symbols":
+  "mciuploads debug build and artifacts":
     - command: s3.put
       params:
         build_variants:
@@ -890,7 +891,7 @@ tasks:
       - func: "compile release"
       - func: "build msi"
         variants: [windows-64]
-      - func: "mciuploads release build and symbols"
+      - func: "mciuploads release build and artifacts"
 
   - name: compile-debug
     commands:
@@ -898,7 +899,7 @@ tasks:
         variants: [ubuntu2204]
       - func: "set packages version"
       - func: "compile debug"
-      - func: "mciuploads debug build and symbols"
+      - func: "mciuploads debug build and artifacts"
 
   - name: windows-unit-test
     commands:

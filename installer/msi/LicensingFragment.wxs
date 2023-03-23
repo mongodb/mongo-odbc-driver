@@ -11,8 +11,8 @@
       </Component>
       <Component Id="c_Readme" Guid="f40564ba-a569-4567-895b-f720b816638b">
         <File Id="f_Readme"
-              Name="README.rtf"
-              Source="$(var.SourceDir)\README.rtf"
+              Name="README.md"
+              Source="$(var.SourceDir)\README.md"
               DiskId ="1"/>
       </Component>
     </DirectoryRef>
