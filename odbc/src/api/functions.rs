@@ -10,13 +10,13 @@ use crate::{
     handles::definitions::*,
     trace_odbc,
 };
-use ::function_name::named;
 use bson::Bson;
 use constants::{
     DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
     SQL_ALL_TABLE_TYPES,
 };
 use file_dbg_macros::{dbg_write, msg_to_file};
+use function_name::named;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
@@ -2209,6 +2209,9 @@ unsafe fn sql_get_env_attrw_helper(
             EnvironmentAttribute::SQL_ATTR_CP_MATCH => {
                 *(value_ptr as *mut CpMatch) = env.attributes.read().unwrap().cp_match;
             }
+            EnvironmentAttribute::SQL_ATTR_DRIVER_UNICODE_TYPE => {
+                *(value_ptr as *mut CharSet) = env.attributes.read().unwrap().unicode_type;
+            }
         }
     }
     SqlReturn::SUCCESS
@@ -3409,6 +3412,7 @@ unsafe fn set_connect_attrw_helper(
                 conn.attributes.write().unwrap().login_timeout = Some(value_ptr as u32);
                 SqlReturn::SUCCESS
             }
+            ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => SqlReturn::SUCCESS,
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
                     connection_attribute_to_string(attribute),
@@ -3620,6 +3624,18 @@ unsafe fn sql_set_env_attrw_helper(
                     env_handle.add_diag_info(ODBCError::OptionValueChanged(
                         "SQL_ATTR_CP_MATCH",
                         "SQL_CP_STRICT_MATCH",
+                    ));
+                    SqlReturn::SUCCESS_WITH_INFO
+                }
+            }
+        }
+        EnvironmentAttribute::SQL_ATTR_DRIVER_UNICODE_TYPE => {
+            match FromPrimitive::from_i32(value_ptr as i32) {
+                Some(CharSet::Utf16) => SqlReturn::SUCCESS,
+                _ => {
+                    env_handle.add_diag_info(ODBCError::OptionValueChanged(
+                        "SQL_ATTR_DRIVER_UNICODE_TYPE",
+                        "SQL_DM_CP_UTF16",
                     ));
                     SqlReturn::SUCCESS_WITH_INFO
                 }

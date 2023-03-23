@@ -11,7 +11,6 @@ authors = [
 edition = "2021"
 
 [dependencies]
-odbc-sys = "0.21.2"
 thiserror = "1"
 lazy_static = "1.4.0"
 num-traits = "0.2.14"
@@ -25,6 +24,11 @@ widechar = { path = "../widechar" }
 function_name = "0.3.0"
 serde_json = "1.0.68"
 
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+odbc-sys = "0.21.2"
+[target.'cfg(target_os = "macos")'.dependencies]
+odbc-sys = { version = "0.21.2", default-features = false, features = ["iodbc"]}
+
 [dependencies.mongodb]
 version = "2.3"
 default-features = false
@@ -36,7 +40,6 @@ features = ["chrono-0_4"]
 
 
 [dev-dependencies]
-odbc = "0.17.0"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.8.21"
 thiserror = "1"

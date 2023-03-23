@@ -1,6 +1,24 @@
-use odbc_sys::{Handle, HandleType, SQLGetDiagRecW, SqlReturn};
+use odbc_sys::{
+    AttrOdbcVersion, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle,
+    HandleType, SQLAllocHandle, SQLDriverConnectW, SQLGetDiagRecW, SQLSetEnvAttr, SmallInt,
+    SqlReturn, NTS,
+};
+use std::ptr::null_mut;
 use std::{env, slice};
+use thiserror::Error;
 use widechar::WideChar;
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum Error {
+    #[error("failed to allocate handle, SqlReturn: {0}")]
+    HandleAllocation(String),
+    #[error("failed to set environment attribute, SqlReturn: {0}")]
+    SetEnvAttr(String),
+    #[error("failed to connect SqlReturn: {0}, Diagnostics{1}")]
+    DriverConnect(String, String),
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// Generate the default connection setting defined for the tests using a connection string
 /// of the form 'Driver={};PWD={};USER={};SERVER={}'.
@@ -71,4 +89,82 @@ pub fn sql_return_to_string(return_code: SqlReturn) -> String {
             format!("{return_code:?}")
         }
     }
+}
+
+#[allow(dead_code)]
+// Allocates new environment variable
+pub fn allocate_env() -> Result<HEnv> {
+    let mut env: Handle = null_mut();
+
+    unsafe {
+        match SQLAllocHandle(HandleType::Env, null_mut(), &mut env as *mut Handle) {
+            SqlReturn::SUCCESS => (),
+            sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
+        }
+        match SQLSetEnvAttr(
+            env as HEnv,
+            EnvironmentAttribute::OdbcVersion,
+            AttrOdbcVersion::Odbc3.into(),
+            0,
+        ) {
+            SqlReturn::SUCCESS => (),
+            sql_return => return Err(Error::SetEnvAttr(sql_return_to_string(sql_return))),
+        }
+    }
+    Ok(env as HEnv)
+}
+
+#[allow(dead_code)]
+// Connects to database with provided connection string
+pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) -> Result<HDbc> {
+    // Allocate a DBC handle
+    let mut dbc: Handle = null_mut();
+    unsafe {
+        match SQLAllocHandle(
+            HandleType::Dbc,
+            env_handle as *mut _,
+            &mut dbc as *mut Handle,
+        ) {
+            SqlReturn::SUCCESS => (),
+            sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
+        }
+
+        let mut in_connection_string_encoded = widechar::to_widechar_vec(&in_connection_string);
+        in_connection_string_encoded.push(0);
+
+        let str_len_ptr = &mut 0;
+
+        match SQLDriverConnectW(
+            dbc as HDbc,
+            null_mut(),
+            in_connection_string_encoded.as_ptr(),
+            NTS as SmallInt,
+            null_mut(),
+            0,
+            str_len_ptr,
+            DriverConnectOption::NoPrompt,
+        ) {
+            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => (),
+            sql_return => {
+                return Err(Error::DriverConnect(
+                    sql_return_to_string(sql_return),
+                    get_sql_diagnostics(HandleType::Dbc, dbc),
+                ))
+            }
+        }
+    }
+    Ok(dbc as HDbc)
+}
+
+#[allow(dead_code)]
+// Allocate statement from connection handle
+pub fn allocate_statement(dbc: HDbc) -> Result<HStmt> {
+    let mut stmt: Handle = null_mut();
+    unsafe {
+        match SQLAllocHandle(HandleType::Stmt, dbc as *mut _, &mut stmt as *mut Handle) {
+            SqlReturn::SUCCESS => (),
+            sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
+        }
+    }
+    Ok(stmt as HStmt)
 }
