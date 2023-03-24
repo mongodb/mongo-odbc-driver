@@ -250,7 +250,7 @@ functions:
               -Arch x64\
               -VersionLabel "$VERSION"
 
-  "mciuploads release build and artifacts":
+  "mciuploads release artifacts":
     - command: s3.put
       params:
         build_variants:
@@ -307,7 +307,7 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
 
-  "mciuploads debug build and artifacts":
+  "mciuploads debug artifacts":
     - command: s3.put
       params:
         build_variants:
@@ -895,7 +895,7 @@ tasks:
       - func: "compile release"
       - func: "build msi"
         variants: [windows-64]
-      - func: "mciuploads release build and artifacts"
+      - func: "mciuploads release artifacts"
 
   - name: compile-debug
     commands:
@@ -903,7 +903,7 @@ tasks:
         variants: [ubuntu2204]
       - func: "set packages version"
       - func: "compile debug"
-      - func: "mciuploads debug build and artifacts"
+      - func: "mciuploads debug artifacts"
 
   - name: windows-unit-test
     commands:
