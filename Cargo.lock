@@ -1861,7 +1861,7 @@ dependencies = [
 
 [[package]]
 name = "shared_sql_utils"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "cstr",
  "thiserror",
