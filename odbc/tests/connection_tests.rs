@@ -63,8 +63,8 @@ macro_rules! test_connection_diagnostics {
 
 mod integration {
     use crate::common::verify_sql_diagnostics;
+    use atsql::{SQLAllocHandle, SQLDriverConnectW};
     use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
-    use mongoodbc::{SQLAllocHandle, SQLDriverConnectW};
     use odbc_sys::{DriverConnectOption, Handle, HandleType, SqlReturn};
     use std::ptr::null_mut;
 

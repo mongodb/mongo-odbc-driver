@@ -23,5 +23,5 @@ shared_sql_utils = { path = "../shared_sql_utils" }
 thiserror = "1"
 
 [lib]
-name = "mongoodbc_s"
+name = "atsqls"
 crate-type = ["cdylib", "lib"]

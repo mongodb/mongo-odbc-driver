@@ -1,4 +1,4 @@
-use mongoodbc::SQLGetDiagRecW;
+use atsql::SQLGetDiagRecW;
 use odbc_sys::{Handle, HandleType};
 
 // Verifies that the expected SQL State, message text, and native error in the handle match
