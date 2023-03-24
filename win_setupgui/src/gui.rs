@@ -9,7 +9,7 @@ use shared_sql_utils::DSNOpts;
 use std::{cell::RefCell, thread};
 use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
 
-#[link(name = "atsql.dll", kind = "dylib")]
+#[link(name = "atsql", kind = "raw-dylib")]
 extern "C" {
     fn atlas_sql_test_connection(
         connection_string: *const u16,
