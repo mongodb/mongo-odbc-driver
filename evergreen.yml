@@ -236,9 +236,6 @@ functions:
           cp ./README.md installer/msi
           cd installer/msi
           VERSION="$RELEASE_VERSION"
-          if [ "$VERSION"="snapshot" ]; then
-              VERSION=0.0.0
-          fi
           # unfortunately, using a variable to hold the path to powershell
           # seems to not work properly with evergreen's bash
           /cygdrive/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\
