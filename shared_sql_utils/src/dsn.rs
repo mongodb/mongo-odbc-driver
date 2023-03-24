@@ -20,7 +20,7 @@ const MAX_VALUE_LENGTH: usize = 16383;
 #[derive(Error, Debug)]
 pub enum DSNError {
     #[error("Invalid DSN: {}\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", .0)]
-    DSN(String),
+    Dsn(String),
     #[error(
         "The maximum length of an allowed registry value is {} characters.",
         MAX_VALUE_LENGTH
@@ -73,7 +73,7 @@ impl DSNOpts {
                 driver_name,
             })
         } else if !validation[1] {
-            Err(DSNError::DSN(dsn))
+            Err(DSNError::Dsn(dsn))
         } else {
             Err(DSNError::Value)
         }
@@ -84,11 +84,7 @@ impl DSNOpts {
         attribute_string.split(';').for_each(|pair| {
             let mut key_value = pair.split('=');
             let key = key_value.next().unwrap_or("");
-            let value = key_value
-                .next()
-                .unwrap_or("")
-                .replace("{", "")
-                .replace("}", "");
+            let value = key_value.next().unwrap_or("").replace(['{', '}'], "");
             dsn_opts.set_field(key, &value);
         });
         dsn_opts
