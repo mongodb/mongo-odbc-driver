@@ -1,8 +1,10 @@
 use crate::err::{Error, Result};
 use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
+use file_dbg_macros::*;
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
+use shared_sql_utils::DSNOpts;
 use std::collections::HashMap;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
@@ -45,35 +47,46 @@ lazy_static! {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct ODBCUri<'a>(HashMap<String, &'a str>);
+pub struct ODBCUri(HashMap<String, String>);
 
-impl<'a> std::ops::Deref for ODBCUri<'a> {
-    type Target = HashMap<String, &'a str>;
+impl std::ops::Deref for ODBCUri {
+    type Target = HashMap<String, String>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<'a> ODBCUri<'a> {
-    pub fn new(odbc_uri: &'a str) -> Result<ODBCUri<'a>> {
+impl ODBCUri {
+    pub fn new(odbc_uri: String) -> Result<ODBCUri> {
         if odbc_uri.is_empty() {
             return Err(Error::InvalidUriFormat(EMPTY_URI_ERROR.to_string()));
         }
+        let mut ret = ODBCUri::process_uri(odbc_uri.clone())?;
+        if ret.get(DSN).is_some() {
+            dbg_write!(format!("DSN: {}", ret.get(DSN).unwrap()));
+            let mut dsn_opts = DSNOpts::from_attribute_string(&odbc_uri);
+            dsn_opts = dsn_opts.from_private_profile_string().unwrap();
+            ret = ODBCUri::process_uri(dsn_opts.to_connection_string())?;
+        }
+        Ok(ret)
+    }
+
+    fn process_uri(odbc_uri: String) -> Result<ODBCUri> {
         let mut input = odbc_uri;
         let mut ret = ODBCUri(HashMap::new());
-        while let Some((keyword, value, rest)) = ODBCUri::get_next_attribute(input)? {
+        while let Some((keyword, value, rest)) = ODBCUri::get_next_attribute(input.into())? {
             // if attributes are repeated, the first is the one that is kept.
-            ret.0.entry(keyword).or_insert(value);
+            ret.0.entry(keyword).or_insert(value.into());
             if rest.is_none() {
-                return Ok(ret);
+                break;
             }
             input = rest.unwrap();
         }
         Ok(ret)
     }
 
-    fn get_next_attribute(odbc_uri: &'a str) -> Result<Option<(String, &'a str, Option<&'a str>)>> {
+    fn get_next_attribute(odbc_uri: String) -> Result<Option<(String, String, Option<String>)>> {
         // clean up any extra semi-colons
         let index = odbc_uri.find(|c| c != ';');
         // these are just trailing semis on the URI
@@ -102,10 +115,10 @@ impl<'a> ODBCUri<'a> {
         } else {
             ODBCUri::handle_unbraced_value(rest)?
         };
-        Ok(Some((keyword.to_lowercase(), value, rest)))
+        Ok(Some((keyword.to_lowercase(), value.into(), rest)))
     }
 
-    fn handle_braced_value(input: &'a str) -> Result<(&'a str, Option<&'a str>)> {
+    fn handle_braced_value(input: &str) -> Result<(String, Option<String>)> {
         let mut after_brace = false;
         // This is a simple two state state machine. Either the previous character was '}'
         // or it is not. When the previous character was '}' and we have reached the end
@@ -117,11 +130,11 @@ impl<'a> ODBCUri<'a> {
                 if rest.unwrap() == "" {
                     rest = None;
                 }
-                return Ok((input.get(0..i - 1).unwrap(), rest));
+                return Ok((input.get(0..i - 1).unwrap().into(), rest.map(String::from)));
             }
             if c == '}' {
                 if i + 1 == input.len() {
-                    return Ok((input.get(0..i).unwrap(), None));
+                    return Ok((input.get(0..i).unwrap().into(), None));
                 }
                 after_brace = true
             } else {
@@ -133,21 +146,21 @@ impl<'a> ODBCUri<'a> {
         ))
     }
 
-    fn handle_unbraced_value(input: &'a str) -> Result<(&'a str, Option<&'a str>)> {
+    fn handle_unbraced_value(input: &str) -> Result<(String, Option<String>)> {
         let index = input.find(';');
         if index.is_none() {
-            return Ok((input, None));
+            return Ok((input.into(), None));
         }
         let (value, rest) = input.split_at(index.unwrap());
         if rest.len() == 1 {
-            return Ok((value, None));
+            return Ok((value.into(), None));
         }
-        Ok((value, rest.get(1..)))
+        Ok((value.into(), rest.get(1..).map(String::from)))
     }
 
     // remove will remove the first value with a given one of the names passed, assuming all names
     // are synonyms.
-    pub fn remove(&mut self, names: &[&str]) -> Option<&'a str> {
+    pub fn remove(&mut self, names: &[&str]) -> Option<String> {
         for name in names.iter() {
             let ret = self.0.remove(&name.to_string());
             if ret.is_some() {
@@ -158,7 +171,7 @@ impl<'a> ODBCUri<'a> {
     }
 
     // remove_or_else is the same as remove but with a default thunk.
-    pub fn remove_or_else(&mut self, f: impl Fn() -> &'a str, names: &[&str]) -> &'a str {
+    pub fn remove_or_else(&mut self, f: impl Fn() -> String, names: &[&str]) -> String {
         self.remove(names).unwrap_or_else(f)
     }
 
@@ -166,7 +179,7 @@ impl<'a> ODBCUri<'a> {
     // the caller. It accepts a slice of names that will be checked in order for names that are
     // synonyms (e.g., uid and user are both viable attribute names for a user). If both names
     // exist, it will only find the first.
-    fn remove_mandatory_attribute(&mut self, names: &[&str]) -> Result<&'a str> {
+    fn remove_mandatory_attribute(&mut self, names: &[&str]) -> Result<String> {
         self.remove(names).ok_or_else(|| {
             if names.len() == 1 {
                 Error::InvalidUriFormat(format!(
@@ -186,7 +199,7 @@ impl<'a> ODBCUri<'a> {
     pub fn try_into_client_options(&mut self) -> Result<ClientOptions> {
         let uri = self.remove(URI_KWS);
         if let Some(uri) = uri {
-            return self.handle_uri(uri);
+            return self.handle_uri(&uri);
         }
         self.handle_no_uri()
     }
@@ -219,8 +232,8 @@ impl<'a> ODBCUri<'a> {
 
     fn set_server_and_source(
         mut opts: &mut ClientOptions,
-        server: Option<&str>,
-        source: Option<&str>,
+        server: Option<String>,
+        source: Option<String>,
     ) -> Result<()> {
         // server should supercede that specified in the uri, if specified.
         if let Some(server) = server {
@@ -262,7 +275,7 @@ impl<'a> ODBCUri<'a> {
                     .build(),
             );
         }
-        Self::set_server_and_source(&mut client_options, server, source)?;
+        Self::set_server_and_source(&mut client_options, server, source.map(String::from))?;
         client_options.app_name = client_options.app_name.or(self.handle_app_name());
         Ok(client_options)
     }
@@ -303,8 +316,10 @@ mod unit {
         fn get_unbraced() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("driver".to_string(), "foo", None),
-                ODBCUri::get_next_attribute("DRIVER=foo").unwrap().unwrap(),
+                ("driver".to_string(), "foo".into(), None),
+                ODBCUri::get_next_attribute("DRIVER=foo".into())
+                    .unwrap()
+                    .unwrap(),
             );
         }
 
@@ -312,8 +327,8 @@ mod unit {
         fn get_braced() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("driver".to_string(), "fo[]=o", None),
-                ODBCUri::get_next_attribute("DRIVER={fo[]=o}")
+                ("driver".to_string(), "fo[]=o".into(), None),
+                ODBCUri::get_next_attribute("DRIVER={fo[]=o}".into())
                     .unwrap()
                     .unwrap(),
             );
@@ -323,8 +338,12 @@ mod unit {
         fn get_unbraced_with_rest() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("driver".to_string(), "foo", Some("UID=stuff")),
-                ODBCUri::get_next_attribute("DRIVER=foo;UID=stuff")
+                (
+                    "driver".to_string(),
+                    "foo".to_string(),
+                    Some("UID=stuff".to_string())
+                ),
+                ODBCUri::get_next_attribute("DRIVER=foo;UID=stuff".into())
                     .unwrap()
                     .unwrap(),
             );
@@ -334,8 +353,12 @@ mod unit {
         fn get_braced_with_rest() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("driver".to_string(), "fo[]=o", Some("UID=stuff")),
-                ODBCUri::get_next_attribute("DRIVER={fo[]=o};UID=stuff")
+                (
+                    "driver".to_string(),
+                    "fo[]=o".to_string(),
+                    Some("UID=stuff".to_string())
+                ),
+                ODBCUri::get_next_attribute("DRIVER={fo[]=o};UID=stuff".to_string())
                     .unwrap()
                     .unwrap(),
             );
@@ -348,7 +371,7 @@ mod unit {
                 "Invalid Uri: 'stuff' is not a valid URI keyword",
                 format!(
                     "{}",
-                    ODBCUri::get_next_attribute("stuff=stuff;").unwrap_err()
+                    ODBCUri::get_next_attribute("stuff=stuff;".to_string()).unwrap_err()
                 )
             );
         }
@@ -371,7 +394,7 @@ mod unit {
         fn ends_with_brace() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stuff", None),
+                ("stuff".to_string(), None),
                 ODBCUri::handle_braced_value("stuff}").unwrap()
             );
         }
@@ -380,7 +403,7 @@ mod unit {
         fn ends_with_semi() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stuff", None),
+                ("stuff".to_string(), None),
                 ODBCUri::handle_braced_value("stuff};").unwrap()
             );
         }
@@ -389,7 +412,7 @@ mod unit {
         fn has_rest() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stuff", Some("DRIVER=foo")),
+                ("stuff".to_string(), Some("DRIVER=foo".to_string())),
                 ODBCUri::handle_braced_value("stuff};DRIVER=foo").unwrap()
             );
         }
@@ -398,7 +421,7 @@ mod unit {
         fn ends_with_brace_special_chars() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stu%=[]}ff", None),
+                ("stu%=[]}ff".to_string(), None),
                 ODBCUri::handle_braced_value("stu%=[]}ff}").unwrap()
             );
         }
@@ -407,7 +430,7 @@ mod unit {
         fn ends_with_semi_special_chars() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stu%=[]}ff", None),
+                ("stu%=[]}ff".to_string(), None),
                 ODBCUri::handle_braced_value("stu%=[]}ff};").unwrap()
             );
         }
@@ -416,7 +439,7 @@ mod unit {
         fn has_rest_special_chars() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stu%=[]}ff", Some("DRIVER=foo")),
+                ("stu%=[]}ff".to_string(), Some("DRIVER=foo".to_string())),
                 ODBCUri::handle_braced_value("stu%=[]}ff};DRIVER=foo").unwrap()
             );
         }
@@ -427,7 +450,7 @@ mod unit {
         fn ends_with_empty() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stuff", None),
+                ("stuff".to_string(), None),
                 ODBCUri::handle_unbraced_value("stuff").unwrap()
             );
         }
@@ -436,7 +459,7 @@ mod unit {
         fn ends_with_semi() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stuff", None),
+                ("stuff".to_string(), None),
                 ODBCUri::handle_unbraced_value("stuff;").unwrap()
             );
         }
@@ -445,7 +468,7 @@ mod unit {
         fn has_rest() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("stuff", Some("DRIVER=foo")),
+                ("stuff".to_string(), Some("DRIVER=foo".to_string())),
                 ODBCUri::handle_unbraced_value("stuff;DRIVER=foo").unwrap()
             );
         }
@@ -455,47 +478,52 @@ mod unit {
         #[test]
         fn empty_uri_is_err() {
             use crate::odbc_uri::ODBCUri;
-            assert!(ODBCUri::new("").is_err());
+            assert!(ODBCUri::new("".to_string()).is_err());
         }
 
         #[test]
         fn string_foo_is_err() {
             use crate::odbc_uri::ODBCUri;
-            assert!(ODBCUri::new("Foo").is_err());
+            assert!(ODBCUri::new("Foo".to_string()).is_err());
         }
 
         #[test]
         fn missing_equals_is_err() {
             use crate::odbc_uri::ODBCUri;
-            assert!(ODBCUri::new("driver=Foo;Bar").is_err());
+            assert!(ODBCUri::new("driver=Foo;Bar".to_string()).is_err());
         }
 
         #[test]
         fn one_attribute_works() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
-            let expected = ODBCUri(map! {"driver".to_string() => "Foo"});
-            assert_eq!(expected, ODBCUri::new("Driver=Foo").unwrap());
+            let expected = ODBCUri(map! {"driver".to_string() => "Foo".to_string()});
+            assert_eq!(expected, ODBCUri::new("Driver=Foo".to_string()).unwrap());
         }
 
         #[test]
         fn two_attributes_works() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
-            let expected =
-                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
-            assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr").unwrap());
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;SERVER=bAr".to_string()).unwrap()
+            );
         }
 
         #[test]
         fn repeated_attribute_selects_first() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
-            let expected =
-                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
+            );
             assert_eq!(
                 expected,
-                ODBCUri::new("Driver=Foo;SERVER=bAr;Driver=F").unwrap()
+                ODBCUri::new("Driver=Foo;SERVER=bAr;Driver=F".to_string()).unwrap()
             );
         }
 
@@ -503,20 +531,25 @@ mod unit {
         fn two_attributes_with_trailing_semi_works() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
-            let expected =
-                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
-            assert_eq!(expected, ODBCUri::new("Driver=Foo;SERVER=bAr;").unwrap());
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;SERVER=bAr;".to_string()).unwrap()
+            );
         }
 
         #[test]
         fn two_attributes_with_triple_trailing_semis_works() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
-            let expected =
-                ODBCUri(map! {"driver".to_string() => "Foo", "server".to_string() => "bAr"});
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
+            );
             assert_eq!(
                 expected,
-                ODBCUri::new("Driver=Foo;;;SERVER=bAr;;;").unwrap()
+                ODBCUri::new("Driver=Foo;;;SERVER=bAr;;;".to_string()).unwrap()
             );
         }
     }
@@ -534,7 +567,7 @@ mod unit {
                 "Invalid Uri: server is required for a valid Mongo ODBC Uri",
                 format!(
                     "{}",
-                    ODBCUri::new("USER=foo;PWD=bar")
+                    ODBCUri::new("USER=foo;PWD=bar".to_string())
                         .unwrap()
                         .try_into_client_options()
                         .unwrap_err()
@@ -548,7 +581,7 @@ mod unit {
             "Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri",
             format!(
                 "{}",
-                ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017")
+                ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017".to_string())
                     .unwrap()
                     .try_into_client_options()
                     .unwrap_err()
@@ -562,7 +595,7 @@ mod unit {
                 "Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri",
                 format!(
                     "{}",
-                    ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017")
+                    ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017".to_string())
                         .unwrap()
                         .try_into_client_options()
                         .unwrap_err()
@@ -579,7 +612,7 @@ mod unit {
                     .credential
                     .unwrap()
                     .password,
-                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017")
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017".to_string())
                     .unwrap()
                     .try_into_client_options()
                     .unwrap()
@@ -598,7 +631,7 @@ mod unit {
                     .credential
                     .unwrap()
                     .username,
-                ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017")
+                ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017".to_string())
                     .unwrap()
                     .try_into_client_options()
                     .unwrap()
@@ -617,7 +650,7 @@ mod unit {
                     .credential
                     .unwrap()
                     .password,
-                ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017")
+                ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017".to_string())
                     .unwrap()
                     .try_into_client_options()
                     .unwrap()
@@ -632,7 +665,7 @@ mod unit {
             use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
             let expected_cred = expected_opts.credential.unwrap();
-            let opts = ODBCUri::new("URI=mongodb://foo:bar@127.0.0.1:27017")
+            let opts = ODBCUri::new("URI=mongodb://foo:bar@127.0.0.1:27017".to_string())
                 .unwrap()
                 .try_into_client_options()
                 .unwrap();
@@ -648,10 +681,12 @@ mod unit {
             let expected_opts =
                 ClientOptions::parse("mongodb://foo2:bar2@127.0.0.1:27017").unwrap();
             let expected_cred = expected_opts.credential.unwrap();
-            let opts = ODBCUri::new("USER=foo2;PWD=bar2;URI=mongodb://foo:bar@127.0.0.1:27017")
-                .unwrap()
-                .try_into_client_options()
-                .unwrap();
+            let opts = ODBCUri::new(
+                "USER=foo2;PWD=bar2;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .unwrap();
             let cred = opts.credential.unwrap();
             assert_eq!(expected_cred.username, cred.username);
             assert_eq!(expected_cred.password, cred.password);
@@ -663,7 +698,7 @@ mod unit {
             use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
             let expected_cred = expected_opts.credential.unwrap();
-            let opts = ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://127.0.0.1:27017")
+            let opts = ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://127.0.0.1:27017".to_string())
                 .unwrap()
                 .try_into_client_options()
                 .unwrap();
@@ -678,7 +713,7 @@ mod unit {
             use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
             let expected_cred = expected_opts.credential.unwrap();
-            let opts = ODBCUri::new("PWD=bar;URI=mongodb://foo@127.0.0.1:27017")
+            let opts = ODBCUri::new("PWD=bar;URI=mongodb://foo@127.0.0.1:27017".to_string())
                 .unwrap()
                 .try_into_client_options()
                 .unwrap();
@@ -695,7 +730,7 @@ mod unit {
                 "Err(InvalidUriFormat(\"One of [\\\"uid\\\", \\\"user\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
                 format!(
                     "{:?}",
-                    ODBCUri::new("URI=mongodb://127.0.0.1:27017")
+                    ODBCUri::new("URI=mongodb://127.0.0.1:27017".to_string())
                         .unwrap()
                         .try_into_client_options()
                 )
@@ -709,7 +744,7 @@ mod unit {
                 "Err(InvalidUriFormat(\"One of [\\\"password\\\", \\\"pwd\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
                 format!(
                     "{:?}",
-                    ODBCUri::new("URI=mongodb://foo@127.0.0.1:27017")
+                    ODBCUri::new("URI=mongodb://foo@127.0.0.1:27017".to_string())
                         .unwrap()
                         .try_into_client_options()
                 )
@@ -729,7 +764,7 @@ mod unit {
                 (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
             ] {
             assert_eq!(
-                source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().credential.unwrap().source);
+                source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().unwrap().credential.unwrap().source);
             }
         }
 
@@ -745,7 +780,7 @@ mod unit {
                 (Some(format!("{}+{}",POWERBI_CONNECTOR, DRIVER_METRICS_VERSION.as_str())), format!("URI=mongodb://localhost/?ssl=true&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME={POWERBI_CONNECTOR}").as_str()),
             ] {
             assert_eq!(
-                source, ODBCUri::new(uri).unwrap().try_into_client_options().unwrap().app_name);
+                source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().unwrap().app_name);
             }
         }
 
@@ -754,10 +789,12 @@ mod unit {
             use crate::odbc_uri::ODBCUri;
             let expected_opts =
                 ClientOptions::parse("mongodb://foo2:bar2@127.0.0.2:27017").unwrap();
-            let opts = ODBCUri::new("SERVER=127.0.0.2:27017;URI=mongodb://foo:bar@127.0.0.1:27017")
-                .unwrap()
-                .try_into_client_options()
-                .unwrap();
+            let opts = ODBCUri::new(
+                "SERVER=127.0.0.2:27017;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .unwrap();
             assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
         }
     }

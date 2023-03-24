@@ -23,12 +23,13 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
 ) -> bool {
     let marker = -1i8;
     let conn_str = unsafe { input_text_to_string_w(connection_string, marker as usize) };
-    if let Ok(mut odbc_uri) = ODBCUri::new(&conn_str) {
+    if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
         match odbc_uri.try_into_client_options() {
             Ok(client_options) => {
                 match MongoConnection::connect(
                     client_options,
-                    odbc_uri.get("database").copied(),
+                    // odbc_uri.get("database").map(|s| s.as_str()),
+                    odbc_uri.get("database").map(|s| s.to_owned()),
                     None,
                     Some(30),
                 ) {
