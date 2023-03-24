@@ -1,11 +1,22 @@
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
+use cstr::{input_text_to_string_w, to_widechar_ptr};
+use file_dbg_macros::*;
 use mongo_odbc_core::util::dsn::DSNOpts;
 use nwd::NwgUi;
 use nwg::NativeUi;
 use std::{cell::RefCell, thread};
 use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
+
+#[link(name = "mongoodbc.dll", kind = "dylib")]
+extern "C" {
+    fn atlas_sql_test_connection(
+        connection_string: *const u16,
+        buffer: *const u16,
+        buffer_length: *mut u16,
+    ) -> bool;
+}
 
 #[derive(Default, NwgUi)]
 pub struct ConfigGui {
@@ -146,22 +157,33 @@ impl ConfigGui {
     }
 
     fn test_connection(&self) {
+        let mut buffer = vec![0u16; 1024];
+        let mut buffer_length = 0u16;
         if let Some(opts) = self.validate_input() {
-            match opts.test_connection() {
-                Ok(_) => {
-                    nwg::modal_info_message(
-                        &self.window,
-                        "Success",
-                        "Connected successfully with supplied information.",
-                    );
-                }
-                Err(e) => {
-                    nwg::modal_error_message(
-                        &self.window,
-                        "Error",
-                        &format!("Could not connect with supplied information: {e}",),
-                    );
-                }
+            if unsafe {
+                atlas_sql_test_connection(
+                    to_widechar_ptr(&opts.to_connection_string()).0 as *mut u16,
+                    buffer.as_mut_ptr(),
+                    &mut buffer_length,
+                )
+            } {
+                dbg_write!("got a success trying to connect");
+                nwg::modal_info_message(
+                    &self.window,
+                    "Success",
+                    "Connected successfully with supplied information.",
+                );
+            } else {
+                nwg::modal_error_message(
+                    &self.window,
+                    "Error",
+                    &format!(
+                        "Could not connect with supplied information: {e}",
+                        e = unsafe {
+                            input_text_to_string_w(buffer.as_mut_ptr(), buffer_length as usize)
+                        }
+                    ),
+                );
             }
         }
     }

@@ -13,7 +13,6 @@ use crate::{
         USER,
     },
     util::odbcinst::*,
-    MongoConnection,
 };
 use cstr::{input_text_to_string_w, to_widechar_ptr};
 use serde::{Deserialize, Serialize};
@@ -178,7 +177,7 @@ impl DSNOpts {
         value.len() < MAX_VALUE_LENGTH
     }
 
-    fn to_connection_string(&self) -> String {
+    pub fn to_connection_string(&self) -> String {
         let conn_str = self
             .iter()
             .map(|(key, value)| {
@@ -189,18 +188,6 @@ impl DSNOpts {
             })
             .collect::<String>();
         format!("{conn_str}Driver={{{}}}", self.driver_name)
-    }
-
-    pub fn test_connection(&self) -> Result<bool, DSNError> {
-        let conn_str = self.to_connection_string();
-        let mut odbc_uri = ODBCUri::new(&conn_str).map_err(|e| to_dsn_err(e.to_string()))?;
-        let client_options = odbc_uri
-            .try_into_client_options()
-            .map_err(|e| to_dsn_err(e.to_string()))?;
-        match MongoConnection::connect(client_options, Some(&self.database), None, Some(30)) {
-            Ok(_) => Ok(true),
-            Err(e) => Err(to_dsn_err(e.to_string())),
-        }
     }
 }
 

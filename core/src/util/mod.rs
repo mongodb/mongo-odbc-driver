@@ -6,6 +6,7 @@ pub use decimal128::Decimal128Plus;
 pub mod dsn;
 #[cfg(target_os = "windows")]
 pub(crate) mod odbcinst;
+mod test_connection;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use mongodb::results::CollectionType;

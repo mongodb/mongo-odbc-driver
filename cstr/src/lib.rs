@@ -107,6 +107,19 @@ pub fn to_char_ptr(s: &str) -> (*mut Char, Vec<u8>) {
     (v.as_mut_ptr(), v)
 }
 
+///
+/// write_to_buffer writes the input string to the output buffer, and returns the number of bytes written
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_to_buffer(message: &str, output_ptr: *mut WideChar) -> u16 {
+    let message_buffer = to_widechar_ptr(message);
+    unsafe {
+        copy_nonoverlapping(message_buffer.0, output_ptr, message.len());
+    }
+    (message.len()) as u16
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
