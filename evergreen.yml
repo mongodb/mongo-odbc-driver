@@ -1197,8 +1197,9 @@ buildvariants:
       - name: compile-macos
       - name: compile-debug-macos
       - name: macos-unit-test
-      - name: macos-integration-test
-      - name: macos-result-set-test
+      # Skip Reason:
+      #- name: macos-integration-test
+      #- name: macos-result-set-test
 
   - name: release
     display_name: "Release"

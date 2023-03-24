@@ -7,6 +7,7 @@ authors = ["Ryan Chipman <ryan@ryanchipman.com>",
 edition = "2021"
 
 [dependencies]
+odbc-sys = "0.21.2"
 bson = "2"
 thiserror = "1"
 constants = { path = "../constants" }
@@ -17,7 +18,6 @@ lazy_static = "1.4.0"
 likely_stable = "0.1.2"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
-odbc-sys = "0.21.2"
 
 [dependencies.mongodb]
 version = "2.3"

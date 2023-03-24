@@ -1,10 +1,8 @@
 mod test_generator_util;
 
-// cuse odbc::{create_environment_v3, Allocated, Connection, Handle, NoResult, Statement};
 use odbc_sys::{CDataType, Desc, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn, USmallInt};
 use widechar::WideChar;
 
-// use odbc::safe::AutocommitOn;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::value::Value;
