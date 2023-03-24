@@ -128,12 +128,9 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             SqlReturn::SUCCESS => (),
             sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
         }
-
         let mut in_connection_string_encoded = widechar::to_widechar_vec(&in_connection_string);
         in_connection_string_encoded.push(0);
-
         let str_len_ptr = &mut 0;
-
         match SQLDriverConnectW(
             dbc as HDbc,
             null_mut(),
