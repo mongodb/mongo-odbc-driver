@@ -8,6 +8,7 @@ members = [
   "integration_test",
   "file_dbg_macros",
   "win_setupgui",
+  "shared_sql_utils",
 ]
 
 [profile.release-with-debug]

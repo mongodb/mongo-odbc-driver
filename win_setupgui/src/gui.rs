@@ -3,9 +3,9 @@ extern crate native_windows_gui as nwg;
 
 use cstr::{input_text_to_string_w, to_widechar_ptr};
 use file_dbg_macros::*;
-use mongo_odbc_core::util::dsn::DSNOpts;
 use nwd::NwgUi;
 use nwg::NativeUi;
+use shared_sql_utils::DSNOpts;
 use std::{cell::RefCell, thread};
 use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
 

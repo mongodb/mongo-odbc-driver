@@ -2,10 +2,6 @@ mod decimal128;
 use bson::doc;
 use constants::SQL_ALL_TABLE_TYPES;
 pub use decimal128::Decimal128Plus;
-#[cfg(target_os = "windows")]
-pub mod dsn;
-#[cfg(target_os = "windows")]
-pub(crate) mod odbcinst;
 mod test_connection;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;

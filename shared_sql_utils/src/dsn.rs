@@ -1,26 +1,19 @@
-use crate::{
-    odbc_uri::{
-        ODBCUri,
-        DATABASE,
-        DSN,
-        // SQL-1281
-        // LOGPATH,
-        PASSWORD,
-        PWD,
-        SERVER,
-        UID,
-        URI,
-        USER,
-    },
-    util::odbcinst::*,
-};
+use crate::odbcinst::*;
 use cstr::{input_text_to_string_w, to_widechar_ptr};
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+const DATABASE: &str = "database";
+const DSN: &str = "dsn";
+const PASSWORD: &str = "password";
+const PWD: &str = "pwd";
+const SERVER: &str = "server";
+const UID: &str = "uid";
+const URI: &str = "uri";
+const USER: &str = "user";
+// SQL-1281
+// const LOGPATH: &str = "LOGPATH";
+
 const ODBCINI: &str = "ODBC.INI";
-const BASE_SYSTEM_KEY: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\ODBC\\ODBC.INI\\";
-const BASE_USER_KEY: &str = "HKEY_CURRENT_USER\\SOFTWARE\\ODBC\\ODBC.INI\\";
 // The maximum length of a registry value is 16383 characters.
 const MAX_VALUE_LENGTH: usize = 16383;
 
@@ -37,7 +30,7 @@ pub enum DSNError {
     Generic(String),
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default)]
 pub struct DSNOpts {
     pub database: String,
     pub dsn: String,
@@ -85,11 +78,20 @@ impl DSNOpts {
             Err(DSNError::Value)
         }
     }
-    pub fn from_attribute_string(attribs: String) -> Option<Self> {
-        match ODBCUri::new(&attribs.replace(char::from(0), ";")) {
-            Ok(uri) => Some(Self::from(uri)),
-            Err(_) => None,
-        }
+
+    pub fn from_attribute_string(attribute_string: &str) -> Self {
+        let mut dsn_opts = DSNOpts::default();
+        attribute_string.split(';').for_each(|pair| {
+            let mut key_value = pair.split('=');
+            let key = key_value.next().unwrap_or("");
+            let value = key_value
+                .next()
+                .unwrap_or("")
+                .replace("{", "")
+                .replace("}", "");
+            dsn_opts.set_field(key, &value);
+        });
+        dsn_opts
     }
 
     pub fn is_valid_dsn(&self) -> bool {
@@ -188,49 +190,6 @@ impl DSNOpts {
             })
             .collect::<String>();
         format!("{conn_str}Driver={{{}}}", self.driver_name)
-    }
-}
-
-fn to_dsn_err(e: String) -> DSNError {
-    DSNError::Generic(e)
-}
-
-impl From<ODBCUri<'_>> for DSNOpts {
-    fn from(value: ODBCUri) -> Self {
-        let mut database = String::new();
-        let mut dsn = String::new();
-        let mut password = String::new();
-        let mut server = String::new();
-        let mut uri: String = String::new();
-        let mut user = String::new();
-        // SQL-1281
-        // let mut logpath = String::new();
-        for (key, value) in value.iter() {
-            match key.to_lowercase().as_str() {
-                DATABASE => database = value.to_string(),
-                DSN => dsn = value.to_string(),
-                PASSWORD => password = value.to_string(),
-                PWD => password = value.to_string(),
-                SERVER => server = value.to_string(),
-                URI => uri = value.to_string(),
-                USER => user = value.to_string(),
-                UID => user = value.to_string(),
-                // SQL-1281
-                // LOGPATH => logpath = value.to_string(),
-                _ => {}
-            }
-        }
-        DSNOpts {
-            database,
-            dsn,
-            password,
-            uri,
-            user,
-            server,
-            // SQL-1281
-            // logpath,
-            driver_name: constants::DRIVER_NAME.to_string(),
-        }
     }
 }
 

@@ -15,13 +15,16 @@ windows = { version = "0.44.0", features = [
 native-windows-gui = "1.0.12"
 native-windows-derive = "1.0.3"
 constants = { path = "../constants" }
-mongo-odbc-core = { path = "../core" }
-mongo-odbc-driver = { path = "../odbc" }
 file_dbg_macros = { path = "../file_dbg_macros" }
 cstr = { path = "../cstr" }
 function_name = "0.3.0"
 chrono = "0.4.22"
+shared_sql_utils = { path = "../shared_sql_utils" }
+thiserror = "1"
 
 [lib]
 name = "mongoodbc_s"
 crate-type = ["cdylib", "lib"]
+
+[profile.release]
+opt-level = 0
