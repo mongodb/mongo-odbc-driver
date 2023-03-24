@@ -25,6 +25,3 @@ thiserror = "1"
 [lib]
 name = "mongoodbc_s"
 crate-type = ["cdylib", "lib"]
-
-[profile.release]
-opt-level = 0

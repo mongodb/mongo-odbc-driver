@@ -48,6 +48,3 @@ crate-type = ["cdylib", "lib"]
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
-
-[profile.release]
-opt-level = 0
