@@ -23,11 +23,7 @@ file_dbg_macros = { path = "../file_dbg_macros" }
 widechar = { path = "../widechar" }
 function_name = "0.3.0"
 serde_json = "1.0.68"
-
-[target.'cfg(not(target_os = "macos"))'.dependencies]
 odbc-sys = "0.21.2"
-[target.'cfg(target_os = "macos")'.dependencies]
-odbc-sys = { version = "0.21.2", default-features = false, features = ["iodbc"]}
 
 [dependencies.mongodb]
 version = "2.3"

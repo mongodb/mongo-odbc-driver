@@ -10,12 +10,7 @@ serde_yaml = "0.9.4"
 thiserror = "1"
 lazy_static = "1"
 widechar = { path = "../widechar" }
-
-[target.'cfg(not(target_os = "macos"))'.dependencies]
 odbc-sys =  "0.21.2"
-# odbc-sys = { version = "0.21.2", default-features = false}
-[target.'cfg(target_os = "macos")'.dependencies]
-odbc-sys = { version = "0.21.2", default-features = false, features =  ["odbc_version_3_50","iodbc"]}
 
 [dependencies.mongodb]
 version = "2.3"

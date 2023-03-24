@@ -335,7 +335,7 @@ if [[ $? -ne 0 ]]; then
     mkdir -p $TMP_DIR
     mkdir -p $LOGS_PATH
     # Start mongohoused with appropriate config
-    nohup $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
+    $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
       --config ./testdata/config/mongodb_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
     echo $! > $TMP_DIR/${MONGOHOUSED}.pid
 
