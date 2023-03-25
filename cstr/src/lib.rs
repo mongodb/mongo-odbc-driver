@@ -148,7 +148,7 @@ mod test {
     fn test_write_to_buffer_with_enough_space() {
         let expected = "test\0\0\0\0\0";
         let mut buffer = [0u16; 9];
-        unsafe { write_to_buffer(&"test", buffer.len(), buffer.as_mut_ptr()) };
+        unsafe { write_to_buffer("test", buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
     }
 
@@ -156,7 +156,7 @@ mod test {
     fn test_write_to_buffer_constrained_space() {
         let expected = "te\0";
         let mut buffer = [0u16; 3];
-        unsafe { write_to_buffer(&"testing", buffer.len(), buffer.as_mut_ptr()) };
+        unsafe { write_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
     }
 }
