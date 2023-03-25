@@ -6,9 +6,10 @@ use cstr::{input_text_to_string_w, write_to_buffer};
 /// If the connection fails, the error message is written to the buffer.
 ///
 /// # Arguments
-/// * `connection_string` - A null-terminated string containing the connection string.
-/// * `buffer` - A buffer to write the error message to.
-/// * `buffer_length` - The length of the buffer.
+/// * `connection_string` - A null-terminated widechar string containing the connection string.
+/// * `buffer` - A buffer to write the error message to, in widechar chars.
+/// * `buffer_in_len` - The length of the buffer, in widechar chars.
+/// * `buffer_out_length` - The length of data written to buffer, in widechar chars.
 ///
 /// # Safety
 /// Because this function is called from C, it is unsafe.
@@ -17,7 +18,8 @@ use cstr::{input_text_to_string_w, write_to_buffer};
 pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const u16,
     buffer: *const u16,
-    buffer_len: *mut u16,
+    buffer_in_len: usize,
+    buffer_out_len: *mut u16,
 ) -> bool {
     let marker = -1i8;
     let conn_str = unsafe { input_text_to_string_w(connection_string, marker as usize) };
@@ -32,21 +34,26 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                 ) {
                     Ok(_) => true,
                     Err(e) => {
-                        let len = write_to_buffer(&e.to_string(), buffer as *mut u16);
-                        *buffer_len = len;
+                        let len =
+                            write_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut u16);
+                        *buffer_out_len = len;
                         false
                     }
                 }
             }
             Err(e) => {
-                let len = write_to_buffer(&e.to_string(), buffer as *mut u16);
-                *buffer_len = len;
+                let len = write_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut u16);
+                *buffer_out_len = len;
                 false
             }
         }
     } else {
-        let len = write_to_buffer("Invalid connection string.", buffer as *mut u16);
-        *buffer_len = len;
+        let len = write_to_buffer(
+            "Invalid connection string.",
+            buffer_in_len,
+            buffer as *mut u16,
+        );
+        *buffer_out_len = len;
         false
     }
 }
@@ -67,6 +74,7 @@ mod test {
             atlas_sql_test_connection(
                 to_widechar_ptr(&generate_connection_str(None, None)).0 as *const u16,
                 buffer.as_mut_ptr(),
+                buffer.len(),
                 &mut buffer_len,
             )
         };
@@ -82,6 +90,7 @@ mod test {
                 to_widechar_ptr(&generate_connection_str(None, Some("hunter2".into()))).0
                     as *const u16,
                 buffer.as_mut_ptr(),
+                buffer.len(),
                 &mut buffer_len,
             )
         };
@@ -107,6 +116,7 @@ mod test {
                 ))
                 .0 as *const u16,
                 buffer.as_ptr(),
+                buffer.len(),
                 &mut buffer_len,
             )
         };

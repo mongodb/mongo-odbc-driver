@@ -11,10 +11,24 @@ use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
 
 #[link(name = "atsql", kind = "raw-dylib")]
 extern "C" {
+    /// AtlasSQLTestConnection return true if a connection can be established
+    /// with the provided connection string.
+    /// If the connection fails, the error message is written to the buffer.
+    ///
+    /// # Arguments
+    /// * `connection_string` - A null-terminated widechar string containing the connection string.
+    /// * `buffer` - A buffer to write the error message to, in widechar chars.
+    /// * `buffer_in_len` - The length the input buffer, in widechar chars.
+    /// * `buffer_out_length` - The length of data written to buffer, in widechar chars.
+    ///
+    /// # Safety
+    /// Because this function is called from C, it is unsafe.
+    ///
     fn atlas_sql_test_connection(
         connection_string: *const u16,
         buffer: *const u16,
-        buffer_length: *mut u16,
+        buffer_in_length: usize,
+        buffer_out_length: *mut u16,
     ) -> bool;
 }
 
@@ -164,6 +178,7 @@ impl ConfigGui {
                 atlas_sql_test_connection(
                     to_widechar_ptr(&opts.to_connection_string()).0 as *mut u16,
                     buffer.as_mut_ptr(),
+                    buffer.len(),
                     &mut buffer_length,
                 )
             } {
