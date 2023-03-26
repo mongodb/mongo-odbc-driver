@@ -119,7 +119,7 @@ pub unsafe fn write_to_buffer(message: &str, len: usize, output_ptr: *mut WideCh
     unsafe {
         copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
     }
-    len as u16
+    v.len() as u16
 }
 
 #[cfg(test)]
@@ -147,16 +147,30 @@ mod test {
     #[test]
     fn test_write_to_buffer_with_enough_space() {
         let expected = "test\0\0\0\0\0";
+        let input = "test";
         let mut buffer = [0u16; 9];
-        unsafe { write_to_buffer("test", buffer.len(), buffer.as_mut_ptr()) };
+        let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
 
     #[test]
     fn test_write_to_buffer_constrained_space() {
         let expected = "te\0";
+        let input = "testing";
         let mut buffer = [0u16; 3];
-        unsafe { write_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
+        let len = unsafe { write_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_to_buffer_when_message_len_is_buffer_len() {
+        let expected = "tes\0";
+        let input = "test";
+        let mut buffer = [0u16; 4];
+        let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
 }
