@@ -1,33 +1,26 @@
-use crate::{
-    odbc_uri::{
-        ODBCUri,
-        DATABASE,
-        DSN,
-        // SQL-1281
-        // LOGPATH,
-        PASSWORD,
-        PWD,
-        SERVER,
-        UID,
-        URI,
-        USER,
-    },
-    util::odbcinst::*,
-};
+use crate::odbcinst::*;
 use cstr::{input_text_to_string_w, to_widechar_ptr};
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+const DATABASE: &str = "database";
+const DSN: &str = "dsn";
+const PASSWORD: &str = "password";
+const PWD: &str = "pwd";
+const SERVER: &str = "server";
+const UID: &str = "uid";
+const URI: &str = "uri";
+const USER: &str = "user";
+// SQL-1281
+// const LOGPATH: &str = "LOGPATH";
+
 const ODBCINI: &str = "ODBC.INI";
-const BASE_SYSTEM_KEY: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\ODBC\\ODBC.INI\\";
-const BASE_USER_KEY: &str = "HKEY_CURRENT_USER\\SOFTWARE\\ODBC\\ODBC.INI\\";
 // The maximum length of a registry value is 16383 characters.
 const MAX_VALUE_LENGTH: usize = 16383;
 
 #[derive(Error, Debug)]
 pub enum DSNError {
     #[error("Invalid DSN: {}\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", .0)]
-    DSN(String),
+    Dsn(String),
     #[error(
         "The maximum length of an allowed registry value is {} characters.",
         MAX_VALUE_LENGTH
@@ -37,7 +30,7 @@ pub enum DSNError {
     Generic(String),
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default)]
 pub struct DSNOpts {
     pub database: String,
     pub dsn: String,
@@ -79,17 +72,22 @@ impl DSNOpts {
                 server,
                 driver_name,
             })
-        } else if validation[1] == false {
-            Err(DSNError::DSN(dsn))
+        } else if !validation[1] {
+            Err(DSNError::Dsn(dsn))
         } else {
             Err(DSNError::Value)
         }
     }
-    pub fn from_attribute_string(attribs: String) -> Option<Self> {
-        match ODBCUri::new(&attribs.replace(char::from(0), ";")) {
-            Ok(uri) => Some(Self::from(uri)),
-            Err(_) => None,
-        }
+
+    pub fn from_attribute_string(attribute_string: &str) -> Self {
+        let mut dsn_opts = DSNOpts::default();
+        attribute_string.split(';').for_each(|pair| {
+            let mut key_value = pair.split('=');
+            let key = key_value.next().unwrap_or("");
+            let value = key_value.next().unwrap_or("").replace(['{', '}'], "");
+            dsn_opts.set_field(key, &value);
+        });
+        dsn_opts
     }
 
     pub fn is_valid_dsn(&self) -> bool {
@@ -176,44 +174,18 @@ impl DSNOpts {
     fn check_value_length(value: &str) -> bool {
         value.len() < MAX_VALUE_LENGTH
     }
-}
 
-impl From<ODBCUri<'_>> for DSNOpts {
-    fn from(value: ODBCUri) -> Self {
-        let mut database = String::new();
-        let mut dsn = String::new();
-        let mut password = String::new();
-        let mut server = String::new();
-        let mut uri: String = String::new();
-        let mut user = String::new();
-        // SQL-1281
-        // let mut logpath = String::new();
-        for (key, value) in value.iter() {
-            match key.to_lowercase().as_str() {
-                DATABASE => database = value.to_string(),
-                DSN => dsn = value.to_string(),
-                PASSWORD => password = value.to_string(),
-                PWD => password = value.to_string(),
-                SERVER => server = value.to_string(),
-                URI => uri = value.to_string(),
-                USER => user = value.to_string(),
-                UID => user = value.to_string(),
-                // SQL-1281
-                // LOGPATH => logpath = value.to_string(),
-                _ => {}
-            }
-        }
-        DSNOpts {
-            database,
-            dsn,
-            password,
-            uri,
-            user,
-            server,
-            // SQL-1281
-            // logpath,
-            driver_name: constants::DRIVER_NAME.to_string(),
-        }
+    pub fn to_connection_string(&self) -> String {
+        let conn_str = self
+            .iter()
+            .map(|(key, value)| {
+                if value.is_empty() {
+                    return "".into();
+                }
+                format!("{key}={value};")
+            })
+            .collect::<String>();
+        format!("{conn_str}Driver={{{}}}", self.driver_name)
     }
 }
 
