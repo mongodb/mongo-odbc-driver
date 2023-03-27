@@ -13,7 +13,7 @@
            <RegistryValue Id="Version" Key="SOFTWARE\MongoDB\[ProductName]"  Name="Version" Root="HKLM" Type="string" Value="[ProductVersion]" />
        </Component>
        <Component Guid="{0ae4440c-c8d1-11ed-afa1-0242ac120002}" Id="setupdll" SharedDllRefCount="yes" Win64="$(var.win64Flag)">
-            <File DiskId="1" Id="f_mongoodbc_s" Name="atsqls.dll" Source="mongoodbc_s.dll" />
+            <File DiskId="1" Id="f_mongoodbc_s" Name="atsqls.dll" Source="atsqls.dll" />
        </Component>
        <Component Guid="{12cd6c2a-c8d1-11ed-afa1-0242ac120002}" Id="driver" SharedDllRefCount="yes" Win64="$(var.win64Flag)">
            <File Checksum="yes" DiskId="1" Id="f_mongoodbc" Name="atsql.dll" Source="atsql.dll" KeyPath="yes" />
