@@ -27,21 +27,25 @@ mod integration {
      * The following tests require a DSN called "ADF_Test" to be configured on the machine running the tests.
      */
 
-    #[test]
-    fn test_valid_dsn_connection() {
-        let env = create_environment_v3().unwrap();
-        let conn_str = "DSN=ADF_Test";
-        env.connect_with_connection_string(conn_str).unwrap();
-    }
+    #[cfg(target_os = "windows")]
+    mod test_dsn {
+        use odbc::create_environment_v3;
+        #[test]
+        fn test_valid_dsn_connection() {
+            let env = create_environment_v3().unwrap();
+            let conn_str = "DSN=ADF_Test";
+            env.connect_with_connection_string(conn_str).unwrap();
+        }
 
-    #[test]
-    fn test_uri_opts_override_dsn() {
-        let env = create_environment_v3().unwrap();
-        let conn_str = "PWD=wrong;DSN=ADF_Test";
-        let result = env.connect_with_connection_string(conn_str);
-        assert!(
-            result.is_err(),
-            "The connection should have failed, but it was successful."
-        );
+        #[test]
+        fn test_uri_opts_override_dsn() {
+            let env = create_environment_v3().unwrap();
+            let conn_str = "PWD=wrong;DSN=ADF_Test";
+            let result = env.connect_with_connection_string(conn_str);
+            assert!(
+                result.is_err(),
+                "The connection should have failed, but it was successful."
+            );
+        }
     }
 }
