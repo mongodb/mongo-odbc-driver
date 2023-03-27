@@ -224,7 +224,30 @@ functions:
       params:
         file: mongosql-odbc-driver/expansions.yml
 
-  "mciuploads release build and symbols":
+  "build msi":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          echo "env $(env)"
+          cp target/release/*.dll installer/msi
+          cp ./README.md installer/msi
+          cd installer/msi
+          VERSION="$RELEASE_VERSION"
+          # unfortunately, using a variable to hold the path to powershell
+          # seems to not work properly with evergreen's bash
+          /cygdrive/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\
+              -NoProfile\
+              -NoLogo\
+              -NonInteractive\
+              -ExecutionPolicy ByPass\
+              -File ./build-msi.ps1\
+              -Arch x64\
+              -VersionLabel "$VERSION"
+
+  "mciuploads release artifacts":
     - command: s3.put
       params:
         build_variants:
@@ -233,6 +256,17 @@ functions:
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/atsql.dll
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.msi
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -270,7 +304,7 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
 
-  "mciuploads debug build and symbols":
+  "mciuploads debug artifacts":
     - command: s3.put
       params:
         build_variants:
@@ -856,7 +890,9 @@ tasks:
         variants: [ubuntu2204]
       - func: "set packages version"
       - func: "compile release"
-      - func: "mciuploads release build and symbols"
+      - func: "build msi"
+        variants: [windows-64]
+      - func: "mciuploads release artifacts"
 
   - name: compile-debug
     commands:
@@ -864,7 +900,7 @@ tasks:
         variants: [ubuntu2204]
       - func: "set packages version"
       - func: "compile debug"
-      - func: "mciuploads debug build and symbols"
+      - func: "mciuploads debug artifacts"
 
   - name: windows-unit-test
     commands:

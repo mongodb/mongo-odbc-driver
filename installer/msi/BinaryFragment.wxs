@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2018, 2023-Present MongoDB Inc. -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="BIN">
+	    <?if $(var.Platform)=x64 ?>
+	       <?define win64Flag = "yes" ?>
+	    <?else ?>
+	       <?define win64Flag = "no" ?>
+	    <?endif ?>
+       <Component Guid="{fc5fc424-c8d0-11ed-afa1-0242ac120002}" Id="RegKeys" Win64="$(var.win64Flag)">
+           <RegistryKey ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Id="MongoDBKey" Key="SOFTWARE\MongoDB\[ProductName]" Root="HKLM" />
+           <RegistryValue Id="Version" Key="SOFTWARE\MongoDB\[ProductName]"  Name="Version" Root="HKLM" Type="string" Value="[ProductVersion]" />
+       </Component>
+       <Component Guid="{0ae4440c-c8d1-11ed-afa1-0242ac120002}" Id="setupdll" SharedDllRefCount="yes" Win64="$(var.win64Flag)">
+            <File DiskId="1" Id="f_mongoodbc_s" Name="atsqls.dll" Source="atsqls.dll" />
+       </Component>
+       <Component Guid="{12cd6c2a-c8d1-11ed-afa1-0242ac120002}" Id="driver" SharedDllRefCount="yes" Win64="$(var.win64Flag)">
+           <File Checksum="yes" DiskId="1" Id="f_mongoodbc" Name="atsql.dll" Source="atsql.dll" KeyPath="yes" />
+           <ODBCDriver File="f_mongoodbc" Id="MongoDB_Atlas_SQL_ODBC_0" Name="MongoDB Atlas SQL ODBC Driver" SetupFile="f_mongoodbc_s" />
+       </Component>
+      </DirectoryRef>
+      <ComponentGroup Id="base">
+          <ComponentRef Id="RegKeys" />
+          <ComponentRef Id="driver" />
+          <ComponentRef Id="setupdll" />
+       </ComponentGroup>
+  </Fragment>
+</Wix>
