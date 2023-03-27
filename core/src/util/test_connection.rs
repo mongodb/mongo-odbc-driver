@@ -1,7 +1,7 @@
 use crate::{odbc_uri::ODBCUri, MongoConnection};
 use cstr::{input_text_to_string_w, write_to_buffer};
 
-/// AtlasSQLTestConnection return true if a connection can be established
+/// atlas_sql_test_connection returns true if a connection can be established
 /// with the provided connection string.
 /// If the connection fails, the error message is written to the buffer.
 ///
