@@ -22,4 +22,26 @@ mod integration {
         let conn_str = crate::common::generate_default_connection_str();
         let _ = connect_with_conn_string(env_handle.unwrap(), conn_str).unwrap();
     }
+
+    /**
+     * The following tests require a DSN called "ADF_Test" to be configured on the machine running the tests.
+     */
+
+    #[test]
+    fn test_valid_dsn_connection() {
+        let env = create_environment_v3().unwrap();
+        let conn_str = "DSN=ADF_Test";
+        env.connect_with_connection_string(conn_str).unwrap();
+    }
+
+    #[test]
+    fn test_uri_opts_override_dsn() {
+        let env = create_environment_v3().unwrap();
+        let conn_str = "PWD=wrong;DSN=ADF_Test";
+        let result = env.connect_with_connection_string(conn_str);
+        assert!(
+            result.is_err(),
+            "The connection should have failed, but it was successful."
+        );
+    }
 }

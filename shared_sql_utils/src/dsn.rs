@@ -176,16 +176,15 @@ impl DSNOpts {
     }
 
     pub fn to_connection_string(&self) -> String {
-        let conn_str = self
-            .iter()
+        self.iter()
             .map(|(key, value)| {
                 if value.is_empty() {
                     return "".into();
                 }
                 format!("{key}={value};")
             })
-            .collect::<String>();
-        format!("{conn_str}Driver={{{}}}", self.driver_name)
+            .collect::<String>()
+        // format!("{conn_str}Driver={{{}}}", self.driver_name)
     }
 }
 

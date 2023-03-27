@@ -1,6 +1,5 @@
 use crate::err::{Error, Result};
 use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
-use file_dbg_macros::*;
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
@@ -57,6 +56,16 @@ impl std::ops::Deref for ODBCUri {
     }
 }
 
+fn transform_keyword(keyword: &str) -> String {
+    match keyword {
+        UID => USER.to_string(),
+        USER => USER.to_string(),
+        PWD => PASSWORD.to_string(),
+        PASSWORD => PASSWORD.to_string(),
+        _ => keyword.to_string(),
+    }
+}
+
 impl ODBCUri {
     pub fn new(odbc_uri: String) -> Result<ODBCUri> {
         if odbc_uri.is_empty() {
@@ -64,10 +73,9 @@ impl ODBCUri {
         }
         let mut ret = ODBCUri::process_uri(odbc_uri.clone())?;
         if ret.get(DSN).is_some() {
-            dbg_write!(format!("DSN: {}", ret.get(DSN).unwrap()));
             let mut dsn_opts = DSNOpts::from_attribute_string(&odbc_uri);
             dsn_opts = dsn_opts.from_private_profile_string().unwrap();
-            ret = ODBCUri::process_uri(dsn_opts.to_connection_string())?;
+            ret = ODBCUri::process_uri(format!("{odbc_uri};{}", dsn_opts.to_connection_string()))?;
         }
         Ok(ret)
     }
@@ -77,7 +85,10 @@ impl ODBCUri {
         let mut ret = ODBCUri(HashMap::new());
         while let Some((keyword, value, rest)) = ODBCUri::get_next_attribute(input.into())? {
             // if attributes are repeated, the first is the one that is kept.
-            ret.0.entry(keyword).or_insert(value.into());
+
+            ret.0
+                .entry(transform_keyword(&keyword))
+                .or_insert(value.into());
             if rest.is_none() {
                 break;
             }
@@ -796,6 +807,25 @@ mod unit {
             .try_into_client_options()
             .unwrap();
             assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
+        }
+
+        #[test]
+        fn supplied_args_override_dsn_args() {
+            // we leave dsn out of the uri so that it doesn't try to query the registry in the test
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse(
+                "mongodb://foo:bar@www.atlas.net:27017/?authSource=authDB&ssl=true",
+            )
+            .unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("UID=foo;PWD=bar;SERVER=www.atlas.net:27017;User=foo2;Password=bar2;uri=mongodb://localhost:29000/?authSource=authDB&ssl=true".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .unwrap();
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
         }
     }
 }

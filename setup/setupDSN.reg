@@ -9,7 +9,7 @@ Windows Registry Editor Version 5.00
 [HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI\ADF_Test]
 "Driver"="%DRIVER_DLL_PATH%\\atsql.dll"
 "PWD"="%ADF_TEST_PWD%"
-"server"="%ADF_TEST_HOST%"
+"uri"="%ADF_TEST_HOST%"
 "user"="%ADF_TEST_USER%"
 "database"="%ADF_TEST_DB%"
 
