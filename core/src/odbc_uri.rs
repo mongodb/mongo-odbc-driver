@@ -83,12 +83,10 @@ impl ODBCUri {
     fn process_uri(odbc_uri: String) -> Result<ODBCUri> {
         let mut input = odbc_uri;
         let mut ret = ODBCUri(HashMap::new());
-        while let Some((keyword, value, rest)) = ODBCUri::get_next_attribute(input.into())? {
+        while let Some((keyword, value, rest)) = ODBCUri::get_next_attribute(input)? {
             // if attributes are repeated, the first is the one that is kept.
 
-            ret.0
-                .entry(transform_keyword(&keyword))
-                .or_insert(value.into());
+            ret.0.entry(transform_keyword(&keyword)).or_insert(value);
             if rest.is_none() {
                 break;
             }
@@ -126,7 +124,7 @@ impl ODBCUri {
         } else {
             ODBCUri::handle_unbraced_value(rest)?
         };
-        Ok(Some((keyword.to_lowercase(), value.into(), rest)))
+        Ok(Some((keyword.to_lowercase(), value, rest)))
     }
 
     fn handle_braced_value(input: &str) -> Result<(String, Option<String>)> {
@@ -279,12 +277,8 @@ impl ODBCUri {
             // set as attributes.
             let user = self.remove_mandatory_attribute(USER_KWS)?;
             let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
-            client_options.credential = Some(
-                Credential::builder()
-                    .username(user.to_string())
-                    .password(pwd.to_string())
-                    .build(),
-            );
+            client_options.credential =
+                Some(Credential::builder().username(user).password(pwd).build());
         }
         Self::set_server_and_source(&mut client_options, server, source.map(String::from))?;
         client_options.app_name = client_options.app_name.or(self.handle_app_name());
@@ -295,10 +289,7 @@ impl ODBCUri {
         let user = self.remove_mandatory_attribute(USER_KWS)?;
         let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
         let server = self.remove_mandatory_attribute(SERVER_KWS)?;
-        let cred = Credential::builder()
-            .username(user.to_string())
-            .password(pwd.to_string())
-            .build();
+        let cred = Credential::builder().username(user).password(pwd).build();
         Ok(ClientOptions::builder()
             .hosts(vec![
                 ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
@@ -314,7 +305,7 @@ impl ODBCUri {
                 if s == POWERBI_CONNECTOR {
                     format!("{}+{}", POWERBI_CONNECTOR, DRIVER_METRICS_VERSION.as_str())
                 } else {
-                    s.to_string()
+                    s
                 }
             })
             .or(Some(DEFAULT_APP_NAME.to_string()))
