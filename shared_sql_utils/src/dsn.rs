@@ -235,7 +235,7 @@ mod test {
     #[test]
     fn invalid_value_length_in_database_field() {
         let dsn_opts = DSNOpts::new(
-            "t".repeat(MAX_VALUE_LENGTH + 1).into(),
+            "t".repeat(MAX_VALUE_LENGTH + 1),
             "test".into(),
             "test".into(),
             "test".into(),
@@ -251,7 +251,7 @@ mod test {
         let dsn_opts = DSNOpts::new(
             "test".into(),
             "test".into(),
-            "t".repeat(MAX_VALUE_LENGTH + 1).into(),
+            "t".repeat(MAX_VALUE_LENGTH + 1),
             "test".into(),
             "test".into(),
             "test".into(),
@@ -266,7 +266,7 @@ mod test {
             "test".into(),
             "test".into(),
             "test".into(),
-            "t".repeat(MAX_VALUE_LENGTH + 1).into(),
+            "t".repeat(MAX_VALUE_LENGTH + 1),
             "test".into(),
             "test".into(),
             "test".into(),
@@ -281,7 +281,7 @@ mod test {
             "test".into(),
             "test".into(),
             "test".into(),
-            "t".repeat(MAX_VALUE_LENGTH).into(),
+            "t".repeat(MAX_VALUE_LENGTH),
             "test".into(),
             "test".into(),
         );
@@ -291,12 +291,12 @@ mod test {
     #[test]
     fn valid_value_lengths_and_dsn() {
         let dsn_opts = DSNOpts::new(
-            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
+            "t".repeat(MAX_VALUE_LENGTH - 1),
             "test".into(),
-            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
-            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
-            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
-            "t".repeat(MAX_VALUE_LENGTH - 1).into(),
+            "t".repeat(MAX_VALUE_LENGTH - 1),
+            "t".repeat(MAX_VALUE_LENGTH - 1),
+            "t".repeat(MAX_VALUE_LENGTH - 1),
+            "t".repeat(MAX_VALUE_LENGTH - 1),
             "test".into(),
         );
         assert!(dsn_opts.is_ok());
