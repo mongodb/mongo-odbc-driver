@@ -184,7 +184,6 @@ impl DSNOpts {
                 format!("{key}={value};")
             })
             .collect::<String>()
-        // format!("{conn_str}Driver={{{}}}", self.driver_name)
     }
 }
 
