@@ -154,7 +154,7 @@ functions:
             cargo set-version $RELEASE_VERSION
           fi
 
-  "compile release":
+  "check packages version":
     - command: shell.exec
       type: test
       params:
@@ -175,6 +175,14 @@ functions:
             exit 1
           fi
 
+  "compile release":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
           # Compile release build
           cargo build --release
 
@@ -189,18 +197,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
 
           # Compile debug build
           cargo build
@@ -232,19 +228,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
-
           # Compile release build
           cargo build --release --features odbc-sys/iodbc
 
@@ -259,19 +242,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
-
           # Compile debug build
           cargo build --features odbc-sys/iodbc
 
@@ -982,6 +952,7 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
+      - func: "check packages version"
       - func: "compile release"
       - func: "mciuploads release build and symbols"
 
@@ -990,6 +961,7 @@ tasks:
     commands:
       - func: "install iODBC"
       - func: "set packages version"
+      - func: "check packages version"
       - func: "compile macos release"
       - func: "mciuploads release build and symbols"
 
@@ -998,6 +970,7 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
+      - func: "check packages version"
       - func: "compile debug"
       - func: "mciuploads debug build and symbols"
 
@@ -1005,6 +978,7 @@ tasks:
     commands:
       - func: "install iODBC"
       - func: "set packages version"
+      - func: "check packages version"
       - func: "compile macos debug"
       - func: "mciuploads debug build and symbols"
 
@@ -1197,7 +1171,7 @@ buildvariants:
       - name: compile-macos
       - name: compile-debug-macos
       - name: macos-unit-test
-      # Skip Reason:
+      # Skip Reason: SQL-1332
       #- name: macos-integration-test
       #- name: macos-result-set-test
 

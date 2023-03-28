@@ -2210,7 +2210,7 @@ unsafe fn sql_get_env_attrw_helper(
                 *(value_ptr as *mut CpMatch) = env.attributes.read().unwrap().cp_match;
             }
             EnvironmentAttribute::SQL_ATTR_DRIVER_UNICODE_TYPE => {
-                *(value_ptr as *mut CharSet) = env.attributes.read().unwrap().unicode_type;
+                *(value_ptr as *mut CharSet) = env.attributes.read().unwrap().driver_unicode_type;
             }
         }
     }
