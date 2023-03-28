@@ -34,8 +34,8 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           export CARGO_NET_GIT_FETCH_WITH_CLI=true
-          export UNIX_ODBC_PATH="$PWD/unixodbc/install"
-          export LD_LIBRARY_PATH="$UNIX_ODBC_PATH/lib"
+          export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
+          export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
           export PATH="$LD_LIBRARY_PATH:$PATH:$HOME/.cargo/bin"
           export DUMP_FOLDER=dumps
           export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
@@ -71,7 +71,7 @@ functions:
             export MONGOODBC_DEBUGGING_INFO_ARCHIVE=$MONGOODBC_DEBUGGING_INFO_ARCHIVE
 
             # Non-Windows variables
-            export UNIX_ODBC_PATH="$PWD/unixodbc/install"
+            export INSTALLED_ODBC_PATH="$INSTALLED_ODBC_PATH"
             export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
             export LIBRARY_PATH="$LD_LIBRARY_PATH"
             export ODBCSYSINI="$(pwd)"/setup
@@ -154,7 +154,7 @@ functions:
             cargo set-version $RELEASE_VERSION
           fi
 
-  "compile release":
+  "check packages version":
     - command: shell.exec
       type: test
       params:
@@ -175,6 +175,14 @@ functions:
             exit 1
           fi
 
+  "compile release":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
           # Compile release build
           cargo build --release
 
@@ -189,18 +197,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
 
           # Compile debug build
           cargo build
@@ -217,6 +213,49 @@ functions:
           cargo build --profile=release-with-debug
           export DRIVER_LIB_PATH=$PWD/target/release-with-debug
 
+          cat <<EOT >> expansions.yml
+            export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
+          EOT
+    - command: expansions.update
+      params:
+        file: mongosql-odbc-driver/expansions.yml
+
+  "compile macos release":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          # Compile release build
+          cargo build --release --features odbc-sys/iodbc
+
+          # Verify the version is the expected one from the driver perspective too
+          cargo test api::get_info_tests::unit::driver_ver -- --nocapture
+
+  "compile macos debug":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          # Compile debug build
+          cargo build --features odbc-sys/iodbc
+
+  "compile macos release with debug info":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          echo "env $(env)"
+          # Build a release driver with debug information
+          cargo build --features odbc-sys/iodbc --profile=release-with-debug
+          export DRIVER_LIB_PATH=$PWD/target/release-with-debug
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
           EOT
@@ -514,6 +553,32 @@ functions:
           cat setup/odbcinst.ini
           echo "-------------------------"
 
+  "setup driver with iODBC":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script:  |
+          ${prepare_shell}
+          echo "-----   Setup driver with iODBC   -----"
+          # DRIVER_LIB_PATH should have been set by the compile task
+          echo "DRIVER_LIB_PATH = $DRIVER_LIB_PATH"
+          if [ ! -d  "$DRIVER_LIB_PATH" ]; then
+            echo "$DRIVER_LIB_PATH directory does not exist. Built targets are:"
+            ls ${DRIVER_LIB_PATH%/*}
+          fi
+          sed -i.bu "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/iodbcinst.ini
+          echo "-------------------------"
+          cat setup/iodbcinst.ini
+          echo "-------------------------"
+          
+          cat <<EOT >> expansions.yml
+            export ODBCINSTINI="$ODBCSYSINI/iodbcinst.ini"
+          EOT
+    - command: expansions.update
+      params:
+        file: mongosql-odbc-driver/expansions.yml
+
   "setup crash dump collection":
     - command: shell.exec
       params:
@@ -637,6 +702,30 @@ functions:
           ./resources/run_adf.sh stop
           exit $EXITCODE
 
+  "install iODBC":
+    - command: shell.exec
+      type: system
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          mkdir -p "$INSTALLED_ODBC_PATH"
+          cd installed_odbc
+          echo "downloading iODBC"
+          iODBC_dir=libiodbc-3.52.15
+          curl -LO "https://github.com/openlink/iODBC/releases/download/v3.52.15/$iODBC_dir.tar.gz" \
+            --silent \
+            --fail \
+            --max-time 60 \
+            --retry 5 \
+            --retry-delay 0
+          tar xf "$iODBC_dir.tar.gz"
+          cd "$iODBC_dir"
+          ./configure --prefix="$INSTALLED_ODBC_PATH"
+          make 
+          make install
+
   "install unix odbc":
     - command: shell.exec
       type: system
@@ -645,8 +734,8 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          mkdir -p "$UNIX_ODBC_PATH"
-          cd unixodbc
+          mkdir -p "$INSTALLED_ODBC_PATH"
+          cd installed_odbc
           echo "downloading unixODBC"
           unixODBC_dir=unixODBC-2.3.6
           curl -O "http://noexpire.s3.amazonaws.com/sqlproxy/binary/linux/unixODBC-2.3.6.tar.gz" \
@@ -657,7 +746,7 @@ functions:
             --retry-delay 0
           tar xf "$unixODBC_dir.tar.gz"
           cd "$unixODBC_dir"
-          ./configure --prefix="$UNIX_ODBC_PATH" --with-pic
+          ./configure --prefix="$INSTALLED_ODBC_PATH" --with-pic
           make
           make install
 
@@ -697,6 +786,76 @@ functions:
 
           # Run integration tests with ubuntu
           cargo test integration
+          EXITCODE=$?
+
+          # Stop the local ADF
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
+
+  "run macos result-set tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          echo "-------- ODBC related env variable ----------"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "LIBRARY_PATH = $LIBRARY_PATH"
+          echo "ODBCINSTINI = $ODBCINSTINI"
+          echo "----------------------------------------------"
+
+          ~/.cargo/bin/rustup default stable
+
+          export RUST_BACKTRACE=1
+          # Start a local ADF
+          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+
+          # Run integration tests with macos
+          cargo test --features odbc-sys/iodbc -- --ignored
+          EXITCODE=$?
+
+          # Stop the local ADF
+          ./resources/run_adf.sh stop
+          exit $EXITCODE
+
+  "run macos unit tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          ~/.cargo/bin/rustup default stable
+
+          cargo test unit
+
+  "run macos integration tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          echo "-------- ODBC related env variable ----------"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "LIBRARY_PATH = $LIBRARY_PATH"
+          echo "ODBCINSTINI = $ODBCINSTINI"
+          echo "----------------------------------------------"
+
+          ~/.cargo/bin/rustup default stable
+
+          export RUST_BACKTRACE=1
+          # Start a local ADF
+          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+
+          # Run integration tests with macos
+          cargo test --features odbc-sys/iodbc integration
           EXITCODE=$?
 
           # Stop the local ADF
@@ -889,9 +1048,19 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
+      - func: "check packages version"
       - func: "compile release"
       - func: "build msi"
         variants: [windows-64]
+      - func: "mciuploads release artifacts"
+
+  - name: compile-macos
+    depends_on:
+    commands:
+      - func: "install iODBC"
+      - func: "set packages version"
+      - func: "check packages version"
+      - func: "compile macos release"
       - func: "mciuploads release artifacts"
 
   - name: compile-debug
@@ -899,7 +1068,16 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
+      - func: "check packages version"
       - func: "compile debug"
+      - func: "mciuploads debug artifacts"
+
+  - name: compile-debug-macos
+    commands:
+      - func: "install iODBC"
+      - func: "set packages version"
+      - func: "check packages version"
+      - func: "compile macos debug"
       - func: "mciuploads debug artifacts"
 
   - name: windows-unit-test
@@ -939,6 +1117,25 @@ tasks:
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu result-set tests"
+
+  - name: macos-unit-test
+    commands:
+      - func: "install iODBC"
+      - func: "run macos unit tests"
+
+  - name: macos-integration-test
+    commands:
+      - func: "install iODBC"
+      - func: "compile macos release with debug info"
+      - func: "setup driver with iODBC"
+      - func: "run macos integration tests"
+
+  - name: macos-result-set-test
+    commands:
+      - func: "install iODBC"
+      - func: "compile macos release with debug info"
+      - func: "setup driver with iODBC"
+      - func: "run macos result-set tests"
 
   - name: asan-unit-test
     commands:
@@ -1064,6 +1261,17 @@ buildvariants:
       - name: asan-unit-test
       - name: asan-integration-test
       - name: asan-result-set-test
+
+  - name: macos
+    display_name: "macOS 11.0"
+    run_on: [ macos-1100 ]
+    tasks:
+      - name: compile-macos
+      - name: compile-debug-macos
+      - name: macos-unit-test
+      # Skip Reason: SQL-1332
+      #- name: macos-integration-test
+      #- name: macos-result-set-test
 
   - name: release
     display_name: "Release"

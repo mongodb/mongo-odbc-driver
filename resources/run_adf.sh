@@ -80,7 +80,7 @@ MONGOSH_DOWNLOAD_LINUX_FILE=mongosh-1.8.0-linux-x64.tgz
 
 ## macOS
 MONGO_DOWNLOAD_MAC=mongodb-macos-x86_64-6.0.4.tgz
-MONGOSH_DOWNLOAD_MAC_FILE=mongosh-1.8.0-macos-x64.zip
+MONGOSH_DOWNLOAD_MAC_FILE=mongosh-1.8.0-darwin-x64.zip
 
 ## Windows
 MONGO_DOWNLOAD_WIN=mongodb-windows-x86_64-6.0.4.zip
@@ -166,6 +166,8 @@ if [ $OS = "Linux" ]; then
 elif [ $OS = "Darwin" ]; then
   MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/osx/$MONGO_DOWNLOAD_MAC
   MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_MAC
+  MONGOSH_DOWNLOAD_FILE=$MONGOSH_DOWNLOAD_MAC_FILE
+  MONGOSH_DOWNLOAD_LINK=$MONGOSH_DOWNLOAD_BASE/$MONGOSH_DOWNLOAD_FILE
 elif [[ $OS =~ ^CYGWIN ]]; then
   MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/windows/$MONGO_DOWNLOAD_WIN
   MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_WIN
@@ -333,7 +335,7 @@ if [[ $? -ne 0 ]]; then
     mkdir -p $TMP_DIR
     mkdir -p $LOGS_PATH
     # Start mongohoused with appropriate config
-    nohup $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
+    $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
       --config ./testdata/config/mongodb_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
     echo $! > $TMP_DIR/${MONGOHOUSED}.pid
 

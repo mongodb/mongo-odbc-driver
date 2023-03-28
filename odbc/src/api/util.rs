@@ -26,6 +26,7 @@ pub(crate) fn connection_attribute_to_string(attr: ConnectionAttribute) -> Strin
         ConnectionAttribute::SQL_ATTR_CONNECTION_DEAD => "CONNECTION_DEAD".to_string(),
         ConnectionAttribute::SQL_ATTR_AUTO_IPD => "AUTO_IPD".to_string(),
         ConnectionAttribute::SQL_ATTR_METADATA_ID => "METADATA_ID".to_string(),
+        ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => "APP_WCHAR_TYPE".to_string(),
     }
 }
 

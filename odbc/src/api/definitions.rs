@@ -9,6 +9,11 @@ pub enum SqlBool {
 // Environment attributes
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+pub enum CharSet {
+    Utf16 = 1,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum OdbcVersion {
     Odbc3 = 3,
     Odbc3_80 = 380,
@@ -135,6 +140,7 @@ pub enum ConnectionAttribute {
     SQL_ATTR_ENLIST_IN_DTC = 1207,
     SQL_ATTR_ENLIST_IN_XA = 1208,
     SQL_ATTR_CONNECTION_DEAD = 1209,
+    SQL_ATTR_APP_WCHAR_TYPE = 1061,
     SQL_ATTR_AUTO_IPD = 10001,
     SQL_ATTR_METADATA_ID = 10014,
 }
@@ -147,6 +153,7 @@ pub enum EnvironmentAttribute {
     SQL_ATTR_CONNECTION_POOLING = 201,
     SQL_ATTR_CP_MATCH = 202,
     SQL_ATTR_OUTPUT_NTS = 10001,
+    SQL_ATTR_DRIVER_UNICODE_TYPE = 1065,
 }
 
 #[allow(non_camel_case_types)]

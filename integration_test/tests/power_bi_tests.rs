@@ -4,14 +4,15 @@ mod integration {
     use crate::common::{
         generate_default_connection_str, get_sql_diagnostics, sql_return_to_string,
     };
-    use odbc::ffi::SQL_NTS;
     use odbc_sys::{
-        AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute, Desc,
-        DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
-        Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDriverConnectW, SQLExecDirectW,
-        SQLFetch, SQLFreeHandle, SQLGetData, SQLGetInfoW, SQLMoreResults, SQLNumResultCols,
-        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, USmallInt,
+        AttrConnectionPooling, AttrOdbcVersion, CDataType, Desc, DriverConnectOption,
+        EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType, Len, Pointer,
+        SQLAllocHandle, SQLColAttributeW, SQLDriverConnectW, SQLExecDirectW, SQLFetch,
+        SQLFreeHandle, SQLGetData, SQLGetInfoW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr,
+        SQLTablesW, SmallInt, SqlReturn, USmallInt, NTS,
     };
+    #[cfg(not(target_os = "macos"))]
+    use odbc_sys::{ConnectionAttribute, SQLSetConnectAttrW};
 
     use cstr::WideChar;
     use std::ptr::null_mut;
@@ -146,19 +147,23 @@ mod integration {
                 )
             );
 
-            // Set the login timeout
-            let login_timeout = 15;
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLSetConnectAttrW(
-                    dbc as HDbc,
-                    ConnectionAttribute::LoginTimeout,
-                    login_timeout as Pointer,
-                    0,
-                )
-            );
+            // Causes iODBC to hang on `SetConnectOptionW` call
+            #[cfg(not(target_os = "macos"))]
+            {
+                // Set the login timeout
+                let login_timeout = 15;
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLSetConnectAttrW(
+                        dbc as HDbc,
+                        ConnectionAttribute::LoginTimeout,
+                        login_timeout as Pointer,
+                        0,
+                    )
+                );
+            }
 
-            // Generate the connection string and add a null terminator because PowerBi uses SQL_NTS for the length
+            // Generate the connection string and add a null terminator because PowerBi uses NTS for the length
             in_connection_string = generate_default_connection_str();
             let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
@@ -175,7 +180,7 @@ mod integration {
                     dbc as HDbc,
                     null_mut(),
                     in_connection_string_encoded.as_ptr(),
-                    SQL_NTS,
+                    NTS as SmallInt,
                     out_connection_string_buff,
                     BUFFER_LENGTH,
                     str_len_ptr,
@@ -229,7 +234,9 @@ mod integration {
             let column_count_ptr = &mut 0;
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLNumResultCols(stmt as HStmt, column_count_ptr)
+                SQLNumResultCols(stmt as HStmt, column_count_ptr),
+                "{}",
+                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
             );
             assert_eq!(expected_col_count, *column_count_ptr);
 
@@ -356,7 +363,7 @@ mod integration {
     /// Connection flow is :
     /// - SQLAllocHandle(SQL_HANDLE_DBC)
     /// - SQLSetConnectAttrW(SQL_ATTR_LOGIN_TIMEOUT)
-    /// - SQLDriverConnectW({NullTerminatedInConnectionString}, SQL_NTS, {NullTerminatedOutConnectionString}, SQL_NTS, SQL_DRIVER_NOPROMPT)
+    /// - SQLDriverConnectW({NullTerminatedInConnectionString}, NTS , {NullTerminatedOutConnectionString}, NTS , SQL_DRIVER_NOPROMPT)
     /// - SQLGetInfoW(SQL_DRIVER_NAME)
     /// - SQLGetInfoW(SQL_DBMS_NAME)
     /// - SQLGetInfoW(SQL_DBMS_VER)
@@ -506,7 +513,7 @@ mod integration {
     ///     - SQLAllocHandle(SQL_HANDLE_STMT)
     ///     - SQLGetInfoW(SQL_DRIVER_ODBC_VER)
     ///     - SQLGetInfoW(SQL_DRIVER_NAME)
-    ///     - SQLExecDirectW({NullTerminatedQuery},SQL_NTS)
+    ///     - SQLExecDirectW({NullTerminatedQuery},NTS)
     ///     - SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
     ///     - SQLGetInfoW(SQL_GETDATA_EXTENSIONS)
     ///     - SQLNumResultCols()
@@ -549,7 +556,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS as i32),
+                SQLExecDirectW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
                 "{}",
                 get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
             );

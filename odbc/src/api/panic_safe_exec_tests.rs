@@ -5,8 +5,8 @@ use crate::{
     handles::definitions::{MongoHandle, MongoHandleRef, Statement, StatementState},
     panic_safe_exec, trace_odbc,
 };
-use ::function_name::named;
 use file_dbg_macros::{dbg_write, msg_to_file};
+use function_name::named;
 use odbc_sys::{HStmt, SqlReturn};
 use std::{panic, sync::mpsc};
 
