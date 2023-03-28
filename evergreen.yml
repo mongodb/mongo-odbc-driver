@@ -1061,7 +1061,7 @@ tasks:
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile macos release"
-      - func: "mciuploads release build and symbols"
+      - func: "mciuploads release artifacts"
 
   - name: compile-debug
     commands:
@@ -1078,7 +1078,7 @@ tasks:
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile macos debug"
-      - func: "mciuploads debug build and symbols"
+      - func: "mciuploads debug artifacts"
 
   - name: windows-unit-test
     commands:
