@@ -28,7 +28,6 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
             Ok(client_options) => {
                 match MongoConnection::connect(
                     client_options,
-                    // odbc_uri.get("database").map(|s| s.as_str()),
                     odbc_uri.get("database").map(|s| s.to_owned()),
                     None,
                     Some(30),
