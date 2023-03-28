@@ -1095,22 +1095,24 @@ functions:
 pre:
   - func: "fetch source"
   - func: "generate expansions"
-  - func: "install rust toolchain"
 post:
   - func: "upload start_adf logs"
 
 tasks:
   - name: clippy
     commands:
+      - func: "install rust toolchain"
       - func: "check clippy"
 
   - name: rustfmt
     commands:
+      - func: "install rust toolchain"
       - func: "check rustfmt"
 
   - name: compile
     depends_on:
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
@@ -1131,6 +1133,7 @@ tasks:
 
   - name: compile-debug
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
@@ -1175,11 +1178,13 @@ tasks:
 
   - name: ubuntu-unit-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "run ubuntu unit tests"
 
   - name: ubuntu-integration-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1187,6 +1192,7 @@ tasks:
 
   - name: ubuntu-result-set-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1213,11 +1219,13 @@ tasks:
 
   - name: asan-unit-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "run asan unit tests"
 
   - name: asan-integration-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1225,6 +1233,7 @@ tasks:
 
   - name: asan-result-set-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
