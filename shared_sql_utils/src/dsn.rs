@@ -118,26 +118,42 @@ impl DSNOpts {
         let buffer = &mut [0u16; MAX_VALUE_LENGTH];
         let mut dsn_opts = DSNOpts::default();
         let mut error_key = "";
-        self.iter().for_each(|(key, _)| {
-            let len = unsafe {
-                SQLGetPrivateProfileStringW(
-                    to_widechar_ptr(&self.dsn).0,
-                    to_widechar_ptr(key).0,
-                    to_widechar_ptr("").0,
-                    buffer.as_mut_ptr(),
-                    buffer.len() as i32,
-                    to_widechar_ptr(ODBCINI).0,
-                )
-            };
+        let len = unsafe {
+            SQLGetPrivateProfileStringW(
+                to_widechar_ptr(&self.dsn).0,
+                std::ptr::null(),
+                to_widechar_ptr("").0,
+                buffer.as_mut_ptr(),
+                buffer.len() as i32,
+                to_widechar_ptr(ODBCINI).0,
+            )
+        };
+        let dsn_keys = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
+        dsn_keys
+            .split('\0')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<&str>>()
+            .iter()
+            .for_each(|&key| {
+                let len = unsafe {
+                    SQLGetPrivateProfileStringW(
+                        to_widechar_ptr(&self.dsn).0,
+                        to_widechar_ptr(key).0,
+                        to_widechar_ptr("").0,
+                        buffer.as_mut_ptr(),
+                        buffer.len() as i32,
+                        to_widechar_ptr(ODBCINI).0,
+                    )
+                };
 
-            if len > MAX_VALUE_LENGTH as i32 {
-                error_key = key;
-                return;
-            }
+                if len > MAX_VALUE_LENGTH as i32 {
+                    error_key = key;
+                    return;
+                }
 
-            let value = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
-            dsn_opts.set_field(key, &value);
-        });
+                let value = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
+                dsn_opts.set_field(key, &value);
+            });
         // Somehow the registry value was too long. This should never happen unless Microsoft changes registry value rules.
         if !error_key.is_empty() {
             return Err(DSNError::Generic(format!("If you see this error, please report it. Attempted to read a value from registry that was too long for key: `{error_key}`.")));
@@ -300,5 +316,20 @@ mod test {
             "test".into(),
         );
         assert!(dsn_opts.is_ok());
+    }
+
+    #[test]
+    fn test_set_field() {
+        let mut dsn_opts = DSNOpts {
+            ..Default::default()
+        };
+        dsn_opts.set_field("PWD", "hunter2");
+        assert_eq!(dsn_opts.password, "hunter2");
+        dsn_opts.set_field("pwd", "hunter3");
+        assert_eq!(dsn_opts.password, "hunter3");
+        dsn_opts.set_field("UID", "user1");
+        assert_eq!(dsn_opts.user, "user1");
+        dsn_opts.set_field("user", "user2");
+        assert_eq!(dsn_opts.user, "user2");
     }
 }
