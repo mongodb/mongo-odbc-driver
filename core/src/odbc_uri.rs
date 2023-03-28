@@ -139,11 +139,14 @@ impl ODBCUri {
                 if rest.unwrap() == "" {
                     rest = None;
                 }
-                return Ok((input.get(0..i - 1).unwrap().into(), rest.map(String::from)));
+                return Ok((
+                    input.get(0..i - 1).unwrap().to_string(),
+                    rest.map(String::from),
+                ));
             }
             if c == '}' {
                 if i + 1 == input.len() {
-                    return Ok((input.get(0..i).unwrap().into(), None));
+                    return Ok((input.get(0..i).unwrap().to_string(), None));
                 }
                 after_brace = true
             } else {
@@ -158,13 +161,13 @@ impl ODBCUri {
     fn handle_unbraced_value(input: &str) -> Result<(String, Option<String>)> {
         let index = input.find(';');
         if index.is_none() {
-            return Ok((input.into(), None));
+            return Ok((input.to_string(), None));
         }
         let (value, rest) = input.split_at(index.unwrap());
         if rest.len() == 1 {
-            return Ok((value.into(), None));
+            return Ok((value.to_string(), None));
         }
-        Ok((value.into(), rest.get(1..).map(String::from)))
+        Ok((value.to_string(), rest.get(1..).map(String::from)))
     }
 
     // remove will remove the first value with a given one of the names passed, assuming all names
@@ -318,8 +321,8 @@ mod unit {
         fn get_unbraced() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("driver".to_string(), "foo".into(), None),
-                ODBCUri::get_next_attribute("DRIVER=foo".into())
+                ("driver".to_string(), "foo".to_string(), None),
+                ODBCUri::get_next_attribute("DRIVER=foo".to_string())
                     .unwrap()
                     .unwrap(),
             );
@@ -329,8 +332,8 @@ mod unit {
         fn get_braced() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                ("driver".to_string(), "fo[]=o".into(), None),
-                ODBCUri::get_next_attribute("DRIVER={fo[]=o}".into())
+                ("driver".to_string(), "fo[]=o".to_string(), None),
+                ODBCUri::get_next_attribute("DRIVER={fo[]=o}".to_string())
                     .unwrap()
                     .unwrap(),
             );
@@ -345,7 +348,7 @@ mod unit {
                     "foo".to_string(),
                     Some("UID=stuff".to_string())
                 ),
-                ODBCUri::get_next_attribute("DRIVER=foo;UID=stuff".into())
+                ODBCUri::get_next_attribute("DRIVER=foo;UID=stuff".to_string())
                     .unwrap()
                     .unwrap(),
             );
