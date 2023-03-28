@@ -193,7 +193,7 @@ functions:
               --key-name "bi-connector" \
               --auth-token-file ./signing_auth_token \
               --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
-              --notary-url ${notary_client_url} \
+              --notary-url "${notary_client_url}" \
               --skip-missing \
               mongoodbc.msi
 
