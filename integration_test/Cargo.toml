@@ -9,8 +9,9 @@ serde_json = "1"
 serde_yaml = "0.9.4"
 thiserror = "1"
 lazy_static = "1"
-widechar = { path = "../widechar" }
-odbc-sys =  "0.21.2"
+odbc-sys = { version = "0.21.2", default-features = false }
+cstr = { path = "../cstr" }
+constants = { path = "../constants" }
 
 [dependencies.mongodb]
 version = "2.3"

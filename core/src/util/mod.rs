@@ -2,6 +2,11 @@ mod decimal128;
 use bson::doc;
 use constants::SQL_ALL_TABLE_TYPES;
 pub use decimal128::Decimal128Plus;
+#[cfg(target_os = "windows")]
+pub mod dsn;
+#[cfg(target_os = "windows")]
+pub(crate) mod odbcinst;
+use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use mongodb::results::CollectionType;
 use regex::{Regex, RegexSet, RegexSetBuilder};
@@ -20,15 +25,30 @@ lazy_static! {
         .case_insensitive(true)
         .build()
         .unwrap();
+    static ref NON_ESCAPED_UNDERSCORE: FancyRegex = FancyRegex::new(r"(?<!\\\\)_").unwrap();
+    static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\\\)%").unwrap();
 }
 
 // Converts SQL pattern characters (% and _) into proper regex patterns.
-// SQL-1060: Improve SQL-to-Rust regex pattern method
+// SQL-1308: Handle SQL_ATTR_METADATA_ID
 // Returns regex for a filter
 pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
     match filter {
-        "%" => None,
-        _ => Some(Regex::new(&filter.replace('%', ".*").replace('_', ".")).unwrap()),
+        "%" | "" => None,
+        _ => {
+            let filter = regex::escape(filter);
+            let filter = NON_ESCAPED_UNDERSCORE.replace_all(&filter, ".");
+            let filter = NON_ESCAPED_PERCENT.replace_all(&filter, ".*");
+            let filter = &filter.replace("\\\\_", "_").replace("\\\\%", "%");
+            Some(Regex::new(&format!("^{filter}$")).unwrap())
+        }
+    }
+}
+
+pub(crate) fn is_match(name: &str, filter: &Option<Regex>) -> bool {
+    match filter {
+        Some(regex) => regex.is_match(name),
+        None => true,
     }
 }
 
@@ -79,3 +99,52 @@ macro_rules! set {
             ].into_iter())
         };
     }
+
+#[cfg(test)]
+mod filtering {
+    use super::{is_match, to_name_regex};
+
+    #[test]
+    fn test_to_name_regex() {
+        assert!(to_name_regex("%").is_none());
+        assert!(to_name_regex("").is_none());
+        assert!(to_name_regex("filter").is_some());
+    }
+
+    #[test]
+    fn test_is_positive_match() {
+        assert!(is_match("filter", &to_name_regex("%")));
+        assert!(is_match("filter", &to_name_regex("filter")));
+        assert!(is_match("downtimes", &to_name_regex("downtimes")));
+        assert!(is_match("customerssales", &to_name_regex("customer_sales")));
+        assert!(is_match("myiphone", &to_name_regex("my_phone")));
+        assert!(is_match("conversions2022", &to_name_regex("conversions%")));
+        assert!(is_match("integration_test", &to_name_regex("%test")));
+        assert!(is_match("money$$bags", &to_name_regex("money$$bags")));
+        assert!(is_match("money$.bags", &to_name_regex("money$.bags")));
+    }
+
+    #[test]
+    fn test_is_negative_match() {
+        assert!(!is_match("filter", &to_name_regex("filt")));
+        assert!(!is_match("filter", &to_name_regex(r"filt_er")));
+        assert!(!is_match("downtimestatus", &to_name_regex("downtimes")));
+        assert!(!is_match("downtimestatus", &to_name_regex("status")));
+        assert!(!is_match("integration_test_2", &to_name_regex("%test")));
+        assert!(!is_match("money$$bags", &to_name_regex("money$.bags")));
+    }
+
+    #[test]
+    fn test_escaped_chars() {
+        assert!(is_match("my_phone", &to_name_regex(r"my\_phone")));
+        assert!(!is_match("myiphone", &to_name_regex(r"my\_phone")));
+        assert!(is_match(
+            "conversion%2022",
+            &to_name_regex(r"conversion\%2022")
+        ));
+        assert!(!is_match(
+            "conversions2022",
+            &to_name_regex(r"conversion\%2022")
+        ));
+    }
+}

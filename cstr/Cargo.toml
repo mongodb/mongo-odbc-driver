@@ -1,14 +1,14 @@
 [package]
-name = "file_dbg_macros"
+name = "cstr"
 version = "0.0.0"
-edition = "2021"
 authors = [
     "Ryan Chipman <ryan@ryanchipman.com>",
     "Natacha Bagnard <natacha.bagnard@mongodb.com>",
     "Patrick Meredith <pmeredit@protonmail.com>",
-    "Oliver Bucaojit <oliver.bucaojit@mongodb.com>",
+    "Nathan Leniz <nathan.leniz@mongodb.com>",
 ]
+edition = "2021"
 
 [dependencies]
-lazy_static = "1.4.0"
-thiserror = "1"
+widestring = "1.0.2"
+odbc-sys = "0.21.2"

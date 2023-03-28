@@ -276,7 +276,7 @@ lazy_static! {
 }
 
 mod unit {
-    use widechar::WideChar;
+    use cstr::WideChar;
 
     use super::*;
     // test unallocated_statement tests SQLFetch when the mongo_statement inside
@@ -401,9 +401,8 @@ mod unit {
 
     #[test]
     fn sql_get_wstring_data() {
-        use crate::api::{
-            data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
-        };
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
+        use cstr::input_text_to_string_w;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -440,7 +439,7 @@ mod unit {
                     );
                     assert_eq!(
                         expected.to_string(),
-                        input_wtext_to_string(char_buffer as *const _, expected.len())
+                        input_text_to_string_w(char_buffer as *const _, expected.len())
                     );
                 };
 
@@ -500,11 +499,9 @@ mod unit {
 
     #[test]
     fn sql_get_wstring_data_by_pieces() {
-        use crate::api::{
-            data::input_wtext_to_string, definitions::CDataType, functions::SQLGetData,
-        };
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
+        use cstr::{input_text_to_string_w, WideChar};
         use std::mem::size_of;
-        use widechar::WideChar;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -560,7 +557,7 @@ mod unit {
                     );
                     assert_eq!(
                         expected.to_string(),
-                        input_wtext_to_string(char_buffer as *const _, expected.chars().count())
+                        input_text_to_string_w(char_buffer as *const _, expected.chars().count())
                     );
                 };
 
@@ -669,9 +666,8 @@ mod unit {
 
     #[test]
     fn sql_get_string_data_by_pieces() {
-        use crate::api::{
-            data::input_text_to_string, definitions::CDataType, functions::SQLGetData,
-        };
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
+        use cstr::input_text_to_string_a;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -690,25 +686,27 @@ mod unit {
             let buffer_length = 3;
             let out_len_or_ind = &mut 0;
             {
-                let mut str_val_test =
-                    |col: u16, expected_out_len: isize, expected: &str, code: SqlReturn| {
-                        assert_eq!(
-                            code,
-                            SQLGetData(
-                                stmt_handle as *mut _,
-                                col,
-                                CDataType::SQL_C_CHAR as i16,
-                                char_buffer,
-                                buffer_length,
-                                out_len_or_ind,
-                            )
-                        );
-                        assert_eq!(expected_out_len, *out_len_or_ind);
-                        assert_eq!(
-                            expected.to_string(),
-                            input_text_to_string(char_buffer as *const _, expected.chars().count())
-                        );
-                    };
+                let mut str_val_test = |col: u16,
+                                        expected_out_len: isize,
+                                        expected: &str,
+                                        code: SqlReturn| {
+                    assert_eq!(
+                        code,
+                        SQLGetData(
+                            stmt_handle as *mut _,
+                            col,
+                            CDataType::SQL_C_CHAR as i16,
+                            char_buffer,
+                            buffer_length,
+                            out_len_or_ind,
+                        )
+                    );
+                    assert_eq!(expected_out_len, *out_len_or_ind);
+                    assert_eq!(
+                        expected.to_string(),
+                        input_text_to_string_a(char_buffer as *const _, expected.chars().count())
+                    );
+                };
 
                 str_val_test(ARRAY_COL, 7, "[1", SqlReturn::SUCCESS_WITH_INFO);
                 str_val_test(ARRAY_COL, 5, ",2", SqlReturn::SUCCESS_WITH_INFO);
@@ -899,9 +897,8 @@ mod unit {
 
     #[test]
     fn sql_get_string_data() {
-        use crate::api::{
-            data::input_text_to_string, definitions::CDataType, functions::SQLGetData,
-        };
+        use crate::api::{definitions::CDataType, functions::SQLGetData};
+        use cstr::input_text_to_string_a;
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
@@ -939,7 +936,7 @@ mod unit {
                     );
                     assert_eq!(
                         expected.to_string(),
-                        input_text_to_string(char_buffer as *const _, expected.len()),
+                        input_text_to_string_a(char_buffer as *const _, expected.len()),
                         "Expected column type {col}",
                     );
                 };

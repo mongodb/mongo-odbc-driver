@@ -1,11 +1,10 @@
 use crate::{
-    api::data::input_wtext_to_string,
     definitions::*,
     handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
 };
+use cstr::{input_text_to_string_w, WideChar};
 use odbc_sys::{Pointer, SmallInt, SqlReturn, UInteger, USmallInt};
-use widechar::WideChar;
 
 macro_rules! test_get_info {
     ($func_name:ident,
@@ -78,14 +77,14 @@ macro_rules! test_get_info_expect_u32_zero {
 }
 
 unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
-    input_wtext_to_string(
+    input_text_to_string_w(
         value_ptr as *const _,
         out_length / std::mem::size_of::<WideChar>(),
     )
 }
 
 unsafe fn modify_string_value_from_runes(value_ptr: Pointer, out_length: usize) -> String {
-    input_wtext_to_string(value_ptr as *const _, out_length)
+    input_text_to_string_w(value_ptr as *const _, out_length)
 }
 
 unsafe fn modify_u32_value(value_ptr: Pointer, _: usize) -> u32 {
@@ -100,15 +99,15 @@ mod unit {
 
     use super::*;
     use constants::{DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION};
+    use cstr::WideChar;
     use std::mem::size_of;
-    use widechar::WideChar;
 
     test_get_info!(
         driver_name,
         info_type = InfoType::SQL_DRIVER_NAME as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = 40 * size_of::<WideChar>() as i16,
-        expected_length = 39 * size_of::<WideChar>() as i16,
+        buffer_length = (DRIVER_NAME.len() + 1) as i16 * size_of::<WideChar>() as i16,
+        expected_length = DRIVER_NAME.len() as i16 * size_of::<WideChar>() as i16,
         expected_value = DRIVER_NAME,
         actual_value_modifier = modify_string_value,
     );
@@ -137,9 +136,9 @@ mod unit {
         search_pattern_escape,
         info_type = InfoType::SQL_SEARCH_PATTERN_ESCAPE as u16,
         expected_sql_return = SqlReturn::SUCCESS,
-        buffer_length = size_of::<WideChar>() as i16,
-        expected_length = 0,
-        expected_value = "",
+        buffer_length = 3 * size_of::<WideChar>() as i16,
+        expected_length = 2,
+        expected_value = r"\",
         actual_value_modifier = modify_string_value,
     );
 

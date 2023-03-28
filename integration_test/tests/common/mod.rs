@@ -6,7 +6,8 @@ use odbc_sys::{
 use std::ptr::null_mut;
 use std::{env, slice};
 use thiserror::Error;
-use widechar::WideChar;
+use cstr::{self, WideChar};
+use constants::DRIVER_NAME;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
@@ -32,7 +33,7 @@ pub fn generate_default_connection_str() -> String {
     let db = env::var("ADF_TEST_LOCAL_DB");
     let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
         Ok(val) => val,
-        Err(_e) => "MongoDB Atlas SQL ODBC Driver".to_string(), //Default driver name
+        Err(_e) => DRIVER_NAME.to_string(), //Default driver name
     };
 
     let mut connection_string =
@@ -70,7 +71,7 @@ pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
         );
     };
     unsafe {
-        widechar::from_widechar_ref_lossy(slice::from_raw_parts(
+        cstr::from_widechar_ref_lossy(slice::from_raw_parts(
             actual_message_text as *const WideChar,
             *text_length_ptr as usize,
         ))
@@ -128,7 +129,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             SqlReturn::SUCCESS => (),
             sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
         }
-        let mut in_connection_string_encoded = widechar::to_widechar_vec(&in_connection_string);
+        let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
         in_connection_string_encoded.push(0);
         let str_len_ptr = &mut 0;
         match SQLDriverConnectW(
