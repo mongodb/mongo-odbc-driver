@@ -1,3 +1,5 @@
+use constants::DRIVER_NAME;
+use cstr::{self, WideChar};
 use odbc_sys::{
     AttrOdbcVersion, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle,
     HandleType, SQLAllocHandle, SQLDriverConnectW, SQLGetDiagRecW, SQLSetEnvAttr, SmallInt,
@@ -6,8 +8,6 @@ use odbc_sys::{
 use std::ptr::null_mut;
 use std::{env, slice};
 use thiserror::Error;
-use cstr::{self, WideChar};
-use constants::DRIVER_NAME;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
