@@ -107,6 +107,21 @@ pub fn to_char_ptr(s: &str) -> (*mut Char, Vec<u8>) {
     (v.as_mut_ptr(), v)
 }
 
+///
+/// write_to_buffer writes the input string to the output buffer, and returns the number of bytes written
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_to_buffer(message: &str, len: usize, output_ptr: *mut WideChar) -> u16 {
+    let len = std::cmp::min(message.len(), len - 1);
+    let mut v = to_widechar_vec(&message[..len]);
+    v.push(0);
+    unsafe {
+        copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
+    }
+    v.len() as u16
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -114,7 +129,7 @@ mod test {
     #[test]
     fn test_input_atext_to_string() {
         let expected = "test";
-        let test = expected.as_bytes();
+        let test = "test\0".as_bytes();
         let test = test.as_ptr();
         let test = unsafe { input_text_to_string_a(test, expected.len()) };
         assert_eq!(expected, test);
@@ -127,5 +142,35 @@ mod test {
         let test = test.as_ptr();
         let test = unsafe { input_text_to_string_w(test, expected.len()) };
         assert_eq!(expected, test);
+    }
+
+    #[test]
+    fn test_write_to_buffer_with_enough_space() {
+        let expected = "test\0\0\0\0\0";
+        let input = "test";
+        let mut buffer = [0u16; 9];
+        let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_to_buffer_constrained_space() {
+        let expected = "te\0";
+        let input = "testing";
+        let mut buffer = [0u16; 3];
+        let len = unsafe { write_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_to_buffer_when_message_len_is_buffer_len() {
+        let expected = "tes\0";
+        let input = "test";
+        let mut buffer = [0u16; 4];
+        let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
 }

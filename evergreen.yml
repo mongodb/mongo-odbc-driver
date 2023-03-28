@@ -256,7 +256,6 @@ functions:
           # Build a release driver with debug information
           cargo build --features odbc-sys/iodbc --profile=release-with-debug
           export DRIVER_LIB_PATH=$PWD/target/release-with-debug
-
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
           EOT
@@ -264,15 +263,60 @@ functions:
       params:
         file: mongosql-odbc-driver/expansions.yml
 
-  "mciuploads release build and symbols":
+  "build msi":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          echo "env $(env)"
+          cp target/release/*.dll installer/msi
+          cp ./README.md installer/msi
+          cd installer/msi
+          VERSION="$RELEASE_VERSION"
+          # unfortunately, using a variable to hold the path to powershell
+          # seems to not work properly with evergreen's bash
+          /cygdrive/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\
+              -NoProfile\
+              -NoLogo\
+              -NonInteractive\
+              -ExecutionPolicy ByPass\
+              -File ./build-msi.ps1\
+              -Arch x64\
+              -VersionLabel "$VERSION"
+
+  "mciuploads release artifacts":
     - command: s3.put
       params:
         build_variants:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dll
+        local_file: mongosql-odbc-driver/target/release/atsql.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.msi
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/atsqls.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsqls.dll
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -282,8 +326,8 @@ functions:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/libmongoodbc.so
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libmongoodbc.so
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -293,21 +337,32 @@ functions:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.pdb
+        local_file: mongosql-odbc-driver/target/release/atsql.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
 
-  "mciuploads debug build and symbols":
+  "mciuploads debug artifacts":
     - command: s3.put
       params:
         build_variants:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/debug/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/mongoodbc.dll
+        local_file: mongosql-odbc-driver/target/debug/atsql.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/atsql.dll
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/debug/atsqls.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/atsqls.dll
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -317,8 +372,8 @@ functions:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/debug/libmongoodbc.so
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/libmongoodbc.so
+        local_file: mongosql-odbc-driver/target/debug/libatsql.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/libatsql.so
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -328,8 +383,8 @@ functions:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/debug/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/mongoodbc.pdb
+        local_file: mongosql-odbc-driver/target/debug/atsql.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/debug/atsql.pdb
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -339,15 +394,15 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc.dll
-        local_file: mongosql-odbc-driver/release/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsql.dll
+        local_file: mongosql-odbc-driver/release/atsql.dll
         bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/release/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/mongoodbc.dll
+        local_file: mongosql-odbc-driver/release/atsql.dll
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -355,15 +410,31 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc.pdb
-        local_file: mongosql-odbc-driver/release/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsqls.dll
+        local_file: mongosql-odbc-driver/release/atsqls.dll
         bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/release/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/mongoodbc.pdb
+        local_file: mongosql-odbc-driver/release/atsqls.dll
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsqls.dll
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsql.pdb
+        local_file: mongosql-odbc-driver/release/atsql.pdb
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/atsql.pdb
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -373,15 +444,15 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/debug/mongoodbc.dll
-        local_file: mongosql-odbc-driver/debug/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/debug/atsql.dll
+        local_file: mongosql-odbc-driver/debug/atsql.dll
         bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/debug/mongoodbc.dll
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/debug/mongoodbc.dll
+        local_file: mongosql-odbc-driver/debug/atsql.dll
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/debug/atsql.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -389,15 +460,31 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/debug/mongoodbc.pdb
-        local_file: mongosql-odbc-driver/debug/mongoodbc.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/debug/atsqls.dll
+        local_file: mongosql-odbc-driver/debug/atsqls.dll
         bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/debug/mongoodbc.pdb
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/debug/mongoodbc.pdb
+        local_file: mongosql-odbc-driver/debug/atsqls.dll
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/debug/atsqls.dll
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/debug/atsql.pdb
+        local_file: mongosql-odbc-driver/debug/atsql.pdb
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/debug/atsql.pdb
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/debug/atsql.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -409,8 +496,17 @@ functions:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dll
-        local_file: mongosql-odbc-driver/mongoodbc.dll
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.dll
+        local_file: mongosql-odbc-driver/atsql.dll
+        bucket: mciuploads
+    - command: s3.get
+      params:
+        build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsqls.dll
+        local_file: mongosql-odbc-driver/atsqls.dll
         bucket: mciuploads
     - command: s3.get
       params:
@@ -418,8 +514,8 @@ functions:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libmongoodbc.so
-        local_file: mongosql-odbc-driver/libmongoodbc.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
+        local_file: mongosql-odbc-driver/libatsql.so
         bucket: mciuploads
 
   "setup driver on Windows":
@@ -954,7 +1050,9 @@ tasks:
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile release"
-      - func: "mciuploads release build and symbols"
+      - func: "build msi"
+        variants: [windows-64]
+      - func: "mciuploads release artifacts"
 
   - name: compile-macos
     depends_on:
@@ -972,7 +1070,7 @@ tasks:
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile debug"
-      - func: "mciuploads debug build and symbols"
+      - func: "mciuploads debug artifacts"
 
   - name: compile-debug-macos
     commands:

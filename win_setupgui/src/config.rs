@@ -1,7 +1,7 @@
 use crate::gui::config_dsn;
 use cstr::{input_text_to_string_w, parse_attribute_string};
 use file_dbg_macros::*;
-use mongo_odbc_core::util::dsn::DSNOpts;
+use shared_sql_utils::DSNOpts;
 use windows::Win32::{
     Foundation::HWND,
     System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN, ODBC_REMOVE_DSN},
@@ -25,9 +25,8 @@ unsafe extern "C" fn ConfigDSNW(
     driver: *mut cstr::WideChar,
     attributes: *mut cstr::WideChar,
 ) -> bool {
-    match std::panic::catch_unwind(|| {
-        let mut dsn_opts =
-            DSNOpts::from_attribute_string(parse_attribute_string(attributes)).unwrap_or_default();
+    std::panic::catch_unwind(|| {
+        let mut dsn_opts = DSNOpts::from_attribute_string(&parse_attribute_string(attributes));
 
         // If a data source name is passed to ConfigDSN in lpszAttributes, ConfigDSN checks that the name is valid. If the
         // data source name matches an existing data source name and hwndParent is null, ConfigDSN overwrites the existing name.
@@ -56,8 +55,6 @@ unsafe extern "C" fn ConfigDSNW(
             ODBC_REMOVE_DSN => dsn_opts.remove_dsn(),
             _ => unreachable!(),
         }
-    }) {
-        Ok(result) => result,
-        Err(_) => false,
-    }
+    })
+    .unwrap_or(false)
 }

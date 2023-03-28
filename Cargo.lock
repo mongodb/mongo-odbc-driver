@@ -1387,6 +1387,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "shared_sql_utils"
+version = "0.0.0"
+dependencies = [
+ "cstr",
+ "thiserror",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1911,10 +1919,10 @@ dependencies = [
  "cstr",
  "file_dbg_macros",
  "function_name",
- "mongo-odbc-core",
- "mongo-odbc-driver",
  "native-windows-derive",
  "native-windows-gui",
+ "shared_sql_utils",
+ "thiserror",
  "windows",
 ]
 

@@ -42,7 +42,7 @@ serde_yaml = "0.8.21"
 thiserror = "1"
 
 [lib]
-name = "mongoodbc"
+name = "atsql"
 crate-type = ["cdylib", "lib"]
 
 [target.'cfg(windows)'.build-dependencies]
