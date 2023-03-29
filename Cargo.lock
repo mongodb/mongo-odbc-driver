@@ -777,6 +777,7 @@ dependencies = [
  "odbc-sys",
  "regex",
  "serde",
+ "shared_sql_utils",
  "thiserror",
  "windows",
 ]

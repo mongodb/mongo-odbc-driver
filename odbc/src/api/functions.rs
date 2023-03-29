@@ -1048,14 +1048,14 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 }
 
 fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoConnection> {
-    let mut odbc_uri = ODBCUri::new(odbc_uri_string)?;
+    let mut odbc_uri = ODBCUri::new(odbc_uri_string.to_string())?;
     let client_options = odbc_uri.try_into_client_options()?;
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
     let conn_attrs = conn.attributes.read().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
-        conn_attrs.current_catalog.as_deref()
+        conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
     } else {
         odbc_uri.remove(&["database"])
     };

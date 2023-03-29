@@ -36,7 +36,7 @@ impl MongoConnection {
     /// setting specified in the uri if any.
     pub fn connect(
         mut client_options: ClientOptions,
-        current_db: Option<&str>,
+        current_db: Option<String>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
     ) -> Result<Self> {
@@ -44,7 +44,7 @@ impl MongoConnection {
         let client = Client::with_options(client_options).map_err(Error::InvalidClientOptions)?;
         let connection = MongoConnection {
             client,
-            current_db: current_db.map(String::from),
+            current_db,
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
         };
         // Verify that the connection is working and the user has access to the default DB
