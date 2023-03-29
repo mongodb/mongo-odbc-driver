@@ -30,13 +30,6 @@ functions:
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.msi
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
         bucket: mciuploads
-    - command: s3.get
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.dll
-        local_file: mongosql-odbc-driver/installer/msi/atsql.dll
-        bucket: mciuploads
 
   "fetch source":
     - command: git.get_project
@@ -203,13 +196,6 @@ functions:
               --notary-url "${notary_client_url}" \
               --skip-missing \
               mongoodbc.msi
-          /usr/local/bin/notary-client.py \
-              --key-name "bi-connector" \
-              --auth-token-file ./signing_auth_token \
-              --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
-              --notary-url "${notary_client_url}" \
-              --skip-missing \
-              atsql.dll
 
   "compile release":
     - command: shell.exec
@@ -445,15 +431,6 @@ functions:
         aws_secret: ${aws_secret}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc-signed.msi
-        bucket: mciuploads
-        permissions: public-read
-        content_type: application/octet-stream
-    - command: s3.put
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsql-signed.dll
-        local_file: mongosql-odbc-driver/installer/msi/atsql-signed.dll
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
