@@ -364,6 +364,17 @@ functions:
     - command: s3.put
       params:
         build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/atsql.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
@@ -375,11 +386,11 @@ functions:
     - command: s3.put
       params:
         build_variants:
-          - windows-64
+          - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/atsql.pdb
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
+        local_file: mongosql-odbc-driver/release/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -506,6 +517,42 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/libatsql.so
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
 
   "upload debug":
     - command: s3.get
@@ -556,6 +603,24 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/debug/libatsql.so
+        local_file: mongosql-odbc-driver/target/debug/libatsql.so
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/debug/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/debug/libatsql.so
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
 
   "download artifact":
     - command: s3.get
@@ -585,6 +650,18 @@ functions:
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
         local_file: mongosql-odbc-driver/libatsql.so
         bucket: mciuploads
+
+  "tar linux artifacts":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script:  |
+          mkdir -p release/mongoodbc/bin
+          cp  target/release/libatsql.so release/mongoodbc/bin/
+          cp ./LICENSE ./README.md release/mongoodbc/
+          cd release
+          tar -czvf mongoodbc.tar.gz mongoodbc/
 
   "setup driver on Windows":
     - command: shell.exec
@@ -1126,6 +1203,8 @@ tasks:
       - func: "compile release"
       - func: "build msi"
         variants: [windows-64]
+      - func: "tar linux artifacts"
+        variants: [ubuntu2204]
       - func: "mciuploads release artifacts"
 
   - name: compile-macos
@@ -1261,6 +1340,12 @@ tasks:
         variant: "windows-64"
       - name: windows-result-set-test
         variant: "windows-64"
+      - name: ubuntu-unit-test
+        variant: "ubuntu2204"
+      - name: ubuntu-integration-test
+        variant: "ubuntu2204"
+      - name: ubuntu-result-set-test
+        variant: "ubuntu2204"
       - name: asan-unit-test
         variant: "*"
       - name: asan-integration-test
