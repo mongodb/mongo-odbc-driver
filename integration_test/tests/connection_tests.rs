@@ -29,19 +29,19 @@ mod integration {
 
     #[cfg(target_os = "windows")]
     mod test_dsn {
-        use odbc::create_environment_v3;
+        use crate::common::{allocate_env, connect_with_conn_string};
         #[test]
         fn test_valid_dsn_connection() {
-            let env = create_environment_v3().unwrap();
+            let env_handle = allocate_env();
             let conn_str = "DSN=ADF_Test";
-            env.connect_with_connection_string(conn_str).unwrap();
+            connect_with_conn_string(env_handle.unwrap(), conn_str.to_string()).unwrap();
         }
 
         #[test]
         fn test_uri_opts_override_dsn() {
-            let env = create_environment_v3().unwrap();
+            let env_handle = allocate_env();
             let conn_str = "PWD=wrong;DSN=ADF_Test";
-            let result = env.connect_with_connection_string(conn_str);
+            let result = connect_with_conn_string(env_handle.unwrap(), conn_str.to_string());
             assert!(
                 result.is_err(),
                 "The connection should have failed, but it was successful."
