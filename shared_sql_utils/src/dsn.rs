@@ -1,5 +1,8 @@
 use crate::odbcinst::*;
-use cstr::{input_text_to_string_w, to_widechar_ptr};
+use cstr::{
+    input_text_to_string_w, parse_attribute_string_a, parse_attribute_string_w, to_char_ptr,
+    to_widechar_ptr,
+};
 use thiserror::Error;
 
 const DATABASE: &str = "database";
@@ -115,22 +118,49 @@ impl DSNOpts {
     }
 
     pub fn from_private_profile_string(&self) -> Result<Self, DSNError> {
-        let buffer = &mut [0u16; MAX_VALUE_LENGTH];
         let mut dsn_opts = DSNOpts::default();
         let mut error_key = "";
-        let len = unsafe {
-            SQLGetPrivateProfileStringW(
-                to_widechar_ptr(&self.dsn).0,
-                std::ptr::null(),
-                to_widechar_ptr("").0,
-                buffer.as_mut_ptr(),
-                buffer.len() as i32,
-                to_widechar_ptr(ODBCINI).0,
-            )
+
+        // SQL-1338 - Support reading utf16 values in dsn keys with unixodbc
+        // SQLGetPrivateProfileStringW is hopelessly broken in unixodbc. As a workaround,
+        // we must use SQLGetPrivateProfileString until if/when unixodbc is fixed or we
+        // implement SQL-1338.
+        // The implication for users is that on linux, they cannot use utf16 unicode values
+        // in DSN keys.
+
+        // All odbc implementations (windows, unixodbc, iODBC) support return the available
+        // keys in a DSN as a null-terminated string of null-terminated strings.
+        let dsn_keys = if cfg!(not(target_os = "linux")) {
+            let wbuf = &mut [0u16; 1024];
+            unsafe {
+                SQLGetPrivateProfileStringW(
+                    to_widechar_ptr(&self.dsn).0,
+                    std::ptr::null(),
+                    to_widechar_ptr("").0,
+                    wbuf.as_mut_ptr(),
+                    wbuf.len() as i32,
+                    to_widechar_ptr(ODBCINI).0,
+                );
+            }
+            unsafe { parse_attribute_string_w(wbuf.as_mut_ptr()) }
+        } else {
+            let abuf = &mut [0u8; 1024];
+
+            unsafe {
+                SQLGetPrivateProfileString(
+                    to_char_ptr(&self.dsn).0,
+                    std::ptr::null(),
+                    to_char_ptr("").0,
+                    abuf.as_mut_ptr(),
+                    abuf.len() as i32,
+                    to_char_ptr(ODBCINI).0,
+                );
+            }
+            unsafe { parse_attribute_string_a(abuf.as_mut_ptr()) }
         };
-        let dsn_keys = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
+        let buffer = &mut [0u16; 1024];
         dsn_keys
-            .split('\0')
+            .split(';')
             .filter(|s| !s.is_empty())
             .collect::<Vec<&str>>()
             .iter()

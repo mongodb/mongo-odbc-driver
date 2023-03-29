@@ -21,5 +21,13 @@ extern "C" {
         buffer_size: i32,
         filename: *const WideChar,
     ) -> i32;
+    pub fn SQLGetPrivateProfileString(
+        section: *const u8,
+        entry: *const u8,
+        default: *const u8,
+        buffer: *mut u8,
+        buffer_size: i32,
+        filename: *const u8,
+    ) -> i32;
     pub fn SQLGetConfigMode(buffer: *mut u32) -> i32;
 }

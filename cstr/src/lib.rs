@@ -1,4 +1,4 @@
-use std::ptr::copy_nonoverlapping;
+use std::{ptr::copy_nonoverlapping, str::from_utf8};
 
 pub type WideChar = u16;
 pub type Char = u8;
@@ -68,6 +68,28 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> Strin
     copy_nonoverlapping(text, dst.as_mut_ptr(), len);
     from_widechar_vec_lossy(dst)
 }
+///
+/// parse_attribute_string converts a null-separted u16 doubly-null terminated cstring to a Rust
+/// string separated by `;`.
+///
+/// # Safety
+/// This converts a raw c-pointer to a Rust string, which requires unsafe operations
+///
+#[allow(clippy::uninit_vec)]
+pub unsafe fn parse_attribute_string_a(text: *const Char) -> String {
+    let mut dst = Vec::new();
+    let mut itr = text;
+    {
+        while *itr != 0 || *itr.offset(1) != 0 {
+            dst.push(*itr);
+            itr = itr.offset(1);
+        }
+    }
+    from_utf8(dst.as_slice())
+        .unwrap()
+        .replace(char::from(0), ";")
+    // from_widechar_vec_lossy(dst).replace(char::from(0), ";")
+}
 
 ///
 /// parse_attribute_string converts a null-separted u16 doubly-null terminated cstring to a Rust
@@ -77,7 +99,7 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> Strin
 /// This converts a raw c-pointer to a Rust string, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn parse_attribute_string(text: *const WideChar) -> String {
+pub unsafe fn parse_attribute_string_w(text: *const WideChar) -> String {
     let mut dst = Vec::new();
     let mut itr = text;
     {
