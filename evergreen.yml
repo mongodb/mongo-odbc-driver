@@ -22,7 +22,7 @@ timeout:
         ls -la
 
 functions:
-  "fetch for windows sign"
+  "fetch for windows sign":
     - command: s3.get
       params:
         aws_key: ${aws_key}
@@ -190,7 +190,7 @@ functions:
             cargo set-version $RELEASE_VERSION
           fi
 
-  "sign windows"
+  "sign windows":
     - command: shell.exec
       params:
         working_dir: mongosql-odbc-driver/installer/msi
@@ -438,7 +438,7 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
 
-  "upload signed windows artifacts"
+  "upload signed windows artifacts":
     - command: s3.put
       params:
         aws_key: ${aws_key}
