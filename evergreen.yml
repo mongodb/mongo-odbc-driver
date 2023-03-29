@@ -235,7 +235,14 @@ functions:
           cp target/release/*.dll installer/msi
           cp ./README.md installer/msi
           cd installer/msi
-          VERSION="$RELEASE_VERSION"
+          if [ "$RELEASE_VERSION" == "snapshot" ]; then
+              MINOR_VERSION ="0.1"
+              VERSION_LABEL="0.1.0"
+          else
+              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
+              VERSION_LABEL="$RELEASE_VERSION"
+          fi
+          UUID=$(uuidgen -m -N "mongoodbc_no_conflicts_$MINOR_VERSION" -n @oid)
           # unfortunately, using a variable to hold the path to powershell
           # seems to not work properly with evergreen's bash
           /cygdrive/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\
@@ -245,7 +252,9 @@ functions:
               -ExecutionPolicy ByPass\
               -File ./build-msi.ps1\
               -Arch x64\
-              -VersionLabel "$VERSION"
+              -Version "$MINOR_VERSION"\
+              -VersionLabel "$VERSION_LABEL"\
+              -UpgradeCode "$UUID"
 
   "mciuploads release artifacts":
     - command: s3.put

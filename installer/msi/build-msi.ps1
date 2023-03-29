@@ -9,7 +9,9 @@
 #>
 Param(
   [string]$Arch,
-  [string]$VersionLabel
+  [string]$Version,
+  [string]$VersionLabel,
+  [string]$UpgradeCode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,27 +26,6 @@ $WixPath = "C:\wixtools\bin\"
 #$WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $wixUiExt = "$WixPath\WixUIExtension.dll"
 
-if ($VersionLabel -eq "snapshot") {
-    # We use 0.1.0 as the default for a snapshot because Windows seems to think a newer version is installed if
-    # 0.0.0 is used even when nothing is installed.
-    $VersionLabel = "0.1.0"
-}
-if (-not ($VersionLabel -match "(\d\.\d).*")) {
-    throw "invalid version specified: $VersionLabel"
-}
-$version = $matches[1]
-
-# upgrade code needs to change everytime we
-# rev the minor version (1.0 -> 1.1). That way, we
-# will allow multiple minor versions to be installed
-# side-by-side.
-if ([double]$version -gt 0.1) {
-    throw "You must change the upgrade code for a minor revision.
-Once that is done, change the version number above to
-account for the next revision that will require being
-upgradeable. Make sure to change both x64 and x86 upgradeCode"
-}
-
 # we currently only support x64, but we'll leave the 32 bit support here
 # in case we eventually decide to provide a 32-bit driver
 if ($Arch -eq "x64") {
@@ -58,8 +39,8 @@ if ($Arch -eq "x64") {
 & $WixPath\candle.exe -wx `
     -dProductId="*" `
     -dPlatform="$Arch" `
-    -dUpgradeCode="$upgradeCode" `
-    -dVersion="$version" `
+    -dUpgradeCode="$UpgradeCode" `
+    -dVersion="$Version" `
     -dVersionLabel="$VersionLabel" `
     -dProjectName="$ProjectName" `
     -dSourceDir="$sourceDir" `
