@@ -3,17 +3,18 @@
 rm ./*.dmg
 rm dmg-contents/*.pkg || true
 
-ROOT=/Library/MongoDB/ODBC/$MDBODBC_VER
+VERSION=$1
+ROOT=/Library/MongoDB/AtlasSQL ODBC/$VERSION
 mkdir -p components/"$ROOT"
 mv ./*.so components/"$ROOT"/
 mv ./*.dylib components/"$ROOT"/
 cp ./resources/*.rtf components/"$ROOT"/
 
 # build component pkg
-pkgbuild --root=components/ --scripts=scripts/ --identifier='MongoDB ODBC' 'mongodb-odbc-component.pkg'
+pkgbuild --root=components/ --scripts=scripts/ --identifier='AtlasSQL ODBC' 'mongodb-odbc-component.pkg'
 
-# set the version based on VERSION.txt (stored in $MDBODBC_VER)
-sed -i '.bak' "s|__VERSION__|$MDBODBC_VER|g" distribution.xml
+# set the version based on $VERSION
+sed -i '.bak' "s|__VERSION__|$VERSION|g" distribution.xml
 
 PRODUCT="$PREFIX".pkg
 # build product pkg (which can install multiple component pkgs, but we only have one)
