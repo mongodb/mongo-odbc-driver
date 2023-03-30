@@ -6,9 +6,9 @@ rm dmg-contents/*.pkg || true
 VERSION=$1
 ROOT="/Library/MongoDB/AtlasSQL ODBC/$VERSION"
 mkdir -p components/"$ROOT"
-mv ./*.so components/"$ROOT"/
 mv ./*.dylib components/"$ROOT"/
 cp ./resources/*.rtf components/"$ROOT"/
+cp ../../README.md components/"$ROOT"/
 
 # build component pkg
 pkgbuild --root=components/ --scripts=scripts/ --identifier='AtlasSQL ODBC' 'mongoodbc-component.pkg'
