@@ -69,7 +69,7 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> Strin
     from_widechar_vec_lossy(dst)
 }
 ///
-/// parse_attribute_string converts a null-separted u16 doubly-null terminated cstring to a Rust
+/// parse_attribute_string_a converts a null-separated utf8 doubly-null terminated cstring to a Rust
 /// string separated by `;`.
 ///
 /// # Safety
@@ -88,11 +88,10 @@ pub unsafe fn parse_attribute_string_a(text: *const Char) -> String {
     from_utf8(dst.as_slice())
         .unwrap()
         .replace(char::from(0), ";")
-    // from_widechar_vec_lossy(dst).replace(char::from(0), ";")
 }
 
 ///
-/// parse_attribute_string converts a null-separted u16 doubly-null terminated cstring to a Rust
+/// parse_attribute_string_w converts a null-separated utf16 doubly-null terminated cstring to a Rust
 /// string separated by `;`.
 ///
 /// # Safety
