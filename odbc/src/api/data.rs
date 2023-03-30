@@ -99,6 +99,7 @@ impl IntoCData for Bson {
             _ => self.into_relaxed_extjson(),
         }
     }
+
     fn to_json(self) -> String {
         match self {
             Bson::String(s) => s,
@@ -108,26 +109,9 @@ impl IntoCData for Bson {
 
     fn to_binary(self) -> Result<Vec<u8>> {
         match self {
-            Bson::Double(f) => Ok(f.to_le_bytes().to_vec()),
             Bson::String(s) => Ok(s.into_bytes()),
-            Bson::Boolean(b) => Ok(if b { vec![1u8] } else { vec![0u8] }),
-            Bson::DateTime(d) => {
-                let dt: DateTime<Utc> = d.into();
-                let mut ret = Vec::with_capacity(16usize);
-                ret.extend(dt.year().to_le_bytes());
-                ret.extend(dt.month().to_le_bytes());
-                ret.extend(dt.day().to_le_bytes());
-                ret.extend(dt.hour().to_le_bytes());
-                ret.extend(dt.minute().to_le_bytes());
-                ret.extend(dt.second().to_le_bytes());
-                let fraction = (dt.nanosecond() as f32 * 0.000001) as u32;
-                ret.extend(fraction.to_le_bytes());
-                Ok(ret)
-            }
-            Bson::Int32(i) => Ok(i.to_le_bytes().to_vec()),
-            Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
             Bson::Binary(b) if b.subtype != BinarySubtype::Uuid => Ok(b.bytes),
-            _ => Ok(self.to_json().into_bytes()),
+            _ => Ok(self.to_json_val().to_string().into_bytes()),
         }
     }
 
