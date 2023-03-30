@@ -305,8 +305,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cp target/release/*.so installer/dmg
-          cp target/release/*.dylib installed/dmg
+          cp target/release/*.dylib installer/dmg
           cd installer/dmg
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               VERSION="0.1.0"
