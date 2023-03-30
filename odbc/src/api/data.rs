@@ -111,7 +111,7 @@ impl IntoCData for Bson {
         match self {
             Bson::String(s) => Ok(s.into_bytes()),
             Bson::Binary(b) if b.subtype != BinarySubtype::Uuid => Ok(b.bytes),
-            _ => Ok(self.to_json_val().to_string().into_bytes()),
+            _ => Ok(self.to_json().into_bytes()),
         }
     }
 
