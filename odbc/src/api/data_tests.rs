@@ -767,18 +767,12 @@ mod unit {
 
                 bin_val_test(ARRAY_STR_VAL.0, ARRAY_STR_VAL.1.as_bytes());
                 bin_val_test(BIN_COL, &[5, 6, 42]);
-                bin_val_test(BOOL_COL, &[1]);
-                bin_val_test(
-                    DATETIME_COL,
-                    &[
-                        222, 7, 0, 0, 11, 0, 0, 0, 28, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0,
-                        0, 0, 0, 0, 0,
-                    ],
-                );
+                bin_val_test(BOOL_COL, BOOL_STR_VAL.1.as_bytes());
+                bin_val_test(DATETIME_COL, DATETIME_STR_VAL.1.as_bytes());
                 bin_val_test(DOC_STR_VAL.0, DOC_STR_VAL.1.as_bytes());
-                bin_val_test(DOUBLE_COL, &[205, 204, 204, 204, 204, 204, 244, 63]);
-                bin_val_test(I32_COL, &[1, 0, 0, 0]);
-                bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0]);
+                bin_val_test(DOUBLE_COL, DOUBLE_STR_VAL.1.as_bytes());
+                bin_val_test(I32_COL, I32_STR_VAL.1.as_bytes());
+                bin_val_test(I64_COL, I64_STR_VAL.1.as_bytes());
                 bin_val_test(JS_STR_VAL.0, JS_STR_VAL.1.as_bytes());
                 bin_val_test(JS_W_S_STR_VAL.0, JS_W_S_STR_VAL.1.as_bytes());
                 bin_val_test(MAXKEY_STR_VAL.0, MAXKEY_STR_VAL.1.as_bytes());
