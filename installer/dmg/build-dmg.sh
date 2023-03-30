@@ -11,7 +11,7 @@ mv ./*.dylib components/"$ROOT"/
 cp ./resources/*.rtf components/"$ROOT"/
 
 # build component pkg
-pkgbuild --root=components/ --scripts=scripts/ --identifier='AtlasSQL ODBC' 'mongodb-odbc-component.pkg'
+pkgbuild --root=components/ --scripts=scripts/ --identifier='AtlasSQL ODBC' 'mongoodbc-component.pkg'
 
 # set the version based on $VERSION
 sed -i '.bak' "s|__VERSION__|$VERSION|g" distribution.xml
@@ -27,4 +27,4 @@ mkdir -p dmg-contents
 
 mv "$PRODUCT" dmg-contents/
 
-hdiutil create -fs HFS+ -srcfolder dmg-contents -volname mongodb-odbc mongodb-odbc.dmg
+hdiutil create -fs HFS+ -srcfolder dmg-contents -volname mongoodbc mongoodbc.dmg

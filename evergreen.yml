@@ -270,7 +270,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          echo "env $(env)"
           cp target/release/*.dll installer/msi
           cp ./README.md installer/msi
           cd installer/msi
@@ -298,6 +297,24 @@ functions:
               -Version "$MINOR_VERSION"\
               -VersionLabel "$VERSION_LABEL"\
               -UpgradeCode "$UUID"
+
+  "build dmg":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cp target/release/*.so installer/dmg
+          cp target/release/*.dylib installed/dmg
+          cd installer/dmg
+          if [ "$RELEASE_VERSION" == "snapshot" ]; then
+              VERSION="0.1.0"
+          else
+              VERSION="$RELEASE_VERSION"
+          fi
+          ./build-dmg.sh "$VERSION"
+
 
   "mciuploads release artifacts":
     - command: s3.put
@@ -336,6 +353,17 @@ functions:
     - command: s3.put
       params:
         build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/atsql.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
@@ -347,11 +375,33 @@ functions:
     - command: s3.put
       params:
         build_variants:
-          - windows-64
+          - macos
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/atsql.pdb
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - macos
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql.dylib
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.dylib
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - macos
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dmg
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -1078,6 +1128,7 @@ tasks:
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile macos release"
+      - func: "build dmg"
       - func: "mciuploads release artifacts"
 
   - name: compile-debug
