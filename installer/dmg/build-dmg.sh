@@ -1,10 +1,10 @@
 #!/bin/sh
 
-rm ./*.dmg
+rm ./*.dmg || true
 rm dmg-contents/*.pkg || true
 
 VERSION=$1
-ROOT=/Library/MongoDB/AtlasSQL ODBC/$VERSION
+ROOT="/Library/MongoDB/AtlasSQL ODBC/$VERSION"
 mkdir -p components/"$ROOT"
 mv ./*.so components/"$ROOT"/
 mv ./*.dylib components/"$ROOT"/
