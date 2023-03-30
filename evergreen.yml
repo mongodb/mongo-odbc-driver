@@ -185,16 +185,21 @@ functions:
 
   "sign windows":
     - command: shell.exec
+      type: system
+      params:
+        silent: true
+        script: |
+          echo "${signing_token_odbc_driver}" > ./signing_auth_token
+    - command: shell.exec
+      type: system
       params:
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
-          echo "${signing_token_odbc_driver}" > ./signing_auth_token
           /usr/local/bin/notary-client.py \
               --key-name "bi-connector" \
               --auth-token-file ./signing_auth_token \
               --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
               --notary-url "${notary_client_url}" \
-              --skip-missing \
               mongoodbc.msi
 
   "compile release":
@@ -1270,6 +1275,8 @@ tasks:
         variant: "*"
       - name: compile-debug
         variant: "*"
+      - name: windows-sign
+        variant: "windows-64"
     commands:
       - func: "upload release"
       - func: "upload debug"
