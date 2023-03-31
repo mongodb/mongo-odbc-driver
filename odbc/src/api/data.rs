@@ -107,11 +107,7 @@ impl IntoCData for Bson {
     }
 
     fn to_binary(self) -> Result<Vec<u8>> {
-        match self {
-            Bson::String(s) => Ok(s.into_bytes()),
-            Bson::Binary(b) if b.subtype != BinarySubtype::Uuid => Ok(b.bytes),
-            _ => Ok(self.to_json().into_bytes()),
-        }
+        Ok(self.to_json().into_bytes())
     }
 
     fn to_guid(self) -> Result<Vec<u8>> {

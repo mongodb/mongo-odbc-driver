@@ -766,7 +766,7 @@ mod unit {
                 };
 
                 bin_val_test(ARRAY_STR_VAL.0, ARRAY_STR_VAL.1.as_bytes());
-                bin_val_test(BIN_COL, &[5, 6, 42]);
+                bin_val_test(BIN_COL, BIN_STR_VAL.1.as_bytes());
                 bin_val_test(BOOL_COL, BOOL_STR_VAL.1.as_bytes());
                 bin_val_test(DATETIME_COL, DATETIME_STR_VAL.1.as_bytes());
                 bin_val_test(DOC_STR_VAL.0, DOC_STR_VAL.1.as_bytes());
@@ -839,7 +839,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 2;
+            let buffer_length: isize = 25;
             let out_len_or_ind = &mut 0;
             {
                 let mut bin_val_test =
@@ -866,10 +866,9 @@ mod unit {
                             _ => (),
                         }
                     };
-
-                bin_val_test(BIN_COL, 3, &[5u8, 6u8], SqlReturn::SUCCESS_WITH_INFO);
+                bin_val_test(BIN_COL, 44, &BIN_STR_VAL.1.as_bytes()[0..24], SqlReturn::SUCCESS_WITH_INFO);
                 assert_eq!(
-                    "[MongoDB][API] Buffer size \"2\" not large enough for data".to_string(),
+                    "[MongoDB][API] Buffer size \"25\" not large enough for data".to_string(),
                     format!(
                         "{}",
                         (*stmt_handle)
@@ -880,7 +879,8 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                bin_val_test(BIN_COL, 1, &[42u8], SqlReturn::SUCCESS);
+                bin_val_test(BIN_COL, 19, &BIN_STR_VAL.1.as_bytes()[25..], SqlReturn::SUCCESS);
+                bin_val_test(BIN_COL, 19, &BIN_STR_VAL.1.as_bytes()[25..], SqlReturn::SUCCESS);
                 bin_val_test(BIN_COL, 0, &[], SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(buffer as *mut WChar);
