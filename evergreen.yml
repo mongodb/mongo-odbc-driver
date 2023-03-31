@@ -388,7 +388,7 @@ functions:
           - macos
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.msi
+        local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.dmg
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dmg
         bucket: mciuploads
         permissions: public-read
