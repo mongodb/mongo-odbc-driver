@@ -10,11 +10,10 @@
 ### Setup ###
 #############
 TARGET_VOLUME=$3
-LOG_FILE="/tmp/postinstall_MongoDB_ODBC.log"
+LOG_FILE="/tmp/postinstall_AtlasSQL_ODBC.log"
 
 # Log an error
 err(){
-    
     echo "Err: $@" | tee -a $LOG_FILE
 }
 
@@ -41,30 +40,22 @@ if [[ ! -z $TARGET_VOLUME ]]; then
 fi
 INI="$ODBC_PATH/odbcinst.ini"
 info "Drivers configuration will be added to $INI"
-INSTALL_ROOT="/Library/MongoDB/ODBC/"
+INSTALL_ROOT="/Library/MongoDB/AtlasSQL ODBC/"
 # Get the latest installed version
-LATEST_VERSION=$(ls $INSTALL_ROOT/| grep -E "[0-9]\.[0-9]\.[0-9]" | sort | cut -d '/' -f2 | tail -n 1)
+LATEST_VERSION=$(ls "$INSTALL_ROOT/"| grep -E "[0-9]\.[0-9]\.[0-9]" | sort | cut -d '/' -f2 | tail -n 1)
 INSTALL_PATH=$INSTALL_ROOT$LATEST_VERSION
 DRIVERS_SECTION="ODBC Drivers"
-MDB_UNICODE="MongoDB Unicode ODBC $LATEST_VERSION"
-MDB_ANSI="MongoDB ANSI ODBC $LATEST_VERSION"
-MDB_UNICODE_DRIVERS="$INSTALL_PATH/libmdbodbcw.so"
-MDB_ANSI_DRIVERS="$INSTALL_PATH/libmdbodbca.so"
+MDB="AtlasSQL ODBC $LATEST_VERSION"
+MDB_DRIVERS="$INSTALL_PATH/libatsql.dylib"
 CREATED_NEW_INI_FILE=0
-MDB_UNICODE_DRIVER_INSTALLED=0
-MDB_ANSI_DRIVER_INSTALLED=0
-MDB_UNICODE_DRIVER_CONFIGURED=0
-MDB_ANSI_DRIVER_CONFIGURED=0
+MDB_DRIVER_INSTALLED=0
+MDB_DRIVER_CONFIGURED=0
 
 # Flag the driver as installed if not already done
 flagDriversAsInstalled(){
-        if [ $MDB_UNICODE_DRIVER_INSTALLED == 0 ]; then
-            echo "$MDB_UNICODE = Installed" >> $INI
-            MDB_UNICODE_DRIVER_INSTALLED=1
-        fi
-        if [ $MDB_ANSI_DRIVER_INSTALLED == 0 ]; then
-            echo "$MDB_ANSI = Installed" >> $INI
-            MDB_ANSI_DRIVER_INSTALLED=1
+        if [ $MDB_DRIVER_INSTALLED == 0 ]; then
+            echo "$MDB = Installed" >> $INI
+            MDB_DRIVER_INSTALLED=1
         fi
 }
 
@@ -85,14 +76,11 @@ if [[ ! -e $INI ]]; then
     info "$INI does not exists, creating"
     touch $INI
     echo "[ODBC Drivers]" >> $INI
-    echo "$MDB_UNICODE = Installed" >> $INI
-    echo "$MDB_ANSI = Installed" >> $INI
+    echo "$MDB = Installed" >> $INI
     echo "" >> $INI
-    echo "[$MDB_UNICODE]" >> $INI
-    echo "Driver = $MDB_UNICODE_DRIVERS" >> $INI
+    echo "[$MDB]" >> $INI
+    echo "Driver = $MDB_DRIVERS" >> $INI
     echo "" >> $INI
-    echo "[$MDB_ANSI]" >> $INI
-    echo "Driver = $MDB_ANSI_DRIVERS" >> $INI
     $CREATED_NEW_INI_FILE=1
 fi
 
@@ -122,12 +110,9 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
                     # where all drivers are listed
                     ODBC_DRIVERS_SECTION_EXISTS=1
                     CURRENT_SECTION="ODBC"
-                elif grep -iqF "[$MDB_UNICODE]" <<< "$line"; then
-                    # Found the [MongoDB Unicode ODBC {version}] section
+                elif grep -iqF "[$MDB]" <<< "$line"; then
+                    # Found the [AtlasSQL Unicode ODBC {version}] section
                     CURRENT_SECTION="UNICODE"
-                elif grep -iqF "[$MDB_ANSI]" <<< "$line"; then
-                    # Found the [MongoDB ANSI ODBC {version}] section
-                    CURRENT_SECTION="ANSI"
                 else
                     CURRENT_SECTION="OTHER"
                 fi
@@ -140,27 +125,18 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
                 fi
                 echo "$line" >> $INI
             else
-                if [ $CURRENT_SECTION == "ODBC" ]  && grep -iqF "$MDB_UNICODE" <<< "$line" ; then
+                if [ $CURRENT_SECTION == "ODBC" ]  && grep -iqF "$MDB" <<< "$line" ; then
                     # Found the latest unicode MongoDB driver already configured
                     # Make sure to mark it "Installed"
-                    echo "$MDB_UNICODE = Installed" >> $INI
-                    MDB_UNICODE_DRIVER_INSTALLED=1
-                elif [ $CURRENT_SECTION == "ODBC" ] && grep -iqF "$MDB_ANSI" <<< "$line" ; then
-                    # Found the latest ANSI MongoDB driver already configured
-                    # Make sure to mark it "Installed"
-                    echo "$MDB_ANSI = Installed" >> $INI
-                    MDB_ANSI_DRIVER_INSTALLED=1
+                    echo "$MDB = Installed" >> $INI
+                    MDB_DRIVER_INSTALLED=1
                 elif [ $CURRENT_SECTION == "UNICODE" ] && grep -iqF "Driver" <<< "$line" ; then
                     # Make sure the driver install path is correct
-                    echo "Driver = $MDB_UNICODE_DRIVERS" >> $INI
-                    MDB_UNICODE_DRIVER_CONFIGURED=1
-                elif [ $CURRENT_SECTION == "ANSI" ] && grep -iqF "Driver" <<< "$line" ; then
-                    # Make sure the driver install path is correct
-                    echo "Driver = $MDB_ANSI_DRIVERS" >> $INI
-                    MDB_ANSI_DRIVER_CONFIGURED=1
+                    echo "Driver = $MDB_DRIVERS" >> $INI
+                    MDB_DRIVER_CONFIGURED=1
                 else
                     echo "$line" >> $INI
-                fi        
+                fi
             fi
         done < "$BACK_INI"
 
@@ -169,20 +145,15 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
         flagDriversAsInstalled
 
         # Configure the driver if needed by adding their respective sections at the end of the odbcinst.ini file
-        if [ $MDB_UNICODE_DRIVER_CONFIGURED == 0 ]; then
+        if [ $MDB_DRIVER_CONFIGURED == 0 ]; then
             echo "" >> $INI
-            echo "[$MDB_UNICODE]" >> $INI
-            echo "Driver = $MDB_UNICODE_DRIVERS" >> $INI
-        fi
-        if [ $MDB_ANSI_DRIVER_CONFIGURED == 0 ]; then
-            echo "" >> $INI
-            echo "[$MDB_ANSI]" >> $INI
-            echo "Driver = $MDB_ANSI_DRIVERS" >> $INI
+            echo "[$MDB]" >> $INI
+            echo "Driver = $MDB_DRIVERS" >> $INI
         fi
 
         # No [ODBC Drivers] section existed in the file, adding one at the beginning of the file
         if [ $ODBC_DRIVERS_SECTION_EXISTS == 0 ]; then
-            sed -i -e "1s/^/\[ODBC Drivers\]\\n$MDB_UNICODE = Installed\\n$MDB_ANSI = Installed\\n\\n/g" $INI
+            sed -i -e "1s/^/\[ODBC Drivers\]\\n$MDB = Installed\\n/g" $INI
         fi
     else
         err "An error occured while making a backup of the existing odbcinst.ini file"

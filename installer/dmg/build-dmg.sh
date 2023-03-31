@@ -6,7 +6,7 @@ rm dmg-contents/*.pkg || true
 VERSION=$1
 ROOT="/Library/MongoDB/AtlasSQL ODBC/$VERSION"
 mkdir -p components/"$ROOT"
-mv ./*.dylib components/"$ROOT"/
+mv ./libatsql.dylib components/"$ROOT"/
 cp ./resources/*.rtf components/"$ROOT"/
 cp ../../README.md components/"$ROOT"/
 
