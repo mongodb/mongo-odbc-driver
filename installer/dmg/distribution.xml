@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="1">
-    <title>AtlasSQL ODBC Driver 0.1.0</title>
+    <title>AtlasSQL ODBC Driver __VERSION__</title>
     <welcome file="WELCOME.rtf" mim-type="application/rtf" />
     <license file="LICENSE.rtf" mim-type="application/rtf" />
     <background file="background.png" mime-type="image/png" scaling="tofit" />
@@ -15,8 +15,8 @@
         <pkg-ref id="odbc_manager"/>
     </choice>
     <pkg-ref id="odbc_manager" version="0" onConclusion="none">odbc-manager-component.pkg</pkg-ref>
-    <choice id="mongodb_odbc" title="MongoDB ODBC" enabled="false" visible="true">
+    <choice id="mongodb_odbc" title="AtlasSQL ODBC" enabled="false" visible="true">
         <pkg-ref id="mongodb_odbc"/>
-    </choice>
-    <pkg-ref id="mongodb_odbc" version="0" onConclusion="none">mongoodbc-component.pkg</pkg-ref>
+	</choice>
+	<pkg-ref id="mongodb_odbc" version="0" onConclusion="none">mongoodbc-component.pkg</pkg-ref>
 </installer-gui-script>
