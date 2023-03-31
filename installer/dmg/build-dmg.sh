@@ -16,7 +16,7 @@ pkgbuild --root=components/ --scripts=scripts/ --identifier='AtlasSQL ODBC' 'mon
 # set the version based on $VERSION
 sed -i '.bak' "s|__VERSION__|$VERSION|g" distribution.xml
 
-PRODUCT="$PREFIX".pkg
+PRODUCT=mongoodbc.pkg
 # build product pkg (which can install multiple component pkgs, but we only have one)
 productbuild --distribution distribution.xml \
 	--resources ./resources \
