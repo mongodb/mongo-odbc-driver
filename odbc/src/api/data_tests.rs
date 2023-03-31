@@ -866,7 +866,12 @@ mod unit {
                             _ => (),
                         }
                     };
-                bin_val_test(BIN_COL, 44, &BIN_STR_VAL.1.as_bytes()[0..24], SqlReturn::SUCCESS_WITH_INFO);
+                bin_val_test(
+                    BIN_COL,
+                    44,
+                    &BIN_STR_VAL.1.as_bytes()[0..24],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
                 assert_eq!(
                     "[MongoDB][API] Buffer size \"25\" not large enough for data".to_string(),
                     format!(
@@ -879,8 +884,18 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                bin_val_test(BIN_COL, 19, &BIN_STR_VAL.1.as_bytes()[25..], SqlReturn::SUCCESS);
-                bin_val_test(BIN_COL, 19, &BIN_STR_VAL.1.as_bytes()[25..], SqlReturn::SUCCESS);
+                bin_val_test(
+                    BIN_COL,
+                    19,
+                    &BIN_STR_VAL.1.as_bytes()[25..],
+                    SqlReturn::SUCCESS,
+                );
+                bin_val_test(
+                    BIN_COL,
+                    19,
+                    &BIN_STR_VAL.1.as_bytes()[25..],
+                    SqlReturn::SUCCESS,
+                );
                 bin_val_test(BIN_COL, 0, &[], SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(buffer as *mut WChar);
