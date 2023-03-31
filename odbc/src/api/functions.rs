@@ -1159,7 +1159,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
             trace_odbc!(
-                debug,
+                info,
                 conn_handle,
                 format!("Connecting using {DRIVER_NAME} {} ", *DRIVER_ODBC_VERSION),
                 function_name!()
@@ -4122,7 +4122,7 @@ pub unsafe extern "C" fn SQLTablesW(
     name_length_4: SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
-        info,
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
