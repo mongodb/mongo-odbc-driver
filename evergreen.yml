@@ -377,17 +377,6 @@ functions:
           - macos
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/libatsql.so
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
-        bucket: mciuploads
-        permissions: public-read
-        content_type: application/octet-stream
-    - command: s3.put
-      params:
-        build_variants:
-          - macos
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.dylib
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.dylib
         bucket: mciuploads
