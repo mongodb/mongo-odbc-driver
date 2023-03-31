@@ -20,6 +20,7 @@ mod integration {
     fn test_default_connection() {
         let env_handle = allocate_env();
         let conn_str = crate::common::generate_default_connection_str();
+        // let conn_str = format!("{conn_str};LOGLEVEL=debug");
         let _ = connect_with_conn_string(env_handle.unwrap(), conn_str).unwrap();
     }
 

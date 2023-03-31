@@ -10,6 +10,7 @@ const SERVER: &str = "server";
 const UID: &str = "uid";
 const URI: &str = "uri";
 const USER: &str = "user";
+const LOGLEVEL: &str = "loglevel";
 // SQL-1281
 // const LOGPATH: &str = "LOGPATH";
 
@@ -38,9 +39,8 @@ pub struct DSNOpts {
     pub uri: String,
     pub user: String,
     pub server: String,
-    // SQL-1281
-    // pub logpath: String,
     pub driver_name: String,
+    pub log_level: String,
 }
 
 impl DSNOpts {
@@ -52,6 +52,7 @@ impl DSNOpts {
         user: String,
         server: String,
         driver_name: String,
+        log_level: String,
     ) -> Result<Self, DSNError> {
         let validation = vec![
             DSNOpts::check_value_length(&database),
@@ -71,6 +72,7 @@ impl DSNOpts {
                 user,
                 server,
                 driver_name,
+                log_level,
             })
         } else if !validation[1] {
             Err(DSNError::Dsn(dsn))
@@ -173,6 +175,7 @@ impl DSNOpts {
             URI => self.uri = value.to_string(),
             USER => self.user = value.to_string(),
             UID => self.user = value.to_string(),
+            LOGLEVEL => self.log_level = value.to_string(),
             // SQL-1281
             // LOGPATH => self.logpath = value.to_string(),
             _ => {}
@@ -244,6 +247,7 @@ mod test {
             "test".into(),
             "test".into(),
             "test".into(),
+            "info".into(),
         );
         assert!(dsn_opts.is_err());
     }
@@ -258,6 +262,7 @@ mod test {
             "test".into(),
             "test".into(),
             "test".into(),
+            "info".into(),
         );
         assert!(dsn_opts.is_err());
     }
@@ -272,6 +277,7 @@ mod test {
             "test".into(),
             "test".into(),
             "test".into(),
+            "info".into(),
         );
         assert!(dsn_opts.is_err());
     }
@@ -286,6 +292,7 @@ mod test {
             "test".into(),
             "test".into(),
             "test".into(),
+            "info".into(),
         );
         assert!(dsn_opts.is_err());
     }
@@ -300,6 +307,7 @@ mod test {
             "t".repeat(MAX_VALUE_LENGTH),
             "test".into(),
             "test".into(),
+            "info".into(),
         );
         assert!(dsn_opts.is_err());
     }
@@ -314,6 +322,7 @@ mod test {
             "t".repeat(MAX_VALUE_LENGTH - 1),
             "t".repeat(MAX_VALUE_LENGTH - 1),
             "test".into(),
+            "info".into(),
         );
         assert!(dsn_opts.is_ok());
     }

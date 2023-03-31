@@ -20,7 +20,7 @@ pub const USER: &str = "user";
 pub const UID: &str = "uid";
 pub const URI: &str = "uri";
 pub const APPNAME: &str = "appname";
-pub const LOGPATH: &str = "logpath";
+pub const LOGLEVEL: &str = "loglevel";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
@@ -31,7 +31,7 @@ const SERVER_KWS: &[&str] = &[SERVER];
 
 lazy_static! {
     static ref KEYWORDS: RegexSet = RegexSetBuilder::new(
-        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME, LOGPATH]
+        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME, LOGLEVEL]
             .into_iter()
             .map(|x| "^".to_string() + x + "$")
             .collect::<Vec<_>>()

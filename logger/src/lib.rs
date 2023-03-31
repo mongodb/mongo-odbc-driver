@@ -14,8 +14,7 @@ use log4rs::{
 use shared_sql_utils::odbcinst::SQLGetPrivateProfileString;
 use std::path::{Path, PathBuf};
 
-// 50KB
-const LOG_FILE_SIZE: u64 = 1024 * 1024 * 50;
+const LOG_FILE_SIZE: u64 = 1024 * 500;
 
 #[derive(Debug)]
 pub struct Logger {
@@ -29,6 +28,7 @@ impl Logger {
         // so that logger failure does not cause our dll to crash.
         match std::panic::catch_unwind(|| {
             let mut buffer = [0u8; 1024];
+            // TODO: use cargo env to get version info
             unsafe {
                 SQLGetPrivateProfileString(
                     to_char_ptr("MongoDB Atlas SQL ODBC Driver").0,
@@ -44,7 +44,7 @@ impl Logger {
             let path = Path::new(&driver_path);
             let parent = path.parent().unwrap();
             let log_dir = parent.parent().unwrap().join("log");
-            let logfile = Self::file_appender(&log_dir.to_str().unwrap());
+            let logfile = Self::file_appender(log_dir.to_str().unwrap());
             let handle = Self::init_logger(logfile);
 
             Self { handle, log_dir }
@@ -54,11 +54,20 @@ impl Logger {
         }
     }
 
-    pub fn set_level_filter(&self, level_filter: LevelFilter) {
+    pub fn set_log_level(&self, level_filter: String) {
+        let level_filter = match level_filter.to_lowercase().as_str() {
+            "error" => LevelFilter::Error,
+            "warn" => LevelFilter::Warn,
+            "info" => LevelFilter::Info,
+            "debug" => LevelFilter::Debug,
+            "trace" => LevelFilter::Trace,
+            _ => LevelFilter::Info,
+        };
+
         let config = Config::builder()
             .appender(Appender::builder().build(
                 "logfile",
-                Box::new(Logger::file_appender(&self.log_dir.to_str().unwrap())),
+                Box::new(Logger::file_appender(self.log_dir.to_str().unwrap())),
             ))
             .build(Root::builder().appender("logfile").build(level_filter))
             .unwrap();
@@ -80,7 +89,7 @@ impl Logger {
                 "{d(%Y-%m-%d %H:%M:%S)(utc)} - {h({l})}: {m}{n}",
             )))
             .append(true)
-            .build(&file_path, Box::new(policy))
+            .build(file_path, Box::new(policy))
             .unwrap()
     }
 
@@ -105,17 +114,11 @@ mod driver {
         info!("info1");
         debug!("debug1");
         error!("error1");
-        logger
-            .as_ref()
-            .unwrap()
-            .set_level_filter(LevelFilter::Debug);
+        logger.as_ref().unwrap().set_log_level("debug".to_string());
         info!("info2");
         debug!("debug2");
         error!("error2");
-        logger
-            .as_ref()
-            .unwrap()
-            .set_level_filter(LevelFilter::Error);
+        logger.as_ref().unwrap().set_log_level("error".to_string());
         info!("info3");
         debug!("debug3");
         error!("error3");

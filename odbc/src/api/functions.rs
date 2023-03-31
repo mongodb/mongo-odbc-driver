@@ -1062,6 +1062,18 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
+
+    if let Some(log_level) = odbc_uri.remove(&["loglevel"]) {
+        let env = unsafe { conn.env.as_ref() };
+        if let Some(env) = env {
+            if let Some(env) = env.as_env() {
+                if let Some(logger) = env.logger.as_ref() {
+                    logger.set_log_level(log_level);
+                }
+            }
+        }
+    }
+
     let conn_attrs = conn.attributes.read().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
         conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
@@ -1511,15 +1523,14 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
-    // TODO: comment on this in pr
     trace_odbc!(
-        debug,
+        info,
         *(handle as *mut MongoHandle),
         format!("Freeing handle {:?}", handle as *mut MongoHandle),
         function_name!()
     );
     panic_safe_exec!(
-        debug,
+        info,
         || {
             match sql_free_handle(handle_type, handle as *mut _) {
                 Ok(_) => SqlReturn::SUCCESS,
@@ -3586,7 +3597,7 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
     _string_length: Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
-        debug,
+        info,
         || {
             let env_handle = MongoHandleRef::from(environment_handle);
             env_handle.clear_diagnostics();
