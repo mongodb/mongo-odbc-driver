@@ -99,7 +99,6 @@ impl IntoCData for Bson {
             _ => self.into_relaxed_extjson(),
         }
     }
-
     fn to_json(self) -> String {
         match self {
             Bson::String(s) => s,
