@@ -3,9 +3,8 @@ use crate::{
     add_diag_with_function,
     errors::ODBCError,
     handles::definitions::{MongoHandle, MongoHandleRef, Statement, StatementState},
-    panic_safe_exec, trace_odbc,
+    panic_safe_exec,
 };
-use file_dbg_macros::{dbg_write, msg_to_file};
 use function_name::named;
 use odbc_sys::{HStmt, SqlReturn};
 use std::{panic, sync::mpsc};
@@ -24,12 +23,12 @@ mod unit {
 
     #[named]
     unsafe fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn {
-        panic_safe_exec!(|| { SqlReturn::SUCCESS }, stmt_handle);
+        panic_safe_exec!(debug, || { SqlReturn::SUCCESS }, stmt_handle);
     }
 
     #[named]
     unsafe fn panic_fn(stmt_handle: HStmt) -> SqlReturn {
-        panic_safe_exec!(|| { panic!("panic test") }, stmt_handle);
+        panic_safe_exec!(error, || { panic!("panic test") }, stmt_handle);
     }
 
     #[test]

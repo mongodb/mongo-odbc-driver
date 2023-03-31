@@ -19,11 +19,13 @@ regex = "1.6.0"
 chrono = "0.4.22"
 constants = { path = "../constants" }
 mongo-odbc-core = { path = "../core" }
-file_dbg_macros = { path = "../file_dbg_macros" }
 cstr = { path = "../cstr" }
 function_name = "0.3.0"
 serde_json = "1.0.68"
 odbc-sys = "0.21.2"
+shared_sql_utils = { path = "../shared_sql_utils" }
+logger = { path = "../logger" }
+log = "0.4.17"
 
 
 [dependencies.mongodb]

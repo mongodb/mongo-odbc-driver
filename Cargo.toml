@@ -9,6 +9,7 @@ members = [
   "file_dbg_macros",
   "win_setupgui",
   "shared_sql_utils",
+  "logger",
 ]
 
 [profile.release-with-debug]

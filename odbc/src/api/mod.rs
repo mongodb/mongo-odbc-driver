@@ -55,15 +55,15 @@ macro_rules! set {
 ///
 #[macro_export]
 macro_rules! trace_odbc {
-    ($info:expr, $fct_name:expr) => {
+    ($level:ident, $info:expr, $fct_name:expr) => {
         // No handle have been allocated yet
         let message = format!("{}:: {}", $fct_name, $info);
-        dbg_write!(message);
+        $level!("{}", message);
     };
-    ($mongo_handle:expr, $info:expr, $fct_name:expr) => {
+    ($level:ident, $mongo_handle:expr, $info:expr, $fct_name:expr) => {
         let handle_info = $mongo_handle.get_handle_info();
         let message = format!("{handle_info} {}:: {}", $fct_name, $info);
-        dbg_write!(message);
+        $level!("{}", message);
     };
 }
 
@@ -76,8 +76,9 @@ macro_rules! trace_odbc {
 #[macro_export]
 macro_rules! add_diag_with_function {
     ($handle:expr, $error:expr, $fct_name:expr) => {
-        let err = $error;
-        trace_odbc!($handle, format!("{err}"), $fct_name);
-        $handle.add_diag_info(err);
+        let handle_info = $handle.get_handle_info();
+        let message = format!("{handle_info} {}:: {}", $fct_name, $error);
+        log::info!("{}", message);
+        $handle.add_diag_info($error);
     };
 }

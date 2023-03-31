@@ -70,6 +70,8 @@ fn get_set_env_attr(
 }
 
 mod unit {
+    use logger::Logger;
+
     use super::*;
     // test_env_attr tests SQLGetEnvAttr and SQLSetEnvAttr with every
     // environment attribute value.
@@ -77,7 +79,8 @@ mod unit {
     fn test_env_attr() {
         unsafe {
             use crate::map;
-            let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+            let env_handle: *mut _ =
+                &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
 
             get_set_env_attr(
                 env_handle,
@@ -156,7 +159,8 @@ mod unit {
     fn test_optional_value_changed() {
         use cstr::WideChar;
         unsafe {
-            let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+            let handle: *mut _ =
+                &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLSetEnvAttrW(

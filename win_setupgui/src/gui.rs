@@ -2,7 +2,6 @@ extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
 use cstr::{input_text_to_string_w, to_widechar_ptr};
-use file_dbg_macros::*;
 use nwd::NwgUi;
 use nwg::NativeUi;
 use shared_sql_utils::DSNOpts;
@@ -182,7 +181,6 @@ impl ConfigGui {
                     &mut buffer_length,
                 )
             } {
-                dbg_write!("got a success trying to connect");
                 nwg::modal_info_message(
                     &self.window,
                     "Success",
