@@ -1,4 +1,4 @@
-use cstr::*;
+use cstr::to_widechar_ptr;
 use log::LevelFilter;
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::Handle;
@@ -11,7 +11,7 @@ use log4rs::{
     },
     config::{Appender, Config, Root},
 };
-use shared_sql_utils::odbcinst::SQLGetPrivateProfileString;
+use shared_sql_utils::odbcinst::SQLGetPrivateProfileStringW;
 use std::path::{Path, PathBuf};
 
 const LOG_FILE_SIZE: u64 = 1024 * 500;
@@ -27,19 +27,19 @@ impl Logger {
         // Due to numerous reasons why the logger could fail to initialize, we wrap it in a catch_unwind
         // so that logger failure does not cause our dll to crash.
         match std::panic::catch_unwind(|| {
-            let mut buffer = [0u8; 1024];
+            let mut buffer = [0u16; 1024];
             // TODO: use cargo env to get version info
             unsafe {
-                SQLGetPrivateProfileString(
-                    to_char_ptr("MongoDB Atlas SQL ODBC Driver").0,
-                    to_char_ptr("Driver").0,
-                    to_char_ptr("").0,
+                SQLGetPrivateProfileStringW(
+                    to_widechar_ptr("MongoDB Atlas SQL ODBC Driver").0,
+                    to_widechar_ptr("Driver").0,
+                    to_widechar_ptr("").0,
                     buffer.as_mut_ptr(),
                     buffer.len() as i32,
-                    to_char_ptr("odbcinst.ini").0,
+                    to_widechar_ptr("odbcinst.ini").0,
                 )
             };
-            let driver_path = unsafe { cstr::parse_attribute_string_a(buffer.as_mut_ptr()) };
+            let driver_path = unsafe { cstr::parse_attribute_string_w(buffer.as_mut_ptr()) };
 
             let path = Path::new(&driver_path);
             let parent = path.parent().unwrap();
