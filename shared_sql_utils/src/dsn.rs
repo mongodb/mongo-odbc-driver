@@ -44,6 +44,7 @@ pub struct DSNOpts {
 }
 
 impl DSNOpts {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         database: String,
         dsn: String,

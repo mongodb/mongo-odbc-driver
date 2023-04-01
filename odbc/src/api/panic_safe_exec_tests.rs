@@ -12,6 +12,7 @@ use std::{panic, sync::mpsc};
 mod unit {
     use super::*;
     use lazy_static::lazy_static;
+    use log::{debug, error};
     use regex::{Regex, RegexBuilder};
 
     lazy_static! {

@@ -133,9 +133,9 @@ macro_rules! panic_safe_exec {
                 #[allow(unused_variables)]
                 let trace = trace_outcome(&sql_return);
                 if handle.is_null() {
-                    trace_odbc!($level, trace, fct_name);
+                    crate::trace_odbc!($level, trace, fct_name);
                 } else {
-                    trace_odbc!($level, handle_ref, trace, fct_name);
+                    crate::trace_odbc!($level, handle_ref, trace, fct_name);
                 }
 
                 return sql_return;
@@ -148,7 +148,7 @@ macro_rules! panic_safe_exec {
                 };
 
                 if handle.is_null() {
-                    trace_odbc!(error, ODBCError::Panic(panic_msg.clone()), fct_name);
+                    crate::trace_odbc_error!(ODBCError::Panic(panic_msg.clone()), fct_name);
                 } else {
                     add_diag_with_function!(
                         handle_ref,
@@ -160,9 +160,9 @@ macro_rules! panic_safe_exec {
                 #[allow(unused_variables)]
                 let trace = trace_outcome(&sql_return);
                 if handle.is_null() {
-                    trace_odbc!(error, trace, fct_name);
+                    crate::trace_odbc_error!(trace, fct_name);
                 } else {
-                    trace_odbc!(error, handle_ref, trace, fct_name);
+                    crate::trace_odbc_error!(handle_ref, trace, fct_name);
                 }
                 return sql_return;
             }
@@ -237,10 +237,9 @@ fn sql_alloc_handle(
     input_handle: *mut MongoHandle,
     output_handle: *mut Handle,
 ) -> Result<()> {
-    let logger = Logger::new();
     match handle_type {
         HandleType::Env => {
-            let env = Env::with_state(EnvState::Allocated, logger);
+            let env = Env::with_state(EnvState::Allocated, Logger::new());
             let mh = Box::new(MongoHandle::Env(env));
             unsafe {
                 *output_handle = Box::into_raw(mh) as *mut _;

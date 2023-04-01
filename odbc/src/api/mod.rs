@@ -68,6 +68,25 @@ macro_rules! trace_odbc {
 }
 
 ///
+/// Adds a line in the trace formatted like this [{handle info}]{function name} - "{message to log}"]
+/// The handle info provide the address of the current handle and it's parent handle.
+/// For example for a connection handle : [Env_0x131904740][Conn_0x131805040]
+///
+#[macro_export]
+macro_rules! trace_odbc_error {
+    ($info:expr, $fct_name:expr) => {
+        // No handle have been allocated yet
+        let message = format!("{}:: {}", $fct_name, $info);
+        log::error!("{}", message);
+    };
+    ($mongo_handle:expr, $info:expr, $fct_name:expr) => {
+        let handle_info = $mongo_handle.get_handle_info();
+        let message = format!("{handle_info} {}:: {}", $fct_name, $info);
+        log::error!("{}", message);
+    };
+}
+
+///
 /// Using the given handle, error and function name, it will:
 ///  - Add the error information in the trace.
 ///    For example : 2023-02-08T17:14:05.383-08:00 odbc/src/api/functions.rs:1151 - [Env_0x130f04740][Conn_0x131a04d40][SQLDriverConnectW] - "[MongoDB][API] Missing property "Driver" or "DSN" in connection string"
