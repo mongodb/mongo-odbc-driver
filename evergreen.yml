@@ -188,6 +188,7 @@ functions:
       type: system
       params:
         silent: true
+        working_dir: mongosql-odbc-driver/installer/msi
         script: |
           echo "${signing_token_odbc_driver}" > ./signing_auth_token
     - command: shell.exec
