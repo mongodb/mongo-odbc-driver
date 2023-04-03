@@ -22,6 +22,15 @@ timeout:
         ls -la
 
 functions:
+  "fetch for windows sign":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.msi
+        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        bucket: mciuploads
+
   "fetch source":
     - command: git.get_project
       params:
@@ -130,6 +139,26 @@ functions:
           ${prepare_shell}
           cargo clippy --all-targets -- -D warnings
 
+  "check packages version":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cargo install cargo-get
+          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
+          if [[ "${triggered_by_git_tag}" == "" ]]; then
+            EXPECTED_RELEASE_VERSION="0.0.0"
+          else
+            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
+          fi
+          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
+            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
+            exit 1
+          fi
+
   "check rustfmt":
     - command: shell.exec
       type: test
@@ -154,26 +183,25 @@ functions:
             cargo set-version $RELEASE_VERSION
           fi
 
-  "check packages version":
+  "sign windows":
     - command: shell.exec
-      type: test
+      type: system
       params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
+        silent: true
+        working_dir: mongosql-odbc-driver/installer/msi
         script: |
-          ${prepare_shell}
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
+          echo "${signing_token_odbc_driver}" > ./signing_auth_token
+    - command: shell.exec
+      type: system
+      params:
+        working_dir: mongosql-odbc-driver/installer/msi
+        script: |
+          /usr/local/bin/notary-client.py \
+              --key-name "bi-connector" \
+              --auth-token-file ./signing_auth_token \
+              --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
+              --notary-url "${notary_client_url}" \
+              mongoodbc.msi
 
   "compile release":
     - command: shell.exec
@@ -402,7 +430,34 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
 
+  "upload signed windows artifacts":
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
+        local_file: mongosql-odbc-driver/installer/msi/mongoodbc-signed.msi
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
   "upload release":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/pkg/mongoodbc.msi
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
     - command: s3.get
       params:
         aws_key: ${aws_key}
@@ -1046,22 +1101,24 @@ functions:
 pre:
   - func: "fetch source"
   - func: "generate expansions"
-  - func: "install rust toolchain"
 post:
   - func: "upload start_adf logs"
 
 tasks:
   - name: clippy
     commands:
+      - func: "install rust toolchain"
       - func: "check clippy"
 
   - name: rustfmt
     commands:
+      - func: "install rust toolchain"
       - func: "check rustfmt"
 
   - name: compile
     depends_on:
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
@@ -1082,6 +1139,7 @@ tasks:
 
   - name: compile-debug
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
@@ -1116,13 +1174,23 @@ tasks:
       - func: "install rust toolchain"
       - func: "run windows result set test"
 
+  - name: windows-sign
+    depends_on:
+      - name: compile
+    commands:
+      - func: "fetch for windows sign"
+      - func: "sign windows"
+      - func: "upload signed windows artifacts"
+
   - name: ubuntu-unit-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "run ubuntu unit tests"
 
   - name: ubuntu-integration-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1130,6 +1198,7 @@ tasks:
 
   - name: ubuntu-result-set-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1156,11 +1225,13 @@ tasks:
 
   - name: asan-unit-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "run asan unit tests"
 
   - name: asan-integration-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1168,6 +1239,7 @@ tasks:
 
   - name: asan-result-set-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1204,6 +1276,8 @@ tasks:
         variant: "*"
       - name: compile-debug
         variant: "*"
+      - name: windows-sign
+        variant: "windows-64"
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1265,6 +1339,9 @@ buildvariants:
       - name: windows-windows-test-unit-group
       - name: windows-test-integration-group
       - name: windows-test-result-set-group
+      - name: windows-sign
+        run_on: linux-64-amzn-build
+
 
   - name: ubuntu2204
     display_name: Ubuntu 22.04
