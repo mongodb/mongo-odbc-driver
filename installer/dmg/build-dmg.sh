@@ -23,19 +23,6 @@ productbuild --distribution distribution.xml \
 	--package-path . \
 	"$PRODUCT"
 
-mkdir -p dmg-contents
-
 mv "$PRODUCT" dmg-contents/
 
-if [ ! -d create-dmg ]; then
-    git clone https://github.com/create-dmg/create-dmg.git
-fi
-
-./create-dmg/create-dmg --volname mongoodbc\
-	--background resources/background.png\
-	--window-pos 200 120\
-	--window-size 600 480\
-	--icon-size 100\
-	--icon "$PRODUCT" 200 190 \
-	mongoodbc.dmg\
-	dmg-contents
+hdiutil create -fs HFS+ -srcfolder dmg-contents -volname mongoodbc mongoodbc.dmg

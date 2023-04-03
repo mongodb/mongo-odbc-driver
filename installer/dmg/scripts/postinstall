@@ -111,7 +111,7 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
                     ODBC_DRIVERS_SECTION_EXISTS=1
                     CURRENT_SECTION="ODBC"
                 elif grep -iqF "[$MDB]" <<< "$line"; then
-                    # Found the [AtlasSQL Unicode ODBC {version}] section
+                    # Found the [AtlasSQL ODBC {version}] section
                     CURRENT_SECTION="UNICODE"
                 else
                     CURRENT_SECTION="OTHER"
