@@ -4,14 +4,14 @@ rm ./*.dmg || true
 rm dmg-contents/*.pkg || true
 
 VERSION=$1
-ROOT="/Library/MongoDB/AtlasSQL ODBC/$VERSION"
+ROOT="/Library/MongoDB/MongoDB Atlas SQL ODBC/$VERSION"
 mkdir -p components/"$ROOT"
 mv ./libatsql.dylib components/"$ROOT"/
 cp ./resources/*.rtf components/"$ROOT"/
 cp ../../README.md components/"$ROOT"/
 
 # build component pkg
-pkgbuild --root=components/ --scripts=scripts/ --identifier='AtlasSQL ODBC' 'mongoodbc-component.pkg'
+pkgbuild --root=components/ --scripts=scripts/ --identifier='MongoDB Atlas SQL ODBC' 'mongoodbc-component.pkg'
 
 # set the version based on $VERSION
 sed -i '.bak' "s|__VERSION__|$VERSION|g" distribution.xml

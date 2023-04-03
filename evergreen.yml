@@ -308,11 +308,11 @@ functions:
           cp target/release/*.dylib installer/dmg
           cd installer/dmg
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
-              VERSION="0.1.0"
+              MINOR_VERSION="0.1"
           else
-              VERSION="$RELEASE_VERSION"
+              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
           fi
-          ./build-dmg.sh "$VERSION"
+          ./build-dmg.sh "$MINOR_VERSION"
 
 
   "mciuploads release artifacts":

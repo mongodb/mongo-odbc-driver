@@ -10,7 +10,7 @@
 ### Setup ###
 #############
 TARGET_VOLUME=$3
-LOG_FILE="/tmp/postinstall_AtlasSQL_ODBC.log"
+LOG_FILE="/tmp/postinstall_MongoDB_Atlas_SQL_ODBC.log"
 
 # Log an error
 err(){
@@ -31,7 +31,7 @@ if [[ ! -e $LOG_FILE ]]; then
     touch $LOG_FILE
 else
     # Clean up the existing file
-    > $LOG_FILE 
+    > $LOG_FILE
 fi
 
 ODBC_PATH="/Library/ODBC"
@@ -39,13 +39,13 @@ if [[ ! -z $TARGET_VOLUME ]]; then
     ODBC_PATH="$TARGET_VOLUME/Library/ODBC"
 fi
 INI="$ODBC_PATH/odbcinst.ini"
-info "Drivers configuration will be added to $INI"
-INSTALL_ROOT="/Library/MongoDB/AtlasSQL ODBC/"
+info "Drivers configuration will be added to "$INI""
+INSTALL_ROOT="/Library/MongoDB/MongoDB Atlas SQL ODBC/"
 # Get the latest installed version
-LATEST_VERSION=$(ls "$INSTALL_ROOT/"| grep -E "[0-9]\.[0-9]\.[0-9]" | sort | cut -d '/' -f2 | tail -n 1)
+LATEST_VERSION=$(ls "$INSTALL_ROOT/"| grep -E "[0-9]\.[0-9]" | sort | cut -d '/' -f2 | tail -n 1)
 INSTALL_PATH=$INSTALL_ROOT$LATEST_VERSION
 DRIVERS_SECTION="ODBC Drivers"
-MDB="AtlasSQL ODBC $LATEST_VERSION"
+MDB="MongoDB Atlas SQL ODBC $LATEST_VERSION"
 MDB_DRIVERS="$INSTALL_PATH/libatsql.dylib"
 CREATED_NEW_INI_FILE=0
 MDB_DRIVER_INSTALLED=0
@@ -54,7 +54,7 @@ MDB_DRIVER_CONFIGURED=0
 # Flag the driver as installed if not already done
 flagDriversAsInstalled(){
         if [ $MDB_DRIVER_INSTALLED == 0 ]; then
-            echo "$MDB = Installed" >> $INI
+            echo "$MDB = Installed" >> "$INI"
             MDB_DRIVER_INSTALLED=1
         fi
 }
@@ -68,36 +68,36 @@ if [[ ! -e $ODBC_PATH ]]; then
     mkdir -p $ODBC_PATH
 elif [[ ! -d $ODBC_PATH ]]; then
      err "$ODBC_PATH already exists but is not a directory"
-     exit 1   
+     exit 1
 fi
 
 #Update the odbcinst.ini with the latest driver path and mark it as installed
-if [[ ! -e $INI ]]; then
-    info "$INI does not exists, creating"
-    touch $INI
-    echo "[ODBC Drivers]" >> $INI
-    echo "$MDB = Installed" >> $INI
-    echo "" >> $INI
-    echo "[$MDB]" >> $INI
-    echo "Driver = $MDB_DRIVERS" >> $INI
-    echo "" >> $INI
+if [[ ! -e "$INI" ]]; then
+    info ""$INI" does not exists, creating"
+    touch "$INI"
+    echo "[ODBC Drivers]" >> "$INI"
+    echo "$MDB = Installed" >> "$INI"
+    echo "" >> "$INI"
+    echo "[$MDB]" >> "$INI"
+    echo "Driver = $MDB_DRIVERS" >> "$INI"
+    echo "" >> "$INI"
     $CREATED_NEW_INI_FILE=1
 fi
 
 #If there was an existing odbcinst file, update the odbcinst.ini
 # with the latest driver path
 if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
-    BACK_INI="$INI.back"
+    BACK_INI=""$INI".back"
     info "Back up file $BACK_INI"
     ODBC_DRIVERS_SECTION_EXISTS=0
     CURRENT_SECTION="NONE"
     PREVIOUS_SECTION="NONE"
 
     # Make a copy of the existing ini file
-    cp $INI $BACK_INI
+    cp "$INI" $BACK_INI
     if [[ -e $BACK_INI ]]; then
         # Clear the INI file
-        > $INI
+        > "$INI"
 
         # Read the backup odbcinst.ini.back file and recreate the new updated odbcinst.ini one
         while IFS= read -r line
@@ -111,8 +111,8 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
                     ODBC_DRIVERS_SECTION_EXISTS=1
                     CURRENT_SECTION="ODBC"
                 elif grep -iqF "[$MDB]" <<< "$line"; then
-                    # Found the [AtlasSQL ODBC {version}] section
-                    CURRENT_SECTION="UNICODE"
+                    # Found the [MongoDB Atlas SQL ODBC {version}] section
+                    CURRENT_SECTION="MongoDB Atlas SQL ODBC"
                 else
                     CURRENT_SECTION="OTHER"
                 fi
@@ -121,39 +121,40 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
                 # Need to add the drivers lines in [ODBC Drivers] section
                 if [ $PREVIOUS_SECTION == "ODBC" ]; then
                     flagDriversAsInstalled
-                    echo "" >> $INI
+                    echo "" >> "$INI"
                 fi
-                echo "$line" >> $INI
+                echo "$line" >> "$INI"
             else
                 if [ $CURRENT_SECTION == "ODBC" ]  && grep -iqF "$MDB" <<< "$line" ; then
                     # Found the latest unicode MongoDB driver already configured
                     # Make sure to mark it "Installed"
-                    echo "$MDB = Installed" >> $INI
+                    echo "$MDB = Installed" >> "$INI"
                     MDB_DRIVER_INSTALLED=1
-                elif [ $CURRENT_SECTION == "UNICODE" ] && grep -iqF "Driver" <<< "$line" ; then
+                elif [ $CURRENT_SECTION == "MongoDB Atlas SQL ODBC" ] && grep -iqF "Driver" <<< "$line" ; then
                     # Make sure the driver install path is correct
-                    echo "Driver = $MDB_DRIVERS" >> $INI
+                    echo "Driver = $MDB_DRIVERS" >> "$INI"
+                    echo "DriverUnicodeType = utf16" >> "$INI"
                     MDB_DRIVER_CONFIGURED=1
                 else
-                    echo "$line" >> $INI
+                    echo "$line" >> "$INI"
                 fi
             fi
         done < "$BACK_INI"
 
-        # Reached the end of the file, if [ODBC Drivers] was the last section, 
+        # Reached the end of the file, if [ODBC Drivers] was the last section,
         # then add the lines for each MongoDB drivers
         flagDriversAsInstalled
 
         # Configure the driver if needed by adding their respective sections at the end of the odbcinst.ini file
         if [ $MDB_DRIVER_CONFIGURED == 0 ]; then
-            echo "" >> $INI
-            echo "[$MDB]" >> $INI
-            echo "Driver = $MDB_DRIVERS" >> $INI
+            echo "" >> "$INI"
+            echo "[$MDB]" >> "$INI"
+            echo "Driver = $MDB_DRIVERS" >> "$INI"
         fi
 
         # No [ODBC Drivers] section existed in the file, adding one at the beginning of the file
         if [ $ODBC_DRIVERS_SECTION_EXISTS == 0 ]; then
-            sed -i -e "1s/^/\[ODBC Drivers\]\\n$MDB = Installed\\n/g" $INI
+            sed -i -e "1s/^/\[ODBC Drivers\]\\n$MDB = Installed\\n/g" "$INI"
         fi
     else
         err "An error occured while making a backup of the existing odbcinst.ini file"
