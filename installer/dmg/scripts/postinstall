@@ -80,6 +80,7 @@ if [[ ! -e "$INI" ]]; then
     echo "" >> "$INI"
     echo "[$MDB]" >> "$INI"
     echo "Driver = $MDB_DRIVERS" >> "$INI"
+    echo "DriverUnicodeType = utf16" >> "$INI"
     echo "" >> "$INI"
     $CREATED_NEW_INI_FILE=1
 fi
@@ -150,6 +151,7 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
             echo "" >> "$INI"
             echo "[$MDB]" >> "$INI"
             echo "Driver = $MDB_DRIVERS" >> "$INI"
+            echo "DriverUnicodeType = utf16" >> "$INI"
         fi
 
         # No [ODBC Drivers] section existed in the file, adding one at the beginning of the file
