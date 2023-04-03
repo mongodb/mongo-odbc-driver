@@ -1,6 +1,5 @@
 use crate::gui::config_dsn;
 use cstr::{input_text_to_string_w, parse_attribute_string_w};
-use file_dbg_macros::*;
 use shared_sql_utils::DSNOpts;
 use windows::Win32::{
     Foundation::HWND,
@@ -45,10 +44,9 @@ unsafe extern "C" fn ConfigDSNW(
             }
             ODBC_CONFIG_DSN => match dsn_opts.from_private_profile_string() {
                 Ok(dsn) => config_dsn(dsn, request),
-                Err(e) => {
+                Err(_e) => {
                     // we've somehow attempted to read a value from the DSN
                     // that is longer than the registry allows (at the time of writing!)
-                    dbg_write!(e.to_string());
                     false
                 }
             },
