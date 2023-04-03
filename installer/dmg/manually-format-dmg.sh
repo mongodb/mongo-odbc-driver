@@ -6,9 +6,7 @@
 #for changing the layout based on pixels, as can be seen below, versus having to
 #format with clicking and dragging. Unfortunately, we cannot run this on evergreen
 #because it still requires a gui to operate, but we can use this manually on our
-#own macos computers in order to format the .DS_Store. After this script is run
-#mount the dmg and copy from
-#/Volumes
+#own macos computers in order to format the .DS_Store.
 if [ ! -d create-dmg ]; then
     git clone https://github.com/create-dmg/create-dmg.git
 fi
