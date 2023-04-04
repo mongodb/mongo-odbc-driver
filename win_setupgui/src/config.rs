@@ -45,6 +45,7 @@ unsafe extern "C" fn ConfigDSNW(
             ODBC_CONFIG_DSN => match dsn_opts.from_private_profile_string() {
                 Ok(dsn) => config_dsn(dsn, request),
                 Err(_e) => {
+                    // TODO: SQL-1281 - Log this error
                     // we've somehow attempted to read a value from the DSN
                     // that is longer than the registry allows (at the time of writing!)
                     false

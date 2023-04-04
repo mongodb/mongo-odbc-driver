@@ -561,6 +561,7 @@ functions:
           sed -i "s,%ADF_TEST_DB%,${adf_test_local_db},g" setup/odbc.ini
           sed -i "s,%ADF_TEST_USER%,${adf_test_local_user},g" setup/odbc.ini
           sed -i "s,%ADF_TEST_PWD%,${adf_test_local_pwd},g" setup/odbc.ini
+          sed -i "s,%ADF_TEST_HOST%,${adf_test_host},g" setup/odbc.ini
           cp setup/odbc.ini ~/.odbc.ini
           echo "---- END DSN Setup ----"
 
@@ -587,11 +588,12 @@ functions:
           sed -i "s,%ADF_TEST_DB%,${adf_test_local_db},g" setup/iodbc.ini
           sed -i "s,%ADF_TEST_USER%,${adf_test_local_user},g" setup/iodbc.ini
           sed -i "s,%ADF_TEST_PWD%,${adf_test_local_pwd},g" setup/iodbc.ini
+          sed -i "s,%ADF_TEST_HOST%,${adf_test_host},g" setup/iodbc.ini
           echo "---- END DSN Setup ----"
 
           cat <<EOT >> expansions.yml
             export ODBCINSTINI="$ODBCSYSINI/iodbcinst.ini"
-            export ODBCINI=-"$ODBCSYSINI/iodbc.ini"
+            export ODBCINI="$ODBCSYSINI/iodbc.ini"
           EOT
     - command: expansions.update
       params:

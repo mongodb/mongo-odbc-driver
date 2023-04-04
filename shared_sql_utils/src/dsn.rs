@@ -121,14 +121,12 @@ impl DSNOpts {
         let mut dsn_opts = DSNOpts::default();
         let mut error_key = "";
 
-        // SQL-1338 - Support reading utf16 values in dsn keys with unixodbc
         // SQLGetPrivateProfileStringW is hopelessly broken in unixodbc. As a workaround,
-        // we must use SQLGetPrivateProfileString until if/when unixodbc is fixed or we
-        // implement SQL-1338.
-        // The implication for users is that on linux, they cannot use utf16 unicode values
+        // we must use SQLGetPrivateProfileString until if/when unixodbc is fixed.
+        // The implication for users is that on linux, they cannot use unicode values
         // in DSN keys.
 
-        // All odbc implementations (windows, unixodbc, iODBC) support return the available
+        // All odbc implementations (windows, unixodbc, iODBC) return the available
         // keys in a DSN as a null-terminated string of null-terminated strings.
         let dsn_keys = if cfg!(not(target_os = "linux")) {
             let wbuf = &mut [0u16; 1024];
