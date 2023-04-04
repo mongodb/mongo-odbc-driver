@@ -306,6 +306,7 @@ functions:
         script: |
           ${prepare_shell}
           cp target/release/*.dylib installer/dmg
+          cp target/release/macos_postinstall installer/dmg
           cd installer/dmg
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               MINOR_VERSION="0.1"

@@ -1,0 +1,11 @@
+[package]
+name = "macos_postinstall"
+version = "0.0.0"
+authors = [
+  "Patrick Meredith <pmeredit@protonmail.com>",
+]
+edition = "2021"
+
+[dependencies]
+toml = "0.7.3"
+itertools = "0.10.5"

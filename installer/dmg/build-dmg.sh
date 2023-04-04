@@ -6,7 +6,9 @@ rm dmg-contents/*.pkg || true
 VERSION=$1
 ROOT="/Library/MongoDB/MongoDB Atlas SQL ODBC/$VERSION"
 mkdir -p components/"$ROOT"
+mkdir -p scripts
 mv ./libatsql.dylib components/"$ROOT"/
+mv ./mac_postinstall scripts/
 cp ./resources/*.rtf components/"$ROOT"/
 cp ../../README.md components/"$ROOT"/
 
