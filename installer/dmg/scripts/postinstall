@@ -131,7 +131,7 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
                     # Make sure to mark it "Installed"
                     echo "$MDB = Installed" >> "$INI"
                     MDB_DRIVER_INSTALLED=1
-                elif [ $CURRENT_SECTION == "MongoDB Atlas SQL ODBC" ] && grep -iqF "Driver" <<< "$line" ; then
+                elif [[ $CURRENT_SECTION == "MongoDB Atlas SQL ODBC" ]] && grep -iqF "Driver" <<< "$line" ; then
                     # Make sure the driver install path is correct
                     echo "Driver = $MDB_DRIVERS" >> "$INI"
                     echo "DriverUnicodeType = utf16" >> "$INI"
