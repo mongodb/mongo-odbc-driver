@@ -120,7 +120,7 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
 
                 # Found a new section right after [ODBC Drivers]
                 # Need to add the drivers lines in [ODBC Drivers] section
-                if [ $PREVIOUS_SECTION == "ODBC" ]; then
+                if [[ $PREVIOUS_SECTION == "ODBC" ]]; then
                     flagDriversAsInstalled
                     echo "" >> "$INI"
                 fi
