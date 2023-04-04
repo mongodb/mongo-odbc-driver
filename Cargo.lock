@@ -757,6 +757,7 @@ dependencies = [
 name = "logger"
 version = "0.0.0"
 dependencies = [
+ "constants",
  "cstr",
  "log",
  "log4rs",
