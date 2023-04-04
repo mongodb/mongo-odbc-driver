@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="1">
-    <title>MongoDB Atlas SQL ODBC Driver __VERSION__</title>
+    <title>MongoDB Atlas SQL ODBC Driver 0.1.0</title>
     <welcome file="WELCOME.rtf" mim-type="application/rtf" />
     <license file="LICENSE.rtf" mim-type="application/rtf" />
     <background file="background.png" mime-type="image/png" scaling="tofit" />
