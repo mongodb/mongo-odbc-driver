@@ -11,7 +11,7 @@ use crate::{
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
-use mongodb::results::CollectionType;
+use mongodb::{options::ListDatabasesOptions, results::CollectionType};
 use odbc_sys::Nullability;
 use regex::Regex;
 
@@ -106,7 +106,12 @@ impl MongoCollections {
         let db_name_filter_regex = to_name_regex(db_name_filter);
         let databases = mongo_connection
             .client
-            .list_database_names(None, None)
+            .list_database_names(
+                None,
+                ListDatabasesOptions::builder()
+                    .authorized_databases(true)
+                    .build(),
+            )
             .unwrap()
             .iter()
             .filter(|&db_name| is_match(db_name.as_str(), &db_name_filter_regex))

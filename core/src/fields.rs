@@ -10,7 +10,7 @@ use crate::{
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
-use mongodb::results::CollectionType;
+use mongodb::{options::ListDatabasesOptions, results::CollectionType};
 use odbc_sys::Nullability;
 use regex::Regex;
 use std::collections::VecDeque;
@@ -479,7 +479,12 @@ impl MongoFields {
             || {
                 mongo_connection
                     .client
-                    .list_database_names(None, None)
+                    .list_database_names(
+                        None,
+                        ListDatabasesOptions::builder()
+                            .authorized_databases(true)
+                            .build(),
+                    )
                     .unwrap()
             },
             |db| vec![db.to_string()],
