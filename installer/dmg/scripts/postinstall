@@ -82,7 +82,7 @@ if [[ ! -e "$INI" ]]; then
     echo "Driver = $MDB_DRIVERS" >> "$INI"
     echo "DriverUnicodeType = utf16" >> "$INI"
     echo "" >> "$INI"
-    $CREATED_NEW_INI_FILE=1
+    CREATED_NEW_INI_FILE=1
 fi
 
 #If there was an existing odbcinst file, update the odbcinst.ini
