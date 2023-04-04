@@ -27,11 +27,16 @@ impl Logger {
     pub fn new() -> Option<Self> {
         // Due to numerous reasons why the logger could fail to initialize, we wrap it in a catch_unwind
         // so that logger failure does not cause our dll to crash.
+        let driver_name = if DRIVER_NAME_INSTALLED_VERSION.eq("MongoDB Atlas SQL ODBC Driver 0.0") {
+            "MongoDB Atlas SQL ODBC Driver 0.1"
+        } else {
+            DRIVER_NAME_INSTALLED_VERSION.as_str()
+        };
         match std::panic::catch_unwind(|| {
             let mut buffer = [0u16; 1024];
             unsafe {
                 SQLGetPrivateProfileStringW(
-                    to_widechar_ptr(DRIVER_NAME_INSTALLED_VERSION.as_str()).0,
+                    to_widechar_ptr(driver_name).0,
                     to_widechar_ptr("Driver").0,
                     to_widechar_ptr("").0,
                     buffer.as_mut_ptr(),
@@ -39,18 +44,32 @@ impl Logger {
                     to_widechar_ptr("odbcinst.ini").0,
                 )
             };
+
             let driver_path = unsafe { cstr::parse_attribute_string_w(buffer.as_mut_ptr()) };
-            dbg!(&driver_path);
 
-            let path = Path::new(&driver_path);
-            let parent = path.parent().unwrap();
-            let log_dir = parent.parent().unwrap().join("log");
-            let logfile = Self::file_appender(log_dir.to_str().unwrap());
-            let handle = Self::init_logger(logfile);
+            let log_dir = if driver_path.is_empty() {
+                std::env::temp_dir()
+            } else {
+                let path = Path::new(&driver_path);
+                path.parent()
+                    .map(|p| p.parent().map(|p| p.join("logs")).unwrap())
+                    .unwrap_or_else(std::env::temp_dir)
+            };
 
-            Self { handle, log_dir }
+            if let Some(log_dir_str) = log_dir.to_str() {
+                if let Ok(appender) = Self::file_appender(log_dir_str) {
+                    match Self::init_logger(appender) {
+                        Ok(handle) => Some(Self { handle, log_dir }),
+                        Err(_) => None,
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
         }) {
-            Ok(logger) => Some(logger),
+            Ok(logger) => logger,
             Err(_) => None,
         }
     }
@@ -65,25 +84,25 @@ impl Logger {
             _ => LevelFilter::Info,
         };
 
-        let config = Config::builder()
-            .appender(Appender::builder().build(
-                "logfile",
-                Box::new(Logger::file_appender(self.log_dir.to_str().unwrap())),
-            ))
-            .build(Root::builder().appender("logfile").build(level_filter))
-            .unwrap();
-        self.handle.set_config(config);
+        if let Some(log_dir) = self.log_dir.to_str() {
+            if let Ok(appender) = Logger::file_appender(log_dir) {
+                let config = Config::builder()
+                    .appender(Appender::builder().build("logfile", Box::new(appender)))
+                    .build(Root::builder().appender("logfile").build(level_filter))
+                    .unwrap();
+                self.handle.set_config(config);
+            }
+        }
     }
 
-    fn file_appender(log_dir: &str) -> RollingFileAppender {
-        let file_path = format!(
-            "{log_dir}/mongo_odbc-{}.log",
+    fn file_appender(log_dir: &str) -> Result<RollingFileAppender, std::io::Error> {
+        let version = if DRIVER_MAJOR_MINOR_VERSION.eq("0.0") {
+            "0.1"
+        } else {
             DRIVER_MAJOR_MINOR_VERSION.as_str()
-        );
-        let roller_pattern = format!(
-            "{log_dir}/mongo_odbc-{}.log.{{}}",
-            DRIVER_MAJOR_MINOR_VERSION.as_str()
-        );
+        };
+        let file_path = format!("{log_dir}/mongo_odbc-{version}.log");
+        let roller_pattern = format!("{log_dir}/mongo_odbc-{version}.log.{{}}");
 
         let roller = FixedWindowRoller::builder()
             .build(&roller_pattern, 10)
@@ -97,15 +116,14 @@ impl Logger {
             )))
             .append(true)
             .build(file_path, Box::new(policy))
-            .unwrap()
     }
 
-    fn init_logger(logfile: RollingFileAppender) -> Handle {
+    fn init_logger(logfile: RollingFileAppender) -> Result<Handle, ()> {
         let config = Config::builder()
             .appender(Appender::builder().build("logfile", Box::new(logfile)))
             .build(Root::builder().appender("logfile").build(LevelFilter::Info))
-            .unwrap();
-        log4rs::init_config(config).unwrap()
+            .map_err(|_e| ())?;
+        log4rs::init_config(config).map_err(|_e| ())
     }
 }
 
