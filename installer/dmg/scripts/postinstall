@@ -126,7 +126,7 @@ if [[ $CREATED_NEW_INI_FILE == 0 ]]; then
                 fi
                 echo "$line" >> "$INI"
             else
-                if [ $CURRENT_SECTION == "ODBC" ]  && grep -iqF "$MDB" <<< "$line" ; then
+                if [[ $CURRENT_SECTION == "ODBC" ]]  && grep -iqF "$MDB" <<< "$line" ; then
                     # Found the latest unicode MongoDB driver already configured
                     # Make sure to mark it "Installed"
                     echo "$MDB = Installed" >> "$INI"
