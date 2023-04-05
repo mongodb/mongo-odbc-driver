@@ -51,12 +51,12 @@ fn write_to_log(data: String) {
 }
 
 fn err(val: &str) {
-    let data = format!("Error: {}\n", val);
+    let data = format!("Error: {val}\n");
     write_to_log(data);
 }
 
 fn info(val: &str) {
-    let data = format!("Info: {}\n", val);
+    let data = format!("Info: {val}\n");
     write_to_log(data);
 }
 
@@ -64,8 +64,7 @@ fn get_latest_version() -> String {
     let versions = fs::read_dir(INSTALL_ROOT);
     if versions.is_err() {
         err(&format!(
-            "Could not read {} due to {:?}",
-            INSTALL_ROOT, versions
+            "Could not read {INSTALL_ROOT} due to {versions:?}"
         ));
     }
     let versions = versions.unwrap();
@@ -78,7 +77,7 @@ fn get_latest_version() -> String {
     }))
     .collect::<Vec<_>>();
     if sorted_versions.is_empty() {
-        err(&format!("No installed versions in {}", INSTALL_ROOT));
+        err(&format!("No installed versions in {INSTALL_ROOT}"));
         panic!()
     }
     sorted_versions.last().unwrap().1.to_string()
@@ -118,18 +117,18 @@ fn main() {
         ini_file
     ));
     let latest = get_latest_version();
-    let mdb_driver_key = format!("MongoDB Atlas SQL ODBC {}", latest);
-    let install_path = format!("{}/{}", INSTALL_ROOT, latest);
-    let mdb_driver_path = format!("{}/{}", install_path, "libatsql.dylib");
-    info(&format!("Driver installed at: {}", mdb_driver_path));
+    let mdb_driver_key = format!("MongoDB Atlas SQL ODBC {latest}");
+    let install_path = format!("{INSTALL_ROOT}/{latest}");
+    let mdb_driver_path = format!("{install_path}/libatsql.dylib");
+    info(&format!("Driver installed at: {mdb_driver_path}"));
 
     // create the ODBC_PATH, if it doesn't exist
-    let res = fs::create_dir_all(&odbc_path);
+    let res = fs::create_dir_all(&ini_file);
     if res.is_err() {
         err(&format!("{:?}", res));
         panic!();
     }
 
     let odbc_file = parse_odbc_file(&odbc_path);
-    info(&format!("ODBC toml = {:?}", odbc_file));
+    info(&format!("ODBC toml = {odbc_file:?}"));
 }
