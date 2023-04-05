@@ -31,6 +31,15 @@ functions:
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
         bucket: mciuploads
 
+  "fetch for ubuntu sign":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz
+        bucket: mciuploads
+
   "fetch source":
     - command: git.get_project
       params:
@@ -202,6 +211,26 @@ functions:
               --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
               --notary-url "${notary_client_url}" \
               mongoodbc.msi
+
+  "sign ubuntu":
+    - command: shell.exec
+      type: system
+      params:
+        silent: true
+        working_dir: mongosql-odbc-driver/installer/tgz
+        script: |
+          echo "${signing_token_odbc_driver}" > ./signing_auth_token
+    - command: shell.exec
+      type: system
+      params:
+        working_dir: mongosql-odbc-driver/installer/tgz
+        script: |
+          /usr/local/bin/notary-client.py \
+              --key-name "bi-connector" \
+              --auth-token-file ./signing_auth_token \
+              --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
+              --notary-url "${notary_client_url}" \
+              mongoodbc.tar.gz
 
   "compile release":
     - command: shell.exec
@@ -389,7 +418,7 @@ functions:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
         bucket: mciuploads
         permissions: public-read
@@ -448,6 +477,17 @@ functions:
         aws_secret: ${aws_secret}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc-signed.msi
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "upload signed ubuntu artifacts":
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc-signed.tar.gz
+        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc-signed.tar.gz
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -1283,6 +1323,14 @@ tasks:
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu result-set tests"
 
+  - name: ubuntu-sign
+    depends_on:
+      - name: compile
+    commands:
+      - func: "fetch for ubuntu sign"
+      - func: "sign ubuntu"
+      - func: "upload signed ubuntu artifacts"
+
   - name: macos-unit-test
     commands:
       - func: "install iODBC"
@@ -1437,6 +1485,7 @@ buildvariants:
       - name: ubuntu-unit-test
       - name: ubuntu-integration-test
       - name: ubuntu-result-set-test
+      - name: ubuntu-sign
       - name: asan-unit-test
       - name: asan-integration-test
       - name: asan-result-set-test
