@@ -18,7 +18,7 @@ lazy_static! {
         .write(true)
         .create(true)
         .append(true)
-        .open(&*LOG_FILE)
+        .open(LOG_FILE)
     {
         Err(why) => panic!("couldn't open log file {LOG_FILE:?}: {why}"),
         Ok(file) => Mutex::new(file),
@@ -32,13 +32,11 @@ fn write_to_log(data: String) {
     }
     let mut logger_file = logger_file.unwrap();
     println!("{}", data);
-    match (*logger_file).write_all(data.as_bytes()) {
-        Err(why) => panic!("couldn't write to log file {LOG_FILE:?}: {why}"),
-        Ok(_) => (),
+    if let Err(why) = (*logger_file).write_all(data.as_bytes()) {
+        panic!("couldn't write to log file {LOG_FILE:?}: {why}");
     };
-    match (*logger_file).flush() {
-        Err(why) => panic!("couldn't flush log file {LOG_FILE:?}: {why}"),
-        Ok(_) => (),
+    if let Err(why) = (*logger_file).flush() {
+        panic!("couldn't flush log file {LOG_FILE:?}: {why}");
     }
 }
 
@@ -114,13 +112,11 @@ fn main() {
 
     let mut ini = parse_odbc_file(&ini_file);
     let drivers_section = ini.section_mut(Some(DRIVERS_SECTION));
-    if drivers_section.is_none() {
+    if let Some(drivers_section) = drivers_section {
+        drivers_section.insert(mdb_driver_key.clone(), "Installed");
+    } else {
         ini.with_section(Some(DRIVERS_SECTION))
             .set(mdb_driver_key.clone(), "Installed");
-    } else {
-        drivers_section
-            .unwrap()
-            .insert(mdb_driver_key.clone(), "Installed");
     }
 
     ini.with_section(Some(mdb_driver_key))
