@@ -49,12 +49,12 @@ fn write_to_log(data: String) {
 }
 
 fn err(val: &str) {
-    let data = format!("Error: {}", val);
+    let data = format!("Error: {}\n", val);
     write_to_log(data);
 }
 
 fn info(val: &str) {
-    let data = format!("Info: {}", val);
+    let data = format!("Info: {}\n", val);
     write_to_log(data);
 }
 
@@ -101,6 +101,7 @@ fn main() {
     let mdb_driver_key = format!("MongoDB Atlas SQL ODBC {}", latest);
     let install_path = format!("{}/{}", INSTALL_ROOT, latest);
     let mdb_driver_path = format!("{}/{}", install_path, "libatsql.dylib");
+    info(&format!("Driver installed at: {}", mdb_driver_path));
 
     // create the ODBC_PATH, if it doesn't exist
     let res = fs::create_dir_all(odbc_path);
