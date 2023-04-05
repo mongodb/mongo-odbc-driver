@@ -25,11 +25,6 @@ lazy_static! {
     };
 }
 
-#[cfg(not(target_os = "macos"))]
-fn main() {
-    println!("Hi, I am the install setup script for macos, I do nothing on your current os");
-}
-
 fn write_to_log(data: String) {
     let mut logger_file = LOGGER_FILE.lock();
     while logger_file.is_err() {
@@ -92,7 +87,6 @@ fn write_odbc_file(path: &str, ini: Ini) {
     ini.write_to_file(path).unwrap()
 }
 
-#[cfg(target_os = "macos")]
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     let target_volume = args[3].clone();
