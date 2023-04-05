@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use std::{
     env,
     fs::{self, File},
-    io::Read,
+    io::{Read, Write},
     sync::Mutex,
 };
 use toml::Table;
@@ -101,6 +101,19 @@ fn parse_odbc_file(path: &str) -> Table {
     }
 }
 
+fn write_odbc_file(path: &str, table: Table) {
+    match std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        Err(why) => panic!("couldn't open log file {LOG_FILE:?}: {why}"),
+        Ok(mut file) => file.write(table.to_string().as_bytes()),
+    }
+    .unwrap();
+}
+
 //#[cfg(target_os = "macos")]
 fn main() {
     let args = env::args().collect::<Vec<_>>();
@@ -129,6 +142,8 @@ fn main() {
         panic!();
     }
 
-    let odbc_file = parse_odbc_file(&odbc_path);
-    info(&format!("ODBC toml = {odbc_file:?}"));
+    let ini_table = parse_odbc_file(&odbc_path);
+    info(&format!("ODBC toml = {ini_table:?}"));
+
+    write_odbc_file(&ini_file, ini_table)
 }

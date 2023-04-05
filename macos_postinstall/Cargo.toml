@@ -7,6 +7,6 @@ authors = [
 edition = "2021"
 
 [dependencies]
-toml = "0.7.3"
+toml = { version = "0.7.3", features = ["display"] }
 itertools = "0.10.5"
 lazy_static = "1"
