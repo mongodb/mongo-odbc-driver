@@ -231,6 +231,9 @@ functions:
               --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
               --notary-url "${notary_client_url}" \
               mongoodbc.tar.gz
+          echo "======="
+          ls
+          echo "-------"
           cp mongoodbc-signed.tar.gz ../../target/release/mongoodbc.tar.gz
 
   "compile release":
