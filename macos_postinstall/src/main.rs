@@ -3,12 +3,14 @@ use lazy_static::lazy_static;
 use std::{
     env,
     fs::{self, File},
+    io::Read,
     sync::Mutex,
 };
+use toml::Table;
 
 const LOG_FILE: &str = "/tmp/postinstall_MongoDB_Atlas_SQL_ODBC.log";
 const ODBC_PATH: &str = "/Library/ODBC";
-const INSTALL_ROOT: &str = "/Library/MongoDB/MongoDB Atlas SQL ODBC/";
+const INSTALL_ROOT: &str = "/Library/MongoDB/MongoDB Atlas SQL ODBC";
 const DRIVERS_SECTION: &str = "ODBC Drivers";
 
 lazy_static! {
@@ -82,12 +84,30 @@ fn get_latest_version() -> String {
     sorted_versions.last().unwrap().1.to_string()
 }
 
+fn parse_odbc_file(path: &str) -> Table {
+    let mut buf = String::new();
+    match std::fs::OpenOptions::new()
+        .read(true)
+        .create(true)
+        .open(path)
+    {
+        Err(why) => {
+            err("Couldn't open {path}");
+            panic!()
+        }
+        Ok(mut file) => {
+            file.read_to_string(&mut buf).unwrap();
+            buf.parse::<Table>().unwrap()
+        }
+    }
+}
+
 //#[cfg(target_os = "macos")]
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     info(&format!("{:?}", args));
     let target_volume = args[3].clone();
-    let odbc_path = if !target_volume.is_empty() {
+    let odbc_path = if target_volume != "/" {
         target_volume + "/" + ODBC_PATH
     } else {
         ODBC_PATH.to_string()
@@ -104,9 +124,12 @@ fn main() {
     info(&format!("Driver installed at: {}", mdb_driver_path));
 
     // create the ODBC_PATH, if it doesn't exist
-    let res = fs::create_dir_all(odbc_path);
+    let res = fs::create_dir_all(&odbc_path);
     if res.is_err() {
         err(&format!("{:?}", res));
         panic!();
     }
+
+    let odbc_file = parse_odbc_file(&odbc_path);
+    info(&format!("ODBC toml = {:?}", odbc_file));
 }
