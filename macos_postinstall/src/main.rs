@@ -85,19 +85,19 @@ fn get_latest_version() -> String {
 
 fn parse_odbc_file(path: &str) -> Table {
     let mut buf = String::new();
-    match std::fs::OpenOptions::new()
-        .read(true)
-        .create(true)
-        .open(path)
-    {
-        Err(why) => {
-            err(&format!("Couldn't open {path} because {why:?}"));
-            panic!()
+    if std::path::Path::new(path).exists() {
+        match std::fs::OpenOptions::new().read(true).open(path) {
+            Err(why) => {
+                err(&format!("Couldn't open {path} because {why:?}"));
+                panic!()
+            }
+            Ok(mut file) => {
+                file.read_to_string(&mut buf).unwrap();
+                buf.parse::<Table>().unwrap()
+            }
         }
-        Ok(mut file) => {
-            file.read_to_string(&mut buf).unwrap();
-            buf.parse::<Table>().unwrap()
-        }
+    } else {
+        Table::new()
     }
 }
 
