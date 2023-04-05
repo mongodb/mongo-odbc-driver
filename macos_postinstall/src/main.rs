@@ -86,7 +86,7 @@ fn get_latest_version() -> String {
 fn parse_odbc_file(path: &str) -> Table {
     let mut buf = String::new();
     if std::path::Path::new(path).exists() {
-        match std::fs::OpenOptions::new().read(true).open(path) {
+        match fs::File::open(path) {
             Err(why) => {
                 err(&format!("Couldn't open {path} because {why:?}"));
                 panic!()
@@ -108,7 +108,7 @@ fn write_odbc_file(path: &str, table: Table) {
         .append(true)
         .open(path)
     {
-        Err(why) => panic!("couldn't open log file {LOG_FILE:?}: {why}"),
+        Err(why) => panic!("Couldn't open file {path:?}: {why}"),
         Ok(mut file) => file.write(table.to_string().as_bytes()),
     }
     .unwrap();
@@ -136,9 +136,9 @@ fn main() {
     info(&format!("Driver installed at: {mdb_driver_path}"));
 
     // create the ODBC_PATH, if it doesn't exist
-    let res = fs::create_dir_all(&ini_file);
+    let res = fs::create_dir_all(&odbc_path);
     if res.is_err() {
-        err(&format!("{:?}", res));
+        err(&format!("Failed to create ODBC_PATH: {res:?}"));
         panic!();
     }
 
