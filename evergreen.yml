@@ -413,6 +413,17 @@ functions:
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - ubuntu2204
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/release/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
 
   "mciuploads debug artifacts":
     - command: s3.put
