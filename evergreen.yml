@@ -56,17 +56,6 @@ functions:
           export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
           export PATH="$LD_LIBRARY_PATH:$PATH:$HOME/.cargo/bin"
           export DUMP_FOLDER=dumps
-          export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
-          export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
-          export SCRIPT_FOLDER=resources
-          if [[ "${triggered_by_git_tag}" != "" ]]; then
-            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
-          else
-            export RELEASE_VERSION=snapshot
-          fi
-
-          cat <<EOT > expansions.yml
-          RELEASE_VERSION: "$RELEASE_VERSION"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
@@ -231,6 +220,7 @@ functions:
               --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
               --notary-url "${notary_client_url}" \
               mongoodbc.tar.gz
+          cp mongoodbc-signed.tar.gz ../../target/release/mongoodbc.tar.gz
 
   "compile release":
     - command: shell.exec
@@ -409,17 +399,6 @@ functions:
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.so
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
-        bucket: mciuploads
-        permissions: public-read
-        content_type: application/octet-stream
-    - command: s3.put
-      params:
-        build_variants:
-          - ubuntu2204
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
