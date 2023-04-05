@@ -92,7 +92,7 @@ fn parse_odbc_file(path: &str) -> Table {
         .open(path)
     {
         Err(why) => {
-            err("Couldn't open {path}");
+            err(&format!("Couldn't open {path} because {why:?}"));
             panic!()
         }
         Ok(mut file) => {
