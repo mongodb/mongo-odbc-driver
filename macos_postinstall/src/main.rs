@@ -1,9 +1,27 @@
 use itertools::sorted;
-use std::{env, fs};
+use lazy_static::lazy_static;
+use std::{
+    env,
+    fs::{self, File},
+    sync::Mutex,
+};
+
 const LOG_FILE: &str = "/tmp/postinstall_MongoDB_Atlas_SQL_ODBC.log";
 const ODBC_PATH: &str = "/Library/ODBC";
 const INSTALL_ROOT: &str = "/Library/MongoDB/MongoDB Atlas SQL ODBC/";
 const DRIVERS_SECTION: &str = "ODBC Drivers";
+
+lazy_static! {
+    pub static ref LOGGER_FILE: Mutex<File> = match std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open(&*LOG_FILE)
+    {
+        Err(why) => panic!("couldn't open log file {LOG_FILE:?}: {why}"),
+        Ok(file) => Mutex::new(file),
+    };
+}
 
 //#[cfg(not(target_os = "macos"))]
 //fn main() {
@@ -11,16 +29,33 @@ const DRIVERS_SECTION: &str = "ODBC Drivers";
 //}
 //
 
+fn write_to_log(data: String) {
+    use std::io::Write;
+
+    let mut logger_file = LOGGER_FILE.lock();
+    while logger_file.is_err() {
+        logger_file = LOGGER_FILE.lock();
+    }
+    let mut logger_file = logger_file.unwrap();
+    println!("{}", data);
+    match (*logger_file).write_all(data.as_bytes()) {
+        Err(why) => panic!("couldn't write to log file {LOG_FILE:?}: {why}"),
+        Ok(_) => (),
+    };
+    match (*logger_file).flush() {
+        Err(why) => panic!("couldn't flush log file {LOG_FILE:?}: {why}"),
+        Ok(_) => (),
+    }
+}
+
 fn err(val: &str) {
     let data = format!("Error: {}", val);
-    println!("{}", data);
-    fs::write(LOG_FILE, data).expect("Unable to write to LOG_FILE");
+    write_to_log(data);
 }
 
 fn info(val: &str) {
     let data = format!("Info: {}", val);
-    println!("{}", data);
-    fs::write(LOG_FILE, data).expect("Unable to write to LOG_FILE");
+    write_to_log(data);
 }
 
 fn get_latest_version() -> String {
@@ -32,27 +67,19 @@ fn get_latest_version() -> String {
         ));
     }
     let versions = versions.unwrap();
-    let sorted_versions = sorted(
-        versions
-            .into_iter()
-            .map(|x| {
-                x.unwrap()
-                    .file_name()
-                    .into_string()
-                    .unwrap()
-                    .split(".")
-                    .map(String::from)
-                    .collect::<Vec<_>>()
-            })
-            .filter(|x| x.len() == 2)
-            .map(|x| format!("{}.{}", x[0], x[1])),
-    )
+    let sorted_versions = sorted(versions.into_iter().map(|x| {
+        let x = x.unwrap();
+        (
+            x.metadata().unwrap().modified().unwrap(),
+            x.file_name().into_string().unwrap(),
+        )
+    }))
     .collect::<Vec<_>>();
     if sorted_versions.is_empty() {
         err(&format!("No installed versions in {}", INSTALL_ROOT));
         panic!()
     }
-    sorted_versions.last().unwrap().to_string()
+    sorted_versions.last().unwrap().1.to_string()
 }
 
 //#[cfg(target_os = "macos")]

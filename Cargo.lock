@@ -724,6 +724,7 @@ name = "macos_postinstall"
 version = "0.0.0"
 dependencies = [
  "itertools",
+ "lazy_static",
  "toml 0.7.3",
 ]
 

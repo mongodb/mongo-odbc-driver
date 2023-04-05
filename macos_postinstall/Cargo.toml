@@ -9,3 +9,4 @@ edition = "2021"
 [dependencies]
 toml = "0.7.3"
 itertools = "0.10.5"
+lazy_static = "1"
