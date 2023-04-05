@@ -114,9 +114,14 @@ fn main() {
 
     let mut ini = parse_odbc_file(&ini_file);
     let drivers_section = ini.section_mut(Some(DRIVERS_SECTION));
-    drivers_section
-        .unwrap()
-        .insert(mdb_driver_key.clone(), "Installed");
+    if drivers_section.is_none() {
+        ini.with_section(Some(DRIVERS_SECTION))
+            .set(mdb_driver_key.clone(), "Installed");
+    } else {
+        drivers_section
+            .unwrap()
+            .insert(mdb_driver_key.clone(), "Installed");
+    }
 
     ini.with_section(Some(mdb_driver_key))
         .set("Description", "MongoDB Atlas SQL ODBC Driver")
