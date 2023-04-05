@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use std::{
     env,
     fs::{self, File},
-    io::{Read, Write},
+    io::Write,
     sync::Mutex,
 };
 
@@ -32,8 +32,6 @@ lazy_static! {
 //
 
 fn write_to_log(data: String) {
-    use std::io::Write;
-
     let mut logger_file = LOGGER_FILE.lock();
     while logger_file.is_err() {
         logger_file = LOGGER_FILE.lock();
@@ -84,7 +82,6 @@ fn get_latest_version() -> String {
 }
 
 fn parse_odbc_file(path: &str) -> Ini {
-    let mut buf = String::new();
     if std::path::Path::new(path).exists() {
         Ini::load_from_file(path).unwrap()
     } else {
@@ -122,10 +119,16 @@ fn main() {
         panic!();
     }
 
-    info(&format!("Parsing ini_file: {ini_file}"));
-    let ini = parse_odbc_file(&ini_file);
-    let tmp = ini.sections().collect::<Vec<_>>();
-    info(&format!("ODBC toml = {tmp:?}"));
+    let mut ini = parse_odbc_file(&ini_file);
+    let drivers_section = ini.section_mut(Some(DRIVERS_SECTION));
+    drivers_section
+        .unwrap()
+        .insert(mdb_driver_key.clone(), "Installed");
+
+    ini.with_section(Some(mdb_driver_key))
+        .set("Description", "MongoDB Atlas SQL ODBC Driver")
+        .set("Driver", mdb_driver_path)
+        .set("DriverUnicodeType", "utf16");
 
     info(&format!("Writing ini_file: {ini_file}"));
     write_odbc_file(&ini_file, ini)
