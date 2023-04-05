@@ -1,3 +1,4 @@
+use ini::Ini;
 use itertools::sorted;
 use lazy_static::lazy_static;
 use std::{
@@ -6,7 +7,6 @@ use std::{
     io::{Read, Write},
     sync::Mutex,
 };
-use toml::Table;
 
 const LOG_FILE: &str = "/tmp/postinstall_MongoDB_Atlas_SQL_ODBC.log";
 const ODBC_PATH: &str = "/Library/ODBC";
@@ -83,41 +83,22 @@ fn get_latest_version() -> String {
     sorted_versions.last().unwrap().1.to_string()
 }
 
-fn parse_odbc_file(path: &str) -> Table {
+fn parse_odbc_file(path: &str) -> Ini {
     let mut buf = String::new();
     if std::path::Path::new(path).exists() {
-        match fs::File::open(path) {
-            Err(why) => {
-                err(&format!("Couldn't open {path} because {why:?}"));
-                panic!()
-            }
-            Ok(mut file) => {
-                file.read_to_string(&mut buf).unwrap();
-                buf.parse::<Table>().unwrap()
-            }
-        }
+        Ini::load_from_file(path).unwrap()
     } else {
-        Table::new()
+        Ini::new()
     }
 }
 
-fn write_odbc_file(path: &str, table: Table) {
-    match std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .append(true)
-        .open(path)
-    {
-        Err(why) => panic!("Couldn't open file {path:?}: {why}"),
-        Ok(mut file) => file.write(table.to_string().as_bytes()),
-    }
-    .unwrap();
+fn write_odbc_file(path: &str, ini: Ini) {
+    ini.write_to_file(path).unwrap()
 }
 
 //#[cfg(target_os = "macos")]
 fn main() {
     let args = env::args().collect::<Vec<_>>();
-    info(&format!("{:?}", args));
     let target_volume = args[3].clone();
     let odbc_path = if target_volume != "/" {
         target_volume + "/" + ODBC_PATH
@@ -126,8 +107,7 @@ fn main() {
     };
     let ini_file = odbc_path.clone() + "/odbcinst.ini";
     info(&format!(
-        "Drivers configuration will be added to {}",
-        ini_file
+        "Drivers configuration will be added to {ini_file}"
     ));
     let latest = get_latest_version();
     let mdb_driver_key = format!("MongoDB Atlas SQL ODBC {latest}");
@@ -142,8 +122,11 @@ fn main() {
         panic!();
     }
 
-    let ini_table = parse_odbc_file(&odbc_path);
-    info(&format!("ODBC toml = {ini_table:?}"));
+    info(&format!("Parsing ini_file: {ini_file}"));
+    let ini = parse_odbc_file(&ini_file);
+    let tmp = ini.sections().collect::<Vec<_>>();
+    info(&format!("ODBC toml = {tmp:?}"));
 
-    write_odbc_file(&ini_file, ini_table)
+    info(&format!("Writing ini_file: {ini_file}"));
+    write_odbc_file(&ini_file, ini)
 }
