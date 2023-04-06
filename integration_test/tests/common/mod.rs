@@ -1,4 +1,4 @@
-use constants::{DRIVER_MAJOR_MINOR_VERSION, DRIVER_NAME, DRIVER_NAME_INSTALLED_VERSION};
+use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use odbc_sys::{
     AttrOdbcVersion, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle,
@@ -33,13 +33,7 @@ pub fn generate_default_connection_str() -> String {
     let db = env::var("ADF_TEST_LOCAL_DB");
     let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
         Ok(val) => val,
-        Err(_e) => {
-            if DRIVER_MAJOR_MINOR_VERSION.eq("0.0") {
-                format!("{} 0.1", DRIVER_NAME)
-            } else {
-                DRIVER_NAME_INSTALLED_VERSION.to_string()
-            }
-        } //Default driver name
+        Err(_e) => DRIVER_NAME.to_string(), //Default driver name
     };
 
     let mut connection_string =

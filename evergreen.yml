@@ -538,17 +538,11 @@ functions:
         working_dir: mongosql-odbc-driver
         script:  |
           ${prepare_shell}
-          if [ "$RELEASE_VERSION" == "snapshot" ]; then
-              MINOR_VERSION="0.1"
-          else
-              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
-          fi
           echo "Minor version: $MINOR_VERSION"
           sed -i 's@%DRIVER_DLL_PATH%@'"$(echo "$(cygpath -w $(pwd))" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           sed -i 's@%ADF_TEST_USER%@'"$(echo "${adf_test_local_user}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           sed -i 's@%ADF_TEST_PWD%@'"$(echo "${adf_test_local_pwd}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           sed -i 's@%ADF_TEST_HOST%@'"$(echo "${adf_test_host}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
-          sed -i 's@%MINOR_VERSION%@'"$(echo "$MINOR_VERSION" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           sed -i 's@%ADF_TEST_DB%@'"$(echo "${adf_test_local_db}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           reg import "setup\setupDSN.reg"
           echo "----- Registry entries after setup ----"
@@ -565,11 +559,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script:  |
           ${prepare_shell}
-          if [ "$RELEASE_VERSION" == "snapshot" ]; then
-              MINOR_VERSION="0.1"
-          else
-              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
-          fi
           echo "-----   Setup driver with Unix ODBC   -----"
           # DRIVER_LIB_PATH should have been set by the compile task
           echo "DRIVER_LIB_PATH = $DRIVER_LIB_PATH"
@@ -578,7 +567,6 @@ functions:
             ls ${DRIVER_LIB_PATH%/*}
           fi
           sed -i "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/odbcinst.ini
-          sed -i "s,%MINOR_VERSION%,$MINOR_VERSION,g" setup/odbcinst.init
           echo "-------------------------"
           cat setup/odbcinst.ini
           echo "-------------------------"
@@ -590,11 +578,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script:  |
           ${prepare_shell}
-          if [ "$RELEASE_VERSION" == "snapshot" ]; then
-              MINOR_VERSION="0.1"
-          else
-              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
-          fi
           echo "-----   Setup driver with iODBC   -----"
           # DRIVER_LIB_PATH should have been set by the compile task
           echo "DRIVER_LIB_PATH = $DRIVER_LIB_PATH"
@@ -603,7 +586,6 @@ functions:
             ls ${DRIVER_LIB_PATH%/*}
           fi
           sed -i.bu "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/iodbcinst.ini
-          sed -i.bu "s,%MINOR_VERSION%,$MINOR_VERSION,g" setup/odbcinst.init
           echo "-------------------------"
           cat setup/iodbcinst.ini
           echo "-------------------------"

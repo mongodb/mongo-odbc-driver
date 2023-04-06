@@ -1,4 +1,4 @@
-use constants::{DRIVER_MAJOR_MINOR_VERSION, DRIVER_NAME_INSTALLED_VERSION};
+use constants::DRIVER_NAME;
 use cstr::to_widechar_ptr;
 use log::LevelFilter;
 use log4rs::encode::pattern::PatternEncoder;
@@ -27,16 +27,11 @@ impl Logger {
     pub fn new() -> Option<Self> {
         // Due to numerous reasons why the logger could fail to initialize, we wrap it in a catch_unwind
         // so that logger failure does not cause our dll to crash.
-        let driver_name = if DRIVER_NAME_INSTALLED_VERSION.eq("MongoDB Atlas SQL ODBC Driver 0.0") {
-            "MongoDB Atlas SQL ODBC Driver 0.1"
-        } else {
-            DRIVER_NAME_INSTALLED_VERSION.as_str()
-        };
         match std::panic::catch_unwind(|| {
             let mut buffer = [0u16; 1024];
             unsafe {
                 SQLGetPrivateProfileStringW(
-                    to_widechar_ptr(driver_name).0,
+                    to_widechar_ptr(DRIVER_NAME).0,
                     to_widechar_ptr("Driver").0,
                     to_widechar_ptr("").0,
                     buffer.as_mut_ptr(),
@@ -96,13 +91,8 @@ impl Logger {
     }
 
     fn file_appender(log_dir: &str) -> Result<RollingFileAppender, std::io::Error> {
-        let version = if DRIVER_MAJOR_MINOR_VERSION.eq("0.0") {
-            "0.1"
-        } else {
-            DRIVER_MAJOR_MINOR_VERSION.as_str()
-        };
-        let file_path = format!("{log_dir}/mongo_odbc-{version}.log");
-        let roller_pattern = format!("{log_dir}/mongo_odbc-{version}.log.{{}}");
+        let file_path = format!("{log_dir}/mongo_odbc.log");
+        let roller_pattern = format!("{log_dir}/mongo_odbc.log.{{}}");
 
         let roller = FixedWindowRoller::builder()
             .build(&roller_pattern, 10)
