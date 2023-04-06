@@ -550,8 +550,10 @@ impl MongoFields {
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
-                        // TODO: SQL-1198: Add a log or warning
-                        Err(_) => continue,
+                        Err(e) => {
+                            log::error!("Error while processing collection metadata: {}", e);
+                            continue;
+                        }
                     }
                 }
             }

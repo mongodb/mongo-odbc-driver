@@ -824,6 +824,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "likely_stable",
+ "log",
  "mongodb",
  "num-derive",
  "num-traits",
