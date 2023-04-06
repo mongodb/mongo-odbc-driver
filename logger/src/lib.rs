@@ -104,22 +104,49 @@ impl Logger {
 #[cfg(test)]
 mod driver {
 
+    use std::{fs, path::Path};
+
     use super::*;
     use log::{debug, error, info};
 
     #[test]
     fn logger() {
-        let logger = Logger::new();
+        let tmp_log = std::env::temp_dir().join(Path::new("mongo_odbc.log"));
+        let logger = Logger::new("");
+
         info!("info1");
         debug!("debug1");
         error!("error1");
+
+        let mut log_file = fs::read_to_string(&tmp_log).unwrap();
+        assert!(log_file.contains("info1"));
+        assert!(log_file.contains("error1"));
+        assert!(!log_file.contains("debug1"));
+
         logger.as_ref().unwrap().set_log_level("debug".to_string());
+
         info!("info2");
         debug!("debug2");
         error!("error2");
+
+        log_file = fs::read_to_string(&tmp_log).unwrap();
+
+        assert!(log_file.contains("info2"));
+        assert!(log_file.contains("error2"));
+        assert!(log_file.contains("debug2"));
+
         logger.as_ref().unwrap().set_log_level("error".to_string());
+
         info!("info3");
         debug!("debug3");
         error!("error3");
+
+        log_file = fs::read_to_string(&tmp_log).unwrap();
+
+        assert!(log_file.contains("error3"));
+        assert!(!log_file.contains("info3"));
+        assert!(!log_file.contains("debug3"));
+
+        fs::remove_file(tmp_log).unwrap()
     }
 }
