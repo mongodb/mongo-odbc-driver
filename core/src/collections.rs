@@ -10,6 +10,7 @@ use crate::{
     Error,
 };
 use bson::{doc, Bson};
+use file_dbg_macros::*;
 use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
 use odbc_sys::Nullability;
@@ -133,6 +134,8 @@ impl MongoCollections {
                         MongoODBCCollectionSpecification::new(name, collection_type)
                     }).collect()
                 }).unwrap_or_else(|_| {
+                    // TODO: SQL-1281: Logging
+                    dbg_write!("Error getting collections for db {}");
                     vec![]
                 }),
             }

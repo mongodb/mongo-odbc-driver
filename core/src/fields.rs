@@ -9,6 +9,7 @@ use crate::{
     util::to_name_regex,
 };
 use bson::{doc, Bson};
+use file_dbg_macros::*;
 use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
 use odbc_sys::Nullability;
@@ -586,6 +587,7 @@ impl MongoFields {
                         MongoODBCCollectionSpecification::new(name, collection_type)
                     }).collect()
                 }).unwrap_or_else(|_| {
+                    dbg_write!("Error getting collections for database");
                     VecDeque::new()
                 }),
             );
