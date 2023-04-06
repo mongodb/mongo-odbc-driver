@@ -231,10 +231,6 @@ functions:
               --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
               --notary-url "${notary_client_url}" \
               mongoodbc.tar.gz
-          echo "======="
-          ls
-          echo "-------"
-          cp mongoodbc-signed.tar.gz ../../target/release/mongoodbc.tar.gz
 
   "compile release":
     - command: shell.exec
@@ -485,13 +481,13 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
 
-  "upload signed ubuntu artifacts":
+  "upload ubuntu sig file":
     - command: s3.put
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc-signed.tar.gz
-        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc-signed.tar.gz
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
+        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz.sig
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -576,6 +572,24 @@ functions:
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
         remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz.sig
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz.sig
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz.sig
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1333,7 +1347,7 @@ tasks:
     commands:
       - func: "fetch for ubuntu sign"
       - func: "sign ubuntu"
-      - func: "upload signed ubuntu artifacts"
+      - func: "upload ubuntu sig file"
 
   - name: macos-unit-test
     commands:
