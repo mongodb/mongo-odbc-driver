@@ -53,7 +53,7 @@ mod unit {
         }
 
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
+            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new("")));
         validate_diag_rec(HandleType::Env, env_handle);
 
         let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
@@ -73,7 +73,7 @@ mod unit {
     fn test_error_message() {
         use cstr::WideChar;
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
+            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new("")));
 
         // Initialize buffers
         let mut sql_state: [WideChar; 6] = [0; 6];
@@ -132,7 +132,7 @@ mod unit {
         use cstr::WideChar;
 
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
+            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new("")));
 
         // Initialize buffers
         let mut sql_state: [WideChar; 6] = [0; 6];

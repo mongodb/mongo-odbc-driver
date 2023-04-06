@@ -50,7 +50,7 @@ macro_rules! set {
 
 ///
 /// Adds a line in the trace formatted like this [{handle info}]{function name} - "{message to log}"]
-/// The handle info provide the address of the current handle and it's parent handle.
+/// The handle info provides the address of the current handle and it's parent handle.
 /// For example for a connection handle : [Env_0x131904740][Conn_0x131805040]
 ///
 #[macro_export]

@@ -122,7 +122,7 @@ mod unit {
     #[test]
     fn test_simple() {
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
+            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new("")));
         let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
             env_handle,
             ConnectionState::Allocated,
@@ -164,7 +164,7 @@ mod unit {
         use std::mem::size_of;
 
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
+            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new("")));
 
         // Initialize buffers
         let message_text = &mut [0; 500 * size_of::<WideChar>()] as *mut _ as *mut c_void;
@@ -217,7 +217,7 @@ mod unit {
         use cstr::WideChar;
         use std::mem::size_of;
         let env_handle: *mut _ =
-            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
+            &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new("")));
 
         unsafe {
             (*env_handle).add_diag_info(ODBCError::Unimplemented("SQLDrivers"));

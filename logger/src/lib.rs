@@ -1,8 +1,4 @@
-use constants::DRIVER_NAME;
-use cstr::to_widechar_ptr;
 use log::LevelFilter;
-use log4rs::encode::pattern::PatternEncoder;
-use log4rs::Handle;
 use log4rs::{
     append::rolling_file::{
         policy::compound::{
@@ -11,8 +7,9 @@ use log4rs::{
         RollingFileAppender,
     },
     config::{Appender, Config, Root},
+    encode::pattern::PatternEncoder,
+    Handle,
 };
-use shared_sql_utils::odbcinst::SQLGetPrivateProfileStringW;
 use std::path::{Path, PathBuf};
 
 const LOG_FILE_SIZE: u64 = 1024 * 500;
@@ -24,24 +21,11 @@ pub struct Logger {
 }
 
 impl Logger {
-    pub fn new() -> Option<Self> {
+    pub fn new<S: Into<String>>(driver_path: S) -> Option<Self> {
+        let driver_path = driver_path.into();
         // Due to numerous reasons why the logger could fail to initialize, we wrap it in a catch_unwind
         // so that logger failure does not cause our dll to crash.
         match std::panic::catch_unwind(|| {
-            let mut buffer = [0u16; 1024];
-            unsafe {
-                SQLGetPrivateProfileStringW(
-                    to_widechar_ptr(DRIVER_NAME).0,
-                    to_widechar_ptr("Driver").0,
-                    to_widechar_ptr("").0,
-                    buffer.as_mut_ptr(),
-                    buffer.len() as i32,
-                    to_widechar_ptr("odbcinst.ini").0,
-                )
-            };
-
-            let driver_path = unsafe { cstr::parse_attribute_string_w(buffer.as_mut_ptr()) };
-
             let log_dir = if driver_path.is_empty() {
                 std::env::temp_dir()
             } else {

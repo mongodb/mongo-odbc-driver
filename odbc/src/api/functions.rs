@@ -9,14 +9,14 @@ use crate::{
     },
     handles::definitions::*,
     trace_odbc,
+    util::get_driver_path,
 };
 use bson::Bson;
 use constants::{
     DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
     SQL_ALL_TABLE_TYPES,
 };
-use cstr::WideChar;
-use cstr::{input_text_to_string_a, input_text_to_string_w};
+use cstr::{input_text_to_string_a, input_text_to_string_w, WideChar};
 use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
@@ -239,7 +239,7 @@ fn sql_alloc_handle(
 ) -> Result<()> {
     match handle_type {
         HandleType::Env => {
-            let env = Env::with_state(EnvState::Allocated, Logger::new());
+            let env = Env::with_state(EnvState::Allocated, Logger::new(get_driver_path()));
             let mh = Box::new(MongoHandle::Env(env));
             unsafe {
                 *output_handle = Box::into_raw(mh) as *mut _;

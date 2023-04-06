@@ -80,7 +80,7 @@ mod unit {
         unsafe {
             use crate::map;
             let env_handle: *mut _ =
-                &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
+                &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new("")));
 
             get_set_env_attr(
                 env_handle,
@@ -160,7 +160,7 @@ mod unit {
         use cstr::WideChar;
         unsafe {
             let handle: *mut _ =
-                &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new()));
+                &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, Logger::new("")));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLSetEnvAttrW(

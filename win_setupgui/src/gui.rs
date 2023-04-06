@@ -4,7 +4,7 @@ extern crate native_windows_gui as nwg;
 use cstr::{input_text_to_string_w, to_widechar_ptr};
 use nwd::NwgUi;
 use nwg::NativeUi;
-use shared_sql_utils::DSNOpts;
+use shared_sql_utils::{DSNArgs, DSN};
 use std::{cell::RefCell, thread};
 use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
 
@@ -127,7 +127,7 @@ impl ConfigGui {
         nwg::stop_thread_dispatch();
     }
 
-    fn validate_input(&self) -> Option<DSNOpts> {
+    fn validate_input(&self) -> Option<DSN> {
         match (
             self.database_input.text().is_empty(),
             self.dsn_input.text().is_empty(),
@@ -157,16 +157,16 @@ impl ConfigGui {
                 return None;
             }
         }
-        match DSNOpts::new(
-            self.database_input.text(),
-            self.dsn_input.text(),
-            self.password_input.text(),
-            self.mongodb_uri_input.text(),
-            self.user_input.text(),
-            "".to_string(),
-            self.driver_name.text(),
-            self.log_level_input.text(),
-        ) {
+        match DSN::new(DSNArgs {
+            database: self.database_input.text().as_str(),
+            dsn: self.dsn_input.text().as_str(),
+            password: self.password_input.text().as_str(),
+            uri: self.mongodb_uri_input.text().as_str(),
+            user: self.user_input.text().as_str(),
+            server: "",
+            driver_name: self.driver_name.text().as_str(),
+            log_level: self.log_level_input.text().as_str(),
+        }) {
             Err(e) => {
                 nwg::modal_error_message(&self.window, "Error", &e.to_string());
                 None
@@ -273,7 +273,7 @@ impl ConfigGui {
     }
 }
 
-pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) -> bool {
+pub fn config_dsn(dsn_opts: DSN, dsn_op: u32) -> bool {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
 

@@ -32,7 +32,19 @@ pub enum DSNError {
 }
 
 #[derive(Debug, Default)]
-pub struct DSNOpts {
+pub struct DSNArgs<S: Into<String> + Copy> {
+    pub database: S,
+    pub dsn: S,
+    pub password: S,
+    pub uri: S,
+    pub user: S,
+    pub server: S,
+    pub driver_name: S,
+    pub log_level: S,
+}
+
+#[derive(Debug, Default)]
+pub struct DSN {
     pub database: String,
     pub dsn: String,
     pub password: String,
@@ -43,47 +55,38 @@ pub struct DSNOpts {
     pub log_level: String,
 }
 
-impl DSNOpts {
+impl DSN {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        database: String,
-        dsn: String,
-        password: String,
-        uri: String,
-        user: String,
-        server: String,
-        driver_name: String,
-        log_level: String,
-    ) -> Result<Self, DSNError> {
+    pub fn new<S: Into<String> + Copy>(args: DSNArgs<S>) -> Result<Self, DSNError> {
         let validation = vec![
-            DSNOpts::check_value_length(&database),
-            unsafe { SQLValidDSNW(to_widechar_ptr(&dsn).0) },
-            DSNOpts::check_value_length(&password),
-            DSNOpts::check_value_length(&uri),
-            DSNOpts::check_value_length(&user),
-            DSNOpts::check_value_length(&server),
-            DSNOpts::check_value_length(&driver_name),
+            DSN::check_value_length(&args.database.into()),
+            unsafe { SQLValidDSNW(to_widechar_ptr(&args.dsn.into()).0) },
+            DSN::check_value_length(&args.password.into()),
+            DSN::check_value_length(&args.uri.into()),
+            DSN::check_value_length(&args.user.into()),
+            DSN::check_value_length(&args.server.into()),
+            DSN::check_value_length(&args.driver_name.into()),
         ];
         if validation.iter().all(|&b| b) {
             Ok(Self {
-                database,
-                dsn,
-                password,
-                uri,
-                user,
-                server,
-                driver_name,
-                log_level,
+                database: args.database.into(),
+                dsn: args.dsn.into(),
+                password: args.password.into(),
+                uri: args.uri.into(),
+                user: args.user.into(),
+                server: args.server.into(),
+                driver_name: args.driver_name.into(),
+                log_level: args.log_level.into(),
             })
         } else if !validation[1] {
-            Err(DSNError::Dsn(dsn))
+            Err(DSNError::Dsn(args.dsn.into()))
         } else {
             Err(DSNError::Value)
         }
     }
 
     pub fn from_attribute_string(attribute_string: &str) -> Self {
-        let mut dsn_opts = DSNOpts::default();
+        let mut dsn_opts = DSN::default();
         attribute_string.split(';').for_each(|pair| {
             let mut key_value = pair.split('=');
             let key = key_value.next().unwrap_or("");
@@ -119,7 +122,7 @@ impl DSNOpts {
 
     pub fn from_private_profile_string(&self) -> Result<Self, DSNError> {
         let buffer = &mut [0u16; MAX_VALUE_LENGTH];
-        let mut dsn_opts = DSNOpts::default();
+        let mut dsn_opts = DSN::default();
         let mut error_key = "";
         let len = unsafe {
             SQLGetPrivateProfileStringW(
@@ -212,7 +215,7 @@ pub struct DSNIterator<'a> {
 }
 
 impl<'a> DSNIterator<'a> {
-    pub fn new(dsn_opts: &'a DSNOpts) -> Self {
+    pub fn new(dsn_opts: &'a DSN) -> Self {
         Self {
             inner: vec![
                 ("Database", &dsn_opts.database),
@@ -240,97 +243,97 @@ mod test {
 
     #[test]
     fn invalid_dsn_name() {
-        let dsn_opts = DSNOpts::new(
-            "test".into(),
-            "test!".into(),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "info".into(),
-        );
+        let dsn_opts = DSN::new(DSNArgs {
+            database: "test",
+            dsn: "test!",
+            password: "test",
+            uri: "test",
+            user: "test",
+            server: "test",
+            driver_name: "test",
+            log_level: "info",
+        });
         assert!(dsn_opts.is_err());
     }
 
     #[test]
     fn invalid_value_length_in_database_field() {
-        let dsn_opts = DSNOpts::new(
-            "t".repeat(MAX_VALUE_LENGTH + 1),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "info".into(),
-        );
+        let dsn_opts = DSN::new(DSNArgs {
+            database: "t".repeat(MAX_VALUE_LENGTH + 1).as_str(),
+            dsn: "test",
+            password: "test",
+            uri: "test",
+            user: "test",
+            server: "test",
+            driver_name: "test",
+            log_level: "info",
+        });
         assert!(dsn_opts.is_err());
     }
 
     #[test]
     fn invalid_value_length_in_password_field() {
-        let dsn_opts = DSNOpts::new(
-            "test".into(),
-            "test".into(),
-            "t".repeat(MAX_VALUE_LENGTH + 1),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "info".into(),
-        );
+        let dsn_opts = DSN::new(DSNArgs {
+            database: "t",
+            dsn: "test",
+            password: "t".repeat(MAX_VALUE_LENGTH + 1).as_str(),
+            uri: "test",
+            user: "test",
+            server: "test",
+            driver_name: "test",
+            log_level: "info",
+        });
         assert!(dsn_opts.is_err());
     }
 
     #[test]
     fn invalid_value_length_in_server_field() {
-        let dsn_opts = DSNOpts::new(
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "t".repeat(MAX_VALUE_LENGTH + 1),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "info".into(),
-        );
+        let dsn_opts = DSN::new(DSNArgs {
+            database: "t",
+            dsn: "test",
+            password: "test",
+            uri: "test",
+            user: "test",
+            server: "t".repeat(MAX_VALUE_LENGTH + 1).as_str(),
+            driver_name: "test",
+            log_level: "info",
+        });
         assert!(dsn_opts.is_err());
     }
 
     #[test]
     fn invalid_value_length_in_user_field() {
-        let dsn_opts = DSNOpts::new(
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "test".into(),
-            "t".repeat(MAX_VALUE_LENGTH),
-            "test".into(),
-            "test".into(),
-            "info".into(),
-        );
+        let dsn_opts = DSN::new(DSNArgs {
+            database: "test",
+            dsn: "test",
+            password: "test",
+            uri: "test",
+            server: "test",
+            user: "t".repeat(MAX_VALUE_LENGTH + 1).as_str(),
+            driver_name: "test",
+            log_level: "info",
+        });
         assert!(dsn_opts.is_err());
     }
 
     #[test]
     fn valid_value_lengths_and_dsn() {
-        let dsn_opts = DSNOpts::new(
-            "t".repeat(MAX_VALUE_LENGTH - 1),
-            "test".into(),
-            "t".repeat(MAX_VALUE_LENGTH - 1),
-            "t".repeat(MAX_VALUE_LENGTH - 1),
-            "t".repeat(MAX_VALUE_LENGTH - 1),
-            "t".repeat(MAX_VALUE_LENGTH - 1),
-            "test".into(),
-            "info".into(),
-        );
+        let dsn_opts = DSN::new(DSNArgs {
+            database: "test",
+            dsn: "test",
+            password: "test",
+            uri: "test",
+            server: "test",
+            user: "test",
+            driver_name: "test",
+            log_level: "info",
+        });
         assert!(dsn_opts.is_ok());
     }
 
     #[test]
     fn test_set_field() {
-        let mut dsn_opts = DSNOpts {
+        let mut dsn_opts = DSN {
             ..Default::default()
         };
         dsn_opts.set_field("PWD", "hunter2");

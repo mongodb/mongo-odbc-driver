@@ -287,7 +287,7 @@ mod unit {
     fn unallocated_statement_sql_fetch() {
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -319,7 +319,7 @@ mod unit {
     fn sql_fetch_and_more_results_basic_functionality() {
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -358,7 +358,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -410,7 +410,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -510,7 +510,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -594,7 +594,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -678,7 +678,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -734,7 +734,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -842,7 +842,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -912,7 +912,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1012,7 +1012,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1208,7 +1208,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1402,7 +1402,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1602,7 +1602,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1796,7 +1796,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1996,7 +1996,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -2183,7 +2183,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -2370,7 +2370,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -2582,7 +2582,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -2787,7 +2787,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            Logger::new(),
+            Logger::new(""),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
