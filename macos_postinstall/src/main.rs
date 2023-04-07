@@ -10,7 +10,7 @@ use std::{
 
 const LOG_FILE: &str = "/tmp/postinstall_MongoDB_Atlas_SQL_ODBC.log";
 const ODBC_PATH: &str = "/Library/ODBC";
-const INSTALL_ROOT: &str = "/Library/MongoDB/MongoDB Atlas SQL ODBC";
+const INSTALL_ROOT: &str = "/Library/MongoDB/MongoDB Atlas SQL ODBC Driver";
 const DRIVERS_SECTION: &str = "ODBC Drivers";
 
 lazy_static! {
@@ -87,9 +87,8 @@ fn write_odbc_file(path: &str, ini: Ini) {
 
 fn main() {
     let args = env::args().collect::<Vec<_>>();
-    let target_volume = args[3].clone();
-    let odbc_path = if target_volume != "/" {
-        target_volume + "/" + ODBC_PATH
+    let odbc_path = if args.len() > 3 && args[3] != "/" {
+        args[3].clone() + "/" + ODBC_PATH
     } else {
         ODBC_PATH.to_string()
     };
@@ -98,7 +97,7 @@ fn main() {
         "Drivers configuration will be added to {ini_file}"
     ));
     let latest = get_latest_version();
-    let mdb_driver_key = format!("MongoDB Atlas SQL ODBC {latest}");
+    let mdb_driver_key = format!("MongoDB Atlas SQL ODBC Driver");
     let install_path = format!("{INSTALL_ROOT}/{latest}");
     let mdb_driver_path = format!("{install_path}/libatsql.dylib");
     info(&format!("Driver installed at: {mdb_driver_path}"));
@@ -120,7 +119,10 @@ fn main() {
     }
 
     ini.with_section(Some(mdb_driver_key))
-        .set("Description", "MongoDB Atlas SQL ODBC Driver")
+        .set(
+            "Description",
+            format!("MongoDB Atlas SQL ODBC Driver {latest}"),
+        )
         .set("Driver", mdb_driver_path)
         .set("DriverUnicodeType", "utf16");
 

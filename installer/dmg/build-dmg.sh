@@ -4,7 +4,7 @@ rm ./*.dmg || true
 rm dmg-contents/*.pkg || true
 
 VERSION=$1
-ROOT="/Library/MongoDB/MongoDB Atlas SQL ODBC/$VERSION"
+ROOT="/Library/MongoDB/MongoDB Atlas SQL ODBC Driver/$VERSION"
 rm -Rf components
 mkdir -p components/"$ROOT"
 mkdir -p scripts
