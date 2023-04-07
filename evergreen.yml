@@ -31,6 +31,15 @@ functions:
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
         bucket: mciuploads
 
+  "fetch for ubuntu sign":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz
+        bucket: mciuploads
+
   "fetch source":
     - command: git.get_project
       params:
@@ -203,6 +212,26 @@ functions:
               --notary-url "${notary_client_url}" \
               mongoodbc.msi
 
+  "sign ubuntu":
+    - command: shell.exec
+      type: system
+      params:
+        silent: true
+        working_dir: mongosql-odbc-driver/installer/tgz
+        script: |
+          echo "${signing_token_odbc_driver}" > ./signing_auth_token
+    - command: shell.exec
+      type: system
+      params:
+        working_dir: mongosql-odbc-driver/installer/tgz
+        script: |
+          /usr/local/bin/notary-client.py \
+              --key-name "bi-connector" \
+              --auth-token-file ./signing_auth_token \
+              --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
+              --notary-url "${notary_client_url}" \
+              mongoodbc.tar.gz
+
   "compile release":
     - command: shell.exec
       type: test
@@ -364,6 +393,17 @@ functions:
     - command: s3.put
       params:
         build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/atsql.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
@@ -375,11 +415,11 @@ functions:
     - command: s3.put
       params:
         build_variants:
-          - windows-64
+          - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/atsql.pdb
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
+        local_file: mongosql-odbc-driver/release/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -437,6 +477,17 @@ functions:
         aws_secret: ${aws_secret}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc-signed.msi
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "upload ubuntu sig file":
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
+        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz.sig
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -506,6 +557,60 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz.sig
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz.sig
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz.sig
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/libatsql.so
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
 
   "upload debug":
     - command: s3.get
@@ -556,6 +661,24 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/debug/libatsql.so
+        local_file: mongosql-odbc-driver/target/debug/libatsql.so
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/debug/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/debug/libatsql.so
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
 
   "download artifact":
     - command: s3.get
@@ -585,6 +708,18 @@ functions:
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
         local_file: mongosql-odbc-driver/libatsql.so
         bucket: mciuploads
+
+  "tar linux artifacts":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script:  |
+          mkdir -p release/mongoodbc/bin
+          cp  target/release/libatsql.so release/mongoodbc/bin/
+          cp ./LICENSE ./README.md release/mongoodbc/
+          cd release
+          tar -czvf mongoodbc.tar.gz mongoodbc/
 
   "setup driver on Windows":
     - command: shell.exec
@@ -1126,6 +1261,8 @@ tasks:
       - func: "compile release"
       - func: "build msi"
         variants: [windows-64]
+      - func: "tar linux artifacts"
+        variants: [ubuntu2204]
       - func: "mciuploads release artifacts"
 
   - name: compile-macos
@@ -1204,6 +1341,14 @@ tasks:
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu result-set tests"
 
+  - name: ubuntu-sign
+    depends_on:
+      - name: compile
+    commands:
+      - func: "fetch for ubuntu sign"
+      - func: "sign ubuntu"
+      - func: "upload ubuntu sig file"
+
   - name: macos-unit-test
     commands:
       - func: "install iODBC"
@@ -1261,6 +1406,12 @@ tasks:
         variant: "windows-64"
       - name: windows-result-set-test
         variant: "windows-64"
+      - name: ubuntu-unit-test
+        variant: "ubuntu2204"
+      - name: ubuntu-integration-test
+        variant: "ubuntu2204"
+      - name: ubuntu-result-set-test
+        variant: "ubuntu2204"
       - name: asan-unit-test
         variant: "*"
       - name: asan-integration-test
@@ -1278,6 +1429,8 @@ tasks:
         variant: "*"
       - name: windows-sign
         variant: "windows-64"
+      - name: ubuntu-sign
+        variant: "ubuntu2204"
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1355,6 +1508,8 @@ buildvariants:
       - name: asan-unit-test
       - name: asan-integration-test
       - name: asan-result-set-test
+      - name: ubuntu-sign
+        run_on: linux-64-amzn-build
 
   - name: macos
     display_name: "macOS 11.0"
