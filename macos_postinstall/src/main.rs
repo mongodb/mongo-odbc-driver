@@ -97,7 +97,7 @@ fn main() {
         "Drivers configuration will be added to {ini_file}"
     ));
     let latest = get_latest_version();
-    let mdb_driver_key = format!("MongoDB Atlas SQL ODBC Driver");
+    let mdb_driver_key = "MongoDB Atlas SQL ODBC Driver".to_string();
     let install_path = format!("{INSTALL_ROOT}/{latest}");
     let mdb_driver_path = format!("{install_path}/libatsql.dylib");
     info(&format!("Driver installed at: {mdb_driver_path}"));
