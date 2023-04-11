@@ -1,6 +1,6 @@
 use std::ptr::copy_nonoverlapping;
 
-#[cfg(all(feature = "iodbc", feature = "utf32"))]
+#[cfg(feature = "utf32")]
 pub type WideChar = u32;
 #[cfg(not(feature = "utf32"))]
 pub type WideChar = u16;
@@ -11,9 +11,11 @@ pub fn from_widechar_vec_lossy(v: Vec<u16>) -> String {
     widestring::decode_utf16_lossy(v).collect::<String>()
 }
 
-#[cfg(all(feature = "iodbc", feature = "utf32"))]
+#[cfg(feature = "utf32")]
 pub fn from_widechar_ref_lossy(v: &[WideChar]) -> String {
-    widestring::decode_utf32(v.iter().copied()).collect::<String>()
+    widestring::decode_utf32(v.iter().copied())
+        .collect::<Result<String, _>>()
+        .expect("Failed to decode utf32")
 }
 
 #[cfg(not(feature = "utf32"))]
@@ -21,7 +23,7 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
     widestring::encode_utf16(s.chars()).collect::<Vec<_>>()
 }
 
-#[cfg(all(feature = "iodbc", feature = "utf32"))]
+#[cfg(feature = "utf32")]
 pub fn from_widechar_vec_lossy(v: Vec<WideChar>) -> String {
     widestring::decode_utf32_lossy(v).collect::<String>()
 }
@@ -31,7 +33,7 @@ pub fn from_widechar_ref_lossy(v: &[WideChar]) -> String {
     widestring::decode_utf16_lossy(v.iter().copied()).collect::<String>()
 }
 
-#[cfg(all(feature = "iodbc", feature = "utf32"))]
+#[cfg(feature = "utf32")]
 pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
     widestring::encode_utf32(s.chars()).collect::<Vec<_>>()
 }
