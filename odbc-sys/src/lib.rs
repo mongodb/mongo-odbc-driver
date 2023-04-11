@@ -13,6 +13,7 @@ pub use self::{
     indicator::*, info_type::*, interval::*, nullability::*, param_type::*, sql_data_type::*,
     sqlreturn::*,
 };
+use cstr::WideChar;
 use std::os::raw::{c_int, c_void};
 
 mod attributes;
@@ -56,7 +57,7 @@ pub type UInteger = u32;
 pub type Pointer = *mut c_void;
 pub type Char = u8;
 pub type SChar = i8;
-pub type WChar = u16;
+pub type WChar = WideChar;
 
 pub type Len = isize;
 pub type ULen = usize;

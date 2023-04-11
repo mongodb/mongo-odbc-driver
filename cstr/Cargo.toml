@@ -11,4 +11,3 @@ edition = "2021"
 
 [dependencies]
 widestring = "1.0.2"
-odbc-sys = { path = "../odbc-sys" }

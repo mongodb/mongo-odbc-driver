@@ -214,7 +214,6 @@ dependencies = [
 name = "cstr"
 version = "0.0.0"
 dependencies = [
- "odbc-sys",
  "widestring 1.0.2",
 ]
 
@@ -959,6 +958,9 @@ dependencies = [
 [[package]]
 name = "odbc-sys"
 version = "0.21.4"
+dependencies = [
+ "cstr",
+]
 
 [[package]]
 name = "once_cell"
