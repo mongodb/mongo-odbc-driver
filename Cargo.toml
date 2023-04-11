@@ -9,6 +9,7 @@ members = [
   "file_dbg_macros",
   "win_setupgui",
   "shared_sql_utils",
+  "macos_postinstall",
 ]
 
 [profile.release-with-debug]

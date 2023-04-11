@@ -327,7 +327,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          echo "env $(env)"
           cp target/release/*.dll installer/msi
           cp ./README.md installer/msi
           cd installer/msi
@@ -355,6 +354,24 @@ functions:
               -Version "$MINOR_VERSION"\
               -VersionLabel "$VERSION_LABEL"\
               -UpgradeCode "$UUID"
+
+  "build dmg":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cp target/release/*.dylib installer/dmg
+          cp target/release/macos_postinstall installer/dmg
+          cd installer/dmg
+          if [ "$RELEASE_VERSION" == "snapshot" ]; then
+              MINOR_VERSION="0.1"
+          else
+              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
+          fi
+          ./build-dmg.sh "$MINOR_VERSION"
+
 
   "mciuploads release artifacts":
     - command: s3.put
@@ -420,6 +437,28 @@ functions:
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/release/mongoodbc.tar.gz
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - macos
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql.dylib
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.dylib
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - macos
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.dmg
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dmg
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -1272,6 +1311,7 @@ tasks:
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile macos release"
+      - func: "build dmg"
       - func: "mciuploads release artifacts"
 
   - name: compile-debug
