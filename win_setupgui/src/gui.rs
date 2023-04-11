@@ -4,7 +4,7 @@ extern crate native_windows_gui as nwg;
 use cstr::{input_text_to_string_w, to_widechar_ptr};
 use nwd::NwgUi;
 use nwg::NativeUi;
-use shared_sql_utils::{DSNArgs, DSN};
+use shared_sql_utils::{Dsn, DsnArgs};
 use std::{cell::RefCell, thread};
 use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
 
@@ -127,7 +127,7 @@ impl ConfigGui {
         nwg::stop_thread_dispatch();
     }
 
-    fn validate_input(&self) -> Option<DSN> {
+    fn validate_input(&self) -> Option<Dsn> {
         match (
             self.database_input.text().is_empty(),
             self.dsn_input.text().is_empty(),
@@ -157,7 +157,7 @@ impl ConfigGui {
                 return None;
             }
         }
-        match DSN::new(DSNArgs {
+        match Dsn::new(DsnArgs {
             database: self.database_input.text().as_str(),
             dsn: self.dsn_input.text().as_str(),
             password: self.password_input.text().as_str(),
@@ -273,7 +273,7 @@ impl ConfigGui {
     }
 }
 
-pub fn config_dsn(dsn_opts: DSN, dsn_op: u32) -> bool {
+pub fn config_dsn(dsn_opts: Dsn, dsn_op: u32) -> bool {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
 

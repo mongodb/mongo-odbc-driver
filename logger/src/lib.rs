@@ -75,8 +75,18 @@ impl Logger {
     }
 
     fn file_appender(log_dir: &str) -> Result<RollingFileAppender, std::io::Error> {
-        let file_path = format!("{log_dir}/mongo_odbc.log");
-        let roller_pattern = format!("{log_dir}/mongo_odbc.log.{{}}");
+        let file_path = Path::new(log_dir)
+            .join("mongo_odbc.log")
+            .as_os_str()
+            .to_str()
+            .unwrap()
+            .to_string();
+        let roller_pattern = Path::new(log_dir)
+            .join("mongo_odbc.log.{}")
+            .as_os_str()
+            .to_str()
+            .unwrap()
+            .to_string();
 
         let roller = FixedWindowRoller::builder()
             .build(&roller_pattern, 10)

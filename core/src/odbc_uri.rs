@@ -3,7 +3,7 @@ use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
-use shared_sql_utils::DSN;
+use shared_sql_utils::Dsn;
 use std::collections::HashMap;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
@@ -73,7 +73,7 @@ impl ODBCUri {
         }
         let mut ret = ODBCUri::process_uri(odbc_uri.clone())?;
         if ret.get(DSN).is_some() {
-            let mut dsn_opts = DSN::from_attribute_string(&odbc_uri);
+            let mut dsn_opts = Dsn::from_attribute_string(&odbc_uri);
             dsn_opts = dsn_opts.from_private_profile_string().unwrap();
             ret = ODBCUri::process_uri(format!("{odbc_uri};{}", dsn_opts.to_connection_string()))?;
         }

@@ -19,7 +19,7 @@ const ODBCINI: &str = "ODBC.INI";
 const MAX_VALUE_LENGTH: usize = 16383;
 
 #[derive(Error, Debug)]
-pub enum DSNError {
+pub enum DsnError {
     #[error("Invalid DSN: {}\nDSN may not be longer than 32 characters, and may not contain any of the following characters: [ ] {{ }} ( ) , ; ? * = ! @ \\", .0)]
     Dsn(String),
     #[error(
@@ -32,7 +32,7 @@ pub enum DSNError {
 }
 
 #[derive(Debug, Default)]
-pub struct DSNArgs<S: Into<String> + Copy> {
+pub struct DsnArgs<S: Into<String> + Copy> {
     pub database: S,
     pub dsn: S,
     pub password: S,
@@ -44,7 +44,7 @@ pub struct DSNArgs<S: Into<String> + Copy> {
 }
 
 #[derive(Debug, Default)]
-pub struct DSN {
+pub struct Dsn {
     pub database: String,
     pub dsn: String,
     pub password: String,
@@ -55,17 +55,17 @@ pub struct DSN {
     pub log_level: String,
 }
 
-impl DSN {
+impl Dsn {
     #[allow(clippy::too_many_arguments)]
-    pub fn new<S: Into<String> + Copy>(args: DSNArgs<S>) -> Result<Self, DSNError> {
+    pub fn new<S: Into<String> + Copy>(args: DsnArgs<S>) -> Result<Self, DsnError> {
         let validation = vec![
-            DSN::check_value_length(&args.database.into()),
+            Dsn::check_value_length(&args.database.into()),
             unsafe { SQLValidDSNW(to_widechar_ptr(&args.dsn.into()).0) },
-            DSN::check_value_length(&args.password.into()),
-            DSN::check_value_length(&args.uri.into()),
-            DSN::check_value_length(&args.user.into()),
-            DSN::check_value_length(&args.server.into()),
-            DSN::check_value_length(&args.driver_name.into()),
+            Dsn::check_value_length(&args.password.into()),
+            Dsn::check_value_length(&args.uri.into()),
+            Dsn::check_value_length(&args.user.into()),
+            Dsn::check_value_length(&args.server.into()),
+            Dsn::check_value_length(&args.driver_name.into()),
         ];
         if validation.iter().all(|&b| b) {
             Ok(Self {
@@ -79,14 +79,14 @@ impl DSN {
                 log_level: args.log_level.into(),
             })
         } else if !validation[1] {
-            Err(DSNError::Dsn(args.dsn.into()))
+            Err(DsnError::Dsn(args.dsn.into()))
         } else {
-            Err(DSNError::Value)
+            Err(DsnError::Value)
         }
     }
 
     pub fn from_attribute_string(attribute_string: &str) -> Self {
-        let mut dsn_opts = DSN::default();
+        let mut dsn_opts = Dsn::default();
         attribute_string.split(';').for_each(|pair| {
             let mut key_value = pair.split('=');
             let key = key_value.next().unwrap_or("");
@@ -120,9 +120,9 @@ impl DSN {
         })
     }
 
-    pub fn from_private_profile_string(&self) -> Result<Self, DSNError> {
+    pub fn from_private_profile_string(&self) -> Result<Self, DsnError> {
         let buffer = &mut [0u16; MAX_VALUE_LENGTH];
-        let mut dsn_opts = DSN::default();
+        let mut dsn_opts = Dsn::default();
         let mut error_key = "";
         let len = unsafe {
             SQLGetPrivateProfileStringW(
@@ -162,7 +162,7 @@ impl DSN {
             });
         // Somehow the registry value was too long. This should never happen unless Microsoft changes registry value rules.
         if !error_key.is_empty() {
-            return Err(DSNError::Generic(format!("If you see this error, please report it. Attempted to read a value from registry that was too long for key: `{error_key}`.")));
+            return Err(DsnError::Generic(format!("If you see this error, please report it. Attempted to read a value from registry that was too long for key: `{error_key}`.")));
         }
         dsn_opts.driver_name = self.driver_name.clone();
         dsn_opts.dsn = self.dsn.clone();
@@ -215,7 +215,7 @@ pub struct DSNIterator<'a> {
 }
 
 impl<'a> DSNIterator<'a> {
-    pub fn new(dsn_opts: &'a DSN) -> Self {
+    pub fn new(dsn_opts: &'a Dsn) -> Self {
         Self {
             inner: vec![
                 ("Database", &dsn_opts.database),
@@ -243,7 +243,7 @@ mod test {
 
     #[test]
     fn invalid_dsn_name() {
-        let dsn_opts = DSN::new(DSNArgs {
+        let dsn_opts = Dsn::new(DsnArgs {
             database: "test",
             dsn: "test!",
             password: "test",
@@ -258,7 +258,7 @@ mod test {
 
     #[test]
     fn invalid_value_length_in_database_field() {
-        let dsn_opts = DSN::new(DSNArgs {
+        let dsn_opts = Dsn::new(DsnArgs {
             database: "t".repeat(MAX_VALUE_LENGTH + 1).as_str(),
             dsn: "test",
             password: "test",
@@ -273,7 +273,7 @@ mod test {
 
     #[test]
     fn invalid_value_length_in_password_field() {
-        let dsn_opts = DSN::new(DSNArgs {
+        let dsn_opts = Dsn::new(DsnArgs {
             database: "t",
             dsn: "test",
             password: "t".repeat(MAX_VALUE_LENGTH + 1).as_str(),
@@ -288,7 +288,7 @@ mod test {
 
     #[test]
     fn invalid_value_length_in_server_field() {
-        let dsn_opts = DSN::new(DSNArgs {
+        let dsn_opts = Dsn::new(DsnArgs {
             database: "t",
             dsn: "test",
             password: "test",
@@ -303,7 +303,7 @@ mod test {
 
     #[test]
     fn invalid_value_length_in_user_field() {
-        let dsn_opts = DSN::new(DSNArgs {
+        let dsn_opts = Dsn::new(DsnArgs {
             database: "test",
             dsn: "test",
             password: "test",
@@ -318,7 +318,7 @@ mod test {
 
     #[test]
     fn valid_value_lengths_and_dsn() {
-        let dsn_opts = DSN::new(DSNArgs {
+        let dsn_opts = Dsn::new(DsnArgs {
             database: "test",
             dsn: "test",
             password: "test",
@@ -333,7 +333,7 @@ mod test {
 
     #[test]
     fn test_set_field() {
-        let mut dsn_opts = DSN {
+        let mut dsn_opts = Dsn {
             ..Default::default()
         };
         dsn_opts.set_field("PWD", "hunter2");
