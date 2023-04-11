@@ -263,7 +263,7 @@ pub mod simplified {
                     bson_type: None,
                     properties: None,
                     required: None,
-                    additional_properties: None,
+                    additional_properties: None | Some(false),
                     items: None,
                     any_of: None,
                 } => Ok(Atomic::Scalar(BsonTypeName::Any)),
@@ -823,6 +823,16 @@ mod unit {
             variant = Schema,
             expected = Ok(Schema::Atomic(Atomic::Scalar(BsonTypeName::Any))),
             input = json_schema::Schema::default()
+        );
+
+        try_from_test!(
+            bson_type_none_and_additional_properties_false_results_in_any,
+            variant = Schema,
+            expected = Ok(Schema::Atomic(Atomic::Scalar(BsonTypeName::Any))),
+            input = json_schema::Schema {
+                additional_properties: Some(false),
+                ..Default::default()
+            }
         );
 
         try_from_test!(
