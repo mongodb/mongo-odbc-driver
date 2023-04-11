@@ -143,6 +143,7 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
                 None => {
                     let mut conn_str = crate::common::generate_default_connection_str();
                     conn_str.push_str(&("DATABASE=".to_owned() + &test.db));
+                    println!("{conn_str}");
                     let conn_handle = connect_with_conn_string(env, conn_str).unwrap();
                     let test_result = match test.test_definition {
                         TestDef::Query(ref q) => run_query_test(q, &test, conn_handle, generate),

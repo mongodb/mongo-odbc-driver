@@ -23,7 +23,7 @@ file_dbg_macros = { path = "../file_dbg_macros" }
 cstr = { path = "../cstr" }
 function_name = "0.3.0"
 serde_json = "1.0.68"
-odbc-sys = "0.21.2"
+odbc-sys = { path = "../odbc-sys" }
 
 
 [dependencies.mongodb]

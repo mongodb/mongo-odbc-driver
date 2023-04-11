@@ -33,6 +33,9 @@ elif [ -d "C:\\golang\\$GO_VERSION" ]; then
   GOBINDIR="$GOROOT"\\bin
   export GOCACHE=$(cygpath -m $HOME/gocache)
   export GOPATH=$(cygpath -m $HOME/go)
+# local testing macos
+elif [ -e /usr/local/bin/go ]; then
+  GOBINDIR=/usr/local/bin
 else #local testing
   GOBINDIR=/usr/bin
 fi
