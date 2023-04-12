@@ -24,7 +24,7 @@ mod integration {
         let _ = connect_with_conn_string(env_handle.unwrap(), conn_str).unwrap();
     }
 
-    #[cfg(all(test, not(feature = "logger_panic")))]
+    #[cfg(test)]
     mod logs {
         use crate::common::{allocate_env, connect_with_conn_string};
         use constants::DRIVER_NAME;

@@ -1057,7 +1057,6 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 
 fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoConnection> {
     let mut odbc_uri = ODBCUri::new(odbc_uri_string.to_string())?;
-    dbg!(&odbc_uri);
     let client_options = odbc_uri.try_into_client_options()?;
     odbc_uri
         .remove(&["driver", "dsn"])
@@ -1068,13 +1067,11 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         if let Some(env) = env {
             if let Some(env) = env.as_env() {
                 if let Some(logger) = env.logger.as_ref() {
-                    dbg!("logger exists");
                     logger.set_log_level(log_level);
                 }
             }
         }
     }
-    dbg!(&odbc_uri);
 
     let conn_attrs = conn.attributes.read().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
