@@ -1,4 +1,4 @@
-use std::ptr::copy_nonoverlapping;
+use std::{ptr::copy_nonoverlapping, str::from_utf8};
 
 pub type WideChar = u16;
 pub type Char = u8;
@@ -68,7 +68,6 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> Strin
     copy_nonoverlapping(text, dst.as_mut_ptr(), len);
     from_widechar_vec_lossy(dst)
 }
-
 ///
 /// parse_attribute_string_w converts a null-separated doubly null terminated *Widechar string to a Rust
 /// string separated by `;`.

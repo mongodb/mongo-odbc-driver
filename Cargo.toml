@@ -9,6 +9,7 @@ members = [
   "win_setupgui",
   "shared_sql_utils",
   "logger",
+  "macos_postinstall",
 ]
 
 [profile.release-with-debug]
