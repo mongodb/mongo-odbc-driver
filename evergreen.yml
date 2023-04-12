@@ -765,7 +765,7 @@ functions:
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
-        script:  |
+        script: |
           ${prepare_shell}
           sed -i 's@%DRIVER_DLL_PATH%@'"$(echo "$(cygpath -w $(pwd))" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           sed -i 's@%ADF_TEST_USER%@'"$(echo "${adf_test_local_user}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
@@ -785,7 +785,7 @@ functions:
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
-        script:  |
+        script: |
           ${prepare_shell}
           echo "-----   Setup driver with Unix ODBC   -----"
           # DRIVER_LIB_PATH should have been set by the compile task
@@ -798,13 +798,21 @@ functions:
           echo "-------------------------"
           cat setup/odbcinst.ini
           echo "-------------------------"
+          echo "----- DSN Setup -----"
+          sed -i "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/odbc.ini
+          sed -i "s,%ADF_TEST_DB%,${adf_test_local_db},g" setup/odbc.ini
+          sed -i "s,%ADF_TEST_USER%,${adf_test_local_user},g" setup/odbc.ini
+          sed -i "s,%ADF_TEST_PWD%,${adf_test_local_pwd},g" setup/odbc.ini
+          sed -i "s,%ADF_TEST_HOST%,${adf_test_host},g" setup/odbc.ini
+          cp setup/odbc.ini ~/.odbc.ini
+          echo "---- END DSN Setup ----"
 
   "setup driver with iODBC":
     - command: shell.exec
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
-        script:  |
+        script: |
           ${prepare_shell}
           echo "-----   Setup driver with iODBC   -----"
           # DRIVER_LIB_PATH should have been set by the compile task
@@ -817,9 +825,17 @@ functions:
           echo "-------------------------"
           cat setup/iodbcinst.ini
           echo "-------------------------"
-          
+          echo "----- DSN Setup -----"
+          sed -i "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/iodbc.ini
+          sed -i "s,%ADF_TEST_DB%,${adf_test_local_db},g" setup/iodbc.ini
+          sed -i "s,%ADF_TEST_USER%,${adf_test_local_user},g" setup/iodbc.ini
+          sed -i "s,%ADF_TEST_PWD%,${adf_test_local_pwd},g" setup/iodbc.ini
+          sed -i "s,%ADF_TEST_HOST%,${adf_test_host},g" setup/iodbc.ini
+          echo "---- END DSN Setup ----"
+
           cat <<EOT >> expansions.yml
             export ODBCINSTINI="$ODBCSYSINI/iodbcinst.ini"
+            export ODBCINI="$ODBCSYSINI/iodbc.ini"
           EOT
     - command: expansions.update
       params:
@@ -830,7 +846,7 @@ functions:
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
-        script:  |
+        script: |
           ${prepare_shell}
           mkdir $DUMP_PATH
           set +e
@@ -856,13 +872,12 @@ functions:
           echo "-------------------------"
           echo "App Data = $AppData"
 
-
   "clean-up driver on Windows":
     - command: shell.exec
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
-        script:  |
+        script: |
           ${prepare_shell}
           if [ 'windows-32' == '${build_variant}' ]; then
             sed -i 's@SOFTWARE@'"SOFTWARE\\\\Wow6432Node"'@' setup/cleanup_driver.reg
@@ -880,7 +895,7 @@ functions:
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
-        script:  |
+        script: |
           ${prepare_shell}
           set +e
           # See what crash dump has been created. Checking the default path just in case
@@ -1238,24 +1253,24 @@ functions:
         exit $EXITCODE
 
   "upload start_adf logs":
-     - command: s3.put
-       params:
-         aws_key: ${aws_key}
-         aws_secret: ${aws_secret}
-         local_file: mongosql-odbc-driver/local_adf/logs/mongohoused.log
-         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongohoused.log
-         bucket: mciuploads
-         permissions: public-read
-         content_type: application/octet-stream
-     - command: s3.put
-       params:
-         aws_key: ${aws_key}
-         aws_secret: ${aws_secret}
-         local_file: mongosql-odbc-driver/local_adf/logs/mongodb_test.log
-         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongodb_test.log
-         bucket: mciuploads
-         permissions: public-read
-         content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/local_adf/logs/mongohoused.log
+        remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongohoused.log
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/local_adf/logs/mongodb_test.log
+        remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongodb_test.log
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
 
   "upload crash debugging info":
     - command: s3.put
@@ -1515,17 +1530,16 @@ task_groups:
       - windows-result-set-test
 
 buildvariants:
-
   - name: static-analysis
     display_name: "* Static Analysis"
-    run_on: [ ubuntu2004-test ]
+    run_on: [ubuntu2004-test]
     tasks:
       - name: clippy
       - name: rustfmt
 
   - name: windows-64
     display_name: Windows (64-bit)
-    run_on: [ windows-64-vs2019-large ]
+    run_on: [windows-64-vs2019-large]
     tasks:
       - name: compile
       - name: compile-debug
@@ -1538,7 +1552,7 @@ buildvariants:
 
   - name: ubuntu2204
     display_name: Ubuntu 22.04
-    run_on: [ ubuntu2204-large ]
+    run_on: [ubuntu2204-large]
     tasks:
       - name: compile
       - name: compile-debug
@@ -1553,7 +1567,7 @@ buildvariants:
 
   - name: macos
     display_name: "macOS 11.0"
-    run_on: [ macos-1100 ]
+    run_on: [macos-1100]
     tasks:
       - name: compile-macos
       - name: compile-debug-macos
@@ -1564,7 +1578,7 @@ buildvariants:
 
   - name: release
     display_name: "Release"
-    run_on: [ ubuntu2004-medium ]
+    run_on: [ubuntu2004-medium]
     tasks:
       - name: release
       - name: snapshot

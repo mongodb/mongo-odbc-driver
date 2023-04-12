@@ -27,7 +27,6 @@ mod integration {
      * The following tests require a DSN called "ADF_Test" to be configured on the machine running the tests.
      */
 
-    #[cfg(target_os = "windows")]
     mod test_dsn {
         use crate::common::{allocate_env, connect_with_conn_string};
         #[test]

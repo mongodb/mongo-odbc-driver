@@ -16,7 +16,7 @@ lazy_static = "1.4.0"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
 regex = "1.6.0"
-chrono = "0.4.22"
+chrono = "=0.4.22"                                # pinning to =0.4.22 TODO: SQL-1345: bump chrono and use non-deprecated methods
 constants = { path = "../constants" }
 mongo-odbc-core = { path = "../core" }
 file_dbg_macros = { path = "../file_dbg_macros" }
