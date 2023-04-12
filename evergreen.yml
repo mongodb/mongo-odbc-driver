@@ -22,6 +22,24 @@ timeout:
         ls -la
 
 functions:
+  "fetch for windows sign":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.msi
+        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        bucket: mciuploads
+
+  "fetch for ubuntu sign":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz
+        bucket: mciuploads
+
   "fetch source":
     - command: git.get_project
       params:
@@ -130,6 +148,26 @@ functions:
           ${prepare_shell}
           cargo clippy --all-targets -- -D warnings
 
+  "check packages version":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cargo install cargo-get
+          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
+          if [[ "${triggered_by_git_tag}" == "" ]]; then
+            EXPECTED_RELEASE_VERSION="0.0.0"
+          else
+            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
+          fi
+          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
+            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
+            exit 1
+          fi
+
   "check rustfmt":
     - command: shell.exec
       type: test
@@ -154,26 +192,45 @@ functions:
             cargo set-version $RELEASE_VERSION
           fi
 
-  "check packages version":
+  "sign windows":
     - command: shell.exec
-      type: test
+      type: system
       params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
+        silent: true
+        working_dir: mongosql-odbc-driver/installer/msi
         script: |
-          ${prepare_shell}
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
+          echo "${signing_token_odbc_driver}" > ./signing_auth_token
+    - command: shell.exec
+      type: system
+      params:
+        working_dir: mongosql-odbc-driver/installer/msi
+        script: |
+          /usr/local/bin/notary-client.py \
+              --key-name "bi-connector" \
+              --auth-token-file ./signing_auth_token \
+              --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
+              --notary-url "${notary_client_url}" \
+              mongoodbc.msi
 
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
+  "sign ubuntu":
+    - command: shell.exec
+      type: system
+      params:
+        silent: true
+        working_dir: mongosql-odbc-driver/installer/tgz
+        script: |
+          echo "${signing_token_odbc_driver}" > ./signing_auth_token
+    - command: shell.exec
+      type: system
+      params:
+        working_dir: mongosql-odbc-driver/installer/tgz
+        script: |
+          /usr/local/bin/notary-client.py \
+              --key-name "bi-connector" \
+              --auth-token-file ./signing_auth_token \
+              --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
+              --notary-url "${notary_client_url}" \
+              mongoodbc.tar.gz
 
   "compile release":
     - command: shell.exec
@@ -270,11 +327,21 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          echo "env $(env)"
           cp target/release/*.dll installer/msi
           cp ./README.md installer/msi
           cd installer/msi
-          VERSION="$RELEASE_VERSION"
+          if [ "$RELEASE_VERSION" == "snapshot" ]; then
+              MINOR_VERSION="0.1"
+              VERSION_LABEL="0.1.0"
+          else
+              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
+              VERSION_LABEL="$RELEASE_VERSION"
+          fi
+          # This UUID is used for the upgrade code and should be consistent across minor version_id
+          # bug patches, that is why it is seeded with the minor version. Being consistent across
+          # bug patches but different across minor versions allows for users to have multiple
+          # minor versions of the driver installed side by side on Windows.
+          UUID=$(uuidgen -m -N "mongoodbc_no_conflicts_$MINOR_VERSION" -n @oid)
           # unfortunately, using a variable to hold the path to powershell
           # seems to not work properly with evergreen's bash
           /cygdrive/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\
@@ -284,7 +351,27 @@ functions:
               -ExecutionPolicy ByPass\
               -File ./build-msi.ps1\
               -Arch x64\
-              -VersionLabel "$VERSION"
+              -Version "$MINOR_VERSION"\
+              -VersionLabel "$VERSION_LABEL"\
+              -UpgradeCode "$UUID"
+
+  "build dmg":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cp target/release/*.dylib installer/dmg
+          cp target/release/macos_postinstall installer/dmg
+          cd installer/dmg
+          if [ "$RELEASE_VERSION" == "snapshot" ]; then
+              MINOR_VERSION="0.1"
+          else
+              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
+          fi
+          ./build-dmg.sh "$MINOR_VERSION"
+
 
   "mciuploads release artifacts":
     - command: s3.put
@@ -323,6 +410,17 @@ functions:
     - command: s3.put
       params:
         build_variants:
+          - windows-64
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/atsql.pdb
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
@@ -334,11 +432,33 @@ functions:
     - command: s3.put
       params:
         build_variants:
-          - windows-64
+          - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/target/release/atsql.pdb
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
+        local_file: mongosql-odbc-driver/release/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - macos
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql.dylib
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.dylib
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - macos
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.dmg
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dmg
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -389,7 +509,45 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
 
+  "upload signed windows artifacts":
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
+        local_file: mongosql-odbc-driver/installer/msi/mongoodbc-signed.msi
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "upload ubuntu sig file":
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
+        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz.sig
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
   "upload release":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/pkg/mongoodbc.msi
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
     - command: s3.get
       params:
         aws_key: ${aws_key}
@@ -435,6 +593,60 @@ functions:
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.pdb
         remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.pdb
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz.sig
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz.sig
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz.sig
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/libatsql.so
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -488,6 +700,24 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/debug/libatsql.so
+        local_file: mongosql-odbc-driver/target/debug/libatsql.so
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/debug/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/debug/libatsql.so
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
 
   "download artifact":
     - command: s3.get
@@ -517,6 +747,18 @@ functions:
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
         local_file: mongosql-odbc-driver/libatsql.so
         bucket: mciuploads
+
+  "tar linux artifacts":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script:  |
+          mkdir -p release/mongoodbc/bin
+          cp  target/release/libatsql.so release/mongoodbc/bin/
+          cp ./LICENSE ./README.md release/mongoodbc/
+          cd release
+          tar -czvf mongoodbc.tar.gz mongoodbc/
 
   "setup driver on Windows":
     - command: shell.exec
@@ -1048,22 +1290,24 @@ functions:
 pre:
   - func: "fetch source"
   - func: "generate expansions"
-  - func: "install rust toolchain"
 post:
   - func: "upload start_adf logs"
 
 tasks:
   - name: clippy
     commands:
+      - func: "install rust toolchain"
       - func: "check clippy"
 
   - name: rustfmt
     commands:
+      - func: "install rust toolchain"
       - func: "check rustfmt"
 
   - name: compile
     depends_on:
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
@@ -1071,6 +1315,8 @@ tasks:
       - func: "compile release"
       - func: "build msi"
         variants: [windows-64]
+      - func: "tar linux artifacts"
+        variants: [ubuntu2204]
       - func: "mciuploads release artifacts"
 
   - name: compile-macos
@@ -1080,10 +1326,12 @@ tasks:
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile macos release"
+      - func: "build dmg"
       - func: "mciuploads release artifacts"
 
   - name: compile-debug
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
@@ -1118,13 +1366,23 @@ tasks:
       - func: "install rust toolchain"
       - func: "run windows result set test"
 
+  - name: windows-sign
+    depends_on:
+      - name: compile
+    commands:
+      - func: "fetch for windows sign"
+      - func: "sign windows"
+      - func: "upload signed windows artifacts"
+
   - name: ubuntu-unit-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "run ubuntu unit tests"
 
   - name: ubuntu-integration-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1132,10 +1390,19 @@ tasks:
 
   - name: ubuntu-result-set-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
       - func: "run ubuntu result-set tests"
+
+  - name: ubuntu-sign
+    depends_on:
+      - name: compile
+    commands:
+      - func: "fetch for ubuntu sign"
+      - func: "sign ubuntu"
+      - func: "upload ubuntu sig file"
 
   - name: macos-unit-test
     commands:
@@ -1158,11 +1425,13 @@ tasks:
 
   - name: asan-unit-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "run asan unit tests"
 
   - name: asan-integration-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1170,6 +1439,7 @@ tasks:
 
   - name: asan-result-set-test
     commands:
+      - func: "install rust toolchain"
       - func: "install unix odbc"
       - func: "compile release with debug info"
       - func: "setup driver with UnixODBC"
@@ -1191,6 +1461,12 @@ tasks:
         variant: "windows-64"
       - name: windows-result-set-test
         variant: "windows-64"
+      - name: ubuntu-unit-test
+        variant: "ubuntu2204"
+      - name: ubuntu-integration-test
+        variant: "ubuntu2204"
+      - name: ubuntu-result-set-test
+        variant: "ubuntu2204"
       - name: asan-unit-test
         variant: "*"
       - name: asan-integration-test
@@ -1206,6 +1482,10 @@ tasks:
         variant: "*"
       - name: compile-debug
         variant: "*"
+      - name: windows-sign
+        variant: "windows-64"
+      - name: ubuntu-sign
+        variant: "ubuntu2204"
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1266,6 +1546,9 @@ buildvariants:
       - name: windows-windows-test-unit-group
       - name: windows-test-integration-group
       - name: windows-test-result-set-group
+      - name: windows-sign
+        run_on: linux-64-amzn-build
+
 
   - name: ubuntu2204
     display_name: Ubuntu 22.04
@@ -1279,6 +1562,8 @@ buildvariants:
       - name: asan-unit-test
       - name: asan-integration-test
       - name: asan-result-set-test
+      - name: ubuntu-sign
+        run_on: linux-64-amzn-build
 
   - name: macos
     display_name: "macOS 11.0"
