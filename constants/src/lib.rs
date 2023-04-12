@@ -16,17 +16,6 @@ lazy_static! {
     pub static ref DEFAULT_APP_NAME: String =
         format!("{}+{}", DRIVER_SHORT_NAME, DRIVER_METRICS_VERSION.as_str());
     pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
-    pub static ref DRIVER_NAME_INSTALLED_VERSION: String = format!(
-        "{} {}.{}",
-        DRIVER_NAME,
-        env!("CARGO_PKG_VERSION_MAJOR"),
-        env!("CARGO_PKG_VERSION_MINOR")
-    );
-    pub static ref DRIVER_MAJOR_MINOR_VERSION: String = format!(
-        "{}.{}",
-        env!("CARGO_PKG_VERSION_MAJOR"),
-        env!("CARGO_PKG_VERSION_MINOR")
-    );
 }
 
 // SQL states

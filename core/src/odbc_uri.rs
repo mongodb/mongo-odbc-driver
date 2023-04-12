@@ -557,6 +557,19 @@ mod unit {
                 ODBCUri::new("Driver=Foo;;;SERVER=bAr;;;".to_string()).unwrap()
             );
         }
+
+        #[test]
+        fn log_level() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "foo".to_string(), "server".to_string() => "bAr".to_string(), "loglevel".to_string() => "debug".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=foo;SERVER=bAr;LOGLEVEL=debug".to_string()).unwrap()
+            );
+        }
     }
 
     #[cfg(test)]

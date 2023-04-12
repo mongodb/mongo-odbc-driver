@@ -21,6 +21,16 @@ pub struct Logger {
 }
 
 impl Logger {
+    /// Initializes the logger with the given path as its root. The logger will create a logs folder
+    /// two levels up from the given path and write its logs there. For example, if the given path is
+    /// `C:\\Program Files\\mongo_odbc\\1.1\\bin\\atsql.dll`, the logger will write its logs to
+    /// `C:\\Program Files\\mongo_odbc\\1.1\\logs\\mongo_odbc.log`. `std::path::Path` is used to assemble
+    /// the paths so this is OS safe.
+    ///
+    /// If the given path is empty, or there is an error accessing the path, the logger will write its logs to the temp directory.
+    ///
+    /// The logger is wrapped in a catch_unwind so that logger failure does the driver to crash. In this case
+    /// the logger returns None and no logs will be written.
     pub fn new<S: Into<String>>(driver_path: S) -> Option<Self> {
         let driver_path = driver_path.into();
         // Due to numerous reasons why the logger could fail to initialize, we wrap it in a catch_unwind

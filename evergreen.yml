@@ -542,7 +542,7 @@ functions:
           sed -i 's@%DRIVER_DLL_PATH%@'"$(echo "$(cygpath -w $(pwd))" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           sed -i 's@%ADF_TEST_USER%@'"$(echo "${adf_test_local_user}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           sed -i 's@%ADF_TEST_PWD%@'"$(echo "${adf_test_local_pwd}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
-          sed -i 's@%ADF_TEST_HOST%@'"$(echo "${adf_test_host}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
+          sed -i 's@%ADF_TEST_URI%@'"$(echo "${adf_test_uri}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           sed -i 's@%ADF_TEST_DB%@'"$(echo "${adf_test_local_db}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           reg import "setup\setupDSN.reg"
           echo "----- Registry entries after setup ----"
