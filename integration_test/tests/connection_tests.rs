@@ -70,8 +70,7 @@ mod integration {
             let log = fs::read_to_string(log_file_path).unwrap();
 
             assert!(log.contains("INFO:"));
-            // TODO: Re-enable this assertion
-            // assert!(log.contains("DEBUG:"));
+            assert!(log.contains("DEBUG:"));
         }
     }
 
