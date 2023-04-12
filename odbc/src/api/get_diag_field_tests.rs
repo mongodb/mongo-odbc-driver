@@ -93,7 +93,7 @@ mod unit {
            Thus, calling SQLGetDiagField with type SQL_DIAG_RETURNCODE is essentially
            a no-op. Verify this by checking we get sqlsucces, and buffers remain unchanged.
         */
-        let message_text = &mut [116u16, 101, 115, 116, 0];
+        let message_text = &mut [116, 101, 115, 116, 0] as *mut _;
         let string_length_ptr = &mut 0;
         unsafe {
             assert_eq!(
@@ -108,11 +108,9 @@ mod unit {
                     string_length_ptr
                 )
             );
+            let wtext: &[u32] = &*(message_text as *const [WideChar; 5]);
             // checking input pointer was not altered in any way, and we just pass through SUCCESS
-            assert_eq!(
-                "test\0",
-                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 5]))
-            );
+            assert_eq!("test\0", cstr::from_widechar_ref_lossy(wtext));
             assert_eq!(0, *string_length_ptr);
         }
     }

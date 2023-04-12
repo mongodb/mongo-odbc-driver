@@ -171,7 +171,7 @@ mod test {
     fn test_write_to_buffer_with_enough_space() {
         let expected = "test\0\0\0\0\0";
         let input = "test";
-        let mut buffer = [0u16; 9];
+        let mut buffer = [0; 9];
         let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);

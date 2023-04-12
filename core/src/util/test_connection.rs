@@ -68,11 +68,11 @@ mod test {
 
     #[test]
     fn successful_connection() {
-        let mut buffer = [0u16; 1024];
-        let mut buffer_len = 0u16;
+        let mut buffer = [0; 1024];
+        let mut buffer_len = 0;
         let result = unsafe {
             atlas_sql_test_connection(
-                to_widechar_ptr(&generate_connection_str(None, None)).0 as *const u16,
+                to_widechar_ptr(&generate_connection_str(None, None)).0 as *const cstr::WideChar,
                 buffer.as_mut_ptr(),
                 buffer.len(),
                 &mut buffer_len,
@@ -83,12 +83,12 @@ mod test {
 
     #[test]
     fn bad_credentials() {
-        let mut buffer = [0u16; 1024];
-        let mut buffer_len = 0u16;
+        let mut buffer = [0; 1024];
+        let mut buffer_len = 0;
         let result = unsafe {
             atlas_sql_test_connection(
                 to_widechar_ptr(&generate_connection_str(None, Some("hunter2".into()))).0
-                    as *const u16,
+                    as *const cstr::WideChar,
                 buffer.as_mut_ptr(),
                 buffer.len(),
                 &mut buffer_len,
@@ -106,15 +106,15 @@ mod test {
     #[ignore]
     // this test is ignored due to the 30 second connection timeout
     fn bad_host() {
-        let mut buffer = [0u16; 1024];
-        let mut buffer_len = 0u16;
+        let mut buffer = [0; 1024];
+        let mut buffer_len = 0;
         let result = unsafe {
             atlas_sql_test_connection(
                 to_widechar_ptr(&generate_connection_str(
                     Some("example.net:30000".into()),
                     None,
                 ))
-                .0 as *const u16,
+                .0 as *const cstr::WideChar,
                 buffer.as_ptr(),
                 buffer.len(),
                 &mut buffer_len,

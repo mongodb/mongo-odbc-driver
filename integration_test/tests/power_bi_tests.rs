@@ -27,7 +27,7 @@ mod integration {
             let info_value_buffer_length = $info_value_buffer_length;
             let info_value_type = $info_value_type;
 
-            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let output_buffer = &mut [0; (BUFFER_LENGTH as usize - 1)] as *mut _;
             let mut buffer = OutputBuffer {
                 output_buffer: output_buffer as Pointer,
                 data_length: *&mut 0,
@@ -73,7 +73,7 @@ mod integration {
     impl From<OutputBuffer> for String {
         fn from(val: OutputBuffer) -> Self {
             unsafe {
-                String::from_utf16_lossy(slice::from_raw_parts(
+                cstr::from_widechar_ref_lossy(slice::from_raw_parts(
                     val.output_buffer as *const _,
                     val.data_length as usize / std::mem::size_of::<WideChar>(),
                 ))
@@ -551,8 +551,7 @@ mod integration {
             SQLGetInfoW(SQL_DRIVER_ODBC_VER)
             SQLGetInfoW(SQL_DRIVER_NAME)
             */
-
-            let mut query: Vec<u16> = "select * from example".encode_utf16().collect();
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -606,7 +605,7 @@ mod integration {
                     &mut stmt as *mut Handle
                 )
             );
-            let mut table_view: Vec<u16> = "TABLE,VIEW".encode_utf16().collect();
+            let mut table_view: Vec<WideChar> = cstr::to_widechar_vec("TABLE,VIEW");
             table_view.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
