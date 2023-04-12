@@ -29,7 +29,7 @@ impl Logger {
     ///
     /// If the given path is empty, or there is an error accessing the path, the logger will write its logs to the temp directory.
     ///
-    /// The logger is wrapped in a catch_unwind so that logger failure does the driver to crash. In this case
+    /// The logger is wrapped in a catch_unwind so that logger failure does not cause the driver to crash. In this case
     /// the logger returns None and no logs will be written.
     pub fn new<S: Into<String>>(driver_path: S) -> Option<Self> {
         let driver_path = driver_path.into();
