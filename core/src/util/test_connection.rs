@@ -1,5 +1,5 @@
 use crate::{odbc_uri::ODBCUri, MongoConnection};
-use cstr::{input_text_to_string_w, write_to_buffer};
+use cstr::{input_text_to_string_w, write_to_buffer, WideChar};
 
 /// atlas_sql_test_connection returns true if a connection can be established
 /// with the provided connection string.
@@ -16,8 +16,8 @@ use cstr::{input_text_to_string_w, write_to_buffer};
 ///
 #[no_mangle]
 pub unsafe extern "C" fn atlas_sql_test_connection(
-    connection_string: *const u16,
-    buffer: *const u16,
+    connection_string: *const WideChar,
+    buffer: *const WideChar,
     buffer_in_len: usize,
     buffer_out_len: *mut u16,
 ) -> bool {
@@ -35,14 +35,14 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                     Ok(_) => true,
                     Err(e) => {
                         let len =
-                            write_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut u16);
+                            write_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut WideChar);
                         *buffer_out_len = len;
                         false
                     }
                 }
             }
             Err(e) => {
-                let len = write_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut u16);
+                let len = write_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut WideChar);
                 *buffer_out_len = len;
                 false
             }
@@ -51,7 +51,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
         let len = write_to_buffer(
             "Invalid connection string.",
             buffer_in_len,
-            buffer as *mut u16,
+            buffer as *mut WideChar,
         );
         *buffer_out_len = len;
         false

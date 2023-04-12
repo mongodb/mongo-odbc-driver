@@ -1,5 +1,5 @@
 use crate::odbcinst::*;
-use cstr::{input_text_to_string_w, to_widechar_ptr};
+use cstr::{input_text_to_string_w, to_widechar_ptr, WideChar};
 use thiserror::Error;
 
 const DATABASE: &str = "database";
@@ -115,7 +115,7 @@ impl DSNOpts {
     }
 
     pub fn from_private_profile_string(&self) -> Result<Self, DSNError> {
-        let buffer = &mut [0u16; MAX_VALUE_LENGTH];
+        let buffer: &mut [WideChar; MAX_VALUE_LENGTH] = &mut [0; MAX_VALUE_LENGTH];
         let mut dsn_opts = DSNOpts::default();
         let mut error_key = "";
         let len = unsafe {

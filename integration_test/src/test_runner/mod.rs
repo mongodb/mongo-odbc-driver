@@ -202,7 +202,7 @@ fn str_or_null(value: &Value) -> *const u8 {
 /// wstr_or_null converts value to a wide string or null_mut() if null
 /// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
 /// as the ptr.
-fn wstr_or_null(value: &Value) -> (*const u16, Vec<u16>) {
+fn wstr_or_null(value: &Value) -> (*const WideChar, Vec<WideChar>) {
     if value.is_null() {
         (null_mut(), Vec::new())
     } else {
@@ -213,7 +213,7 @@ fn wstr_or_null(value: &Value) -> (*const u16, Vec<u16>) {
 /// to_wstr_ptr converts a &str into a *const u16.
 /// Ok, it looks bizarre that we return the Vec here. This is to ensure that it lives as long
 /// as the ptr.
-fn to_wstr_ptr(string: &str) -> (*const u16, Vec<WideChar>) {
+fn to_wstr_ptr(string: &str) -> (*const WideChar, Vec<WideChar>) {
     let mut v = cstr::to_widechar_vec(string);
     v.push(0);
     (v.as_ptr(), v)

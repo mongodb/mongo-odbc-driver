@@ -1,4 +1,5 @@
 use crate::api::{definitions::*, errors::ODBCError};
+use cstr::WideChar;
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
     borrow::BorrowMut,
@@ -264,7 +265,7 @@ pub enum CachedData {
     Fixed,
     Char(usize, Vec<u8>),
     Bin(usize, Vec<u8>),
-    WChar(usize, Vec<u16>),
+    WChar(usize, Vec<WideChar>),
 }
 
 #[derive(Debug)]
