@@ -1,4 +1,31 @@
 {
-  "version": "{RELEASE_VERSION}",
-  "download_link": "https://repo1.maven.org/maven2/org/mongodb/mongodb-jdbc/RELEASE_VERSION"
+  "manual_link": "https://www.mongodb.com/docs/atlas/data-federation/query/query-with-sql/",
+  "release_notes_link": "https://www.mongodb.com/docs/atlas/data-federation/query/sql/release-notes/",
+  "versions": [
+    {
+      "version": "{RELEASE_VERSION}",
+      "platform": [
+        {
+          "name": "Windows",
+          "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/{RELEASE_VERSION}/pkg/"
+        },
+        {
+          "name": "Linux (x86_64)",
+          "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/{RELEASE_VERSION}/release/mongoodbc.tar.gz"
+        },
+        {
+          "name": "Linux (arm64)",
+          "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204-arm64/{RELEASE_VERSION}/release/mongoodbc.tar.gz"
+        },
+        {
+          "name": "MacOS (x86_64)",
+          "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/macos/{RELEASE_VERSION}/release/mongoodbc.dmg"
+        },
+        {
+          "name": "MacOS (arm64)",
+          "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/macos-arm64/{RELEASE_VERSION}/release/mongoodbc.tar.gz"
+        }
+      ]
+    }
+  ]
 }
