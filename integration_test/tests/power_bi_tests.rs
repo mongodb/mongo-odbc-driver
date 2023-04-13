@@ -463,7 +463,12 @@ mod integration {
             // InfoType::SQL_TIMEDATE_ADD_INTERVALS
             // InfoType::SQL_TIMEDATE_DIFF_INTERVALS
             // InfoType::SQL_CONCAT_NULL_BEHAVIOR
-            test_get_info!(conn_handle, InfoType::CatalogName, 4, DataType::WChar);
+            test_get_info!(
+                conn_handle,
+                InfoType::CatalogName,
+                (2 * std::mem::size_of::<WideChar>()) as i16,
+                DataType::WChar
+            );
             // InfoType::SQL_CATALOG_TERM
             // InfoType::SQL_OWNER_TERM
             // InfoType::SQL_ODBC_INTERFACE_CONFORMANCE
