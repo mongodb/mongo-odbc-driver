@@ -30,7 +30,7 @@ use odbc_sys::{
     Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
     Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
-use std::ptr::null_mut;
+use std::{cell::RefCell, ptr::null_mut};
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 
 const NULL_HANDLE_ERROR: &str = "handle cannot be null";
@@ -239,7 +239,10 @@ fn sql_alloc_handle(
 ) -> Result<()> {
     match handle_type {
         HandleType::Env => {
-            let env = Env::with_state(EnvState::Allocated, Logger::new(get_driver_path()));
+            let env = Env::with_state(
+                EnvState::Allocated,
+                RefCell::new(Logger::new(get_driver_path())),
+            );
             let mh = Box::new(MongoHandle::Env(env));
             unsafe {
                 *output_handle = Box::into_raw(mh) as *mut _;
@@ -1066,7 +1069,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         let env = unsafe { conn.env.as_ref() };
         if let Some(env) = env {
             if let Some(env) = env.as_env() {
-                if let Some(logger) = env.logger.as_ref() {
+                if let Some(logger) = env.logger.borrow().as_ref() {
                     logger.set_log_level(log_level);
                 }
             }
@@ -1550,7 +1553,9 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                     .as_env()
                     .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_ENV_ERROR))?
             }
-            .logger = None;
+            .logger
+            .borrow_mut()
+            .take();
             let _ = unsafe {
                 (*handle)
                     .as_env()

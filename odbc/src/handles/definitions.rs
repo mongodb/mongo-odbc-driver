@@ -3,6 +3,7 @@ use logger::Logger;
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
     borrow::BorrowMut,
+    cell::RefCell,
     collections::{HashMap, HashSet},
     ptr::null_mut,
     sync::RwLock,
@@ -164,11 +165,11 @@ pub struct Env {
     pub connections: RwLock<HashSet<*mut MongoHandle>>,
     pub errors: RwLock<Vec<ODBCError>>,
     // we need to hold on to the logger so that it doesn't get dropped
-    pub logger: Option<Logger>,
+    pub logger: RefCell<Option<Logger>>,
 }
 
 impl Env {
-    pub fn with_state(state: EnvState, logger: Option<Logger>) -> Self {
+    pub fn with_state(state: EnvState, logger: RefCell<Option<Logger>>) -> Self {
         Self {
             attributes: RwLock::new(EnvAttributes::default()),
             state: RwLock::new(state),
