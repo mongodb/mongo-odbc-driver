@@ -1,0 +1,4 @@
+{
+  "version": "{RELEASE_VERSION}",
+  "download_link": "https://repo1.maven.org/maven2/org/mongodb/mongodb-jdbc/RELEASE_VERSION"
+}
