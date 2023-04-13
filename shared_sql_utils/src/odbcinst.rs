@@ -1,4 +1,4 @@
-use cstr::WideChar;
+use cstr::{Char, WideChar};
 
 #[cfg_attr(target_os = "linux", link(name = "odbcinst", kind = "dylib"))]
 #[cfg_attr(target_os = "macos", link(name = "iodbcinst", kind = "dylib"))]
@@ -20,6 +20,14 @@ extern "C" {
         buffer: *mut WideChar,
         buffer_size: i32,
         filename: *const WideChar,
+    ) -> i32;
+    pub fn SQLGetPrivateProfileString(
+        section: *const Char,
+        entry: *const Char,
+        default: *const Char,
+        buffer: *mut Char,
+        buffer_size: i32,
+        filename: *const Char,
     ) -> i32;
     pub fn SQLGetConfigMode(buffer: *mut u32) -> i32;
 }

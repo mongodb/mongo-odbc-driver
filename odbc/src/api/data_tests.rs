@@ -276,6 +276,8 @@ lazy_static! {
 }
 
 mod unit {
+    use std::cell::RefCell;
+
     use cstr::WideChar;
 
     use super::*;
@@ -286,6 +288,7 @@ mod unit {
     fn unallocated_statement_sql_fetch() {
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -317,6 +320,7 @@ mod unit {
     fn sql_fetch_and_more_results_basic_functionality() {
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -355,6 +359,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -406,6 +411,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -505,6 +511,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -588,6 +595,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -671,6 +679,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -726,6 +735,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -766,19 +776,13 @@ mod unit {
                 };
 
                 bin_val_test(ARRAY_STR_VAL.0, ARRAY_STR_VAL.1.as_bytes());
-                bin_val_test(BIN_COL, &[5, 6, 42]);
-                bin_val_test(BOOL_COL, &[1]);
-                bin_val_test(
-                    DATETIME_COL,
-                    &[
-                        222, 7, 0, 0, 11, 0, 0, 0, 28, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0,
-                        0, 0, 0, 0, 0,
-                    ],
-                );
+                bin_val_test(BIN_COL, BIN_STR_VAL.1.as_bytes());
+                bin_val_test(BOOL_COL, BOOL_STR_VAL.1.as_bytes());
+                bin_val_test(DATETIME_COL, DATETIME_STR_VAL.1.as_bytes());
                 bin_val_test(DOC_STR_VAL.0, DOC_STR_VAL.1.as_bytes());
-                bin_val_test(DOUBLE_COL, &[205, 204, 204, 204, 204, 204, 244, 63]);
-                bin_val_test(I32_COL, &[1, 0, 0, 0]);
-                bin_val_test(I64_COL, &[0, 0, 0, 0, 0, 0, 0, 0]);
+                bin_val_test(DOUBLE_COL, DOUBLE_STR_VAL.1.as_bytes());
+                bin_val_test(I32_COL, I32_STR_VAL.1.as_bytes());
+                bin_val_test(I64_COL, I64_STR_VAL.1.as_bytes());
                 bin_val_test(JS_STR_VAL.0, JS_STR_VAL.1.as_bytes());
                 bin_val_test(JS_W_S_STR_VAL.0, JS_W_S_STR_VAL.1.as_bytes());
                 bin_val_test(MAXKEY_STR_VAL.0, MAXKEY_STR_VAL.1.as_bytes());
@@ -833,6 +837,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -845,7 +850,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 2;
+            let buffer_length: isize = 25;
             let out_len_or_ind = &mut 0;
             {
                 let mut bin_val_test =
@@ -872,10 +877,14 @@ mod unit {
                             _ => (),
                         }
                     };
-
-                bin_val_test(BIN_COL, 3, &[5u8, 6u8], SqlReturn::SUCCESS_WITH_INFO);
+                bin_val_test(
+                    BIN_COL,
+                    44,
+                    &BIN_STR_VAL.1.as_bytes()[0..24],
+                    SqlReturn::SUCCESS_WITH_INFO,
+                );
                 assert_eq!(
-                    "[MongoDB][API] Buffer size \"2\" not large enough for data".to_string(),
+                    "[MongoDB][API] Buffer size \"25\" not large enough for data".to_string(),
                     format!(
                         "{}",
                         (*stmt_handle)
@@ -886,7 +895,12 @@ mod unit {
                             .unwrap()[0]
                     ),
                 );
-                bin_val_test(BIN_COL, 1, &[42u8], SqlReturn::SUCCESS);
+                bin_val_test(
+                    BIN_COL,
+                    19,
+                    &BIN_STR_VAL.1.as_bytes()[25..],
+                    SqlReturn::SUCCESS,
+                );
                 bin_val_test(BIN_COL, 0, &[], SqlReturn::NO_DATA);
             }
             let _ = Box::from_raw(buffer as *mut WChar);
@@ -902,6 +916,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1001,6 +1016,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1196,6 +1212,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1389,6 +1406,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1588,6 +1606,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1781,6 +1800,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -1980,6 +2000,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -2166,6 +2187,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -2352,6 +2374,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -2563,6 +2586,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
@@ -2767,6 +2791,7 @@ mod unit {
 
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
+            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,

@@ -9,7 +9,6 @@ use crate::{
     util::to_name_regex,
 };
 use bson::{doc, Bson};
-use file_dbg_macros::*;
 use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
 use odbc_sys::Nullability;
@@ -559,8 +558,10 @@ impl MongoFields {
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
-                        // TODO: SQL-1281: Add a log or warning
-                        Err(_) => continue,
+                        Err(e) => {
+                            log::error!("Error while processing collection metadata: {}", e);
+                            continue;
+                        }
                     }
                 }
             }
@@ -587,7 +588,7 @@ impl MongoFields {
                         MongoODBCCollectionSpecification::new(name, collection_type)
                     }).collect()
                 }).unwrap_or_else(|_| {
-                    dbg_write!("Error getting collections for database");
+                    log::error!("Error getting collections for database {db_name}");
                     VecDeque::new()
                 }),
             );

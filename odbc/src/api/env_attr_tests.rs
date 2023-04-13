@@ -70,6 +70,10 @@ fn get_set_env_attr(
 }
 
 mod unit {
+    use std::cell::RefCell;
+
+    use logger::Logger;
+
     use super::*;
     // test_env_attr tests SQLGetEnvAttr and SQLSetEnvAttr with every
     // environment attribute value.
@@ -77,7 +81,10 @@ mod unit {
     fn test_env_attr() {
         unsafe {
             use crate::map;
-            let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+            let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
+                EnvState::Allocated,
+                RefCell::new(Logger::new("")),
+            ));
 
             get_set_env_attr(
                 env_handle,
@@ -156,7 +163,10 @@ mod unit {
     fn test_optional_value_changed() {
         use cstr::WideChar;
         unsafe {
-            let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+            let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
+                EnvState::Allocated,
+                RefCell::new(Logger::new("")),
+            ));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLSetEnvAttrW(
@@ -191,6 +201,84 @@ mod unit {
             assert_eq!(
              "[MongoDB][API] Invalid value for attribute SQL_ATTR_CP_MATCH, changed to SQL_CP_STRICT_MATCH\0",
                 cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 93]))
+            );
+        }
+    }
+
+    #[test]
+    fn no_logger_does_not_block_operations() {
+        unsafe {
+            use crate::map;
+            let env_handle: *mut _ =
+                &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, RefCell::new(None)));
+
+            get_set_env_attr(
+                env_handle,
+                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+                map! {
+                    OdbcVersion::Odbc3 as i32 => SqlReturn::SUCCESS,
+                    OdbcVersion::Odbc3_80 as i32 => SqlReturn::SUCCESS,
+                    2 => SqlReturn::ERROR // Some number other than 3 and 380
+                },
+                OdbcVersion::Odbc3_80 as i32,
+            );
+
+            get_set_env_attr(
+                env_handle,
+                EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS,
+                map! {
+                    SqlBool::True as i32 => SqlReturn::SUCCESS,
+                    SqlBool::False as i32 => SqlReturn::ERROR
+                },
+                SqlBool::True as i32,
+            );
+
+            get_set_env_attr(
+                env_handle,
+                EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING,
+                map! {
+                    ConnectionPooling::Off as i32 => SqlReturn::SUCCESS,
+                    ConnectionPooling::OnePerHEnv as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    ConnectionPooling::OnePerDriver as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    ConnectionPooling::DriverAware as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                },
+                ConnectionPooling::Off as i32,
+            );
+
+            get_set_env_attr(
+                env_handle,
+                EnvironmentAttribute::SQL_ATTR_CP_MATCH,
+                map! {
+                    CpMatch::Strict as i32 => SqlReturn::SUCCESS,
+                    CpMatch::Relaxed as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                },
+                CpMatch::Strict as i32,
+            );
+
+            // SQLGetEnvAttrW where value_ptr is null
+            let string_length_ptr = &mut 0;
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetEnvAttrW(
+                    env_handle as *mut _,
+                    EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
+                    std::ptr::null_mut() as *mut c_void,
+                    0,
+                    string_length_ptr
+                )
+            );
+            assert_eq!(0, *string_length_ptr);
+
+            // SQLGetEnvAttrW where string_length_ptr is null
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetEnvAttrW(
+                    env_handle as *mut _,
+                    EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
+                    std::ptr::null_mut() as *mut c_void,
+                    0,
+                    std::ptr::null_mut()
+                )
             );
         }
     }

@@ -68,16 +68,17 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> Strin
     copy_nonoverlapping(text, dst.as_mut_ptr(), len);
     from_widechar_vec_lossy(dst)
 }
-
 ///
-/// parse_attribute_string converts a null-separted u16 doubly-null terminated cstring to a Rust
+/// parse_attribute_string_w converts a null-separated doubly null terminated *Widechar string to a Rust
 /// string separated by `;`.
 ///
 /// # Safety
-/// This converts a raw c-pointer to a Rust string, which requires unsafe operations
+/// This converts a raw c-pointer to a Rust string, which requires unsafe operations. Additionally, it
+/// has the small possibility of reading into unallocated memory should the input string not be doubly
+/// null terminated. Only use this method if you are certain the input string is doubly null terminated.
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn parse_attribute_string(text: *const WideChar) -> String {
+pub unsafe fn parse_attribute_string_w(text: *const WideChar) -> String {
     let mut dst = Vec::new();
     let mut itr = text;
     {
@@ -87,6 +88,28 @@ pub unsafe fn parse_attribute_string(text: *const WideChar) -> String {
         }
     }
     from_widechar_vec_lossy(dst).replace(char::from(0), ";")
+}
+
+///
+/// parse_attribute_string_a converts a null-separated doubly null terminated *Char string to a Rust
+/// string separated by `;`.
+///
+/// # Safety
+/// This converts a raw c-pointer to a Rust string, which requires unsafe operations. Additionally, it
+/// has the small possibility of reading into unallocated memory should the input string not be doubly
+/// null terminated. Only use this method if you are certain the input string is doubly null terminated.
+///
+#[allow(clippy::uninit_vec)]
+pub unsafe fn parse_attribute_string_a(text: *const Char) -> String {
+    let mut dst = Vec::new();
+    let mut itr = text;
+    {
+        while *itr != 0 || *itr.offset(1) != 0 {
+            dst.push(*itr);
+            itr = itr.offset(1);
+        }
+    }
+    String::from_utf8(dst).unwrap().replace(char::from(0), ";")
 }
 
 ///

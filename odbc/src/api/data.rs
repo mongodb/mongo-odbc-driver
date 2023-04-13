@@ -3,12 +3,10 @@ use crate::{
     api::definitions::CDataType,
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle, Statement},
-    trace_odbc,
 };
 use bson::{spec::BinarySubtype, Bson};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use cstr::WideChar;
-use file_dbg_macros::{dbg_write, msg_to_file};
 use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
@@ -107,28 +105,7 @@ impl IntoCData for Bson {
     }
 
     fn to_binary(self) -> Result<Vec<u8>> {
-        match self {
-            Bson::Double(f) => Ok(f.to_le_bytes().to_vec()),
-            Bson::String(s) => Ok(s.into_bytes()),
-            Bson::Boolean(b) => Ok(if b { vec![1u8] } else { vec![0u8] }),
-            Bson::DateTime(d) => {
-                let dt: DateTime<Utc> = d.into();
-                let mut ret = Vec::with_capacity(16usize);
-                ret.extend(dt.year().to_le_bytes());
-                ret.extend(dt.month().to_le_bytes());
-                ret.extend(dt.day().to_le_bytes());
-                ret.extend(dt.hour().to_le_bytes());
-                ret.extend(dt.minute().to_le_bytes());
-                ret.extend(dt.second().to_le_bytes());
-                let fraction = (dt.nanosecond() as f32 * 0.000001) as u32;
-                ret.extend(fraction.to_le_bytes());
-                Ok(ret)
-            }
-            Bson::Int32(i) => Ok(i.to_le_bytes().to_vec()),
-            Bson::Int64(i) => Ok(i.to_le_bytes().to_vec()),
-            Bson::Binary(b) if b.subtype != BinarySubtype::Uuid => Ok(b.bytes),
-            _ => Ok(self.to_json().into_bytes()),
-        }
+        Ok(self.to_json().into_bytes())
     }
 
     fn to_guid(self) -> Result<Vec<u8>> {
