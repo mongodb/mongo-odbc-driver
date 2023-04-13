@@ -201,7 +201,11 @@ mod unit {
             );
             assert_eq!(
                 "[MongoDB][API] The feature SQLDriv✐𑜲 is not implemented\0",
-                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 57]))
+                if std::mem::size_of::<WideChar>() == std::mem::size_of::<u16>() {
+                    cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 57]))
+                } else {
+                    cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 56]))
+                }
             );
         }
     }

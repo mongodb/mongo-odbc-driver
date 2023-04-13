@@ -400,7 +400,7 @@ mod unit {
     }
 
     #[test]
-    fn XXX_sql_get_wstring_data() {
+    fn sql_get_wstring_data() {
         use crate::api::{definitions::CDataType, functions::SQLGetData};
         use cstr::input_text_to_string_w;
 

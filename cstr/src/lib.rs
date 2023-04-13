@@ -13,9 +13,7 @@ pub fn from_widechar_vec_lossy(v: Vec<u16>) -> String {
 
 #[cfg(feature = "utf32")]
 pub fn from_widechar_ref_lossy(v: &[WideChar]) -> String {
-    widestring::decode_utf32(v.iter().copied())
-        .collect::<Result<String, _>>()
-        .expect("Failed to decode utf32")
+    widestring::decode_utf32_lossy(v.iter().copied()).collect::<String>()
 }
 
 #[cfg(not(feature = "utf32"))]
