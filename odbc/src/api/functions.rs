@@ -1545,6 +1545,12 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
         // By making Boxes to the types and letting them go out of
         // scope, they will be dropped.
         HandleType::Env => {
+            unsafe {
+                (*handle)
+                    .as_env()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_ENV_ERROR))?
+            }
+            .logger = None;
             let _ = unsafe {
                 (*handle)
                     .as_env()
