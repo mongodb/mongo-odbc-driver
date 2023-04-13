@@ -286,7 +286,7 @@ functions:
         script: |
           ${prepare_shell}
           # Compile release build
-          cargo build --release --features odbc-sys/iodbc
+          cargo build --release --features odbc-sys/iodbc,cstr/utf32
 
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
@@ -300,7 +300,7 @@ functions:
         script: |
           ${prepare_shell}
           # Compile debug build
-          cargo build --features odbc-sys/iodbc
+          cargo build --features odbc-sys/iodbc,cstr/utf32
 
   "compile macos release with debug info":
     - command: shell.exec
@@ -311,7 +311,7 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           # Build a release driver with debug information
-          cargo build --features odbc-sys/iodbc --profile=release-with-debug
+          cargo build --features odbc-sys/iodbc,cstr/utf32 --profile=release-with-debug
           export DRIVER_LIB_PATH=$PWD/target/release-with-debug
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
@@ -1060,7 +1060,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc -- --ignored
+          cargo test --features odbc-sys/iodbc,cstr/utf32 -- --ignored
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1101,7 +1101,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc integration
+          cargo test --features odbc-sys/iodbc,cstr/utf32 integration
           EXITCODE=$?
 
           # Stop the local ADF
