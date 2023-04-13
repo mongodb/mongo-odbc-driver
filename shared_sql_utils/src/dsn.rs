@@ -124,7 +124,6 @@ impl Dsn {
     }
 
     pub fn from_private_profile_string(&self) -> Result<Self, DsnError> {
-        let buffer = &mut [0u16; MAX_VALUE_LENGTH];
         let mut dsn_opts = Dsn::default();
         let mut error_key = "";
 

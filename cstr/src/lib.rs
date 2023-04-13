@@ -1,4 +1,4 @@
-use std::{ptr::copy_nonoverlapping, str::from_utf8};
+use std::ptr::copy_nonoverlapping;
 
 pub type WideChar = u16;
 pub type Char = u8;
