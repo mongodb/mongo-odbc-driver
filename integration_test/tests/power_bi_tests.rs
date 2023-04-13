@@ -169,7 +169,7 @@ mod integration {
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
-            const BUFFER_LENGTH: SmallInt = 300;
+            const BUFFER_LENGTH: SmallInt = 900;
             let mut out_connection_string_buff: [WideChar; BUFFER_LENGTH as usize - 1] =
                 [0; (BUFFER_LENGTH as usize - 1)];
             let out_connection_string_buff = &mut out_connection_string_buff as *mut WideChar;
@@ -412,7 +412,7 @@ mod integration {
             test_get_info!(
                 conn_handle,
                 InfoType::IdentifierQuoteChar,
-                4,
+                (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
             // SQL-1177: Investigate how to test missing InfoType values
@@ -448,7 +448,7 @@ mod integration {
             test_get_info!(
                 conn_handle,
                 InfoType::OrderByColumnsInSelect,
-                4,
+                (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
             // InfoType::SQL_STRING_FUNCTIONS
@@ -470,7 +470,7 @@ mod integration {
             test_get_info!(
                 conn_handle,
                 InfoType::SearchPatternEscape,
-                4,
+                (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
             // InfoType::SQL_CONVERT_FUNCTIONS
@@ -500,7 +500,7 @@ mod integration {
             test_get_info!(
                 conn_handle,
                 InfoType::SpecialCharacters,
-                44,
+                (22 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
             // InfoType::SQL_RETURN_ESCAPE_CLAUSE
