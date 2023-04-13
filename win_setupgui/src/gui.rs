@@ -4,7 +4,7 @@ extern crate native_windows_gui as nwg;
 use cstr::{input_text_to_string_w, to_widechar_ptr};
 use nwd::NwgUi;
 use nwg::NativeUi;
-use shared_sql_utils::DSNOpts;
+use shared_sql_utils::{Dsn, DsnArgs};
 use std::{cell::RefCell, thread};
 use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
 
@@ -82,21 +82,14 @@ pub struct ConfigGui {
     #[nwg_layout_item(layout: grid,  row: 5, col: 2, col_span: 7)]
     database_input: nwg::TextInput,
 
-    // #[nwg_control(flags: "VISIBLE", text: "Log Path")]
-    // #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 2)]
-    // log_path_field: nwg::Label,
+    #[nwg_control(flags: "VISIBLE", text: "Log Level")]
+    #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 2)]
+    log_level_field: nwg::Label,
 
-    // #[nwg_resource(title: "Select Directory", action: nwg::FileDialogAction::OpenDirectory)]
-    // dialog: nwg::FileDialog,
+    #[nwg_control(flags: "VISIBLE", text: "Info")]
+    #[nwg_layout_item(layout: grid,  row: 6, col: 3, col_span: 6)]
+    log_level_input: nwg::TextInput,
 
-    // #[nwg_control(flags: "VISIBLE")]
-    // #[nwg_layout_item(layout: grid,  row: 6, col: 2, col_span: 1)]
-    // #[nwg_events( OnButtonClick: [ConfigGui::open_dir_picker] )]
-    // directory_button: nwg::Button,
-
-    // #[nwg_control(flags: "VISIBLE", text: "")]
-    // #[nwg_layout_item(layout: grid,  row: 6, col: 3, col_span: 6)]
-    // log_path_input: nwg::TextInput,
     #[nwg_control(flags: "VISIBLE", text: "Test")]
     #[nwg_events( OnButtonClick: [ConfigGui::test_connection] )]
     #[nwg_layout_item(layout: grid,  row: 10, col: 0, col_span: 1)]
@@ -134,15 +127,16 @@ impl ConfigGui {
         nwg::stop_thread_dispatch();
     }
 
-    fn validate_input(&self) -> Option<DSNOpts> {
+    fn validate_input(&self) -> Option<Dsn> {
         match (
             self.database_input.text().is_empty(),
             self.dsn_input.text().is_empty(),
             self.password_input.text().is_empty(),
             self.mongodb_uri_input.text().is_empty(),
             self.user_input.text().is_empty(),
+            self.log_level_input.text().is_empty(),
         ) {
-            (false, false, false, false, false) => {}
+            (false, false, false, false, false, false) => {}
             _ => {
                 nwg::modal_error_message(
                     &self.window,
@@ -152,15 +146,27 @@ impl ConfigGui {
                 return None;
             }
         }
-        match DSNOpts::new(
-            self.database_input.text(),
-            self.dsn_input.text(),
-            self.password_input.text(),
-            self.mongodb_uri_input.text(),
-            self.user_input.text(),
-            "".to_string(),
-            self.driver_name.text(),
-        ) {
+        match self.log_level_input.text().to_lowercase().as_str() {
+            "info" | "debug" | "error" => {}
+            _ => {
+                nwg::modal_error_message(
+                    &self.window,
+                    "Error",
+                    "Log level must be one of: Info, Debug, Error.",
+                );
+                return None;
+            }
+        }
+        match Dsn::new(DsnArgs {
+            database: self.database_input.text().as_str(),
+            dsn: self.dsn_input.text().as_str(),
+            password: self.password_input.text().as_str(),
+            uri: self.mongodb_uri_input.text().as_str(),
+            user: self.user_input.text().as_str(),
+            server: "",
+            driver_name: self.driver_name.text().as_str(),
+            log_level: self.log_level_input.text().as_str(),
+        }) {
             Err(e) => {
                 nwg::modal_error_message(&self.window, "Error", &e.to_string());
                 None
@@ -267,7 +273,7 @@ impl ConfigGui {
     }
 }
 
-pub fn config_dsn(dsn_opts: DSNOpts, dsn_op: u32) -> bool {
+pub fn config_dsn(dsn_opts: Dsn, dsn_op: u32) -> bool {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
 

@@ -15,11 +15,11 @@ windows = { version = "0.44.0", features = [
 native-windows-gui = "1.0.12"
 native-windows-derive = "1.0.3"
 constants = { path = "../constants" }
-file_dbg_macros = { path = "../file_dbg_macros" }
 cstr = { path = "../cstr" }
 function_name = "0.3.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
 thiserror = "1"
+log = "0.4.17"
 
 [lib]
 name = "atsqls"

@@ -1,6 +1,7 @@
 use crate::gui::config_dsn;
 use cstr::{input_text_to_string_w, parse_attribute_string_w};
-use shared_sql_utils::DSNOpts;
+use log::error;
+use shared_sql_utils::Dsn;
 use windows::Win32::{
     Foundation::HWND,
     System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN, ODBC_REMOVE_DSN},
@@ -25,7 +26,7 @@ unsafe extern "C" fn ConfigDSNW(
     attributes: *mut cstr::WideChar,
 ) -> bool {
     std::panic::catch_unwind(|| {
-        let mut dsn_opts = DSNOpts::from_attribute_string(&parse_attribute_string_w(attributes));
+        let mut dsn_opts = Dsn::from_attribute_string(&parse_attribute_string_w(attributes));
 
         // If a data source name is passed to ConfigDSN in lpszAttributes, ConfigDSN checks that the name is valid. If the
         // data source name matches an existing data source name and hwndParent is null, ConfigDSN overwrites the existing name.
@@ -44,10 +45,10 @@ unsafe extern "C" fn ConfigDSNW(
             }
             ODBC_CONFIG_DSN => match dsn_opts.from_private_profile_string() {
                 Ok(dsn) => config_dsn(dsn, request),
-                Err(_e) => {
-                    // TODO: SQL-1281 - Log this error
+                Err(e) => {
                     // we've somehow attempted to read a value from the DSN
                     // that is longer than the registry allows (at the time of writing!)
+                    error!("Error reading DSN: {e}");
                     false
                 }
             },
