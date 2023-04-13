@@ -3,6 +3,7 @@ use crate::{
     err::Result, stmt::MongoStatement, Error,
 };
 use bson::Bson;
+use mongodb::options::ListDatabasesOptions;
 use odbc_sys::Nullability;
 
 use lazy_static::lazy_static;
@@ -201,7 +202,12 @@ impl MongoDatabases {
     ) -> Self {
         let database_names: Vec<String> = mongo_connection
             .client
-            .list_database_names(None, None)
+            .list_database_names(
+                None,
+                ListDatabasesOptions::builder()
+                    .authorized_databases(true)
+                    .build(),
+            )
             .unwrap();
         MongoDatabases {
             database_names,

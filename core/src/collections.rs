@@ -9,10 +9,9 @@ use crate::{
     util::{COLLECTION, TABLE, TIMESERIES},
     Error,
 };
-use bson::Bson;
+use bson::{doc, Bson};
 use lazy_static::lazy_static;
-use mongodb::results::{CollectionSpecification, CollectionType};
-use mongodb::sync::Cursor;
+use mongodb::{options::ListDatabasesOptions, results::CollectionType};
 use odbc_sys::Nullability;
 use regex::Regex;
 
@@ -56,16 +55,33 @@ lazy_static! {
     ];
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct MongoODBCCollectionSpecification {
+    pub name: String,
+    pub collection_type: CollectionType,
+}
+
+impl MongoODBCCollectionSpecification {
+    pub fn new(name: String, collection_type: CollectionType) -> Self {
+        Self {
+            name,
+            collection_type,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct CollectionsForDb {
     database_name: String,
-    collection_list: Cursor<CollectionSpecification>,
+    collection_list: Vec<MongoODBCCollectionSpecification>,
 }
 
 #[derive(Debug)]
 pub struct MongoCollections {
     // The current collection specification.
-    current_collection: Option<CollectionSpecification>,
+    current_collection: Option<MongoODBCCollectionSpecification>,
+    // The index of the current collection.
+    current_collection_index: Option<usize>,
     // The index of the current db.
     current_database_index: Option<usize>,
     // List of CollectionsForDb for each db.
@@ -90,22 +106,43 @@ impl MongoCollections {
         let db_name_filter_regex = to_name_regex(db_name_filter);
         let databases = mongo_connection
             .client
-            .list_database_names(None, None)
+            .list_database_names(
+                None,
+                ListDatabasesOptions::builder()
+                    .authorized_databases(true)
+                    .build(),
+            )
             .unwrap()
             .iter()
             .filter(|&db_name| is_match(db_name.as_str(), &db_name_filter_regex))
-            .map(|val| CollectionsForDb {
+            .map(|val| {
+                CollectionsForDb {
                 database_name: val.to_string(),
-                collection_list: mongo_connection
-                    .client
-                    .database(val.as_str())
-                    .list_collections(None, None)
-                    .unwrap(),
+                collection_list: mongo_connection.client.database(val.as_str()).run_command(
+                    doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
+                    None,
+                ).unwrap().get_document("cursor").map(|doc| {
+                    doc.get_array("firstBatch").unwrap().iter().map(|val| {
+                        let doc = val.as_document().unwrap();
+                        let name = doc.get_str("name").unwrap().to_string();
+                        let collection_type = match doc.get_str("type").unwrap() {
+                            "collection" => CollectionType::Collection,
+                            "view" => CollectionType::View,
+                            _ => CollectionType::Collection
+                        };
+                        MongoODBCCollectionSpecification::new(name, collection_type)
+                    }).collect()
+                }).unwrap_or_else(|_| {
+                    log::error!("Error getting collections for db {}", val);
+                    vec![]
+                }),
+            }
             })
             .collect();
 
         MongoCollections {
             current_collection: None,
+            current_collection_index: None,
             current_database_index: None,
             collections_for_db_list: databases,
             collection_name_filter: to_name_regex(collection_name_filter),
@@ -123,6 +160,7 @@ impl MongoCollections {
     pub fn empty() -> MongoCollections {
         MongoCollections {
             current_collection: None,
+            current_collection_index: None,
             current_database_index: None,
             collections_for_db_list: Vec::new(),
             table_types_filter: None,
@@ -143,27 +181,27 @@ impl MongoStatement for MongoCollections {
             }
             self.current_database_index = Some(0);
         }
-        let mut warnings: Vec<Error> = vec![];
+        if self.current_collection_index.is_none() {
+            self.current_collection_index = Some(0);
+        }
+
         loop {
             while self
                 .collections_for_db_list
                 .get_mut(self.current_database_index.unwrap())
                 .unwrap()
                 .collection_list
-                .advance()
-                .unwrap_or_else(|err| {
-                    warnings.push(Error::CollectionCursorUpdate(err));
-                    false
-                })
+                .get_mut(self.current_collection_index.unwrap())
+                .is_some()
             {
                 match self
                     .collections_for_db_list
                     .get(self.current_database_index.unwrap())
                     .unwrap()
                     .collection_list
-                    .deserialize_current()
+                    .get(self.current_collection_index.unwrap())
                 {
-                    Ok(collection) => {
+                    Some(collection) => {
                         if (self.table_types_filter.is_none()
                             || self
                                 .table_types_filter
@@ -177,20 +215,27 @@ impl MongoStatement for MongoCollections {
                                     .unwrap()
                                     .is_match(&collection.name))
                         {
-                            // Cursor advance succeeded and the collection matches the filters, update current CollectionSpecification
-                            self.current_collection = Some(collection);
-                            return Ok((true, warnings));
+                            // collection matches the filters, advance the collection index and update current CollectionSpecification
+                            self.current_collection_index =
+                                self.current_collection_index.map(|val| val + 1);
+                            self.current_collection = Some(collection.clone());
+                            return Ok((true, vec![]));
+                        } else {
+                            // collection doens't match the filter, advance the collection index
+                            self.current_collection_index =
+                                self.current_collection_index.map(|val| val + 1);
                         }
                     }
-                    Err(warning) => {
-                        warnings.push(Error::CollectionCursorUpdate(warning));
+                    None => {
                         continue;
                     }
                 }
             }
+
             self.current_database_index = Some(self.current_database_index.unwrap() + 1);
+            self.current_collection_index = Some(0);
             if self.current_database_index.unwrap() >= self.collections_for_db_list.len() {
-                return Ok((false, warnings));
+                return Ok((false, vec![]));
             }
         }
     }
