@@ -108,7 +108,7 @@ mod unit {
                     string_length_ptr
                 )
             );
-            let wtext: &[u32] = &*(message_text as *const [WideChar; 5]);
+            let wtext: &[WideChar] = &*(message_text as *const [WideChar; 5]);
             // checking input pointer was not altered in any way, and we just pass through SUCCESS
             assert_eq!("test\0", cstr::from_widechar_ref_lossy(wtext));
             assert_eq!(0, *string_length_ptr);
