@@ -87,7 +87,6 @@ mod unit {
     }
 
     fn validate_return_code(handle_type: HandleType, handle: *mut MongoHandle) {
-        use cstr::WideChar;
         /*
            The return code is always implemented by the driver manager, per the spec.
            Thus, calling SQLGetDiagField with type SQL_DIAG_RETURNCODE is essentially
@@ -108,9 +107,8 @@ mod unit {
                     string_length_ptr
                 )
             );
-            let wtext: &[WideChar] = &*(message_text as *const [WideChar; 5]);
             // checking input pointer was not altered in any way, and we just pass through SUCCESS
-            assert_eq!("test\0", cstr::from_widechar_ref_lossy(wtext));
+            assert_eq!([116, 101, 115, 116, 0], *message_text);
             assert_eq!(0, *string_length_ptr);
         }
     }

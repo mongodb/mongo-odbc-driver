@@ -1954,11 +1954,11 @@ pub unsafe extern "C" fn SQLGetDiagField(
 pub unsafe extern "C" fn SQLGetDiagFieldW(
     _handle_type: HandleType,
     handle: Handle,
-    _record_number: SmallInt,
-    _diag_identifier: SmallInt,
-    _diag_info_ptr: Pointer,
-    _buffer_length: SmallInt,
-    _string_length_ptr: *mut SmallInt,
+    record_number: SmallInt,
+    diag_identifier: SmallInt,
+    diag_info_ptr: Pointer,
+    buffer_length: SmallInt,
+    string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
         || {
@@ -1967,15 +1967,15 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
                 get_diag_field(
                     errors,
                     diag_identifier,
-                    _diag_info_ptr,
-                    _record_number,
-                    _buffer_length,
-                    _string_length_ptr,
+                    diag_info_ptr,
+                    record_number,
+                    buffer_length,
+                    string_length_ptr,
                     true,
                 )
             };
 
-            match FromPrimitive::from_i16(_diag_identifier) {
+            match FromPrimitive::from_i16(diag_identifier) {
                 Some(diag_identifier) => {
                     match diag_identifier {
                         // some diagnostics are statement specific; return error if another handle is passed
@@ -1983,7 +1983,7 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
                             if _handle_type != HandleType::Stmt {
                                 return SqlReturn::ERROR;
                             }
-                            get_stmt_diag_field(diag_identifier, _diag_info_ptr)
+                            get_stmt_diag_field(diag_identifier, diag_info_ptr)
                         }
                         DiagType::SQL_DIAG_NUMBER
                         | DiagType::SQL_DIAG_MESSAGE_TEXT
