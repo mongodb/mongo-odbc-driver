@@ -134,7 +134,8 @@ mod integration {
     fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
-        let output_len;
+        #[allow(unused_mut)]
+        let mut output_len;
         let in_connection_string;
         let out_connection_string;
         unsafe {
@@ -169,7 +170,7 @@ mod integration {
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
-            const BUFFER_LENGTH: SmallInt = 900;
+            const BUFFER_LENGTH: SmallInt = 300;
             let mut out_connection_string_buff: [WideChar; BUFFER_LENGTH as usize - 1] =
                 [0; (BUFFER_LENGTH as usize - 1)];
             let out_connection_string_buff = &mut out_connection_string_buff as *mut WideChar;
@@ -191,6 +192,14 @@ mod integration {
             );
 
             output_len = *str_len_ptr;
+            // The iodbc driver manager is multiplying the output length by size_of WideChar (u32)
+            // for some reason. It is correct when returned from SQLDriverConnectW, but is 4x
+            // bigger between return and here.
+            #[cfg(target_os = "macos")]
+            {
+                output_len /= std::mem::size_of::<WideChar>() as i16;
+            }
+
             out_connection_string = cstr::from_widechar_ref_lossy(slice::from_raw_parts(
                 out_connection_string_buff,
                 output_len as usize,
@@ -395,9 +404,19 @@ mod integration {
             );
              */
 
-            test_get_info!(conn_handle, InfoType::DbmsName, 28, DataType::WChar);
+            test_get_info!(
+                conn_handle,
+                InfoType::DbmsName,
+                14 * (std::mem::size_of::<WideChar>() as i16),
+                DataType::WChar
+            );
 
-            test_get_info!(conn_handle, InfoType::DbmsVer, 58, DataType::WChar);
+            test_get_info!(
+                conn_handle,
+                InfoType::DbmsVer,
+                29 * (std::mem::size_of::<WideChar>() as i16),
+                DataType::WChar
+            );
         }
     }
 
