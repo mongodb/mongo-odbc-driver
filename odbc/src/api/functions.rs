@@ -1173,7 +1173,6 @@ pub unsafe extern "C" fn SQLDriverConnectW(
                 buffer_len,
                 string_length_2,
             );
-            println!("string_length_2 {}", *string_length_2);
             if sql_return == SqlReturn::SUCCESS_WITH_INFO {
                 add_diag_info!(conn_handle, ODBCError::OutStringTruncated(buffer_len));
             }
