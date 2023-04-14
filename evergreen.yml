@@ -1472,6 +1472,10 @@ tasks:
         variant: "*"
       - name: asan-integration-test
         variant: "*"
+      - name: windows-sign
+        variant: "windows-64"
+      - name: ubuntu-sign
+        variant: "ubuntu2204"
     commands:
       - func: "upload release"
       - func: "upload debug"
