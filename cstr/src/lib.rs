@@ -113,7 +113,8 @@ pub unsafe fn parse_attribute_string(text: *const WideChar) -> String {
 }
 
 ///
-/// to_widechar_ptr converts the input string to a null terminated string encoded in UTF-16.
+/// to_widechar_ptr converts the input string to a null terminated string encoded in UTF-16 or
+/// UTF-32 as appropriate.
 ///
 pub fn to_widechar_ptr(s: &str) -> (*mut WideChar, Vec<WideChar>) {
     let mut v = to_widechar_vec(s);

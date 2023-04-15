@@ -957,7 +957,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-sys"
-version = "0.21.4"
+version = "0.0.0"
 dependencies = [
  "cstr",
 ]
