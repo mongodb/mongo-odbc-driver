@@ -544,7 +544,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/pkg/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/mongoodbc.msi
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
