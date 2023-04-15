@@ -36,6 +36,8 @@ elif [ -d "C:\\golang\\$GO_VERSION" ]; then
 # local testing macos
 elif [ -e /usr/local/bin/go ]; then
   GOBINDIR=/usr/local/bin
+elif [ -e /opt/homebrew/bin/go ]; then
+  GOBINDIR=/opt/homebrew/bin
 else #local testing
   GOBINDIR=/usr/bin
 fi
