@@ -23,7 +23,7 @@
         },
         {
           "name": "MacOS (arm64)",
-          "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/macos-arm64/{RELEASE_VERSION}/release/mongoodbc.tar.gz"
+          "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/macos-arm64/{RELEASE_VERSION}/release/mongoodbc.dmg"
         }
       ]
     }
