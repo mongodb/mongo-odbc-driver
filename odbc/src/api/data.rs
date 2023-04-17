@@ -1359,7 +1359,7 @@ mod unit {
     #[test]
     fn date_format() {
         assert_eq!(
-            Utc.timestamp(1003483404, 123000000),
+            Utc.timestamp_opt(1003483404, 123000000).unwrap(),
             bson!("2001-10-19T09:23:24.123Z").to_datetime().unwrap().0
         );
     }
@@ -1371,7 +1371,7 @@ mod unit {
         use bson::Bson;
         use constants::{
             FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE,
-            INVALID_DATETIME_FORMAT,
+            INVALID_DATETIME_FORMAT_OR_VALUE,
         };
 
         use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
@@ -1679,9 +1679,9 @@ mod unit {
                 "2014-11-28T09:23:24Z".parse().unwrap();
             let datetime_expectation_millis: DateTime<Utc> =
                 "2014-11-28T09:23:24.123456789Z".parse().unwrap();
-            let today_plus_time_no_millis_expectation = Utc::today().and_hms(9, 23, 24);
+            let today_plus_time_no_millis_expectation = DateTime::from_utc(Utc::now().date_naive().and_hms_opt(9, 23, 24).unwrap(), Utc);
             let today_plus_time_millis_expectation =
-                Utc::today().and_hms_nano(9, 23, 24, 123456789);
+                DateTime::from_utc(Utc::now().naive_utc().date().and_hms_nano_opt(9, 23, 24, 123456789).unwrap(), Utc);
 
             type V = Vec<(
                 &'static str,
@@ -1725,25 +1725,25 @@ mod unit {
                     "11/28/2014",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
                 ),
                 (
                     "2014-35-80",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
                 ),
                 (
                     "2014-30-90 09:23:24.1234567890",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
                 ),
                 (
                     "30:23:24",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
                 ),
                 (
                     "09:23:24",
@@ -1790,12 +1790,12 @@ mod unit {
 
         #[test]
         fn string_conversions_to_dates() {
-            let date_expectation = NaiveDate::from_ymd(2014, 11, 28);
+            let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("2014-11-28", Ok(()), None),
-                ("11/28/2014", Err(()), Some(INVALID_DATETIME_FORMAT)),
-                ("2014-22-22", Err(()), Some(INVALID_DATETIME_FORMAT)),
-                ("10:15:30", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("11/28/2014", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
+                ("2014-22-22", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
+                ("10:15:30", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
                 ("2014-11-28 00:00:00", Ok(()), None),
                 ("2014-11-28 00:00:00.000", Ok(()), None),
                 ("2014-11-28T00:00:00Z", Ok(()), None),
@@ -1825,7 +1825,7 @@ mod unit {
 
         #[test]
         fn datetime_conversions_to_dates() {
-            let date_expectation = NaiveDate::from_ymd(2014, 11, 28);
+            let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
             let test_cases: [(chrono::DateTime<Utc>, Option<&str>); 2] = [
                 ("2014-11-28T00:00:00Z".parse().unwrap(), None),
                 (
@@ -1845,13 +1845,13 @@ mod unit {
 
         #[test]
         fn string_conversions_to_times() {
-            let time_expectation = NaiveTime::from_hms(10, 15, 30);
+            let time_expectation = NaiveTime::from_hms_opt(10, 15, 30).unwrap();
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("10:15:30", Ok(()), None),
                 ("10:15:30.00000", Ok(()), None),
-                ("10:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT)),
-                ("25:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT)),
-                ("2022-10-15", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("10:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
+                ("25:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
+                ("2022-10-15", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
                 ("2014-11-28 10:15:30.000", Ok(()), None),
                 (
                     "2014-11-28 10:15:30.1243",
@@ -1883,7 +1883,7 @@ mod unit {
 
         #[test]
         fn datetime_conversions_to_times() {
-            let time_expectation = NaiveTime::from_hms(10, 15, 30);
+            let time_expectation = NaiveTime::from_hms_opt(10, 15, 30).unwrap();
             let test_cases: [(chrono::DateTime<Utc>, Option<&str>); 2] = [
                 ("2014-11-28T10:15:30Z".parse().unwrap(), None),
                 (
