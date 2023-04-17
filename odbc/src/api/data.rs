@@ -385,12 +385,12 @@ impl IntoCData for Bson {
                     (
                         NaiveDate::parse_from_str(s, "%F")
                             .map_err(|_| ODBCError::InvalidDatetimeFormat)?,
-                        NaiveTime::from_hms(0, 0, 0),
+                        NaiveTime::from_hms_opt(0, 0, 0).ok_or(ODBCError::InvalidTime)?,
                     )
                 } else {
                     let time = NaiveTime::parse_from_str(s, "%T%.f")
                         .map_err(|_| ODBCError::InvalidDatetimeFormat)?;
-                    (Utc::today().naive_utc(), time)
+                    (Utc::now().naive_utc().date(), time)
                 };
                 Ok((
                     DateTime::<Utc>::from_utc(NaiveDateTime::new(date, time), Utc),
@@ -408,8 +408,10 @@ impl IntoCData for Bson {
                 let chrono_datetime = (*d).to_chrono();
                 Ok((
                     chrono_datetime.date_naive(),
-                    (chrono_datetime.time() != NaiveTime::from_hms_nano(0, 0, 0, 0))
-                        .then_some(ODBCError::TimeTruncation(d.to_string())),
+                    (chrono_datetime.time()
+                        != NaiveTime::from_hms_nano_opt(0, 0, 0, 0)
+                            .ok_or(ODBCError::InvalidTime)?)
+                    .then_some(ODBCError::TimeTruncation(d.to_string())),
                 ))
             }
             Bson::String(s) => {
@@ -420,12 +422,15 @@ impl IntoCData for Bson {
                 } else {
                     NaiveDate::parse_from_str(s, "%F")
                         .map_err(|_| ODBCError::InvalidDatetimeFormat)?
-                        .and_hms(0, 0, 0)
+                        .and_hms_opt(0, 0, 0)
+                        .ok_or(ODBCError::InvalidTime)?
                 };
                 Ok((
                     dt.date(),
-                    (dt.time() != NaiveTime::from_hms_nano(0, 0, 0, 0))
-                        .then_some(ODBCError::TimeTruncation(s.clone())),
+                    (dt.time()
+                        != NaiveTime::from_hms_nano_opt(0, 0, 0, 0)
+                            .ok_or(ODBCError::InvalidTime)?)
+                    .then_some(ODBCError::TimeTruncation(s.clone())),
                 ))
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),

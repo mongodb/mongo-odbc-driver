@@ -21,7 +21,7 @@ lazy_static = "1.4.0"
 likely_stable = "0.1.2"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
-chrono = "0.4.22"
+chrono = "0.4.24"
 cstr = { path = "../cstr" }
 fancy-regex = "0.11.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
