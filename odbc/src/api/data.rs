@@ -1679,9 +1679,16 @@ mod unit {
                 "2014-11-28T09:23:24Z".parse().unwrap();
             let datetime_expectation_millis: DateTime<Utc> =
                 "2014-11-28T09:23:24.123456789Z".parse().unwrap();
-            let today_plus_time_no_millis_expectation = DateTime::from_utc(Utc::now().date_naive().and_hms_opt(9, 23, 24).unwrap(), Utc);
-            let today_plus_time_millis_expectation =
-                DateTime::from_utc(Utc::now().naive_utc().date().and_hms_nano_opt(9, 23, 24, 123456789).unwrap(), Utc);
+            let today_plus_time_no_millis_expectation =
+                DateTime::from_utc(Utc::now().date_naive().and_hms_opt(9, 23, 24).unwrap(), Utc);
+            let today_plus_time_millis_expectation = DateTime::from_utc(
+                Utc::now()
+                    .naive_utc()
+                    .date()
+                    .and_hms_nano_opt(9, 23, 24, 123456789)
+                    .unwrap(),
+                Utc,
+            );
 
             type V = Vec<(
                 &'static str,
@@ -1793,8 +1800,16 @@ mod unit {
             let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("2014-11-28", Ok(()), None),
-                ("11/28/2014", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
-                ("2014-22-22", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
+                (
+                    "11/28/2014",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                ),
+                (
+                    "2014-22-22",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                ),
                 ("10:15:30", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
                 ("2014-11-28 00:00:00", Ok(()), None),
                 ("2014-11-28 00:00:00.000", Ok(()), None),
@@ -1849,9 +1864,21 @@ mod unit {
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("10:15:30", Ok(()), None),
                 ("10:15:30.00000", Ok(()), None),
-                ("10:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
-                ("25:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
-                ("2022-10-15", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
+                (
+                    "10:15:30.123",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                ),
+                (
+                    "25:15:30.123",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                ),
+                (
+                    "2022-10-15",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                ),
                 ("2014-11-28 10:15:30.000", Ok(()), None),
                 (
                     "2014-11-28 10:15:30.1243",
