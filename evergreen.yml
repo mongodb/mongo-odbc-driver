@@ -1288,6 +1288,27 @@ functions:
         content_type: application/octet-stream
         display_name: crash-dump-
 
+  "update download center feed":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          sed -i 's@{RELEASE_VERSION}@'${RELEASE_VERSION}'@' mongo-odbc-downloads_template.json
+          echo "-------------------------"
+          cat mongo-odbc-downloads_template.json
+          echo "-------------------------"
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-downloads_template.json
+        remote_file: mongosql-odbc-driver/mongo-odbc-downloads.json
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -1476,6 +1497,14 @@ tasks:
       - func: "upload release"
       - func: "upload debug"
 
+  - name: downloadcenter-update
+    git_tag_only: true
+    depends_on:
+      - name: release
+    commands:
+      - func: "update download center feed"
+      - func: "update download center feed"
+
   - name: release
     git_tag_only: true
     depends_on:
@@ -1490,6 +1519,7 @@ tasks:
     commands:
       - func: "upload release"
       - func: "upload debug"
+      - func: "update download center feed"
 
 task_groups:
   - name: windows-windows-test-unit-group
@@ -1583,3 +1613,4 @@ buildvariants:
     tasks:
       - name: release
       - name: snapshot
+      - name: downloadcenter-update
