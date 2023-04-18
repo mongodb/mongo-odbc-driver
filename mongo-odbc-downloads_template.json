@@ -10,11 +10,11 @@
           "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/{RELEASE_VERSION}/pkg/"
         },
         {
-          "name": "Linux (x86_64)",
+          "name": "Ubuntu 22.04 (x86_64)",
           "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/{RELEASE_VERSION}/release/mongoodbc.tar.gz"
         },
         {
-          "name": "Linux (arm64)",
+          "name": "Ubuntu 22.04 (arm64)",
           "download_link": "https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204-arm64/{RELEASE_VERSION}/release/mongoodbc.tar.gz"
         },
         {
