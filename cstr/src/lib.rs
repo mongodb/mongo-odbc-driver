@@ -1,10 +1,19 @@
+use num_derive::FromPrimitive;
 use std::ptr::copy_nonoverlapping;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+pub enum Charset {
+    Utf16 = 1,
+    Utf32 = 2,
+}
 
 pub type Char = u8;
 
 #[cfg(feature = "utf32")]
 pub type WideChar = u32;
 
+#[cfg(feature = "utf32")]
+pub const CHARSET: Charset = Charset::Utf32;
 #[cfg(feature = "utf32")]
 pub fn from_widechar_ref_lossy(v: &[WideChar]) -> String {
     widestring::decode_utf32_lossy(v.iter().copied()).collect::<String>()
@@ -22,6 +31,9 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 
 #[cfg(not(feature = "utf32"))]
 pub type WideChar = u16;
+
+#[cfg(not(feature = "utf32"))]
+pub const CHARSET: Charset = Charset::Utf16;
 
 #[cfg(not(feature = "utf32"))]
 pub fn from_widechar_vec_lossy(v: Vec<u16>) -> String {

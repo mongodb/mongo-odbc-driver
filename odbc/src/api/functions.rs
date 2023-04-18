@@ -15,8 +15,7 @@ use constants::{
     DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
     SQL_ALL_TABLE_TYPES,
 };
-use cstr::WideChar;
-use cstr::{input_text_to_string_a, input_text_to_string_w};
+use cstr::{input_text_to_string_a, input_text_to_string_w, Charset, WideChar};
 use file_dbg_macros::{dbg_write, msg_to_file};
 use function_name::named;
 use mongo_odbc_core::{
@@ -2212,7 +2211,7 @@ unsafe fn sql_get_env_attrw_helper(
                 *(value_ptr as *mut CpMatch) = env.attributes.read().unwrap().cp_match;
             }
             EnvironmentAttribute::SQL_ATTR_DRIVER_UNICODE_TYPE => {
-                *(value_ptr as *mut CharSet) = env.attributes.read().unwrap().driver_unicode_type;
+                *(value_ptr as *mut Charset) = env.attributes.read().unwrap().driver_unicode_type;
             }
         }
     }
@@ -3630,7 +3629,8 @@ unsafe fn sql_set_env_attrw_helper(
         }
         EnvironmentAttribute::SQL_ATTR_DRIVER_UNICODE_TYPE => {
             match FromPrimitive::from_i32(value_ptr as i32) {
-                Some(CharSet::Utf16) => SqlReturn::SUCCESS,
+                Some(Charset::Utf16) => SqlReturn::SUCCESS,
+                Some(Charset::Utf32) => SqlReturn::SUCCESS,
                 _ => {
                     env_handle.add_diag_info(ODBCError::OptionValueChanged(
                         "SQL_ATTR_DRIVER_UNICODE_TYPE",

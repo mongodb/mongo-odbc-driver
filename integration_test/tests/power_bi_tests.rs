@@ -195,8 +195,7 @@ mod integration {
             // The iodbc driver manager is multiplying the output length by size_of WideChar (u32)
             // for some reason. It is correct when returned from SQLDriverConnectW, but is 4x
             // bigger between return and here.
-            #[cfg(target_os = "macos")]
-            {
+            if odbc_sys::USING_IODBC {
                 output_len /= std::mem::size_of::<WideChar>() as i16;
             }
 

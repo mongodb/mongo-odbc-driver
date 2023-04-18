@@ -1,5 +1,5 @@
 use crate::api::{definitions::*, errors::ODBCError};
-use cstr::WideChar;
+use cstr::{Charset, WideChar};
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
     borrow::BorrowMut,
@@ -182,7 +182,7 @@ pub struct EnvAttributes {
     pub output_nts: SqlBool,
     pub connection_pooling: ConnectionPooling,
     pub cp_match: CpMatch,
-    pub driver_unicode_type: CharSet,
+    pub driver_unicode_type: Charset,
 }
 
 impl Default for EnvAttributes {
@@ -192,7 +192,7 @@ impl Default for EnvAttributes {
             output_nts: SqlBool::True,
             connection_pooling: ConnectionPooling::Off,
             cp_match: CpMatch::Strict,
-            driver_unicode_type: CharSet::Utf16,
+            driver_unicode_type: cstr::CHARSET,
         }
     }
 }

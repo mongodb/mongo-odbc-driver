@@ -214,6 +214,8 @@ dependencies = [
 name = "cstr"
 version = "0.0.0"
 dependencies = [
+ "num-derive",
+ "num-traits",
  "widestring 1.0.2",
 ]
 

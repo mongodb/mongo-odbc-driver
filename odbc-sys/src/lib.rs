@@ -30,6 +30,12 @@ mod param_type;
 mod sql_data_type;
 mod sqlreturn;
 
+#[cfg(feature = "iodbc")]
+pub const USING_IODBC: bool = true;
+
+#[cfg(not(feature = "iodbc"))]
+pub const USING_IODBC: bool = false;
+
 //These types can never be instantiated in Rust code.
 pub enum Obj {}
 
