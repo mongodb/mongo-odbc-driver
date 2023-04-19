@@ -1525,7 +1525,6 @@ tasks:
     commands:
       - func: "upload release"
       - func: "upload debug"
-      - func: "update download center feed"
 
 task_groups:
   - name: windows-windows-test-unit-group
