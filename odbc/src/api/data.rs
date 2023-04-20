@@ -385,7 +385,7 @@ impl IntoCData for Bson {
                     (
                         NaiveDate::parse_from_str(s, "%F")
                             .map_err(|_| ODBCError::InvalidDatetimeFormat)?,
-                        NaiveTime::from_hms_opt(0, 0, 0).ok_or(ODBCError::InvalidTime)?,
+                        NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
                     )
                 } else {
                     let time = NaiveTime::parse_from_str(s, "%T%.f")
@@ -408,10 +408,8 @@ impl IntoCData for Bson {
                 let chrono_datetime = (*d).to_chrono();
                 Ok((
                     chrono_datetime.date_naive(),
-                    (chrono_datetime.time()
-                        != NaiveTime::from_hms_nano_opt(0, 0, 0, 0)
-                            .ok_or(ODBCError::InvalidTime)?)
-                    .then_some(ODBCError::TimeTruncation(d.to_string())),
+                    (chrono_datetime.time() != NaiveTime::from_hms_nano_opt(0, 0, 0, 0).unwrap())
+                        .then_some(ODBCError::TimeTruncation(d.to_string())),
                 ))
             }
             Bson::String(s) => {
@@ -423,14 +421,12 @@ impl IntoCData for Bson {
                     NaiveDate::parse_from_str(s, "%F")
                         .map_err(|_| ODBCError::InvalidDatetimeFormat)?
                         .and_hms_opt(0, 0, 0)
-                        .ok_or(ODBCError::InvalidTime)?
+                        .unwrap()
                 };
                 Ok((
                     dt.date(),
-                    (dt.time()
-                        != NaiveTime::from_hms_nano_opt(0, 0, 0, 0)
-                            .ok_or(ODBCError::InvalidTime)?)
-                    .then_some(ODBCError::TimeTruncation(s.clone())),
+                    (dt.time() != NaiveTime::from_hms_nano_opt(0, 0, 0, 0).unwrap())
+                        .then_some(ODBCError::TimeTruncation(s.clone())),
                 ))
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DATETIME)),
@@ -1371,7 +1367,7 @@ mod unit {
         use bson::Bson;
         use constants::{
             FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE,
-            INVALID_DATETIME_FORMAT_OR_VALUE,
+            INVALID_DATETIME_FORMAT,
         };
 
         use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
@@ -1732,25 +1728,25 @@ mod unit {
                     "11/28/2014",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                    Some(INVALID_DATETIME_FORMAT),
                 ),
                 (
                     "2014-35-80",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                    Some(INVALID_DATETIME_FORMAT),
                 ),
                 (
                     "2014-30-90 09:23:24.1234567890",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                    Some(INVALID_DATETIME_FORMAT),
                 ),
                 (
                     "30:23:24",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
+                    Some(INVALID_DATETIME_FORMAT),
                 ),
                 (
                     "09:23:24",
@@ -1800,17 +1796,9 @@ mod unit {
             let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("2014-11-28", Ok(()), None),
-                (
-                    "11/28/2014",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
-                ),
-                (
-                    "2014-22-22",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
-                ),
-                ("10:15:30", Err(()), Some(INVALID_DATETIME_FORMAT_OR_VALUE)),
+                ("11/28/2014", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("2014-22-22", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("10:15:30", Err(()), Some(INVALID_DATETIME_FORMAT)),
                 ("2014-11-28 00:00:00", Ok(()), None),
                 ("2014-11-28 00:00:00.000", Ok(()), None),
                 ("2014-11-28T00:00:00Z", Ok(()), None),
@@ -1864,21 +1852,9 @@ mod unit {
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("10:15:30", Ok(()), None),
                 ("10:15:30.00000", Ok(()), None),
-                (
-                    "10:15:30.123",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
-                ),
-                (
-                    "25:15:30.123",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
-                ),
-                (
-                    "2022-10-15",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT_OR_VALUE),
-                ),
+                ("10:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("25:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("2022-10-15", Err(()), Some(INVALID_DATETIME_FORMAT)),
                 ("2014-11-28 10:15:30.000", Ok(()), None),
                 (
                     "2014-11-28 10:15:30.1243",

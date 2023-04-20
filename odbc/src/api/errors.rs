@@ -1,7 +1,7 @@
 use constants::{
     FRACTIONAL_TRUNCATION, GENERAL_ERROR, GENERAL_WARNING, INDICATOR_VARIABLE_REQUIRED,
     INTEGRAL_TRUNCATION, INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE,
-    INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT_OR_VALUE,
+    INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
     INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED,
     NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE,
     RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
@@ -108,8 +108,6 @@ pub enum ODBCError {
     IntegralTruncation(String),
     #[error("[{}][API] invalid datetime format", VENDOR_IDENTIFIER)]
     InvalidDatetimeFormat,
-    #[error("[{}][API] invalid time value", VENDOR_IDENTIFIER)]
-    InvalidTime,
     #[error(
         "[{}][API] invalid character value for cast to type: {0}",
         VENDOR_IDENTIFIER
@@ -163,8 +161,7 @@ impl ODBCError {
             ODBCError::SecondsTruncation(_) => FRACTIONAL_TRUNCATION,
             ODBCError::TimeTruncation(_) => FRACTIONAL_TRUNCATION,
             ODBCError::IntegralTruncation(_) => INTEGRAL_TRUNCATION,
-            ODBCError::InvalidTime => INVALID_DATETIME_FORMAT_OR_VALUE,
-            ODBCError::InvalidDatetimeFormat => INVALID_DATETIME_FORMAT_OR_VALUE,
+            ODBCError::InvalidDatetimeFormat => INVALID_DATETIME_FORMAT,
             ODBCError::InvalidCharacterValue(_) => INVALID_CHARACTER_VALUE,
             ODBCError::IndicatorVariableRequiredButNotSupplied => INDICATOR_VARIABLE_REQUIRED,
             ODBCError::NoResultSet => NO_RESULTSET,
@@ -202,7 +199,6 @@ impl ODBCError {
             | ODBCError::SecondsTruncation(_)
             | ODBCError::TimeTruncation(_)
             | ODBCError::IntegralTruncation(_)
-            | ODBCError::InvalidTime
             | ODBCError::InvalidDatetimeFormat
             | ODBCError::InvalidSqlType(_)
             | ODBCError::UnsupportedFieldDescriptor(_)
