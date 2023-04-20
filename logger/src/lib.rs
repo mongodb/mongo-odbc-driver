@@ -1,3 +1,4 @@
+use directories::UserDirs;
 use log::LevelFilter;
 use log4rs::{
     append::rolling_file::{
@@ -40,9 +41,30 @@ impl Logger {
                 std::env::temp_dir()
             } else {
                 let path = Path::new(&driver_path);
-                path.parent()
-                    .map(|p| p.parent().map(|p| p.join("logs")).unwrap())
-                    .unwrap_or_else(std::env::temp_dir)
+                // get the version number from the path
+                let version = path
+                    .parent()
+                    .map(|p| p.parent().unwrap())
+                    .unwrap()
+                    .file_name()
+                    .unwrap();
+                if let Some(user_dir) = UserDirs::new() {
+                    let log_dir = user_dir
+                        .document_dir()
+                        .map(|p| {
+                            p.join("MongoDB")
+                                .join("Atlas SQL ODBC")
+                                .join(version)
+                                .join("logs")
+                        })
+                        .unwrap_or_else(|| std::env::temp_dir());
+                    if !log_dir.exists() {
+                        std::fs::create_dir_all(&log_dir).unwrap();
+                    }
+                    log_dir
+                } else {
+                    std::env::temp_dir()
+                }
             };
 
             if let Some(log_dir_str) = log_dir.to_str() {
