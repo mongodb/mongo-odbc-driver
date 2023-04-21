@@ -18,7 +18,6 @@ use constants::{
 };
 
 use cstr::{input_text_to_string_a, input_text_to_string_w, Charset, WideChar};
-use file_dbg_macros::{dbg_write, msg_to_file};
 
 use function_name::named;
 use log::{debug, error, info};

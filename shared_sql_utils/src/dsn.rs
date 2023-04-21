@@ -1,7 +1,7 @@
 use crate::odbcinst::*;
 use cstr::{
     input_text_to_string_w, parse_attribute_string_a, parse_attribute_string_w, to_char_ptr,
-    to_widechar_ptr, Widechar,
+    to_widechar_ptr,
 };
 use thiserror::Error;
 
@@ -123,8 +123,7 @@ impl Dsn {
         })
     }
 
-pub fn from_private_profile_string(&self) -> Result<Self, DsnError> {
-        let buffer: &mut [WideChar; MAX_VALUE_LENGTH] = &mut [0; MAX_VALUE_LENGTH];
+    pub fn from_private_profile_string(&self) -> Result<Self, DsnError> {
         let mut dsn_opts = Dsn::default();
 
         let mut error_key = "";
@@ -363,9 +362,7 @@ mod test {
 
     #[test]
     fn test_set_field() {
-        let mut dsn_opts = Dsn {
-            ..Default::default()
-        };
+        let mut dsn_opts = Dsn::default();
         dsn_opts.set_field("PWD", "hunter2");
         assert_eq!(dsn_opts.password, "hunter2");
         dsn_opts.set_field("pwd", "hunter3");
