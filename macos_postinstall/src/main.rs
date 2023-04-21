@@ -31,7 +31,6 @@ fn write_to_log(data: String) {
         logger_file = LOGGER_FILE.lock();
     }
     let mut logger_file = logger_file.unwrap();
-    println!("{}", data);
     if let Err(why) = (*logger_file).write_all(data.as_bytes()) {
         panic!("couldn't write to log file {LOG_FILE:?}: {why}");
     };

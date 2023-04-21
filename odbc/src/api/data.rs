@@ -946,7 +946,7 @@ unsafe fn set_output_wstring_helper(
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
     copy_nonoverlapping(message.as_ptr(), output_ptr, num_chars - 1);
-    *output_ptr.add(num_chars - 1) = 0u16;
+    *output_ptr.add(num_chars - 1) = 0;
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars <= message.len() {
@@ -1207,7 +1207,7 @@ pub mod isize_len {
     ///
     pub unsafe fn set_output_wstring_as_bytes(
         stmt: &Statement,
-        message: Vec<u16>,
+        message: Vec<WideChar>,
         col_num: USmallInt,
         index: usize,
         output_ptr: *mut WideChar,

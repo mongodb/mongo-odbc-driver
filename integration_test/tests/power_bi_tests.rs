@@ -27,7 +27,7 @@ mod integration {
             let info_value_buffer_length = $info_value_buffer_length;
             let info_value_type = $info_value_type;
 
-            let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+            let output_buffer = &mut [0; (BUFFER_LENGTH as usize - 1)] as *mut _;
             let mut buffer = OutputBuffer {
                 output_buffer: output_buffer as Pointer,
                 data_length: *&mut 0,
@@ -73,7 +73,7 @@ mod integration {
     impl From<OutputBuffer> for String {
         fn from(val: OutputBuffer) -> Self {
             unsafe {
-                String::from_utf16_lossy(slice::from_raw_parts(
+                cstr::from_widechar_ref_lossy(slice::from_raw_parts(
                     val.output_buffer as *const _,
                     val.data_length as usize / std::mem::size_of::<WideChar>(),
                 ))
@@ -134,7 +134,8 @@ mod integration {
     fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
-        let output_len;
+        #[allow(unused_mut)]
+        let mut output_len;
         let in_connection_string;
         let out_connection_string;
         unsafe {
@@ -191,6 +192,13 @@ mod integration {
             );
 
             output_len = *str_len_ptr;
+            // The iodbc driver manager is multiplying the output length by size_of WideChar (u32)
+            // for some reason. It is correct when returned from SQLDriverConnectW, but is 4x
+            // bigger between return and here.
+            if odbc_sys::USING_IODBC {
+                output_len /= std::mem::size_of::<WideChar>() as i16;
+            }
+
             out_connection_string = cstr::from_widechar_ref_lossy(slice::from_raw_parts(
                 out_connection_string_buff,
                 output_len as usize,
@@ -395,9 +403,19 @@ mod integration {
             );
              */
 
-            test_get_info!(conn_handle, InfoType::DbmsName, 28, DataType::WChar);
+            test_get_info!(
+                conn_handle,
+                InfoType::DbmsName,
+                14 * (std::mem::size_of::<WideChar>() as i16),
+                DataType::WChar
+            );
 
-            test_get_info!(conn_handle, InfoType::DbmsVer, 58, DataType::WChar);
+            test_get_info!(
+                conn_handle,
+                InfoType::DbmsVer,
+                29 * (std::mem::size_of::<WideChar>() as i16),
+                DataType::WChar
+            );
         }
     }
 
@@ -412,7 +430,7 @@ mod integration {
             test_get_info!(
                 conn_handle,
                 InfoType::IdentifierQuoteChar,
-                4,
+                (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
             // SQL-1177: Investigate how to test missing InfoType values
@@ -448,7 +466,7 @@ mod integration {
             test_get_info!(
                 conn_handle,
                 InfoType::OrderByColumnsInSelect,
-                4,
+                (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
             // InfoType::SQL_STRING_FUNCTIONS
@@ -463,14 +481,19 @@ mod integration {
             // InfoType::SQL_TIMEDATE_ADD_INTERVALS
             // InfoType::SQL_TIMEDATE_DIFF_INTERVALS
             // InfoType::SQL_CONCAT_NULL_BEHAVIOR
-            test_get_info!(conn_handle, InfoType::CatalogName, 4, DataType::WChar);
+            test_get_info!(
+                conn_handle,
+                InfoType::CatalogName,
+                (2 * std::mem::size_of::<WideChar>()) as i16,
+                DataType::WChar
+            );
             // InfoType::SQL_CATALOG_TERM
             // InfoType::SQL_OWNER_TERM
             // InfoType::SQL_ODBC_INTERFACE_CONFORMANCE
             test_get_info!(
                 conn_handle,
                 InfoType::SearchPatternEscape,
-                4,
+                (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
             // InfoType::SQL_CONVERT_FUNCTIONS
@@ -500,7 +523,7 @@ mod integration {
             test_get_info!(
                 conn_handle,
                 InfoType::SpecialCharacters,
-                44,
+                (22 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
             // InfoType::SQL_RETURN_ESCAPE_CLAUSE
@@ -551,8 +574,7 @@ mod integration {
             SQLGetInfoW(SQL_DRIVER_ODBC_VER)
             SQLGetInfoW(SQL_DRIVER_NAME)
             */
-
-            let mut query: Vec<u16> = "select * from example".encode_utf16().collect();
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -606,7 +628,7 @@ mod integration {
                     &mut stmt as *mut Handle
                 )
             );
-            let mut table_view: Vec<u16> = "TABLE,VIEW".encode_utf16().collect();
+            let mut table_view: Vec<WideChar> = cstr::to_widechar_vec("TABLE,VIEW");
             table_view.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,

@@ -36,14 +36,14 @@ pub fn verify_sql_diagnostics(
     unsafe {
         assert_eq!(
             expected_message_text,
-            &(cstr::from_widechar_ref_lossy(&*(actual_message_text as *const [u16; 256])))
+            &(cstr::from_widechar_ref_lossy(&*(actual_message_text as *const [WideChar; 256])))
                 [0..actual_message_length],
         );
         assert_eq!(
             cstr::from_widechar_ref_lossy(
-                &*(expected_sql_state_encoded.as_ptr() as *const [u16; 6])
+                &*(expected_sql_state_encoded.as_ptr() as *const [WideChar; 6])
             ),
-            cstr::from_widechar_ref_lossy(&*(actual_sql_state as *const [u16; 6]))
+            cstr::from_widechar_ref_lossy(&*(actual_sql_state as *const [WideChar; 6]))
         );
     }
     assert_eq!(&mut expected_native_err as &mut i32, actual_native_error);

@@ -246,7 +246,8 @@ dependencies = [
 name = "cstr"
 version = "0.0.0"
 dependencies = [
- "odbc-sys",
+ "num-derive",
+ "num-traits",
  "widestring 1.0.2",
 ]
 
@@ -1052,9 +1053,10 @@ dependencies = [
 
 [[package]]
 name = "odbc-sys"
-version = "0.21.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "592c5c4ce58f47dde428c52b39904252191d25436b410cc232fae0813ff58f08"
+version = "0.0.0"
+dependencies = [
+ "cstr",
+]
 
 [[package]]
 name = "once_cell"

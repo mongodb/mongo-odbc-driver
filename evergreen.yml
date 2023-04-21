@@ -286,7 +286,7 @@ functions:
         script: |
           ${prepare_shell}
           # Compile release build
-          cargo build --release --features odbc-sys/iodbc
+          cargo build --release --features odbc-sys/iodbc,cstr/utf32
 
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
@@ -300,7 +300,7 @@ functions:
         script: |
           ${prepare_shell}
           # Compile debug build
-          cargo build --features odbc-sys/iodbc
+          cargo build --features odbc-sys/iodbc,cstr/utf32
 
   "compile macos release with debug info":
     - command: shell.exec
@@ -311,7 +311,7 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           # Build a release driver with debug information
-          cargo build --features odbc-sys/iodbc --profile=release-with-debug
+          cargo build --features odbc-sys/iodbc,cstr/utf32 --profile=release-with-debug
           export DRIVER_LIB_PATH=$PWD/target/release-with-debug
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
@@ -536,7 +536,7 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc.msi
         local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
         bucket: mciuploads
     - command: s3.put
@@ -544,7 +544,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/pkg/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/mongoodbc.msi
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1076,7 +1076,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc -- --ignored
+          cargo test --features odbc-sys/iodbc,cstr/utf32 -- --ignored
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1117,7 +1117,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc integration
+          cargo test --features odbc-sys/iodbc,cstr/utf32 integration
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1577,9 +1577,8 @@ buildvariants:
       - name: compile-macos
       - name: compile-debug-macos
       - name: macos-unit-test
-      # Skip Reason: SQL-1332
-      #- name: macos-integration-test
-      #- name: macos-result-set-test
+      - name: macos-integration-test
+      - name: macos-result-set-test
 
   - name: release
     display_name: "Release"

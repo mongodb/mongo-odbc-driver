@@ -125,6 +125,7 @@ impl Dsn {
 
     pub fn from_private_profile_string(&self) -> Result<Self, DsnError> {
         let mut dsn_opts = Dsn::default();
+
         let mut error_key = "";
 
         // SQLGetPrivateProfileStringW is hopelessly broken in unixodbc. As a workaround,
@@ -361,9 +362,7 @@ mod test {
 
     #[test]
     fn test_set_field() {
-        let mut dsn_opts = Dsn {
-            ..Default::default()
-        };
+        let mut dsn_opts = Dsn::default();
         dsn_opts.set_field("PWD", "hunter2");
         assert_eq!(dsn_opts.password, "hunter2");
         dsn_opts.set_field("pwd", "hunter3");
