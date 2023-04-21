@@ -9,15 +9,20 @@ use crate::{
     },
     handles::definitions::*,
     trace_odbc,
+    util::get_driver_path,
 };
 use bson::Bson;
 use constants::{
     DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
     SQL_ALL_TABLE_TYPES,
 };
+
 use cstr::{input_text_to_string_a, input_text_to_string_w, Charset, WideChar};
 use file_dbg_macros::{dbg_write, msg_to_file};
+
 use function_name::named;
+use log::{debug, error, info};
+use logger::Logger;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
@@ -28,7 +33,7 @@ use odbc_sys::{
     Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
     Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
-use std::ptr::null_mut;
+use std::{cell::RefCell, ptr::null_mut};
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 
 const NULL_HANDLE_ERROR: &str = "handle cannot be null";
@@ -111,7 +116,7 @@ macro_rules! odbc_unwrap {
 // If a panic occurs during execution, the panic is caught and turned into a String.
 // The panic message is added to the diagnostics of `handle` and SqlReturn::ERROR returned.
 macro_rules! panic_safe_exec {
-    ($function:expr, $handle:expr) => {{
+    ($level:ident, $function:expr, $handle:expr) => {{
         let function = $function;
         let handle = $handle;
         let handle_ref = MongoHandleRef::from(handle);
@@ -131,9 +136,9 @@ macro_rules! panic_safe_exec {
                 #[allow(unused_variables)]
                 let trace = trace_outcome(&sql_return);
                 if handle.is_null() {
-                    trace_odbc!(trace, fct_name);
+                    crate::trace_odbc!($level, trace, fct_name);
                 } else {
-                    trace_odbc!(handle_ref, trace, fct_name);
+                    crate::trace_odbc!($level, handle_ref, trace, fct_name);
                 }
 
                 return sql_return;
@@ -146,7 +151,7 @@ macro_rules! panic_safe_exec {
                 };
 
                 if handle.is_null() {
-                    trace_odbc!(ODBCError::Panic(panic_msg.clone()), fct_name);
+                    crate::trace_odbc_error!(ODBCError::Panic(panic_msg.clone()), fct_name);
                 } else {
                     add_diag_with_function!(
                         handle_ref,
@@ -158,9 +163,9 @@ macro_rules! panic_safe_exec {
                 #[allow(unused_variables)]
                 let trace = trace_outcome(&sql_return);
                 if handle.is_null() {
-                    trace_odbc!(trace, fct_name);
+                    crate::trace_odbc_error!(trace, fct_name);
                 } else {
-                    trace_odbc!(handle_ref, trace, fct_name);
+                    crate::trace_odbc_error!(handle_ref, trace, fct_name);
                 }
                 return sql_return;
             }
@@ -176,6 +181,7 @@ pub(crate) use panic_safe_exec;
 macro_rules! unsupported_function {
     ($handle:expr) => {
         panic_safe_exec!(
+            info,
             || {
                 let mongo_handle = MongoHandleRef::from($handle);
                 mongo_handle.clear_diagnostics();
@@ -194,7 +200,7 @@ macro_rules! unsupported_function {
 ///
 macro_rules! unimpl {
     ($handle:expr) => {
-        panic_safe_exec!(|| { unimplemented!() }, $handle)
+        panic_safe_exec!(error, || { unimplemented!() }, $handle)
     };
 }
 
@@ -218,6 +224,7 @@ pub unsafe extern "C" fn SQLAllocHandle(
     output_handle: *mut Handle,
 ) -> SqlReturn {
     panic_safe_exec!(
+        info,
         || {
             match sql_alloc_handle(handle_type, input_handle as *mut _, output_handle) {
                 Ok(_) => SqlReturn::SUCCESS,
@@ -235,7 +242,10 @@ fn sql_alloc_handle(
 ) -> Result<()> {
     match handle_type {
         HandleType::Env => {
-            let env = Env::with_state(EnvState::Allocated);
+            let env = Env::with_state(
+                EnvState::Allocated,
+                RefCell::new(Logger::new(get_driver_path())),
+            );
             let mh = Box::new(MongoHandle::Env(env));
             unsafe {
                 *output_handle = Box::into_raw(mh) as *mut _;
@@ -472,6 +482,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
     numeric_attribute_ptr: *mut Len,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
@@ -673,6 +684,7 @@ pub unsafe extern "C" fn SQLColumns(
     column_name_length: SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             if !(schema_name.is_null() || schema_name_length == 0) {
@@ -745,6 +757,7 @@ pub unsafe extern "C" fn SQLColumnsW(
     column_name_length: SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
@@ -968,6 +981,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
     nullable: *mut Nullability,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let stmt_handle = MongoHandleRef::from(hstmt);
             stmt_handle.clear_diagnostics();
@@ -1029,6 +1043,7 @@ pub unsafe extern "C" fn SQLDescribeParam(
 #[no_mangle]
 pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
     panic_safe_exec!(
+        info,
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
             let conn = must_be_valid!((*conn_handle).as_connection());
@@ -1052,6 +1067,18 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
+
+    if let Some(log_level) = odbc_uri.remove(&["loglevel"]) {
+        let env = unsafe { conn.env.as_ref() };
+        if let Some(env) = env {
+            if let Some(env) = env.as_env() {
+                if let Some(logger) = env.logger.borrow().as_ref() {
+                    logger.set_log_level(log_level);
+                }
+            }
+        }
+    }
+
     let conn_attrs = conn.attributes.read().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
         conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
@@ -1090,6 +1117,7 @@ pub unsafe extern "C" fn SQLDriverConnect(
     driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
@@ -1144,9 +1172,11 @@ pub unsafe extern "C" fn SQLDriverConnectW(
     driver_completion: DriverConnectOption,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
             trace_odbc!(
+                info,
                 conn_handle,
                 format!("Connecting using {DRIVER_NAME} {} ", *DRIVER_ODBC_VERSION),
                 function_name!()
@@ -1255,6 +1285,7 @@ pub unsafe extern "C" fn SQLExecDirect(
     text_length: Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let query = input_text_to_string_a(statement_text, text_length as usize);
             let mongo_handle = MongoHandleRef::from(statement_handle);
@@ -1297,6 +1328,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
     text_length: Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let query = input_text_to_string_w(statement_text, text_length as usize);
             let mongo_handle = MongoHandleRef::from(statement_handle);
@@ -1345,6 +1377,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
@@ -1436,6 +1469,7 @@ pub unsafe extern "C" fn SQLForeignKeys(
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
@@ -1473,6 +1507,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
@@ -1494,11 +1529,13 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
     trace_odbc!(
+        info,
         *(handle as *mut MongoHandle),
         format!("Freeing handle {:?}", handle as *mut MongoHandle),
         function_name!()
     );
     panic_safe_exec!(
+        info,
         || {
             match sql_free_handle(handle_type, handle as *mut _) {
                 Ok(_) => SqlReturn::SUCCESS,
@@ -1514,6 +1551,14 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
         // By making Boxes to the types and letting them go out of
         // scope, they will be dropped.
         HandleType::Env => {
+            unsafe {
+                (*handle)
+                    .as_env()
+                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_ENV_ERROR))?
+            }
+            .logger
+            .borrow_mut()
+            .take();
             let _ = unsafe {
                 (*handle)
                     .as_env()
@@ -1618,6 +1663,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
     string_length_ptr: *mut Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
 
@@ -1744,6 +1790,7 @@ pub unsafe extern "C" fn SQLGetData(
     str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
 
@@ -1960,6 +2007,7 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
     string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = handle as *mut MongoHandle;
             let get_error = |errors: &Vec<ODBCError>, diag_identifier: DiagType| -> SqlReturn {
@@ -2021,6 +2069,7 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
 macro_rules! sql_get_diag_rec_impl {
     ($handle_type:ident, $handle:ident, $rec_number:ident, $state:ident, $native_error_ptr:ident, $message_text:ident, $buffer_length:ident, $text_length_ptr:ident, $error_output_func:ident) => {{
         panic_safe_exec!(
+            debug,
             || {
                 if $rec_number < 1 || $buffer_length < 0 {
                     return SqlReturn::ERROR;
@@ -2167,6 +2216,7 @@ pub unsafe extern "C" fn SQLGetEnvAttrW(
     string_length: *mut Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
+        info,
         || {
             let env_handle = MongoHandleRef::from(environment_handle);
             env_handle.clear_diagnostics();
@@ -2254,6 +2304,7 @@ pub unsafe extern "C" fn SQLGetInfoW(
     string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || sql_get_infow_helper(
             connection_handle,
             info_type,
@@ -2728,6 +2779,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
     string_length_ptr: *mut Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let stmt_handle = MongoHandleRef::from(handle);
             stmt_handle.clear_diagnostics();
@@ -2952,6 +3004,7 @@ unsafe fn sql_get_stmt_attrw_helper(
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(handle);
             match FromPrimitive::from_i16(data_type) {
@@ -2984,6 +3037,7 @@ pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> S
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(handle);
             match FromPrimitive::from_i16(data_type) {
@@ -3087,6 +3141,7 @@ pub unsafe extern "C" fn SQLNumResultCols(
     column_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
 
@@ -3172,6 +3227,7 @@ pub unsafe extern "C" fn SQLPrimaryKeys(
     _table_name_length: SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
@@ -3203,6 +3259,7 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
     _table_name_length: SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
@@ -3331,6 +3388,7 @@ pub unsafe extern "C" fn SQLRowCount(
     row_count_ptr: *mut Len,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             // even though we always return 0, we must still assert that the proper handle
@@ -3377,6 +3435,7 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
     _str_length: Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
 
@@ -3551,6 +3610,7 @@ pub unsafe extern "C" fn SQLSetEnvAttrW(
     _string_length: Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
+        info,
         || {
             let env_handle = MongoHandleRef::from(environment_handle);
             env_handle.clear_diagnostics();
@@ -3677,6 +3737,7 @@ pub unsafe extern "C" fn SQLSetStmtAttrW(
     _str_length: Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let stmt_handle = MongoHandleRef::from(hstmt);
             stmt_handle.clear_diagnostics();
@@ -4086,6 +4147,7 @@ pub unsafe extern "C" fn SQLTablesW(
     name_length_4: SmallInt,
 ) -> SqlReturn {
     panic_safe_exec!(
+        debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());

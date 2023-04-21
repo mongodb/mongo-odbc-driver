@@ -12,6 +12,7 @@ lazy_static = "1"
 odbc-sys = { path = "../odbc-sys", default-features = false }
 cstr = { path = "../cstr" }
 constants = { path = "../constants" }
+shared_sql_utils = { path = "../shared_sql_utils" }
 
 [dependencies.mongodb]
 version = "2.3"

@@ -1,0 +1,13 @@
+[package]
+name = "logger"
+version = "0.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4.17"
+log4rs = { version = "1.2.0", features = ["background_rotation"] }
+cstr = { path = "../cstr" }
+shared_sql_utils = { path = "../shared_sql_utils" }
+constants = { path = "../constants" }

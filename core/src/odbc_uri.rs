@@ -3,7 +3,7 @@ use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
-use shared_sql_utils::DSNOpts;
+use shared_sql_utils::Dsn;
 use std::collections::HashMap;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
@@ -20,7 +20,7 @@ pub const USER: &str = "user";
 pub const UID: &str = "uid";
 pub const URI: &str = "uri";
 pub const APPNAME: &str = "appname";
-pub const LOGPATH: &str = "logpath";
+pub const LOGLEVEL: &str = "loglevel";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
@@ -31,7 +31,7 @@ const SERVER_KWS: &[&str] = &[SERVER];
 
 lazy_static! {
     static ref KEYWORDS: RegexSet = RegexSetBuilder::new(
-        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME, LOGPATH]
+        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME, LOGLEVEL]
             .into_iter()
             .map(|x| "^".to_string() + x + "$")
             .collect::<Vec<_>>()
@@ -73,7 +73,7 @@ impl ODBCUri {
         }
         let mut ret = ODBCUri::process_uri(odbc_uri.clone())?;
         if ret.get(DSN).is_some() {
-            let mut dsn_opts = DSNOpts::from_attribute_string(&odbc_uri);
+            let mut dsn_opts = Dsn::from_attribute_string(&odbc_uri);
             dsn_opts = dsn_opts.from_private_profile_string().unwrap();
             ret = ODBCUri::process_uri(format!("{odbc_uri};{}", dsn_opts.to_connection_string()))?;
         }
@@ -555,6 +555,19 @@ mod unit {
             assert_eq!(
                 expected,
                 ODBCUri::new("Driver=Foo;;;SERVER=bAr;;;".to_string()).unwrap()
+            );
+        }
+
+        #[test]
+        fn log_level() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "foo".to_string(), "server".to_string() => "bAr".to_string(), "loglevel".to_string() => "debug".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=foo;SERVER=bAr;LOGLEVEL=debug".to_string()).unwrap()
             );
         }
     }

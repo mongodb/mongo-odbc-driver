@@ -50,20 +50,39 @@ macro_rules! set {
 
 ///
 /// Adds a line in the trace formatted like this [{handle info}]{function name} - "{message to log}"]
-/// The handle info provide the address of the current handle and it's parent handle.
+/// The handle info provides the address of the current handle and it's parent handle.
 /// For example for a connection handle : [Env_0x131904740][Conn_0x131805040]
 ///
 #[macro_export]
 macro_rules! trace_odbc {
+    ($level:ident, $info:expr, $fct_name:expr) => {
+        // No handle have been allocated yet
+        let message = format!("{}:: {}", $fct_name, $info);
+        $level!("{}", message);
+    };
+    ($level:ident, $mongo_handle:expr, $info:expr, $fct_name:expr) => {
+        let handle_info = $mongo_handle.get_handle_info();
+        let message = format!("{handle_info} {}:: {}", $fct_name, $info);
+        $level!("{}", message);
+    };
+}
+
+///
+/// Adds a line in the trace formatted like this [{handle info}]{function name} - "{message to log}"]
+/// The handle info provide the address of the current handle and it's parent handle.
+/// For example for a connection handle : [Env_0x131904740][Conn_0x131805040]
+///
+#[macro_export]
+macro_rules! trace_odbc_error {
     ($info:expr, $fct_name:expr) => {
         // No handle have been allocated yet
         let message = format!("{}:: {}", $fct_name, $info);
-        dbg_write!(message);
+        log::error!("{}", message);
     };
     ($mongo_handle:expr, $info:expr, $fct_name:expr) => {
         let handle_info = $mongo_handle.get_handle_info();
         let message = format!("{handle_info} {}:: {}", $fct_name, $info);
-        dbg_write!(message);
+        log::error!("{}", message);
     };
 }
 
@@ -76,8 +95,9 @@ macro_rules! trace_odbc {
 #[macro_export]
 macro_rules! add_diag_with_function {
     ($handle:expr, $error:expr, $fct_name:expr) => {
-        let err = $error;
-        trace_odbc!($handle, format!("{err}"), $fct_name);
-        $handle.add_diag_info(err);
+        let handle_info = $handle.get_handle_info();
+        let message = format!("{handle_info} {}:: {}", $fct_name, $error);
+        log::info!("{}", message);
+        $handle.add_diag_info($error);
     };
 }

@@ -1,6 +1,7 @@
 use crate::{
     bson_type_info::BsonTypeInfo,
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
+    collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
     definitions::SqlDataType,
     err::{Error, Result},
@@ -9,7 +10,7 @@ use crate::{
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
-use mongodb::{results::CollectionSpecification, sync::Cursor};
+use mongodb::{options::ListDatabasesOptions, results::CollectionType};
 use odbc_sys::Nullability;
 use regex::Regex;
 use std::collections::VecDeque;
@@ -452,7 +453,7 @@ mod unit {
 pub struct MongoFields {
     dbs: VecDeque<String>,
     current_db_name: String,
-    collections_for_db: Option<Cursor<CollectionSpecification>>,
+    collections_for_db: Option<VecDeque<MongoODBCCollectionSpecification>>,
     current_col_metadata: Vec<MongoColMetadata>,
     current_field_for_collection: isize,
     collection_name_filter: Option<Regex>,
@@ -478,7 +479,12 @@ impl MongoFields {
             || {
                 mongo_connection
                     .client
-                    .list_database_names(None, None)
+                    .list_database_names(
+                        None,
+                        ListDatabasesOptions::builder()
+                            .authorized_databases(true)
+                            .build(),
+                    )
                     .unwrap()
             },
             |db| vec![db.to_string()],
@@ -513,8 +519,10 @@ impl MongoFields {
         let mut warnings: Vec<Error> = vec![];
         loop {
             if self.collections_for_db.is_some() {
-                for current_collection in self.collections_for_db.as_mut().unwrap() {
-                    let collection_name = current_collection.unwrap().name;
+                if let Some(current_collection) =
+                    self.collections_for_db.as_mut().unwrap().pop_front()
+                {
+                    let collection_name = current_collection.name.clone();
                     if self.collection_name_filter.is_some()
                         && !self
                             .collection_name_filter
@@ -550,8 +558,10 @@ impl MongoFields {
                             }
                         }
                         // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
-                        // TODO: SQL-1198: Add a log or warning
-                        Err(_) => continue,
+                        Err(e) => {
+                            log::error!("Error while processing collection metadata: {}", e);
+                            continue;
+                        }
                     }
                 }
             }
@@ -563,8 +573,24 @@ impl MongoFields {
                 mongo_connection
                     .client
                     .database(&db_name)
-                    .list_collections(None, None)
-                    .unwrap(),
+                    .run_command(
+                    doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
+                    None,
+                ).unwrap().get_document("cursor").map(|doc| {
+                    doc.get_array("firstBatch").unwrap().iter().map(|val| {
+                        let doc = val.as_document().unwrap();
+                        let name = doc.get_str("name").unwrap().to_string();
+                        let collection_type = match doc.get_str("type").unwrap() {
+                            "collection" => CollectionType::Collection,
+                            "view" => CollectionType::View,
+                            _ => CollectionType::Collection
+                        };
+                        MongoODBCCollectionSpecification::new(name, collection_type)
+                    }).collect()
+                }).unwrap_or_else(|_| {
+                    log::error!("Error getting collections for database {db_name}");
+                    VecDeque::new()
+                }),
             );
             self.current_db_name = db_name;
         }

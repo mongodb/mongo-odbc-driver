@@ -4,6 +4,10 @@ use odbc_sys::{HandleType, SqlReturn};
 const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
 
 mod unit {
+    use std::cell::RefCell;
+
+    use logger::Logger;
+
     use super::*;
     #[test]
     fn test_simple() {
@@ -50,7 +54,10 @@ mod unit {
             }
         }
 
-        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
+            EnvState::Allocated,
+            RefCell::new(Logger::new("")),
+        ));
         validate_diag_rec(HandleType::Env, env_handle);
 
         let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
@@ -69,7 +76,10 @@ mod unit {
     #[test]
     fn test_error_message() {
         use cstr::WideChar;
-        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
+            EnvState::Allocated,
+            RefCell::new(Logger::new("")),
+        ));
 
         // Initialize buffers
         let mut sql_state: [WideChar; 6] = [0; 6];
@@ -131,7 +141,10 @@ mod unit {
     fn test_invalid_ops() {
         use cstr::WideChar;
 
-        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
+            EnvState::Allocated,
+            RefCell::new(Logger::new("")),
+        ));
 
         // Initialize buffers
         let mut sql_state: [WideChar; 6] = [0; 6];

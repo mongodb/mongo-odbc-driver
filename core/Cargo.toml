@@ -21,11 +21,11 @@ lazy_static = "1.4.0"
 likely_stable = "0.1.2"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
-file_dbg_macros = { path = "../file_dbg_macros" }
 chrono = "0.4.22"
 cstr = { path = "../cstr" }
 fancy-regex = "0.11.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
+log = "0.4.14"
 
 [dependencies.mongodb]
 version = "2.3"

@@ -3,12 +3,10 @@ use crate::{
     api::definitions::CDataType,
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle, Statement},
-    trace_odbc,
 };
 use bson::{spec::BinarySubtype, Bson};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use cstr::WideChar;
-use file_dbg_macros::{dbg_write, msg_to_file};
 use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,

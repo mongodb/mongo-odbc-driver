@@ -1,3 +1,3 @@
 mod dsn;
 pub mod odbcinst;
-pub use dsn::DSNOpts;
+pub use dsn::{Dsn, DsnArgs};
