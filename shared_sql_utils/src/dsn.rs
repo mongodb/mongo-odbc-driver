@@ -136,7 +136,7 @@ impl Dsn {
         // All odbc implementations (windows, unixodbc, iODBC) return the available
         // keys in a DSN as a null-terminated string of null-terminated strings.
         let dsn_keys = if cfg!(not(target_os = "linux")) {
-            let wbuf = &mut [0u16; 1024];
+            let wbuf = &mut [0; 1024];
             unsafe {
                 SQLGetPrivateProfileStringW(
                     to_widechar_ptr(&self.dsn).0,
@@ -163,7 +163,7 @@ impl Dsn {
             }
             unsafe { parse_attribute_string_a(abuf.as_mut_ptr()) }
         };
-        let buffer = &mut [0u16; 1024];
+        let buffer = &mut [0; 1024];
         dsn_keys
             .split(';')
             .filter(|s| !s.is_empty())

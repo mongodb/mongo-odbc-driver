@@ -827,11 +827,11 @@ functions:
           cat setup/iodbcinst.ini
           echo "-------------------------"
           echo "----- DSN Setup -----"
-          sed -i "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/iodbc.ini
-          sed -i "s,%ADF_TEST_DB%,${adf_test_local_db},g" setup/iodbc.ini
-          sed -i "s,%ADF_TEST_USER%,${adf_test_local_user},g" setup/iodbc.ini
-          sed -i "s,%ADF_TEST_PWD%,${adf_test_local_pwd},g" setup/iodbc.ini
-          sed -i "s,%ADF_TEST_HOST%,${adf_test_host},g" setup/iodbc.ini
+          sed -i.bu "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/iodbc.ini
+          sed -i.bu "s,%ADF_TEST_DB%,${adf_test_local_db},g" setup/iodbc.ini
+          sed -i.bu "s,%ADF_TEST_USER%,${adf_test_local_user},g" setup/iodbc.ini
+          sed -i.bu "s,%ADF_TEST_PWD%,${adf_test_local_pwd},g" setup/iodbc.ini
+          sed -i.bu "s,%ADF_TEST_HOST%,${adf_test_host},g" setup/iodbc.ini
           echo "---- END DSN Setup ----"
 
           cat <<EOT >> expansions.yml
