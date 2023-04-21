@@ -22,11 +22,10 @@ mongo-odbc-core = { path = "../core" }
 cstr = { path = "../cstr" }
 function_name = "0.3.0"
 serde_json = "1.0.68"
-odbc-sys = "0.21.2"
+odbc-sys = { path = "../odbc-sys" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 logger = { path = "../logger" }
 log = "0.4.17"
-
 
 [dependencies.mongodb]
 version = "2.3"

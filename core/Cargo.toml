@@ -10,7 +10,7 @@ authors = [
 edition = "2021"
 
 [dependencies]
-odbc-sys = "0.21.2"
+odbc-sys = { path = "../odbc-sys" }
 bson = "2"
 thiserror = "1"
 constants = { path = "../constants" }

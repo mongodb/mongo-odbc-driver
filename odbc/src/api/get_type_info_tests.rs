@@ -19,7 +19,7 @@ mod unit {
         unsafe {
             assert_eq!(SqlReturn::ERROR, SQLGetTypeInfoW(handle as *mut _, 100));
             // use SQLGetDiagField to retreive and assert correct error message
-            let message_text = &mut [0u16; 6] as *mut _ as *mut c_void;
+            let message_text = &mut [0; 6] as *mut _ as *mut c_void;
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetDiagFieldW(
@@ -34,7 +34,7 @@ mod unit {
             );
             assert_eq!(
                 INVALID_SQL_TYPE,
-                String::from_utf16(&*(message_text as *const [u16; 6])).unwrap()
+                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 6]))
             );
         }
     }

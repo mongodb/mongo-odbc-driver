@@ -1,4 +1,5 @@
 use crate::api::{definitions::*, errors::ODBCError};
+use cstr::{Charset, WideChar};
 use logger::Logger;
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
@@ -186,7 +187,7 @@ pub struct EnvAttributes {
     pub output_nts: SqlBool,
     pub connection_pooling: ConnectionPooling,
     pub cp_match: CpMatch,
-    pub driver_unicode_type: CharSet,
+    pub driver_unicode_type: Charset,
 }
 
 impl Default for EnvAttributes {
@@ -196,7 +197,7 @@ impl Default for EnvAttributes {
             output_nts: SqlBool::True,
             connection_pooling: ConnectionPooling::Off,
             cp_match: CpMatch::Strict,
-            driver_unicode_type: CharSet::Utf16,
+            driver_unicode_type: cstr::CHARSET,
         }
     }
 }
@@ -269,7 +270,7 @@ pub enum CachedData {
     Fixed,
     Char(usize, Vec<u8>),
     Bin(usize, Vec<u8>),
-    WChar(usize, Vec<u16>),
+    WChar(usize, Vec<WideChar>),
 }
 
 #[derive(Debug)]
