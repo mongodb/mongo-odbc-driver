@@ -341,11 +341,14 @@ functions:
               MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
               VERSION_LABEL="$RELEASE_VERSION"
           fi
+          sed -i "s,__VERSION__,$MINOR_VERSION,g" installer/msi/make-active.bat
+          sed -i "s,__VERSION_LABEL__,$VERSION_LABEL,g" installer/msi/make-active.bat
           # This UUID is used for the upgrade code and should be consistent across minor version_id
           # bug patches, that is why it is seeded with the minor version. Being consistent across
           # bug patches but different across minor versions allows for users to have multiple
           # minor versions of the driver installed side by side on Windows.
-          UUID=$(uuidgen -m -N "mongoodbc_no_conflicts_$MINOR_VERSION" -n @oid)
+          UUID_UPGRADE=$(uuidgen -m -N "mongoodbc_no_conflicts_upgrade_$MINOR_VERSION" -n @oid)
+          UUID_PRODUCT=$(uuidgen -m -N "mongoodbc_no_conflicts_product_$MINOR_VERSION" -n @oid)
           # unfortunately, using a variable to hold the path to powershell
           # seems to not work properly with evergreen's bash
           /cygdrive/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\
@@ -357,7 +360,8 @@ functions:
               -Arch x64\
               -Version "$MINOR_VERSION"\
               -VersionLabel "$VERSION_LABEL"\
-              -UpgradeCode "$UUID"
+              -UpgradeCode "$UUID_UPGRADE"\
+              -ProductCode "$UUID_PRODUCT"
 
   "build dmg":
     - command: shell.exec
