@@ -24,10 +24,7 @@ pub struct Logger {
 
 impl Logger {
     /// Initializes the logger with the given path as its root. The logger will create a logs folder
-    /// two levels up from the given path and write its logs there. For example, if the given path is
-    /// `C:\\Program Files\\mongo_odbc\\1.1\\bin\\atsql.dll`, the logger will write its logs to
-    /// `C:\\Program Files\\mongo_odbc\\1.1\\logs\\mongo_odbc.log`. `std::path::Path` is used to assemble
-    /// the paths so this is OS safe.
+    /// in the user's documents directory, such as User/Documents/MongoDB/Atlas ODBC Driver/1.1/logs
     ///
     /// If the given path is empty, or there is an error accessing the path, the logger will write its logs to the temp directory.
     ///
@@ -40,24 +37,22 @@ impl Logger {
         match std::panic::catch_unwind(|| {
             let log_dir = if driver_path.is_empty() {
                 std::env::temp_dir()
-            } else {
-                if let Some(user_dir) = UserDirs::new() {
-                    let log_dir = user_dir
-                        .document_dir()
-                        .map(|p| {
-                            p.join("MongoDB")
-                                .join("Atlas SQL ODBC")
-                                .join(DRIVER_LOG_VERSION.as_str())
-                                .join("logs")
-                        })
-                        .unwrap_or_else(|| std::env::temp_dir());
-                    if !log_dir.exists() {
-                        std::fs::create_dir_all(&log_dir).unwrap();
-                    }
-                    log_dir
-                } else {
-                    std::env::temp_dir()
+            } else if let Some(user_dir) = UserDirs::new() {
+                let log_dir = user_dir
+                    .document_dir()
+                    .map(|p| {
+                        p.join("MongoDB")
+                            .join("Atlas SQL ODBC")
+                            .join(DRIVER_LOG_VERSION.as_str())
+                            .join("logs")
+                    })
+                    .unwrap_or_else(std::env::temp_dir);
+                if !log_dir.exists() {
+                    std::fs::create_dir_all(&log_dir).unwrap();
                 }
+                log_dir
+            } else {
+                std::env::temp_dir()
             };
 
             if let Some(log_dir_str) = log_dir.to_str() {
