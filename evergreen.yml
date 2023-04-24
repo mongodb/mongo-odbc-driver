@@ -1293,24 +1293,54 @@ functions:
         display_name: crash-dump-
 
   "update download center feed":
+    # Download the current json feed used by the download center
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/mongo-odbc-downloads.json
+        local_file: mongosql-odbc-driver/resources/download-center/mongo-odbc-downloads.json
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/json
+    # Update the file, adding the latest release
     - command: shell.exec
       params:
         shell: bash
-        working_dir: mongosql-odbc-driver
+        working_dir: mongosql-odbc-driver/resources/download-center/
         script: |
           ${prepare_shell}
           # Update the template to generate the feed for this release
           sed -i 's@{RELEASE_VERSION}@'${RELEASE_VERSION}'@' mongo-odbc-downloads_template.json
           sed -i 's@{WINDOWS_INSTALLER_PATH}@'${WINDOWS_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
           sed -i 's@{UBUNTU2204_INSTALLER_PATH}@'${UBUNTU2204_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
-          echo "-------------------------"
+          echo "--------- New release object ----------------"
           cat mongo-odbc-downloads_template.json
-          echo "-------------------------"
+          echo "---------------------------------------------"
+          NEW_VERSION=$(cat mongo-odbc-downloads_template.json)
+          
+          # The task runs on the variant used for Release (Ubuntu). Download the Linux build of JQ
+          curl -L -o jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 \
+            --silent \
+            --fail \
+            --max-time 60 \
+            --retry 5 \
+            --retry-delay 0
+          
+          chmod +x jq
+          
+          # Add the new release, sort by version and reverse the array
+          jq --argjson new_version "$NEW_VERSION" '.versions += [ $new_version ] | .versions |= sort_by(.version) | .versions |= reverse' mongo-odbc-downloads.json > mongo-odbc-downloads_updated.json
+          
+          echo "----------- Updated download list -------------"
+          cat mongo-odbc-downloads_updated.json
+          echo "-----------------------------------------------"
+    # Re-upload the updated file
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-downloads_template.json
+        local_file: mongosql-odbc-driver/resources/download-center/mongo-odbc-downloads_updated.json
         remote_file: mongosql-odbc-driver/mongo-odbc-downloads.json
         bucket: translators-connectors-releases
         permissions: public-read
