@@ -15,8 +15,7 @@ Param(
     [string]$Arch,
     [string]$Version,
     [string]$VersionLabel,
-    [string]$UpgradeCode,
-    [string]$ProductCode
+    [string]$UpgradeCode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,20 +32,18 @@ $wixUiExt = "$WixPath\WixUIExtension.dll"
 
 # we currently only support x64, but we'll leave the 32 bit support here
 # in case we eventually decide to provide a 32-bit driver
-# upgradeCodes and productCodes are pre-generated for the next several releases 
+# we will need to add a product code should we ever want to have a v1.x and v2.x version side by side
 if ($Arch -eq "x64") {
-    $upgradeCode = "a4b5342b-25fc-4978-8347-8686684ddba2" 
-    $productCode = "72118595-650f-47a6-bd0f-8c21888bb115"
+    $productCode = "72118595-650f-47a6-bd0f-8c21888bb116"
 }
 else {
-    $upgradeCode = "ade38aac-c8ca-11ed-afa1-0242ac120002"
     $productCode = "15e9a1ea-5c6e-4fe8-9f48-6dc23def5ec1"
 }
 
 
 # compile wxs into .wixobjs
 & $WixPath\candle.exe -wx `
-    -dProductId="$ProductCode" `
+    -dProductId="$productCode" `
     -dPlatform="$Arch" `
     -dUpgradeCode="$UpgradeCode" `
     -dVersion="$Version" `

@@ -2,7 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
     <Fragment>
         <FeatureGroup Id="fg_All">
-            <Feature Id="ProductAll" Title="!(wix.ProductName)" Description="!(wix.ProductName)" Level="1" ConfigurableDirectory="INSTALLLOCATION">
+            <Feature Id="ProductAll" Title="!(wix.ProductName)" Description="!(wix.ProductName)" Level="1" ConfigurableDirectory="PROJECT">
                 <ComponentGroupRef Id="base" />
                 <ComponentGroupRef Id="cg_License" />
             </Feature>

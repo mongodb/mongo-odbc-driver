@@ -10,7 +10,6 @@
             <Component Id="InstallDriver" Guid="*" Win64="$(var.win64Flag)">
                 <File Id="atsql.dll" Name="atsql.dll" Source="atsql.dll" />
                 <File Id="atsqls.dll" Name="atsqls.dll" Source="atsqls.dll" />
-                <File Id="makeactive" Name="make-active.bat" Source="make-active.bat" />
                 <RegistryKey ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Id="MongoDBKey" Key="SOFTWARE\MongoDB\[ProductName]" Root="HKLM" />
                 <RegistryValue Id="Version" Key="SOFTWARE\MongoDB\[ProductName]" Name="Version" Root="HKLM" Type="string" Value="[ProductVersion]" />
                 <RegistryValue Id="mongodb.reg.1" Root="HKLM" Key="SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" Name="MongoDB Atlas SQL ODBC Driver" Type="string" Value="Installed" />
