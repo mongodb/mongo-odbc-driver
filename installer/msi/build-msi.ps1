@@ -25,9 +25,9 @@ $sourceDir = Get-Location
 $resourceDir = Get-Location
 $binDir = Get-Location
 $objDIr = ".\objs\"
-# $WixPath = "C:\wixtools\bin\"
+$WixPath = "C:\wixtools\bin\"
 # for local building, most installations will be in the directory below
-$WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
+# $WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $wixUiExt = "$WixPath\WixUIExtension.dll"
 
 # we currently only support x64, but we'll leave the 32 bit support here
