@@ -67,9 +67,13 @@ functions:
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
+          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/mongoodbc.msi"
+          UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
+            export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
+            export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
@@ -544,7 +548,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/mongoodbc.msi
+        remote_file: ${WINDOWS_INSTALLER_PATH}
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -610,7 +614,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
-        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz
+        remote_file: ${UBUNTU2204_INSTALLER_PATH}
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1288,6 +1292,30 @@ functions:
         content_type: application/octet-stream
         display_name: crash-dump-
 
+  "update download center feed":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          # Update the template to generate the feed for this release
+          sed -i 's@{RELEASE_VERSION}@'${RELEASE_VERSION}'@' mongo-odbc-downloads_template.json
+          sed -i 's@{WINDOWS_INSTALLER_PATH}@'${WINDOWS_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
+          sed -i 's@{UBUNTU2204_INSTALLER_PATH}@'${UBUNTU2204_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
+          echo "-------------------------"
+          cat mongo-odbc-downloads_template.json
+          echo "-------------------------"
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-downloads_template.json
+        remote_file: mongosql-odbc-driver/mongo-odbc-downloads.json
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/json
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -1480,6 +1508,13 @@ tasks:
       - func: "upload release"
       - func: "upload debug"
 
+  - name: download-center-update
+    git_tag_only: true
+    depends_on:
+      - name: release
+    commands:
+      - func: "update download center feed"
+
   - name: release
     git_tag_only: true
     depends_on:
@@ -1586,3 +1621,4 @@ buildvariants:
     tasks:
       - name: release
       - name: snapshot
+      - name: download-center-update

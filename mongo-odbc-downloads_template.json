@@ -1,0 +1,19 @@
+{
+  "manual_link": "https://www.mongodb.com/docs/atlas/data-federation/query/query-with-sql/",
+  "release_notes_link": "https://www.mongodb.com/docs/atlas/release-notes/sql/",
+  "versions": [
+    {
+      "version": "{RELEASE_VERSION}",
+      "platform": [
+        {
+          "name": "Windows",
+          "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{WINDOWS_INSTALLER_PATH}"
+        },
+        {
+          "name": "Ubuntu 22.04 (x86_64)",
+          "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{UBUNTU2204_INSTALLER_PATH}"
+        }
+      ]
+    }
+  ]
+}
