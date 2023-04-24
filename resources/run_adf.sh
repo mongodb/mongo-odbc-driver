@@ -291,9 +291,11 @@ if [[ $? -ne 0 ]]; then
             git clone $MONGOHOUSE_URI $MONGOHOUSE_DIR
         fi
         cd $MONGOHOUSE_DIR
+
         # for now, we checkout a specific working commit of ADF
         # TODO SQL-1374: Find a better long term solution
         git checkout 247a246
+
         export GOPRIVATE=github.com/10gen
         $GO mod download
     fi
