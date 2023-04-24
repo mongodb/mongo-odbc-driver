@@ -385,12 +385,12 @@ impl IntoCData for Bson {
                     (
                         NaiveDate::parse_from_str(s, "%F")
                             .map_err(|_| ODBCError::InvalidDatetimeFormat)?,
-                        NaiveTime::from_hms(0, 0, 0),
+                        NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
                     )
                 } else {
                     let time = NaiveTime::parse_from_str(s, "%T%.f")
                         .map_err(|_| ODBCError::InvalidDatetimeFormat)?;
-                    (Utc::today().naive_utc(), time)
+                    (Utc::now().naive_utc().date(), time)
                 };
                 Ok((
                     DateTime::<Utc>::from_utc(NaiveDateTime::new(date, time), Utc),
@@ -408,7 +408,7 @@ impl IntoCData for Bson {
                 let chrono_datetime = (*d).to_chrono();
                 Ok((
                     chrono_datetime.date_naive(),
-                    (chrono_datetime.time() != NaiveTime::from_hms_nano(0, 0, 0, 0))
+                    (chrono_datetime.time() != NaiveTime::from_hms_nano_opt(0, 0, 0, 0).unwrap())
                         .then_some(ODBCError::TimeTruncation(d.to_string())),
                 ))
             }
@@ -420,11 +420,12 @@ impl IntoCData for Bson {
                 } else {
                     NaiveDate::parse_from_str(s, "%F")
                         .map_err(|_| ODBCError::InvalidDatetimeFormat)?
-                        .and_hms(0, 0, 0)
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap()
                 };
                 Ok((
                     dt.date(),
-                    (dt.time() != NaiveTime::from_hms_nano(0, 0, 0, 0))
+                    (dt.time() != NaiveTime::from_hms_nano_opt(0, 0, 0, 0).unwrap())
                         .then_some(ODBCError::TimeTruncation(s.clone())),
                 ))
             }
@@ -946,7 +947,7 @@ unsafe fn set_output_wstring_helper(
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
     copy_nonoverlapping(message.as_ptr(), output_ptr, num_chars - 1);
-    *output_ptr.add(num_chars - 1) = 0u16;
+    *output_ptr.add(num_chars - 1) = 0;
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars <= message.len() {
@@ -1207,7 +1208,7 @@ pub mod isize_len {
     ///
     pub unsafe fn set_output_wstring_as_bytes(
         stmt: &Statement,
-        message: Vec<u16>,
+        message: Vec<WideChar>,
         col_num: USmallInt,
         index: usize,
         output_ptr: *mut WideChar,
@@ -1354,7 +1355,7 @@ mod unit {
     #[test]
     fn date_format() {
         assert_eq!(
-            Utc.timestamp(1003483404, 123000000),
+            Utc.timestamp_opt(1003483404, 123000000).unwrap(),
             bson!("2001-10-19T09:23:24.123Z").to_datetime().unwrap().0
         );
     }
@@ -1674,9 +1675,16 @@ mod unit {
                 "2014-11-28T09:23:24Z".parse().unwrap();
             let datetime_expectation_millis: DateTime<Utc> =
                 "2014-11-28T09:23:24.123456789Z".parse().unwrap();
-            let today_plus_time_no_millis_expectation = Utc::today().and_hms(9, 23, 24);
-            let today_plus_time_millis_expectation =
-                Utc::today().and_hms_nano(9, 23, 24, 123456789);
+            let today_plus_time_no_millis_expectation =
+                DateTime::from_utc(Utc::now().date_naive().and_hms_opt(9, 23, 24).unwrap(), Utc);
+            let today_plus_time_millis_expectation = DateTime::from_utc(
+                Utc::now()
+                    .naive_utc()
+                    .date()
+                    .and_hms_nano_opt(9, 23, 24, 123456789)
+                    .unwrap(),
+                Utc,
+            );
 
             type V = Vec<(
                 &'static str,
@@ -1785,7 +1793,7 @@ mod unit {
 
         #[test]
         fn string_conversions_to_dates() {
-            let date_expectation = NaiveDate::from_ymd(2014, 11, 28);
+            let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("2014-11-28", Ok(()), None),
                 ("11/28/2014", Err(()), Some(INVALID_DATETIME_FORMAT)),
@@ -1820,7 +1828,7 @@ mod unit {
 
         #[test]
         fn datetime_conversions_to_dates() {
-            let date_expectation = NaiveDate::from_ymd(2014, 11, 28);
+            let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
             let test_cases: [(chrono::DateTime<Utc>, Option<&str>); 2] = [
                 ("2014-11-28T00:00:00Z".parse().unwrap(), None),
                 (
@@ -1840,7 +1848,7 @@ mod unit {
 
         #[test]
         fn string_conversions_to_times() {
-            let time_expectation = NaiveTime::from_hms(10, 15, 30);
+            let time_expectation = NaiveTime::from_hms_opt(10, 15, 30).unwrap();
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("10:15:30", Ok(()), None),
                 ("10:15:30.00000", Ok(()), None),
@@ -1878,7 +1886,7 @@ mod unit {
 
         #[test]
         fn datetime_conversions_to_times() {
-            let time_expectation = NaiveTime::from_hms(10, 15, 30);
+            let time_expectation = NaiveTime::from_hms_opt(10, 15, 30).unwrap();
             let test_cases: [(chrono::DateTime<Utc>, Option<&str>); 2] = [
                 ("2014-11-28T10:15:30Z".parse().unwrap(), None),
                 (

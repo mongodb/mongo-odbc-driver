@@ -84,7 +84,7 @@ pub(crate) fn statement_attribute_to_string(attr: StatementAttribute) -> String 
 }
 
 pub(crate) fn get_driver_path() -> String {
-    let mut buffer = [0u16; 1024];
+    let mut buffer = [0; 1024];
     unsafe {
         SQLGetPrivateProfileStringW(
             to_widechar_ptr(DRIVER_NAME).0,

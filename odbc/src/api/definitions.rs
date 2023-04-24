@@ -7,12 +7,6 @@ pub enum SqlBool {
 }
 
 // Environment attributes
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
-pub enum CharSet {
-    Utf16 = 1,
-}
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum OdbcVersion {
     Odbc3 = 3,

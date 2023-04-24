@@ -25,7 +25,7 @@ macro_rules! test_get_info {
                     Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
                 let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
 
-                let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 100])) as *mut _;
+                let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 900])) as *mut _;
                 let out_length: *mut SmallInt = &mut 10;
 
                 #[allow(unused_mut, unused_assignments)]
@@ -137,7 +137,7 @@ mod unit {
         info_type = InfoType::SQL_SEARCH_PATTERN_ESCAPE as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         buffer_length = 3 * size_of::<WideChar>() as i16,
-        expected_length = 2,
+        expected_length = size_of::<WideChar>() as i16,
         expected_value = r"\",
         actual_value_modifier = modify_string_value,
     );

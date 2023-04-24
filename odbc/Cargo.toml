@@ -16,17 +16,16 @@ lazy_static = "1.4.0"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
 regex = "1.6.0"
-chrono = "=0.4.22"                                # pinning to =0.4.22 TODO: SQL-1345: bump chrono and use non-deprecated methods
+chrono = "0.4.24"
 constants = { path = "../constants" }
 mongo-odbc-core = { path = "../core" }
 cstr = { path = "../cstr" }
 function_name = "0.3.0"
 serde_json = "1.0.68"
-odbc-sys = "0.21.2"
+odbc-sys = { path = "../odbc-sys" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 logger = { path = "../logger" }
 log = "0.4.17"
-
 
 [dependencies.mongodb]
 version = "2.3"

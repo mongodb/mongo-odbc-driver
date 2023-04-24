@@ -1,16 +1,51 @@
+use num_derive::FromPrimitive;
 use std::ptr::copy_nonoverlapping;
 
-pub type WideChar = u16;
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+pub enum Charset {
+    Utf16 = 1,
+    Utf32 = 2,
+}
+
 pub type Char = u8;
 
+#[cfg(feature = "utf32")]
+pub type WideChar = u32;
+
+#[cfg(feature = "utf32")]
+pub const CHARSET: Charset = Charset::Utf32;
+#[cfg(feature = "utf32")]
+pub fn from_widechar_ref_lossy(v: &[WideChar]) -> String {
+    widestring::decode_utf32_lossy(v.iter().copied()).collect::<String>()
+}
+
+#[cfg(feature = "utf32")]
+pub fn from_widechar_vec_lossy(v: Vec<WideChar>) -> String {
+    widestring::decode_utf32_lossy(v).collect::<String>()
+}
+
+#[cfg(feature = "utf32")]
+pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
+    widestring::encode_utf32(s.chars()).collect::<Vec<_>>()
+}
+
+#[cfg(not(feature = "utf32"))]
+pub type WideChar = u16;
+
+#[cfg(not(feature = "utf32"))]
+pub const CHARSET: Charset = Charset::Utf16;
+
+#[cfg(not(feature = "utf32"))]
 pub fn from_widechar_vec_lossy(v: Vec<u16>) -> String {
     widestring::decode_utf16_lossy(v).collect::<String>()
 }
 
-pub fn from_widechar_ref_lossy(v: &[u16]) -> String {
+#[cfg(not(feature = "utf32"))]
+pub fn from_widechar_ref_lossy(v: &[WideChar]) -> String {
     widestring::decode_utf16_lossy(v.iter().copied()).collect::<String>()
 }
 
+#[cfg(not(feature = "utf32"))]
 pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
     widestring::encode_utf16(s.chars()).collect::<Vec<_>>()
 }
@@ -115,7 +150,7 @@ pub unsafe fn parse_attribute_string_a(text: *const Char) -> String {
 ///
 /// to_widechar_ptr converts the input string to a null terminated string encoded in UTF-16.
 ///
-pub fn to_widechar_ptr(s: &str) -> (*mut WideChar, Vec<u16>) {
+pub fn to_widechar_ptr(s: &str) -> (*mut WideChar, Vec<WideChar>) {
     let mut v = to_widechar_vec(s);
     v.push(0);
     (v.as_mut_ptr(), v)
@@ -171,7 +206,7 @@ mod test {
     fn test_write_to_buffer_with_enough_space() {
         let expected = "test\0\0\0\0\0";
         let input = "test";
-        let mut buffer = [0u16; 9];
+        let mut buffer = [0; 9];
         let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
@@ -181,7 +216,7 @@ mod test {
     fn test_write_to_buffer_constrained_space() {
         let expected = "te\0";
         let input = "testing";
-        let mut buffer = [0u16; 3];
+        let mut buffer: [WideChar; 3] = [0; 3];
         let len = unsafe { write_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
@@ -191,7 +226,7 @@ mod test {
     fn test_write_to_buffer_when_message_len_is_buffer_len() {
         let expected = "tes\0";
         let input = "test";
-        let mut buffer = [0u16; 4];
+        let mut buffer: [WideChar; 4] = [0; 4];
         let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);

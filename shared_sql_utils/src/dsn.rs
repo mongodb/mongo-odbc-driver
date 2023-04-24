@@ -125,6 +125,7 @@ impl Dsn {
 
     pub fn from_private_profile_string(&self) -> Result<Self, DsnError> {
         let mut dsn_opts = Dsn::default();
+
         let mut error_key = "";
 
         // SQLGetPrivateProfileStringW is hopelessly broken in unixodbc. As a workaround,
@@ -135,7 +136,7 @@ impl Dsn {
         // All odbc implementations (windows, unixodbc, iODBC) return the available
         // keys in a DSN as a null-terminated string of null-terminated strings.
         let dsn_keys = if cfg!(not(target_os = "linux")) {
-            let wbuf = &mut [0u16; 1024];
+            let wbuf = &mut [0; 1024];
             unsafe {
                 SQLGetPrivateProfileStringW(
                     to_widechar_ptr(&self.dsn).0,
@@ -162,7 +163,7 @@ impl Dsn {
             }
             unsafe { parse_attribute_string_a(abuf.as_mut_ptr()) }
         };
-        let buffer = &mut [0u16; 1024];
+        let buffer = &mut [0; 1024];
         dsn_keys
             .split(';')
             .filter(|s| !s.is_empty())
@@ -361,9 +362,7 @@ mod test {
 
     #[test]
     fn test_set_field() {
-        let mut dsn_opts = Dsn {
-            ..Default::default()
-        };
+        let mut dsn_opts = Dsn::default();
         dsn_opts.set_field("PWD", "hunter2");
         assert_eq!(dsn_opts.password, "hunter2");
         dsn_opts.set_field("pwd", "hunter3");

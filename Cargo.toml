@@ -4,6 +4,7 @@ members = [
   "constants",
   "cstr",
   "odbc",
+  "odbc-sys",
   "core",
   "integration_test",
   "win_setupgui",
