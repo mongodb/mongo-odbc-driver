@@ -44,13 +44,10 @@
                         <Directory Id="ProgramFilesFolder">
                                 <Directory Id="MongoDB"
                                         Name="MongoDB">
-                                        <Directory Id="Project"
+                                        <Directory Id="PROJECT"
                                                 Name="ODBC">
-                                                <Directory Id="INSTALLLOCATION"
-                                                        Name="!(wix.InstallFolder)">
-                                                        <Directory Id="BIN"
-                                                                Name="bin" />
-                                                </Directory>
+                                                <Directory Id="BIN"
+                                                        Name="bin" />
                                         </Directory>
                                 </Directory>
                         </Directory>
