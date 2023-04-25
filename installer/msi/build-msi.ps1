@@ -14,8 +14,7 @@
 Param(
     [string]$Arch,
     [string]$Version,
-    [string]$VersionLabel,
-    [string]$UpgradeCode
+    [string]$VersionLabel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,9 +34,11 @@ $wixUiExt = "$WixPath\WixUIExtension.dll"
 # we will need to add a product code should we ever want to have a v1.x and v2.x version side by side
 if ($Arch -eq "x64") {
     $productCode = "72118595-650f-47a6-bd0f-8c21888bb116"
+    $upgradeCode = "806440a5-1623-44b6-9d7c-8efbeaa8e316"
 }
 else {
     $productCode = "15e9a1ea-5c6e-4fe8-9f48-6dc23def5ec1"
+    $upgradeCode = "8344fddd-a83e-4232-88f8-8b8bd387e0f8"
 }
 
 
@@ -45,7 +46,7 @@ else {
 & $WixPath\candle.exe -wx `
     -dProductId="$productCode" `
     -dPlatform="$Arch" `
-    -dUpgradeCode="$UpgradeCode" `
+    -dUpgradeCode="$upgradeCode" `
     -dVersion="$Version" `
     -dVersionLabel="$VersionLabel" `
     -dProjectName="$ProjectName" `
