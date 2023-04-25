@@ -182,7 +182,7 @@ elif [ $OS = "Darwin" ]; then
     MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/osx/$MONGO_DOWNLOAD_MAC_ARM
     MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_MAC_ARM
     MONGOSH_DOWNLOAD_FILE=$MONGOSH_DOWNLOAD_MAC_FILE_ARM
-    MONGOSH_DOWNLOAD_LINK=$MONGOSH_DOWNLOAD_BASE/$MONGOSH_DOWNLOAD_FILE_ARM
+    MONGOSH_DOWNLOAD_LINK=$MONGOSH_DOWNLOAD_BASE/$MONGOSH_DOWNLOAD_MAC_FILE_ARM
   fi
 elif [[ $OS =~ ^CYGWIN ]]; then
   MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/windows/$MONGO_DOWNLOAD_WIN
@@ -203,10 +203,11 @@ install_mongodb() {
       MONGO_UNZIP_DIR=$(unzip -lq $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE | grep mongod.exe | tr -s ' ' \
 	          | cut -d ' ' -f 5 | cut -d/ -f1)
       chmod -R +x $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR/bin/
-      echo $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR
     else
       tar zxf $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR
-      echo $LOCAL_INSTALL_DIR/${MONGO_DOWNLOAD_FILE:0:$((${#MONGO_DOWNLOAD_FILE} - 4))}
+      >&2 echo "tar zxf $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR"
+      # for some reason the arm64 zip contains a directory with aarch64 instead of arm64. Joy.
+      echo $LOCAL_INSTALL_DIR/${MONGO_DOWNLOAD_FILE:0:$((${#MONGO_DOWNLOAD_FILE} - 4))} | sed 's|arm|aarch|'
     fi
 }
 
