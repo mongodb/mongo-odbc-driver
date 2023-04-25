@@ -15,6 +15,6 @@ constants = { path = "../constants" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 
 [dependencies.mongodb]
-version = "2.3"
+version = "2.5"
 default-features = false
 features = ["tokio-sync"]
