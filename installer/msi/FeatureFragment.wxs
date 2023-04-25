@@ -4,10 +4,10 @@
     <Fragment>
         <FeatureGroup Id="fg_All">
             <Feature Id="ProductAll"
-                     Title="!(wix.ProductName)"
-                     Description="!(wix.ProductName)"
-                     Level="1"
-                     ConfigurableDirectory="PROJECT">
+                Title="!(wix.ProductName)"
+                Description="!(wix.ProductName)"
+                Level="1"
+                ConfigurableDirectory="PROJECT">
                 <ComponentGroupRef Id="base" />
                 <ComponentGroupRef Id="cg_License" />
             </Feature>
