@@ -205,7 +205,6 @@ install_mongodb() {
       chmod -R +x $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR/bin/
     else
       tar zxf $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR
-      >&2 echo "tar zxf $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR"
       # for some reason the arm64 zip contains a directory with aarch64 instead of arm64. Joy.
       echo $LOCAL_INSTALL_DIR/${MONGO_DOWNLOAD_FILE:0:$((${#MONGO_DOWNLOAD_FILE} - 4))} | sed 's|arm|aarch|'
     fi
