@@ -1,7 +1,5 @@
 use crate::api::{definitions::*, errors::ODBCError};
-use bson::UuidRepresentation;
 use cstr::{Charset, WideChar};
-use lazy_static::lazy_static;
 use logger::Logger;
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
@@ -9,7 +7,7 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     ptr::null_mut,
-    sync::{Mutex, RwLock},
+    sync::RwLock,
 };
 
 #[derive(Debug)]
@@ -228,10 +226,6 @@ pub struct Connection {
     // all Statements allocated from this Connection
     pub statements: RwLock<HashSet<*mut MongoHandle>>,
     pub errors: RwLock<Vec<ODBCError>>,
-}
-
-lazy_static! {
-    pub static ref UUID_REPR: Mutex<Option<UuidRepresentation>> = Mutex::new(None);
 }
 
 #[derive(Debug, Default)]
