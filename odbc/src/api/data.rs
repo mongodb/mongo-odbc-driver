@@ -4,10 +4,9 @@ use crate::{
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle, Statement},
 };
-use bson::{spec::BinarySubtype, Bson};
+use bson::{spec::BinarySubtype, Bson, UuidRepresentation};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use cstr::WideChar;
-use mongo_odbc_core::util::Decimal128Plus;
 use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
@@ -23,16 +22,15 @@ const UINT64: &str = "UInt64";
 const BIT: &str = "Bit";
 const DATETIME: &str = "DateTime";
 const GUID: &str = "GUID";
-const UUID_REPR: &str = "UUID_REPRESENTATION";
 
 type Result<T> = std::result::Result<T, ODBCError>;
 
 /// IntoCData is just used for adding methods to bson::Bson.
 trait IntoCData {
-    fn to_json(self) -> String;
-    fn to_json_val(self) -> Value;
-    fn to_binary(self) -> Result<Vec<u8>>;
-    fn to_guid(self) -> Result<Vec<u8>>;
+    fn to_json(self, uuid_repr: Option<UuidRepresentation>) -> String;
+    fn to_json_val(self, uuid_repr: Option<UuidRepresentation>) -> Value;
+    fn to_binary(self, uuid_repr: Option<UuidRepresentation>) -> Result<Vec<u8>>;
+    fn to_guid(self, uuid_repr: Option<UuidRepresentation>) -> Result<Vec<u8>>;
     fn to_f64(&self) -> Result<(f64, Option<ODBCError>)>;
     fn to_f32(&self) -> Result<(f32, Option<ODBCError>)>;
     fn to_i64(&self) -> Result<(i64, Option<ODBCError>)>;
@@ -84,54 +82,44 @@ fn from_string(s: &str, conversion_error_type: &'static str) -> Result<f64> {
 impl IntoCData for Bson {
     // TODO SQL-1068: This is a temporary solution to allow us to display Decimal128 values
     // to the user. This should be removed once the driver has first-class Decimal128 support.
-    fn to_json_val(self) -> Value {
+    fn to_json_val(self, uuid_repr: Option<UuidRepresentation>) -> Value {
         match self {
-            Bson::Array(v) => Value::Array(v.into_iter().map(|b| b.to_json_val()).collect()),
-            Bson::Document(v) => {
-                Value::Object(v.into_iter().map(|(k, v)| (k, v.to_json_val())).collect())
+            Bson::Array(v) => {
+                Value::Array(v.into_iter().map(|b| b.to_json_val(uuid_repr)).collect())
             }
-            Bson::Decimal128(d) => Value::String(d.to_formatted_string()),
+            Bson::Document(v) => Value::Object(
+                v.into_iter()
+                    .map(|(k, v)| (k, v.to_json_val(uuid_repr)))
+                    .collect(),
+            ),
+            Bson::Decimal128(d) => Value::String(d.to_string()),
             Bson::String(s) => Value::String(s),
             Bson::Binary(b) if b.subtype == BinarySubtype::Uuid => {
                 json!({"$uuid": b.to_uuid().unwrap().to_string()})
             }
             Bson::Binary(b) if b.subtype == BinarySubtype::UuidOld => {
-                let uuid_repr = match std::env::var(UUID_REPR)
-                    .unwrap_or("pythonLegacy".to_string())
-                    .as_str()
-                {
-                    "csharpLegacy" => bson::UuidRepresentation::CSharpLegacy,
-                    "javaLegacy" => bson::UuidRepresentation::JavaLegacy,
-                    _ => bson::UuidRepresentation::PythonLegacy,
-                };
-                json!({"$uuid": b.to_uuid_with_representation(uuid_repr).unwrap().to_string()})
+                json!({"$uuid": b.to_uuid_with_representation(uuid_repr.unwrap_or(UuidRepresentation::PythonLegacy)).unwrap().to_string()})
             }
             _ => self.into_relaxed_extjson(),
         }
     }
-    fn to_json(self) -> String {
+    fn to_json(self, uuid_repr: Option<UuidRepresentation>) -> String {
         match self {
             Bson::String(s) => s,
-            _ => self.to_json_val().to_string(),
+            _ => self.to_json_val(uuid_repr).to_string(),
         }
     }
 
-    fn to_binary(self) -> Result<Vec<u8>> {
-        Ok(self.to_json().into_bytes())
+    fn to_binary(self, uuid_repr: Option<UuidRepresentation>) -> Result<Vec<u8>> {
+        Ok(self.to_json(uuid_repr).into_bytes())
     }
 
-    fn to_guid(self) -> Result<Vec<u8>> {
+    fn to_guid(self, uuid_repr: Option<UuidRepresentation>) -> Result<Vec<u8>> {
         match self {
-            Bson::Binary(b) => {
-                if b.subtype != BinarySubtype::Uuid {
-                    Err(ODBCError::RestrictedDataType(
-                        "binary with non-uuid subtype",
-                        GUID,
-                    ))
-                } else {
-                    Ok(b.bytes)
-                }
-            }
+            Bson::Binary(b) if b.subtype != BinarySubtype::Uuid => Err(
+                ODBCError::RestrictedDataType("binary with non-uuid subtype", GUID),
+            ),
+            Bson::Binary(_) => Ok(self.to_json(uuid_repr).into_bytes()),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), GUID)),
         }
     }
@@ -143,10 +131,7 @@ impl IntoCData for Bson {
             Bson::Boolean(b) => Ok((if *b { 1.0 } else { 0.0 }, None)),
             Bson::Int32(i) => Ok((*i as f64, None)),
             Bson::Int64(i) => Ok((*i as f64, None)),
-            Bson::Decimal128(d) => {
-                let d_str = d.to_formatted_string();
-                Bson::Double(from_string(&d_str, DOUBLE)?).to_f64()
-            }
+            Bson::Decimal128(d) => Bson::Double(from_string(&d.to_string(), DOUBLE)?).to_f64(),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
         }
     }
@@ -165,10 +150,7 @@ impl IntoCData for Bson {
             Bson::Boolean(b) => Ok((if *b { 1.0 } else { 0.0 }, None)),
             Bson::Int32(i) => Ok((*i as f32, None)),
             Bson::Int64(i) => Ok((*i as f32, None)),
-            Bson::Decimal128(d) => {
-                let d_str = d.to_formatted_string();
-                Bson::Double(from_string(&d_str, DOUBLE)?).to_f32()
-            }
+            Bson::Decimal128(d) => Bson::Double(from_string(&d.to_string(), DOUBLE)?).to_f32(),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
         }
     }
@@ -787,12 +769,27 @@ pub unsafe fn format_bson_data(
         }
         _ => {}
     }
+
+    let uuid_repr = match &mongo_handle.as_connection() {
+        Some(conn) => match conn.mongo_connection.read() {
+            Ok(conn) => {
+                if conn.as_ref().is_some() {
+                    conn.as_ref().unwrap().uuid_repr
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        },
+        None => None,
+    };
+
     match target_type {
         CDataType::SQL_C_BINARY | CDataType::SQL_C_GUID => {
             let data = if target_type == CDataType::SQL_C_GUID {
-                data.to_guid()
+                data.to_guid(uuid_repr)
             } else {
-                data.to_binary()
+                data.to_binary(uuid_repr)
             };
             match data {
                 Ok(data) => format_binary(
@@ -813,7 +810,7 @@ pub unsafe fn format_bson_data(
             }
         }
         CDataType::SQL_C_CHAR => {
-            let data = data.to_json().bytes().collect::<Vec<u8>>();
+            let data = data.to_json(uuid_repr).bytes().collect::<Vec<u8>>();
             char_data!(
                 mongo_handle,
                 col_num,
@@ -826,7 +823,7 @@ pub unsafe fn format_bson_data(
             )
         }
         CDataType::SQL_C_WCHAR => {
-            let data = cstr::to_widechar_vec(&data.to_json());
+            let data = cstr::to_widechar_vec(&data.to_json(uuid_repr));
             char_data!(
                 mongo_handle,
                 col_num,

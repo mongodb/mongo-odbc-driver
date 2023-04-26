@@ -394,7 +394,7 @@ checksum = "04414300db88f70d74c5ff54e50f9e1d1737d9a5b90f53fcf2e95ca2a9ab554b"
 dependencies = [
  "libc",
  "redox_users",
- "windows-sys",
+ "windows-sys 0.45.0",
 ]
 
 [[package]]

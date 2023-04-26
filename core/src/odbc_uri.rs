@@ -1,7 +1,7 @@
 use crate::err::{Error, Result};
 use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
 use lazy_static::lazy_static;
-use mongodb::options::{ClientOptions, Credential, ServerAddress};
+use mongodb::options::{ClientOptions, ConnectionString, Credential, ServerAddress};
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use shared_sql_utils::Dsn;
 use std::collections::HashMap;
@@ -208,7 +208,7 @@ impl ODBCUri {
 
     // try_into_client_options converts this ODBCUri to a mongo_uri String. It will
     // remove all the attributes necessary to make a mongo_uri. This is destructive!
-    pub fn try_into_client_options(&mut self) -> Result<ClientOptions> {
+    pub fn try_into_client_options(&mut self) -> Result<(ClientOptions, Option<ConnectionString>)> {
         let uri = self.remove(URI_KWS);
         if let Some(uri) = uri {
             return self.handle_uri(&uri);
@@ -257,7 +257,7 @@ impl ODBCUri {
         Ok(())
     }
 
-    fn handle_uri(&mut self, uri: &str) -> Result<ClientOptions> {
+    fn handle_uri(&mut self, uri: &str) -> Result<(ClientOptions, Option<ConnectionString>)> {
         let server = self.remove(SERVER_KWS);
         let source = AUTH_SOURCE_REGEX
             .captures(uri)
@@ -285,21 +285,26 @@ impl ODBCUri {
         }
         Self::set_server_and_source(&mut client_options, server, source.map(String::from))?;
         client_options.app_name = client_options.app_name.or(self.handle_app_name());
-        Ok(client_options)
+        let connection_string =
+            ConnectionString::parse(uri).map_err(Error::InvalidClientOptions)?;
+        Ok((client_options, Some(connection_string)))
     }
 
-    fn handle_no_uri(&mut self) -> Result<ClientOptions> {
+    fn handle_no_uri(&mut self) -> Result<(ClientOptions, Option<ConnectionString>)> {
         let user = self.remove_mandatory_attribute(USER_KWS)?;
         let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
         let server = self.remove_mandatory_attribute(SERVER_KWS)?;
         let cred = Credential::builder().username(user).password(pwd).build();
-        Ok(ClientOptions::builder()
-            .hosts(vec![
-                ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
-            ])
-            .credential(cred)
-            .app_name(self.handle_app_name())
-            .build())
+        Ok((
+            ClientOptions::builder()
+                .hosts(vec![
+                    ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
+                ])
+                .credential(cred)
+                .app_name(self.handle_app_name())
+                .build(),
+            None,
+        ))
     }
 
     fn handle_app_name(&mut self) -> Option<String> {
@@ -634,6 +639,7 @@ mod unit {
                     .unwrap()
                     .try_into_client_options()
                     .unwrap()
+                    .0
                     .credential
                     .unwrap()
                     .password
@@ -653,6 +659,7 @@ mod unit {
                     .unwrap()
                     .try_into_client_options()
                     .unwrap()
+                    .0
                     .credential
                     .unwrap()
                     .username
@@ -672,6 +679,7 @@ mod unit {
                     .unwrap()
                     .try_into_client_options()
                     .unwrap()
+                    .0
                     .credential
                     .unwrap()
                     .password
@@ -686,7 +694,8 @@ mod unit {
             let opts = ODBCUri::new("URI=mongodb://foo:bar@127.0.0.1:27017".to_string())
                 .unwrap()
                 .try_into_client_options()
-                .unwrap();
+                .unwrap()
+                .0;
             let cred = opts.credential.unwrap();
             assert_eq!(expected_cred.username, cred.username);
             assert_eq!(expected_cred.password, cred.password);
@@ -704,7 +713,8 @@ mod unit {
             )
             .unwrap()
             .try_into_client_options()
-            .unwrap();
+            .unwrap()
+            .0;
             let cred = opts.credential.unwrap();
             assert_eq!(expected_cred.username, cred.username);
             assert_eq!(expected_cred.password, cred.password);
@@ -719,7 +729,8 @@ mod unit {
             let opts = ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://127.0.0.1:27017".to_string())
                 .unwrap()
                 .try_into_client_options()
-                .unwrap();
+                .unwrap()
+                .0;
             let cred = opts.credential.unwrap();
             assert_eq!(expected_cred.username, cred.username);
             assert_eq!(expected_cred.password, cred.password);
@@ -734,7 +745,8 @@ mod unit {
             let opts = ODBCUri::new("PWD=bar;URI=mongodb://foo@127.0.0.1:27017".to_string())
                 .unwrap()
                 .try_into_client_options()
-                .unwrap();
+                .unwrap()
+                .0;
             let cred = opts.credential.unwrap();
             assert_eq!(expected_cred.username, cred.username);
             assert_eq!(expected_cred.password, cred.password);
@@ -782,7 +794,7 @@ mod unit {
                 (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
             ] {
             assert_eq!(
-                source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().unwrap().credential.unwrap().source);
+                source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().unwrap().0.credential.unwrap().source);
             }
         }
 
@@ -798,7 +810,7 @@ mod unit {
                 (Some(format!("{}+{}",POWERBI_CONNECTOR, DRIVER_METRICS_VERSION.as_str())), format!("URI=mongodb://localhost/?ssl=true&authSource=jfhbgvhj;UID=f;PWD=b;APPNAME={POWERBI_CONNECTOR}").as_str()),
             ] {
             assert_eq!(
-                source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().unwrap().app_name);
+                source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().unwrap().0.app_name);
             }
         }
 
@@ -812,7 +824,8 @@ mod unit {
             )
             .unwrap()
             .try_into_client_options()
-            .unwrap();
+            .unwrap()
+            .0;
             assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
         }
 
@@ -828,7 +841,7 @@ mod unit {
             let opts = ODBCUri::new("UID=foo;PWD=bar;SERVER=www.atlas.net:27017;User=foo2;Password=bar2;uri=mongodb://localhost:29000/?authSource=authDB&ssl=true".to_string())
                 .unwrap()
                 .try_into_client_options()
-                .unwrap();
+                .unwrap().0;
             let cred = opts.credential.unwrap();
             assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
             assert_eq!(expected_cred.username, cred.username);
