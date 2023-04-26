@@ -13,6 +13,11 @@ lazy_static! {
         env!("CARGO_PKG_VERSION_MINOR"),
         env!("CARGO_PKG_VERSION_PATCH")
     );
+    pub static ref DRIVER_LOG_VERSION: String = format!(
+        "{}.{}",
+        env!("CARGO_PKG_VERSION_MAJOR"),
+        env!("CARGO_PKG_VERSION_MINOR")
+    );
     pub static ref DEFAULT_APP_NAME: String =
         format!("{}+{}", DRIVER_SHORT_NAME, DRIVER_METRICS_VERSION.as_str());
     pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
