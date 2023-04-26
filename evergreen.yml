@@ -1296,11 +1296,11 @@ functions:
     # Download the current json feed used by the download center
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
         remote_file: mongosql-odbc-driver/mongo-odbc-downloads.json
         local_file: mongosql-odbc-driver/resources/download-center/mongo-odbc-downloads.json
-        bucket: mciuploads
+        bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/json
     # Update the file, adding the latest release
