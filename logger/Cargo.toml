@@ -11,3 +11,4 @@ log4rs = { version = "1.2.0", features = ["background_rotation"] }
 cstr = { path = "../cstr" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 constants = { path = "../constants" }
+directories = "5.0"

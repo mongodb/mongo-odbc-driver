@@ -6,40 +6,47 @@
     .
 .PARAMETER Arch
     The architecture, x86 or x64.
+.PARAMETER Version
+    The version of the driver.
+.PARAMETER VersionLabel
+    The version label of the driver.
 #>
 Param(
-  [string]$Arch,
-  [string]$Version,
-  [string]$VersionLabel,
-  [string]$UpgradeCode
+    [string]$Arch,
+    [string]$Version,
+    [string]$VersionLabel
 )
 
 $ErrorActionPreference = 'Stop'
 
 $ProjectName = "Atlas SQL ODBC"
-$sourceDir = pwd
-$resourceDir = pwd
-$binDir = pwd
+$sourceDir = Get-Location
+$resourceDir = Get-Location
+$binDir = Get-Location
 $objDIr = ".\objs\"
 $WixPath = "C:\wixtools\bin\"
 # for local building, most installations will be in the directory below
-#$WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
+# $WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $wixUiExt = "$WixPath\WixUIExtension.dll"
 
 # we currently only support x64, but we'll leave the 32 bit support here
 # in case we eventually decide to provide a 32-bit driver
+# we will need to add a product code should we ever want to have a v1.x and v2.x version side by side
 if ($Arch -eq "x64") {
-    $upgradeCode = "a4303fe6-c8ca-11ed-afa1-0242ac120002"
-} else {
-    $upgradeCode = "ade38aac-c8ca-11ed-afa1-0242ac120002"
+    $productCode = "72118595-650f-47a6-bd0f-8c21888bb116"
+    $upgradeCode = "806440a5-1623-44b6-9d7c-8efbeaa8e316"
+}
+else {
+    $productCode = "15e9a1ea-5c6e-4fe8-9f48-6dc23def5ec1"
+    $upgradeCode = "8344fddd-a83e-4232-88f8-8b8bd387e0f8"
 }
 
 
 # compile wxs into .wixobjs
 & $WixPath\candle.exe -wx `
-    -dProductId="*" `
+    -dProductId="$productCode" `
     -dPlatform="$Arch" `
-    -dUpgradeCode="$UpgradeCode" `
+    -dUpgradeCode="$upgradeCode" `
     -dVersion="$Version" `
     -dVersionLabel="$VersionLabel" `
     -dProjectName="$ProjectName" `
@@ -61,11 +68,11 @@ if ($Arch -eq "x64") {
     "$resourceDir\LicensingFragment.wxs" `
     "$resourceDir\UIFragment.wxs"
 
-if(-not $?) {
+if (-not $?) {
     exit 1
 }
 
-$artifactsDir = pwd
+$artifactsDir = Get-Location
 
 # link wixobjs into an msi
 & $WixPath\light.exe -wx `
@@ -79,6 +86,6 @@ $artifactsDir = pwd
     $objDir\UIFragment.wixobj
 
 trap {
-  write-output $_
-  exit 1
+    write-output $_
+    exit 1
 }
