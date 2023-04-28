@@ -1,8 +1,10 @@
 use crate::MongoQuery;
 use crate::{err::Result, Error};
 use bson::{doc, UuidRepresentation};
-use mongodb::options::ConnectionString;
-use mongodb::{options::ClientOptions, sync::Client};
+use mongodb::{
+    options::{ClientOptions, ConnectionString},
+    sync::Client,
+};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -38,15 +40,14 @@ impl MongoConnection {
     /// The initial operation time if provided should come from and will take precedence over the
     /// setting specified in the uri if any.
     pub fn connect(
-        mut options: (ClientOptions, Option<ConnectionString>),
+        (mut options, cs): (ClientOptions, Option<ConnectionString>),
         current_db: Option<String>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
     ) -> Result<Self> {
-        options.0.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
-        let client =
-            Client::with_options(options.0.clone()).map_err(Error::InvalidClientOptions)?;
-        let uuid_repr = options.1.and_then(|opts| opts.uuid_representation);
+        options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
+        let client = Client::with_options(options.clone()).map_err(Error::InvalidClientOptions)?;
+        let uuid_repr = cs.and_then(|opts| opts.uuid_representation);
         let connection = MongoConnection {
             client,
             current_db,

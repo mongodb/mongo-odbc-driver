@@ -80,8 +80,6 @@ fn from_string(s: &str, conversion_error_type: &'static str) -> Result<f64> {
 }
 
 impl IntoCData for Bson {
-    // TODO SQL-1068: This is a temporary solution to allow us to display Decimal128 values
-    // to the user. This should be removed once the driver has first-class Decimal128 support.
     fn to_json_val(self, uuid_repr: Option<UuidRepresentation>) -> Value {
         match self {
             Bson::Array(v) => {
@@ -92,7 +90,6 @@ impl IntoCData for Bson {
                     .map(|(k, v)| (k, v.to_json_val(uuid_repr)))
                     .collect(),
             ),
-            Bson::Decimal128(d) => Value::String(d.to_string()),
             Bson::String(s) => Value::String(s),
             Bson::Binary(b) if b.subtype == BinarySubtype::Uuid => {
                 json!({"$uuid": b.to_uuid().unwrap().to_string()})
@@ -1914,15 +1911,18 @@ mod unit {
         }
     }
 
-    // This just checks that f64 parsing can handle our output Decimal128 strings.
     mod decimal128_to_f64 {
-        use mongo_odbc_core::util::Decimal128Plus;
         use std::str::FromStr;
+
+        use bson::{Bson, Decimal128};
 
         #[test]
         fn nan() {
             assert!(f64::from_str(
-                &[0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 124].to_formatted_string(),
+                &Bson::Decimal128(Decimal128::from_bytes([
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 124
+                ]))
+                .to_string(),
             )
             .unwrap()
             .is_nan());
@@ -1933,7 +1933,10 @@ mod unit {
             assert_eq!(
                 f64::INFINITY,
                 f64::from_str(
-                    &[0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 120].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 120
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -1944,7 +1947,10 @@ mod unit {
             assert_eq!(
                 f64::NEG_INFINITY,
                 f64::from_str(
-                    &[0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 248].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 248
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -1955,7 +1961,10 @@ mod unit {
             assert_eq!(
                 0.0,
                 f64::from_str(
-                    &[0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 48].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 48
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -1966,7 +1975,10 @@ mod unit {
             assert_eq!(
                 0.0,
                 f64::from_str(
-                    &[0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 176].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 176
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -1979,7 +1991,10 @@ mod unit {
             assert_eq!(
                 1.0,
                 f64::from_str(
-                    &[1u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 48].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 48
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -1992,7 +2007,10 @@ mod unit {
             assert_eq!(
                 -1.0,
                 f64::from_str(
-                    &[1u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 176].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 176
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -2003,8 +2021,10 @@ mod unit {
             assert_eq!(
                 412345123451234512345.0,
                 f64::from_str(
-                    &[217u8, 109, 109, 175, 20, 41, 112, 90, 22, 0, 0, 0, 0, 0, 64, 48]
-                        .to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        217, 109, 109, 175, 20, 41, 112, 90, 22, 0, 0, 0, 0, 0, 64, 48
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -2015,8 +2035,10 @@ mod unit {
             assert_eq!(
                 -412345123451234512345.0,
                 f64::from_str(
-                    &[217u8, 109, 109, 175, 20, 41, 112, 90, 22, 0, 0, 0, 0, 0, 64, 176]
-                        .to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        217, 109, 109, 175, 20, 41, 112, 90, 22, 0, 0, 0, 0, 0, 64, 176
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -2027,7 +2049,10 @@ mod unit {
             assert_eq!(
                 1.8E+305,
                 f64::from_str(
-                    &[18u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 50].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 50
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -2038,7 +2063,10 @@ mod unit {
             assert_eq!(
                 -1.8E+305,
                 f64::from_str(
-                    &[18u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 178].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 178
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -2049,7 +2077,10 @@ mod unit {
             assert_eq!(
                 1.8E-305,
                 f64::from_str(
-                    &[18u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 220, 45].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 220, 45
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -2060,7 +2091,10 @@ mod unit {
             assert_eq!(
                 -1.8E-305,
                 f64::from_str(
-                    &[18u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 220, 173].to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 220, 173
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -2071,8 +2105,10 @@ mod unit {
             assert_eq!(
                 std::f64::consts::PI,
                 f64::from_str(
-                    &[96, 226, 246, 85, 188, 202, 251, 179, 1, 0, 0, 0, 0, 0, 26, 48]
-                        .to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        96, 226, 246, 85, 188, 202, 251, 179, 1, 0, 0, 0, 0, 0, 26, 48
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );
@@ -2083,8 +2119,10 @@ mod unit {
             assert_eq!(
                 -std::f64::consts::PI,
                 f64::from_str(
-                    &[96, 226, 246, 85, 188, 202, 251, 179, 1, 0, 0, 0, 0, 0, 26, 176]
-                        .to_formatted_string()
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        96, 226, 246, 85, 188, 202, 251, 179, 1, 0, 0, 0, 0, 0, 26, 176
+                    ]))
+                    .to_string()
                 )
                 .unwrap(),
             );

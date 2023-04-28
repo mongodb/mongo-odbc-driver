@@ -1,7 +1,5 @@
-mod decimal128;
 use bson::doc;
 use constants::SQL_ALL_TABLE_TYPES;
-pub use decimal128::Decimal128Plus;
 mod test_connection;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
