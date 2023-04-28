@@ -26,6 +26,36 @@ mod integration {
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
+    #[test]
+    fn uuid_csharp_legacy() {
+        let env_handle = allocate_env().unwrap();
+        let conn_str = crate::common::generate_uri_with_default_connection_string(
+            "uuidRepresentation=csharpLegacy",
+        );
+        let _ = connect_with_conn_string(env_handle, conn_str).unwrap();
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    #[test]
+    fn uuid_java_legacy() {
+        let env_handle = allocate_env().unwrap();
+        let conn_str = crate::common::generate_uri_with_default_connection_string(
+            "uuidRepresentation=javaLegacy",
+        );
+        let _ = connect_with_conn_string(env_handle, conn_str).unwrap();
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    #[test]
+    fn uuid_python_legacy() {
+        let env_handle = allocate_env().unwrap();
+        let conn_str = crate::common::generate_uri_with_default_connection_string(
+            "uuidRepresentation=pythonLegacy",
+        );
+        let _ = connect_with_conn_string(env_handle, conn_str).unwrap();
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
     /**
      * The following tests require a DSN called "ADF_Test" to be configured on the machine running the tests.
      */
