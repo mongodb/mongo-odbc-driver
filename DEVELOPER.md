@@ -31,6 +31,9 @@ Similar to building, standard cargo commands can be used here:
 cargo test unit
 ```
 
+### Other types of tests
+The other tests that are run are integration and result set tests. These involve more setup, and that setup is largely operating system specific. For more information on how to run these, consider checking [evergreen.yml](evergreen.yml), and following the steps taken for the given operating system-task (i.e. `macos-integration-test` or `windows-result-set-test`)
+
 ## Evergreen
 
 To run our suite of checks and tests against a given branch, a patch can be submitted to evergreen. The project id on evergreen is `mongosql-odbc-driver` (note the difference from the repository's name). An example command for testing your local, uncommited changes would be:
