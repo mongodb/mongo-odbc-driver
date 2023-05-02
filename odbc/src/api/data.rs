@@ -767,7 +767,7 @@ pub unsafe fn format_bson_data(
         _ => {}
     }
 
-    let uuid_repr = match (*mongo_handle).statement_as_connection() {
+    let uuid_repr = match (*mongo_handle).as_statement_connection() {
         Some(conn) => match conn.mongo_connection.read() {
             Ok(conn) => {
                 if conn.as_ref().is_some() {

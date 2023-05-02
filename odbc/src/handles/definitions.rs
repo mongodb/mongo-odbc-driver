@@ -47,7 +47,9 @@ impl MongoHandle {
         }
     }
 
-    pub fn statement_as_connection(&self) -> Option<&Connection> {
+    /// Returns a reference to the statement's connection, if there is
+    /// one.
+    pub fn as_statement_connection(&self) -> Option<&Connection> {
         match self {
             MongoHandle::Statement(stmt) => unsafe {
                 stmt.connection.as_ref().unwrap().as_connection()
