@@ -1,4 +1,5 @@
 use crate::err::{Error, Result};
+use bson::UuidRepresentation;
 use constants::{DEFAULT_APP_NAME, DRIVER_METRICS_VERSION};
 use lazy_static::lazy_static;
 use mongodb::options::{ClientOptions, ConnectionString, Credential, ServerAddress};
@@ -48,7 +49,7 @@ lazy_static! {
 #[derive(Debug)]
 pub struct UserOptions {
     pub client_options: ClientOptions,
-    pub connection_string: Option<ConnectionString>,
+    pub uuid_representation: Option<UuidRepresentation>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -291,11 +292,12 @@ impl ODBCUri {
         }
         Self::set_server_and_source(&mut client_options, server, source.map(String::from))?;
         client_options.app_name = client_options.app_name.or(self.handle_app_name());
-        let connection_string =
-            ConnectionString::parse(uri).map_err(Error::InvalidClientOptions)?;
+        let uuid_representation = ConnectionString::parse(uri)
+            .map_err(Error::InvalidClientOptions)?
+            .uuid_representation;
         Ok(UserOptions {
             client_options,
-            connection_string: Some(connection_string),
+            uuid_representation,
         })
     }
 
@@ -312,7 +314,7 @@ impl ODBCUri {
                 .credential(cred)
                 .app_name(self.handle_app_name())
                 .build(),
-            connection_string: None,
+            uuid_representation: None,
         })
     }
 
