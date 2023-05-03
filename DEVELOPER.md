@@ -10,9 +10,9 @@ For an unoptimized build with debugging information (most common), the following
 - (windows, linux): `cargo build`
 - (macos): `cargo build --features odbc-sys/iodbc,cstr/utf32`
 
-For an optimized build with debugging information, the following will build and output build files to the `target/release-with-debug` directory:
-- (windows, linux): `cargo build --profile=release-with-debug`
-- (macos): `cargo build --features odbc-sys/iodbc,cstr/utf32 --profile=release-with-debug`
+For an optimized build with debugging information, the following will build and output build files to the `target/release` directory:
+- (windows, linux): `cargo build --release`
+- (macos): `cargo build --features odbc-sys/iodbc,cstr/utf32 --release`
 
 ## Setting up the driver manager on MacOS
 
