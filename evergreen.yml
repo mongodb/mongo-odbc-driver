@@ -535,7 +535,7 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
         local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
         bucket: mciuploads
     - command: s3.put
