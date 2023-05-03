@@ -6,20 +6,13 @@
 
 To build and test the driver, the standard cargo commands can be used from the root directory.
 
-For an unoptimized build with debugging information (most common):
-```
-cargo build
-```
+For an unoptimized build with debugging information (most common), the following will build and output build files to the `target/debug` directory:
+- (windows, linux): `cargo build`
+- (macos): `cargo build --features odbc-sys/iodbc,cstr/utf32`
 
-For an optimized build with debugging info (mac)
-```
-cargo build --features odbc-sys/iodbc,cstr/utf32 --profile=release-with-debug
-```
-And for an optimized build with debugging info (windows, linux)
-```
-cargo build --profile=release-with-debug
-```
-The resulting build files will be output to the `target` directory in the `debug` or `release` folders respectively.
+For an optimized build with debugging information, the following will build and output build files to the `target/release-with-debug` directory:
+- (windows, linux): `cargo build --profile=release-with-debug`
+- (macos): `cargo build --features odbc-sys/iodbc,cstr/utf32 --profile=release-with-debug`
 
 ## Setting up the driver manager on MacOS
 
@@ -73,7 +66,7 @@ Similar to building, standard cargo commands can be used here:
 - (macos): `cargo test --features odbc-sys/iodbc,cstr/utf32 unit`
 
 ### Other types of tests
-The other tests that are run are integration and result set tests. These involve more setup, and that setup is largely operating system specific.
+The other tests that are run are integration and result set tests. These involve more setup, and that setup is largely operating system specific. Regardless of the operating system, the below environment variables must be set. Following this, subsections describe any operating specific steps for testing.
 
 ```
 ADF_TEST_LOCAL_USER: local adf username
@@ -85,12 +78,9 @@ MDB_TEST_LOCAL_PORT: local adf port
 ```
 
 #### macos
-First, start a local mongod and Atlas Data Federation instance. A necessary prerequisite is having golang installed (see [here](https://go.dev/doc/install))
+First, start a local mongod and Atlas Data Federation instance, and load sample data into them. A necessary prerequisite is having golang installed (see [here](https://go.dev/doc/install))
 ```
 ./resources/run_adf.sh start
-```
-Next, load data into your ADF instance:
-```
 cargo run --bin data_loader
 ```
 
