@@ -16,7 +16,7 @@ For an optimized build with debugging information, the following will build and 
 
 ## Setting up the driver manager on MacOS
 
-For macos, we use [iodbc](https://www.iodbc.org/dataspace/doc/iodbc/wiki/iodbcWiki/WelcomeVisitors) as the driver manager. To set up iODBC, first download and install it
+For macos, we use [iodbc](https://www.iodbc.org/dataspace/doc/iodbc/wiki/iodbcWiki/WelcomeVisitors) as the driver manager. To set up iODBC, first download and install it using the following commands:
 ```
 export $INSTALLED_ODBC_PATH=$PWD/installed_odbc/install"
 mkdir -p "$INSTALLED_ODBC_PATH"
@@ -36,7 +36,7 @@ cd "$iODBC_dir"
 make 
 make install
 ```
-Next, using the steps above, compile the release version with debug info. Additionally, set the library paths:
+Next, using the steps in [Building From Source](#building-from-source), compile the release version with debug info. Next, set the various library paths:
 ```
 export LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
 export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
@@ -66,7 +66,7 @@ Similar to building, standard cargo commands can be used here:
 - (macos): `cargo test --features odbc-sys/iodbc,cstr/utf32 unit`
 
 ### Other types of tests
-The other tests that are run are integration and result set tests. These involve more setup, and that setup is largely operating system specific. Regardless of the operating system, the below environment variables must be set. Following this, subsections describe any operating specific steps for testing.
+The other tests that are run are integration and result set tests. These involve more setup, and that setup is operating system dependent. Regardless of the operating system, the below environment variables must be set. Following this are subsections describing the OS specific testing steps.
 
 ```
 ADF_TEST_LOCAL_USER: local adf username
