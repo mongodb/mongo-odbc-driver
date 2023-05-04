@@ -1,7 +1,8 @@
+use crate::odbc_uri::UserOptions;
 use crate::MongoQuery;
 use crate::{err::Result, Error};
-use bson::doc;
-use mongodb::{options::ClientOptions, sync::Client};
+use bson::{doc, UuidRepresentation};
+use mongodb::sync::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -21,6 +22,8 @@ pub struct MongoConnection {
     /// Comes from SQL_ATTR_CONNECTION_TIMEOUT if set. Used any time there is a time out in a
     /// situation not associated with query execution or login.
     pub operation_timeout: Option<Duration>,
+    /// The UuidRepresentation to use for this connection.
+    pub uuid_repr: Option<UuidRepresentation>,
 }
 
 impl MongoConnection {
@@ -35,17 +38,21 @@ impl MongoConnection {
     /// The initial operation time if provided should come from and will take precedence over the
     /// setting specified in the uri if any.
     pub fn connect(
-        mut client_options: ClientOptions,
+        mut user_options: UserOptions,
         current_db: Option<String>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
     ) -> Result<Self> {
-        client_options.connect_timeout = login_timeout.map(|to| Duration::new(to as u64, 0));
-        let client = Client::with_options(client_options).map_err(Error::InvalidClientOptions)?;
+        user_options.client_options.connect_timeout =
+            login_timeout.map(|to| Duration::new(to as u64, 0));
+        let client = Client::with_options(user_options.client_options)
+            .map_err(Error::InvalidClientOptions)?;
+        let uuid_repr = user_options.uuid_representation;
         let connection = MongoConnection {
             client,
             current_db,
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
+            uuid_repr,
         };
         // Verify that the connection is working and the user has access to the default DB
         MongoQuery::execute(&connection, None, "select 1")?;

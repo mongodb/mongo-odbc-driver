@@ -21,6 +21,14 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[allow(dead_code)] // false positive
+/// Generate a default uri
+pub fn generate_uri_with_default_connection_string(uri: &str) -> String {
+    let host_port = env::var("ADF_TEST_URI").expect("ADF_TEST_URI is not set");
+    let combined_uri = format!("{}/?{}", host_port, uri);
+    format!("{}URI={combined_uri}", generate_default_connection_str())
+}
+
 /// Generate the default connection setting defined for the tests using a connection string
 /// of the form 'Driver={};PWD={};USER={};SERVER={}'.
 /// The default driver is 'MongoDB Atlas SQL ODBC Driver' if not specified.

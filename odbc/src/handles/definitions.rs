@@ -47,6 +47,17 @@ impl MongoHandle {
         }
     }
 
+    /// Returns a reference to the statement's connection, if there is
+    /// one.
+    pub fn as_statement_connection(&self) -> Option<&Connection> {
+        match self {
+            MongoHandle::Statement(stmt) => unsafe {
+                stmt.connection.as_ref().unwrap().as_connection()
+            },
+            _ => None,
+        }
+    }
+
     /// add_diag_info appends a new ODBCError object to the `errors` field.
     pub fn add_diag_info(&mut self, error: ODBCError) {
         match self {

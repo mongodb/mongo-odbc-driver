@@ -83,6 +83,7 @@ functions:
             export ADF_TEST_LOCAL_HOST="${adf_test_local_host}"
             export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
             export ADF_TEST_LOCAL_DB="${adf_test_local_db}"
+            export ADF_TEST_URI="${adf_test_uri}"
             export SCRIPT_FOLDER="$SCRIPT_FOLDER"
             export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
 
