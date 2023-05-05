@@ -29,8 +29,8 @@ use mongo_odbc_core::{
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
-    Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
-    Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
+    Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
+    Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
 use std::{cell::RefCell, ptr::null_mut};
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
@@ -349,7 +349,6 @@ pub unsafe extern "C" fn SQLBindParameter(
 ) -> SqlReturn {
     unsupported_function!(hstmt)
 }
-
 
 ///
 /// [`SQLBrowseConnectW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLBrowseConnect-function
