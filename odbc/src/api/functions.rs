@@ -3,7 +3,7 @@ use crate::{
     api::{
         data::{i16_len, i32_len, set_str_length},
         definitions::*,
-        diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
+        diag::{get_diag_field, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
         util::{connection_attribute_to_string, statement_attribute_to_string},
     },
@@ -17,7 +17,7 @@ use constants::{
     SQL_ALL_TABLE_TYPES,
 };
 
-use cstr::{input_text_to_string_a, input_text_to_string_w, Charset, WideChar};
+use cstr::{input_text_to_string_w, Charset, WideChar};
 
 use function_name::named;
 use log::{debug, error, info};
@@ -29,7 +29,7 @@ use mongo_odbc_core::{
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
-    Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
+    Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
     Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
 use std::{cell::RefCell, ptr::null_mut};

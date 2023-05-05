@@ -7,23 +7,8 @@ use crate::{
 };
 use cstr::WideChar;
 use odbc_sys::Pointer;
-use odbc_sys::{Char, Integer, SmallInt, SqlReturn};
+use odbc_sys::{Integer, SmallInt, SqlReturn};
 use std::ptr::copy_nonoverlapping;
-
-///
-/// set_sql_state writes the given sql state to the [`output_ptr`].
-///
-/// # Safety
-/// This writes to a raw C-pointer
-///
-pub unsafe fn set_sql_state(sql_state: &str, output_ptr: *mut Char) {
-    if output_ptr.is_null() {
-        return;
-    }
-    let sql_state = &format!("{sql_state}\0");
-    let state_u8 = sql_state.bytes().collect::<Vec<u8>>();
-    copy_nonoverlapping(state_u8.as_ptr(), output_ptr, 6);
-}
 
 ///
 /// set_sql_statew writes the given sql state to the [`output_ptr`].
@@ -38,34 +23,6 @@ pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WideChar) {
     let sql_state = &format!("{sql_state}\0");
     let state_u16 = cstr::to_widechar_vec(sql_state);
     copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
-}
-
-///
-/// get_diag_rec copies the given ODBC error's diagnostic information
-/// into the provided pointers.
-///
-/// # Safety
-/// This writes to multiple raw C-pointers
-///
-pub unsafe fn get_diag_rec(
-    error: &ODBCError,
-    state: *mut Char,
-    message_text: *mut Char,
-    buffer_length: SmallInt,
-    text_length_ptr: *mut SmallInt,
-    native_error_ptr: *mut Integer,
-) -> SqlReturn {
-    if !native_error_ptr.is_null() {
-        *native_error_ptr = error.get_native_err_code();
-    }
-    set_sql_state(error.get_sql_state(), state);
-    let message = format!("{error}");
-    i16_len::set_output_string(
-        &message,
-        message_text,
-        buffer_length as usize,
-        text_length_ptr,
-    )
 }
 
 ///
