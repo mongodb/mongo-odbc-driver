@@ -1,5 +1,5 @@
 #!/bin/bash
-# 
+#
 # Usage: run_adf.sh <operation>
 # operation: 'start' or 'stop'
 #
@@ -221,7 +221,7 @@ install_mongosh() {
       chmod -R +x $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR/bin/
       echo $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR
     else
-      tar zxf $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR
+      unzip -qo $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE -d $LOCAL_INSTALL_DIR 2> /dev/null
       echo $LOCAL_INSTALL_DIR/${MONGOSH_DOWNLOAD_FILE:0:$((${#MONGOSH_DOWNLOAD_FILE} - 4))}
     fi
 }
@@ -256,7 +256,7 @@ if [[ $? -ne 0 ]]; then
 
     waitCounter=0
     while : ; do
-        check_mongod 
+        check_mongod
         if [[ $? -eq 0 ]]; then
             break
         fi
