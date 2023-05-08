@@ -1641,6 +1641,16 @@ buildvariants:
       - name: macos-integration-test
       - name: macos-result-set-test
 
+  - name: macos-arm
+    display_name: "macOS 11.0 ARM 64"
+    run_on: [macos-1100-arm64]
+    tasks:
+      - name: compile-macos
+      - name: compile-debug-macos
+      - name: macos-unit-test
+      - name: macos-integration-test
+      - name: macos-result-set-test
+
   - name: release
     display_name: "Release"
     run_on: [ubuntu2004-medium]

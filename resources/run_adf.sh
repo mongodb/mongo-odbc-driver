@@ -1,5 +1,5 @@
 #!/bin/bash
-# 
+#
 # Usage: run_adf.sh <operation>
 # operation: 'start' or 'stop'
 #
@@ -87,6 +87,10 @@ MONGOSH_DOWNLOAD_LINUX_FILE=mongosh-1.8.0-linux-x64.tgz
 MONGO_DOWNLOAD_MAC=mongodb-macos-x86_64-6.0.4.tgz
 MONGOSH_DOWNLOAD_MAC_FILE=mongosh-1.8.0-darwin-x64.zip
 
+## macOS ARM64
+MONGO_DOWNLOAD_MAC_ARM=mongodb-macos-arm64-6.0.4.tgz
+MONGOSH_DOWNLOAD_MAC_FILE_ARM=mongosh-1.8.0-darwin-arm64.zip
+
 ## Windows
 MONGO_DOWNLOAD_WIN=mongodb-windows-x86_64-6.0.4.zip
 MONGOSH_DOWNLOAD_WINDOWS_FILE=mongosh-1.8.0-win32-x64.zip
@@ -169,10 +173,17 @@ if [ $OS = "Linux" ]; then
     exit 1
   fi
 elif [ $OS = "Darwin" ]; then
-  MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/osx/$MONGO_DOWNLOAD_MAC
-  MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_MAC
-  MONGOSH_DOWNLOAD_FILE=$MONGOSH_DOWNLOAD_MAC_FILE
-  MONGOSH_DOWNLOAD_LINK=$MONGOSH_DOWNLOAD_BASE/$MONGOSH_DOWNLOAD_FILE
+  if [ $(uname -m) = "x86_64" ]; then
+    MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/osx/$MONGO_DOWNLOAD_MAC
+    MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_MAC
+    MONGOSH_DOWNLOAD_FILE=$MONGOSH_DOWNLOAD_MAC_FILE
+    MONGOSH_DOWNLOAD_LINK=$MONGOSH_DOWNLOAD_BASE/$MONGOSH_DOWNLOAD_FILE
+  else
+    MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/osx/$MONGO_DOWNLOAD_MAC_ARM
+    MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_MAC_ARM
+    MONGOSH_DOWNLOAD_FILE=$MONGOSH_DOWNLOAD_MAC_FILE_ARM
+    MONGOSH_DOWNLOAD_LINK=$MONGOSH_DOWNLOAD_BASE/$MONGOSH_DOWNLOAD_FILE
+  fi
 elif [[ $OS =~ ^CYGWIN ]]; then
   MONGO_DOWNLOAD_LINK=$MONGO_DOWNLOAD_BASE/windows/$MONGO_DOWNLOAD_WIN
   MONGO_DOWNLOAD_FILE=$MONGO_DOWNLOAD_WIN
@@ -195,7 +206,8 @@ install_mongodb() {
       echo $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR
     else
       tar zxf $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR
-      echo $LOCAL_INSTALL_DIR/${MONGO_DOWNLOAD_FILE:0:$((${#MONGO_DOWNLOAD_FILE} - 4))}
+      # for some reason the arm64 zip contains a directory with aarch64 instead of arm64. Joy.
+      echo $LOCAL_INSTALL_DIR/${MONGO_DOWNLOAD_FILE:0:$((${#MONGO_DOWNLOAD_FILE} - 4))} | sed 's|arm|aarch|'
     fi
 }
 
@@ -209,6 +221,9 @@ install_mongosh() {
 	          | cut -d ' ' -f 5 | cut -d/ -f1)
       chmod -R +x $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR/bin/
       echo $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR
+    elif [ $OS = "Darwin" ]; then
+      unzip -qo $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE -d $LOCAL_INSTALL_DIR 2> /dev/null
+      echo $LOCAL_INSTALL_DIR/${MONGOSH_DOWNLOAD_FILE:0:$((${#MONGOSH_DOWNLOAD_FILE} - 4))}
     else
       tar zxf $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE --directory $LOCAL_INSTALL_DIR
       echo $LOCAL_INSTALL_DIR/${MONGOSH_DOWNLOAD_FILE:0:$((${#MONGOSH_DOWNLOAD_FILE} - 4))}
@@ -245,7 +260,7 @@ if [[ $? -ne 0 ]]; then
 
     waitCounter=0
     while : ; do
-        check_mongod 
+        check_mongod
         if [[ $? -eq 0 ]]; then
             break
         fi
