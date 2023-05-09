@@ -106,9 +106,9 @@ pub unsafe fn get_diag_field(
                 match diag_identifier {
                     // NOTE: return code is handled by driver manager; just return success
                     DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
-                    DiagType::SQL_DIAG_SQLSTATE => i16_len::set_output_string(
+                    DiagType::SQL_DIAG_SQLSTATE => i16_len::set_output_wstring_as_bytes(
                         error.get_sql_state(),
-                        diag_info_ptr as *mut u8,
+                        diag_info_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     ),
@@ -119,9 +119,9 @@ pub unsafe fn get_diag_field(
                     ),
                     DiagType::SQL_DIAG_MESSAGE_TEXT => {
                         let message = format!("{error}");
-                        i16_len::set_output_string(
+                        i16_len::set_output_wstring_as_bytes(
                             &message,
-                            diag_info_ptr as *mut u8,
+                            diag_info_ptr,
                             buffer_length as usize,
                             string_length_ptr,
                         )
