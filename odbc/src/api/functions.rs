@@ -1560,7 +1560,6 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
                     record_number,
                     buffer_length,
                     string_length_ptr,
-                    true,
                 )
             };
 

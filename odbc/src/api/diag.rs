@@ -107,11 +107,11 @@ pub unsafe fn get_diag_field(
                     // NOTE: return code is handled by driver manager; just return success
                     DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
                     DiagType::SQL_DIAG_SQLSTATE => i16_len::set_output_string(
-                            error.get_sql_state(),
-                            diag_info_ptr as *mut u8,
-                            buffer_length as usize,
-                            string_length_ptr,
-                        )
+                        error.get_sql_state(),
+                        diag_info_ptr as *mut u8,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    ),
                     DiagType::SQL_DIAG_NATIVE => i16_len::set_output_fixed_data(
                         &error.get_native_err_code(),
                         diag_info_ptr,
@@ -120,11 +120,11 @@ pub unsafe fn get_diag_field(
                     DiagType::SQL_DIAG_MESSAGE_TEXT => {
                         let message = format!("{error}");
                         i16_len::set_output_string(
-                                &message,
-                                diag_info_ptr as *mut u8,
-                                buffer_length as usize,
-                                string_length_ptr,
-                            )
+                            &message,
+                            diag_info_ptr as *mut u8,
+                            buffer_length as usize,
+                            string_length_ptr,
+                        )
                     }
                     // this should not be reachable if match branches here mirror those in SQLGetDiagFieldW
                     _ => SqlReturn::ERROR,
