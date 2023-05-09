@@ -649,7 +649,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 Some(column_name_string.as_str())
             };
             let connection = stmt.connection;
-            let mongo_statement = sql_columns(
+            let mongo_statement = Box::new(MongoFields::list_columns(
                 (*connection)
                     .as_connection()
                     .unwrap()
@@ -658,33 +658,16 @@ pub unsafe extern "C" fn SQLColumnsW(
                     .unwrap()
                     .as_ref()
                     .unwrap(),
-                stmt.attributes.read().unwrap().query_timeout as i32,
+                Some(stmt.attributes.read().unwrap().query_timeout as i32),
                 catalog,
                 table,
                 column,
-            );
-            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+            ));
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
             SqlReturn::SUCCESS
         },
         statement_handle
     );
-}
-
-fn sql_columns(
-    mongo_connection: &MongoConnection,
-    query_timeout: i32,
-    catalog: Option<&str>,
-    table: Option<&str>,
-    column: Option<&str>,
-) -> Result<Box<dyn MongoStatement>> {
-    Ok(Box::new(MongoFields::list_columns(
-        mongo_connection,
-        Some(query_timeout),
-        catalog,
-        table,
-        column,
-    )))
 }
 
 ///
@@ -1709,24 +1692,6 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
 }
 
 ///
-/// [`SQLGetEnvAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetEnvAttr-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetEnvAttr(
-    environment_handle: HEnv,
-    _attribute: Integer,
-    _value_ptr: Pointer,
-    _buffer_length: Integer,
-    _string_length: *mut Integer,
-) -> SqlReturn {
-    unsupported_function!(environment_handle)
-}
-
-///
 /// [`SQLGetEnvAttrW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetEnvAttr-function
 ///
 /// This is the WideChar version of the SQLGetEnvAttr function
@@ -2487,39 +2452,6 @@ unsafe fn sql_get_stmt_attrw_helper(
 }
 
 ///
-/// [`SQLGetTypeInfo`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetTypeInfo-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
-    panic_safe_exec!(
-        debug,
-        || {
-            let mongo_handle = MongoHandleRef::from(handle);
-            match FromPrimitive::from_i16(data_type) {
-                Some(sql_data_type) => {
-                    let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let types_info = MongoTypesInfo::new(sql_data_type);
-                    *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
-                    SqlReturn::SUCCESS
-                }
-                None => {
-                    add_diag_info!(
-                        mongo_handle,
-                        ODBCError::InvalidSqlType(data_type.to_string())
-                    );
-                    SqlReturn::ERROR
-                }
-            }
-        },
-        handle
-    )
-}
-
-///
 /// [`SQLGetTypeInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetTypeInfo-function
 ///
 /// # Safety
@@ -2927,22 +2859,6 @@ pub unsafe extern "C" fn SQLSetPos(
     _lock_type: USmallInt,
 ) -> SqlReturn {
     unsupported_function!(statement_handle)
-}
-
-///
-/// [`SQLSetEnvAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetEnvAttr-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-pub unsafe extern "C" fn SQLSetEnvAttr(
-    environment_handle: HEnv,
-    attribute: Integer,
-    value: Pointer,
-    string_length: Integer,
-) -> SqlReturn {
-    SQLSetEnvAttrW(environment_handle, attribute, value, string_length)
 }
 
 ///
