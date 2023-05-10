@@ -43,7 +43,7 @@ Open the Microsoft ODBC Administrator (64-bit) and verify that "MongoDB Atlas SQ
 ## Unsupported Functions
 
 The driver is a Unicode only driver and does not support ANSI functions.  
-Also, the following ODBC functions are currently not supported by the driver. 
+Additionally, the following ODBC functions are currently not supported by the driver. 
 
 | Function             |
 |----------------------|
