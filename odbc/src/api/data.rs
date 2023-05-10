@@ -1126,7 +1126,7 @@ pub mod i32_len {
         *text_length_ptr = (size_of::<WideChar>() * len) as Integer;
         ret
     }
-    
+
     ///
     /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
     /// ODBC drivers assume the output buffer is large enough for fixed types, and are allowed to
