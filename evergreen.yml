@@ -275,14 +275,13 @@ functions:
         key_id: ${key_id}
         secret: ${secret}
         service_url: ${service_url}
-        client_binary: darwin_amd64/macnotary
-        local_zip_file: macos-mongo-odbc.zip
-        output_zip_file: macos-mongo-odbc-signed.zip
+        client_binary: mongosql-odbc-driver/darwin_amd64/macnotary
+        local_zip_file: mongosql-odbc-driver/macos-mongo-odbc.zip
+        output_zip_file: mongosql-odbc-driver/macos-mongo-odbc-signed.zip
         artifact_type: binary
         verify: true
         notarize: true
         bundle_id: com.mongodb.mongoodbc
-        working_directory: mongosql-odbc-driver
     - command: shell.exec
       type: test
       params:
