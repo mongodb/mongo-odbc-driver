@@ -40,6 +40,22 @@ functions:
         local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz
         bucket: mciuploads
 
+  "fetch for macos sign":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dmg
+        local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.dmg
+        bucket: mciuploads
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.dylib
+        local_file: mongosql-odbc-driver/target/release/libatsql.dylib
+        bucket: mciuploads
+
   "fetch source":
     - command: git.get_project
       params:
@@ -69,11 +85,15 @@ functions:
           RELEASE_VERSION: "$RELEASE_VERSION"
           WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/mongoodbc.msi"
           UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
+          MACOS_INSTALLER_PATH: "mongosql-odbc-driver/macos/$RELEASE_VERSION/release/mongoodbc.dmg"
+          MACOS_ARM_INSTALLER_PATH: "mongosql-odbc-driver/macos-arm/$RELEASE_VERSION/release/mongoodbc.dmg"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
             export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
             export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
+            export MACOS_INSTALLER_PATH="$MACOS_INSTALLER_PATH"
+            export MACOS_ARM_INSTALLER_PATH="$MACOS_ARM_INSTALLER_PATH"
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
@@ -236,6 +256,43 @@ functions:
               --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
               --notary-url "${notary_client_url}" \
               mongoodbc.tar.gz
+
+  "sign macos":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          curl -LO https://macos-notary-1628249594.s3.amazonaws.com/releases/client/v3.3.3/darwin_amd64.zip
+          unzip -o darwin_amd64.zip
+          chmod 0755 ./darwin_amd64/macnotary
+          ./darwin_amd64/macnotary -v
+          zip macos-mongo-odbc.zip installer/dmg/mongoodbc.dmg target/release/libatsql.dylib
+    - command: mac.sign
+      params:
+        key_id: ${key_id}
+        secret: ${secret}
+        service_url: ${service_url}
+        client_binary: darwin_amd64/macnotary
+        local_zip_file: macos-mongo-odbc.zip
+        output_zip_file: macos-mongo-odbc-signed.zip
+        artifact_type: binary
+        verify: true
+        notarize: true
+        bundle_id: com.mongodb.mongoodbc
+        working_directory: mongosql-odbc-driver
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          unzip -o macos-mongo-odbc-signed.zip
+          mv mongoodbc.dmg mongoodbc-signed.dmg
+          mv libatsql.dylib libatsql-signed.dylib
 
   "compile release":
     - command: shell.exec
@@ -444,6 +501,7 @@ functions:
       params:
         build_variants:
           - macos
+          - macos-arm
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.dylib
@@ -455,6 +513,7 @@ functions:
       params:
         build_variants:
           - macos
+          - macos-arm
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.dmg
@@ -527,6 +586,26 @@ functions:
         aws_secret: ${aws_secret}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
         local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz.sig
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+
+  "upload signed macos artifacts":
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/{buildvariant}/release/mongoodbc-signed.dmg
+        local_file: mongosql-odbc-driver/mongoodbc-signed.dmg
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/{buildvariant}/release/libatsql-signed.dylib
+        local_file: mongosql-odbc-driver/libatsql-signed.dylib
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -647,6 +726,74 @@ functions:
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.so
         remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/macos/release/libatsql-signed.dylib
+        local_file: mongosql-odbc-driver/target/release/libatsql-signed.dylib
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql-signed.dylib
+        remote_file: mongosql-odbc-driver/macos/${RELEASE_VERSION}/libatsql.dylib
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/macos/release/mongoodbc-signed.dmg
+        local_file: mongosql-odbc-driver/target/release/mongoodbc-signed.dmg
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc-signed.dmg
+        remote_file: ${MACOS_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/macos-arm/release/libatsql-signed.dylib
+        local_file: mongosql-odbc-driver/target/release/libatsql-signed.dylib
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql-signed.dylib
+        remote_file: mongosql-odbc-driver/macos-arm/${RELEASE_VERSION}/libatsql.dylib
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/macos-arm/release/mongoodbc-signed.dmg
+        local_file: mongosql-odbc-driver/target/release/mongoodbc-signed.dmg
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongoodbc-signed.dmg
+        remote_file: ${MACOS_ARM_INSTALLER_PATH}
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1310,6 +1457,8 @@ functions:
           sed -i 's@{RELEASE_VERSION}@'${RELEASE_VERSION}'@' mongo-odbc-downloads_template.json
           sed -i 's@{WINDOWS_INSTALLER_PATH}@'${WINDOWS_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
           sed -i 's@{UBUNTU2204_INSTALLER_PATH}@'${UBUNTU2204_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
+          sed -i 's@{MACOS_INSTALLER_PATH}@'${MACOS_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
+          sed -i 's@{MACOS_ARM_INSTALLER_PATH}@'${MACOS_ARM_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
           echo "--------- New release object ----------------"
           cat mongo-odbc-downloads_template.json
           echo "---------------------------------------------"
@@ -1458,6 +1607,14 @@ tasks:
       - func: "fetch for ubuntu sign"
       - func: "sign ubuntu"
       - func: "upload ubuntu sig file"
+
+  - name: macos-sign
+    depends_on:
+      - name: compile-macos
+    commands:
+      - func: "fetch for macos sign"
+      - func: "sign macos"
+      - func: "upload signed macos artifacts"
 
   - name: macos-unit-test
     commands:
@@ -1640,6 +1797,8 @@ buildvariants:
       - name: macos-unit-test
       - name: macos-integration-test
       - name: macos-result-set-test
+      - name: macos-sign
+        run_on: macos-1014-codesign
 
   - name: macos-arm
     display_name: "macOS 11.0 ARM 64"
@@ -1650,6 +1809,8 @@ buildvariants:
       - name: macos-unit-test
       - name: macos-integration-test
       - name: macos-result-set-test
+      - name: macos-sign
+        run_on: macos-1014-codesign
 
   - name: release
     display_name: "Release"

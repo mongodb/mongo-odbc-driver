@@ -72,6 +72,14 @@ Check that the released files, library and symbols, are available at the followi
   - Release build
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so`  
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}/release/mongoodbc.tar.gz`
+- Macos
+  - Release build
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/macos/${release_version}/mongoodbc.dmg`
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/macos/${release_version}/libatsql.dylib`
+- Macos-ARM
+  - Release build
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/macos-arm/${release_version}/mongoodbc.dmg`
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/macos-arm/${release_version}/libatsql.dylib`
 
 ##### Verify that the driver works with PowerBI
 Download and install the driver file.

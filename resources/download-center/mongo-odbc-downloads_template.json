@@ -8,6 +8,14 @@
         {
           "name": "Ubuntu 22.04 (x86_64)",
           "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{UBUNTU2204_INSTALLER_PATH}"
+        },
+        {
+          "name": "MacOS",
+          "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{MACOS_INSTALLER_PATH}"
+        },
+        {
+          "name": "MacOS ARM",
+          "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{MACOS_ARM_INSTALLER_PATH}"
         }
       ]
     }
