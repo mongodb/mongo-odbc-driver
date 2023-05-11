@@ -3,7 +3,7 @@ use crate::{
     api::{
         data::{i16_len, i32_len, set_str_length},
         definitions::*,
-        diag::{get_diag_field, get_diag_rec, get_diag_recw, get_stmt_diag_field},
+        diag::{get_diag_field, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
         util::{connection_attribute_to_string, statement_attribute_to_string},
     },
@@ -17,7 +17,7 @@ use constants::{
     SQL_ALL_TABLE_TYPES,
 };
 
-use cstr::{input_text_to_string_a, input_text_to_string_w, Charset, WideChar};
+use cstr::{input_text_to_string_w, Charset, WideChar};
 
 use function_name::named;
 use log::{debug, error, info};
@@ -29,8 +29,8 @@ use mongo_odbc_core::{
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
-    Char, Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer,
-    Len, Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
+    Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
+    Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
 use std::{cell::RefCell, ptr::null_mut};
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
@@ -351,25 +351,6 @@ pub unsafe extern "C" fn SQLBindParameter(
 }
 
 ///
-/// [`SQLBrowseConnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLBrowseConnect-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLBrowseConnect(
-    connection_handle: HDbc,
-    _in_connection_string: *const Char,
-    _string_length: SmallInt,
-    _out_connection_string: *mut Char,
-    _buffer_length: SmallInt,
-    _out_buffer_length: *mut SmallInt,
-) -> SqlReturn {
-    unsupported_function!(connection_handle)
-}
-
-///
 /// [`SQLBrowseConnectW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLBrowseConnect-function
 ///
 /// This is the WideChar version of the SQLBrowseConnect function
@@ -439,26 +420,6 @@ pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, handle: Handl
 pub unsafe extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
     // We never need to do anything to close a cusor, so this is safe.
     SqlReturn::SUCCESS
-}
-
-///
-/// [`SQLColAttribute`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLColAttribute-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLColAttribute(
-    statement_handle: HStmt,
-    _column_number: USmallInt,
-    _field_identifier: Desc,
-    _character_attribute_ptr: Pointer,
-    _buffer_length: SmallInt,
-    _string_length_ptr: *mut SmallInt,
-    _numeric_attribute_ptr: *mut Len,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
 }
 
 ///
@@ -618,28 +579,6 @@ pub unsafe extern "C" fn SQLColAttributeW(
 }
 
 ///
-/// [`SQLColumnPrivileges`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLColumnPrivileges-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLColumnPrivileges(
-    statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _catalog_name_length: SmallInt,
-    _schema_name: *const Char,
-    _schema_name_length: SmallInt,
-    _table_name: *const Char,
-    _table_name_length: SmallInt,
-    _column_name: *const Char,
-    _column_name_length: SmallInt,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
-}
-
-///
 /// [`SQLColumnPrivilegesW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLColumnPrivileges-function
 ///
 /// This is the WideChar version of the SQLColumnPrivileges function
@@ -661,77 +600,6 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
     _column_name_length: SmallInt,
 ) -> SqlReturn {
     unimpl!(statement_handle);
-}
-
-///
-/// [`SQLColumns`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLColumns-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLColumns(
-    statement_handle: HStmt,
-    catalog_name: *const Char,
-    catalog_name_length: SmallInt,
-    schema_name: *const Char,
-    schema_name_length: SmallInt,
-    table_name: *const Char,
-    table_name_length: SmallInt,
-    column_name: *const Char,
-    column_name_length: SmallInt,
-) -> SqlReturn {
-    panic_safe_exec!(
-        debug,
-        || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
-            if !(schema_name.is_null() || schema_name_length == 0) {
-                add_diag_info!(mongo_handle, ODBCError::UnsupportedFieldSchema());
-                return SqlReturn::ERROR;
-            }
-            let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog_string = input_text_to_string_a(catalog_name, catalog_name_length as usize);
-            let catalog = if catalog_name.is_null() {
-                None
-            } else {
-                Some(catalog_string.as_str())
-            };
-            // ignore schema
-            let table_string = input_text_to_string_a(table_name, table_name_length as usize);
-            let table = if table_name.is_null() {
-                None
-            } else {
-                Some(table_string.as_str())
-            };
-            let column_name_string =
-                input_text_to_string_a(column_name, column_name_length as usize);
-            let column = if column_name.is_null() {
-                None
-            } else {
-                Some(column_name_string.as_str())
-            };
-            let connection = stmt.connection;
-            let mongo_statement = sql_columns(
-                (*connection)
-                    .as_connection()
-                    .unwrap()
-                    .mongo_connection
-                    .read()
-                    .unwrap()
-                    .as_ref()
-                    .unwrap(),
-                stmt.attributes.read().unwrap().query_timeout as i32,
-                catalog,
-                table,
-                column,
-            );
-            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
-            *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
-            SqlReturn::SUCCESS
-        },
-        statement_handle
-    );
 }
 
 ///
@@ -781,7 +649,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 Some(column_name_string.as_str())
             };
             let connection = stmt.connection;
-            let mongo_statement = sql_columns(
+            let mongo_statement = Box::new(MongoFields::list_columns(
                 (*connection)
                     .as_connection()
                     .unwrap()
@@ -790,33 +658,16 @@ pub unsafe extern "C" fn SQLColumnsW(
                     .unwrap()
                     .as_ref()
                     .unwrap(),
-                stmt.attributes.read().unwrap().query_timeout as i32,
+                Some(stmt.attributes.read().unwrap().query_timeout as i32),
                 catalog,
                 table,
                 column,
-            );
-            let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
+            ));
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
             SqlReturn::SUCCESS
         },
         statement_handle
     );
-}
-
-fn sql_columns(
-    mongo_connection: &MongoConnection,
-    query_timeout: i32,
-    catalog: Option<&str>,
-    table: Option<&str>,
-    column: Option<&str>,
-) -> Result<Box<dyn MongoStatement>> {
-    Ok(Box::new(MongoFields::list_columns(
-        mongo_connection,
-        Some(query_timeout),
-        catalog,
-        table,
-        column,
-    )))
 }
 
 ///
@@ -833,26 +684,6 @@ pub unsafe extern "C" fn SQLCompleteAsync(
     _async_ret_code_ptr: *mut RetCode,
 ) -> SqlReturn {
     unsupported_function!(handle)
-}
-
-///
-/// [`SQLConnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLConnect-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLConnect(
-    connection_handle: HDbc,
-    _server_name: *const Char,
-    _name_length_1: SmallInt,
-    _user_name: *const Char,
-    _name_length_2: SmallInt,
-    _authentication: *const Char,
-    _name_length_3: SmallInt,
-) -> SqlReturn {
-    unsupported_function!(connection_handle)
 }
 
 ///
@@ -893,34 +724,14 @@ pub unsafe extern "C" fn SQLCopyDesc(
 }
 
 ///
-/// [`SQLDataSources`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDataSources-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLDataSources(
-    environment_handle: HEnv,
-    _direction: USmallInt,
-    _server_name: *mut Char,
-    _buffer_length_1: SmallInt,
-    _name_length_1: *mut SmallInt,
-    _description: *mut Char,
-    _buffer_length_2: SmallInt,
-    _name_length_2: *mut SmallInt,
-) -> SqlReturn {
-    unsupported_function!(environment_handle)
-}
-
-///
 /// [`SQLDataSourcesW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDataSources-function
 ///
-/// This is the WideChar version of the SQLDataSources function
+/// This function is implemented only by the Driver Manager.
 ///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+/**
 #[no_mangle]
 #[named]
 pub unsafe extern "C" fn SQLDataSourcesW(
@@ -935,28 +746,7 @@ pub unsafe extern "C" fn SQLDataSourcesW(
 ) -> SqlReturn {
     unsupported_function!(environment_handle)
 }
-
-///
-/// [`SQLDescribeCol`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDescribeCol-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLDescribeCol(
-    hstmt: HStmt,
-    _col_number: USmallInt,
-    _col_name: *mut Char,
-    _buffer_length: SmallInt,
-    _name_length: *mut SmallInt,
-    _data_type: *mut SqlDataType,
-    _col_size: *mut ULen,
-    _decimal_digits: *mut SmallInt,
-    _nullable: *mut Nullability,
-) -> SqlReturn {
-    unsupported_function!(hstmt)
-}
+*/
 
 ///
 /// [`SQLDescribeColW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDescribeCol-function
@@ -1098,59 +888,6 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
 }
 
 ///
-/// [`SQLDriverConnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDriverConnect-function
-///
-/// # Safety
-/// Because this is a C-infereface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLDriverConnect(
-    connection_handle: HDbc,
-    _window_handle: HWnd,
-    in_connection_string: *const Char,
-    string_length_1: SmallInt,
-    out_connection_string: *mut Char,
-    buffer_length: SmallInt,
-    string_length_2: *mut SmallInt,
-    driver_completion: DriverConnectOption,
-) -> SqlReturn {
-    panic_safe_exec!(
-        debug,
-        || {
-            let conn_handle = MongoHandleRef::from(connection_handle);
-            // SQL_NO_PROMPT is the only option supported for DriverCompletion
-            if driver_completion != DriverConnectOption::NoPrompt {
-                add_diag_info!(
-                    conn_handle,
-                    ODBCError::UnsupportedDriverConnectOption(format!("{driver_completion:?}"))
-                );
-
-                return SqlReturn::ERROR;
-            }
-            let conn = must_be_valid!((*conn_handle).as_connection());
-            let odbc_uri_string =
-                input_text_to_string_a(in_connection_string, string_length_1 as usize);
-            let mongo_connection =
-                odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
-            *conn.mongo_connection.write().unwrap() = Some(mongo_connection);
-            let buffer_len = usize::try_from(buffer_length).unwrap();
-            let sql_return = i16_len::set_output_string(
-                &odbc_uri_string,
-                out_connection_string,
-                buffer_len,
-                string_length_2,
-            );
-            if sql_return == SqlReturn::SUCCESS_WITH_INFO {
-                add_diag_info!(conn_handle, ODBCError::OutStringTruncated(buffer_len));
-            }
-            sql_return
-        },
-        connection_handle
-    );
-}
-
-///
 /// [`SQLDriverConnectW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDriverConnect-function
 ///
 /// This is the WideChar version of the SQLDriverConnect function
@@ -1211,34 +948,14 @@ pub unsafe extern "C" fn SQLDriverConnectW(
 }
 
 ///
-/// [`SQLDrivers`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDrivers-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLDrivers(
-    henv: HEnv,
-    _direction: USmallInt,
-    _driver_desc: *mut Char,
-    _driver_desc_max: SmallInt,
-    _out_driver_desc: *mut SmallInt,
-    _driver_attributes: *mut Char,
-    _drvr_attr_max: SmallInt,
-    _out_drvr_attr: *mut SmallInt,
-) -> SqlReturn {
-    unsupported_function!(henv)
-}
-
-///
 /// [`SQLDriversW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDrivers-function
 ///
-/// This is the WideChar version of the SQLDrivers function
+/// This function is implemented only by the Driver Manager.
 ///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+/**
 #[no_mangle]
 #[named]
 pub unsafe extern "C" fn SQLDriversW(
@@ -1253,6 +970,7 @@ pub unsafe extern "C" fn SQLDriversW(
 ) -> SqlReturn {
     unsupported_function!(henv)
 }
+**/
 
 ///
 /// [`SQLEndTran`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLEndTran-function
@@ -1268,47 +986,6 @@ pub unsafe extern "C" fn SQLEndTran(
     _completion_type: SmallInt,
 ) -> SqlReturn {
     unimpl!(handle);
-}
-
-///
-/// [`SQLExecDirect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLExecDirect-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLExecDirect(
-    statement_handle: HStmt,
-    statement_text: *const Char,
-    text_length: Integer,
-) -> SqlReturn {
-    panic_safe_exec!(
-        debug,
-        || {
-            let query = input_text_to_string_a(statement_text, text_length as usize);
-            let mongo_handle = MongoHandleRef::from(statement_handle);
-            let stmt = must_be_valid!(mongo_handle.as_statement());
-            let mongo_statement = {
-                let connection = must_be_valid!((*stmt.connection).as_connection());
-                let timeout = connection.attributes.read().unwrap().connection_timeout;
-                if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref()
-                {
-                    MongoQuery::execute(mongo_connection, timeout, &query).map_err(|e| e.into())
-                } else {
-                    Err(ODBCError::General("Statement has no parent Connection"))
-                }
-            };
-            if let Ok(..) = mongo_statement {
-                *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement.unwrap()));
-                SqlReturn::SUCCESS
-            } else {
-                add_diag_info!(mongo_handle, mongo_statement.as_ref().unwrap_err().clone());
-                SqlReturn::ERROR
-            }
-        },
-        statement_handle
-    );
 }
 
 ///
@@ -1442,42 +1119,6 @@ pub unsafe extern "C" fn SQLFetchScroll(
     _fetch_offset: Len,
 ) -> SqlReturn {
     unimpl!(statement_handle);
-}
-
-///
-/// [`SQLForeignKeys`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLForeignKeys-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLForeignKeys(
-    statement_handle: HStmt,
-    _pk_catalog_name: *const Char,
-    _pk_catalog_name_length: SmallInt,
-    _pk_schema_name: *const Char,
-    _pk_schema_name_length: SmallInt,
-    _pk_table_name: *const Char,
-    _pk_table_name_length: SmallInt,
-    _fk_catalog_name: *const Char,
-    _fk_catalog_name_length: SmallInt,
-    _fk_schema_name: *const Char,
-    _fk_schema_name_length: SmallInt,
-    _fk_table_name: *const Char,
-    _fk_table_name_length: SmallInt,
-) -> SqlReturn {
-    panic_safe_exec!(
-        debug,
-        || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
-            let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mongo_statement = MongoForeignKeys::empty();
-            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
-            SqlReturn::SUCCESS
-        },
-        statement_handle
-    );
 }
 
 ///
@@ -1627,24 +1268,6 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt)
 }
 
 ///
-/// [`SQLGetConnectAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetConnectAttr-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetConnectAttr(
-    connection_handle: HDbc,
-    _attribute: Integer,
-    _value_ptr: Pointer,
-    _buffer_length: Integer,
-    _string_length_ptr: *mut Integer,
-) -> SqlReturn {
-    unsupported_function!(connection_handle)
-}
-
-///
 /// [`SQLGetConnectAttrW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetConnectAttr-function
 ///
 /// This is the WideChar version of the SQLGetConnectAttr function
@@ -1734,23 +1357,6 @@ unsafe fn sql_get_connect_attrw_helper(
         add_diag_with_function!(conn_handle, e, "SQLGetConnectAttrW");
     }
     sql_return
-}
-
-///
-/// [`SQLGetCursorName`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetCursorName-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetCursorName(
-    statement_handle: HStmt,
-    _cursor_name: *mut Char,
-    _buffer_length: SmallInt,
-    _name_length_ptr: *mut SmallInt,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
 }
 
 ///
@@ -1877,25 +1483,6 @@ unsafe fn sql_get_data_helper(
 }
 
 ///
-/// [`SQLGetDescField`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDescField-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetDescField(
-    _descriptor_handle: HDesc,
-    _record_number: SmallInt,
-    _field_identifier: SmallInt,
-    _value_ptr: Pointer,
-    _buffer_length: Integer,
-    _string_length_ptr: *mut Integer,
-) -> SqlReturn {
-    unsupported_function!(_descriptor_handle)
-}
-
-///
 /// [`SQLGetDescFieldW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDescField-function
 ///
 /// This is the WideChar version of the SQLGetDescField function
@@ -1912,30 +1499,6 @@ pub unsafe extern "C" fn SQLGetDescFieldW(
     _value_ptr: Pointer,
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
-) -> SqlReturn {
-    unsupported_function!(_descriptor_handle)
-}
-
-///
-/// [`SQLGetDescRec`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDescRec-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetDescRec(
-    _descriptor_handle: HDesc,
-    _record_number: SmallInt,
-    _name: *mut Char,
-    _buffer_length: SmallInt,
-    _string_length_ptr: *mut SmallInt,
-    _type_ptr: *mut SmallInt,
-    _sub_type_ptr: *mut SmallInt,
-    _length_ptr: *mut Len,
-    _precision_ptr: *mut SmallInt,
-    _scale_ptr: *mut SmallInt,
-    _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
     unsupported_function!(_descriptor_handle)
 }
@@ -1964,26 +1527,6 @@ pub unsafe extern "C" fn SQLGetDescRecW(
     _nullable_ptr: *mut Nullability,
 ) -> SqlReturn {
     unsupported_function!(_descriptor_handle)
-}
-
-///
-/// [`SQLGetDiagField`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDiagField-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetDiagField(
-    _handle_type: HandleType,
-    handle: Handle,
-    _record_rumber: SmallInt,
-    _diag_identifier: SmallInt,
-    _diag_info_ptr: Pointer,
-    _buffer_length: SmallInt,
-    _string_length_ptr: *mut SmallInt,
-) -> SqlReturn {
-    unsupported_function!(handle)
 }
 
 ///
@@ -2017,7 +1560,6 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
                     record_number,
                     buffer_length,
                     string_length_ptr,
-                    true,
                 )
             };
 
@@ -2116,37 +1658,6 @@ macro_rules! sql_get_diag_rec_impl {
 }
 
 ///
-/// [`SQLGetDiagRec`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDiagRec-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLGetDiagRec(
-    handle_type: HandleType,
-    handle: Handle,
-    rec_number: SmallInt,
-    state: *mut Char,
-    native_error_ptr: *mut Integer,
-    message_text: *mut Char,
-    buffer_length: SmallInt,
-    text_length_ptr: *mut SmallInt,
-) -> SqlReturn {
-    sql_get_diag_rec_impl!(
-        handle_type,
-        handle,
-        rec_number,
-        state,
-        native_error_ptr,
-        message_text,
-        buffer_length,
-        text_length_ptr,
-        get_diag_rec
-    )
-}
-
-///
 /// [`SQLGetDiagRecW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetDiagRec-function
 ///
 /// This is the WideChar version of the SQLGetDiagRec function
@@ -2177,24 +1688,6 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
         text_length_ptr,
         get_diag_recw
     )
-}
-
-///
-/// [`SQLGetEnvAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetEnvAttr-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetEnvAttr(
-    environment_handle: HEnv,
-    _attribute: Integer,
-    _value_ptr: Pointer,
-    _buffer_length: Integer,
-    _string_length: *mut Integer,
-) -> SqlReturn {
-    unsupported_function!(environment_handle)
 }
 
 ///
@@ -2265,24 +1758,6 @@ unsafe fn sql_get_env_attrw_helper(
         }
     }
     SqlReturn::SUCCESS
-}
-
-///
-/// [`SQLGetInfo`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetInfo-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetInfo(
-    connection_handle: HDbc,
-    _info_type: USmallInt,
-    _info_value_ptr: Pointer,
-    _buffer_length: SmallInt,
-    _string_length_ptr: *mut SmallInt,
-) -> SqlReturn {
-    unsupported_function!(connection_handle)
 }
 
 ///
@@ -2743,24 +2218,6 @@ unsafe fn sql_get_infow_helper(
 }
 
 ///
-/// [`SQLGetStmtAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetStmtAttr-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLGetStmtAttr(
-    handle: HStmt,
-    _attribute: Integer,
-    _value_ptr: Pointer,
-    _buffer_length: Integer,
-    _string_length_ptr: *mut Integer,
-) -> SqlReturn {
-    unsupported_function!(handle)
-}
-
-///
 /// [`SQLGetStmtAttrW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetStmtAttr-function
 ///
 /// This is the WideChar version of the SQLGetStmtAttr function
@@ -2994,39 +2451,6 @@ unsafe fn sql_get_stmt_attrw_helper(
 }
 
 ///
-/// [`SQLGetTypeInfo`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetTypeInfo-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLGetTypeInfo(handle: HStmt, data_type: SmallInt) -> SqlReturn {
-    panic_safe_exec!(
-        debug,
-        || {
-            let mongo_handle = MongoHandleRef::from(handle);
-            match FromPrimitive::from_i16(data_type) {
-                Some(sql_data_type) => {
-                    let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let types_info = MongoTypesInfo::new(sql_data_type);
-                    *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
-                    SqlReturn::SUCCESS
-                }
-                None => {
-                    add_diag_info!(
-                        mongo_handle,
-                        ODBCError::InvalidSqlType(data_type.to_string())
-                    );
-                    SqlReturn::ERROR
-                }
-            }
-        },
-        handle
-    )
-}
-
-///
 /// [`SQLGetTypeInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetTypeInfo-function
 ///
 /// # Safety
@@ -3070,25 +2494,6 @@ pub unsafe extern "C" fn SQLMoreResults(_handle: HStmt) -> SqlReturn {
     // For now, we never allow more than one result from a query (i.e., we only support one query
     // at a time).
     SqlReturn::NO_DATA
-}
-
-///
-/// [`SQLNativeSql`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLNativeSql-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLNativeSql(
-    connection_handle: HDbc,
-    _in_statement_text: *const Char,
-    _in_statement_len: Integer,
-    _out_statement_text: *mut Char,
-    _buffer_len: Integer,
-    _out_statement_len: *mut Integer,
-) -> SqlReturn {
-    unsupported_function!(connection_handle)
 }
 
 ///
@@ -3175,22 +2580,6 @@ pub unsafe extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer
 }
 
 ///
-/// [`SQLPrepare`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLPrepare-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLPrepare(
-    hstmt: HStmt,
-    _statement_text: *const Char,
-    _text_length: Integer,
-) -> SqlReturn {
-    unsupported_function!(hstmt)
-}
-
-///
 /// [`SQLPrepareW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLPrepare-function
 ///
 /// This is the WideChar version of the SQLPrepare function
@@ -3206,36 +2595,6 @@ pub unsafe extern "C" fn SQLPrepareW(
     _text_length: Integer,
 ) -> SqlReturn {
     unsupported_function!(hstmt)
-}
-
-///
-/// [`SQLPrimaryKeys`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLPrimaryKeys-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLPrimaryKeys(
-    statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _catalog_name_length: SmallInt,
-    _schema_name: *const Char,
-    _schema_name_length: SmallInt,
-    _table_name: *const Char,
-    _table_name_length: SmallInt,
-) -> SqlReturn {
-    panic_safe_exec!(
-        debug,
-        || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
-            let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mongo_statement = MongoPrimaryKeys::empty();
-            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
-            SqlReturn::SUCCESS
-        },
-        statement_handle
-    );
 }
 
 ///
@@ -3271,28 +2630,6 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
 }
 
 ///
-/// [`SQLProcedureColumns`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLProcedureColumns-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLProcedureColumns(
-    statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _catalog_name_length: SmallInt,
-    _schema_name: *const Char,
-    _schema_name_length: SmallInt,
-    _proc_name: *const Char,
-    _proc_name_length: SmallInt,
-    _column_name: *const Char,
-    _column_name_length: SmallInt,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
-}
-
-///
 /// [`SQLProcedureColumnsW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLProcedureColumns-function
 ///
 /// This is the WideChar version of the SQLProcedureColumns function
@@ -3312,26 +2649,6 @@ pub unsafe extern "C" fn SQLProcedureColumnsW(
     _proc_name_length: SmallInt,
     _column_name: *const WideChar,
     _column_name_length: SmallInt,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
-}
-
-///
-/// [`SQLProcedures`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLProcedures-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLProcedures(
-    statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _catalog_name_length: SmallInt,
-    _schema_name: *const Char,
-    _schema_name_length: SmallInt,
-    _proc_name: *const Char,
-    _proc_name_length: SmallInt,
 ) -> SqlReturn {
     unsupported_function!(statement_handle)
 }
@@ -3398,23 +2715,6 @@ pub unsafe extern "C" fn SQLRowCount(
         },
         statement_handle
     );
-}
-
-///
-/// [`SQLSetConnectAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetConnectAttr-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLSetConnectAttr(
-    connection_handle: HDbc,
-    _attribute: Integer,
-    _value_ptr: Pointer,
-    _str_length: Integer,
-) -> SqlReturn {
-    unsupported_function!(connection_handle)
 }
 
 ///
@@ -3485,22 +2785,6 @@ unsafe fn set_connect_attrw_helper(
 }
 
 ///
-/// [`SQLSetCursorName`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetCursorName-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLSetCursorName(
-    statement_handle: HStmt,
-    _cursor_name: *const Char,
-    _name_length: SmallInt,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
-}
-
-///
 /// [`SQLSetCursorNameW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetCursorName-function
 ///
 /// This is the WideChar version of the SQLSetCursorName function
@@ -3519,14 +2803,14 @@ pub unsafe extern "C" fn SQLSetCursorNameW(
 }
 
 ///
-/// [`SQLSetDescField`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetDescField-function
+/// [`SQLSetDescFieldW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetDescField-function
 ///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 #[no_mangle]
 #[named]
-pub unsafe extern "C" fn SQLSetDescField(
+pub unsafe extern "C" fn SQLSetDescFieldW(
     _desc_handle: HDesc,
     _rec_number: SmallInt,
     _field_identifier: SmallInt,
@@ -3574,22 +2858,6 @@ pub unsafe extern "C" fn SQLSetPos(
     _lock_type: USmallInt,
 ) -> SqlReturn {
     unsupported_function!(statement_handle)
-}
-
-///
-/// [`SQLSetEnvAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetEnvAttr-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-pub unsafe extern "C" fn SQLSetEnvAttr(
-    environment_handle: HEnv,
-    attribute: Integer,
-    value: Pointer,
-    string_length: Integer,
-) -> SqlReturn {
-    SQLSetEnvAttrW(environment_handle, attribute, value, string_length)
 }
 
 ///
@@ -3700,23 +2968,6 @@ unsafe fn sql_set_env_attrw_helper(
             }
         }
     }
-}
-
-///
-/// [`SQLSetStmtAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSetStmtAttr-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLSetStmtAttr(
-    hstmt: HStmt,
-    _attr: Integer,
-    _value: Pointer,
-    _str_length: Integer,
-) -> SqlReturn {
-    unsupported_function!(hstmt)
 }
 
 ///
@@ -3966,29 +3217,6 @@ unsafe fn sql_set_stmt_attrw_helper(
 }
 
 ///
-/// [`SQLSpecialColumns`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSpecialColumns-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLSpecialColumns(
-    statement_handle: HStmt,
-    _identifier_type: SmallInt,
-    _catalog_name: *const Char,
-    _catalog_name_length: SmallInt,
-    _schema_name: *const Char,
-    _schema_name_length: SmallInt,
-    _table_name: *const Char,
-    _table_name_length: SmallInt,
-    _scope: SmallInt,
-    _nullable: SmallInt,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
-}
-
-///
 /// [`SQLSpecialColumnsW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLSpecialColumns-function
 ///
 /// This is the WideChar version of the SQLSpecialColumns function
@@ -4021,13 +3249,13 @@ pub unsafe extern "C" fn SQLSpecialColumnsW(
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLStatistics(
+pub unsafe extern "C" fn SQLStatisticsW(
     statement_handle: HStmt,
-    _catalog_name: *const Char,
+    _catalog_name: *const WideChar,
     _catalog_name_length: SmallInt,
-    _schema_name: *const Char,
+    _schema_name: *const WideChar,
     _schema_name_length: SmallInt,
-    _table_name: *const Char,
+    _table_name: *const WideChar,
     _table_name_length: SmallInt,
     _unique: SmallInt,
     _reserved: SmallInt,
@@ -4036,27 +3264,7 @@ pub unsafe extern "C" fn SQLStatistics(
 }
 
 ///
-/// [`SQLTablePrivileges`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLTablePrivileges-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[no_mangle]
-#[named]
-pub unsafe extern "C" fn SQLTablePrivileges(
-    statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _name_length_1: SmallInt,
-    _schema_name: *const Char,
-    _name_length_2: SmallInt,
-    _table_name: *const Char,
-    _name_length_3: SmallInt,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
-}
-
-///
-/// [`SQLTablesPrivilegesW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLTablesPrivileges-function
+/// [`SQLTablePrivilegesW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqltableprivileges-function
 ///
 /// This is the WideChar version of the SQLTablesPrivileges function
 ///
@@ -4065,7 +3273,7 @@ pub unsafe extern "C" fn SQLTablePrivileges(
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLTablesPrivilegesW(
+pub unsafe extern "C" fn SQLTablePrivilegesW(
     statement_handle: HStmt,
     _catalog_name: *const WideChar,
     _name_length_1: SmallInt,
@@ -4075,28 +3283,6 @@ pub unsafe extern "C" fn SQLTablesPrivilegesW(
     _name_length_3: SmallInt,
 ) -> SqlReturn {
     unimpl!(statement_handle);
-}
-
-///
-/// [`SQLTables`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLTables-function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLTables(
-    statement_handle: HStmt,
-    _catalog_name: *const Char,
-    _name_length_1: SmallInt,
-    _schema_name: *const Char,
-    _name_length_2: SmallInt,
-    _table_name: *const Char,
-    _name_length_3: SmallInt,
-    _table_type: *const Char,
-    _name_length_4: SmallInt,
-) -> SqlReturn {
-    unsupported_function!(statement_handle)
 }
 
 fn sql_tables(

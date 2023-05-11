@@ -1,6 +1,6 @@
 # mongo-odbc-driver
 
-An ODBC driver for connecting to Atlas Data Lake via the MongoSQL dialect.
+An 64-bit unicode ODBC driver for connecting to Atlas Data Lake via the MongoSQL dialect.
 
 If you're looking for an ODBC driver to use with the [MongoDB
 Connector for BI](https://docs.mongodb.com/bi-connector/current/),
@@ -40,59 +40,41 @@ Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MongoDB Atlas SQL 
 
 Open the Microsoft ODBC Administrator (64-bit) and verify that "MongoDB Atlas SQL ODBC Driver" appears under "System DSN".
 
-### 32-bit
-Follow the validation steps listed in the 64-bit section, but make sure to use the 32-bit Microsoft ODBC Administrator. Additionally, the registry keys should be listed under `HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC` instead of `HKEY_LOCAL_MACHINE\SOFTWARE\ODBC`, and the dll path must point to the 32-bit version of the driver.
-
-\<document field access expression\> ::= [\<compound identifier\>](#identifiers) \| [\<expression\>](#expressions) \".\" [\<compound identifier\>](#identifiers)</br>
-
 ## Unsupported Functions
 
-The following ODBC functions are currently not supported by the driver. Note that some unsupported ANSI functions have Unicode analogs. If the version of the function suffixed with 'W', e.g., `SQLTablesW`, is not mentioned, the Unicode version is either supported or may be supported in the future.
+The driver is a Unicode only driver and does not support ANSI functions.  
+Additionally, the following ODBC functions are currently not supported by the driver. 
 
-| function |
-| --- |
-| SQLBindParameter |
-| SQLBrowseConnect |
-| SQLBulkOperations |
-| SQLColAttribute |
-| SQLColumnPrivileges |
-| SQLCompleteAsync |
-| SQLConnect |
-| SQLConnectW |
-| SQLCopyDesc |
-| SQLDataSources |
-| SQLDataSourcesW |
-| SQLDescribeCol |
-| SQLDescribeParam |
-| SQLDrivers |
-| SQLDriversW |
-| SQLExecute |
-| SQLGetConnectAttr |
-| SQLGetCursorName |
-| SQLGetDescField |
-| SQLGetDescFieldW |
-| SQLGetDescRec |
-| SQLGetDescRecW |
-| SQLGetDiagField |
-| SQLGetEnvAttr |
-| SQLGetInfo |
-| SQLGetStmtAttr |
-| SQLNativeSql |
-| SQLNumParams |
-| SQLParamData |
-| SQLPrepare |
-| SQLPrepareW |
-| SQLProcedureColumns |
+| Function             |
+|----------------------|
+| SQLBindCol           |
+| SQLBindParameter     |
+| SQLBrowseConnectW    |
+| SQLBulkOperations    |
+| SQLCancel            |
+| SQLCancelHandle      |
+| SQLColumnPrivilegesW |
+| SQLCompleteAsync     |
+| SQLConnectW          |
+| SQLCopyDesc          |
+| SQLDescribeParam     |
+| SQLEndTran           |
+| SQLFetchScroll       |
+| SQLFreeStmt          |
+| SQLGetCursorNameW    |
+| SQLGetDescFieldW     |
+| SQLGetDescRecW       |
+| SQLNativeSqlW        |
+| SQLNumParams         |
+| SQLParamData         |
+| SQLPrepareW          |
 | SQLProcedureColumnsW |
-| SQLProcedures |
-| SQLProceduresW |
-| SQLPutData |
-| SQLSetConnectAttr |
-| SQLSetCursorName |
-| SQLSetDescField |
-| SQLSetPos |
-| SQLSetStmtAttr |
-| SQLSpecialColumns |
-| SQLStatistics |
-| SQLTablePrivileges |
-| SQLTables |
+| SQLProceduresW       |
+| SQLPutData           |
+| SQLSetCursorNameW    |
+| SQLSetDescFieldW     |
+| SQLSetDescRec        |
+| SQLSetPos            |
+| SQLSpecialColumnsW   |
+| SQLStatisticsW       |
+| SQLTablePrivilegesW  |

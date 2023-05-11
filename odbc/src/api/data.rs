@@ -1083,28 +1083,6 @@ pub mod i16_len {
     }
 
     ///
-    /// set_output_string writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
-    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
-    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
-    /// should be stored in [`text_length_ptr`].
-    ///
-    /// # Safety
-    /// This writes to multiple raw C-pointers
-    ///
-    pub unsafe fn set_output_string(
-        message: &str,
-        output_ptr: *mut Char,
-        buffer_len: usize,
-        text_length_ptr: *mut SmallInt,
-    ) -> SqlReturn {
-        // TODO SQL-1087: consider encoding utf-8 using the encoding crate. This allows for somewhat
-        // sensible output for characters in unicode - ascii.:writes
-        let (len, ret) = set_output_string_helper(message.as_bytes(), output_ptr, buffer_len);
-        *text_length_ptr = len as SmallInt;
-        ret
-    }
-
-    ///
     /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
     /// ODBC drivers assume the output buffer is large enough for fixed types, and are allowed to
     /// overwrite the buffer if too small a buffer is passed.
@@ -1152,27 +1130,6 @@ pub mod i32_len {
             buffer_len / size_of::<WideChar>(),
         );
         *text_length_ptr = (size_of::<WideChar>() * len) as Integer;
-        ret
-    }
-
-    ///
-    /// set_output_string writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
-    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
-    /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]
-    /// should be stored in [`text_length_ptr`].
-    ///
-    /// # Safety
-    /// This writes to multiple raw C-pointers
-    ///
-    #[allow(dead_code)]
-    pub unsafe fn set_output_string(
-        message: &str,
-        output_ptr: *mut Char,
-        buffer_len: usize,
-        text_length_ptr: *mut Integer,
-    ) -> SqlReturn {
-        let (len, ret) = set_output_string_helper(message.as_bytes(), output_ptr, buffer_len);
-        *text_length_ptr = len as Integer;
         ret
     }
 
