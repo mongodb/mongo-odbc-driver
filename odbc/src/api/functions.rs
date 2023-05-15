@@ -1691,16 +1691,14 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
 }
 
 ///
-/// [`SQLGetEnvAttrW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetEnvAttr-function
-///
-/// This is the WideChar version of the SQLGetEnvAttr function
+/// [`SQLGetEnvAttr`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetEnvAttr-function
 ///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLGetEnvAttrW(
+pub unsafe extern "C" fn SQLGetEnvAttr(
     environment_handle: HEnv,
     attribute: Integer,
     value_ptr: Pointer,
@@ -2870,7 +2868,7 @@ pub unsafe extern "C" fn SQLSetPos(
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLSetEnvAttrW(
+pub unsafe extern "C" fn SQLSetEnvAttr(
     environment_handle: HEnv,
     attribute: Integer,
     value: Pointer,
