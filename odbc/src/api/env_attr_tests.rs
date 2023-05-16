@@ -169,7 +169,7 @@ mod unit {
             ));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
-                SQLSetEnvAttrW(
+                SQLSetEnvAttr(
                     handle as HEnv,
                     EnvironmentAttribute::SQL_ATTR_CP_MATCH as i32,
                     CpMatch::Relaxed as i32 as Pointer,
