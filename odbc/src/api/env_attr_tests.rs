@@ -1,8 +1,8 @@
-use crate::map;
+use crate::{map, SQLSetEnvAttr};
 use crate::{
     api::definitions::*,
     handles::definitions::{Env, EnvState, MongoHandle},
-    SQLGetDiagRecW, SQLGetEnvAttr, SQLSetEnvAttr,
+    SQLGetDiagRecW, SQLGetEnvAttr,
 };
 use odbc_sys::{HEnv, HandleType, Integer, Pointer, SqlReturn};
 use std::{collections::BTreeMap, ffi::c_void, mem::size_of};
@@ -42,7 +42,7 @@ fn get_set_env_attr(
                 let value = discriminant as Pointer;
                 assert_eq!(
                     expected_return,
-                    SQLGetEnvAttr(handle as HEnv, attr, value, 0, string_length_ptr)
+                    SQLSetEnvAttr(handle as HEnv, attr, value, 0)
                 );
                 assert_eq!(
                     SqlReturn::SUCCESS,
@@ -162,7 +162,6 @@ mod unit {
     #[test]
     fn test_optional_value_changed() {
         use cstr::WideChar;
-        let string_length_ptr = &mut 0;
         unsafe {
             let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
                 EnvState::Allocated,
@@ -170,12 +169,11 @@ mod unit {
             ));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
-                SQLGetEnvAttr(
+                SQLSetEnvAttrW(
                     handle as HEnv,
                     EnvironmentAttribute::SQL_ATTR_CP_MATCH as i32,
                     CpMatch::Relaxed as i32 as Pointer,
-                    0,
-                    string_length_ptr
+                    0
                 )
             );
 
