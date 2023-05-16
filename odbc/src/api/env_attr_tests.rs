@@ -1,9 +1,9 @@
-use crate::{map, SQLSetEnvAttr};
 use crate::{
     api::definitions::*,
     handles::definitions::{Env, EnvState, MongoHandle},
     SQLGetDiagRecW, SQLGetEnvAttr,
 };
+use crate::{map, SQLSetEnvAttr};
 use odbc_sys::{HEnv, HandleType, Integer, Pointer, SqlReturn};
 use std::{collections::BTreeMap, ffi::c_void, mem::size_of};
 
