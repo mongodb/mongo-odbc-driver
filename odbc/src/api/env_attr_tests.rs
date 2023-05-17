@@ -1,9 +1,9 @@
-use crate::map;
 use crate::{
     api::definitions::*,
     handles::definitions::{Env, EnvState, MongoHandle},
-    SQLGetDiagRecW, SQLGetEnvAttrW, SQLSetEnvAttrW,
+    SQLGetDiagRecW, SQLGetEnvAttr,
 };
+use crate::{map, SQLSetEnvAttr};
 use odbc_sys::{HEnv, HandleType, Integer, Pointer, SqlReturn};
 use std::{collections::BTreeMap, ffi::c_void, mem::size_of};
 
@@ -23,7 +23,7 @@ fn get_set_env_attr(
         // Test the environment attribute's default value
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLGetEnvAttrW(
+            SQLGetEnvAttr(
                 handle as *mut _,
                 attr,
                 attr_buffer as Pointer,
@@ -42,11 +42,11 @@ fn get_set_env_attr(
                 let value = discriminant as Pointer;
                 assert_eq!(
                     expected_return,
-                    SQLSetEnvAttrW(handle as HEnv, attr, value, 0)
+                    SQLSetEnvAttr(handle as HEnv, attr, value, 0)
                 );
                 assert_eq!(
                     SqlReturn::SUCCESS,
-                    SQLGetEnvAttrW(
+                    SQLGetEnvAttr(
                         handle as *mut _,
                         attr,
                         attr_buffer as Pointer,
@@ -129,11 +129,11 @@ mod unit {
                 CpMatch::Strict as i32,
             );
 
-            // SQLGetEnvAttrW where value_ptr is null
+            // SQLGetEnvAttr where value_ptr is null
             let string_length_ptr = &mut 0;
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetEnvAttrW(
+                SQLGetEnvAttr(
                     env_handle as *mut _,
                     EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
                     std::ptr::null_mut() as *mut c_void,
@@ -143,10 +143,10 @@ mod unit {
             );
             assert_eq!(0, *string_length_ptr);
 
-            // SQLGetEnvAttrW where string_length_ptr is null
+            // SQLGetEnvAttr where string_length_ptr is null
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetEnvAttrW(
+                SQLGetEnvAttr(
                     env_handle as *mut _,
                     EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
                     std::ptr::null_mut() as *mut c_void,
@@ -169,7 +169,7 @@ mod unit {
             ));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
-                SQLSetEnvAttrW(
+                SQLSetEnvAttr(
                     handle as HEnv,
                     EnvironmentAttribute::SQL_ATTR_CP_MATCH as i32,
                     CpMatch::Relaxed as i32 as Pointer,
@@ -255,11 +255,11 @@ mod unit {
                 CpMatch::Strict as i32,
             );
 
-            // SQLGetEnvAttrW where value_ptr is null
+            // SQLGetEnvAttr where value_ptr is null
             let string_length_ptr = &mut 0;
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetEnvAttrW(
+                SQLGetEnvAttr(
                     env_handle as *mut _,
                     EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
                     std::ptr::null_mut() as *mut c_void,
@@ -269,10 +269,10 @@ mod unit {
             );
             assert_eq!(0, *string_length_ptr);
 
-            // SQLGetEnvAttrW where string_length_ptr is null
+            // SQLGetEnvAttr where string_length_ptr is null
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetEnvAttrW(
+                SQLGetEnvAttr(
                     env_handle as *mut _,
                     EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
                     std::ptr::null_mut() as *mut c_void,
