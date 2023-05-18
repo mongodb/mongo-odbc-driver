@@ -2771,7 +2771,7 @@ unsafe fn set_connect_attrw_helper(
             }
             ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
                 conn.attributes.write().unwrap().current_catalog = Some(input_text_to_string_w(
-                    value_ptr as *const u16,
+                    value_ptr as *const WideChar,
                     str_length as usize,
                 ));
                 SqlReturn::SUCCESS
