@@ -2729,7 +2729,7 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
     connection_handle: HDbc,
     attribute: Integer,
     value_ptr: Pointer,
-    _str_length: Integer,
+    str_length: Integer,
 ) -> SqlReturn {
     panic_safe_exec!(
         debug,
@@ -2737,7 +2737,9 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
             let conn_handle = MongoHandleRef::from(connection_handle);
 
             match FromPrimitive::from_i32(attribute) {
-                Some(valid_attr) => set_connect_attrw_helper(conn_handle, valid_attr, value_ptr),
+                Some(valid_attr) => {
+                    set_connect_attrw_helper(conn_handle, valid_attr, value_ptr, str_length)
+                }
                 None => {
                     add_diag_info!(conn_handle, ODBCError::InvalidAttrIdentifier(attribute));
                     SqlReturn::ERROR
@@ -2752,6 +2754,7 @@ unsafe fn set_connect_attrw_helper(
     conn_handle: &mut MongoHandle,
     attribute: ConnectionAttribute,
     value_ptr: Pointer,
+    str_length: Integer,
 ) -> SqlReturn {
     let mut err = None;
 
@@ -2764,6 +2767,13 @@ unsafe fn set_connect_attrw_helper(
         match attribute {
             ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => {
                 conn.attributes.write().unwrap().login_timeout = Some(value_ptr as u32);
+                SqlReturn::SUCCESS
+            }
+            ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
+                conn.attributes.write().unwrap().current_catalog = Some(input_text_to_string_w(
+                    value_ptr as *const u16,
+                    str_length as usize,
+                ));
                 SqlReturn::SUCCESS
             }
             ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => SqlReturn::SUCCESS,

@@ -166,6 +166,30 @@ mod unit {
         }
     }
 
+    #[test]
+    fn set_current_catalog() {
+        unsafe {
+            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+            let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
+            let database = "mongosql-rs";
+
+            let value_ptr = cstr::to_widechar_ptr(database);
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLSetConnectAttrW(
+                    mongo_handle as *mut _,
+                    ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG as i32,
+                    value_ptr.0 as Pointer,
+                    database.len() as i32,
+                )
+            );
+            let conn_handle = (*mongo_handle).as_connection().unwrap();
+            let attributes = &conn_handle.attributes.read().unwrap();
+            assert_eq!(attributes.current_catalog, Some(database.to_string()));
+        }
+    }
+
     const UNSUPPORTED_ATTRS: [ConnectionAttribute; 19] = [
         ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE,
         ConnectionAttribute::SQL_ATTR_ACCESS_MODE,
