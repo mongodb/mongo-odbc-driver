@@ -29,7 +29,11 @@ impl MongoQuery {
         query_timeout: Option<u32>,
         query: &str,
     ) -> Result<Self> {
-        let current_db = client.current_db.as_ref().ok_or(Error::NoDatabase)?;
+        let current_db = client
+            .attributes
+            .current_catalog
+            .as_ref()
+            .ok_or(Error::NoDatabase)?;
         let db = client.client.database(current_db);
 
         // 1. Run the sqlGetResultSchema command to get the result set

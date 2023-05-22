@@ -6,24 +6,27 @@ use mongodb::sync::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+#[derive(Debug, Default, Clone)]
+pub struct ConnectionAttributes {
+    // SQL_ATTR_CURRENT_CATALOG: the current catalog/database
+    // for this Connection.
+    pub current_catalog: Option<String>,
+    // SQL_ATTR_LOGIN_TIMEOUT: SQLUINTEGER, timeout in seconds
+    // to wait for a login request to complete.
+    pub login_timeout: Option<u32>,
+    // SQL_ATTR_CONNECTION_TIMEOUT: SQLUINTER, timeout in seconds
+    // to wait for any operation on a connection to timeout (other than
+    // initial login).
+    pub connection_timeout: Option<u32>,
+}
 #[derive(Debug)]
 pub struct MongoConnection {
     /// The mongo DB client
     pub client: Client,
-    /// The current database set for this client.
-    /// All new queries will be done on this DB.
-    /// We stick with mongo terminology here and ODBC
-    /// terminology in the odbc wrappers, hence
-    /// current_db here and current_catalog in the
-    /// odbc/handles code.
-    pub current_db: Option<String>,
-    /// Number of seconds to wait for any request on the connection to complete before returning to
-    /// the application.
-    /// Comes from SQL_ATTR_CONNECTION_TIMEOUT if set. Used any time there is a time out in a
-    /// situation not associated with query execution or login.
-    pub operation_timeout: Option<Duration>,
     /// The UuidRepresentation to use for this connection.
     pub uuid_repr: Option<UuidRepresentation>,
+    // all the possible Connection settings
+    pub attributes: ConnectionAttributes,
 }
 
 impl MongoConnection {
@@ -39,20 +42,18 @@ impl MongoConnection {
     /// setting specified in the uri if any.
     pub fn connect(
         mut user_options: UserOptions,
-        current_db: Option<String>,
-        operation_timeout: Option<u32>,
-        login_timeout: Option<u32>,
+        connection_attributes: ConnectionAttributes,
     ) -> Result<Self> {
-        user_options.client_options.connect_timeout =
-            login_timeout.map(|to| Duration::new(to as u64, 0));
+        user_options.client_options.connect_timeout = connection_attributes
+            .login_timeout
+            .map(|to| Duration::new(to as u64, 0));
         let client = Client::with_options(user_options.client_options)
             .map_err(Error::InvalidClientOptions)?;
         let uuid_repr = user_options.uuid_representation;
         let connection = MongoConnection {
             client,
-            current_db,
-            operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
             uuid_repr,
+            attributes: connection_attributes,
         };
         // Verify that the connection is working and the user has access to the default DB
         MongoQuery::execute(&connection, None, "select 1")?;

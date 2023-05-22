@@ -2,7 +2,7 @@ mod unit {
     use crate::{
         api::definitions::ConnectionAttribute,
         errors::ODBCError,
-        handles::definitions::{Connection, ConnectionAttributes, ConnectionState, MongoHandle},
+        handles::definitions::{Connection, ConnectionState, MongoHandle},
         util::connection_attribute_to_string,
         SQLGetConnectAttrW, SQLSetConnectAttrW,
     };
@@ -14,6 +14,7 @@ mod unit {
         use std::mem::size_of;
 
         use cstr::WideChar;
+        use mongo_odbc_core::ConnectionAttributes;
 
         use super::*;
 
@@ -87,10 +88,10 @@ mod unit {
             current_catalog,
             attribute = ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG as i32,
             expected_sql_return = SqlReturn::SUCCESS,
-            initial_attrs = RwLock::new(ConnectionAttributes {
+            initial_attrs = RwLock::new(Some(ConnectionAttributes {
                 current_catalog: Some("test".to_string()),
                 ..Default::default()
-            }),
+            })),
             buffer_length = 5 * size_of::<WideChar>() as i32,
             expected_length = 4 * size_of::<WideChar>() as i32,
             expected_value = "test".to_string(),
@@ -110,10 +111,10 @@ mod unit {
             connection_timeout,
             attribute = ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT as i32,
             expected_sql_return = SqlReturn::SUCCESS,
-            initial_attrs = RwLock::new(ConnectionAttributes {
+            initial_attrs = RwLock::new(Some(ConnectionAttributes {
                 connection_timeout: Some(42),
                 ..Default::default()
-            }),
+            })),
             expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 42u32,
             actual_value_modifier = modify_numeric_attr,
@@ -132,10 +133,10 @@ mod unit {
             login_timeout,
             attribute = ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT as i32,
             expected_sql_return = SqlReturn::SUCCESS,
-            initial_attrs = RwLock::new(ConnectionAttributes {
+            initial_attrs = RwLock::new(Some(ConnectionAttributes {
                 login_timeout: Some(42),
                 ..Default::default()
-            }),
+            })),
             expected_length = std::mem::size_of::<u32>() as i32,
             expected_value = 42u32,
             actual_value_modifier = modify_numeric_attr,
@@ -162,7 +163,7 @@ mod unit {
             );
             let conn_handle = (*mongo_handle).as_connection().unwrap();
             let attributes = &conn_handle.attributes.read().unwrap();
-            assert_eq!(attributes.login_timeout, Some(42));
+            assert_eq!(attributes.as_ref().unwrap().login_timeout, Some(42));
         }
     }
 
@@ -186,7 +187,10 @@ mod unit {
             );
             let conn_handle = (*mongo_handle).as_connection().unwrap();
             let attributes = &conn_handle.attributes.read().unwrap();
-            assert_eq!(attributes.current_catalog, Some(database.to_string()));
+            assert_eq!(
+                attributes.as_ref().unwrap().current_catalog,
+                Some(database.to_string())
+            );
         }
     }
 

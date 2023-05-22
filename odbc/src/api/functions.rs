@@ -868,22 +868,28 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         }
     }
 
+    // when a mongo_connection is being established, we take the connection attributes that could have been sent
+    // prior to the mongo_connection being established and move them into the mongo_connection
     let conn_attrs = conn.attributes.read().unwrap();
-    let database = if conn_attrs.current_catalog.is_some() {
-        conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
+
+    let database = if conn_attrs.as_ref().unwrap().current_catalog.is_some() {
+        conn_attrs
+            .as_ref()
+            .unwrap()
+            .current_catalog
+            .as_deref()
+            .map(|s| s.to_string())
     } else {
         odbc_uri.remove(&["database"])
     };
-    let connection_timeout = conn_attrs.connection_timeout;
-    let login_timeout = conn_attrs.login_timeout;
+    let mut attrs = conn.attributes.write().unwrap().take().unwrap();
+    attrs.current_catalog = database;
     // ODBCError has an impl From mongo_odbc_core::Error, but that does not
     // create an impl From Result<T, mongo_odbc_core::Error> to Result<T, ODBCError>
     // hence this bizarre Ok(func?) pattern.
     Ok(mongo_odbc_core::MongoConnection::connect(
         client_options,
-        database,
-        connection_timeout,
-        login_timeout,
+        attrs,
     )?)
 }
 
@@ -1011,7 +1017,13 @@ pub unsafe extern "C" fn SQLExecDirectW(
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let mongo_statement = {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
-                let timeout = connection.attributes.read().unwrap().connection_timeout;
+                let timeout = connection
+                    .attributes
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap()
+                    .connection_timeout;
                 if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref()
                 {
                     MongoQuery::execute(mongo_connection, timeout, &query).map_err(|e| e.into())
@@ -1211,6 +1223,20 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                     .as_connection()
                     .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_CONN_ERROR))?
             };
+            // We must take the connection attributes in the mongo_connection and put them back
+            // in the connection attributes for the conn
+            if conn.has_mongo_connection() {
+                let mongo_connection_attributes = conn
+                    .mongo_connection
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap()
+                    .attributes
+                    .clone();
+                let mut connection_attributes = conn.attributes.write().unwrap();
+                *connection_attributes = Some(mongo_connection_attributes);
+            }
             let env = unsafe {
                 (*conn.env)
                     .as_env()
@@ -1321,25 +1347,35 @@ unsafe fn sql_get_connect_attrw_helper(
     // all operating systems, and the docs say it can panic.
     let sql_return = {
         let conn = must_be_valid!((*conn_handle).as_connection());
-        let attributes = &conn.attributes.read().unwrap();
+        let mongo_connection = conn.mongo_connection.read().unwrap();
+        let connection_attributes = conn.attributes.read().unwrap();
 
+        let has_connection = conn.has_mongo_connection();
+        // unfortunate clones here, but the types in a ConnectionAttributes struct are small
+        let attributes = if has_connection {
+            mongo_connection.as_ref().unwrap().attributes.clone()
+        } else {
+            connection_attributes.as_ref().unwrap().clone()
+        };
+
+        // Only attributes that are Either or After are synced to the attributes in the mongo_connection
         match attribute {
-            ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
-                let current_catalog = attributes.current_catalog.as_deref();
-                match current_catalog {
-                    None => SqlReturn::NO_DATA,
-                    Some(cc) => i32_len::set_output_wstring_as_bytes(
-                        cc,
-                        value_ptr,
-                        buffer_length as usize,
-                        string_length_ptr,
-                    ),
-                }
-            }
+            // Either
+            ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => match attributes.current_catalog {
+                None => SqlReturn::NO_DATA,
+                Some(ref cc) => i32_len::set_output_wstring_as_bytes(
+                    cc,
+                    value_ptr,
+                    buffer_length as usize,
+                    string_length_ptr,
+                ),
+            },
+            // Before
             ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => {
                 let login_timeout = attributes.login_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
             }
+            // Either
             ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => {
                 let connection_timeout = attributes.connection_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
@@ -2764,16 +2800,49 @@ unsafe fn set_connect_attrw_helper(
     let sql_return = {
         let conn = must_be_valid!((*conn_handle).as_connection());
 
+        let has_connection = conn.has_mongo_connection();
+
+        // Attributes could be set before or after the mongo_connection is established, so we
+        // have to check and write to the proper place. Keep in mind the conn.attributes Option<RwLock<ConnectionAttributes>> is TAKEN
+        // when a mongo_connection is established, so writing to both isn't safe
         match attribute {
             ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => {
-                conn.attributes.write().unwrap().login_timeout = Some(value_ptr as u32);
+                if has_connection {
+                    conn.mongo_connection
+                        .write()
+                        .unwrap()
+                        .as_mut()
+                        .unwrap()
+                        .attributes
+                        .login_timeout = Some(value_ptr as u32);
+                } else {
+                    conn.attributes
+                        .write()
+                        .unwrap()
+                        .as_mut()
+                        .unwrap()
+                        .login_timeout = Some(value_ptr as u32);
+                }
                 SqlReturn::SUCCESS
             }
             ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
-                conn.attributes.write().unwrap().current_catalog = Some(input_text_to_string_w(
-                    value_ptr as *const WideChar,
-                    str_length as usize,
-                ));
+                let db = input_text_to_string_w(value_ptr as *const WideChar, str_length as usize);
+                if has_connection {
+                    conn.mongo_connection
+                        .write()
+                        .unwrap()
+                        .as_mut()
+                        .unwrap()
+                        .attributes
+                        .current_catalog = Some(db);
+                } else {
+                    conn.attributes
+                        .write()
+                        .unwrap()
+                        .as_mut()
+                        .unwrap()
+                        .current_catalog = Some(db);
+                }
                 SqlReturn::SUCCESS
             }
             ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => SqlReturn::SUCCESS,
