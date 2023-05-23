@@ -870,18 +870,23 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
 
     // when a mongo_connection is being established, we take the connection attributes that could have been sent
     // prior to the mongo_connection being established and move them into the mongo_connection
-    let conn_attrs = conn.attributes.read().unwrap();
-
-    let database = if conn_attrs.as_ref().unwrap().current_catalog.is_some() {
-        conn_attrs
+    let database: Option<String>;
+    {
+        let catalog_database = conn
+            .attributes
+            .read()
+            .unwrap()
             .as_ref()
             .unwrap()
             .current_catalog
             .as_deref()
-            .map(|s| s.to_string())
-    } else {
-        odbc_uri.remove(&["database"])
-    };
+            .map(|s| s.to_string());
+        database = if catalog_database.is_some() {
+            catalog_database
+        } else {
+            odbc_uri.remove(&["database"])
+        };
+    }
     let mut attrs = conn.attributes.write().unwrap().take().unwrap();
     attrs.current_catalog = database;
     // ODBCError has an impl From mongo_odbc_core::Error, but that does not
@@ -1022,8 +1027,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
                     .read()
                     .unwrap()
                     .as_ref()
-                    .unwrap()
-                    .connection_timeout;
+                    .and_then(|attr| attr.connection_timeout);
                 if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref()
                 {
                     MongoQuery::execute(mongo_connection, timeout, &query).map_err(|e| e.into())
