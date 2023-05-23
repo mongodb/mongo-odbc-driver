@@ -44,7 +44,7 @@ export DYLD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
 ```
 Finally, return to the root folder, and update the ini files to set the relevant values and export additional environment variables:
 ```
-export DRIVER_LIB_PATH=$PWD/target/release-with-debug
+export DRIVER_LIB_PATH=$PWD/target/release
 sed -i.bu "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/iodbcinst.ini
 sed -i.bu "s,%DRIVER_LIB_PATH%,$DRIVER_LIB_PATH,g" setup/iodbc.ini
 sed -i.bu "s,%ADF_TEST_DB%,${ADF_TEST_LOCAL_DB},g" setup/iodbc.ini
