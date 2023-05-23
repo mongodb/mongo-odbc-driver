@@ -836,6 +836,18 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
             let conn = must_be_valid!((*conn_handle).as_connection());
+
+            // prior to dropping the mongo_connection, we need to move it's ConnectionAttributes
+            // to the conn's ConnectionAttributes - the inverse of what we do when a mongo_connection
+            // is established
+            {
+                let mongo_connection = conn.mongo_connection.write().unwrap();
+                if conn.has_mongo_connection() {
+                    *conn.attributes.write().unwrap() =
+                        Some(mongo_connection.as_ref().unwrap().attributes.clone())
+                }
+            }
+
             // set the mongo_connection to None. This will cause the previous mongo_connection
             // to drop and disconnect.
             *conn.mongo_connection.write().unwrap() = None;
