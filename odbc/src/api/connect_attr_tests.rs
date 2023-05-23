@@ -299,7 +299,7 @@ mod unit {
                 assert_eq!(
                     "mongosql-rs",
                     input_text_to_string_w(
-                        return_ptr as *const u16,
+                        return_ptr as *const WideChar,
                         *out_length as usize / size_of::<WideChar>()
                     )
                 );
@@ -363,7 +363,7 @@ mod unit {
                 assert_eq!(
                     "mongosql-rs",
                     input_text_to_string_w(
-                        return_ptr as *const u16,
+                        return_ptr as *const WideChar,
                         *out_length as usize / size_of::<WideChar>()
                     )
                 );
@@ -415,7 +415,7 @@ mod unit {
                 assert_eq!(
                     "mongosql-rs",
                     input_text_to_string_w(
-                        return_ptr as *const u16,
+                        return_ptr as *const WideChar,
                         *out_length as usize / size_of::<WideChar>()
                     )
                 );
