@@ -870,24 +870,10 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
 
     // when a mongo_connection is being established, we take the connection attributes that could have been sent
     // prior to the mongo_connection being established and move them into the mongo_connection
-    let database: Option<String>;
-    {
-        let catalog_database = conn
-            .attributes
-            .read()
-            .unwrap()
-            .as_ref()
-            .unwrap()
-            .current_catalog
-            .as_deref()
-            .map(|s| s.to_string());
-        database = if catalog_database.is_some() {
-            catalog_database
-        } else {
-            odbc_uri.remove(&["database"])
-        };
-    }
+    // The attributes are taken, leaving None in the conn.attributes struct. A write lock is used to ensure there
+    // aren't any open readers.
     let mut attrs = conn.attributes.write().unwrap().take().unwrap();
+    let database = attrs.current_catalog.or(odbc_uri.remove(&["database"]));
     attrs.current_catalog = database;
     // ODBCError has an impl From mongo_odbc_core::Error, but that does not
     // create an impl From Result<T, mongo_odbc_core::Error> to Result<T, ODBCError>
@@ -1362,9 +1348,7 @@ unsafe fn sql_get_connect_attrw_helper(
             connection_attributes.as_ref().unwrap().clone()
         };
 
-        // Only attributes that are Either or After are synced to the attributes in the mongo_connection
         match attribute {
-            // Either
             ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => match attributes.current_catalog {
                 None => SqlReturn::NO_DATA,
                 Some(ref cc) => i32_len::set_output_wstring_as_bytes(
@@ -1374,12 +1358,10 @@ unsafe fn sql_get_connect_attrw_helper(
                     string_length_ptr,
                 ),
             },
-            // Before
             ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => {
                 let login_timeout = attributes.login_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
             }
-            // Either
             ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => {
                 let connection_timeout = attributes.connection_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
@@ -2806,9 +2788,6 @@ unsafe fn set_connect_attrw_helper(
 
         let has_connection = conn.has_mongo_connection();
 
-        // Attributes could be set before or after the mongo_connection is established, so we
-        // have to check and write to the proper place. Keep in mind the conn.attributes Option<RwLock<ConnectionAttributes>> is TAKEN
-        // when a mongo_connection is established, so writing to both isn't safe
         match attribute {
             ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => {
                 if has_connection {
