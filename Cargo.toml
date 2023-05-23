@@ -13,6 +13,5 @@ members = [
   "macos_postinstall",
 ]
 
-[profile.release-with-debug]
-inherits = "release"
+[profile.release]
 debug = true

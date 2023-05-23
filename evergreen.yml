@@ -272,8 +272,8 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           # Build a release driver with debug information
-          cargo build --profile=release-with-debug
-          export DRIVER_LIB_PATH=$PWD/target/release-with-debug
+          cargo build --release
+          export DRIVER_LIB_PATH=$PWD/target/release
 
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
@@ -316,8 +316,8 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           # Build a release driver with debug information
-          cargo build --features odbc-sys/iodbc,cstr/utf32 --profile=release-with-debug
-          export DRIVER_LIB_PATH=$PWD/target/release-with-debug
+          cargo build --features odbc-sys/iodbc,cstr/utf32 --release
+          export DRIVER_LIB_PATH=$PWD/target/release
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
           EOT
