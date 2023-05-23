@@ -840,9 +840,10 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
             // prior to dropping the mongo_connection, we need to move it's ConnectionAttributes
             // to the conn's ConnectionAttributes - the inverse of what we do when a mongo_connection
             // is established
+            let has_mongo_connection = conn.has_mongo_connection();
             {
                 let mongo_connection = conn.mongo_connection.write().unwrap();
-                if conn.has_mongo_connection() {
+                if has_mongo_connection {
                     *conn.attributes.write().unwrap() =
                         Some(mongo_connection.as_ref().unwrap().attributes.clone())
                 }
