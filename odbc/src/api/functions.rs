@@ -111,7 +111,8 @@ macro_rules! odbc_unwrap {
     }};
 }
 
-// panic_safe_exec executes `function` such that any panics do not crash the runtime.
+// panic_safe_exec_clear_diagnostics executes `function` such that any panics do not crash the runtime,
+// while clearing any diagnostics in the $handle's error vec.
 // If a panic occurs during execution, the panic is caught and turned into a String.
 // The panic message is added to the diagnostics of `handle` and SqlReturn::ERROR returned.
 macro_rules! panic_safe_exec_clear_diagnostics {
@@ -174,7 +175,8 @@ macro_rules! panic_safe_exec_clear_diagnostics {
 }
 pub(crate) use panic_safe_exec_clear_diagnostics;
 
-// panic_safe_exec_keep_diagnostics executes `function` such that any panics do not crash the runtime.
+// panic_safe_exec_keep_diagnostics executes `function` such that any panics do not crash the runtime,
+// while retaining any diagnostics in the provided $handle's errors vec.
 // If a panic occurs during execution, the panic is caught and turned into a String.
 // The panic message is added to the diagnostics of `handle` and SqlReturn::ERROR returned.
 macro_rules! panic_safe_exec_keep_diagnostics {
