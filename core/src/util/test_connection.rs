@@ -32,7 +32,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                     login_timeout: Some(30),
                     connection_timeout: None,
                 };
-                match MongoConnection::connect(client_options, connection_attributes) {
+                match MongoConnection::connect(client_options, connection_attributes.into()) {
                     Ok(_) => true,
                     Err(e) => {
                         let len =

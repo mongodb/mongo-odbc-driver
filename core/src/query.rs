@@ -31,6 +31,8 @@ impl MongoQuery {
     ) -> Result<Self> {
         let current_db = client
             .attributes
+            .as_ref()
+            .unwrap()
             .current_catalog
             .as_ref()
             .ok_or(Error::NoDatabase)?;

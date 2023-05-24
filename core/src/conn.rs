@@ -26,7 +26,8 @@ pub struct MongoConnection {
     /// The UuidRepresentation to use for this connection.
     pub uuid_repr: Option<UuidRepresentation>,
     // all the possible Connection settings
-    pub attributes: ConnectionAttributes,
+    // this is an option for ergonomics only. In reality, this will always be Some
+    pub attributes: Option<ConnectionAttributes>,
 }
 
 impl MongoConnection {
@@ -42,9 +43,11 @@ impl MongoConnection {
     /// setting specified in the uri if any.
     pub fn connect(
         mut user_options: UserOptions,
-        connection_attributes: ConnectionAttributes,
+        connection_attributes: Option<ConnectionAttributes>,
     ) -> Result<Self> {
         user_options.client_options.connect_timeout = connection_attributes
+            .as_ref()
+            .unwrap()
             .login_timeout
             .map(|to| Duration::new(to as u64, 0));
         let client = Client::with_options(user_options.client_options)

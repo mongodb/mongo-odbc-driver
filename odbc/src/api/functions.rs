@@ -838,14 +838,19 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
             let conn = must_be_valid!((*conn_handle).as_connection());
 
             // prior to dropping the mongo_connection, we need to move it's ConnectionAttributes
-            // to the conn's ConnectionAttributes - the inverse of what we do when a mongo_connection
+            // to the conn_handle's ConnectionAttributes - the inverse of what we do when a mongo_connection
             // is established
             let has_mongo_connection = conn.has_mongo_connection();
             {
-                let mongo_connection = conn.mongo_connection.write().unwrap();
                 if has_mongo_connection {
-                    *conn.attributes.write().unwrap() =
-                        Some(mongo_connection.as_ref().unwrap().attributes.clone())
+                    *conn.attributes.write().unwrap() = conn
+                        .mongo_connection
+                        .write()
+                        .unwrap()
+                        .as_mut()
+                        .unwrap()
+                        .attributes
+                        .take()
                 }
             }
 
@@ -893,7 +898,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     // hence this bizarre Ok(func?) pattern.
     Ok(mongo_odbc_core::MongoConnection::connect(
         client_options,
-        attrs,
+        Some(attrs),
     )?)
 }
 
@@ -1226,20 +1231,6 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                     .as_connection()
                     .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_CONN_ERROR))?
             };
-            // We must take the connection attributes in the mongo_connection and put them back
-            // in the connection attributes for the conn
-            if conn.has_mongo_connection() {
-                let mongo_connection_attributes = conn
-                    .mongo_connection
-                    .read()
-                    .unwrap()
-                    .as_ref()
-                    .unwrap()
-                    .attributes
-                    .clone();
-                let mut connection_attributes = conn.attributes.write().unwrap();
-                *connection_attributes = Some(mongo_connection_attributes);
-            }
             let env = unsafe {
                 (*conn.env)
                     .as_env()
@@ -1356,9 +1347,14 @@ unsafe fn sql_get_connect_attrw_helper(
         let has_connection = conn.has_mongo_connection();
         // unfortunate clones here, but the types in a ConnectionAttributes struct are small
         let attributes = if has_connection {
-            mongo_connection.as_ref().unwrap().attributes.clone()
+            mongo_connection
+                .as_ref()
+                .unwrap()
+                .attributes
+                .as_ref()
+                .unwrap()
         } else {
-            connection_attributes.as_ref().unwrap().clone()
+            connection_attributes.as_ref().unwrap()
         };
 
         match attribute {
@@ -2810,6 +2806,8 @@ unsafe fn set_connect_attrw_helper(
                         .as_mut()
                         .unwrap()
                         .attributes
+                        .as_mut()
+                        .unwrap()
                         .login_timeout = Some(value_ptr as u32);
                 } else {
                     conn.attributes
@@ -2830,6 +2828,8 @@ unsafe fn set_connect_attrw_helper(
                         .as_mut()
                         .unwrap()
                         .attributes
+                        .as_mut()
+                        .unwrap()
                         .current_catalog = Some(db);
                 } else {
                     conn.attributes
