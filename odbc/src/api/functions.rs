@@ -117,60 +117,11 @@ macro_rules! odbc_unwrap {
 // The panic message is added to the diagnostics of `handle` and SqlReturn::ERROR returned.
 macro_rules! panic_safe_exec_clear_diagnostics {
     ($level:ident, $function:expr, $handle:expr) => {{
-        let function = $function;
+        use crate::panic_safe_exec_keep_diagnostics;
         let handle = $handle;
         let handle_ref = MongoHandleRef::from(handle);
         handle_ref.clear_diagnostics();
-        let previous_hook = panic::take_hook();
-        let (s, r) = mpsc::sync_channel(1);
-        let fct_name: &str = function_name!();
-        panic::set_hook(Box::new(move |i| {
-            if let Some(location) = i.location() {
-                let info = format!("in file '{}' at line {}", location.file(), location.line());
-                let _ = s.send(info);
-            }
-        }));
-        let result = panic::catch_unwind(function);
-        panic::set_hook(previous_hook);
-        match result {
-            Ok(sql_return) => {
-                #[allow(unused_variables)]
-                let trace = trace_outcome(&sql_return);
-                if handle.is_null() {
-                    crate::trace_odbc!($level, trace, fct_name);
-                } else {
-                    crate::trace_odbc!($level, handle_ref, trace, fct_name);
-                }
-
-                return sql_return;
-            }
-            Err(err) => {
-                let panic_msg = if let Some(msg) = err.downcast_ref::<&'static str>() {
-                    format!("{}\n{:?}", msg, r.recv())
-                } else {
-                    format!("{:?}\n{:?}", err, r.recv())
-                };
-
-                if handle.is_null() {
-                    crate::trace_odbc_error!(ODBCError::Panic(panic_msg.clone()), fct_name);
-                } else {
-                    add_diag_with_function!(
-                        handle_ref,
-                        ODBCError::Panic(panic_msg.clone()),
-                        fct_name
-                    );
-                }
-                let sql_return = SqlReturn::ERROR;
-                #[allow(unused_variables)]
-                let trace = trace_outcome(&sql_return);
-                if handle.is_null() {
-                    crate::trace_odbc_error!(trace, fct_name);
-                } else {
-                    crate::trace_odbc_error!(handle_ref, trace, fct_name);
-                }
-                return sql_return;
-            }
-        };
+        panic_safe_exec_keep_diagnostics!($level, $function, $handle);
     }};
 }
 pub(crate) use panic_safe_exec_clear_diagnostics;
