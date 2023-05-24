@@ -655,7 +655,7 @@ mod unit {
                             .unwrap()
                             .errors
                             .read()
-                            .unwrap()[1]
+                            .unwrap()[0]
                     ),
                 );
                 guid_val_test(
