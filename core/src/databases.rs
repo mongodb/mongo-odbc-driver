@@ -208,7 +208,12 @@ impl MongoDatabases {
                     .authorized_databases(true)
                     .build(),
             )
-            .unwrap();
+            .unwrap()
+            // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
+            .iter()
+            .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
+            .map(|s| s.to_string())
+            .collect();
         MongoDatabases {
             database_names,
             current_db_index: 0,

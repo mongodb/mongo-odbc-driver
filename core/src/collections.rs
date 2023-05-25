@@ -114,6 +114,8 @@ impl MongoCollections {
             )
             .unwrap()
             .iter()
+            // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
+            .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
             .filter(|&db_name| is_match(db_name.as_str(), &db_name_filter_regex))
             .map(|val| {
                 CollectionsForDb {
