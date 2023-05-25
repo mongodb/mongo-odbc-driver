@@ -486,6 +486,11 @@ impl MongoFields {
                             .build(),
                     )
                     .unwrap()
+                    // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
+                    .iter()
+                    .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
+                    .map(|s| s.to_string())
+                    .collect()
             },
             |db| vec![db.to_string()],
         );
