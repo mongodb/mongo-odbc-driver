@@ -6,7 +6,7 @@ use crate::{
 };
 use bson::{spec::BinarySubtype, Bson, UuidRepresentation};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
-use cstr::WideChar;
+use cstr::{from_widechar_ref_lossy, write_char_to_buffer, write_widechar_to_buffer, WideChar};
 use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
@@ -945,19 +945,17 @@ unsafe fn set_output_wstring_helper(
     if output_ptr.is_null() || buffer_len == 0 {
         return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
-    // Check if the entire message plus a null terminator can fit in the buffer;
-    // we should truncate the message if it's too long.
-    let num_chars = min(message.len() + 1, buffer_len);
     // TODO SQL-1084: This will currently not work when we need to truncate data that takes more than
     // two bytes, such as emojis because it's assuming every character is 2 bytes.
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
-    copy_nonoverlapping(message.as_ptr(), output_ptr, num_chars - 1);
-    *output_ptr.add(num_chars - 1) = 0;
+    let num_chars_written =
+        write_widechar_to_buffer(&from_widechar_ref_lossy(message), buffer_len, output_ptr)
+            as usize;
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars <= message.len() {
-        (num_chars - 1, SqlReturn::SUCCESS_WITH_INFO)
+    if num_chars_written <= message.len() {
+        (num_chars_written - 1, SqlReturn::SUCCESS_WITH_INFO)
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
@@ -981,15 +979,14 @@ unsafe fn set_output_string_helper(
     if output_ptr.is_null() || buffer_len == 0 {
         return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
-    // Check if the entire message plus a null terminator can fit in the buffer;
-    // we should truncate the message if it's too long.
-    let num_chars = min(message.len() + 1, buffer_len);
-    copy_nonoverlapping(message.as_ptr(), output_ptr, num_chars - 1);
-    *output_ptr.add(num_chars - 1) = 0u8;
+
+    let num_chars_written =
+        write_char_to_buffer(&String::from_utf8_lossy(message), buffer_len, output_ptr) as usize;
+
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars <= message.len() {
-        (num_chars - 1, SqlReturn::SUCCESS_WITH_INFO)
+    if num_chars_written <= message.len() {
+        (num_chars_written - 1, SqlReturn::SUCCESS_WITH_INFO)
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
