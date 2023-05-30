@@ -1,4 +1,5 @@
 use num_derive::FromPrimitive;
+use std::os::raw::c_void;
 use std::ptr::copy_nonoverlapping;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
@@ -166,15 +167,11 @@ pub fn to_char_ptr(s: &str) -> (*mut Char, Vec<u8>) {
 }
 
 ///
-/// write_widechar_to_buffer writes the input string to the output buffer, and returns the number of bytes written
+/// write_string_to_buffer writes the input string to the output buffer, and returns the number of bytes written
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
-pub unsafe fn write_widechar_to_buffer(
-    message: &str,
-    len: usize,
-    output_ptr: *mut WideChar,
-) -> u16 {
+pub unsafe fn write_string_to_buffer(message: &str, len: usize, output_ptr: *mut WideChar) -> u16 {
     let len = std::cmp::min(message.len(), len - 1);
     let mut v = to_widechar_vec(&message[..len]);
     v.push(0);
@@ -185,21 +182,74 @@ pub unsafe fn write_widechar_to_buffer(
 }
 
 ///
-/// write_char_to_buffer writes the input string to the output buffer, and returns the number of bytes written
+/// write_wstring_slice_to_buffer writes the input WideChar slice (wstring) to the output buffer, and returns the number of bytes written
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
-pub unsafe fn write_char_to_buffer(message: &str, len: usize, output_ptr: *mut Char) -> u16 {
+pub unsafe fn write_wstring_slice_to_buffer(
+    message: &[WideChar],
+    len: usize,
+    output_ptr: *mut WideChar,
+) -> u16 {
     let len = std::cmp::min(message.len(), len - 1);
-
-    let chars_to_write = &mut message[..len].to_string();
-
-    let v = chars_to_write.as_mut_vec();
+    let mut v = message[..len].to_vec();
     v.push(0);
+
     unsafe {
         copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
     }
+
     v.len() as u16
+}
+
+///
+/// write_string_slice_to_buffer writes the input Char slice (string) to the output buffer, and returns the number of bytes written
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_string_slice_to_buffer(
+    message: &[Char],
+    len: usize,
+    output_ptr: *mut Char,
+) -> u16 {
+    let len = std::cmp::min(message.len(), len - 1);
+    let mut v = message[..len].to_vec();
+    v.push(0);
+
+    unsafe {
+        copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
+    }
+
+    v.len() as u16
+}
+
+///
+/// write_binary_slice_to_buffer writes the input Char slice (binary) to the output buffer, and returns the number of bytes written
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_binary_slice_to_buffer(
+    message: &[Char],
+    len: usize,
+    output_ptr: *mut Char,
+) -> u16 {
+    let len = std::cmp::min(message.len(), len);
+    let mut v = message[..len].to_vec();
+
+    unsafe {
+        copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
+    }
+
+    v.len() as u16
+}
+
+///
+/// write_fixed_data_to_buffer writes the input data to the output buffer with a length of 1.
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_fixed_data_to_buffer<T: core::fmt::Debug>(data: &T, output_ptr: *mut c_void) {
+    copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
 }
 
 #[cfg(test)]
@@ -229,7 +279,7 @@ mod test {
         let expected = "test\0\0\0\0\0";
         let input = "test";
         let mut buffer = [0; 9];
-        let len = unsafe { write_widechar_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        let len = unsafe { write_string_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
@@ -239,7 +289,7 @@ mod test {
         let expected = "te\0";
         let input = "testing";
         let mut buffer: [WideChar; 3] = [0; 3];
-        let len = unsafe { write_widechar_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
+        let len = unsafe { write_string_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
@@ -249,7 +299,7 @@ mod test {
         let expected = "tes\0";
         let input = "test";
         let mut buffer: [WideChar; 4] = [0; 4];
-        let len = unsafe { write_widechar_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        let len = unsafe { write_string_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }

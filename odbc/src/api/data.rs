@@ -6,13 +6,16 @@ use crate::{
 };
 use bson::{spec::BinarySubtype, Bson, UuidRepresentation};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
-use cstr::{from_widechar_ref_lossy, write_char_to_buffer, write_widechar_to_buffer, WideChar};
+use cstr::{
+    write_binary_slice_to_buffer, write_fixed_data_to_buffer, write_string_slice_to_buffer,
+    write_wstring_slice_to_buffer, WideChar,
+};
 use odbc_sys::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
 use regex::Regex;
 use serde_json::{json, Value};
-use std::{cmp::min, mem::size_of, ptr::copy_nonoverlapping, str::FromStr};
+use std::{mem::size_of, str::FromStr};
 
 const DOUBLE: &str = "Double";
 const INT32: &str = "Int32";
@@ -949,9 +952,7 @@ unsafe fn set_output_wstring_helper(
     // two bytes, such as emojis because it's assuming every character is 2 bytes.
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
-    let num_chars_written =
-        write_widechar_to_buffer(&from_widechar_ref_lossy(message), buffer_len, output_ptr)
-            as usize;
+    let num_chars_written = write_wstring_slice_to_buffer(message, buffer_len, output_ptr) as usize;
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars_written <= message.len() {
@@ -980,8 +981,7 @@ unsafe fn set_output_string_helper(
         return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
 
-    let num_chars_written =
-        write_char_to_buffer(&String::from_utf8_lossy(message), buffer_len, output_ptr) as usize;
+    let num_chars_written = write_string_slice_to_buffer(message, buffer_len, output_ptr) as usize;
 
     // return the number of characters in the message string, excluding the
     // null terminator
@@ -1005,23 +1005,19 @@ unsafe fn set_output_binary_helper(
     output_ptr: *mut Char,
     buffer_len: usize,
 ) -> (usize, SqlReturn) {
-    if output_ptr.is_null() {
-        return (data.len(), SqlReturn::SUCCESS_WITH_INFO);
+    // If the output_ptr is null or no buffer space has been allocated, we need
+    // to return SUCCESS_WITH_INFO.
+    if output_ptr.is_null() || buffer_len == 0 {
+        return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
-    // Check if the entire message can fit in the buffer;
-    // we should truncate the message if it's too long.
-    let data_len = data.len();
-    let num_bytes = min(data_len, buffer_len);
-    // It is possible that no buffer space has been allocated.
-    if num_bytes == 0 {
-        return (0, SqlReturn::SUCCESS_WITH_INFO);
-    }
-    copy_nonoverlapping(data.as_ptr(), output_ptr as *mut _, num_bytes);
+
+    let num_bytes_written = write_binary_slice_to_buffer(data, buffer_len, output_ptr) as usize;
+
     // return the number of characters in the binary
-    if num_bytes < data_len {
-        (num_bytes, SqlReturn::SUCCESS_WITH_INFO)
+    if num_bytes_written < data.len() {
+        (num_bytes_written, SqlReturn::SUCCESS_WITH_INFO)
     } else {
-        (num_bytes, SqlReturn::SUCCESS)
+        (num_bytes_written, SqlReturn::SUCCESS)
     }
 }
 
@@ -1099,7 +1095,7 @@ pub mod i16_len {
         if output_ptr.is_null() {
             return SqlReturn::SUCCESS_WITH_INFO;
         }
-        copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
+        write_fixed_data_to_buffer(data, output_ptr);
         SqlReturn::SUCCESS
     }
 }
@@ -1150,7 +1146,7 @@ pub mod i32_len {
         if output_ptr.is_null() {
             return SqlReturn::SUCCESS_WITH_INFO;
         }
-        copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
+        write_fixed_data_to_buffer(data, output_ptr);
         SqlReturn::SUCCESS
     }
 }
@@ -1290,7 +1286,7 @@ pub mod isize_len {
             // If the output_ptr is NULL, we should still return the length of the message.
             *data_len_ptr = size_of::<T>() as isize;
         }
-        copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
+        write_fixed_data_to_buffer(data, output_ptr);
         SqlReturn::SUCCESS
     }
 }
