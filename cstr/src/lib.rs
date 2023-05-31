@@ -244,7 +244,7 @@ pub unsafe fn write_binary_slice_to_buffer(
 }
 
 ///
-/// write_fixed_data_to_buffer writes the input data to the output buffer with a length of 1.
+/// write_fixed_data_to_buffer writes the input data (a single value) to the output buffer.
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
@@ -309,7 +309,8 @@ mod test {
         let expected = "test\0";
         let input = &to_widechar_vec("test")[..];
         let mut buffer = [0; 5];
-        let len = unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        let len =
+            unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
@@ -319,7 +320,8 @@ mod test {
         let expected = "te\0";
         let input = &to_widechar_vec("test")[..];
         let mut buffer = [0; 3];
-        let len = unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        let len =
+            unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
@@ -329,7 +331,8 @@ mod test {
         let expected = "tes\0";
         let input = &to_widechar_vec("test")[..];
         let mut buffer = [0; 4];
-        let len = unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        let len =
+            unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
@@ -398,9 +401,10 @@ mod test {
     fn test_write_fixed_data() {
         let expected = 42i32;
         let input = &42i32;
-        let output_ptr: *mut c_void =
-            Box::into_raw(Box::new([0i32; 1])) as *mut _;
+        let output_ptr: *mut c_void = Box::into_raw(Box::new([0i32; 1])) as *mut _;
         unsafe { write_fixed_data(input, output_ptr) };
-        unsafe { assert_eq!(expected, *(output_ptr as *mut i32)); }
+        unsafe {
+            assert_eq!(expected, *(output_ptr as *mut i32));
+        }
     }
 }
