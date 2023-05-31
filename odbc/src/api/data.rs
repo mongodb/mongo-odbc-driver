@@ -7,7 +7,7 @@ use crate::{
 use bson::{spec::BinarySubtype, Bson, UuidRepresentation};
 use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use cstr::{
-    write_binary_slice_to_buffer, write_fixed_data_to_buffer, write_string_slice_to_buffer,
+    write_binary_slice_to_buffer, write_fixed_data, write_string_slice_to_buffer,
     write_wstring_slice_to_buffer, WideChar,
 };
 use odbc_sys::{
@@ -1095,7 +1095,7 @@ pub mod i16_len {
         if output_ptr.is_null() {
             return SqlReturn::SUCCESS_WITH_INFO;
         }
-        write_fixed_data_to_buffer(data, output_ptr);
+        write_fixed_data(data, output_ptr);
         SqlReturn::SUCCESS
     }
 }
@@ -1146,7 +1146,7 @@ pub mod i32_len {
         if output_ptr.is_null() {
             return SqlReturn::SUCCESS_WITH_INFO;
         }
-        write_fixed_data_to_buffer(data, output_ptr);
+        write_fixed_data(data, output_ptr);
         SqlReturn::SUCCESS
     }
 }
@@ -1286,7 +1286,7 @@ pub mod isize_len {
             // If the output_ptr is NULL, we should still return the length of the message.
             *data_len_ptr = size_of::<T>() as isize;
         }
-        write_fixed_data_to_buffer(data, output_ptr);
+        write_fixed_data(data, output_ptr);
         SqlReturn::SUCCESS
     }
 }
