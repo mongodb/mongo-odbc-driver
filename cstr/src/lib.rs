@@ -195,7 +195,7 @@ pub unsafe fn write_wstring_slice_to_buffer(
 
     unsafe {
         copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
-        *output_ptr.offset(len as isize) = 0;
+        *output_ptr.add(len) = 0;
     }
 
     (len + 1) as u16
@@ -215,7 +215,7 @@ pub unsafe fn write_string_slice_to_buffer(
 
     unsafe {
         copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
-        *output_ptr.offset(len as isize) = 0;
+        *output_ptr.add(len) = 0;
     }
 
     (len + 1) as u16
