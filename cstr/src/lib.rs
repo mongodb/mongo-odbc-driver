@@ -176,7 +176,7 @@ pub unsafe fn write_string_to_buffer(message: &str, len: usize, output_ptr: *mut
     let mut v = to_widechar_vec(&message[..len]);
     v.push(0);
     unsafe {
-        copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
+        copy_nonoverlapping(v.as_ptr(), output_ptr, len);
     }
     v.len() as u16
 }
@@ -192,14 +192,13 @@ pub unsafe fn write_wstring_slice_to_buffer(
     output_ptr: *mut WideChar,
 ) -> u16 {
     let len = std::cmp::min(message.len(), len - 1);
-    let mut v = message[..len].to_vec();
-    v.push(0);
 
     unsafe {
-        copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
+        copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
+        *output_ptr.offset(len as isize) = 0;
     }
 
-    v.len() as u16
+    (len + 1) as u16
 }
 
 ///
@@ -213,14 +212,13 @@ pub unsafe fn write_string_slice_to_buffer(
     output_ptr: *mut Char,
 ) -> u16 {
     let len = std::cmp::min(message.len(), len - 1);
-    let mut v = message[..len].to_vec();
-    v.push(0);
 
     unsafe {
-        copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
+        copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
+        *output_ptr.offset(len as isize) = 0;
     }
 
-    v.len() as u16
+    (len + 1) as u16
 }
 
 ///
@@ -234,13 +232,12 @@ pub unsafe fn write_binary_slice_to_buffer(
     output_ptr: *mut Char,
 ) -> u16 {
     let len = std::cmp::min(message.len(), len);
-    let mut v = message[..len].to_vec();
 
     unsafe {
-        copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
+        copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
     }
 
-    v.len() as u16
+    len as u16
 }
 
 ///
