@@ -1,4 +1,5 @@
 use num_derive::FromPrimitive;
+use std::os::raw::c_void;
 use std::ptr::copy_nonoverlapping;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
@@ -166,18 +167,86 @@ pub fn to_char_ptr(s: &str) -> (*mut Char, Vec<u8>) {
 }
 
 ///
-/// write_to_buffer writes the input string to the output buffer, and returns the number of bytes written
+/// write_string_to_buffer writes the input string to the output buffer, and returns the number of bytes written
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
-pub unsafe fn write_to_buffer(message: &str, len: usize, output_ptr: *mut WideChar) -> u16 {
+pub unsafe fn write_string_to_buffer(message: &str, len: usize, output_ptr: *mut WideChar) -> u16 {
     let len = std::cmp::min(message.len(), len - 1);
     let mut v = to_widechar_vec(&message[..len]);
     v.push(0);
     unsafe {
-        copy_nonoverlapping(v.as_mut_ptr(), output_ptr, len);
+        copy_nonoverlapping(v.as_ptr(), output_ptr, len);
     }
     v.len() as u16
+}
+
+///
+/// write_wstring_slice_to_buffer writes the input WideChar slice (wstring) to the output buffer, and returns the number of bytes written
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_wstring_slice_to_buffer(
+    message: &[WideChar],
+    len: usize,
+    output_ptr: *mut WideChar,
+) -> u16 {
+    let len = std::cmp::min(message.len(), len - 1);
+
+    unsafe {
+        copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
+        *output_ptr.add(len) = 0;
+    }
+
+    (len + 1) as u16
+}
+
+///
+/// write_string_slice_to_buffer writes the input Char slice (string) to the output buffer, and returns the number of bytes written
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_string_slice_to_buffer(
+    message: &[Char],
+    len: usize,
+    output_ptr: *mut Char,
+) -> u16 {
+    let len = std::cmp::min(message.len(), len - 1);
+
+    unsafe {
+        copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
+        *output_ptr.add(len) = 0;
+    }
+
+    (len + 1) as u16
+}
+
+///
+/// write_binary_slice_to_buffer writes the input Char slice (binary) to the output buffer, and returns the number of bytes written
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_binary_slice_to_buffer(
+    message: &[Char],
+    len: usize,
+    output_ptr: *mut Char,
+) -> u16 {
+    let len = std::cmp::min(message.len(), len);
+
+    unsafe {
+        copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
+    }
+
+    len as u16
+}
+
+///
+/// write_fixed_data_to_buffer writes the input data (a single value) to the output buffer.
+///
+/// # Safety
+/// This writes to a raw c-pointer, which requires unsafe operations
+pub unsafe fn write_fixed_data<T: core::fmt::Debug>(data: &T, output_ptr: *mut c_void) {
+    copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
 }
 
 #[cfg(test)]
@@ -194,7 +263,7 @@ mod test {
     }
 
     #[test]
-    fn test_input_wtext_to_srtring() {
+    fn test_input_wtext_to_string() {
         let expected = "test";
         let test = to_widechar_vec(expected);
         let test = test.as_ptr();
@@ -203,32 +272,136 @@ mod test {
     }
 
     #[test]
-    fn test_write_to_buffer_with_enough_space() {
+    fn test_write_string_to_buffer_with_enough_space() {
         let expected = "test\0\0\0\0\0";
         let input = "test";
         let mut buffer = [0; 9];
-        let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        let len = unsafe { write_string_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
 
     #[test]
-    fn test_write_to_buffer_constrained_space() {
+    fn test_write_string_to_buffer_constrained_space() {
         let expected = "te\0";
         let input = "testing";
         let mut buffer: [WideChar; 3] = [0; 3];
-        let len = unsafe { write_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
+        let len = unsafe { write_string_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
     }
 
     #[test]
-    fn test_write_to_buffer_when_message_len_is_buffer_len() {
+    fn test_write_string_to_buffer_when_message_len_is_buffer_len() {
         let expected = "tes\0";
         let input = "test";
         let mut buffer: [WideChar; 4] = [0; 4];
-        let len = unsafe { write_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        let len = unsafe { write_string_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_wstring_slice_to_buffer_with_enough_space() {
+        let expected = "test\0";
+        let input = &to_widechar_vec("test")[..];
+        let mut buffer = [0; 5];
+        let len =
+            unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_wstring_slice_to_buffer_constrained_space() {
+        let expected = "te\0";
+        let input = &to_widechar_vec("test")[..];
+        let mut buffer = [0; 3];
+        let len =
+            unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_wstring_slice_to_buffer_when_message_len_is_buffer_len() {
+        let expected = "tes\0";
+        let input = &to_widechar_vec("test")[..];
+        let mut buffer = [0; 4];
+        let len =
+            unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_string_slice_to_buffer_with_enough_space() {
+        let expected = "test\0";
+        let input = "test".as_bytes();
+        let mut buffer = [0; 5];
+        let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, String::from_utf8_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_string_slice_to_buffer_constrained_space() {
+        let expected = "te\0";
+        let input = "test".as_bytes();
+        let mut buffer = [0; 3];
+        let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, String::from_utf8_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_string_slice_to_buffer_when_message_len_is_buffer_len() {
+        let expected = "tes\0";
+        let input = "test".as_bytes();
+        let mut buffer = [0; 4];
+        let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, String::from_utf8_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_binary_slice_to_buffer_with_enough_space() {
+        let expected = "test\0";
+        let input = "test".as_bytes();
+        let mut buffer = [0; 5];
+        let len = unsafe { write_binary_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, String::from_utf8_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len(), buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_binary_slice_to_buffer_constrained_space() {
+        let expected = "tes";
+        let input = "test".as_bytes();
+        let mut buffer = [0; 3];
+        let len = unsafe { write_binary_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, String::from_utf8_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len(), buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_binary_slice_to_buffer_when_message_len_is_buffer_len() {
+        let expected = "test";
+        let input = "test".as_bytes();
+        let mut buffer = [0; 4];
+        let len = unsafe { write_binary_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
+        assert_eq!(expected, String::from_utf8_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len(), buffer.len()) as u16);
+    }
+
+    #[test]
+    fn test_write_fixed_data() {
+        let expected = 42i32;
+        let input = &42i32;
+        let output_ptr: *mut c_void = Box::into_raw(Box::new([0i32; 1])) as *mut _;
+        unsafe { write_fixed_data(input, output_ptr) };
+        unsafe {
+            assert_eq!(expected, *(output_ptr as *mut i32));
+        }
     }
 }

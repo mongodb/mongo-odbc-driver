@@ -1,5 +1,5 @@
 use crate::{odbc_uri::ODBCUri, ConnectionAttributes, MongoConnection};
-use cstr::{input_text_to_string_w, write_to_buffer, WideChar};
+use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
 
 /// atlas_sql_test_connection returns true if a connection can be established
 /// with the provided connection string.
@@ -35,21 +35,25 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                 match MongoConnection::connect(client_options, connection_attributes.into()) {
                     Ok(_) => true,
                     Err(e) => {
-                        let len =
-                            write_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut WideChar);
+                        let len = write_string_to_buffer(
+                            &e.to_string(),
+                            buffer_in_len,
+                            buffer as *mut WideChar,
+                        );
                         *buffer_out_len = len;
                         false
                     }
                 }
             }
             Err(e) => {
-                let len = write_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut WideChar);
+                let len =
+                    write_string_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut WideChar);
                 *buffer_out_len = len;
                 false
             }
         }
     } else {
-        let len = write_to_buffer(
+        let len = write_string_to_buffer(
             "Invalid connection string.",
             buffer_in_len,
             buffer as *mut WideChar,
