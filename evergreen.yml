@@ -1501,7 +1501,7 @@ tasks:
       - name: integration-test
         variant: "*"
       - name: result-set-test
-        variant: "*"
+        variants: [windows-64, ubuntu2204]
       - name: sign
         variants: [windows-64, ubuntu2204]
     commands:
