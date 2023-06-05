@@ -1504,7 +1504,7 @@ tasks:
       - name: result-set-test
         variant: "*"
       - name: sign
-        variant: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204]
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1524,7 +1524,7 @@ tasks:
       - name: compile-debug
         variant: "*"
       - name: sign
-        variant: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204]
     commands:
       - func: "upload release"
       - func: "upload debug"
