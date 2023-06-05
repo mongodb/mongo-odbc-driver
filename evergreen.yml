@@ -1362,44 +1362,40 @@ tasks:
   - name: compile
     depends_on:
     commands:
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile release"
+        variants: [ubuntu2204, windows-64]
+      - func: "compile macos release"
+        variants: [macos, macos-arm]
       - func: "build msi"
         variants: [windows-64]
       - func: "tar linux artifacts"
         variants: [ubuntu2204]
-      - func: "mciuploads release artifacts"
-
-  - name: compile-macos
-    depends_on:
-    commands:
-      - func: "install iODBC"
-      - func: "set packages version"
-      - func: "check packages version"
-      - func: "compile macos release"
       - func: "build dmg"
+        variants: [macos, macos-arm]
       - func: "mciuploads release artifacts"
 
   - name: compile-debug
     commands:
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile debug"
-      - func: "mciuploads debug artifacts"
-
-  - name: compile-debug-macos
-    commands:
-      - func: "install iODBC"
-      - func: "set packages version"
-      - func: "check packages version"
+        variants: [ubuntu2204, windows-64]
       - func: "compile macos debug"
+        variants: [macos, macos-arm]
       - func: "mciuploads debug artifacts"
 
   - name: windows-unit-test
@@ -1635,8 +1631,8 @@ buildvariants:
     display_name: "macOS 11.0"
     run_on: [macos-1100]
     tasks:
-      - name: compile-macos
-      - name: compile-debug-macos
+      - name: compile
+      - name: compile-debug
       - name: macos-unit-test
       - name: macos-integration-test
       - name: macos-result-set-test
@@ -1645,8 +1641,8 @@ buildvariants:
     display_name: "macOS 11.0 ARM 64"
     run_on: [macos-1100-arm64]
     tasks:
-      - name: compile-macos
-      - name: compile-debug-macos
+      - name: compile
+      - name: compile-debug
       - name: macos-unit-test
       - name: macos-integration-test
       - name: macos-result-set-test
