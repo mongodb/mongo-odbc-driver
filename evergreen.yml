@@ -1497,26 +1497,14 @@ tasks:
         variant: "*"
       - name: rustfmt
         variant: "*"
-      - name: windows-unit-test
-        variant: "windows-64"
-      - name: windows-integration-test
-        variant: "windows-64"
-      - name: windows-result-set-test
-        variant: "windows-64"
-      - name: ubuntu-unit-test
-        variant: "ubuntu2204"
-      - name: ubuntu-integration-test
-        variant: "ubuntu2204"
-      - name: ubuntu-result-set-test
-        variant: "ubuntu2204"
-      - name: asan-unit-test
+      - name: unit-test
         variant: "*"
-      - name: asan-integration-test
+      - name: integration-test
         variant: "*"
-      - name: windows-sign
-        variant: "windows-64"
-      - name: ubuntu-sign
-        variant: "ubuntu2204"
+      - name: result-set-test
+        variant: "*"
+      - name: sign
+        variant: [windows-64, ubuntu2204]
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1535,10 +1523,8 @@ tasks:
         variant: "*"
       - name: compile-debug
         variant: "*"
-      - name: windows-sign
-        variant: "windows-64"
-      - name: ubuntu-sign
-        variant: "ubuntu2204"
+      - name: sign
+        variant: [windows-64, ubuntu2204]
     commands:
       - func: "upload release"
       - func: "upload debug"
