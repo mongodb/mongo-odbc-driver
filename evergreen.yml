@@ -1398,103 +1398,94 @@ tasks:
         variants: [macos, macos-arm]
       - func: "mciuploads debug artifacts"
 
-  - name: windows-unit-test
+  - name: unit-test
     commands:
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
       - func: "run windows unit tests"
+        variants: [windows-64]
+      - func: "run ubuntu unit tests"
+        variants: [ubuntu2204]
+      - func: "run asan unit tests"
+        variants: [ubuntu2204]
+      - func: "run macos unit tests"
+        variants: [macos, macos-arm]
 
-  - name: windows-integration-test
+  - name: integration-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
+      - func: "compile release with debug info"
+        variants: [ubuntu2204]
+      - func: "compile macos release with debug info"
+        variants: [macos, macos-arm]
+      - func: "setup driver with UnixODBC"
+        variants: [ubuntu2204]
+      - func: "setup driver with iODBC"
+        variants: [macos, macos-arm]
+      - func: "run ubuntu integration tests"
+        variants: [ubuntu2204]
+      - func: "run asan integration tests"
+        variants: [ubuntu2204]
       - func: "run windows integration tests"
+        variants: [windows-64]
+      - func: "run macos integration tests"
+        variants: [macos, macos-arm]
 
-  - name: windows-result-set-test
+
+  - name: result-set-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
+      - func: "compile release with debug info"
+        variants: [ubuntu2204]
+      - func: "compile macos release with debug info"
+        variants: [macos, macos-arm]
+      - func: "setup driver with UnixODBC"
+        variants: [ubuntu2204]
+      - func: "setup driver with iODBC"
+        variants: [macos, macos-arm]
       - func: "run windows result set test"
+        variants: [windows-64]
+      - func: "run ubuntu result-set tests"
+        variants: [ubuntu2204]
+      - func: "run asan result-set tests"
+        variants: [ubuntu2204]
+      - func: "run macos result-set tests"
+        variants: [macos, macos-arm]
 
-  - name: windows-sign
+  - name: sign
     depends_on:
       - name: compile
     commands:
       - func: "fetch for windows sign"
+        variants: [windows-64]
       - func: "sign windows"
+        variants: [windows-64]
       - func: "upload signed windows artifacts"
-
-  - name: ubuntu-unit-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "run ubuntu unit tests"
-
-  - name: ubuntu-integration-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "compile release with debug info"
-      - func: "setup driver with UnixODBC"
-      - func: "run ubuntu integration tests"
-
-  - name: ubuntu-result-set-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "compile release with debug info"
-      - func: "setup driver with UnixODBC"
-      - func: "run ubuntu result-set tests"
-
-  - name: ubuntu-sign
-    depends_on:
-      - name: compile
-    commands:
+        variants: [windows-64]
       - func: "fetch for ubuntu sign"
+        variants: [ubuntu2204]
       - func: "sign ubuntu"
+        variants: [ubuntu2204]
       - func: "upload ubuntu sig file"
-
-  - name: macos-unit-test
-    commands:
-      - func: "install iODBC"
-      - func: "run macos unit tests"
-
-  - name: macos-integration-test
-    commands:
-      - func: "install iODBC"
-      - func: "compile macos release with debug info"
-      - func: "setup driver with iODBC"
-      - func: "run macos integration tests"
-
-  - name: macos-result-set-test
-    commands:
-      - func: "install iODBC"
-      - func: "compile macos release with debug info"
-      - func: "setup driver with iODBC"
-      - func: "run macos result-set tests"
-
-  - name: asan-unit-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "run asan unit tests"
-
-  - name: asan-integration-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "compile release with debug info"
-      - func: "setup driver with UnixODBC"
-      - func: "run asan integration tests"
-
-  - name: asan-result-set-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "compile release with debug info"
-      - func: "setup driver with UnixODBC"
-      - func: "run asan result-set tests"
+        variants: [ubuntu2204]
 
   - name: snapshot
     depends_on:
@@ -1559,7 +1550,7 @@ task_groups:
       - func: "fetch source"
       - func: "generate expansions"
     tasks:
-      - windows-unit-test
+      - unit-test
 
   - name: windows-test-integration-group
     setup_group_can_fail_task: false
@@ -1574,7 +1565,7 @@ task_groups:
       - func: "clean-up driver on Windows"
       - func: "clean-up crash dump collection"
     tasks:
-      - windows-integration-test
+      - integration-test
 
   - name: windows-test-result-set-group
     setup_group_can_fail_task: false
@@ -1589,7 +1580,7 @@ task_groups:
       - func: "clean-up driver on Windows"
       - func: "clean-up crash dump collection"
     tasks:
-      - windows-result-set-test
+      - result-set-test
 
 buildvariants:
   - name: static-analysis
@@ -1608,7 +1599,7 @@ buildvariants:
       - name: windows-windows-test-unit-group
       - name: windows-test-integration-group
       - name: windows-test-result-set-group
-      - name: windows-sign
+      - name: sign
         run_on: linux-64-amzn-build
 
 
@@ -1618,13 +1609,10 @@ buildvariants:
     tasks:
       - name: compile
       - name: compile-debug
-      - name: ubuntu-unit-test
-      - name: ubuntu-integration-test
-      - name: ubuntu-result-set-test
-      - name: asan-unit-test
-      - name: asan-integration-test
-      - name: asan-result-set-test
-      - name: ubuntu-sign
+      - name: unit-test
+      - name: integration-test
+      - name: result-set-test
+      - name: sign
         run_on: linux-64-amzn-build
 
   - name: macos
@@ -1633,9 +1621,9 @@ buildvariants:
     tasks:
       - name: compile
       - name: compile-debug
-      - name: macos-unit-test
-      - name: macos-integration-test
-      - name: macos-result-set-test
+      - name: unit-test
+      - name: integration-test
+      - name: result-set-test
 
   - name: macos-arm
     display_name: "macOS 11.0 ARM 64"
@@ -1643,9 +1631,9 @@ buildvariants:
     tasks:
       - name: compile
       - name: compile-debug
-      - name: macos-unit-test
-      - name: macos-integration-test
-      - name: macos-result-set-test
+      - name: unit-test
+      - name: integration-test
+      - name: result-set-test
 
   - name: release
     display_name: "Release"
