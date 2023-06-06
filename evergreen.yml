@@ -1497,9 +1497,9 @@ tasks:
       - name: rustfmt
         variant: "*"
       - name: unit-test
-        variant: "*"
+        variants: [windows-64, ubuntu2204]
       - name: integration-test
-        variant: "*"
+        variants: [windows-64, ubuntu2204]
       - name: result-set-test
         variants: [windows-64, ubuntu2204]
       - name: sign
