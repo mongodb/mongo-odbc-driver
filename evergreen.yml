@@ -153,26 +153,6 @@ functions:
           ${prepare_shell}
           cargo clippy --all-targets -- -D warnings
 
-  "check packages version":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
-
   "check rustfmt":
     - command: shell.exec
       type: test
@@ -183,7 +163,7 @@ functions:
           ${prepare_shell}
           cargo fmt --all --  --check
 
-  "set packages version":
+  "set and check packages version":
     - command: shell.exec
       type: test
       params:
@@ -195,6 +175,17 @@ functions:
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             cargo install cargo-edit
             cargo set-version $RELEASE_VERSION
+          fi
+          cargo install cargo-get
+          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
+          if [[ "${triggered_by_git_tag}" == "" ]]; then
+            EXPECTED_RELEASE_VERSION="0.0.0"
+          else
+            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
+          fi
+          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
+            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
+            exit 1
           fi
 
   "sign windows":
@@ -237,7 +228,7 @@ functions:
               --notary-url "${notary_client_url}" \
               mongoodbc.tar.gz
 
-  "compile release":
+  "compile ubuntu and win release":
     - command: shell.exec
       type: test
       params:
@@ -251,7 +242,7 @@ functions:
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
 
-  "compile debug":
+  "compile ubuntu and win debug":
     - command: shell.exec
       type: test
       params:
@@ -1360,7 +1351,6 @@ tasks:
       - func: "check rustfmt"
 
   - name: compile
-    depends_on:
     commands:
       - func: "install iODBC"
         variants: [macos, macos-arm]
@@ -1368,9 +1358,8 @@ tasks:
         variants: [ubuntu2204, windows-64]
       - func: "install unix odbc"
         variants: [ubuntu2204]
-      - func: "set packages version"
-      - func: "check packages version"
-      - func: "compile release"
+      - func: "set and check packages version"
+      - func: "compile ubuntu and win release"
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
         variants: [macos, macos-arm]
@@ -1390,9 +1379,8 @@ tasks:
         variants: [ubuntu2204, windows-64]
       - func: "install unix odbc"
         variants: [ubuntu2204]
-      - func: "set packages version"
-      - func: "check packages version"
-      - func: "compile debug"
+      - func: "set and check packages version"
+      - func: "compile ubuntu and win debug"
         variants: [ubuntu2204, windows-64]
       - func: "compile macos debug"
         variants: [macos, macos-arm]
