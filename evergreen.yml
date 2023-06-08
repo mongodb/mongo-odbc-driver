@@ -153,26 +153,6 @@ functions:
           ${prepare_shell}
           cargo clippy --all-targets -- -D warnings
 
-  "check packages version":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
-
   "check rustfmt":
     - command: shell.exec
       type: test
@@ -183,7 +163,7 @@ functions:
           ${prepare_shell}
           cargo fmt --all --  --check
 
-  "set packages version":
+  "set and check packages version":
     - command: shell.exec
       type: test
       params:
@@ -195,6 +175,17 @@ functions:
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             cargo install cargo-edit
             cargo set-version $RELEASE_VERSION
+          fi
+          cargo install cargo-get
+          CARGO_PKGS_VERSION=$(cargo get -n --root="odbc/Cargo.toml" version --major --minor --patch --delimiter=".")
+          if [[ "${triggered_by_git_tag}" == "" ]]; then
+            EXPECTED_RELEASE_VERSION="0.0.0"
+          else
+            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
+          fi
+          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
+            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
+            exit 1
           fi
 
   "sign windows":
@@ -237,7 +228,7 @@ functions:
               --notary-url "${notary_client_url}" \
               mongoodbc.tar.gz
 
-  "compile release":
+  "compile ubuntu and win release":
     - command: shell.exec
       type: test
       params:
@@ -251,7 +242,7 @@ functions:
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
 
-  "compile debug":
+  "compile ubuntu and win debug":
     - command: shell.exec
       type: test
       params:
@@ -1360,145 +1351,128 @@ tasks:
       - func: "check rustfmt"
 
   - name: compile
-    depends_on:
     commands:
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
       - func: "install unix odbc"
         variants: [ubuntu2204]
-      - func: "set packages version"
-      - func: "check packages version"
-      - func: "compile release"
+      - func: "set and check packages version"
+      - func: "compile ubuntu and win release"
+        variants: [ubuntu2204, windows-64]
+      - func: "compile macos release"
+        variants: [macos, macos-arm]
       - func: "build msi"
         variants: [windows-64]
       - func: "tar linux artifacts"
         variants: [ubuntu2204]
-      - func: "mciuploads release artifacts"
-
-  - name: compile-macos
-    depends_on:
-    commands:
-      - func: "install iODBC"
-      - func: "set packages version"
-      - func: "check packages version"
-      - func: "compile macos release"
       - func: "build dmg"
+        variants: [macos, macos-arm]
       - func: "mciuploads release artifacts"
 
   - name: compile-debug
     commands:
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
       - func: "install unix odbc"
         variants: [ubuntu2204]
-      - func: "set packages version"
-      - func: "check packages version"
-      - func: "compile debug"
-      - func: "mciuploads debug artifacts"
-
-  - name: compile-debug-macos
-    commands:
-      - func: "install iODBC"
-      - func: "set packages version"
-      - func: "check packages version"
+      - func: "set and check packages version"
+      - func: "compile ubuntu and win debug"
+        variants: [ubuntu2204, windows-64]
       - func: "compile macos debug"
+        variants: [macos, macos-arm]
       - func: "mciuploads debug artifacts"
 
-  - name: windows-unit-test
+  - name: unit-test
     commands:
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
       - func: "run windows unit tests"
+        variants: [windows-64]
+      - func: "run ubuntu unit tests"
+        variants: [ubuntu2204]
+      - func: "run asan unit tests"
+        variants: [ubuntu2204]
+      - func: "run macos unit tests"
+        variants: [macos, macos-arm]
 
-  - name: windows-integration-test
+  - name: integration-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
+      - func: "compile release with debug info"
+        variants: [ubuntu2204]
+      - func: "compile macos release with debug info"
+        variants: [macos, macos-arm]
+      - func: "setup driver with UnixODBC"
+        variants: [ubuntu2204]
+      - func: "setup driver with iODBC"
+        variants: [macos, macos-arm]
+      - func: "run ubuntu integration tests"
+        variants: [ubuntu2204]
+      - func: "run asan integration tests"
+        variants: [ubuntu2204]
       - func: "run windows integration tests"
+        variants: [windows-64]
+      - func: "run macos integration tests"
+        variants: [macos, macos-arm]
 
-  - name: windows-result-set-test
+  - name: result-set-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64]
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
+      - func: "compile release with debug info"
+        variants: [ubuntu2204]
+      - func: "compile macos release with debug info"
+        variants: [macos, macos-arm]
+      - func: "setup driver with UnixODBC"
+        variants: [ubuntu2204]
+      - func: "setup driver with iODBC"
+        variants: [macos, macos-arm]
       - func: "run windows result set test"
+        variants: [windows-64]
+      - func: "run ubuntu result-set tests"
+        variants: [ubuntu2204]
+      - func: "run asan result-set tests"
+        variants: [ubuntu2204]
+      - func: "run macos result-set tests"
+        variants: [macos, macos-arm]
 
-  - name: windows-sign
+  - name: sign
     depends_on:
       - name: compile
     commands:
       - func: "fetch for windows sign"
-      - func: "sign windows"
-      - func: "upload signed windows artifacts"
-
-  - name: ubuntu-unit-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "run ubuntu unit tests"
-
-  - name: ubuntu-integration-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "compile release with debug info"
-      - func: "setup driver with UnixODBC"
-      - func: "run ubuntu integration tests"
-
-  - name: ubuntu-result-set-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "compile release with debug info"
-      - func: "setup driver with UnixODBC"
-      - func: "run ubuntu result-set tests"
-
-  - name: ubuntu-sign
-    depends_on:
-      - name: compile
-    commands:
+        variants: [windows-64]
       - func: "fetch for ubuntu sign"
+        variants: [ubuntu2204]
+      - func: "sign windows"
+        variants: [windows-64]
       - func: "sign ubuntu"
+        variants: [ubuntu2204]
+      - func: "upload signed windows artifacts"
+        variants: [windows-64]
       - func: "upload ubuntu sig file"
-
-  - name: macos-unit-test
-    commands:
-      - func: "install iODBC"
-      - func: "run macos unit tests"
-
-  - name: macos-integration-test
-    commands:
-      - func: "install iODBC"
-      - func: "compile macos release with debug info"
-      - func: "setup driver with iODBC"
-      - func: "run macos integration tests"
-
-  - name: macos-result-set-test
-    commands:
-      - func: "install iODBC"
-      - func: "compile macos release with debug info"
-      - func: "setup driver with iODBC"
-      - func: "run macos result-set tests"
-
-  - name: asan-unit-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "run asan unit tests"
-
-  - name: asan-integration-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "compile release with debug info"
-      - func: "setup driver with UnixODBC"
-      - func: "run asan integration tests"
-
-  - name: asan-result-set-test
-    commands:
-      - func: "install rust toolchain"
-      - func: "install unix odbc"
-      - func: "compile release with debug info"
-      - func: "setup driver with UnixODBC"
-      - func: "run asan result-set tests"
+        variants: [ubuntu2204]
 
   - name: snapshot
     depends_on:
@@ -1510,26 +1484,14 @@ tasks:
         variant: "*"
       - name: rustfmt
         variant: "*"
-      - name: windows-unit-test
-        variant: "windows-64"
-      - name: windows-integration-test
-        variant: "windows-64"
-      - name: windows-result-set-test
-        variant: "windows-64"
-      - name: ubuntu-unit-test
-        variant: "ubuntu2204"
-      - name: ubuntu-integration-test
-        variant: "ubuntu2204"
-      - name: ubuntu-result-set-test
-        variant: "ubuntu2204"
-      - name: asan-unit-test
-        variant: "*"
-      - name: asan-integration-test
-        variant: "*"
-      - name: windows-sign
-        variant: "windows-64"
-      - name: ubuntu-sign
-        variant: "ubuntu2204"
+      - name: unit-test
+        variants: [windows-64, ubuntu2204]
+      - name: integration-test
+        variants: [windows-64, ubuntu2204]
+      - name: result-set-test
+        variants: [windows-64, ubuntu2204]
+      - name: sign
+        variants: [windows-64, ubuntu2204]
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1548,10 +1510,8 @@ tasks:
         variant: "*"
       - name: compile-debug
         variant: "*"
-      - name: windows-sign
-        variant: "windows-64"
-      - name: ubuntu-sign
-        variant: "ubuntu2204"
+      - name: sign
+        variants: [windows-64, ubuntu2204]
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1563,7 +1523,7 @@ task_groups:
       - func: "fetch source"
       - func: "generate expansions"
     tasks:
-      - windows-unit-test
+      - unit-test
 
   - name: windows-test-integration-group
     setup_group_can_fail_task: false
@@ -1578,7 +1538,7 @@ task_groups:
       - func: "clean-up driver on Windows"
       - func: "clean-up crash dump collection"
     tasks:
-      - windows-integration-test
+      - integration-test
 
   - name: windows-test-result-set-group
     setup_group_can_fail_task: false
@@ -1593,7 +1553,7 @@ task_groups:
       - func: "clean-up driver on Windows"
       - func: "clean-up crash dump collection"
     tasks:
-      - windows-result-set-test
+      - result-set-test
 
 buildvariants:
   - name: static-analysis
@@ -1612,9 +1572,8 @@ buildvariants:
       - name: windows-windows-test-unit-group
       - name: windows-test-integration-group
       - name: windows-test-result-set-group
-      - name: windows-sign
+      - name: sign
         run_on: linux-64-amzn-build
-
 
   - name: ubuntu2204
     display_name: Ubuntu 22.04
@@ -1622,34 +1581,31 @@ buildvariants:
     tasks:
       - name: compile
       - name: compile-debug
-      - name: ubuntu-unit-test
-      - name: ubuntu-integration-test
-      - name: ubuntu-result-set-test
-      - name: asan-unit-test
-      - name: asan-integration-test
-      - name: asan-result-set-test
-      - name: ubuntu-sign
+      - name: unit-test
+      - name: integration-test
+      - name: result-set-test
+      - name: sign
         run_on: linux-64-amzn-build
 
   - name: macos
     display_name: "macOS 11.0"
     run_on: [macos-1100]
     tasks:
-      - name: compile-macos
-      - name: compile-debug-macos
-      - name: macos-unit-test
-      - name: macos-integration-test
-      - name: macos-result-set-test
+      - name: compile
+      - name: compile-debug
+      - name: unit-test
+      - name: integration-test
+      - name: result-set-test
 
   - name: macos-arm
     display_name: "macOS 11.0 ARM 64"
     run_on: [macos-1100-arm64]
     tasks:
-      - name: compile-macos
-      - name: compile-debug-macos
-      - name: macos-unit-test
-      - name: macos-integration-test
-      - name: macos-result-set-test
+      - name: compile
+      - name: compile-debug
+      - name: unit-test
+      - name: integration-test
+      - name: result-set-test
 
   - name: release
     display_name: "Release"
