@@ -193,40 +193,42 @@ functions:
       type: system
       params:
         silent: true
-        working_dir: mongosql-odbc-driver/installer/msi
         script: |
-          echo "${signing_token_odbc_driver}" > ./signing_auth_token
+          podman login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${artifactory_link}
     - command: shell.exec
       type: system
       params:
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
-          /usr/local/bin/notary-client.py \
-              --key-name "bi-connector" \
-              --auth-token-file ./signing_auth_token \
-              --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
-              --notary-url "${notary_client_url}" \
-              mongoodbc.msi
+          podman run \
+          -e GRS_CONFIG_USER1_USERNAME=${garasign_jsign_username} \
+          -e GRS_CONFIG_USER1_PASSWORD=${garasign_jsign_password} \
+          --rm \
+          -v $(pwd):$(pwd) -w $(pwd) \
+          ${garasign_jsign_image} \
+          /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 mongoodbc.msi"
 
+
+# FIGURE OUT THE USERNAME AND PASSWORD FOR GARASIGN. ALSO, CAN THEY BE THE SAME VARIABLE?
   "sign ubuntu":
     - command: shell.exec
       type: system
       params:
         silent: true
-        working_dir: mongosql-odbc-driver/installer/tgz
         script: |
-          echo "${signing_token_odbc_driver}" > ./signing_auth_token
+          docker login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${artifactory_link}
     - command: shell.exec
       type: system
       params:
         working_dir: mongosql-odbc-driver/installer/tgz
         script: |
-          /usr/local/bin/notary-client.py \
-              --key-name "bi-connector" \
-              --auth-token-file ./signing_auth_token \
-              --comment "Evergreen Automatic Signing (Atlas SQL ODBC) - ${version_id} - ${build_variant}" \
-              --notary-url "${notary_client_url}" \
-              mongoodbc.tar.gz
+          docker run \
+            -e GRS_CONFIG_USER1_USERNAME=${garasign_gpg_username_70} \
+            -e GRS_CONFIG_USER1_PASSWORD=${garasign_gpg_password_70} \
+            --rm \
+            -v $(pwd):$(pwd) -w $(pwd) \
+            ${garasign_gpg_image} \
+            /bin/bash -c "gpgloader && gpg --yes -v --armor -o mongoodbc.tar.gz.sig --detach-sign mongoodbc.tar.gz"
 
   "compile ubuntu and win release":
     - command: shell.exec
