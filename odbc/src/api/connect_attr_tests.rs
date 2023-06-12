@@ -166,6 +166,31 @@ mod unit {
         }
     }
 
+    // Test setting the current catalog attribute.
+    #[test]
+    fn set_current_catalog() {
+        unsafe {
+            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+            let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
+
+            let current_catalog_value = "test";
+            let current_catalog_ptr = cstr::to_widechar_ptr(current_catalog_value);
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLSetConnectAttrW(
+                    mongo_handle as *mut _,
+                    ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG as i32,
+                    current_catalog_ptr.0 as *mut _,
+                    current_catalog_ptr.1.len() as i32
+                )
+            );
+            let conn_handle = (*mongo_handle).as_connection().unwrap();
+            let attributes = &conn_handle.attributes.read().unwrap();
+            assert_eq!(attributes.current_catalog, Some("test".to_string()));
+        }
+    }
+
     const UNSUPPORTED_ATTRS: [ConnectionAttribute; 19] = [
         ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE,
         ConnectionAttribute::SQL_ATTR_ACCESS_MODE,
