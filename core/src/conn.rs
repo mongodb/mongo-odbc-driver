@@ -10,12 +10,6 @@ use std::time::Duration;
 pub struct MongoConnection {
     /// The mongo DB client
     pub client: Client,
-    /// The current database set for this client.
-    /// All new queries will be done on this DB.
-    /// We stick with mongo terminology here and ODBC
-    /// terminology in the odbc wrappers, hence
-    /// current_db here and current_catalog in the
-    /// odbc/handles code.
     /// Number of seconds to wait for any request on the connection to complete before returning to
     /// the application.
     /// Comes from SQL_ATTR_CONNECTION_TIMEOUT if set. Used any time there is a time out in a
