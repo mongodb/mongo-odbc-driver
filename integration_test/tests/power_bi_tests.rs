@@ -5,14 +5,12 @@ mod integration {
         generate_default_connection_str, get_sql_diagnostics, sql_return_to_string,
     };
     use odbc_sys::{
-        AttrConnectionPooling, AttrOdbcVersion, CDataType, Desc, DriverConnectOption,
-        EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType, Len, Pointer,
-        SQLAllocHandle, SQLColAttributeW, SQLDriverConnectW, SQLExecDirectW, SQLFetch,
-        SQLFreeHandle, SQLGetData, SQLGetInfoW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr,
-        SQLTablesW, SmallInt, SqlReturn, USmallInt, NTS,
+        AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute, Desc,
+        DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
+        Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDriverConnectW, SQLExecDirectW,
+        SQLFetch, SQLFreeHandle, SQLGetData, SQLGetInfoW, SQLMoreResults, SQLNumResultCols,
+        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, USmallInt, NTS,
     };
-    #[cfg(not(target_os = "macos"))]
-    use odbc_sys::{ConnectionAttribute, SQLSetConnectAttrW};
 
     use cstr::WideChar;
     use std::ptr::null_mut;
