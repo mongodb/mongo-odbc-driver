@@ -16,7 +16,6 @@ pub struct MongoConnection {
     /// terminology in the odbc wrappers, hence
     /// current_db here and current_catalog in the
     /// odbc/handles code.
-    pub current_db: Option<String>,
     /// Number of seconds to wait for any request on the connection to complete before returning to
     /// the application.
     /// Comes from SQL_ATTR_CONNECTION_TIMEOUT if set. Used any time there is a time out in a
@@ -50,12 +49,11 @@ impl MongoConnection {
         let uuid_repr = user_options.uuid_representation;
         let connection = MongoConnection {
             client,
-            current_db,
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
             uuid_repr,
         };
         // Verify that the connection is working and the user has access to the default DB
-        MongoQuery::execute(&connection, None, "select 1")?;
+        MongoQuery::execute(&connection, current_db, None, "select 1")?;
         Ok(connection)
     }
 

@@ -26,11 +26,12 @@ impl MongoQuery {
     // or an error is returned.
     pub fn execute(
         client: &MongoConnection,
+        current_db: Option<String>,
         query_timeout: Option<u32>,
         query: &str,
     ) -> Result<Self> {
-        let current_db = client.current_db.as_ref().ok_or(Error::NoDatabase)?;
-        let db = client.client.database(current_db);
+        let current_db = current_db.ok_or(Error::NoDatabase)?;
+        let db = client.client.database(&current_db);
 
         // 1. Run the sqlGetResultSchema command to get the result set
         // metadata. Column metadata is sorted alphabetically by table
@@ -44,7 +45,7 @@ impl MongoQuery {
         )
         .map_err(Error::QueryDeserialization)?;
 
-        let metadata = get_result_schema_response.process_result_metadata(current_db)?;
+        let metadata = get_result_schema_response.process_result_metadata(&current_db)?;
 
         // 2. Run the $sql aggregation to get the result set cursor.
         let pipeline = vec![doc! {"$sql": {

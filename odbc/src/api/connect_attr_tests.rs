@@ -217,10 +217,7 @@ mod unit {
         unsafe {
             for attr in [
                 &UNSUPPORTED_ATTRS[..],
-                &[
-                    ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG,
-                    ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT,
-                ][..],
+                &[ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT][..],
             ]
             .concat()
             {

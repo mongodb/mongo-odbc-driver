@@ -882,11 +882,13 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         }
     }
 
-    let conn_attrs = conn.attributes.read().unwrap();
+    let mut conn_attrs = conn.attributes.write().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
         conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
     } else {
-        odbc_uri.remove(&["database"])
+        let db = odbc_uri.remove(&["database"]);
+        conn_attrs.current_catalog = db.as_ref().cloned();
+        db
     };
     let connection_timeout = conn_attrs.connection_timeout;
     let login_timeout = conn_attrs.login_timeout;
@@ -1025,10 +1027,13 @@ pub unsafe extern "C" fn SQLExecDirectW(
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let mongo_statement = {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
-                let timeout = connection.attributes.read().unwrap().connection_timeout;
+                let attributes = connection.attributes.read().unwrap();
+                let timeout = attributes.connection_timeout;
+                let current_db = attributes.current_catalog.as_ref().cloned();
                 if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref()
                 {
-                    MongoQuery::execute(mongo_connection, timeout, &query).map_err(|e| e.into())
+                    MongoQuery::execute(mongo_connection, current_db, timeout, &query)
+                        .map_err(|e| e.into())
                 } else {
                     Err(ODBCError::InvalidCursorState)
                 }
@@ -2206,6 +2211,12 @@ unsafe fn sql_get_infow_helper(
                         string_length_ptr,
                     )
                 }
+                InfoType::SQL_MAX_CONCURRENT_ACTIVITIES => {
+                    i16_len::set_output_fixed_data(&1, info_value_ptr, string_length_ptr)
+                }
+                InfoType::SQL_DTC_TRANSITION_COST => {
+                    i16_len::set_output_fixed_data(&0, info_value_ptr, string_length_ptr)
+                }
                 _ => {
                     err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
                         info_type.to_string(),
@@ -2779,6 +2790,11 @@ unsafe fn set_connect_attrw_helper(
                 SqlReturn::SUCCESS
             }
             ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => SqlReturn::SUCCESS,
+            ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
+                let current_db = input_text_to_string_w(value_ptr as *const _, usize::MAX);
+                conn.attributes.write().unwrap().current_catalog = Some(current_db);
+                SqlReturn::SUCCESS
+            }
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
                     connection_attribute_to_string(attribute),

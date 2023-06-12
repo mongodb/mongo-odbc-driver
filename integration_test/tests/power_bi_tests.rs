@@ -574,6 +574,16 @@ mod integration {
             SQLGetInfoW(SQL_DRIVER_ODBC_VER)
             SQLGetInfoW(SQL_DRIVER_NAME)
             */
+            let current_db = cstr::to_widechar_ptr("integration_test");
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLSetConnectAttrW(
+                    conn_handle,
+                    ConnectionAttribute::CurrentCatalog,
+                    current_db.0 as *mut _,
+                    current_db.1.len() as i32
+                )
+            );
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
             query.push(0);
             assert_eq!(

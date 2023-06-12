@@ -1122,7 +1122,9 @@ pub mod i32_len {
             output_ptr as *mut WideChar,
             buffer_len / size_of::<WideChar>(),
         );
-        *text_length_ptr = (size_of::<WideChar>() * len) as Integer;
+        if !text_length_ptr.is_null() {
+            *text_length_ptr = (size_of::<WideChar>() * len) as Integer;
+        }
         ret
     }
 
