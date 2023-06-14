@@ -201,12 +201,12 @@ functions:
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
           podman run \
-          -e GRS_CONFIG_USER1_USERNAME=${garasign_username} \
-          -e GRS_CONFIG_USER1_PASSWORD=${garasign_password} \
-          --rm \
-          -v $(pwd):$(pwd) -w $(pwd) \
-          ${garasign_jsign_image} \
-          /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 mongoodbc.msi"
+            -e GRS_CONFIG_USER1_USERNAME=${garasign_username} \
+            -e GRS_CONFIG_USER1_PASSWORD=${garasign_password} \
+            --rm \
+            -v $(pwd):$(pwd) -w $(pwd) \
+            ${garasign_jsign_image} \
+            /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 mongoodbc.msi"
 
   "sign ubuntu":
     - command: shell.exec
