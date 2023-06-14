@@ -2211,8 +2211,9 @@ unsafe fn sql_get_infow_helper(
                         string_length_ptr,
                     )
                 }
+                // Setting this to 10, which is our default for the number of workers in the mongo driver's connection pool.
                 InfoType::SQL_MAX_CONCURRENT_ACTIVITIES => {
-                    i16_len::set_output_fixed_data(&1, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(&10, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_DTC_TRANSITION_COST => {
                     i16_len::set_output_fixed_data(&0, info_value_ptr, string_length_ptr)
