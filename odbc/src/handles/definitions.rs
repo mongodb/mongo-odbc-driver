@@ -1,7 +1,6 @@
 use crate::api::{definitions::*, errors::ODBCError};
 use cstr::{Charset, WideChar};
 use logger::Logger;
-use mongo_odbc_core::ConnectionAttributes;
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
     borrow::BorrowMut,
@@ -230,9 +229,7 @@ pub struct Connection {
     // it will be None when the Connection is closed.
     pub mongo_connection: RwLock<Option<mongo_odbc_core::MongoConnection>>,
     // all the possible Connection settings
-    // ConnectionAttributes is wrapped in an option so that when a
-    // mongo_connection is established, the values can be taken
-    pub attributes: RwLock<Option<ConnectionAttributes>>,
+    pub attributes: RwLock<ConnectionAttributes>,
     // state of this connection
     pub state: RwLock<ConnectionState>,
     // MongoDB Client for issuing commands
@@ -240,6 +237,20 @@ pub struct Connection {
     // all Statements allocated from this Connection
     pub statements: RwLock<HashSet<*mut MongoHandle>>,
     pub errors: RwLock<Vec<ODBCError>>,
+}
+
+#[derive(Debug, Default)]
+pub struct ConnectionAttributes {
+    // SQL_ATTR_CURRENT_CATALOG: the current catalog/database
+    // for this Connection.
+    pub current_catalog: Option<String>,
+    // SQL_ATTR_LOGIN_TIMEOUT: SQLUINTEGER, timeout in seconds
+    // to wait for a login request to complete.
+    pub login_timeout: Option<u32>,
+    // SQL_ATTR_CONNECTION_TIMEOUT: SQLUINTER, timeout in seconds
+    // to wait for any operation on a connection to timeout (other than
+    // initial login).
+    pub connection_timeout: Option<u32>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -256,16 +267,11 @@ impl Connection {
         Self {
             env,
             mongo_connection: RwLock::new(None),
-            attributes: RwLock::new(Some(ConnectionAttributes::default())),
+            attributes: RwLock::new(ConnectionAttributes::default()),
             state: RwLock::new(state),
             statements: RwLock::new(HashSet::new()),
             errors: RwLock::new(vec![]),
         }
-    }
-    pub fn has_mongo_connection(&self) -> bool {
-        self.mongo_connection
-            .read()
-            .map_or_else(|_| false, |mc| mc.is_some())
     }
 }
 
