@@ -1485,13 +1485,13 @@ tasks:
       - name: rustfmt
         variant: "*"
       - name: unit-test
-        variants: [windows-64, ubuntu2204]
+        variant: ".release-variant"
       - name: integration-test
-        variants: [windows-64, ubuntu2204]
+        variant: ".release-variant"
       - name: result-set-test
-        variants: [windows-64, ubuntu2204]
+        variant: ".release-variant"
       - name: sign
-        variants: [windows-64, ubuntu2204]
+        variant: ".release-variant"
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1511,7 +1511,7 @@ tasks:
       - name: compile-debug
         variant: "*"
       - name: sign
-        variants: [windows-64, ubuntu2204]
+        variant: ".release-variant"
     commands:
       - func: "upload release"
       - func: "upload debug"
@@ -1564,6 +1564,7 @@ buildvariants:
       - name: rustfmt
 
   - name: windows-64
+    tags: ["release-variant"]
     display_name: Windows (64-bit)
     run_on: [windows-64-vs2019-large]
     tasks:
@@ -1576,6 +1577,7 @@ buildvariants:
         run_on: linux-64-amzn-build
 
   - name: ubuntu2204
+    tags: ["release-variant"]
     display_name: Ubuntu 22.04
     run_on: [ubuntu2204-large]
     tasks:
