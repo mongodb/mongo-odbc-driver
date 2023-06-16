@@ -194,15 +194,15 @@ functions:
       params:
         silent: true
         script: |
-          podman login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${artifactory_link}
+          podman login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${release_tools_container_registry}
     - command: shell.exec
       type: system
       params:
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
           podman run \
-            -e GRS_CONFIG_USER1_USERNAME=${garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
+            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_jsign_image} \
@@ -214,15 +214,15 @@ functions:
       params:
         silent: true
         script: |
-          docker login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${artifactory_link}
+          docker login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${release_tools_container_registry}
     - command: shell.exec
       type: system
       params:
         working_dir: mongosql-odbc-driver/installer/tgz
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
+            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
