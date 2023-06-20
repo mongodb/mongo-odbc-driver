@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 rm ./*.dmg || true
 rm dmg-contents/*.pkg || true
@@ -26,6 +27,3 @@ productbuild --distribution distribution.xml \
 	--package-path . \
 	"$PRODUCT"
 
-mv "$PRODUCT" dmg-contents/
-
-hdiutil create -fs HFS+ -srcfolder dmg-contents -volname mongoodbc mongoodbc.dmg

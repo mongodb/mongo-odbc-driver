@@ -257,6 +257,20 @@ functions:
               --notary-url "${notary_client_url}" \
               mongoodbc.tar.gz
 
+  "install macnotary":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          MACNOTARY_VERSION=3.8.1
+          curl -LO https://macos-notary-1628249594.s3.amazonaws.com/releases/client/v$MACNOTARY_VERSION/darwin_amd64.zip
+          unzip -o darwin_amd64.zip
+          chmod 0755 ./darwin_amd64/macnotary
+          ./darwin_amd64/macnotary -v  
+
   "sign macos":
     - command: shell.exec
       type: test
@@ -265,10 +279,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          curl -LO https://macos-notary-1628249594.s3.amazonaws.com/releases/client/v3.3.3/darwin_amd64.zip
-          unzip -o darwin_amd64.zip
-          chmod 0755 ./darwin_amd64/macnotary
-          ./darwin_amd64/macnotary -v
           zip macos-mongo-odbc.zip installer/dmg/mongoodbc.dmg target/release/libatsql.dylib
     - command: mac.sign
       params:
@@ -290,8 +300,8 @@ functions:
         script: |
           ${prepare_shell}
           unzip -o macos-mongo-odbc-signed.zip
-          mv mongoodbc.dmg mongoodbc-signed.dmg
-          mv libatsql.dylib libatsql-signed.dylib
+          mv installer/dmg/mongoodbc.dmg mongoodbc-signed.dmg
+          mv target/release/libatsql.dylib libatsql-signed.dylib
 
   "compile release":
     - command: shell.exec
@@ -418,16 +428,58 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cp target/release/*.dylib installer/dmg
-          cp target/release/macos_postinstall installer/dmg
-          cd installer/dmg
+          # Sign the postinstall executable prior to creating dmg, needed for notarizing
+          zip -r unsigned-target.zip target/release/macos_postinstall \
+                              target/release/libatsql.dylib
+    - command: mac.sign
+      params:
+        key_id: ${key_id}
+        secret: ${secret}
+        service_url: ${service_url}
+        client_binary: mongosql-odbc-driver/darwin_amd64/macnotary
+        local_zip_file: mongosql-odbc-driver/unsigned-target.zip
+        output_zip_file: mongosql-odbc-driver/signed-target.zip
+        artifact_type: binary
+        verify: true
+        notarize: false
+    - command: shell.exec
+      params:
+        add_expansions_to_env: true
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}  
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               MINOR_VERSION="0.1"
           else
               MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
           fi
+          
+          ditto -x -k $PWD/signed-target.zip .
+          cp target/release/*.dylib installer/dmg
+          cp target/release/macos_postinstall installer/dmg
+          cd installer/dmg
           ./build-dmg.sh "$MINOR_VERSION"
-
+          zip -rv ../../mongoodbc-pkg-unsigned.zip mongoodbc.pkg
+          cd ../..
+          
+          # pkg file needs to be signed separately before packaged in dmg file
+          # mac.sign evergreen task does not yet support the ArtifactType `pkg`
+          # Working around that by calling via command line
+          ./darwin_amd64/macnotary -o mongoodbc-pkg-signed.zip -f mongoodbc-pkg-unsigned.zip -m sign  \
+             -u https://dev.macos-notary.build.10gen.cc/api -t pkg -o mongoodbc-pkg-signed.zip \
+             -k $key_id -s $secret
+    - command: shell.exec
+      params:
+        add_expansions_to_env: true
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}   
+          ditto -x -k mongoodbc-pkg-signed.zip installer/dmg/dmg-contents/ 
+          cd installer/dmg
+          
+          hdiutil create -fs HFS+ -srcfolder dmg-contents -volname mongoodbc mongoodbc.dmg
 
   "mciuploads release artifacts":
     - command: s3.put
@@ -1529,6 +1581,7 @@ tasks:
       - func: "set packages version"
       - func: "check packages version"
       - func: "compile macos release"
+      - func: "install macnotary"
       - func: "build dmg"
       - func: "mciuploads release artifacts"
 
@@ -1612,6 +1665,7 @@ tasks:
       - name: compile-macos
     commands:
       - func: "fetch for macos sign"
+      - func: "install macnotary"
       - func: "sign macos"
       - func: "upload signed macos artifacts"
 
@@ -1797,7 +1851,6 @@ buildvariants:
       - name: macos-integration-test
       - name: macos-result-set-test
       - name: macos-sign
-        run_on: macos-1014-codesign
 
   - name: macos-arm
     display_name: "macOS 11.0 ARM 64"
@@ -1809,7 +1862,6 @@ buildvariants:
       - name: macos-integration-test
       - name: macos-result-set-test
       - name: macos-sign
-        run_on: macos-1014-codesign
 
   - name: release
     display_name: "Release"
