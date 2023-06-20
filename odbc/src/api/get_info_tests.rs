@@ -263,6 +263,24 @@ mod unit {
         actual_value_modifier = modify_u32_value,
     );
 
+    test_get_info!(
+        dtc_transition_cost,
+        info_type = InfoType::SQL_DTC_TRANSITION_COST as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = 0u32,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        max_concurrent_activities,
+        info_type = InfoType::SQL_MAX_CONCURRENT_ACTIVITIES as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = 10u32,
+        actual_value_modifier = modify_u32_value,
+    );
+
     test_get_info_expect_u32_zero!(
         convert_big_int,
         info_type = InfoType::SQL_CONVERT_BIGINT as u16

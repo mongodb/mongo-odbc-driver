@@ -1,4 +1,4 @@
-use crate::{odbc_uri::ODBCUri, ConnectionAttributes, MongoConnection};
+use crate::{odbc_uri::ODBCUri, MongoConnection};
 use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
 
 /// atlas_sql_test_connection returns true if a connection can be established
@@ -23,16 +23,15 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
 ) -> bool {
     let marker = -1i8;
     let conn_str = unsafe { input_text_to_string_w(connection_string, marker as usize) };
-
     if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
         match odbc_uri.try_into_client_options() {
             Ok(client_options) => {
-                let connection_attributes = ConnectionAttributes {
-                    current_catalog: odbc_uri.get("database").map(|s| s.to_owned()),
-                    login_timeout: Some(30),
-                    connection_timeout: None,
-                };
-                match MongoConnection::connect(client_options, connection_attributes.into()) {
+                match MongoConnection::connect(
+                    client_options,
+                    odbc_uri.get("database").map(|s| s.to_owned()),
+                    None,
+                    Some(30),
+                ) {
                     Ok(_) => true,
                     Err(e) => {
                         let len = write_string_to_buffer(

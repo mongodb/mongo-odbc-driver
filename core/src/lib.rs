@@ -5,7 +5,7 @@ pub use bson_type_info::SQL_SEARCHABLE;
 mod collections;
 pub use collections::MongoCollections;
 mod conn;
-pub use conn::{ConnectionAttributes, MongoConnection};
+pub use conn::MongoConnection;
 mod databases;
 pub use databases::MongoDatabases;
 mod definitions;
