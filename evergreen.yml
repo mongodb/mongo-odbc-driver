@@ -194,13 +194,13 @@ functions:
       params:
         silent: true
         script: |
-          podman login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${release_tools_container_registry}
+          docker login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${release_tools_container_registry}
     - command: shell.exec
       type: system
       params:
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
-          podman run \
+          docker run \
             -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
             -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
             --rm \
@@ -506,7 +506,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
-        local_file: mongosql-odbc-driver/installer/msi/mongoodbc-signed.msi
+        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -1574,6 +1574,7 @@ buildvariants:
       - name: windows-test-integration-group
       - name: windows-test-result-set-group
       - name: sign
+        run_on: ubuntu2204-large
 
   - name: ubuntu2204
     tags: ["release-variant"]
