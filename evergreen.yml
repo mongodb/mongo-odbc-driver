@@ -208,7 +208,7 @@ functions:
             ${garasign_jsign_image} \
             /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 mongoodbc.msi"
 
-  "sign ubuntu":
+  "sign ubuntu and verify signature":
     - command: shell.exec
       type: system
       params:
@@ -227,6 +227,19 @@ functions:
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
             /bin/bash -c "gpgloader && gpg --yes -v --armor -o mongoodbc.tar.gz.sig --detach-sign mongoodbc.tar.gz"
+    - command: shell.exec
+      type: system
+      params:
+        working_dir: mongosql-odbc-driver/installer/tgz
+        silent: false
+        script: |
+          docker run \
+            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
+            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            --rm \
+            -v $(pwd):$(pwd) -w $(pwd) \
+            ${garasign_gpg_image} \
+            /bin/bash -c "gpgloader && gpg --verify mongoodbc.tar.gz.sig mongoodbc.tar.gz"
 
   "compile ubuntu and win release":
     - command: shell.exec
@@ -509,6 +522,7 @@ functions:
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
         bucket: mciuploads
         permissions: public-read
+        display_name: mongoodbc-signed.msi
         content_type: application/octet-stream
 
   "upload ubuntu sig file":
@@ -1467,7 +1481,7 @@ tasks:
         variants: [ubuntu2204]
       - func: "sign windows"
         variants: [windows-64]
-      - func: "sign ubuntu"
+      - func: "sign ubuntu and verify signature"
         variants: [ubuntu2204]
       - func: "upload signed windows artifacts"
         variants: [windows-64]
