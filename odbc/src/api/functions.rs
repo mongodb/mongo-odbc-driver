@@ -1496,12 +1496,6 @@ unsafe fn sql_get_data_helper(
         add_diag_with_function!(mongo_handle, e, "SQLGetData");
         return SqlReturn::ERROR;
     }
-    trace_odbc!(
-        info,
-        mongo_handle,
-        format!("Getting bson data [{col_or_param_num}] = {ret}"),
-        "SQLGetData"
-    );
     crate::api::data::format_bson_data(
         mongo_handle,
         col_or_param_num,
