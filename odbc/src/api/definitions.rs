@@ -209,6 +209,7 @@ pub enum InfoType {
     SQL_FETCH_DIRECTION = 8,
     SQL_SERVER_NAME = 13,
     SQL_SEARCH_PATTERN_ESCAPE = 14,
+    SQL_DATABASE_NAME = 16,
     SQL_DBMS_NAME = 17,
     SQL_DBMS_VER = 18,
     SQL_ACCESSIBLE_TABLES = 19,
@@ -562,6 +563,18 @@ pub const SQL_SC_SQL92_ENTRY: u32 = 0x00000001;
 pub const SQL_INFO_Y: &str = "Y";
 pub const SQL_GB_GROUP_BY_CONTAINS_SELECT: u16 = 0x0002;
 pub const SQL_CB_PRESERVE: u16 = 2;
+pub const SQL_CA1_NEXT: u32 = 0x00000001;
+pub const SQL_CA2_READ_ONLY_CONCURRENCY: u32 = 0x00000001;
+pub const SQL_CA2_MAX_ROWS_SELECT: u32 = 0x00000080;
+pub const SQL_CA2_CRC_EXACT: u32 = 0x00001000;
+pub const MONGO_CA2_SUPPORT: u32 =
+    SQL_CA2_CRC_EXACT | SQL_CA2_MAX_ROWS_SELECT | SQL_CA2_READ_ONLY_CONCURRENCY;
+pub const SQL_SO_FORWARD_ONLY: u32 = 0x00000001;
+pub const SQL_SO_STATIC: u32 = 0x00000010;
+pub const MONGO_SO_SUPPORT: u32 = SQL_SO_FORWARD_ONLY | SQL_SO_STATIC;
+pub const SQL_TXN_SERIALIZABLE: u32 = 0x00000008;
+pub const SQL_SCCO_READ_ONLY: u32 = 0x00000001;
+pub const SQL_LCK_NO_CHANGE: u32 = 0x00000001;
 
 // SQL_CONVERT_FUNCTIONS bitmask
 pub const SQL_FN_CVT_CAST: u32 = 0x00000002;
@@ -583,50 +596,49 @@ pub const SQL_FN_NUM_ROUND: u32 = 0x00400000;
 
 // SQL_STRING_FUNCTIONS bitmasks
 #[allow(unused)]
-pub const SQL_FN_STR_CONCAT : u32 = 00000001;
+pub const SQL_FN_STR_CONCAT: u32 = 00000001;
 #[allow(unused)]
-pub const SQL_FN_STR_INSERT : u32 = 00000002;
+pub const SQL_FN_STR_INSERT: u32 = 00000002;
 #[allow(unused)]
-pub const SQL_FN_STR_LEFT : u32 = 00000004;
+pub const SQL_FN_STR_LEFT: u32 = 00000004;
 #[allow(unused)]
-pub const SQL_FN_STR_LTRIM : u32 = 00000008;
+pub const SQL_FN_STR_LTRIM: u32 = 00000008;
 #[allow(unused)]
-pub const SQL_FN_STR_LENGTH : u32 = 00000010;
+pub const SQL_FN_STR_LENGTH: u32 = 00000010;
 #[allow(unused)]
-pub const SQL_FN_STR_LOCATE : u32 = 00000020;
+pub const SQL_FN_STR_LOCATE: u32 = 00000020;
 #[allow(unused)]
-pub const SQL_FN_STR_LCASE : u32 = 00000040;
+pub const SQL_FN_STR_LCASE: u32 = 00000040;
 #[allow(unused)]
-pub const SQL_FN_STR_REPEAT : u32 = 00000080;
+pub const SQL_FN_STR_REPEAT: u32 = 00000080;
 #[allow(unused)]
-pub const SQL_FN_STR_REPLACE : u32 = 00000100;
+pub const SQL_FN_STR_REPLACE: u32 = 00000100;
 #[allow(unused)]
-pub const SQL_FN_STR_SUBSTRING : u32 = 00000800;
+pub const SQL_FN_STR_SUBSTRING: u32 = 00000800;
 #[allow(unused)]
-pub const SQL_FN_STR_UCASE : u32 = 00001000;
+pub const SQL_FN_STR_UCASE: u32 = 00001000;
 #[allow(unused)]
-pub const SQL_FN_STR_ASCII : u32 = 00002000;
+pub const SQL_FN_STR_ASCII: u32 = 00002000;
 #[allow(unused)]
-pub const SQL_FN_STR_CHAR : u32 = 00004000;
+pub const SQL_FN_STR_CHAR: u32 = 00004000;
 #[allow(unused)]
 pub const SQL_FN_STR_DIFFERENCE: u32 = 00008000;
 #[allow(unused)]
-pub const SQL_FN_STR_LOCATE_2 : u32 = 00010000;
+pub const SQL_FN_STR_LOCATE_2: u32 = 00010000;
 #[allow(unused)]
-pub const SQL_FN_STR_SOUNDEX : u32 = 00020000;
+pub const SQL_FN_STR_SOUNDEX: u32 = 00020000;
 #[allow(unused)]
-pub const SQL_FN_STR_SPACE : u32 = 00040000;
+pub const SQL_FN_STR_SPACE: u32 = 00040000;
 #[allow(unused)]
-pub const SQL_FN_STR_BIT_LENGTH : u32 = 00080000;
+pub const SQL_FN_STR_BIT_LENGTH: u32 = 00080000;
 #[allow(unused)]
 pub const SQL_FN_STR_CHAR_LENGTH: u32 = 00100000;
 #[allow(unused)]
 pub const SQL_FN_STR_CHARACTER_LENGTH: u32 = 00200000;
 #[allow(unused)]
-pub const SQL_FN_STR_OCTET_LENGTH : u32 = 00400000;
+pub const SQL_FN_STR_OCTET_LENGTH: u32 = 00400000;
 #[allow(unused)]
-pub const SQL_FN_STR_POSITION : u32 = 00800000;
-
+pub const SQL_FN_STR_POSITION: u32 = 00800000;
 
 // SQL_TIMEDATE_FUNCTIONS functions
 pub const SQL_FN_TD_CURRENT_TIMESTAMP: u32 = 0x00080000;

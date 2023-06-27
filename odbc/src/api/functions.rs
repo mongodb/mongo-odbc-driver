@@ -1783,14 +1783,13 @@ unsafe fn sql_get_env_attrw_helper(
 }
 
 macro_rules! sql_get_info_helper {
-//    connection_handle: HDbc,
-//    info_type: USmallInt,
-//    info_value_ptr: Pointer,
-//    buffer_length: SmallInt,
-//    string_length_ptr: *mut SmallInt,
-//    string_func: dyn Fn(&str, Pointer, usize, *mut SmallInt) -> SqlReturn,
-//    func_name: &str,
-($connection_handle:ident, $info_type:ident, $info_value_ptr:ident, $buffer_length:ident, $string_length_ptr:ident, $string_func:path, $func_name:expr,) => {{
+($connection_handle:ident,
+ $info_type:ident,
+ $info_value_ptr:ident,
+ $buffer_length:ident,
+ $string_length_ptr:ident,
+ $string_func:path,
+ $func_name:expr,) => {{
     let connection_handle = $connection_handle;
     let info_type = $info_type;
     let info_value_ptr = $info_value_ptr;
@@ -2206,6 +2205,13 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
+                InfoType::SQL_DEFAULT_TXN_ISOLATION => {
+                    i16_len::set_output_fixed_data(
+                        &0,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
                 // Setting this to 10, which is our default for the number of workers in the mongo driver's connection pool.
                 InfoType::SQL_MAX_CONCURRENT_ACTIVITIES => {
                     i16_len::set_output_fixed_data(&10, info_value_ptr, string_length_ptr)
@@ -2213,6 +2219,111 @@ macro_rules! sql_get_info_helper {
                 InfoType::SQL_DTC_TRANSITION_COST => {
                     i16_len::set_output_fixed_data(&0, info_value_ptr, string_length_ptr)
                 }
+                InfoType::SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1
+                | InfoType::SQL_KEYSET_CURSOR_ATTRIBUTES1
+                | InfoType::SQL_DYNAMIC_CURSOR_ATTRIBUTES1
+                | InfoType::SQL_STATIC_CURSOR_ATTRIBUTES1 => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_CA1_NEXT,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES2
+                | InfoType::SQL_KEYSET_CURSOR_ATTRIBUTES2
+                | InfoType::SQL_DYNAMIC_CURSOR_ATTRIBUTES2
+                | InfoType::SQL_STATIC_CURSOR_ATTRIBUTES2 => {
+                    i16_len::set_output_fixed_data(
+                        &MONGO_CA2_SUPPORT,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_SCROLL_OPTIONS => {
+                    i16_len::set_output_fixed_data(
+                        &MONGO_SO_SUPPORT,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_BOOKMARK_PERSISTENCE => {
+                    i16_len::set_output_fixed_data(
+                        // We do not support bookmarks
+                        &0,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_NEED_LONG_DATA_LEN => {
+                    $string_func(
+                        SQL_INFO_Y,
+                        info_value_ptr,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_TXN_ISOLATION_OPTION => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_TXN_SERIALIZABLE,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_DATABASE_NAME => {
+                    let conn = must_be_valid!((*conn_handle).as_connection());
+                    let attributes = conn.attributes.read().unwrap();
+                    if attributes.current_catalog.is_some() {
+                        $string_func(
+                            attributes.current_catalog.as_ref().unwrap().as_str(),
+                            info_value_ptr,
+                            buffer_length as usize,
+                            string_length_ptr,
+                        )
+                    } else {
+                        $string_func(
+                            "test",
+                            info_value_ptr,
+                            buffer_length as usize,
+                            string_length_ptr,
+                        )
+                    }
+                }
+                InfoType::SQL_SCROLL_CONCURRENCY => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_SCCO_READ_ONLY,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_LOCK_TYPES => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_LCK_NO_CHANGE,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_POS_OPERATIONS => {
+                    i16_len::set_output_fixed_data(
+                        &0,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_STATIC_SENSITIVITY => {
+                    i16_len::set_output_fixed_data(
+                        &0,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_TXN_CAPABLE => {
+                    i16_len::set_output_fixed_data(
+                        &0,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+
                 _ => {
                     err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
                         info_type.to_string(),
