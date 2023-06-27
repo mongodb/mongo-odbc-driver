@@ -1952,12 +1952,6 @@ macro_rules! sql_get_info_helper {
                     )
                 }
                 InfoType::SQL_STRING_FUNCTIONS => {
-                    trace_odbc!(
-                        info,
-                        conn_handle,
-                        format!("String Functions"),
-                        "SQLGetInfoW"
-                    );
                     // MongoSQL supports the following string functions.
                     const STRING_FUNCTIONS: u32 = SQL_FN_STR_CONCAT
                         | SQL_FN_STR_LENGTH
