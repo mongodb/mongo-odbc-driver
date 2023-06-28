@@ -76,6 +76,19 @@ macro_rules! test_get_info_expect_u32_zero {
     };
 }
 
+macro_rules! test_get_info_expect_u32_sql_all {
+    ($func_name:ident, info_type = $info_type:expr) => {
+        test_get_info!(
+            $func_name,
+            info_type = $info_type,
+            expected_sql_return = SqlReturn::SUCCESS,
+            expected_length = std::mem::size_of::<u32>() as i16,
+            expected_value = SQL_U32_ALL,
+            actual_value_modifier = modify_u32_value,
+        );
+    };
+}
+
 unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
     input_text_to_string_w(
         value_ptr as *const _,
@@ -281,102 +294,221 @@ mod unit {
         actual_value_modifier = modify_u32_value,
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info!(
+        sql_forward_only_cursor_attributes1,
+        info_type = InfoType::SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1 as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = SQL_CA1_NEXT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_forward_only_cursor_attributes2,
+        info_type = InfoType::SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES2 as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = MONGO_CA2_SUPPORT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_keyset_cursor_attributes1,
+        info_type = InfoType::SQL_KEYSET_CURSOR_ATTRIBUTES1 as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = SQL_CA1_NEXT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_keyset_cursor_attributes2,
+        info_type = InfoType::SQL_KEYSET_CURSOR_ATTRIBUTES2 as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = MONGO_CA2_SUPPORT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_dynamic_cursor_attributes1,
+        info_type = InfoType::SQL_DYNAMIC_CURSOR_ATTRIBUTES1 as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = SQL_CA1_NEXT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_dynamic_cursor_attributes2,
+        info_type = InfoType::SQL_DYNAMIC_CURSOR_ATTRIBUTES2 as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = MONGO_CA2_SUPPORT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_static_cursor_attributes1,
+        info_type = InfoType::SQL_STATIC_CURSOR_ATTRIBUTES1 as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = SQL_CA1_NEXT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_static_cursor_attributes2,
+        info_type = InfoType::SQL_STATIC_CURSOR_ATTRIBUTES2 as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = MONGO_CA2_SUPPORT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_scroll_options,
+        info_type = InfoType::SQL_SCROLL_OPTIONS as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = MONGO_SO_SUPPORT,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_bookmark_persistence,
+        info_type = InfoType::SQL_BOOKMARK_PERSISTENCE as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = 0,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_need_long_data_len,
+        info_type = InfoType::SQL_CATALOG_NAME as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        buffer_length = 2 * size_of::<WideChar>() as i16,
+        expected_length = size_of::<WideChar>() as i16,
+        expected_value = "Y",
+        actual_value_modifier = modify_string_value,
+    );
+
+    test_get_info!(
+        sql_txn_isolation_option,
+        info_type = InfoType::SQL_TXN_ISOLATION_OPTION as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        expected_length = std::mem::size_of::<u32>() as i16,
+        expected_value = SQL_TXN_SERIALIZABLE,
+        actual_value_modifier = modify_u32_value,
+    );
+
+    test_get_info!(
+        sql_database_name,
+        info_type = InfoType::SQL_DATABASE_NAME as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        buffer_length = (2 * size_of::<WideChar>() * "test".len()) as i16,
+        expected_length = (size_of::<WideChar>() * "test".len()) as i16,
+        expected_value = "test",
+        actual_value_modifier = modify_string_value,
+    );
+
+    test_get_info_expect_u32_sql_all!(
         convert_big_int,
         info_type = InfoType::SQL_CONVERT_BIGINT as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_decimal,
         info_type = InfoType::SQL_CONVERT_DECIMAL as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_double,
         info_type = InfoType::SQL_CONVERT_DOUBLE as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_float,
         info_type = InfoType::SQL_CONVERT_FLOAT as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_integer,
         info_type = InfoType::SQL_CONVERT_INTEGER as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_numeric,
         info_type = InfoType::SQL_CONVERT_NUMERIC as u16
     );
 
-    test_get_info_expect_u32_zero!(convert_real, info_type = InfoType::SQL_CONVERT_REAL as u16);
+    test_get_info_expect_u32_sql_all!(convert_real, info_type = InfoType::SQL_CONVERT_REAL as u16);
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_small_int,
         info_type = InfoType::SQL_CONVERT_SMALLINT as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_tiny_int,
         info_type = InfoType::SQL_CONVERT_TINYINT as u16
     );
 
-    test_get_info_expect_u32_zero!(convert_bit, info_type = InfoType::SQL_CONVERT_BIT as u16);
+    test_get_info_expect_u32_sql_all!(convert_bit, info_type = InfoType::SQL_CONVERT_BIT as u16);
 
-    test_get_info_expect_u32_zero!(convert_char, info_type = InfoType::SQL_CONVERT_CHAR as u16);
+    test_get_info_expect_u32_sql_all!(convert_char, info_type = InfoType::SQL_CONVERT_CHAR as u16);
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_var_char,
         info_type = InfoType::SQL_CONVERT_VARCHAR as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_long_var_char,
         info_type = InfoType::SQL_CONVERT_LONGVARCHAR as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_w_char,
         info_type = InfoType::SQL_CONVERT_WCHAR as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_w_var_char,
         info_type = InfoType::SQL_CONVERT_WVARCHAR as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_w_long_var_char,
         info_type = InfoType::SQL_CONVERT_WLONGVARCHAR as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_timestamp,
         info_type = InfoType::SQL_CONVERT_TIMESTAMP as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_binary,
         info_type = InfoType::SQL_CONVERT_BINARY as u16
     );
 
-    test_get_info_expect_u32_zero!(convert_date, info_type = InfoType::SQL_CONVERT_DATE as u16);
+    test_get_info_expect_u32_sql_all!(convert_date, info_type = InfoType::SQL_CONVERT_DATE as u16);
 
-    test_get_info_expect_u32_zero!(convert_time, info_type = InfoType::SQL_CONVERT_TIME as u16);
+    test_get_info_expect_u32_sql_all!(convert_time, info_type = InfoType::SQL_CONVERT_TIME as u16);
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_var_binary,
         info_type = InfoType::SQL_CONVERT_BINARY as u16
     );
 
-    test_get_info_expect_u32_zero!(
+    test_get_info_expect_u32_sql_all!(
         convert_long_var_binary,
         info_type = InfoType::SQL_CONVERT_LONGVARBINARY as u16
     );
 
-    test_get_info_expect_u32_zero!(convert_guid, info_type = InfoType::SQL_CONVERT_GUID as u16);
+    test_get_info_expect_u32_sql_all!(convert_guid, info_type = InfoType::SQL_CONVERT_GUID as u16);
 
     test_get_info!(
         getdata_extensions,
