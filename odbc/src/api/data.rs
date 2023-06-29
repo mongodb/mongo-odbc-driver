@@ -1045,7 +1045,7 @@ pub mod i16_len {
             buffer_len / size_of::<WideChar>(),
         );
         // Only copy the length if the pointer is not null
-        set_data_length(text_length_ptr, (size_of::<WideChar>() * len) as SmallInt);
+        len_ptr_safe_write(text_length_ptr, (size_of::<WideChar>() * len) as SmallInt);
         ret
     }
 
@@ -1067,7 +1067,7 @@ pub mod i16_len {
         let message = cstr::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len);
         // Only copy the length if the pointer is not null
-        set_data_length(text_length_ptr, len as SmallInt);
+        len_ptr_safe_write(text_length_ptr, len as SmallInt);
         ret
     }
 
@@ -1085,7 +1085,7 @@ pub mod i16_len {
         data_len_ptr: *mut SmallInt,
     ) -> SqlReturn {
         // If the output_ptr is NULL, we should still return the length of the message.
-        set_data_length(data_len_ptr, size_of::<T>() as i16);
+        len_ptr_safe_write(data_len_ptr, size_of::<T>() as i16);
 
         if output_ptr.is_null() {
             return SqlReturn::SUCCESS_WITH_INFO;
@@ -1118,7 +1118,7 @@ pub mod i32_len {
             buffer_len / size_of::<WideChar>(),
         );
 
-        set_data_length(text_length_ptr, (size_of::<WideChar>() * len) as Integer);
+        len_ptr_safe_write(text_length_ptr, (size_of::<WideChar>() * len) as Integer);
         ret
     }
 
@@ -1136,7 +1136,7 @@ pub mod i32_len {
         data_len_ptr: *mut Integer,
     ) -> SqlReturn {
         // If the output_ptr is NULL, we should still return the length of the message.
-        set_data_length(data_len_ptr, size_of::<T>() as i32);
+        len_ptr_safe_write(data_len_ptr, size_of::<T>() as i32);
 
         if output_ptr.is_null() {
             return SqlReturn::SUCCESS_WITH_INFO;
@@ -1173,7 +1173,7 @@ pub mod isize_len {
         // TODO Power BI: This will return NO_DATA if the string is size 0 to begin with, not just
         // when the data runs out. Check to see if this is correct behavior.
         if index >= message.len() {
-            set_data_length(text_length_ptr, 0);
+            len_ptr_safe_write(text_length_ptr, 0);
             return SqlReturn::NO_DATA;
         }
         let (len, ret) = set_output_wstring_helper(
@@ -1182,7 +1182,7 @@ pub mod isize_len {
             buffer_len / size_of::<WideChar>(),
         );
         // the returned length should always be the total length of the data.
-        set_data_length(
+        len_ptr_safe_write(
             text_length_ptr,
             (size_of::<WideChar>() * (message.len() - index)) as Len,
         );
@@ -1215,13 +1215,13 @@ pub mod isize_len {
         // TODO Power BI: This will return NO_DATA if the string is size 0 to begin with, not just
         // when the data runs out. Check to see if this is correct behavior.
         if index >= message.len() {
-            set_data_length(text_length_ptr, 0);
+            len_ptr_safe_write(text_length_ptr, 0);
             return SqlReturn::NO_DATA;
         }
         let (len, ret) =
             set_output_string_helper(message.get(index..).unwrap(), output_ptr, buffer_len);
         // the returned length should always be the total length of the data.
-        set_data_length(text_length_ptr, (message.len() - index) as Len);
+        len_ptr_safe_write(text_length_ptr, (message.len() - index) as Len);
         // The length parameter does not matter because character data uses 8bit words and
         // we can obtain it from message.chars().count() above.
         stmt.insert_var_data_cache(col_num, CachedData::Char(len + index, message));
@@ -1253,12 +1253,12 @@ pub mod isize_len {
         // TODO Power BI: This will return NO_DATA if the data is size 0 to begin with, not just
         // when the data runs out. Check to see if this is correct behavior.
         if index >= data.len() {
-            set_data_length(text_length_ptr, 0);
+            len_ptr_safe_write(text_length_ptr, 0);
             return SqlReturn::NO_DATA;
         }
         let (len, ret) =
             set_output_binary_helper(data.get(index..).unwrap(), output_ptr, buffer_len);
-        set_data_length(text_length_ptr, (data.len() - index) as Len);
+        len_ptr_safe_write(text_length_ptr, (data.len() - index) as Len);
         stmt.insert_var_data_cache(col_num, CachedData::Bin(len + index, data));
         ret
     }
@@ -1282,7 +1282,7 @@ pub mod isize_len {
         }
 
         // If the output_ptr is NULL, we should still return the length of the message.
-        set_data_length(data_len_ptr, size_of::<T>() as isize);
+        len_ptr_safe_write(data_len_ptr, size_of::<T>() as isize);
 
         write_fixed_data(data, output_ptr);
         SqlReturn::SUCCESS
@@ -1295,7 +1295,7 @@ pub mod isize_len {
 /// # Safety
 /// This writes to a raw C-pointers
 ///
-pub unsafe fn set_data_length<T>(data_length_ptr: *mut T, length: T) {
+pub unsafe fn len_ptr_safe_write<T>(data_length_ptr: *mut T, length: T) {
     if !data_length_ptr.is_null() {
         *data_length_ptr = length
     }
