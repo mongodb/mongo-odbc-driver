@@ -1295,9 +1295,9 @@ pub mod isize_len {
 /// # Safety
 /// This writes to a raw C-pointers
 ///
-pub unsafe fn len_ptr_safe_write<T>(data_length_ptr: *mut T, length: T) {
-    if !data_length_ptr.is_null() {
-        *data_length_ptr = length
+pub unsafe fn len_ptr_safe_write<T>(length_ptr: *mut T, length: T) {
+    if !length_ptr.is_null() {
+        *length_ptr = length
     }
 }
 
