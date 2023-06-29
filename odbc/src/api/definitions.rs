@@ -596,49 +596,49 @@ pub const SQL_FN_NUM_ROUND: u32 = 0x00400000;
 
 // SQL_STRING_FUNCTIONS bitmasks
 #[allow(unused)]
-pub const SQL_FN_STR_CONCAT: u32 = 00000001;
+pub const SQL_FN_STR_CONCAT: u32 = 0x00000001;
 #[allow(unused)]
-pub const SQL_FN_STR_INSERT: u32 = 00000002;
+pub const SQL_FN_STR_INSERT: u32 = 0x00000002;
 #[allow(unused)]
-pub const SQL_FN_STR_LEFT: u32 = 00000004;
+pub const SQL_FN_STR_LEFT: u32 = 0x00000004;
 #[allow(unused)]
-pub const SQL_FN_STR_LTRIM: u32 = 00000008;
+pub const SQL_FN_STR_LTRIM: u32 = 0x00000008;
 #[allow(unused)]
-pub const SQL_FN_STR_LENGTH: u32 = 00000010;
+pub const SQL_FN_STR_LENGTH: u32 = 0x00000010;
 #[allow(unused)]
-pub const SQL_FN_STR_LOCATE: u32 = 00000020;
+pub const SQL_FN_STR_LOCATE: u32 = 0x00000020;
 #[allow(unused)]
-pub const SQL_FN_STR_LCASE: u32 = 00000040;
+pub const SQL_FN_STR_LCASE: u32 = 0x00000040;
 #[allow(unused)]
-pub const SQL_FN_STR_REPEAT: u32 = 00000080;
+pub const SQL_FN_STR_REPEAT: u32 = 0x00000080;
 #[allow(unused)]
-pub const SQL_FN_STR_REPLACE: u32 = 00000100;
+pub const SQL_FN_STR_REPLACE: u32 = 0x00000100;
 #[allow(unused)]
-pub const SQL_FN_STR_SUBSTRING: u32 = 00000800;
+pub const SQL_FN_STR_SUBSTRING: u32 = 0x00000800;
 #[allow(unused)]
-pub const SQL_FN_STR_UCASE: u32 = 00001000;
+pub const SQL_FN_STR_UCASE: u32 = 0x00001000;
 #[allow(unused)]
-pub const SQL_FN_STR_ASCII: u32 = 00002000;
+pub const SQL_FN_STR_ASCII: u32 = 0x00002000;
 #[allow(unused)]
-pub const SQL_FN_STR_CHAR: u32 = 00004000;
+pub const SQL_FN_STR_CHAR: u32 = 0x00004000;
 #[allow(unused)]
-pub const SQL_FN_STR_DIFFERENCE: u32 = 00008000;
+pub const SQL_FN_STR_DIFFERENCE: u32 = 0x00008000;
 #[allow(unused)]
-pub const SQL_FN_STR_LOCATE_2: u32 = 00010000;
+pub const SQL_FN_STR_LOCATE_2: u32 = 0x00010000;
 #[allow(unused)]
-pub const SQL_FN_STR_SOUNDEX: u32 = 00020000;
+pub const SQL_FN_STR_SOUNDEX: u32 = 0x00020000;
 #[allow(unused)]
-pub const SQL_FN_STR_SPACE: u32 = 00040000;
+pub const SQL_FN_STR_SPACE: u32 = 0x00040000;
 #[allow(unused)]
-pub const SQL_FN_STR_BIT_LENGTH: u32 = 00080000;
+pub const SQL_FN_STR_BIT_LENGTH: u32 = 0x00080000;
 #[allow(unused)]
-pub const SQL_FN_STR_CHAR_LENGTH: u32 = 00100000;
+pub const SQL_FN_STR_CHAR_LENGTH: u32 = 0x00100000;
 #[allow(unused)]
-pub const SQL_FN_STR_CHARACTER_LENGTH: u32 = 00200000;
+pub const SQL_FN_STR_CHARACTER_LENGTH: u32 = 0x00200000;
 #[allow(unused)]
-pub const SQL_FN_STR_OCTET_LENGTH: u32 = 00400000;
+pub const SQL_FN_STR_OCTET_LENGTH: u32 = 0x00400000;
 #[allow(unused)]
-pub const SQL_FN_STR_POSITION: u32 = 00800000;
+pub const SQL_FN_STR_POSITION: u32 = 0x00800000;
 
 // SQL_TIMEDATE_FUNCTIONS functions
 pub const SQL_FN_TD_CURRENT_TIMESTAMP: u32 = 0x00080000;

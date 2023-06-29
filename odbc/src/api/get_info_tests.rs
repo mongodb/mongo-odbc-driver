@@ -258,7 +258,9 @@ mod unit {
             | SQL_FN_STR_CHAR_LENGTH
             | SQL_FN_STR_CHARACTER_LENGTH
             | SQL_FN_STR_OCTET_LENGTH
-            | SQL_FN_STR_POSITION,
+            | SQL_FN_STR_POSITION
+            | SQL_FN_STR_UCASE
+            | SQL_FN_STR_LCASE,
         actual_value_modifier = modify_u32_value,
     );
 
