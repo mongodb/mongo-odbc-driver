@@ -448,8 +448,7 @@ mod unit {
          unsafe {
              let info_type = InfoType::SQL_DATABASE_NAME;
 
-             #[allow(unused_mut, unused_assignments)]
-             let mut conn =
+             let conn =
                  Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
              conn.attributes.write().unwrap().current_catalog = Some("test".to_string());
              let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
