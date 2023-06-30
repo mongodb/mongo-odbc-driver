@@ -2274,12 +2274,7 @@ macro_rules! sql_get_info_helper {
                             string_length_ptr,
                         )
                     } else {
-                        $string_func(
-                            "test",
-                            info_value_ptr,
-                            buffer_length as usize,
-                            string_length_ptr,
-                        )
+                        SqlReturn::NO_DATA
                     }
                 }
                 InfoType::SQL_SCROLL_CONCURRENCY => {
