@@ -1052,6 +1052,33 @@ pub mod i16_len {
     }
 
     ///
+    /// set_output_string_as_bytes writes [`message`] to the Pointer [`output_ptr`]. [`buffer_len`] is the
+    /// length of the [`output_ptr`] buffer in characters; the message should be truncated
+    /// if it is longer than the buffer length. The number of *BYTES* written to [`output_ptr`]
+    /// should be stored in [`text_length_ptr`].
+    ///
+    /// # Safety
+    /// This writes to multiple raw C-pointers
+    ///
+    pub unsafe fn set_output_string_as_bytes(
+        message: &str,
+        output_ptr: Pointer,
+        buffer_len: usize,
+        text_length_ptr: *mut SmallInt,
+    ) -> SqlReturn {
+        let (len, ret) = set_output_string_helper(
+            message.as_bytes(),
+            output_ptr as *mut Char,
+            buffer_len / size_of::<WideChar>(),
+        );
+        // Only copy the length if the pointer is not null
+        if !text_length_ptr.is_null() {
+            *text_length_ptr = (size_of::<WideChar>() * len) as SmallInt;
+        }
+        ret
+    }
+
+    ///
     /// set_output_wstring writes [`message`] to the *WideChar [`output_ptr`]. [`buffer_len`] is the
     /// length of the [`output_ptr`] buffer in characters; the message should be truncated
     /// if it is longer than the buffer length. The number of characters written to [`output_ptr`]

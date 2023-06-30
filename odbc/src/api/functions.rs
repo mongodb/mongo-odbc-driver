@@ -2341,7 +2341,7 @@ macro_rules! sql_get_info_helper {
     };
 
     if let Some(error) = err {
-        add_diag_with_function!(conn_handle, error, "SQLGetInfoW");
+        add_diag_with_function!(conn_handle, error, $func_name);
     }
     sql_return
 }}
@@ -2403,7 +2403,7 @@ pub unsafe extern "C" fn SQLGetInfo(
             info_value_ptr,
             buffer_length,
             string_length_ptr,
-            i16_len::set_output_wstring_as_bytes,
+            i16_len::set_output_string_as_bytes,
             "SQLGetInfo",
         ),
         connection_handle
