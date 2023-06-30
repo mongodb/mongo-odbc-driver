@@ -1,7 +1,7 @@
 use crate::{
     add_diag_with_function,
     api::{
-        data::{i16_len, i32_len, set_str_length},
+        data::{i16_len, i32_len, ptr_safe_write},
         definitions::*,
         diag::{get_diag_field, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
@@ -1751,9 +1751,9 @@ unsafe fn sql_get_env_attrw_helper(
 ) -> SqlReturn {
     let env = must_be_valid!(env_handle.as_env());
     if value_ptr.is_null() {
-        set_str_length(string_length, 0);
+        ptr_safe_write(string_length, 0);
     } else {
-        set_str_length(string_length, size_of::<Integer>() as Integer);
+        ptr_safe_write(string_length, size_of::<Integer>() as Integer);
         match attribute {
             EnvironmentAttribute::SQL_ATTR_ODBC_VERSION => {
                 *(value_ptr as *mut OdbcVersion) = env.attributes.read().unwrap().odbc_ver;
@@ -2287,7 +2287,7 @@ unsafe fn sql_get_stmt_attrw_helper(
 ) -> SqlReturn {
     // Most attributes have type SQLULEN, so default to the size of that
     // type.
-    set_str_length(string_length_ptr, size_of::<ULen>() as Integer);
+    ptr_safe_write(string_length_ptr, size_of::<ULen>() as Integer);
 
     let mut err = None;
 
@@ -2297,30 +2297,30 @@ unsafe fn sql_get_stmt_attrw_helper(
             StatementAttribute::SQL_ATTR_APP_ROW_DESC => {
                 *(value_ptr as *mut Pointer) =
                     stmt.attributes.read().unwrap().app_row_desc as Pointer;
-                set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<Pointer>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_APP_PARAM_DESC => {
                 *(value_ptr as *mut Pointer) =
                     stmt.attributes.read().unwrap().app_param_desc as Pointer;
-                set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<Pointer>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_IMP_ROW_DESC => {
                 *(value_ptr as *mut Pointer) =
                     stmt.attributes.read().unwrap().imp_row_desc as Pointer;
-                set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<Pointer>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_IMP_PARAM_DESC => {
                 *(value_ptr as *mut Pointer) =
                     stmt.attributes.read().unwrap().imp_param_desc as Pointer;
-                set_str_length(string_length_ptr, size_of::<Pointer>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<Pointer>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_FETCH_BOOKMARK_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().fetch_bookmark_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut Len>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut Len>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_CURSOR_SCROLLABLE => {
@@ -2367,7 +2367,7 @@ unsafe fn sql_get_stmt_attrw_helper(
             }
             StatementAttribute::SQL_ATTR_PARAM_BIND_OFFSET_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_bind_offset_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut ULen>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_PARAM_BIND_TYPE => {
@@ -2376,17 +2376,17 @@ unsafe fn sql_get_stmt_attrw_helper(
             }
             StatementAttribute::SQL_ATTR_PARAM_OPERATION_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_operation_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_PARAM_STATUS_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_status_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_PARAMS_PROCESSED_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().param_processed_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut ULen>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_PARAMSET_SIZE => {
@@ -2403,7 +2403,7 @@ unsafe fn sql_get_stmt_attrw_helper(
             }
             StatementAttribute::SQL_ATTR_ROW_BIND_OFFSET_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_bind_offset_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut ULen>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_ROW_BIND_TYPE => {
@@ -2416,17 +2416,17 @@ unsafe fn sql_get_stmt_attrw_helper(
             }
             StatementAttribute::SQL_ATTR_ROW_OPERATION_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_operation_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_ROW_STATUS_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().row_status_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut USmallInt>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_ROWS_FETCHED_PTR => {
                 *(value_ptr as *mut _) = stmt.attributes.read().unwrap().rows_fetched_ptr;
-                set_str_length(string_length_ptr, size_of::<*mut ULen>() as Integer);
+                ptr_safe_write(string_length_ptr, size_of::<*mut ULen>() as Integer);
                 SqlReturn::SUCCESS
             }
             StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE | StatementAttribute::SQL_ROWSET_SIZE => {
