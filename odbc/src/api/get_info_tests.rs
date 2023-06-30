@@ -443,6 +443,41 @@ mod unit {
         info_type = InfoType::SQL_DATABASE_NAME as u16,
     );
 
+    #[test]
+    fn sql_database_name_set() {
+         unsafe {
+             let info_type = InfoType::SQL_DATABASE_NAME;
+
+             #[allow(unused_mut, unused_assignments)]
+             let mut conn =
+                 Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+             conn.attributes.write().unwrap().current_catalog = Some("test".to_string());
+             let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
+
+             let value_ptr: *mut std::ffi::c_void =
+                 Box::into_raw(Box::new([0u8; 40])) as *mut _;
+             let out_length = &mut 10;
+
+             let buffer_length = 40;
+
+             assert_eq!(
+                 SqlReturn::SUCCESS,
+                 SQLGetInfoW(
+                     mongo_handle as *mut _,
+                     info_type as u16,
+                     value_ptr,
+                     buffer_length,
+                     out_length,
+                 )
+             );
+
+             assert_eq!(8, *out_length);
+             assert_eq!("test", modify_string_value(value_ptr, *out_length as usize));
+
+             let _ = Box::from_raw(value_ptr as *mut UInteger);
+         }
+    }
+
     test_get_info_expect_u32_sql_all!(
         convert_big_int,
         info_type = InfoType::SQL_CONVERT_BIGINT as u16
