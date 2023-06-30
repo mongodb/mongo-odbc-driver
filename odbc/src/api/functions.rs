@@ -2205,7 +2205,12 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
-                InfoType::SQL_DEFAULT_TXN_ISOLATION => {
+                InfoType::SQL_DEFAULT_TXN_ISOLATION
+                | InfoType::SQL_DTC_TRANSITION_COST
+                | InfoType::SQL_BOOKMARK_PERSISTENCE
+                | InfoType::SQL_POS_OPERATIONS
+                | InfoType::SQL_STATIC_SENSITIVITY
+                | InfoType::SQL_TXN_CAPABLE => {
                     i16_len::set_output_fixed_data(
                         &0,
                         info_value_ptr,
@@ -2215,9 +2220,6 @@ macro_rules! sql_get_info_helper {
                 // Setting this to 10, which is our default for the number of workers in the mongo driver's connection pool.
                 InfoType::SQL_MAX_CONCURRENT_ACTIVITIES => {
                     i16_len::set_output_fixed_data(&10, info_value_ptr, string_length_ptr)
-                }
-                InfoType::SQL_DTC_TRANSITION_COST => {
-                    i16_len::set_output_fixed_data(&0, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1
                 | InfoType::SQL_KEYSET_CURSOR_ATTRIBUTES1
@@ -2242,14 +2244,6 @@ macro_rules! sql_get_info_helper {
                 InfoType::SQL_SCROLL_OPTIONS => {
                     i16_len::set_output_fixed_data(
                         &MONGO_SO_SUPPORT,
-                        info_value_ptr,
-                        string_length_ptr,
-                    )
-                }
-                InfoType::SQL_BOOKMARK_PERSISTENCE => {
-                    i16_len::set_output_fixed_data(
-                        // We do not support bookmarks
-                        &0,
                         info_value_ptr,
                         string_length_ptr,
                     )
@@ -2302,28 +2296,6 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
-                InfoType::SQL_POS_OPERATIONS => {
-                    i16_len::set_output_fixed_data(
-                        &0,
-                        info_value_ptr,
-                        string_length_ptr,
-                    )
-                }
-                InfoType::SQL_STATIC_SENSITIVITY => {
-                    i16_len::set_output_fixed_data(
-                        &0,
-                        info_value_ptr,
-                        string_length_ptr,
-                    )
-                }
-                InfoType::SQL_TXN_CAPABLE => {
-                    i16_len::set_output_fixed_data(
-                        &0,
-                        info_value_ptr,
-                        string_length_ptr,
-                    )
-                }
-
                 _ => {
                     err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
                         info_type.to_string(),
