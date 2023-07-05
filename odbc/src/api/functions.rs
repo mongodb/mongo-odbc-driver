@@ -1025,7 +1025,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
             let query = input_text_to_string_w(statement_text, text_length as usize);
             let mongo_handle = MongoHandleRef::from(statement_handle);
             trace_odbc!(
-                info,
+                debug,
                 mongo_handle,
                 format!("Executing following query: \"{query}\""),
                 function_name!()
@@ -1194,13 +1194,13 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
     trace_odbc!(
-        info,
+        debug,
         *(handle as *mut MongoHandle),
         format!("Freeing handle {:?}", handle as *mut MongoHandle),
         function_name!()
     );
     panic_safe_exec_keep_diagnostics!(
-        info,
+        debug,
         || {
             match sql_free_handle(handle_type, handle as *mut _) {
                 Ok(_) => SqlReturn::SUCCESS,
@@ -1801,7 +1801,7 @@ macro_rules! sql_get_info_helper {
     let sql_return = match FromPrimitive::from_u16(info_type) {
         Some(some_info_type) => {
             trace_odbc!(
-                info,
+                debug,
                 conn_handle,
                 format!("InfoType {some_info_type:?}"),
                 $func_name
