@@ -336,11 +336,8 @@ if [[ $? -ne 0 ]]; then
     fi
     rm -f $MONGOHOUSE_MQLRUN
     $GO run cmd/buildscript/build.go tools:download:mqlrun
-
-    if [[ $HAVE_LOCAL_MONGOHOUSE -ne 1 || ! -f "$MONGOSQL_LIB" ]]; then
-        rm -f $MONGOSQL_LIB || 1
-        $GO run cmd/buildscript/build.go tools:download:mongosql
-    fi
+    rm -f $MONGOSQL_LIB
+    $GO run cmd/buildscript/build.go tools:download:mongosql
 
     get_jq
     # Load tenant config into mongodb
