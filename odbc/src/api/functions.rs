@@ -1788,8 +1788,7 @@ macro_rules! sql_get_info_helper {
  $info_value_ptr:ident,
  $buffer_length:ident,
  $string_length_ptr:ident,
- $string_func:path,
- $func_name:expr,) => {{
+ ) => {{
     let connection_handle = $connection_handle;
     let info_type = $info_type;
     let info_value_ptr = $info_value_ptr;
@@ -1804,19 +1803,19 @@ macro_rules! sql_get_info_helper {
                 debug,
                 conn_handle,
                 format!("InfoType {some_info_type:?}"),
-                $func_name
+                "SQLGetInfoW"
             );
             match some_info_type {
                 InfoType::SQL_DRIVER_NAME => {
                     // This Driver Name is consistent with the name used for our JDBC driver.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         DRIVER_NAME,
                         info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
                     )
                 }
-                InfoType::SQL_DRIVER_VER => $string_func(
+                InfoType::SQL_DRIVER_VER => i16_len::set_output_wstring_as_bytes(
                     DRIVER_ODBC_VERSION.as_str(),
                     info_value_ptr,
                     buffer_length as usize,
@@ -1831,7 +1830,7 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
-                InfoType::SQL_SEARCH_PATTERN_ESCAPE => $string_func(
+                InfoType::SQL_SEARCH_PATTERN_ESCAPE => i16_len::set_output_wstring_as_bytes(
                     r"\",
                     info_value_ptr,
                     buffer_length as usize,
@@ -1839,7 +1838,7 @@ macro_rules! sql_get_info_helper {
                 ),
                 InfoType::SQL_DBMS_NAME => {
                     // The underlying DBMS is MongoDB Atlas.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         DBMS_NAME,
                         info_value_ptr,
                         buffer_length as usize,
@@ -1857,7 +1856,7 @@ macro_rules! sql_get_info_helper {
                         .unwrap()
                         .get_adf_version();
                     match version {
-                        Ok(version) => $string_func(
+                        Ok(version) => i16_len::set_output_wstring_as_bytes(
                             version.as_str(),
                             info_value_ptr,
                             buffer_length as usize,
@@ -1878,7 +1877,7 @@ macro_rules! sql_get_info_helper {
                     // MongoSQL supports ` and " as identifier delimiters. The "
                     // character is the SQL-92 standard, but we instead return `
                     // to be consistent with our JDBC driver.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         "`",
                         info_value_ptr,
                         buffer_length as usize,
@@ -1896,7 +1895,7 @@ macro_rules! sql_get_info_helper {
                     // Therefore, a "schema" may map to MongoSQL's "database".
                     // However, we choose to use "catalog" to represent MongoSQL
                     // databases, and we omit support for "schema".
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         "",
                         info_value_ptr,
                         buffer_length as usize,
@@ -1905,7 +1904,7 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_CATALOG_NAME_SEPARATOR => {
                     // The name separator used by MongoSQL is '.'.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         ".",
                         info_value_ptr,
                         buffer_length as usize,
@@ -1914,7 +1913,7 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_CATALOG_TERM => {
                     // MongoSQL uses the term "database".
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         "database",
                         info_value_ptr,
                         buffer_length as usize,
@@ -2021,7 +2020,7 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_COLUMN_ALIAS => {
                     // MongoSQL does support column aliases.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
@@ -2040,7 +2039,7 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_ORDER_BY_COLUMNS_IN_SELECT => {
                     // MongoSQL does require ORDER BY columns to be in the SELECT list.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
@@ -2068,7 +2067,7 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_DATA_SOURCE_READ_ONLY => {
                     // MongoSQL is read-only.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
@@ -2096,7 +2095,7 @@ macro_rules! sql_get_info_helper {
                     // than [A-Za-z0-9_]. It is unrealistic to return a string with
                     // all of those characters, so here we choose to return a string
                     // containing what we believe to be most common special characters.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         "`\"'.$+-*/|:<>!={}[]()",
                         info_value_ptr,
                         buffer_length as usize,
@@ -2184,7 +2183,7 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_CATALOG_NAME => {
                     // MongoSQL does support catalog (database) names.
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
@@ -2249,7 +2248,7 @@ macro_rules! sql_get_info_helper {
                     )
                 }
                 InfoType::SQL_NEED_LONG_DATA_LEN => {
-                    $string_func(
+                    i16_len::set_output_wstring_as_bytes(
                         SQL_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
@@ -2267,14 +2266,15 @@ macro_rules! sql_get_info_helper {
                     let conn = must_be_valid!((*conn_handle).as_connection());
                     let attributes = conn.attributes.read().unwrap();
                     if attributes.current_catalog.is_some() {
-                        $string_func(
+                        i16_len::set_output_wstring_as_bytes(
                             attributes.current_catalog.as_ref().unwrap().as_str(),
                             info_value_ptr,
                             buffer_length as usize,
                             string_length_ptr,
                         )
                     } else {
-                        SqlReturn::NO_DATA
+                        err = Some(ODBCError::ConnectionNotOpen);
+                        SqlReturn::ERROR
                     }
                 }
                 InfoType::SQL_SCROLL_CONCURRENCY => {
@@ -2308,7 +2308,7 @@ macro_rules! sql_get_info_helper {
     };
 
     if let Some(error) = err {
-        add_diag_with_function!(conn_handle, error, $func_name);
+        add_diag_with_function!(conn_handle, error, "SQLGetInfoW");
     }
     sql_return
 }}
@@ -2339,39 +2339,6 @@ pub unsafe extern "C" fn SQLGetInfoW(
             info_value_ptr,
             buffer_length,
             string_length_ptr,
-            i16_len::set_output_wstring_as_bytes,
-            "SQLGetInfoW",
-        ),
-        connection_handle
-    )
-}
-
-///
-/// [`SQLGetInfo`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetInfo-function
-///
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLGetInfo(
-    connection_handle: HDbc,
-    info_type: USmallInt,
-    info_value_ptr: Pointer,
-    buffer_length: SmallInt,
-    string_length_ptr: *mut SmallInt,
-) -> SqlReturn {
-    panic_safe_exec_clear_diagnostics!(
-        debug,
-        || sql_get_info_helper!(
-            connection_handle,
-            info_type,
-            info_value_ptr,
-            buffer_length,
-            string_length_ptr,
-            i16_len::set_output_string_as_bytes,
-            "SQLGetInfo",
         ),
         connection_handle
     )

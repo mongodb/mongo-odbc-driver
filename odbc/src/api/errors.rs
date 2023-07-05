@@ -4,7 +4,7 @@ use constants::{
     INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
     INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED,
     NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE,
-    RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER, CONNECTION_NOT_OPEN,
 };
 use thiserror::Error;
 
@@ -125,6 +125,8 @@ pub enum ODBCError {
     RestrictedDataType(&'static str, &'static str),
     #[error("[{}][API] No resultset for statement", VENDOR_IDENTIFIER)]
     NoResultSet,
+    #[error("Connection not open")]
+    ConnectionNotOpen,
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
     Core(mongo_odbc_core::Error),
 }
@@ -166,6 +168,7 @@ impl ODBCError {
             ODBCError::IndicatorVariableRequiredButNotSupplied => INDICATOR_VARIABLE_REQUIRED,
             ODBCError::NoResultSet => NO_RESULTSET,
             ODBCError::UnknownInfoType(_) => INVALID_INFO_TYPE_VALUE,
+            ODBCError::ConnectionNotOpen => CONNECTION_NOT_OPEN,
         }
     }
 
@@ -205,6 +208,7 @@ impl ODBCError {
             | ODBCError::InvalidCharacterValue(_)
             | ODBCError::NoResultSet
             | ODBCError::UnsupportedInfoTypeRetrieval(_)
+            | ODBCError::ConnectionNotOpen
             | ODBCError::UnknownInfoType(_) => 0,
             ODBCError::Core(me) => me.code(),
         }

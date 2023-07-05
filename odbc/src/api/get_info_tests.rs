@@ -63,39 +63,6 @@ macro_rules! test_get_info {
     }
 }
 
-macro_rules! test_get_info_no_data {
-    ($func_name:ident,
-    info_type = $info_type:expr,
-    ) => {
-        #[test]
-        fn $func_name() {
-            unsafe {
-                let info_type = $info_type;
-
-                #[allow(unused_mut, unused_assignments)]
-                let mut conn =
-                    Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
-                let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
-
-                let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 900])) as *mut _;
-                let out_length: *mut SmallInt = &mut 0;
-
-                // Assert that the actual result matches NO_DATA
-                assert_eq!(
-                    SqlReturn::NO_DATA,
-                    SQLGetInfoW(
-                        mongo_handle as *mut _,
-                        info_type,
-                        value_ptr as Pointer,
-                        0,
-                        out_length,
-                    )
-                );
-            }
-        }
-    }
-}
-
 macro_rules! test_get_info_expect_u32_zero {
     ($func_name:ident, info_type = $info_type:expr) => {
         test_get_info!(
@@ -438,13 +405,17 @@ mod unit {
         actual_value_modifier = modify_u32_value,
     );
 
-    test_get_info_no_data!(
-        sql_database_name_default,
+    test_get_info!(
+        sql_database_name_missing_means_no_connection,
         info_type = InfoType::SQL_DATABASE_NAME as u16,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_length = 0,
+        expected_value = 0,
+        actual_value_modifier = modify_u32_value,
     );
 
     #[test]
-    fn sql_database_name_set() {
+    fn sql_database_name() {
          unsafe {
              let info_type = InfoType::SQL_DATABASE_NAME;
 
