@@ -2008,7 +2008,7 @@ macro_rules! sql_get_info_helper {
                     // MongoSQL does not support the CONVERT scalar function, but clients also use
                     // this to apply the CAST syntactic construct. The value we return for
                     // SQL_CONVERT_FUNCTIONS alerts the client that we expect CAST and not CONVERT.
-                    i16_len::set_output_fixed_data(&SQL_U32_ALL, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(&MONGO_CAST_SUPPORT, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_GETDATA_EXTENSIONS => {
                     // GetData can be called on any column in any order.

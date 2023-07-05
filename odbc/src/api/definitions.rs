@@ -557,7 +557,6 @@ pub const SQL_CB_NULL: u16 = 0x0000;
 pub const SQL_U16_ZERO: u16 = 0x0000;
 pub const SQL_CL_START: u16 = 0x0001;
 pub const SQL_U32_ZERO: u32 = 0x0;
-pub const SQL_U32_ALL: u32 = 0xffffffff;
 pub const SQL_OIC_CORE: u32 = 0x00000001;
 pub const SQL_SC_SQL92_ENTRY: u32 = 0x00000001;
 pub const SQL_INFO_Y: &str = "Y";
@@ -578,6 +577,49 @@ pub const SQL_LCK_NO_CHANGE: u32 = 0x00000001;
 
 // SQL_CONVERT_FUNCTIONS bitmask
 pub const SQL_FN_CVT_CAST: u32 = 0x00000002;
+
+// BitMask for supported CAST Types
+pub const SQL_CVT_CHAR: u32 =                      0x00000001;
+pub const SQL_CVT_NUMERIC: u32 =                   0x00000002;
+#[allow(unused)]
+pub const SQL_CVT_DECIMAL: u32 =                   0x00000004;
+pub const SQL_CVT_INTEGER: u32 =                   0x00000008;
+pub const SQL_CVT_SMALLINT: u32 =                  0x00000010;
+pub const SQL_CVT_FLOAT: u32 =                     0x00000020;
+pub const SQL_CVT_REAL: u32 =                      0x00000040;
+pub const SQL_CVT_DOUBLE: u32 =                    0x00000080;
+pub const SQL_CVT_VARCHAR: u32 =                   0x00000100;
+#[allow(unused)]
+pub const SQL_CVT_LONGVARCHAR: u32 =               0x00000200;
+#[allow(unused)]
+pub const SQL_CVT_BINARY: u32 =                    0x00000400;
+#[allow(unused)]
+pub const SQL_CVT_VARBINARY: u32 =                 0x00000800;
+pub const SQL_CVT_BIT: u32 =                       0x00001000;
+#[allow(unused)]
+pub const SQL_CVT_TINYINT: u32 =                   0x00002000;
+#[allow(unused)]
+pub const SQL_CVT_BIGINT: u32 =                    0x00004000;
+#[allow(unused)]
+pub const SQL_CVT_DATE: u32 =                      0x00008000;
+#[allow(unused)]
+pub const SQL_CVT_TIME: u32 =                      0x00010000;
+pub const SQL_CVT_TIMESTAMP: u32 =                 0x00020000;
+#[allow(unused)]
+pub const SQL_CVT_LONGVARBINARY: u32 =             0x00040000;
+#[allow(unused)]
+pub const SQL_CVT_INTERVAL_YEAR_MONTH: u32 =       0x00080000;
+#[allow(unused)]
+pub const SQL_CVT_INTERVAL_DAY_TIME: u32 =         0x00100000;
+#[allow(unused)]
+pub const SQL_CVT_WCHAR: u32 =                     0x00200000;
+#[allow(unused)]
+pub const SQL_CVT_WLONGVARCHAR: u32 =              0x00400000;
+#[allow(unused)]
+pub const SQL_CVT_WVARCHAR: u32 =                  0x00800000;
+#[allow(unused)]
+pub const SQL_CVT_GUID: u32 =                      0x01000000;
+pub const MONGO_CAST_SUPPORT: u32 = SQL_CVT_CHAR | SQL_CVT_NUMERIC | SQL_CVT_INTEGER | SQL_CVT_SMALLINT | SQL_CVT_FLOAT | SQL_CVT_REAL | SQL_CVT_DOUBLE | SQL_CVT_VARCHAR | SQL_CVT_BIT | SQL_CVT_TIMESTAMP;
 
 // SQL_NUMERIC_FUNCTIONS bitmasks
 pub const SQL_FN_NUM_ABS: u32 = 0x00000001;

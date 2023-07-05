@@ -116,7 +116,7 @@ macro_rules! test_get_info_expect_u32_sql_all {
             info_type = $info_type,
             expected_sql_return = SqlReturn::SUCCESS,
             expected_length = std::mem::size_of::<u32>() as i16,
-            expected_value = SQL_U32_ALL,
+            expected_value = MONGO_CAST_SUPPORT,
             actual_value_modifier = modify_u32_value,
         );
     };
