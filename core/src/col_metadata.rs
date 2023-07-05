@@ -4,7 +4,7 @@ use crate::{
         simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
     },
-    BsonTypeInfo, Error, Result,
+    StandardTypeInfo, Error, Result,
 };
 use itertools::Itertools;
 use odbc_sys::Nullability;
@@ -53,7 +53,7 @@ impl MongoColMetadata {
         _current_db: &str,
         datasource_name: String,
         field_name: String,
-        bson_type_info: BsonTypeInfo,
+        bson_type_info: StandardTypeInfo,
         nullability: Nullability,
     ) -> MongoColMetadata {
         MongoColMetadata {
@@ -94,7 +94,7 @@ impl MongoColMetadata {
         field_schema: Schema,
         nullability: Nullability,
     ) -> MongoColMetadata {
-        let bson_type_info: BsonTypeInfo = field_schema.into();
+        let bson_type_info: StandardTypeInfo = field_schema.into();
         MongoColMetadata::new_metadata_from_bson_type_info(
             current_db,
             datasource_name,

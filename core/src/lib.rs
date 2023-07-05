@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 mod bson_type_info;
-use bson_type_info::BsonTypeInfo;
-pub use bson_type_info::SQL_SEARCHABLE;
+use bson_type_info::standard_type_info::StandardTypeInfo;
+use bson_type_info::simple_type_info::SimpleTypeInfo;
+// Do I need another one of these things for SimpleTypeInfo? could do BSON_SQL_SEARCHABLE and SIMPLE_SQL_SEARCHABLE.
+pub use bson_type_info::standard_type_info::SQL_SEARCHABLE;
 mod collections;
 pub use collections::MongoCollections;
 mod conn;

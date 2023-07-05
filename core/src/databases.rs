@@ -1,5 +1,5 @@
 use crate::{
-    bson_type_info::BsonTypeInfo, col_metadata::MongoColMetadata, conn::MongoConnection,
+    bson_type_info::standard_type_info::StandardTypeInfo, col_metadata::MongoColMetadata, conn::MongoConnection,
     err::Result, stmt::MongoStatement, Error,
 };
 use bson::Bson;
@@ -14,35 +14,35 @@ lazy_static! {
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            BsonTypeInfo::STRING,
+            StandardTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            BsonTypeInfo::STRING,
+            StandardTypeInfo::STRING,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            BsonTypeInfo::STRING,
+            StandardTypeInfo::STRING,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            BsonTypeInfo::STRING,
+            StandardTypeInfo::STRING,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            BsonTypeInfo::STRING,
+            StandardTypeInfo::STRING,
             Nullability::NULLABLE
         ),
     ];
