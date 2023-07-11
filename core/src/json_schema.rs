@@ -1,4 +1,4 @@
-use crate::{bson_type_info::{StandardTypeInfo, SimpleTypeInfo, BsonTypeInfo}, Error};
+use crate::{bson_type_info::{StandardTypeInfo, SimpleTypeInfo, BsonTypeInfo, SchemaMode}, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

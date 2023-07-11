@@ -9,7 +9,7 @@ use std::{
     ptr::null_mut,
     sync::RwLock,
 };
-use mongo_odbc_core::BsonTypeInfo;
+use mongo_odbc_core::{SchemaMode};
 
 #[derive(Debug)]
 pub enum MongoHandle {
@@ -239,7 +239,7 @@ pub struct Connection {
     pub statements: RwLock<HashSet<*mut MongoHandle>>,
     pub errors: RwLock<Vec<ODBCError>>,
     // bson_type_info represents whether we're using simple or standard type info
-    pub bson_type_info: RwLock<BsonTypeInfo>,
+    pub schema_mode: RwLock<SchemaMode>,
 }
 
 #[derive(Debug, Default)]
@@ -274,7 +274,7 @@ impl Connection {
             state: RwLock::new(state),
             statements: RwLock::new(HashSet::new()),
             errors: RwLock::new(vec![]),
-            bson_type_info: RwLock::new(BsonTypeInfo::Standard),
+            schema_mode: RwLock::new(SchemaMode::Standard),
         }
     }
 }

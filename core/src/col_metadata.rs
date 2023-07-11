@@ -1,4 +1,4 @@
-use crate::{bson_type_info::{StandardTypeInfo, SimpleTypeInfo, BsonTypeInfo}, definitions::SqlDataType, json_schema::{
+use crate::{bson_type_info::{StandardTypeInfo, SimpleTypeInfo, BsonTypeInfo, SchemaMode}, definitions::SqlDataType, json_schema::{
     simplified::{Atomic, ObjectSchema, Schema},
     BsonTypeName,
 }, Error, Result};
@@ -52,33 +52,39 @@ impl MongoColMetadata {
         bson_type_info: BsonTypeInfo,
         nullability: Nullability,
     ) -> MongoColMetadata {
+
+        let type_info = match bson_type_info{
+            BsonTypeInfo::Standard(standard) => standard,
+            BsonTypeInfo::Simple(simple) => simple,
+        };
+
         MongoColMetadata {
             // For base_col_name, base_table_name, and catalog_name, we do
             // not have this information in sqlGetResultSchema, so these will
             // always be empty string for now.
             base_col_name: "".to_string(),
             base_table_name: "".to_string(),
-            case_sensitive: bson_type_info.is_case_sensitive,
+            case_sensitive: type_info.is_case_sensitive,
             catalog_name: "".to_string(),
-            display_size: bson_type_info.fixed_bytes_length,
-            fixed_prec_scale: bson_type_info.fixed_prec_scale,
+            display_size: type_info.fixed_bytes_length,
+            fixed_prec_scale: type_info.fixed_prec_scale,
             label: field_name.clone(),
-            length: bson_type_info.fixed_bytes_length,
-            literal_prefix: bson_type_info.literal_prefix,
-            literal_suffix: bson_type_info.literal_suffix,
+            length: type_info.fixed_bytes_length,
+            literal_prefix: type_info.literal_prefix,
+            literal_suffix: type_info.literal_suffix,
             col_name: field_name,
             nullability,
-            num_prec_radix: bson_type_info.num_prec_radix,
-            octet_length: bson_type_info.octet_length,
-            precision: bson_type_info.precision,
-            scale: bson_type_info.scale,
-            searchable: bson_type_info.searchable,
+            num_prec_radix: type_info.num_prec_radix,
+            octet_length: type_info.octet_length,
+            precision: type_info.precision,
+            scale: type_info.scale,
+            searchable: type_info.searchable,
             table_name: datasource_name,
-            type_name: bson_type_info.type_name.to_string(),
-            sql_type: bson_type_info.sql_type,
-            non_concise_type: bson_type_info.non_concise_type,
-            sql_code: bson_type_info.sql_code,
-            is_unsigned: bson_type_info.is_unsigned.unwrap_or(true),
+            type_name: type_info.type_name.to_string(),
+            sql_type: type_info.sql_type,
+            non_concise_type: type_info.non_concise_type,
+            sql_code: type_info.sql_code,
+            is_unsigned: type_info.is_unsigned.unwrap_or(true),
             is_updatable: false,
         }
     }
@@ -89,8 +95,13 @@ impl MongoColMetadata {
         field_name: String,
         field_schema: Schema,
         nullability: Nullability,
+        schema_mode: SchemaMode,
     ) -> MongoColMetadata {
-        let bson_type_info: BsonTypeInfo = field_schema.into();
+        let bson_type_info = match schema_mode{
+            SchemaMode::Standard => BsonTypeInfo::Standard(StandardTypeInfo::from(field_schema)),
+            SchemaMode::Simple => BsonTypeInfo::Simple(SimpleTypeInfo::from(field_schema)),
+        };
+
         MongoColMetadata::new_metadata_from_bson_type_info(
             current_db,
             datasource_name,
@@ -141,7 +152,7 @@ impl SqlGetSchemaResponse {
     pub(crate) fn process_result_metadata(
         &self,
         current_db: &str,
-        schema_mode: BsonTypeInfo,
+        schema_mode: SchemaMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
@@ -157,7 +168,7 @@ impl SqlGetSchemaResponse {
             // 2. map each datasource_schema to a Result of an Iterator over MongoColMetadata.
             .map(|(datasource_name, datasource_schema)| {
                 Ok::<std::vec::IntoIter<MongoColMetadata>, Error>(
-                    Self::schema_to_col_metadata(&datasource_schema, current_db, &datasource_name)?
+                    Self::schema_to_col_metadata(&datasource_schema, current_db, &datasource_name, schema_mode)?
                         .into_iter(),
                 )
             })
@@ -204,6 +215,7 @@ impl SqlGetSchemaResponse {
         object_schema: &crate::json_schema::simplified::Schema,
         current_db: &str,
         current_collection: &str,
+        schema_mode: SchemaMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let object_schema = object_schema.assert_object_schema()?;
 
@@ -225,6 +237,7 @@ impl SqlGetSchemaResponse {
                     name,
                     schema,
                     field_nullability,
+                    schema_mode,
                 ))
             })
             .collect::<Result<Vec<_>>>()
