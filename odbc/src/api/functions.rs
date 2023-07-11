@@ -1194,7 +1194,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
     trace_odbc!(
-        debug,
+        info,
         *(handle as *mut MongoHandle),
         format!("Freeing handle {:?}", handle as *mut MongoHandle),
         function_name!()
