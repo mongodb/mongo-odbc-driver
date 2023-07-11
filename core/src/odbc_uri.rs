@@ -22,7 +22,7 @@ pub const UID: &str = "uid";
 pub const URI: &str = "uri";
 pub const APPNAME: &str = "appname";
 pub const LOGLEVEL: &str = "loglevel";
-pub const SIMPLE: &str = "simple";
+pub const SIMPLE: &str = "simple_schema_mode";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
@@ -537,15 +537,15 @@ mod unit {
         }
 
         #[test]
-        fn simple_field_test() {
+        fn simple_schema_mode_test() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
-                map! {"driver".to_string() => "Foo".to_string(), "simple".to_string() => "1".to_string()},
+                map! {"driver".to_string() => "Foo".to_string(), "simple_schema_mode".to_string() => "1".to_string()},
             );
             assert_eq!(
                 expected,
-                ODBCUri::new("Driver=Foo;simple=1".to_string()).unwrap()
+                ODBCUri::new("Driver=Foo;simple_schema_mode=1".to_string()).unwrap()
             );
         }
 
