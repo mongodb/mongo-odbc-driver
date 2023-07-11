@@ -24,7 +24,7 @@ if [[ -z $ARG ]]; then
   exit 0
 fi
 
-GO_VERSION="go1.18"
+GO_VERSION="go1.20"
 if [ -d "/opt/golang/$GO_VERSION" ]; then
   GOROOT="/opt/golang/$GO_VERSION"
   GOBINDIR="$GOROOT"/bin
@@ -307,9 +307,10 @@ if [[ $? -ne 0 ]]; then
         fi
         cd $MONGOHOUSE_DIR
 
-        # for now, we checkout a specific working commit of ADF
-        # TODO SQL-1374: Find a better long term solution
-        git checkout 247a246
+        # Checkout the latest tag
+        LATEST=$(git describe --tags $(git rev-list --tags --max-count=1))
+        echo "Checking out $LATEST"
+        git checkout $LATEST
 
         export GOPRIVATE=github.com/10gen
         $GO mod download
