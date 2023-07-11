@@ -1,11 +1,7 @@
-use crate::{
-    definitions::SqlDataType,
-    json_schema::{
-        simplified::{Atomic, ObjectSchema, Schema},
-        BsonTypeName,
-    },
-    StandardTypeInfo, Error, Result,
-};
+use crate::{bson_type_info::{StandardTypeInfo, SimpleTypeInfo, BsonTypeInfo}, definitions::SqlDataType, json_schema::{
+    simplified::{Atomic, ObjectSchema, Schema},
+    BsonTypeName,
+}, Error, Result};
 use itertools::Itertools;
 use odbc_sys::Nullability;
 use serde::{Deserialize, Serialize};
@@ -53,7 +49,7 @@ impl MongoColMetadata {
         _current_db: &str,
         datasource_name: String,
         field_name: String,
-        bson_type_info: StandardTypeInfo,
+        bson_type_info: BsonTypeInfo,
         nullability: Nullability,
     ) -> MongoColMetadata {
         MongoColMetadata {
@@ -94,7 +90,7 @@ impl MongoColMetadata {
         field_schema: Schema,
         nullability: Nullability,
     ) -> MongoColMetadata {
-        let bson_type_info: StandardTypeInfo = field_schema.into();
+        let bson_type_info: BsonTypeInfo = field_schema.into();
         MongoColMetadata::new_metadata_from_bson_type_info(
             current_db,
             datasource_name,
@@ -145,6 +141,7 @@ impl SqlGetSchemaResponse {
     pub(crate) fn process_result_metadata(
         &self,
         current_db: &str,
+        schema_mode: BsonTypeInfo,
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;

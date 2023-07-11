@@ -22,6 +22,7 @@ pub const UID: &str = "uid";
 pub const URI: &str = "uri";
 pub const APPNAME: &str = "appname";
 pub const LOGLEVEL: &str = "loglevel";
+pub const SIMPLE: &str = "simple";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
@@ -32,7 +33,7 @@ const SERVER_KWS: &[&str] = &[SERVER];
 
 lazy_static! {
     static ref KEYWORDS: RegexSet = RegexSetBuilder::new(
-        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME, LOGLEVEL]
+        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME, LOGLEVEL, SIMPLE]
             .into_iter()
             .map(|x| "^".to_string() + x + "$")
             .collect::<Vec<_>>()
@@ -532,6 +533,19 @@ mod unit {
             assert_eq!(
                 expected,
                 ODBCUri::new("Driver=Foo;SERVER=bAr".to_string()).unwrap()
+            );
+        }
+
+        #[test]
+        fn simple_field_test() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "simple".to_string() => "1".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;simple=1".to_string()).unwrap()
             );
         }
 

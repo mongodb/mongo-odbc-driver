@@ -22,11 +22,7 @@ use cstr::{input_text_to_string_w, Charset, WideChar};
 use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
-use mongo_odbc_core::{
-    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
-    MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
-    MongoTypesInfo, SqlDataType,
-};
+use mongo_odbc_core::{odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes, MongoTypesInfo, SqlDataType, BsonTypeInfo};
 use num_traits::FromPrimitive;
 use odbc_sys::{
     Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
@@ -882,6 +878,13 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         }
     }
 
+    if let Some(simple) = odbc_uri.remove(&["simple"]){
+        if simple.eq("1") {
+            *conn.bson_type_info.write().unwrap() = BsonTypeInfo::Simple;
+        }
+    }
+
+
     let mut conn_attrs = conn.attributes.write().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
         conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
@@ -1027,12 +1030,13 @@ pub unsafe extern "C" fn SQLExecDirectW(
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let mongo_statement = {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
+                let schema_mode = *connection.bson_type_info.read().unwrap();
                 let attributes = connection.attributes.read().unwrap();
                 let timeout = attributes.connection_timeout;
                 let current_db = attributes.current_catalog.as_ref().cloned();
                 if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref()
                 {
-                    MongoQuery::execute(mongo_connection, current_db, timeout, &query)
+                    MongoQuery::execute(mongo_connection, current_db, timeout, &query, schema_mode)
                         .map_err(|e| e.into())
                 } else {
                     Err(ODBCError::InvalidCursorState)

@@ -1,4 +1,4 @@
-use crate::{StandardTypeInfo, Error};
+use crate::{bson_type_info::{StandardTypeInfo, SimpleTypeInfo, BsonTypeInfo}, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -193,12 +193,41 @@ impl From<BsonTypeName> for StandardTypeInfo {
     }
 }
 
+impl From<BsonTypeName> for SimpleTypeInfo {
+    fn from(v: BsonTypeName) -> Self {
+        match v {
+            BsonTypeName::Array => SimpleTypeInfo::ARRAY,
+            BsonTypeName::Object => SimpleTypeInfo::OBJECT,
+            BsonTypeName::Null => SimpleTypeInfo::NULL,
+            BsonTypeName::String => SimpleTypeInfo::STRING,
+            BsonTypeName::Int => SimpleTypeInfo::INT,
+            BsonTypeName::Double => SimpleTypeInfo::DOUBLE,
+            BsonTypeName::Long => SimpleTypeInfo::LONG,
+            BsonTypeName::Decimal => SimpleTypeInfo::DECIMAL,
+            BsonTypeName::BinData => SimpleTypeInfo::BINDATA,
+            BsonTypeName::ObjectId => SimpleTypeInfo::OBJECTID,
+            BsonTypeName::Bool => SimpleTypeInfo::BOOL,
+            BsonTypeName::Date => SimpleTypeInfo::DATE,
+            BsonTypeName::Regex => SimpleTypeInfo::REGEX,
+            BsonTypeName::DbPointer => SimpleTypeInfo::DBPOINTER,
+            BsonTypeName::Javascript => SimpleTypeInfo::JAVASCRIPT,
+            BsonTypeName::Symbol => SimpleTypeInfo::SYMBOL,
+            BsonTypeName::JavascriptWithScope => SimpleTypeInfo::JAVASCRIPTWITHSCOPE,
+            BsonTypeName::Timestamp => SimpleTypeInfo::TIMESTAMP,
+            BsonTypeName::MinKey => SimpleTypeInfo::MINKEY,
+            BsonTypeName::MaxKey => SimpleTypeInfo::MAXKEY,
+            BsonTypeName::Undefined => SimpleTypeInfo::UNDEFINED,
+            BsonTypeName::Any => SimpleTypeInfo::BSON,
+        }
+    }
+}
+
 pub mod simplified {
 
     use crate::{
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
-        StandardTypeInfo, Error,
+        bson_type_info::{BsonTypeInfo, StandardTypeInfo, SimpleTypeInfo},Error,
     };
     use std::collections::{BTreeMap, BTreeSet};
 
@@ -356,6 +385,35 @@ pub mod simplified {
                             .unwrap_or(StandardTypeInfo::BSON)
                     })
                     .unwrap_or(StandardTypeInfo::BSON),
+            }
+        }
+    }
+
+    impl From<Atomic> for SimpleTypeInfo {
+        fn from(a: Atomic) -> Self {
+            match a {
+                Atomic::Scalar(t) => t.into(),
+                Atomic::Object(_) => SimpleTypeInfo::OBJECT,
+                Atomic::Array(_) => SimpleTypeInfo::ARRAY,
+            }
+        }
+    }
+
+    impl From<Schema> for SimpleTypeInfo {
+        fn from(v: Schema) -> Self {
+            match v {
+                Schema::Atomic(a) => a.into(),
+                Schema::AnyOf(b) => (b.len() == 2)
+                    .then(|| {
+                        let atomics = b
+                            .into_iter()
+                            .filter(|a| !matches!(a, Atomic::Scalar(BsonTypeName::Null)))
+                            .collect::<Vec<Atomic>>();
+                        (atomics.len() == 1)
+                            .then(|| atomics.first().unwrap().to_owned().into())
+                            .unwrap_or(SimpleTypeInfo::BSON)
+                    })
+                    .unwrap_or(SimpleTypeInfo::BSON),
             }
         }
     }
