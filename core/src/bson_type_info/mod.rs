@@ -1,5 +1,6 @@
 mod simple_type_info;
 mod standard_type_info;
+pub mod type_info;
 
 pub use simple_type_info::SimpleTypeInfo;
 pub use standard_type_info::StandardTypeInfo;
@@ -11,7 +12,7 @@ pub enum SchemaMode {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum BsonTypeInfo{
+pub enum BsonTypeInfo {
     Standard(StandardTypeInfo),
     Simple(SimpleTypeInfo),
 }

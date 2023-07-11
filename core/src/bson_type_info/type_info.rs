@@ -1,13 +1,18 @@
 use crate::{
-    bson_type_info::standard_type_info::StandardTypeInfo, col_metadata::MongoColMetadata, conn::MongoConnection,
-    definitions::SqlDataType, err::Result, stmt::MongoStatement, Error,
+    bson_type_info::{SimpleTypeInfo, StandardTypeInfo},
+    col_metadata::MongoColMetadata,
+    conn::MongoConnection,
+    definitions::SqlDataType,
+    err::Result,
+    stmt::MongoStatement,
+    Error, SchemaMode,
 };
 use bson::Bson;
 use odbc_sys::Nullability;
 
 use lazy_static::lazy_static;
 
-const DATA_TYPES: [StandardTypeInfo; 21] = [
+const STANDARD_DATA_TYPES: [StandardTypeInfo; 21] = [
     StandardTypeInfo::STRING,              // SqlDataType(-9)
     StandardTypeInfo::BOOL,                // SqlDataType(-7)
     StandardTypeInfo::LONG,                // SqlDataType(-5)
@@ -31,8 +36,32 @@ const DATA_TYPES: [StandardTypeInfo; 21] = [
     StandardTypeInfo::DATE,                // SqlDataType(93)
 ];
 
+const SIMPLE_DATA_TYPES: [SimpleTypeInfo; 21] = [
+    SimpleTypeInfo::STRING,              // SqlDataType(-9)
+    SimpleTypeInfo::BOOL,                // SqlDataType(-7)
+    SimpleTypeInfo::LONG,                // SqlDataType(-5)
+    SimpleTypeInfo::BINDATA,             // SqlDataType(-2)
+    SimpleTypeInfo::ARRAY,               // SqlDataType(0)
+    SimpleTypeInfo::BSON,                // SqlDataType(0)
+    SimpleTypeInfo::DBPOINTER,           //SqlDataType(0)
+    SimpleTypeInfo::DECIMAL,             // SqlDataType(0)
+    SimpleTypeInfo::JAVASCRIPT,          //SqlDataType(0)
+    SimpleTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
+    SimpleTypeInfo::MAXKEY,              // SqlDataType(0)
+    SimpleTypeInfo::MINKEY,              // SqlDataType(0)
+    SimpleTypeInfo::NULL,                // SqlDataType(0)
+    SimpleTypeInfo::OBJECT,              // SqlDataType(0)
+    SimpleTypeInfo::OBJECTID,            // SqlDataType(0)
+    SimpleTypeInfo::SYMBOL,              //SqlDataType(0)
+    SimpleTypeInfo::TIMESTAMP,           // SqlDataType(0)
+    SimpleTypeInfo::UNDEFINED,           // SqlDataType(0)
+    SimpleTypeInfo::INT,                 // SqlDataType(4)
+    SimpleTypeInfo::DOUBLE,              // SqlDataType(8)
+    SimpleTypeInfo::DATE,                // SqlDataType(93)
+];
+
 lazy_static! {
-    pub static ref TYPES_INFO_METADATA: Vec<MongoColMetadata> = vec![
+    pub static ref STANDARD_TYPES_INFO_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
@@ -167,19 +196,156 @@ lazy_static! {
             Nullability::NULLABLE
         ),
     ];
+    pub static ref SIMPLE_TYPES_INFO_METADATA: Vec<MongoColMetadata> = vec![
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TYPE_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "DATATYPE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "COLUMN_SIZE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "LITERAL_PREFIX".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "LITERAL_SUFFIX".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "CREATE_PARAMS".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "NULLABLE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "CASE_SENSITIVE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "SEARCHABLE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "UNSIGNED_ATTRIBUTE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "FIXED_PREC_SCALE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "AUTO_UNIQUE_VALUE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "LOCAL_TYPE_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "MINIMUM_SCALE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "MAXIMUM_SCALE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "SQL_DATA_TYPE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "SQL_DATETIME_SUB".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "NUM_PREC_RADIX".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "INTERVAL_PRECISION".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+    ];
 }
 
 #[derive(Debug)]
 pub struct MongoTypesInfo {
     current_type_index: usize,
     sql_data_type: SqlDataType,
+    schema_mode: SchemaMode,
 }
 
 impl MongoTypesInfo {
-    pub fn new(sql_data_type: SqlDataType) -> MongoTypesInfo {
+    pub fn new(sql_data_type: SqlDataType, schema_mode: SchemaMode) -> MongoTypesInfo {
         MongoTypesInfo {
             current_type_index: 0,
             sql_data_type,
+            schema_mode,
         }
     }
 }
@@ -188,16 +354,22 @@ impl MongoStatement for MongoTypesInfo {
     // iterate through the list, searching for the next "valid" data type.
     // a type is valid if its sql type matches the desired sql type, or if we are getting all types.
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
+
+        let data_types = match self.schema_mode {
+            SchemaMode::Standard => STANDARD_DATA_TYPES,
+            SchemaMode::Simple => SIMPLE_DATA_TYPES,
+        };
+
         loop {
             self.current_type_index += 1;
-            if self.current_type_index > DATA_TYPES.len()
-                || DATA_TYPES[self.current_type_index - 1].sql_type == self.sql_data_type
+            if self.current_type_index > data_types.len()
+                || data_types[self.current_type_index - 1].sql_type == self.sql_data_type
                 || self.sql_data_type == SqlDataType::UNKNOWN_TYPE
             {
                 break;
             }
         }
-        Ok((self.current_type_index <= DATA_TYPES.len(), vec![]))
+        Ok((self.current_type_index <= data_types.len(), vec![]))
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
@@ -225,7 +397,13 @@ impl MongoStatement for MongoTypesInfo {
         if self.current_type_index == 0 {
             return Err(Error::InvalidCursorState);
         }
-        match DATA_TYPES.get(self.current_type_index - 1) {
+
+        let data_type = match self.schema_mode {
+            SchemaMode::Standard => STANDARD_DATA_TYPES.get(self.current_type_index - 1),
+            SchemaMode::Simple => SIMPLE_DATA_TYPES.get(self.current_type_index - 1),
+        };
+
+        match data_type {
             Some(type_info) => Ok(Some(match col_index {
                 1 | 13 => Bson::String(type_info.type_name.to_string()),
                 2 | 16 => Bson::Int32(type_info.sql_type as i32),
@@ -274,6 +452,9 @@ impl MongoStatement for MongoTypesInfo {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &TYPES_INFO_METADATA
+        match self.schema_mode {
+            SchemaMode::Standard => &STANDARD_TYPES_INFO_METADATA,
+            SchemaMode::Simple => &SIMPLE_TYPES_INFO_METADATA,
+        }
     }
 }

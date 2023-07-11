@@ -1,6 +1,7 @@
 use crate::api::{definitions::*, errors::ODBCError};
 use cstr::{Charset, WideChar};
 use logger::Logger;
+use mongo_odbc_core::SchemaMode;
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
     borrow::BorrowMut,
@@ -9,7 +10,6 @@ use std::{
     ptr::null_mut,
     sync::RwLock,
 };
-use mongo_odbc_core::{SchemaMode};
 
 #[derive(Debug)]
 pub enum MongoHandle {

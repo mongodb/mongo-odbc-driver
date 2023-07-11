@@ -1,4 +1,7 @@
-use crate::{bson_type_info::{StandardTypeInfo, SimpleTypeInfo, BsonTypeInfo, SchemaMode}, Error};
+use crate::{
+    bson_type_info::{BsonTypeInfo, SchemaMode, SimpleTypeInfo, StandardTypeInfo},
+    Error,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -225,9 +228,10 @@ impl From<BsonTypeName> for SimpleTypeInfo {
 pub mod simplified {
 
     use crate::{
+        bson_type_info::{BsonTypeInfo, SimpleTypeInfo, StandardTypeInfo},
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
-        bson_type_info::{BsonTypeInfo, StandardTypeInfo, SimpleTypeInfo},Error,
+        Error,
     };
     use std::collections::{BTreeMap, BTreeSet};
 

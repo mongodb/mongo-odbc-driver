@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 mod bson_type_info;
+pub use bson_type_info::type_info::MongoTypesInfo;
 pub use bson_type_info::BsonTypeInfo;
 pub use bson_type_info::SchemaMode;
+
 mod collections;
 pub use collections::MongoCollections;
 mod conn;
@@ -26,8 +28,6 @@ mod stmt;
 pub use stmt::MongoStatement;
 pub mod odbc_uri;
 mod primary_keys;
-mod type_info;
-pub use type_info::MongoTypesInfo;
 pub mod util;
 pub use primary_keys::MongoPrimaryKeys;
 mod foreign_keys;

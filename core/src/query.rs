@@ -1,4 +1,10 @@
-use crate::{col_metadata::{MongoColMetadata, SqlGetSchemaResponse}, conn::MongoConnection, err::Result, stmt::MongoStatement, Error, BsonTypeInfo, SchemaMode};
+use crate::{
+    col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
+    conn::MongoConnection,
+    err::Result,
+    stmt::MongoStatement,
+    BsonTypeInfo, Error, SchemaMode,
+};
 use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use std::time::Duration;
@@ -40,7 +46,8 @@ impl MongoQuery {
         )
         .map_err(Error::QueryDeserialization)?;
 
-        let metadata = get_result_schema_response.process_result_metadata(&current_db, schema_mode)?;
+        let metadata =
+            get_result_schema_response.process_result_metadata(&current_db, schema_mode)?;
 
         // 2. Run the $sql aggregation to get the result set cursor.
         let pipeline = vec![doc! {"$sql": {

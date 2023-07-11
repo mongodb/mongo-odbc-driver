@@ -22,7 +22,11 @@ use cstr::{input_text_to_string_w, Charset, WideChar};
 use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
-use mongo_odbc_core::{odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases, MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes, MongoTypesInfo, SqlDataType, BsonTypeInfo, SchemaMode};
+use mongo_odbc_core::{
+    odbc_uri::ODBCUri, BsonTypeInfo, MongoColMetadata, MongoCollections, MongoConnection,
+    MongoDatabases, MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement,
+    MongoTableTypes, MongoTypesInfo, SchemaMode, SqlDataType,
+};
 use num_traits::FromPrimitive;
 use odbc_sys::{
     Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
@@ -878,12 +882,11 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         }
     }
 
-    if let Some(simple) = odbc_uri.remove(&["simple"]){
+    if let Some(simple) = odbc_uri.remove(&["simple_schema_mode"]) {
         if simple.eq("1") {
             *conn.schema_mode.write().unwrap() = SchemaMode::Simple;
         }
     }
-
 
     let mut conn_attrs = conn.attributes.write().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
@@ -2492,7 +2495,9 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
             match FromPrimitive::from_i16(data_type) {
                 Some(sql_data_type) => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let types_info = MongoTypesInfo::new(sql_data_type);
+                    let connection = must_be_valid!((*stmt.connection).as_connection());
+                    let schema_mode = *connection.schema_mode.read().unwrap();
+                    let types_info = MongoTypesInfo::new(sql_data_type, schema_mode);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
                 }
