@@ -28,7 +28,7 @@ shared_sql_utils = { path = "../shared_sql_utils" }
 log = "0.4.14"
 
 [dependencies.mongodb]
-version = "2.5"
+version = "2.6"
 default-features = false
 features = ["tokio-sync"]
 
