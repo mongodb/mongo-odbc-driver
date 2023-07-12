@@ -3326,13 +3326,14 @@ fn sql_tables(
     schema: &str,
     table: &str,
     table_t: &str,
+    schema_mode: SchemaMode
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
         (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
         ))),
-        ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas())),
+        ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas(schema_mode))),
         ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),
         _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,
@@ -3340,6 +3341,7 @@ fn sql_tables(
             catalog,
             table,
             table_t,
+            schema_mode
         ))),
     }
 }
@@ -3374,11 +3376,10 @@ pub unsafe extern "C" fn SQLTablesW(
             let schema = input_text_to_string_w(schema_name, name_length_2 as usize);
             let table = input_text_to_string_w(table_name, name_length_3 as usize);
             let table_t = input_text_to_string_w(table_type, name_length_4 as usize);
-            let connection = stmt.connection;
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+            let schema_mode = *connection.schema_mode.read().unwrap();
             let mongo_statement = sql_tables(
                 (*connection)
-                    .as_connection()
-                    .unwrap()
                     .mongo_connection
                     .read()
                     .unwrap()
@@ -3389,6 +3390,7 @@ pub unsafe extern "C" fn SQLTablesW(
                 &schema,
                 &table,
                 &table_t,
+                schema_mode
             );
             let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
