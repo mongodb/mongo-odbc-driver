@@ -1,12 +1,12 @@
 use crate::{
-    bson_type_info::standard_type_info::StandardTypeInfo, col_metadata::MongoColMetadata,
+    bson_type_info::{StandardTypeInfo, SimpleTypeInfo, SchemaMode}, col_metadata::MongoColMetadata,
     stmt::EmptyStatement,
 };
 use lazy_static::lazy_static;
 use odbc_sys::Nullability;
 
 lazy_static! {
-    static ref FK_METADATA: Vec<MongoColMetadata> = vec![
+    static ref STANDARD_FK_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
@@ -106,14 +106,118 @@ lazy_static! {
             Nullability::NULLABLE
         ),
     ];
+
+    static ref SIMPLE_FK_METADATA: Vec<MongoColMetadata> = vec![
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "PKTABLE_CAT".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "PKTABLE_SCHEM".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "PKTABLE_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "PKCOLUMN_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "FKTABLE_CAT".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "FKTABLE_SCHEM".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "FKTABLE_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "FKCOLUMN_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "KEY_SEQ".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "UPDATE_RULE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "DELETE_RULE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "FK_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "PK_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "DEFERRABILITY".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+    ];
 }
 
 pub struct MongoForeignKeys {}
 
 impl MongoForeignKeys {
-    pub fn empty() -> EmptyStatement {
+    pub fn empty(schema_mode: SchemaMode) -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: &FK_METADATA,
+            resultset_metadata: match schema_mode {
+                SchemaMode::Standard => &STANDARD_FK_METADATA,
+                SchemaMode::Simple => &SIMPLE_FK_METADATA,
+            }
         }
     }
 }

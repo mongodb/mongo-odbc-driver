@@ -663,11 +663,10 @@ pub unsafe extern "C" fn SQLColumnsW(
             } else {
                 Some(column_name_string.as_str())
             };
-            let connection = stmt.connection;
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+            let schema_mode = *connection.schema_mode.read().unwrap();
             let mongo_statement = Box::new(MongoFields::list_columns(
                 (*connection)
-                    .as_connection()
-                    .unwrap()
                     .mongo_connection
                     .read()
                     .unwrap()
@@ -677,6 +676,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 catalog,
                 table,
                 column,
+                schema_mode
             ));
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
             SqlReturn::SUCCESS
@@ -1177,7 +1177,9 @@ pub unsafe extern "C" fn SQLForeignKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mongo_statement = MongoForeignKeys::empty();
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+            let schema_mode = *connection.schema_mode.read().unwrap();
+            let mongo_statement = MongoForeignKeys::empty(schema_mode);
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
@@ -2652,7 +2654,9 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let mongo_statement = MongoPrimaryKeys::empty();
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+            let schema_mode = *connection.schema_mode.read().unwrap();
+            let mongo_statement = MongoPrimaryKeys::empty(schema_mode);
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
@@ -3332,6 +3336,7 @@ fn sql_tables(
         (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
+            schema_mode
         ))),
         ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas(schema_mode))),
         ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),

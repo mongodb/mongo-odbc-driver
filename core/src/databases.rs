@@ -1,5 +1,5 @@
 use crate::{
-    bson_type_info::standard_type_info::StandardTypeInfo, col_metadata::MongoColMetadata,
+    bson_type_info::{StandardTypeInfo, SimpleTypeInfo, SchemaMode}, col_metadata::MongoColMetadata,
     conn::MongoConnection, err::Result, stmt::MongoStatement, Error,
 };
 use bson::Bson;
@@ -9,7 +9,7 @@ use odbc_sys::Nullability;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref DATABASES_METADATA: Vec<MongoColMetadata> = vec![
+    pub static ref STANDARD_DATABASES_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
@@ -43,6 +43,44 @@ lazy_static! {
             "".to_string(),
             "REMARKS".to_string(),
             StandardTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+    ];
+
+    pub static ref SIMPLE_DATABASES_METADATA: Vec<MongoColMetadata> = vec![
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TABLE_CAT".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TABLE_SCHEM".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TABLE_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TABLE_TYPE".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "REMARKS".to_string(),
+            SimpleTypeInfo::STRING,
             Nullability::NULLABLE
         ),
     ];
@@ -187,6 +225,7 @@ pub struct MongoDatabases {
     database_names: Vec<String>,
     // The current database index.
     current_db_index: usize,
+    schema_mode: SchemaMode,
 }
 
 // Statement for SQLTables(SQL_ALL_CATALOGS, "","").
@@ -199,6 +238,7 @@ impl MongoDatabases {
     pub fn list_all_catalogs(
         mongo_connection: &MongoConnection,
         _query_timeout: Option<i32>,
+        schema_mode: SchemaMode
     ) -> Self {
         let database_names: Vec<String> = mongo_connection
             .client
@@ -217,6 +257,7 @@ impl MongoDatabases {
         MongoDatabases {
             database_names,
             current_db_index: 0,
+            schema_mode
         }
     }
 
@@ -224,6 +265,7 @@ impl MongoDatabases {
         MongoDatabases {
             database_names: vec![],
             current_db_index: 0,
+            schema_mode: SchemaMode::Standard
         }
     }
 }
@@ -255,6 +297,9 @@ impl MongoStatement for MongoDatabases {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &DATABASES_METADATA
+        match self.schema_mode {
+            SchemaMode::Standard => &STANDARD_DATABASES_METADATA,
+            SchemaMode::Simple => &SIMPLE_DATABASES_METADATA,
+        }
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    bson_type_info::standard_type_info::StandardTypeInfo,
+    bson_type_info::{StandardTypeInfo, SimpleTypeInfo, SchemaMode},
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
@@ -16,7 +16,7 @@ use regex::Regex;
 use std::collections::VecDeque;
 
 lazy_static! {
-    static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
+    static ref STANDARD_FIELDS_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
@@ -141,6 +141,138 @@ lazy_static! {
             "".to_string(),
             "IS_NULLABLE".to_string(),
             StandardTypeInfo::STRING,
+            // the docs do not say 'not NULL', but they also say the only possible values for
+            // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
+            // the empty varchar... so NO_NULLS seems correct to me.
+            Nullability::NO_NULLS
+        ),
+    ];
+
+    static ref SIMPLE_FIELDS_METADATA: Vec<MongoColMetadata> = vec![
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TABLE_CAT".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TABLE_SCHEM".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TABLE_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "COLUMN_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "DATA_TYPE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "TYPE_NAME".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "COLUMN_SIZE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "BUFFER_LENGTH".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "DECIMAL_DIGITS".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "NUM_PREC_RADIX".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "NULLABLE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "REMARKS".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "COLUMN_DEF".to_string(),
+            SimpleTypeInfo::STRING,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "SQL_DATA_TYPE".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "SQL_DATETIME_SUB".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "CHAR_OCTET_LENGTH".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NULLABLE
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "ORDINAL_POSITION".to_string(),
+            SimpleTypeInfo::INT,
+            Nullability::NO_NULLS
+        ),
+        MongoColMetadata::new_metadata_from_bson_type_info(
+            "",
+            "".to_string(),
+            "IS_NULLABLE".to_string(),
+            SimpleTypeInfo::STRING,
             // the docs do not say 'not NULL', but they also say the only possible values for
             // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
             // the empty varchar... so NO_NULLS seems correct to me.
@@ -458,6 +590,7 @@ pub struct MongoFields {
     current_field_for_collection: isize,
     collection_name_filter: Option<Regex>,
     field_name_filter: Option<Regex>,
+    schema_mode: SchemaMode
 }
 
 // Statement related to a SQLTables call.
@@ -474,6 +607,7 @@ impl MongoFields {
         db_name: Option<&str>,
         collection_name_filter: Option<&str>,
         field_name_filter: Option<&str>,
+        schema_mode: SchemaMode
     ) -> Self {
         let dbs = db_name.map_or_else(
             || {
@@ -502,6 +636,7 @@ impl MongoFields {
             current_field_for_collection: -1,
             collection_name_filter: collection_name_filter.and_then(to_name_regex),
             field_name_filter: field_name_filter.and_then(to_name_regex),
+            schema_mode
         }
     }
 
@@ -514,6 +649,7 @@ impl MongoFields {
             current_field_for_collection: -1,
             collection_name_filter: None,
             field_name_filter: None,
+            schema_mode: SchemaMode::Standard
         }
     }
 
@@ -726,6 +862,9 @@ impl MongoStatement for MongoFields {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<crate::MongoColMetadata> {
-        &FIELDS_METADATA
+        match self.schema_mode {
+            SchemaMode::Standard => &STANDARD_FIELDS_METADATA,
+            SchemaMode::Simple => &SIMPLE_FIELDS_METADATA,
+        }
     }
 }
