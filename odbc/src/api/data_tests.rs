@@ -17,6 +17,7 @@ use mongo_odbc_core::{
         BsonTypeName,
     },
     mock_query::MongoQuery,
+    SchemaMode,
 };
 use odbc_sys::{Date, Nullability, SqlReturn, Time, Timestamp, WChar};
 
@@ -123,6 +124,7 @@ lazy_static! {
                         BsonTypeName::Int,
                     ))))),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -130,6 +132,7 @@ lazy_static! {
                     "binary".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -137,6 +140,7 @@ lazy_static! {
                     "bool".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Bool)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -144,6 +148,7 @@ lazy_static! {
                     "datetime".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Date)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -158,6 +163,7 @@ lazy_static! {
                         additional_properties: false,
                     })),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -165,6 +171,7 @@ lazy_static! {
                     "f64".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Double)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -172,6 +179,7 @@ lazy_static! {
                     "i3232".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -179,6 +187,7 @@ lazy_static! {
                     "i3264".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Long)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -186,6 +195,7 @@ lazy_static! {
                     "js".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Javascript)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -193,6 +203,7 @@ lazy_static! {
                     "js_w_s".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::JavascriptWithScope)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -200,6 +211,7 @@ lazy_static! {
                     "max_key".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::MaxKey)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -207,6 +219,7 @@ lazy_static! {
                     "min_key".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::MinKey)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -214,6 +227,7 @@ lazy_static! {
                     "null".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Null)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -221,6 +235,7 @@ lazy_static! {
                     "oid".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::ObjectId)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -228,6 +243,7 @@ lazy_static! {
                     "regex".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Regex)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -235,6 +251,7 @@ lazy_static! {
                     "string".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -242,6 +259,7 @@ lazy_static! {
                     "undefined".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -249,6 +267,7 @@ lazy_static! {
                     "unicode".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -256,6 +275,7 @@ lazy_static! {
                     "negative_long".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Long)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -263,6 +283,7 @@ lazy_static! {
                     "unit_str".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
                 MongoColMetadata::new(
                     "",
@@ -270,6 +291,7 @@ lazy_static! {
                     "guid".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
                     Nullability::NO_NULLS,
+                    SchemaMode::Standard
                 ),
             ],
         );
@@ -339,6 +361,7 @@ mod unit {
                 "b".to_string(),
                 Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
                 Nullability::NO_NULLS,
+                SchemaMode::Standard,
             )],
         )));
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
