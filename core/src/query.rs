@@ -3,7 +3,7 @@ use crate::{
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
-    BsonTypeInfo, Error, SchemaMode,
+    Error, SchemaMode,
 };
 use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{options::AggregateOptions, sync::Cursor};

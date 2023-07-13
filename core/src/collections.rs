@@ -1,13 +1,13 @@
 use crate::stmt::EmptyStatement;
 use crate::util::{is_match, table_type_filter_to_vec, to_name_regex};
 use crate::{
-    bson_type_info::{StandardTypeInfo,SimpleTypeInfo, SchemaMode},
+    bson_type_info::{SchemaMode, SimpleTypeInfo, StandardTypeInfo},
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
     util::{COLLECTION, TABLE, TIMESERIES},
-    Error,
+    BsonTypeInfo, Error,
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
@@ -21,73 +21,72 @@ lazy_static! {
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NULLABLE
         ),
     ];
-
     static ref SIMPLE_COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NULLABLE
         ),
     ];
@@ -141,7 +140,7 @@ impl MongoCollections {
         db_name_filter: &str,
         collection_name_filter: &str,
         table_type: &str,
-        schema_mode: SchemaMode
+        schema_mode: SchemaMode,
     ) -> Self {
         let db_name_filter_regex = to_name_regex(db_name_filter);
         let databases = mongo_connection
@@ -189,7 +188,7 @@ impl MongoCollections {
             collections_for_db_list: databases,
             collection_name_filter: to_name_regex(collection_name_filter),
             table_types_filter: table_type_filter_to_vec(table_type),
-            schema_mode
+            schema_mode,
         }
     }
 
@@ -199,7 +198,7 @@ impl MongoCollections {
             resultset_metadata: match schema_mode {
                 SchemaMode::Standard => &STANDARD_COLLECTIONS_METADATA,
                 SchemaMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
-            }
+            },
         }
     }
 

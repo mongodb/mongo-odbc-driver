@@ -238,7 +238,7 @@ pub struct Connection {
     // all Statements allocated from this Connection
     pub statements: RwLock<HashSet<*mut MongoHandle>>,
     pub errors: RwLock<Vec<ODBCError>>,
-    // bson_type_info represents whether we're using simple or standard type info
+    // schema_mode represents whether we're using simple_type_info or standard_type_info
     pub schema_mode: RwLock<SchemaMode>,
 }
 

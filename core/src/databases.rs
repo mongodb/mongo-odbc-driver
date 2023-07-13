@@ -1,6 +1,10 @@
 use crate::{
-    bson_type_info::{StandardTypeInfo, SimpleTypeInfo, SchemaMode}, col_metadata::MongoColMetadata,
-    conn::MongoConnection, err::Result, stmt::MongoStatement, Error,
+    bson_type_info::{BsonTypeInfo, SchemaMode, SimpleTypeInfo, StandardTypeInfo},
+    col_metadata::MongoColMetadata,
+    conn::MongoConnection,
+    err::Result,
+    stmt::MongoStatement,
+    Error,
 };
 use bson::Bson;
 use mongodb::options::ListDatabasesOptions;
@@ -14,73 +18,72 @@ lazy_static! {
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NULLABLE
         ),
     ];
-
     pub static ref SIMPLE_DATABASES_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NULLABLE
         ),
     ];
@@ -238,7 +241,7 @@ impl MongoDatabases {
     pub fn list_all_catalogs(
         mongo_connection: &MongoConnection,
         _query_timeout: Option<i32>,
-        schema_mode: SchemaMode
+        schema_mode: SchemaMode,
     ) -> Self {
         let database_names: Vec<String> = mongo_connection
             .client
@@ -257,7 +260,7 @@ impl MongoDatabases {
         MongoDatabases {
             database_names,
             current_db_index: 0,
-            schema_mode
+            schema_mode,
         }
     }
 
@@ -265,7 +268,7 @@ impl MongoDatabases {
         MongoDatabases {
             database_names: vec![],
             current_db_index: 0,
-            schema_mode: SchemaMode::Standard
+            schema_mode: SchemaMode::Standard,
         }
     }
 }

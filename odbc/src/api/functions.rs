@@ -23,7 +23,7 @@ use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
 use mongo_odbc_core::{
-    odbc_uri::ODBCUri, BsonTypeInfo, MongoColMetadata, MongoCollections, MongoConnection,
+    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection,
     MongoDatabases, MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement,
     MongoTableTypes, MongoTypesInfo, SchemaMode, SqlDataType,
 };
@@ -676,7 +676,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 catalog,
                 table,
                 column,
-                schema_mode
+                schema_mode,
             ));
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
             SqlReturn::SUCCESS
@@ -906,6 +906,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         database,
         connection_timeout,
         login_timeout,
+        conn.schema_mode.read().unwrap().clone(),
     )?)
 }
 
@@ -3330,23 +3331,25 @@ fn sql_tables(
     schema: &str,
     table: &str,
     table_t: &str,
-    schema_mode: SchemaMode
+    schema_mode: SchemaMode,
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
         (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
-            schema_mode
+            schema_mode,
         ))),
         ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas(schema_mode))),
-        ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),
+        ("", "", "", SQL_ALL_TABLE_TYPES) => {
+            Ok(Box::new(MongoTableTypes::all_table_types(schema_mode)))
+        }
         _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,
             Some(query_timeout),
             catalog,
             table,
             table_t,
-            schema_mode
+            schema_mode,
         ))),
     }
 }
@@ -3395,7 +3398,7 @@ pub unsafe extern "C" fn SQLTablesW(
                 &schema,
                 &table,
                 &table_t,
-                schema_mode
+                schema_mode,
             );
             let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);

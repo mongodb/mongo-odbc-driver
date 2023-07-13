@@ -1,5 +1,5 @@
 use crate::{
-    bson_type_info::{BsonTypeInfo, SchemaMode, SimpleTypeInfo, StandardTypeInfo},
+    bson_type_info::{SimpleTypeInfo, StandardTypeInfo},
     Error,
 };
 use serde::{Deserialize, Serialize};
@@ -228,7 +228,7 @@ impl From<BsonTypeName> for SimpleTypeInfo {
 pub mod simplified {
 
     use crate::{
-        bson_type_info::{BsonTypeInfo, SimpleTypeInfo, StandardTypeInfo},
+        bson_type_info::{SimpleTypeInfo, StandardTypeInfo},
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
         Error,
@@ -943,7 +943,7 @@ mod unit {
     }
     mod bson_type_info {
         use crate::{
-            bson_type_info::standard_type_info::StandardTypeInfo,
+            bson_type_info::StandardTypeInfo,
             json_schema::{self, simplified, BsonType, BsonTypeName},
         };
 

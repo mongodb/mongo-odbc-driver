@@ -58,8 +58,8 @@ impl MongoColMetadata {
         nullability: Nullability,
     ) -> MongoColMetadata {
         let specific_type_info = match bson_type_info {
-            BsonTypeInfo::Standard(standard) => standard,
-            BsonTypeInfo::Simple(simple) => simple,
+            BsonTypeInfo::Standard(standard) => standard.type_info_fields,
+            BsonTypeInfo::Simple(simple) => simple.type_info_fields,
         };
 
         MongoColMetadata {
@@ -73,7 +73,7 @@ impl MongoColMetadata {
             display_size: specific_type_info.fixed_bytes_length,
             fixed_prec_scale: specific_type_info.fixed_prec_scale,
             label: field_name.clone(),
-            length: type_info.fixed_bytes_length,
+            length: specific_type_info.fixed_bytes_length,
             literal_prefix: specific_type_info.literal_prefix,
             literal_suffix: specific_type_info.literal_suffix,
             col_name: field_name,
@@ -176,7 +176,7 @@ impl SqlGetSchemaResponse {
                         &datasource_schema,
                         current_db,
                         &datasource_name,
-                        schema_mode,
+                        schema_mode.clone(),
                     )?
                     .into_iter(),
                 )
@@ -210,10 +210,16 @@ impl SqlGetSchemaResponse {
         &self,
         current_db: &str,
         current_collection: &str,
+        schema_mode: SchemaMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let collection_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
-        Self::schema_to_col_metadata(&collection_schema, current_db, current_collection)
+        Self::schema_to_col_metadata(
+            &collection_schema,
+            current_db,
+            current_collection,
+            schema_mode,
+        )
     }
 
     // Helper function that asserts the the passed object_schema is actually an ObjectSchema
@@ -246,7 +252,7 @@ impl SqlGetSchemaResponse {
                     name,
                     schema,
                     field_nullability,
-                    schema_mode,
+                    schema_mode.clone(),
                 ))
             })
             .collect::<Result<Vec<_>>>()
@@ -319,7 +325,7 @@ mod unit {
         use crate::{
             col_metadata::{SqlGetSchemaResponse, VersionedJsonSchema},
             json_schema::{BsonType, BsonTypeName, Schema},
-            map, Error,
+            map, Error, SchemaMode,
         };
 
         #[test]
@@ -335,7 +341,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_result_metadata("test_db");
+            let actual = input.process_result_metadata("test_db", SchemaMode::Standard);
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema(_)) => (),
@@ -363,7 +369,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_result_metadata("test_db");
+            let actual = input.process_result_metadata("test_db", SchemaMode::Standard);
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema(_)) => (),
@@ -411,7 +417,7 @@ mod unit {
                 },
             };
 
-            let res = input.process_result_metadata("test_db");
+            let res = input.process_result_metadata("test_db", SchemaMode::Standard);
 
             match res {
                 Err(e) => panic!("unexpected error: {e:?}"),

@@ -1,5 +1,6 @@
 use crate::{
-    bson_type_info::{StandardTypeInfo, SimpleTypeInfo, SchemaMode}, col_metadata::MongoColMetadata,
+    bson_type_info::{BsonTypeInfo, SchemaMode, SimpleTypeInfo, StandardTypeInfo},
+    col_metadata::MongoColMetadata,
     stmt::EmptyStatement,
 };
 use lazy_static::lazy_static;
@@ -11,87 +12,86 @@ lazy_static! {
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "COLUMN_NAME".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "KEY_SEQ".to_string(),
-            StandardTypeInfo::INT,
+            BsonTypeInfo::Standard(StandardTypeInfo::INT),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "PK_NAME".to_string(),
-            StandardTypeInfo::STRING,
+            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
     ];
-
     static ref SIMPLE_PK_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "COLUMN_NAME".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "KEY_SEQ".to_string(),
-            SimpleTypeInfo::INT,
+            BsonTypeInfo::Simple(SimpleTypeInfo::INT),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "PK_NAME".to_string(),
-            SimpleTypeInfo::STRING,
+            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
     ];
@@ -105,7 +105,7 @@ impl MongoPrimaryKeys {
             resultset_metadata: match schema_mode {
                 SchemaMode::Standard => &STANDARD_PK_METADATA,
                 SchemaMode::Simple => &SIMPLE_PK_METADATA,
-            }
+            },
         }
     }
 }
