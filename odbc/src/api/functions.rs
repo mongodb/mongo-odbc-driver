@@ -906,7 +906,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         database,
         connection_timeout,
         login_timeout,
-        conn.schema_mode.read().unwrap().clone(),
+        *conn.schema_mode.read().unwrap(),
     )?)
 }
 
@@ -2498,8 +2498,15 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
             match FromPrimitive::from_i16(data_type) {
                 Some(sql_data_type) => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let connection = must_be_valid!((*stmt.connection).as_connection());
-                    let schema_mode = *connection.schema_mode.read().unwrap();
+
+                    let schema_mode = if stmt.connection.is_null(){
+                        SchemaMode::Standard
+                    }else{
+                        let connection = must_be_valid!((*stmt.connection).as_connection());
+                        *connection.schema_mode.read().unwrap()
+                    };
+                    //let connection = must_be_valid!((*stmt.connection).as_connection());
+                    //let schema_mode = *connection.schema_mode.read().unwrap();
                     let types_info = MongoTypesInfo::new(sql_data_type, schema_mode);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
