@@ -1178,8 +1178,12 @@ pub unsafe extern "C" fn SQLForeignKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let connection = must_be_valid!((*stmt.connection).as_connection());
-            let schema_mode = *connection.schema_mode.read().unwrap();
+            let schema_mode = if stmt.connection.is_null() {
+                SchemaMode::Standard
+            } else {
+                let connection = must_be_valid!((*stmt.connection).as_connection());
+                *connection.schema_mode.read().unwrap()
+            };
             let mongo_statement = MongoForeignKeys::empty(schema_mode);
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
@@ -2499,14 +2503,13 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
                 Some(sql_data_type) => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
 
-                    let schema_mode = if stmt.connection.is_null(){
+                    let schema_mode = if stmt.connection.is_null() {
                         SchemaMode::Standard
-                    }else{
+                    } else {
                         let connection = must_be_valid!((*stmt.connection).as_connection());
                         *connection.schema_mode.read().unwrap()
                     };
-                    //let connection = must_be_valid!((*stmt.connection).as_connection());
-                    //let schema_mode = *connection.schema_mode.read().unwrap();
+
                     let types_info = MongoTypesInfo::new(sql_data_type, schema_mode);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
@@ -2662,8 +2665,12 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let connection = must_be_valid!((*stmt.connection).as_connection());
-            let schema_mode = *connection.schema_mode.read().unwrap();
+            let schema_mode = if stmt.connection.is_null() {
+                SchemaMode::Standard
+            } else {
+                let connection = must_be_valid!((*stmt.connection).as_connection());
+                *connection.schema_mode.read().unwrap()
+            };
             let mongo_statement = MongoPrimaryKeys::empty(schema_mode);
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
