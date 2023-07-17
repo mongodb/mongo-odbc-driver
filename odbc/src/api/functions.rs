@@ -1044,8 +1044,8 @@ pub unsafe extern "C" fn SQLExecDirectW(
                     Err(ODBCError::InvalidCursorState)
                 }
             };
-            if let Ok(..) = mongo_statement {
-                *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement.unwrap()));
+            if let Ok(mongo_statement) = mongo_statement {
+                *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
                 SqlReturn::SUCCESS
             } else {
                 add_diag_info!(mongo_handle, mongo_statement.as_ref().unwrap_err().clone());
