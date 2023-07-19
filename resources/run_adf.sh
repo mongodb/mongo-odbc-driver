@@ -361,10 +361,6 @@ if [[ $? -ne 0 ]]; then
         fi
         cd $MONGOHOUSE_DIR
 
-        # Checkout the latest tag
-        LATEST=$(git describe --tags $(git rev-list --tags --max-count=1))
-        echo "Checking out $LATEST"
-        git checkout $LATEST
 
         export GOPRIVATE=github.com/10gen
         # make sure mod vendor is cleaned up
