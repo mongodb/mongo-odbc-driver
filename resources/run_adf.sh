@@ -56,12 +56,12 @@ LOGS_PATH=$LOCAL_INSTALL_DIR/logs
 DB_CONFIG_PATH=$(pwd)/resources/integration_test/testdata/adf_db_config.json
 MONGOD_PORT=28017
 MONGOHOUSED_PORT=27017
-COMPUTE_NODE_PORT=57018
+export COMPUTE_MODE_MONGODB_PORT=47017
 START="start"
 STOP="stop"
 MONGOD="mongod"
 MONGOHOUSED="mongohoused"
-TENANT_CONFIG="./testdata/config/mongodb_local/tenant-config.json"
+TENANT_CONFIG="./testdata/config/inline_local/tenant-config.json"
 MONGO_DOWNLOAD_LINK=
 MONGO_DOWNLOAD_DIR=
 MONGO_DOWNLOAD_FILE=
@@ -129,7 +129,7 @@ check_version() {
 check_compute_node() {
   check_procname $MONGOD
   process_check_result=$?
-  check_version $COMPUTE_NODE_PORT
+  check_version $COMPUTE_MODE_MONGODB_PORT
   port_check_result=$?
 
   if [[ $process_check_result -eq 0 ]] && [[ $port_check_result -eq 0 ]]; then
@@ -218,7 +218,7 @@ install_mongodb() {
 
       # Obtain unzipped directory name
       MONGO_UNZIP_DIR=$(unzip -lq $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE | grep mongod.exe | tr -s ' ' \
-	          | cut -d ' ' -f 5 | cut -d/ -f1)
+              | cut -d ' ' -f 5 | cut -d/ -f1)
       chmod -R +x $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR/bin/
       echo $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR
     else
@@ -235,7 +235,7 @@ install_mongosh() {
 
       # Obtain unzipped directory name
       MONGOSH_UNZIP_DIR=$(unzip -lq $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE | grep mongosh.exe | tr -s ' ' \
-	          | cut -d ' ' -f 5 | cut -d/ -f1)
+              | cut -d ' ' -f 5 | cut -d/ -f1)
       chmod -R +x $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR/bin/
       echo $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR
     elif [ $OS = "Darwin" ]; then
@@ -301,8 +301,8 @@ manage_compute_node() {
   if [ $ARG = $START ]; then
     check_compute_node $MONGO_DOWNLOAD_DIR
     echo "Starting a compute $MONGOD"
-    mkdir -p ./artifacts/compute-mode-mongod-data 
-  
+    mkdir -p ./artifacts/compute-mode-mongod-data
+
     # Start compute mongod
     if [[ $OS =~ ^CYGWIN ]]; then
       # mongod does not have --fork option on Windows, using nohup
@@ -311,7 +311,7 @@ manage_compute_node() {
     else
       $MONGO_DOWNLOAD_DIR/bin/mongod -f ./testdata/config/mongod.conf --logpath $LOGS_PATH/compute_mongod.log  --pidfilepath $TMP_DIR/compute_node.pid --fork
     fi
-  
+
     waitCounter=0
     while : ; do
         check_compute_node
@@ -419,7 +419,7 @@ if [[ $? -ne 0 ]]; then
     mkdir -p $LOGS_PATH
     # Start mongohoused with appropriate config
     $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
-      --config ./testdata/config/mongodb_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
+      --config ./testdata/config/inline_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
     echo $! > $TMP_DIR/${MONGOHOUSED}.pid
 
     waitCounter=0
