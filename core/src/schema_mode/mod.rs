@@ -1,11 +1,11 @@
 use crate::definitions::SqlDataType;
 
-mod simple_type_info;
-mod standard_type_info;
+mod simple_bson_type_info;
+mod standard_bson_type_info;
 pub mod type_info;
 
-pub use simple_type_info::SimpleTypeInfo;
-pub use standard_type_info::StandardTypeInfo;
+pub use simple_bson_type_info::SimpleBsonTypeInfo;
+pub use standard_bson_type_info::StandardBsonTypeInfo;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum SchemaMode {
@@ -19,8 +19,8 @@ const SQL_PRED_NONE: i32 = 0;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum BsonTypeInfo {
-    Standard(StandardTypeInfo),
-    Simple(SimpleTypeInfo),
+    Standard(StandardBsonTypeInfo),
+    Simple(SimpleBsonTypeInfo),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

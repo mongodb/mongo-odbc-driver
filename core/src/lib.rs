@@ -1,9 +1,9 @@
 #![allow(dead_code)]
-mod bson_type_info;
-pub use bson_type_info::type_info::MongoTypesInfo;
-pub use bson_type_info::BsonTypeInfo;
-pub use bson_type_info::SchemaMode;
-pub use bson_type_info::SQL_SEARCHABLE;
+mod schema_mode;
+pub use schema_mode::type_info::MongoTypesInfo;
+pub use schema_mode::BsonTypeInfo;
+pub use schema_mode::SchemaMode;
+pub use schema_mode::SQL_SEARCHABLE;
 
 mod collections;
 pub use collections::MongoCollections;

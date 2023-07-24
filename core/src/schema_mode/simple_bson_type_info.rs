@@ -1,16 +1,16 @@
 use crate::{
-    bson_type_info::{TypeInfoFields, SQL_PRED_BASIC, SQL_PRED_NONE, SQL_SEARCHABLE},
+    schema_mode::{TypeInfoFields, SQL_PRED_BASIC, SQL_PRED_NONE, SQL_SEARCHABLE},
     definitions::SqlDataType,
 };
 
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct SimpleTypeInfo {
+pub struct SimpleBsonTypeInfo {
     pub type_info_fields: TypeInfoFields,
 }
 
-impl SimpleTypeInfo {
-    pub const DOUBLE: SimpleTypeInfo = SimpleTypeInfo {
+impl SimpleBsonTypeInfo {
+    pub const DOUBLE: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "double",
             sql_type: SqlDataType::DOUBLE,
@@ -30,7 +30,7 @@ impl SimpleTypeInfo {
             num_prec_radix: Some(10),
         },
     };
-    pub const STRING: SimpleTypeInfo = SimpleTypeInfo {
+    pub const STRING: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "string",
             sql_type: SqlDataType::EXT_W_VARCHAR,
@@ -50,7 +50,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const OBJECT: SimpleTypeInfo = SimpleTypeInfo {
+    pub const OBJECT: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "object",
             sql_type: SqlDataType::VARCHAR,
@@ -70,7 +70,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const ARRAY: SimpleTypeInfo = SimpleTypeInfo {
+    pub const ARRAY: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "array",
             sql_type: SqlDataType::VARCHAR,
@@ -90,7 +90,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const BINDATA: SimpleTypeInfo = SimpleTypeInfo {
+    pub const BINDATA: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "binData",
             sql_type: SqlDataType::EXT_BINARY,
@@ -110,7 +110,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const UNDEFINED: SimpleTypeInfo = SimpleTypeInfo {
+    pub const UNDEFINED: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "undefined",
             sql_type: SqlDataType::VARCHAR,
@@ -130,7 +130,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const OBJECTID: SimpleTypeInfo = SimpleTypeInfo {
+    pub const OBJECTID: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "objectId",
             sql_type: SqlDataType::VARCHAR,
@@ -150,7 +150,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const BOOL: SimpleTypeInfo = SimpleTypeInfo {
+    pub const BOOL: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "bool",
             sql_type: SqlDataType::EXT_BIT,
@@ -170,7 +170,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const DATE: SimpleTypeInfo = SimpleTypeInfo {
+    pub const DATE: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "date",
             sql_type: SqlDataType::TIMESTAMP,
@@ -190,7 +190,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const NULL: SimpleTypeInfo = SimpleTypeInfo {
+    pub const NULL: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "null",
             sql_type: SqlDataType::VARCHAR,
@@ -210,7 +210,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const REGEX: SimpleTypeInfo = SimpleTypeInfo {
+    pub const REGEX: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "regex",
             sql_type: SqlDataType::VARCHAR,
@@ -230,7 +230,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const DBPOINTER: SimpleTypeInfo = SimpleTypeInfo {
+    pub const DBPOINTER: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "dbPointer",
             sql_type: SqlDataType::VARCHAR,
@@ -250,7 +250,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const JAVASCRIPT: SimpleTypeInfo = SimpleTypeInfo {
+    pub const JAVASCRIPT: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "javascript",
             sql_type: SqlDataType::VARCHAR,
@@ -270,7 +270,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const SYMBOL: SimpleTypeInfo = SimpleTypeInfo {
+    pub const SYMBOL: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "symbol",
             sql_type: SqlDataType::VARCHAR,
@@ -290,7 +290,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const JAVASCRIPTWITHSCOPE: SimpleTypeInfo = SimpleTypeInfo {
+    pub const JAVASCRIPTWITHSCOPE: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "javascriptWithScope",
             sql_type: SqlDataType::VARCHAR,
@@ -310,7 +310,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const INT: SimpleTypeInfo = SimpleTypeInfo {
+    pub const INT: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "int",
             sql_type: SqlDataType::INTEGER,
@@ -330,7 +330,7 @@ impl SimpleTypeInfo {
             num_prec_radix: Some(10),
         },
     };
-    pub const TIMESTAMP: SimpleTypeInfo = SimpleTypeInfo {
+    pub const TIMESTAMP: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "timestamp",
             sql_type: SqlDataType::VARCHAR,
@@ -350,7 +350,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const LONG: SimpleTypeInfo = SimpleTypeInfo {
+    pub const LONG: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "long",
             sql_type: SqlDataType::EXT_BIG_INT,
@@ -370,7 +370,7 @@ impl SimpleTypeInfo {
             num_prec_radix: Some(10),
         },
     };
-    pub const DECIMAL: SimpleTypeInfo = SimpleTypeInfo {
+    pub const DECIMAL: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "decimal",
             // TODO SQL-1068: Change to SqlDataType::DECIMAL
@@ -391,7 +391,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const MINKEY: SimpleTypeInfo = SimpleTypeInfo {
+    pub const MINKEY: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "minKey",
             sql_type: SqlDataType::VARCHAR,
@@ -411,7 +411,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const MAXKEY: SimpleTypeInfo = SimpleTypeInfo {
+    pub const MAXKEY: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "maxKey",
             sql_type: SqlDataType::VARCHAR,
@@ -431,7 +431,7 @@ impl SimpleTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const BSON: SimpleTypeInfo = SimpleTypeInfo {
+    pub const BSON: SimpleBsonTypeInfo = SimpleBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "bson",
             sql_type: SqlDataType::VARCHAR,

@@ -1,16 +1,16 @@
 use crate::{
-    bson_type_info::{TypeInfoFields, SQL_PRED_BASIC, SQL_PRED_NONE, SQL_SEARCHABLE},
+    schema_mode::{TypeInfoFields, SQL_PRED_BASIC, SQL_PRED_NONE, SQL_SEARCHABLE},
     definitions::SqlDataType,
 };
 
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct StandardTypeInfo {
+pub struct StandardBsonTypeInfo {
     pub type_info_fields: TypeInfoFields,
 }
 
-impl StandardTypeInfo {
-    pub const DOUBLE: StandardTypeInfo = StandardTypeInfo {
+impl StandardBsonTypeInfo {
+    pub const DOUBLE: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "double",
             sql_type: SqlDataType::DOUBLE,
@@ -30,7 +30,7 @@ impl StandardTypeInfo {
             num_prec_radix: Some(10),
         },
     };
-    pub const STRING: StandardTypeInfo = StandardTypeInfo {
+    pub const STRING: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "string",
             sql_type: SqlDataType::EXT_W_VARCHAR,
@@ -50,7 +50,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const OBJECT: StandardTypeInfo = StandardTypeInfo {
+    pub const OBJECT: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "object",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -70,7 +70,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const ARRAY: StandardTypeInfo = StandardTypeInfo {
+    pub const ARRAY: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "array",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -90,7 +90,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const BINDATA: StandardTypeInfo = StandardTypeInfo {
+    pub const BINDATA: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "binData",
             sql_type: SqlDataType::EXT_BINARY,
@@ -110,7 +110,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const UNDEFINED: StandardTypeInfo = StandardTypeInfo {
+    pub const UNDEFINED: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "undefined",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -130,7 +130,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const OBJECTID: StandardTypeInfo = StandardTypeInfo {
+    pub const OBJECTID: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "objectId",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -150,7 +150,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const BOOL: StandardTypeInfo = StandardTypeInfo {
+    pub const BOOL: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "bool",
             sql_type: SqlDataType::EXT_BIT,
@@ -170,7 +170,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const DATE: StandardTypeInfo = StandardTypeInfo {
+    pub const DATE: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "date",
             sql_type: SqlDataType::TIMESTAMP,
@@ -190,7 +190,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const NULL: StandardTypeInfo = StandardTypeInfo {
+    pub const NULL: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "null",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -210,7 +210,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const REGEX: StandardTypeInfo = StandardTypeInfo {
+    pub const REGEX: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "regex",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -230,7 +230,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const DBPOINTER: StandardTypeInfo = StandardTypeInfo {
+    pub const DBPOINTER: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "dbPointer",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -250,7 +250,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const JAVASCRIPT: StandardTypeInfo = StandardTypeInfo {
+    pub const JAVASCRIPT: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "javascript",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -270,7 +270,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const SYMBOL: StandardTypeInfo = StandardTypeInfo {
+    pub const SYMBOL: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "symbol",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -290,7 +290,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const JAVASCRIPTWITHSCOPE: StandardTypeInfo = StandardTypeInfo {
+    pub const JAVASCRIPTWITHSCOPE: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "javascriptWithScope",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -310,7 +310,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const INT: StandardTypeInfo = StandardTypeInfo {
+    pub const INT: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "int",
             sql_type: SqlDataType::INTEGER,
@@ -330,7 +330,7 @@ impl StandardTypeInfo {
             num_prec_radix: Some(10),
         },
     };
-    pub const TIMESTAMP: StandardTypeInfo = StandardTypeInfo {
+    pub const TIMESTAMP: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "timestamp",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -350,7 +350,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const LONG: StandardTypeInfo = StandardTypeInfo {
+    pub const LONG: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "long",
             sql_type: SqlDataType::EXT_BIG_INT,
@@ -370,7 +370,7 @@ impl StandardTypeInfo {
             num_prec_radix: Some(10),
         },
     };
-    pub const DECIMAL: StandardTypeInfo = StandardTypeInfo {
+    pub const DECIMAL: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "decimal",
             // TODO SQL-1068: Change to SqlDataType::DECIMAL
@@ -391,7 +391,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const MINKEY: StandardTypeInfo = StandardTypeInfo {
+    pub const MINKEY: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "minKey",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -411,7 +411,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const MAXKEY: StandardTypeInfo = StandardTypeInfo {
+    pub const MAXKEY: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "maxKey",
             sql_type: SqlDataType::UNKNOWN_TYPE,
@@ -431,7 +431,7 @@ impl StandardTypeInfo {
             num_prec_radix: None,
         },
     };
-    pub const BSON: StandardTypeInfo = StandardTypeInfo {
+    pub const BSON: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "bson",
             sql_type: SqlDataType::UNKNOWN_TYPE,

@@ -1,7 +1,7 @@
 use crate::stmt::EmptyStatement;
 use crate::util::{is_match, table_type_filter_to_vec, to_name_regex};
 use crate::{
-    bson_type_info::{SchemaMode, SimpleTypeInfo, StandardTypeInfo},
+    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
@@ -21,35 +21,35 @@ lazy_static! {
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
+            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
+            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
+            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
+            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            BsonTypeInfo::Standard(StandardTypeInfo::STRING),
+            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
             Nullability::NULLABLE
         ),
     ];
@@ -58,35 +58,35 @@ lazy_static! {
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
+            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
+            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
+            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
+            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            BsonTypeInfo::Simple(SimpleTypeInfo::STRING),
+            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
             Nullability::NULLABLE
         ),
     ];
