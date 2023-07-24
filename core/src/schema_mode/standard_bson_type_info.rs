@@ -373,16 +373,15 @@ impl StandardBsonTypeInfo {
     pub const DECIMAL: StandardBsonTypeInfo = StandardBsonTypeInfo {
         type_info_fields: TypeInfoFields {
             type_name: "decimal",
-            // TODO SQL-1068: Change to SqlDataType::DECIMAL
-            sql_type: SqlDataType::UNKNOWN_TYPE,
-            non_concise_type: SqlDataType::UNKNOWN_TYPE,
+            sql_type: SqlDataType::DECIMAL,
+            non_concise_type: SqlDataType::DECIMAL,
             searchable: SQL_PRED_BASIC,
             is_case_sensitive: false,
             fixed_prec_scale: false,
             scale: None,
-            precision: None,          // TODO SQL-1068: Some(34),
-            octet_length: None,       // TODO SQL-1068: Some(16),
-            fixed_bytes_length: None, // TODO SQL-1068: Some(16),
+            precision: Some(34),
+            octet_length: Some(16),
+            fixed_bytes_length: Some(16),
             literal_prefix: None,
             literal_suffix: None,
             sql_code: None,
