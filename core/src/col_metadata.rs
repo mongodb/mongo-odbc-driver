@@ -178,7 +178,7 @@ impl SqlGetSchemaResponse {
                         &datasource_schema,
                         current_db,
                         &datasource_name,
-                        schema_mode.clone(),
+                        schema_mode,
                     )?
                     .into_iter(),
                 )
@@ -254,7 +254,7 @@ impl SqlGetSchemaResponse {
                     name,
                     schema,
                     field_nullability,
-                    schema_mode.clone(),
+                    schema_mode,
                 ))
             })
             .collect::<Result<Vec<_>>>()

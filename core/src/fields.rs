@@ -691,7 +691,7 @@ impl MongoFields {
                     match current_col_metadata_response.process_collection_metadata(
                         &self.current_db_name,
                         collection_name.as_str(),
-                        self.schema_mode.clone(),
+                        self.schema_mode,
                     ) {
                         Ok(current_col_metadata) => {
                             if !current_col_metadata.is_empty() {

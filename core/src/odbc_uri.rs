@@ -251,7 +251,7 @@ impl ODBCUri {
     }
 
     fn set_server_and_source(
-        mut opts: &mut ClientOptions,
+        opts: &mut ClientOptions,
         server: Option<String>,
         source: Option<String>,
     ) -> Result<()> {
