@@ -1612,15 +1612,15 @@ buildvariants:
       - name: integration-test
       - name: result-set-test
 
-  - name: macos-arm
-    display_name: "macOS 11.0 ARM 64"
-    run_on: [macos-1100-arm64]
-    tasks:
-      - name: compile
-      - name: compile-debug
-      - name: unit-test
-      - name: integration-test
-      - name: result-set-test
+  # - name: macos-arm
+  #   display_name: "macOS 11.0 ARM 64"
+  #   run_on: [macos-1100-arm64]
+  #   tasks:
+  #     - name: compile
+  #     - name: compile-debug
+  #     - name: unit-test
+  #     - name: integration-test
+  #     - name: result-set-test
 
   - name: release
     display_name: "Release"
