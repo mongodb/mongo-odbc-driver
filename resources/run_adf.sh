@@ -24,7 +24,7 @@ if [[ -z $ARG ]]; then
   exit 0
 fi
 
-GO_VERSION="go1.18"
+GO_VERSION="go1.20"
 if [ -d "/opt/golang/$GO_VERSION" ]; then
   GOROOT="/opt/golang/$GO_VERSION"
   GOBINDIR="$GOROOT"/bin
@@ -38,6 +38,9 @@ elif [ -e /usr/local/bin/go ]; then
   GOBINDIR=/usr/local/bin
 elif [ -e /opt/homebrew/bin/go ]; then
   GOBINDIR=/opt/homebrew/bin
+# local testing ubuntu
+elif [ -e /home/linuxbrew/.linuxbrew/bin/go ]; then
+  GOBINDIR=/home/linuxbrew/.linuxbrew/bin
 else #local testing
   GOBINDIR=/usr/bin
 fi
@@ -53,11 +56,12 @@ LOGS_PATH=$LOCAL_INSTALL_DIR/logs
 DB_CONFIG_PATH=$(pwd)/resources/integration_test/testdata/adf_db_config.json
 MONGOD_PORT=28017
 MONGOHOUSED_PORT=27017
+export COMPUTE_MODE_MONGODB_PORT=47017
 START="start"
 STOP="stop"
 MONGOD="mongod"
 MONGOHOUSED="mongohoused"
-TENANT_CONFIG="./testdata/config/mongodb_local/tenant-config.json"
+TENANT_CONFIG="./testdata/config/inline_local/tenant-config.json"
 MONGO_DOWNLOAD_LINK=
 MONGO_DOWNLOAD_DIR=
 MONGO_DOWNLOAD_FILE=
@@ -77,22 +81,22 @@ MONGOSH_DOWNLOAD_BASE=https://downloads.mongodb.com/compass
 
 ## Linux
 # Ubuntu 22.04
-MONGO_DOWNLOAD_UBUNTU=mongodb-linux-x86_64-ubuntu2204-6.0.4.tgz
+MONGO_DOWNLOAD_UBUNTU=mongodb-linux-x86_64-ubuntu2204-7.0.0-rc6.tgz
 # RedHat 7
-MONGO_DOWNLOAD_REDHAT=mongodb-linux-x86_64-rhel70-6.0.4.tgz
+MONGO_DOWNLOAD_REDHAT=mongodb-linux-x86_64-rhel70-7.0.0-rc6.tgz
 # Shared Linux mongosh
 MONGOSH_DOWNLOAD_LINUX_FILE=mongosh-1.8.0-linux-x64.tgz
 
 ## macOS
-MONGO_DOWNLOAD_MAC=mongodb-macos-x86_64-6.0.4.tgz
+MONGO_DOWNLOAD_MAC=mongodb-macos-x86_64-7.0.0-rc6.tgz
 MONGOSH_DOWNLOAD_MAC_FILE=mongosh-1.8.0-darwin-x64.zip
 
 ## macOS ARM64
-MONGO_DOWNLOAD_MAC_ARM=mongodb-macos-arm64-6.0.4.tgz
+MONGO_DOWNLOAD_MAC_ARM=mongodb-macos-arm64-7.0.0-rc6.tgz
 MONGOSH_DOWNLOAD_MAC_FILE_ARM=mongosh-1.8.0-darwin-arm64.zip
 
 ## Windows
-MONGO_DOWNLOAD_WIN=mongodb-windows-x86_64-6.0.4.zip
+MONGO_DOWNLOAD_WIN=mongodb-windows-x86_64-7.0.0-rc6.zip
 MONGOSH_DOWNLOAD_WINDOWS_FILE=mongosh-1.8.0-win32-x64.zip
 
 mkdir -p $LOCAL_INSTALL_DIR
@@ -116,6 +120,19 @@ check_version() {
   echo $VERSION
 
   if [[ result -eq 0 ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+check_compute_node() {
+  check_procname $MONGOD
+  process_check_result=$?
+  check_version $COMPUTE_MODE_MONGODB_PORT
+  port_check_result=$?
+
+  if [[ $process_check_result -eq 0 ]] && [[ $port_check_result -eq 0 ]]; then
     return 0
   else
     return 1
@@ -201,7 +218,7 @@ install_mongodb() {
 
       # Obtain unzipped directory name
       MONGO_UNZIP_DIR=$(unzip -lq $LOCAL_INSTALL_DIR/$MONGO_DOWNLOAD_FILE | grep mongod.exe | tr -s ' ' \
-	          | cut -d ' ' -f 5 | cut -d/ -f1)
+              | cut -d ' ' -f 5 | cut -d/ -f1)
       chmod -R +x $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR/bin/
       echo $LOCAL_INSTALL_DIR/$MONGO_UNZIP_DIR
     else
@@ -218,7 +235,7 @@ install_mongosh() {
 
       # Obtain unzipped directory name
       MONGOSH_UNZIP_DIR=$(unzip -lq $LOCAL_INSTALL_DIR/$MONGOSH_DOWNLOAD_FILE | grep mongosh.exe | tr -s ' ' \
-	          | cut -d ' ' -f 5 | cut -d/ -f1)
+              | cut -d ' ' -f 5 | cut -d/ -f1)
       chmod -R +x $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR/bin/
       echo $LOCAL_INSTALL_DIR/$MONGOSH_UNZIP_DIR
     elif [ $OS = "Darwin" ]; then
@@ -233,9 +250,9 @@ install_mongosh() {
 MONGO_DOWNLOAD_DIR=$(install_mongodb)
 MONGOSH_DOWNLOAD_DIR=$(install_mongosh)
 
-check_mongod $MONGO_DOWNLOAD_DIR
-if [[ $? -ne 0 ]]; then
-  if [ $ARG = $START ]; then
+if [ $ARG = $START ]; then
+  check_mongod $MONGO_DOWNLOAD_DIR
+  if [[ $? -ne 0 ]]; then
     echo "Starting $MONGOD"
 
     mkdir -p $MONGO_DB_PATH
@@ -265,7 +282,7 @@ if [[ $? -ne 0 ]]; then
             break
         fi
         if [[ "$waitCounter" -gt $TIMEOUT ]]; then
-            echo "ERROR: Local mongod did not start under $TIMEOUT seconds"
+            echo "ERROR: Local data mongod did not start under $TIMEOUT seconds"
             exit 1
         fi
         let waitCounter=waitCounter+1
@@ -275,14 +292,52 @@ if [[ $? -ne 0 ]]; then
 else
   if [ $ARG = $STOP ]; then
     MONGOD_PID=$(< $TMP_DIR/${MONGOD}.pid)
-    echo "Stopping $MONGOD, pid $MONGOD_PID"
+    echo "Stopping data $MONGOD, pid $MONGOD_PID"
     kill "$(< $TMP_DIR/${MONGOD}.pid)"
   fi
 fi
 
-check_mongohoused
-if [[ $? -ne 0 ]]; then
+manage_compute_node() {
   if [ $ARG = $START ]; then
+    check_compute_node $MONGO_DOWNLOAD_DIR
+    if [[ $? -ne 0 ]]; then
+      echo "Starting a compute $MONGOD"
+      mkdir -p ./artifacts/compute-mode-mongod-data
+
+      # Start compute mongod
+      if [[ $OS =~ ^CYGWIN ]]; then
+        # mongod does not have --fork option on Windows, using nohup
+        nohup $MONGO_DOWNLOAD_DIR/bin/mongod -f ./testdata/config/mongod.conf --logpath $(cygpath -m $LOGS_PATH/compute_mongod.log) &
+        echo $! > $TMP_DIR/compute_node.pid
+      else
+        $MONGO_DOWNLOAD_DIR/bin/mongod -f ./testdata/config/mongod.conf --logpath $LOGS_PATH/compute_mongod.log  --pidfilepath $TMP_DIR/compute_node.pid --fork
+      fi
+
+      waitCounter=0
+      while : ; do
+          check_compute_node
+          if [[ $? -eq 0 ]]; then
+              break
+          fi
+          if [[ "$waitCounter" -gt $TIMEOUT ]]; then
+              echo "ERROR: Local compute mongod did not start under $TIMEOUT seconds"
+              exit 1
+          fi
+          let waitCounter=waitCounter+1
+          sleep 1
+      done
+    fi
+  fi
+  if [ $ARG = $STOP ]; then
+    MONGOD_PID=$(< $TMP_DIR/compute_node.pid)
+    echo "Stopping compute $MONGOD, pid $MONGOD_PID"
+    kill "$(< $TMP_DIR/compute_node.pid)"
+  fi
+}
+
+if [ $ARG = $START ]; then
+  check_mongohoused
+  if [[ $? -ne 0 ]]; then
     echo "Starting $MONGOHOUSED"
     $GO version
 
@@ -307,13 +362,15 @@ if [[ $? -ne 0 ]]; then
         fi
         cd $MONGOHOUSE_DIR
 
-        # for now, we checkout a specific working commit of ADF
-        # TODO SQL-1374: Find a better long term solution
-        git checkout 247a246
 
         export GOPRIVATE=github.com/10gen
+        # make sure mod vendor is cleaned up
+        $GO mod vendor
         $GO mod download
     fi
+
+    # Start compute node
+    manage_compute_node $START
 
     # Set relevant environment variables
     export MONGOHOUSE_ENVIRONMENT="local"
@@ -359,7 +416,7 @@ if [[ $? -ne 0 ]]; then
     mkdir -p $LOGS_PATH
     # Start mongohoused with appropriate config
     $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
-      --config ./testdata/config/mongodb_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
+      --config ./testdata/config/inline_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
     echo $! > $TMP_DIR/${MONGOHOUSED}.pid
 
     waitCounter=0
@@ -378,6 +435,7 @@ if [[ $? -ne 0 ]]; then
   fi
 fi
 if [ $ARG = $STOP ]; then
+  manage_compute_node $STOP
   MONGOHOUSED_PID=$(< $TMP_DIR/${MONGOHOUSED}.pid)
   echo "Stopping $MONGOHOUSED, pid $MONGOHOUSED_PID"
 

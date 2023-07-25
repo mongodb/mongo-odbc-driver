@@ -1031,6 +1031,12 @@ pub unsafe extern "C" fn SQLExecDirectW(
         || {
             let query = input_text_to_string_w(statement_text, text_length as usize);
             let mongo_handle = MongoHandleRef::from(statement_handle);
+            trace_odbc!(
+                debug,
+                mongo_handle,
+                format!("Executing following query: \"{query}\""),
+                function_name!()
+            );
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let mongo_statement = {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
@@ -1046,8 +1052,8 @@ pub unsafe extern "C" fn SQLExecDirectW(
                     Err(ODBCError::InvalidCursorState)
                 }
             };
-            if let Ok(..) = mongo_statement {
-                *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement.unwrap()));
+            if let Ok(mongo_statement) = mongo_statement {
+                *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
                 SqlReturn::SUCCESS
             } else {
                 add_diag_info!(mongo_handle, mongo_statement.as_ref().unwrap_err().clone());
@@ -1208,7 +1214,7 @@ pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) 
         function_name!()
     );
     panic_safe_exec_keep_diagnostics!(
-        info,
+        debug,
         || {
             match sql_free_handle(handle_type, handle as *mut _) {
                 Ok(_) => SqlReturn::SUCCESS,
@@ -1790,47 +1796,29 @@ unsafe fn sql_get_env_attrw_helper(
     SqlReturn::SUCCESS
 }
 
-///
-/// [`SQLGetInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetInfo-function
-///
-/// This is the WideChar version of the SQLGetInfo function
-///
-/// # Safety
-/// Because this is a C-interface, this is necessarily unsafe
-///
-#[named]
-#[no_mangle]
-pub unsafe extern "C" fn SQLGetInfoW(
-    connection_handle: HDbc,
-    info_type: USmallInt,
-    info_value_ptr: Pointer,
-    buffer_length: SmallInt,
-    string_length_ptr: *mut SmallInt,
-) -> SqlReturn {
-    panic_safe_exec_clear_diagnostics!(
-        debug,
-        || sql_get_infow_helper(
-            connection_handle,
-            info_type,
-            info_value_ptr,
-            buffer_length,
-            string_length_ptr
-        ),
-        connection_handle
-    )
-}
+macro_rules! sql_get_info_helper {
+($connection_handle:ident,
+ $info_type:ident,
+ $info_value_ptr:ident,
+ $buffer_length:ident,
+ $string_length_ptr:ident,
+ ) => {{
+    let connection_handle = $connection_handle;
+    let info_type = $info_type;
+    let info_value_ptr = $info_value_ptr;
+    let buffer_length = $buffer_length;
+    let string_length_ptr = $string_length_ptr;
 
-unsafe fn sql_get_infow_helper(
-    connection_handle: HDbc,
-    info_type: USmallInt,
-    info_value_ptr: Pointer,
-    buffer_length: SmallInt,
-    string_length_ptr: *mut SmallInt,
-) -> SqlReturn {
     let conn_handle = MongoHandleRef::from(connection_handle);
     let mut err = None;
     let sql_return = match FromPrimitive::from_u16(info_type) {
         Some(some_info_type) => {
+            trace_odbc!(
+                debug,
+                conn_handle,
+                format!("InfoType {some_info_type:?}"),
+                "SQLGetInfoW"
+            );
             match some_info_type {
                 InfoType::SQL_DRIVER_NAME => {
                     // This Driver Name is consistent with the name used for our JDBC driver.
@@ -1984,7 +1972,10 @@ unsafe fn sql_get_infow_helper(
                         | SQL_FN_STR_CHAR_LENGTH
                         | SQL_FN_STR_CHARACTER_LENGTH
                         | SQL_FN_STR_OCTET_LENGTH
-                        | SQL_FN_STR_POSITION;
+                        | SQL_FN_STR_POSITION
+                        | SQL_FN_STR_UCASE
+                        | SQL_FN_STR_LCASE;
+
                     i16_len::set_output_fixed_data(
                         &STRING_FUNCTIONS,
                         info_value_ptr,
@@ -2027,8 +2018,10 @@ unsafe fn sql_get_infow_helper(
                 | InfoType::SQL_CONVERT_VARBINARY
                 | InfoType::SQL_CONVERT_LONGVARBINARY
                 | InfoType::SQL_CONVERT_GUID => {
-                    // MongoSQL does not support CONVERT.
-                    i16_len::set_output_fixed_data(&SQL_U32_ZERO, info_value_ptr, string_length_ptr)
+                    // MongoSQL does not support the CONVERT scalar function, but clients also use
+                    // this to apply the CAST syntactic construct. The value we return for
+                    // SQL_CONVERT_FUNCTIONS alerts the client that we expect CAST and not CONVERT.
+                    i16_len::set_output_fixed_data(&MONGO_CAST_SUPPORT, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_GETDATA_EXTENSIONS => {
                     // GetData can be called on any column in any order.
@@ -2225,12 +2218,92 @@ unsafe fn sql_get_infow_helper(
                         string_length_ptr,
                     )
                 }
+                InfoType::SQL_DEFAULT_TXN_ISOLATION
+                | InfoType::SQL_DTC_TRANSITION_COST
+                | InfoType::SQL_BOOKMARK_PERSISTENCE
+                | InfoType::SQL_POS_OPERATIONS
+                | InfoType::SQL_STATIC_SENSITIVITY
+                | InfoType::SQL_TXN_CAPABLE => {
+                    i16_len::set_output_fixed_data(
+                        &0,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
                 // Setting this to 10, which is our default for the number of workers in the mongo driver's connection pool.
                 InfoType::SQL_MAX_CONCURRENT_ACTIVITIES => {
                     i16_len::set_output_fixed_data(&10, info_value_ptr, string_length_ptr)
                 }
-                InfoType::SQL_DTC_TRANSITION_COST => {
-                    i16_len::set_output_fixed_data(&0, info_value_ptr, string_length_ptr)
+                InfoType::SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1
+                | InfoType::SQL_KEYSET_CURSOR_ATTRIBUTES1
+                | InfoType::SQL_DYNAMIC_CURSOR_ATTRIBUTES1
+                | InfoType::SQL_STATIC_CURSOR_ATTRIBUTES1 => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_CA1_NEXT,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES2
+                | InfoType::SQL_KEYSET_CURSOR_ATTRIBUTES2
+                | InfoType::SQL_DYNAMIC_CURSOR_ATTRIBUTES2
+                | InfoType::SQL_STATIC_CURSOR_ATTRIBUTES2 => {
+                    i16_len::set_output_fixed_data(
+                        &MONGO_CA2_SUPPORT,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_SCROLL_OPTIONS => {
+                    i16_len::set_output_fixed_data(
+                        &MONGO_SO_SUPPORT,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_NEED_LONG_DATA_LEN => {
+                    i16_len::set_output_wstring_as_bytes(
+                        SQL_INFO_Y,
+                        info_value_ptr,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_TXN_ISOLATION_OPTION => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_TXN_SERIALIZABLE,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_DATABASE_NAME => {
+                    let conn = must_be_valid!((*conn_handle).as_connection());
+                    let attributes = conn.attributes.read().unwrap();
+                    if attributes.current_catalog.is_some() {
+                        i16_len::set_output_wstring_as_bytes(
+                            attributes.current_catalog.as_ref().unwrap().as_str(),
+                            info_value_ptr,
+                            buffer_length as usize,
+                            string_length_ptr,
+                        )
+                    } else {
+                        err = Some(ODBCError::ConnectionNotOpen);
+                        SqlReturn::ERROR
+                    }
+                }
+                InfoType::SQL_SCROLL_CONCURRENCY => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_SCCO_READ_ONLY,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_LOCK_TYPES => {
+                    i16_len::set_output_fixed_data(
+                        &SQL_LCK_NO_CHANGE,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
                 }
                 _ => {
                     err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
@@ -2252,6 +2325,37 @@ unsafe fn sql_get_infow_helper(
         add_diag_with_function!(conn_handle, error, "SQLGetInfoW");
     }
     sql_return
+}}
+}
+
+///
+/// [`SQLGetInfoW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLGetInfo-function
+///
+/// This is the WideChar version of the SQLGetInfo function
+///
+/// # Safety
+/// Because this is a C-interface, this is necessarily unsafe
+///
+#[named]
+#[no_mangle]
+pub unsafe extern "C" fn SQLGetInfoW(
+    connection_handle: HDbc,
+    info_type: USmallInt,
+    info_value_ptr: Pointer,
+    buffer_length: SmallInt,
+    string_length_ptr: *mut SmallInt,
+) -> SqlReturn {
+    panic_safe_exec_clear_diagnostics!(
+        debug,
+        || sql_get_info_helper!(
+            connection_handle,
+            info_type,
+            info_value_ptr,
+            buffer_length,
+            string_length_ptr,
+        ),
+        connection_handle
+    )
 }
 
 ///
