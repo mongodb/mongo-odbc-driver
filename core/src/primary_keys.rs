@@ -1,6 +1,6 @@
 use crate::{
-    schema_mode::{BsonTypeInfo, SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     col_metadata::MongoColMetadata,
+    schema_mode::{BsonTypeInfo, SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::EmptyStatement,
 };
 use lazy_static::lazy_static;

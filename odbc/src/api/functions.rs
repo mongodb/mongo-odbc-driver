@@ -882,7 +882,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         }
     }
 
-    if let Some(simple) = odbc_uri.remove(&["simple_schema_mode"]) {
+    if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
         if simple.eq("1") {
             *conn.schema_mode.write().unwrap() = SchemaMode::Simple;
         }

@@ -1,6 +1,6 @@
 use crate::{
-    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     col_metadata::MongoColMetadata,
+    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::EmptyStatement,
     BsonTypeInfo,
 };

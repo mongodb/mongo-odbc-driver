@@ -1,10 +1,10 @@
 use crate::{
-    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
     definitions::SqlDataType,
     err::{Error, Result},
+    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
     util::to_name_regex,
     BsonTypeInfo,

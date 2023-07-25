@@ -228,9 +228,9 @@ impl From<BsonTypeName> for SimpleBsonTypeInfo {
 pub mod simplified {
 
     use crate::{
-        schema_mode::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
+        schema_mode::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
         Error,
     };
     use std::collections::{BTreeMap, BTreeSet};
@@ -943,8 +943,8 @@ mod unit {
     }
     mod bson_type_info {
         use crate::{
-            schema_mode::StandardBsonTypeInfo,
             json_schema::{self, simplified, BsonType, BsonTypeName},
+            schema_mode::StandardBsonTypeInfo,
         };
 
         #[test]
@@ -986,7 +986,10 @@ mod unit {
 
             let input = simplified::Schema::try_from(input_schema).unwrap();
 
-            assert_eq!(StandardBsonTypeInfo::BSON, StandardBsonTypeInfo::from(input));
+            assert_eq!(
+                StandardBsonTypeInfo::BSON,
+                StandardBsonTypeInfo::from(input)
+            );
         }
     }
 }

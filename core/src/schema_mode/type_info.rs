@@ -1,9 +1,9 @@
 use crate::{
-    schema_mode::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     definitions::SqlDataType,
     err::Result,
+    schema_mode::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
     BsonTypeInfo, Error, SchemaMode,
 };
@@ -38,27 +38,27 @@ const STANDARD_DATA_TYPES: [TypeInfoFields; 21] = [
 ];
 
 const SIMPLE_DATA_TYPES: [TypeInfoFields; 21] = [
-    SimpleBsonTypeInfo::STRING.type_info_fields,    // SqlDataType(-9)
-    SimpleBsonTypeInfo::BOOL.type_info_fields,      // SqlDataType(-7)
-    SimpleBsonTypeInfo::LONG.type_info_fields,      // SqlDataType(-5)
-    SimpleBsonTypeInfo::BINDATA.type_info_fields,   // SqlDataType(-2)
-    SimpleBsonTypeInfo::ARRAY.type_info_fields,     // SqlDataType(0)
-    SimpleBsonTypeInfo::BSON.type_info_fields,      // SqlDataType(0)
+    SimpleBsonTypeInfo::STRING.type_info_fields, // SqlDataType(-9)
+    SimpleBsonTypeInfo::BOOL.type_info_fields,   // SqlDataType(-7)
+    SimpleBsonTypeInfo::LONG.type_info_fields,   // SqlDataType(-5)
+    SimpleBsonTypeInfo::BINDATA.type_info_fields, // SqlDataType(-2)
+    SimpleBsonTypeInfo::ARRAY.type_info_fields,  // SqlDataType(0)
+    SimpleBsonTypeInfo::BSON.type_info_fields,   // SqlDataType(0)
     SimpleBsonTypeInfo::DBPOINTER.type_info_fields, //SqlDataType(0)
-    SimpleBsonTypeInfo::DECIMAL.type_info_fields,   // SqlDataType(0)
+    SimpleBsonTypeInfo::DECIMAL.type_info_fields, // SqlDataType(0)
     SimpleBsonTypeInfo::JAVASCRIPT.type_info_fields, //SqlDataType(0)
     SimpleBsonTypeInfo::JAVASCRIPTWITHSCOPE.type_info_fields, // SqlDataType(0)
-    SimpleBsonTypeInfo::MAXKEY.type_info_fields,    // SqlDataType(0)
-    SimpleBsonTypeInfo::MINKEY.type_info_fields,    // SqlDataType(0)
-    SimpleBsonTypeInfo::NULL.type_info_fields,      // SqlDataType(0)
-    SimpleBsonTypeInfo::OBJECT.type_info_fields,    // SqlDataType(0)
-    SimpleBsonTypeInfo::OBJECTID.type_info_fields,  // SqlDataType(0)
-    SimpleBsonTypeInfo::SYMBOL.type_info_fields,    //SqlDataType(0)
+    SimpleBsonTypeInfo::MAXKEY.type_info_fields, // SqlDataType(0)
+    SimpleBsonTypeInfo::MINKEY.type_info_fields, // SqlDataType(0)
+    SimpleBsonTypeInfo::NULL.type_info_fields,   // SqlDataType(0)
+    SimpleBsonTypeInfo::OBJECT.type_info_fields, // SqlDataType(0)
+    SimpleBsonTypeInfo::OBJECTID.type_info_fields, // SqlDataType(0)
+    SimpleBsonTypeInfo::SYMBOL.type_info_fields, //SqlDataType(0)
     SimpleBsonTypeInfo::TIMESTAMP.type_info_fields, // SqlDataType(0)
     SimpleBsonTypeInfo::UNDEFINED.type_info_fields, // SqlDataType(0)
-    SimpleBsonTypeInfo::INT.type_info_fields,       // SqlDataType(4)
-    SimpleBsonTypeInfo::DOUBLE.type_info_fields,    // SqlDataType(8)
-    SimpleBsonTypeInfo::DATE.type_info_fields,      // SqlDataType(93)
+    SimpleBsonTypeInfo::INT.type_info_fields,    // SqlDataType(4)
+    SimpleBsonTypeInfo::DOUBLE.type_info_fields, // SqlDataType(8)
+    SimpleBsonTypeInfo::DATE.type_info_fields,   // SqlDataType(93)
 ];
 
 lazy_static! {

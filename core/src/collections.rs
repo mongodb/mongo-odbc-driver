@@ -1,10 +1,10 @@
 use crate::stmt::EmptyStatement;
 use crate::util::{is_match, table_type_filter_to_vec, to_name_regex};
 use crate::{
-    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
+    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
     util::{COLLECTION, TABLE, TIMESERIES},
     BsonTypeInfo, Error,

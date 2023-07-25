@@ -1,8 +1,8 @@
 use crate::{
-    schema_mode::{BsonTypeInfo, SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
+    schema_mode::{BsonTypeInfo, SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
     Error,
 };
