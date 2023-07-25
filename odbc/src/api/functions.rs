@@ -666,7 +666,7 @@ pub unsafe extern "C" fn SQLColumnsW(
             let connection = must_be_valid!((*stmt.connection).as_connection());
             let schema_mode = *connection.schema_mode.read().unwrap();
             let mongo_statement = Box::new(MongoFields::list_columns(
-                (*connection)
+                connection
                     .mongo_connection
                     .read()
                     .unwrap()
@@ -3505,7 +3505,7 @@ pub unsafe extern "C" fn SQLTablesW(
             let connection = must_be_valid!((*stmt.connection).as_connection());
             let schema_mode = *connection.schema_mode.read().unwrap();
             let mongo_statement = sql_tables(
-                (*connection)
+                connection
                     .mongo_connection
                     .read()
                     .unwrap()

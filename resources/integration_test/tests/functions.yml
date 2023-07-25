@@ -59,7 +59,7 @@ tests:
     - [ "array", 0, null, null, null, null, 1, 0, 0, null, 0, null, "array", null, null, 0, null, null, null ]
     - [ "bson", 0, null, null, null, null, 1, 0, 0, null, 0, null, "bson", null, null, 0, null, null, null ]
     - [ "dbPointer", 0, null, null, null, null, 1, 0, 2, null, 0, null, "dbPointer", null, null, 0, null, null, null ]
-    - [ "decimal", 0, null, null, null, null, 1, 0, 2, 0, 0, 0, "decimal", null, null, 0, null, null, null ]
+    - [ "decimal", 3, 34, null, null, null, 1, 0, 2, 0, 0, 0, "decimal", null, null, 3, null, null, null ]
     - [ "javascript", 0, null, null, null, null, 1, 0, 2, null, 0, null, "javascript", null, null, 0, null, null, null ]
     - [ "javascriptWithScope", 0, null, null, null, null, 1, 0, 2, null, 0, null, "javascriptWithScope", null, null, 0, null, null, null ]
     - [ "maxKey", 0, null, null, null, null, 1, 0, 2, null, 0, null, "maxKey", null, null, 0, null, null, null ]
