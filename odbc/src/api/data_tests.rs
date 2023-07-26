@@ -520,7 +520,7 @@ lazy_static! {
         );
 }
 
-fn sql_fetch_and_more_results_basic_functionality(schema_mode: TypeMode) {
+fn sql_fetch_and_more_results_basic_functionality(type_mode: TypeMode) {
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
         RefCell::new(None),
@@ -542,7 +542,7 @@ fn sql_fetch_and_more_results_basic_functionality(schema_mode: TypeMode) {
             "b".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
             Nullability::NO_NULLS,
-            schema_mode,
+            type_mode,
         )],
     )));
     let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);

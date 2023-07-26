@@ -239,7 +239,7 @@ pub struct Connection {
     pub statements: RwLock<HashSet<*mut MongoHandle>>,
     pub errors: RwLock<Vec<ODBCError>>,
     // type_info represents whether we're using simple_type_info or standard_type_info
-    pub schema_mode: RwLock<TypeMode>,
+    pub type_mode: RwLock<TypeMode>,
 }
 
 #[derive(Debug, Default)]
@@ -274,7 +274,7 @@ impl Connection {
             state: RwLock::new(state),
             statements: RwLock::new(HashSet::new()),
             errors: RwLock::new(vec![]),
-            schema_mode: RwLock::new(TypeMode::Standard),
+            type_mode: RwLock::new(TypeMode::Standard),
         }
     }
 }

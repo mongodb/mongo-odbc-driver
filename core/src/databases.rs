@@ -228,7 +228,7 @@ pub struct MongoDatabases {
     database_names: Vec<String>,
     // The current database index.
     current_db_index: usize,
-    schema_mode: TypeMode,
+    type_mode: TypeMode,
 }
 
 // Statement for SQLTables(SQL_ALL_CATALOGS, "","").
@@ -241,7 +241,7 @@ impl MongoDatabases {
     pub fn list_all_catalogs(
         mongo_connection: &MongoConnection,
         _query_timeout: Option<i32>,
-        schema_mode: TypeMode,
+        type_mode: TypeMode,
     ) -> Self {
         let database_names: Vec<String> = mongo_connection
             .client
@@ -260,7 +260,7 @@ impl MongoDatabases {
         MongoDatabases {
             database_names,
             current_db_index: 0,
-            schema_mode,
+            type_mode,
         }
     }
 
@@ -268,7 +268,7 @@ impl MongoDatabases {
         MongoDatabases {
             database_names: vec![],
             current_db_index: 0,
-            schema_mode: TypeMode::Standard,
+            type_mode: TypeMode::Standard,
         }
     }
 }
@@ -300,7 +300,7 @@ impl MongoStatement for MongoDatabases {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        match self.schema_mode {
+        match self.type_mode {
             TypeMode::Standard => &STANDARD_DATABASES_METADATA,
             TypeMode::Simple => &SIMPLE_DATABASES_METADATA,
         }

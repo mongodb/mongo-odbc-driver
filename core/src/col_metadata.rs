@@ -99,9 +99,9 @@ impl MongoColMetadata {
         field_name: String,
         field_schema: Schema,
         nullability: Nullability,
-        schema_mode: TypeMode,
+        type_mode: TypeMode,
     ) -> MongoColMetadata {
-        let bson_type_info = match schema_mode {
+        let bson_type_info = match type_mode {
             TypeMode::Standard => {
                 BsonTypeInfo::Standard(StandardBsonTypeInfo::from(field_schema))
             }
@@ -158,7 +158,7 @@ impl SqlGetSchemaResponse {
     pub(crate) fn process_result_metadata(
         &self,
         current_db: &str,
-        schema_mode: TypeMode,
+        type_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
@@ -178,7 +178,7 @@ impl SqlGetSchemaResponse {
                         &datasource_schema,
                         current_db,
                         &datasource_name,
-                        schema_mode,
+                        type_mode,
                     )?
                     .into_iter(),
                 )
@@ -212,7 +212,7 @@ impl SqlGetSchemaResponse {
         &self,
         current_db: &str,
         current_collection: &str,
-        schema_mode: TypeMode,
+        type_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let collection_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
@@ -220,7 +220,7 @@ impl SqlGetSchemaResponse {
             &collection_schema,
             current_db,
             current_collection,
-            schema_mode,
+            type_mode,
         )
     }
 
@@ -232,7 +232,7 @@ impl SqlGetSchemaResponse {
         object_schema: &crate::json_schema::simplified::Schema,
         current_db: &str,
         current_collection: &str,
-        schema_mode: TypeMode,
+        type_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let object_schema = object_schema.assert_object_schema()?;
 
@@ -254,7 +254,7 @@ impl SqlGetSchemaResponse {
                     name,
                     schema,
                     field_nullability,
-                    schema_mode,
+                    type_mode,
                 ))
             })
             .collect::<Result<Vec<_>>>()

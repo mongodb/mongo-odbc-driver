@@ -213,9 +213,9 @@ lazy_static! {
 pub struct MongoForeignKeys {}
 
 impl MongoForeignKeys {
-    pub fn empty(schema_mode: TypeMode) -> EmptyStatement {
+    pub fn empty(type_mode: TypeMode) -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: match schema_mode {
+            resultset_metadata: match type_mode {
                 TypeMode::Standard => &STANDARD_FK_METADATA,
                 TypeMode::Simple => &SIMPLE_FK_METADATA,
             },

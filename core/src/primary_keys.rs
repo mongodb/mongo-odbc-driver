@@ -100,9 +100,9 @@ lazy_static! {
 pub struct MongoPrimaryKeys {}
 
 impl MongoPrimaryKeys {
-    pub fn empty(schema_mode: TypeMode) -> EmptyStatement {
+    pub fn empty(type_mode: TypeMode) -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: match schema_mode {
+            resultset_metadata: match type_mode {
                 TypeMode::Standard => &STANDARD_PK_METADATA,
                 TypeMode::Simple => &SIMPLE_PK_METADATA,
             },

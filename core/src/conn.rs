@@ -35,7 +35,7 @@ impl MongoConnection {
         current_db: Option<String>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
-        schema_mode: TypeMode,
+        type_mode: TypeMode,
     ) -> Result<Self> {
         user_options.client_options.connect_timeout =
             login_timeout.map(|to| Duration::new(to as u64, 0));
@@ -48,7 +48,7 @@ impl MongoConnection {
             uuid_repr,
         };
         // Verify that the connection is working and the user has access to the default DB
-        MongoQuery::execute(&connection, current_db, None, "select 1", schema_mode)?;
+        MongoQuery::execute(&connection, current_db, None, "select 1", type_mode)?;
         Ok(connection)
     }
 

@@ -338,15 +338,15 @@ lazy_static! {
 pub struct MongoTypesInfo {
     current_type_index: usize,
     sql_data_type: SqlDataType,
-    schema_mode: TypeMode,
+    type_mode: TypeMode,
 }
 
 impl MongoTypesInfo {
-    pub fn new(sql_data_type: SqlDataType, schema_mode: TypeMode) -> MongoTypesInfo {
+    pub fn new(sql_data_type: SqlDataType, type_mode: TypeMode) -> MongoTypesInfo {
         MongoTypesInfo {
             current_type_index: 0,
             sql_data_type,
-            schema_mode,
+            type_mode,
         }
     }
 }
@@ -355,7 +355,7 @@ impl MongoStatement for MongoTypesInfo {
     // iterate through the list, searching for the next "valid" data type.
     // a type is valid if its sql type matches the desired sql type, or if we are getting all types.
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
-        let data_types = match self.schema_mode {
+        let data_types = match self.type_mode {
             TypeMode::Standard => STANDARD_DATA_TYPES,
             TypeMode::Simple => SIMPLE_DATA_TYPES,
         };
@@ -398,7 +398,7 @@ impl MongoStatement for MongoTypesInfo {
             return Err(Error::InvalidCursorState);
         }
 
-        let data_type = match self.schema_mode {
+        let data_type = match self.type_mode {
             TypeMode::Standard => STANDARD_DATA_TYPES.get(self.current_type_index - 1),
             TypeMode::Simple => SIMPLE_DATA_TYPES.get(self.current_type_index - 1),
         };
@@ -452,7 +452,7 @@ impl MongoStatement for MongoTypesInfo {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        match self.schema_mode {
+        match self.type_mode {
             TypeMode::Standard => &STANDARD_TYPES_INFO_METADATA,
             TypeMode::Simple => &SIMPLE_TYPES_INFO_METADATA,
         }

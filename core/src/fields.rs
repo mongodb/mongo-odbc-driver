@@ -591,7 +591,7 @@ pub struct MongoFields {
     current_field_for_collection: isize,
     collection_name_filter: Option<Regex>,
     field_name_filter: Option<Regex>,
-    schema_mode: TypeMode,
+    type_mode: TypeMode,
 }
 
 // Statement related to a SQLTables call.
@@ -608,7 +608,7 @@ impl MongoFields {
         db_name: Option<&str>,
         collection_name_filter: Option<&str>,
         field_name_filter: Option<&str>,
-        schema_mode: TypeMode,
+        type_mode: TypeMode,
     ) -> Self {
         let dbs = db_name.map_or_else(
             || {
@@ -637,7 +637,7 @@ impl MongoFields {
             current_field_for_collection: -1,
             collection_name_filter: collection_name_filter.and_then(to_name_regex),
             field_name_filter: field_name_filter.and_then(to_name_regex),
-            schema_mode,
+            type_mode,
         }
     }
 
@@ -650,7 +650,7 @@ impl MongoFields {
             current_field_for_collection: -1,
             collection_name_filter: None,
             field_name_filter: None,
-            schema_mode: TypeMode::Standard,
+            type_mode: TypeMode::Standard,
         }
     }
 
@@ -691,7 +691,7 @@ impl MongoFields {
                     match current_col_metadata_response.process_collection_metadata(
                         &self.current_db_name,
                         collection_name.as_str(),
-                        self.schema_mode,
+                        self.type_mode,
                     ) {
                         Ok(current_col_metadata) => {
                             if !current_col_metadata.is_empty() {
@@ -864,7 +864,7 @@ impl MongoStatement for MongoFields {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<crate::MongoColMetadata> {
-        match self.schema_mode {
+        match self.type_mode {
             TypeMode::Standard => &STANDARD_FIELDS_METADATA,
             TypeMode::Simple => &SIMPLE_FIELDS_METADATA,
         }

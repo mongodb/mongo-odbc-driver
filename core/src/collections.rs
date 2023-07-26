@@ -125,7 +125,7 @@ pub struct MongoCollections {
     collections_for_db_list: Vec<CollectionsForDb>,
     collection_name_filter: Option<Regex>,
     table_types_filter: Option<Vec<CollectionType>>,
-    schema_mode: TypeMode,
+    type_mode: TypeMode,
 }
 
 // Statement related to a SQLColumns call.
@@ -140,7 +140,7 @@ impl MongoCollections {
         db_name_filter: &str,
         collection_name_filter: &str,
         table_type: &str,
-        schema_mode: TypeMode,
+        type_mode: TypeMode,
     ) -> Self {
         let db_name_filter_regex = to_name_regex(db_name_filter);
         let databases = mongo_connection
@@ -188,14 +188,14 @@ impl MongoCollections {
             collections_for_db_list: databases,
             collection_name_filter: to_name_regex(collection_name_filter),
             table_types_filter: table_type_filter_to_vec(table_type),
-            schema_mode,
+            type_mode,
         }
     }
 
     // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
-    pub fn all_schemas(schema_mode: TypeMode) -> EmptyStatement {
+    pub fn all_schemas(type_mode: TypeMode) -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: match schema_mode {
+            resultset_metadata: match type_mode {
                 TypeMode::Standard => &STANDARD_COLLECTIONS_METADATA,
                 TypeMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
             },
@@ -210,7 +210,7 @@ impl MongoCollections {
             collections_for_db_list: Vec::new(),
             table_types_filter: None,
             collection_name_filter: None,
-            schema_mode: TypeMode::Standard,
+            type_mode: TypeMode::Standard,
         }
     }
 }
@@ -324,7 +324,7 @@ impl MongoStatement for MongoCollections {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        match self.schema_mode {
+        match self.type_mode {
             TypeMode::Standard => &STANDARD_COLLECTIONS_METADATA,
             TypeMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
         }

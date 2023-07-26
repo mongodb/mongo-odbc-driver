@@ -664,7 +664,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 Some(column_name_string.as_str())
             };
             let connection = must_be_valid!((*stmt.connection).as_connection());
-            let schema_mode = *connection.schema_mode.read().unwrap();
+            let type_mode = *connection.type_mode.read().unwrap();
             let mongo_statement = Box::new(MongoFields::list_columns(
                 connection
                     .mongo_connection
@@ -676,7 +676,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 catalog,
                 table,
                 column,
-                schema_mode,
+                type_mode,
             ));
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
             SqlReturn::SUCCESS
@@ -884,7 +884,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
 
     if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
         if simple.eq("1") {
-            *conn.schema_mode.write().unwrap() = TypeMode::Simple;
+            *conn.type_mode.write().unwrap() = TypeMode::Simple;
         }
     }
 
@@ -906,7 +906,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         database,
         connection_timeout,
         login_timeout,
-        *conn.schema_mode.read().unwrap(),
+        *conn.type_mode.read().unwrap(),
     )?)
 }
 
@@ -1040,13 +1040,13 @@ pub unsafe extern "C" fn SQLExecDirectW(
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let mongo_statement = {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
-                let schema_mode = *connection.schema_mode.read().unwrap();
+                let type_mode = *connection.type_mode.read().unwrap();
                 let attributes = connection.attributes.read().unwrap();
                 let timeout = attributes.connection_timeout;
                 let current_db = attributes.current_catalog.as_ref().cloned();
                 if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref()
                 {
-                    MongoQuery::execute(mongo_connection, current_db, timeout, &query, schema_mode)
+                    MongoQuery::execute(mongo_connection, current_db, timeout, &query, type_mode)
                         .map_err(|e| e.into())
                 } else {
                     Err(ODBCError::InvalidCursorState)
@@ -1184,13 +1184,13 @@ pub unsafe extern "C" fn SQLForeignKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let schema_mode = if stmt.connection.is_null() {
+            let type_mode = if stmt.connection.is_null() {
                 TypeMode::Standard
             } else {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
-                *connection.schema_mode.read().unwrap()
+                *connection.type_mode.read().unwrap()
             };
-            let mongo_statement = MongoForeignKeys::empty(schema_mode);
+            let mongo_statement = MongoForeignKeys::empty(type_mode);
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
@@ -2607,14 +2607,14 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
                 Some(sql_data_type) => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
 
-                    let schema_mode = if stmt.connection.is_null() {
+                    let type_mode = if stmt.connection.is_null() {
                         TypeMode::Standard
                     } else {
                         let connection = must_be_valid!((*stmt.connection).as_connection());
-                        *connection.schema_mode.read().unwrap()
+                        *connection.type_mode.read().unwrap()
                     };
 
-                    let types_info = MongoTypesInfo::new(sql_data_type, schema_mode);
+                    let types_info = MongoTypesInfo::new(sql_data_type, type_mode);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
                 }
@@ -2769,13 +2769,13 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let schema_mode = if stmt.connection.is_null() {
+            let type_mode = if stmt.connection.is_null() {
                 TypeMode::Standard
             } else {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
-                *connection.schema_mode.read().unwrap()
+                *connection.type_mode.read().unwrap()
             };
-            let mongo_statement = MongoPrimaryKeys::empty(schema_mode);
+            let mongo_statement = MongoPrimaryKeys::empty(type_mode);
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
@@ -3449,17 +3449,17 @@ fn sql_tables(
     schema: &str,
     table: &str,
     table_t: &str,
-    schema_mode: TypeMode,
+    type_mode: TypeMode,
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
         (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
             mongo_connection,
             Some(query_timeout),
-            schema_mode,
+            type_mode,
         ))),
-        ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas(schema_mode))),
+        ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas(type_mode))),
         ("", "", "", SQL_ALL_TABLE_TYPES) => {
-            Ok(Box::new(MongoTableTypes::all_table_types(schema_mode)))
+            Ok(Box::new(MongoTableTypes::all_table_types(type_mode)))
         }
         _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,
@@ -3467,7 +3467,7 @@ fn sql_tables(
             catalog,
             table,
             table_t,
-            schema_mode,
+            type_mode,
         ))),
     }
 }
@@ -3503,7 +3503,7 @@ pub unsafe extern "C" fn SQLTablesW(
             let table = input_text_to_string_w(table_name, name_length_3 as usize);
             let table_t = input_text_to_string_w(table_type, name_length_4 as usize);
             let connection = must_be_valid!((*stmt.connection).as_connection());
-            let schema_mode = *connection.schema_mode.read().unwrap();
+            let type_mode = *connection.type_mode.read().unwrap();
             let mongo_statement = sql_tables(
                 connection
                     .mongo_connection
@@ -3516,7 +3516,7 @@ pub unsafe extern "C" fn SQLTablesW(
                 &schema,
                 &table,
                 &table_t,
-                schema_mode,
+                type_mode,
             );
             let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
