@@ -1,4 +1,4 @@
-use crate::{odbc_uri::ODBCUri, MongoConnection, SchemaMode};
+use crate::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
 use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
 
 /// atlas_sql_test_connection returns true if a connection can be established
@@ -31,7 +31,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                     odbc_uri.get("database").map(|s| s.to_owned()),
                     None,
                     Some(30),
-                    SchemaMode::Standard,
+                    TypeMode::Standard,
                 ) {
                     Ok(_) => true,
                     Err(e) => {

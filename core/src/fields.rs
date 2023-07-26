@@ -4,7 +4,7 @@ use crate::{
     conn::MongoConnection,
     definitions::SqlDataType,
     err::{Error, Result},
-    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
     util::to_name_regex,
     BsonTypeInfo,
@@ -591,7 +591,7 @@ pub struct MongoFields {
     current_field_for_collection: isize,
     collection_name_filter: Option<Regex>,
     field_name_filter: Option<Regex>,
-    schema_mode: SchemaMode,
+    schema_mode: TypeMode,
 }
 
 // Statement related to a SQLTables call.
@@ -608,7 +608,7 @@ impl MongoFields {
         db_name: Option<&str>,
         collection_name_filter: Option<&str>,
         field_name_filter: Option<&str>,
-        schema_mode: SchemaMode,
+        schema_mode: TypeMode,
     ) -> Self {
         let dbs = db_name.map_or_else(
             || {
@@ -650,7 +650,7 @@ impl MongoFields {
             current_field_for_collection: -1,
             collection_name_filter: None,
             field_name_filter: None,
-            schema_mode: SchemaMode::Standard,
+            schema_mode: TypeMode::Standard,
         }
     }
 
@@ -865,8 +865,8 @@ impl MongoStatement for MongoFields {
 
     fn get_resultset_metadata(&self) -> &Vec<crate::MongoColMetadata> {
         match self.schema_mode {
-            SchemaMode::Standard => &STANDARD_FIELDS_METADATA,
-            SchemaMode::Simple => &SIMPLE_FIELDS_METADATA,
+            TypeMode::Standard => &STANDARD_FIELDS_METADATA,
+            TypeMode::Simple => &SIMPLE_FIELDS_METADATA,
         }
     }
 }

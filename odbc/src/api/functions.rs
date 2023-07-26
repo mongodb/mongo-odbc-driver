@@ -25,7 +25,7 @@ use logger::Logger;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
-    MongoTypesInfo, SchemaMode, SqlDataType,
+    MongoTypesInfo, TypeMode, SqlDataType,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -884,7 +884,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
 
     if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
         if simple.eq("1") {
-            *conn.schema_mode.write().unwrap() = SchemaMode::Simple;
+            *conn.schema_mode.write().unwrap() = TypeMode::Simple;
         }
     }
 
@@ -1185,7 +1185,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let schema_mode = if stmt.connection.is_null() {
-                SchemaMode::Standard
+                TypeMode::Standard
             } else {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
                 *connection.schema_mode.read().unwrap()
@@ -2608,7 +2608,7 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
 
                     let schema_mode = if stmt.connection.is_null() {
-                        SchemaMode::Standard
+                        TypeMode::Standard
                     } else {
                         let connection = must_be_valid!((*stmt.connection).as_connection());
                         *connection.schema_mode.read().unwrap()
@@ -2770,7 +2770,7 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let schema_mode = if stmt.connection.is_null() {
-                SchemaMode::Standard
+                TypeMode::Standard
             } else {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
                 *connection.schema_mode.read().unwrap()
@@ -3449,7 +3449,7 @@ fn sql_tables(
     schema: &str,
     table: &str,
     table_t: &str,
-    schema_mode: SchemaMode,
+    schema_mode: TypeMode,
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
         (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(

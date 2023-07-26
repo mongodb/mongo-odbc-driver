@@ -1,7 +1,7 @@
 use crate::api::{definitions::*, errors::ODBCError};
 use cstr::{Charset, WideChar};
 use logger::Logger;
-use mongo_odbc_core::SchemaMode;
+use mongo_odbc_core::TypeMode;
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
     borrow::BorrowMut,
@@ -238,8 +238,8 @@ pub struct Connection {
     // all Statements allocated from this Connection
     pub statements: RwLock<HashSet<*mut MongoHandle>>,
     pub errors: RwLock<Vec<ODBCError>>,
-    // schema_mode represents whether we're using simple_type_info or standard_type_info
-    pub schema_mode: RwLock<SchemaMode>,
+    // type_info represents whether we're using simple_type_info or standard_type_info
+    pub schema_mode: RwLock<TypeMode>,
 }
 
 #[derive(Debug, Default)]
@@ -274,7 +274,7 @@ impl Connection {
             state: RwLock::new(state),
             statements: RwLock::new(HashSet::new()),
             errors: RwLock::new(vec![]),
-            schema_mode: RwLock::new(SchemaMode::Standard),
+            schema_mode: RwLock::new(TypeMode::Standard),
         }
     }
 }

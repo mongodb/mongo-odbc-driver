@@ -1,6 +1,6 @@
 use crate::{
     col_metadata::MongoColMetadata,
-    schema_mode::{BsonTypeInfo, SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{BsonTypeInfo, TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::EmptyStatement,
 };
 use lazy_static::lazy_static;
@@ -100,11 +100,11 @@ lazy_static! {
 pub struct MongoPrimaryKeys {}
 
 impl MongoPrimaryKeys {
-    pub fn empty(schema_mode: SchemaMode) -> EmptyStatement {
+    pub fn empty(schema_mode: TypeMode) -> EmptyStatement {
         EmptyStatement {
             resultset_metadata: match schema_mode {
-                SchemaMode::Standard => &STANDARD_PK_METADATA,
-                SchemaMode::Simple => &SIMPLE_PK_METADATA,
+                TypeMode::Standard => &STANDARD_PK_METADATA,
+                TypeMode::Simple => &SIMPLE_PK_METADATA,
             },
         }
     }

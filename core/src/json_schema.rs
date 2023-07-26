@@ -1,5 +1,5 @@
 use crate::{
-    schema_mode::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
     Error,
 };
 use serde::{Deserialize, Serialize};
@@ -230,7 +230,7 @@ pub mod simplified {
     use crate::{
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
-        schema_mode::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
+        type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
         Error,
     };
     use std::collections::{BTreeMap, BTreeSet};
@@ -944,7 +944,7 @@ mod unit {
     mod bson_type_info {
         use crate::{
             json_schema::{self, simplified, BsonType, BsonTypeName},
-            schema_mode::StandardBsonTypeInfo,
+            type_info::StandardBsonTypeInfo,
         };
 
         #[test]

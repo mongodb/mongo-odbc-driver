@@ -2,7 +2,7 @@ use crate::{
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
-    schema_mode::{BsonTypeInfo, SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{BsonTypeInfo, TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
     Error,
 };
@@ -228,7 +228,7 @@ pub struct MongoDatabases {
     database_names: Vec<String>,
     // The current database index.
     current_db_index: usize,
-    schema_mode: SchemaMode,
+    schema_mode: TypeMode,
 }
 
 // Statement for SQLTables(SQL_ALL_CATALOGS, "","").
@@ -241,7 +241,7 @@ impl MongoDatabases {
     pub fn list_all_catalogs(
         mongo_connection: &MongoConnection,
         _query_timeout: Option<i32>,
-        schema_mode: SchemaMode,
+        schema_mode: TypeMode,
     ) -> Self {
         let database_names: Vec<String> = mongo_connection
             .client
@@ -268,7 +268,7 @@ impl MongoDatabases {
         MongoDatabases {
             database_names: vec![],
             current_db_index: 0,
-            schema_mode: SchemaMode::Standard,
+            schema_mode: TypeMode::Standard,
         }
     }
 }
@@ -301,8 +301,8 @@ impl MongoStatement for MongoDatabases {
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
         match self.schema_mode {
-            SchemaMode::Standard => &STANDARD_DATABASES_METADATA,
-            SchemaMode::Simple => &SIMPLE_DATABASES_METADATA,
+            TypeMode::Standard => &STANDARD_DATABASES_METADATA,
+            TypeMode::Simple => &SIMPLE_DATABASES_METADATA,
         }
     }
 }

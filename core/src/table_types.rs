@@ -1,7 +1,7 @@
 use crate::{
     databases::{SIMPLE_DATABASES_METADATA, STANDARD_DATABASES_METADATA},
     err::Result,
-    Error, MongoColMetadata, MongoConnection, MongoStatement, SchemaMode,
+    Error, MongoColMetadata, MongoConnection, MongoStatement, TypeMode,
 };
 use bson::Bson;
 
@@ -13,12 +13,12 @@ pub struct MongoTableTypes {
     table_type: Vec<&'static str>,
     // The current table type index
     current_table_type_index: usize,
-    schema_mode: SchemaMode,
+    schema_mode: TypeMode,
 }
 
 impl MongoTableTypes {
     // Statement for SQLTables("", "", "", SQL_ALL_TABLE_TYPES ).
-    pub fn all_table_types(schema_mode: SchemaMode) -> MongoTableTypes {
+    pub fn all_table_types(schema_mode: TypeMode) -> MongoTableTypes {
         MongoTableTypes {
             table_type: Vec::from(TABLE_TYPES),
             current_table_type_index: 0,
@@ -57,8 +57,8 @@ impl MongoStatement for MongoTableTypes {
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
         match self.schema_mode {
-            SchemaMode::Standard => &STANDARD_DATABASES_METADATA,
-            SchemaMode::Simple => &SIMPLE_DATABASES_METADATA,
+            TypeMode::Standard => &STANDARD_DATABASES_METADATA,
+            TypeMode::Simple => &SIMPLE_DATABASES_METADATA,
         }
     }
 }

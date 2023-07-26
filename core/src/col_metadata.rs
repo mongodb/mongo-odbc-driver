@@ -4,7 +4,7 @@ use crate::{
         simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
     },
-    schema_mode::{BsonTypeInfo, SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{BsonTypeInfo, TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     Error, Result,
 };
 use itertools::Itertools;
@@ -99,13 +99,13 @@ impl MongoColMetadata {
         field_name: String,
         field_schema: Schema,
         nullability: Nullability,
-        schema_mode: SchemaMode,
+        schema_mode: TypeMode,
     ) -> MongoColMetadata {
         let bson_type_info = match schema_mode {
-            SchemaMode::Standard => {
+            TypeMode::Standard => {
                 BsonTypeInfo::Standard(StandardBsonTypeInfo::from(field_schema))
             }
-            SchemaMode::Simple => BsonTypeInfo::Simple(SimpleBsonTypeInfo::from(field_schema)),
+            TypeMode::Simple => BsonTypeInfo::Simple(SimpleBsonTypeInfo::from(field_schema)),
         };
 
         MongoColMetadata::new_metadata_from_bson_type_info(
@@ -158,7 +158,7 @@ impl SqlGetSchemaResponse {
     pub(crate) fn process_result_metadata(
         &self,
         current_db: &str,
-        schema_mode: SchemaMode,
+        schema_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
@@ -212,7 +212,7 @@ impl SqlGetSchemaResponse {
         &self,
         current_db: &str,
         current_collection: &str,
-        schema_mode: SchemaMode,
+        schema_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let collection_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
@@ -232,7 +232,7 @@ impl SqlGetSchemaResponse {
         object_schema: &crate::json_schema::simplified::Schema,
         current_db: &str,
         current_collection: &str,
-        schema_mode: SchemaMode,
+        schema_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let object_schema = object_schema.assert_object_schema()?;
 
@@ -327,7 +327,7 @@ mod unit {
         use crate::{
             col_metadata::{SqlGetSchemaResponse, VersionedJsonSchema},
             json_schema::{BsonType, BsonTypeName, Schema},
-            map, Error, SchemaMode,
+            map, Error, TypeMode,
         };
 
         #[test]
@@ -343,7 +343,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_result_metadata("test_db", SchemaMode::Standard);
+            let actual = input.process_result_metadata("test_db", TypeMode::Standard);
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema(_)) => (),
@@ -371,7 +371,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_result_metadata("test_db", SchemaMode::Standard);
+            let actual = input.process_result_metadata("test_db", TypeMode::Standard);
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema(_)) => (),
@@ -419,7 +419,7 @@ mod unit {
                 },
             };
 
-            let res = input.process_result_metadata("test_db", SchemaMode::Standard);
+            let res = input.process_result_metadata("test_db", TypeMode::Standard);
 
             match res {
                 Err(e) => panic!("unexpected error: {e:?}"),

@@ -1,6 +1,6 @@
 use crate::{
     definitions::SqlDataType,
-    schema_mode::{TypeInfoFields, SQL_PRED_BASIC, SQL_PRED_NONE, SQL_SEARCHABLE},
+    type_info::{TypeInfoFields, SQL_PRED_BASIC, SQL_PRED_NONE, SQL_SEARCHABLE},
 };
 
 #[non_exhaustive]

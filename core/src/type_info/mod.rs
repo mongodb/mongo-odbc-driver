@@ -2,13 +2,13 @@ use crate::definitions::SqlDataType;
 
 mod simple_bson_type_info;
 mod standard_bson_type_info;
-pub mod type_info;
+pub mod mongo_type_info;
 
 pub use simple_bson_type_info::SimpleBsonTypeInfo;
 pub use standard_bson_type_info::StandardBsonTypeInfo;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
-pub enum SchemaMode {
+pub enum TypeMode {
     Standard,
     Simple,
 }

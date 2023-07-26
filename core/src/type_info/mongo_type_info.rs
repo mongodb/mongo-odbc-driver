@@ -3,14 +3,14 @@ use crate::{
     conn::MongoConnection,
     definitions::SqlDataType,
     err::Result,
-    schema_mode::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
-    BsonTypeInfo, Error, SchemaMode,
+    BsonTypeInfo, Error, TypeMode,
 };
 use bson::Bson;
 use odbc_sys::Nullability;
 
-use crate::schema_mode::TypeInfoFields;
+use crate::type_info::TypeInfoFields;
 use lazy_static::lazy_static;
 
 const STANDARD_DATA_TYPES: [TypeInfoFields; 21] = [
@@ -338,11 +338,11 @@ lazy_static! {
 pub struct MongoTypesInfo {
     current_type_index: usize,
     sql_data_type: SqlDataType,
-    schema_mode: SchemaMode,
+    schema_mode: TypeMode,
 }
 
 impl MongoTypesInfo {
-    pub fn new(sql_data_type: SqlDataType, schema_mode: SchemaMode) -> MongoTypesInfo {
+    pub fn new(sql_data_type: SqlDataType, schema_mode: TypeMode) -> MongoTypesInfo {
         MongoTypesInfo {
             current_type_index: 0,
             sql_data_type,
@@ -356,8 +356,8 @@ impl MongoStatement for MongoTypesInfo {
     // a type is valid if its sql type matches the desired sql type, or if we are getting all types.
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         let data_types = match self.schema_mode {
-            SchemaMode::Standard => STANDARD_DATA_TYPES,
-            SchemaMode::Simple => SIMPLE_DATA_TYPES,
+            TypeMode::Standard => STANDARD_DATA_TYPES,
+            TypeMode::Simple => SIMPLE_DATA_TYPES,
         };
 
         loop {
@@ -399,8 +399,8 @@ impl MongoStatement for MongoTypesInfo {
         }
 
         let data_type = match self.schema_mode {
-            SchemaMode::Standard => STANDARD_DATA_TYPES.get(self.current_type_index - 1),
-            SchemaMode::Simple => SIMPLE_DATA_TYPES.get(self.current_type_index - 1),
+            TypeMode::Standard => STANDARD_DATA_TYPES.get(self.current_type_index - 1),
+            TypeMode::Simple => SIMPLE_DATA_TYPES.get(self.current_type_index - 1),
         };
 
         match data_type {
@@ -453,8 +453,8 @@ impl MongoStatement for MongoTypesInfo {
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
         match self.schema_mode {
-            SchemaMode::Standard => &STANDARD_TYPES_INFO_METADATA,
-            SchemaMode::Simple => &SIMPLE_TYPES_INFO_METADATA,
+            TypeMode::Standard => &STANDARD_TYPES_INFO_METADATA,
+            TypeMode::Simple => &SIMPLE_TYPES_INFO_METADATA,
         }
     }
 }

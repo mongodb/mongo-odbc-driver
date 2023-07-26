@@ -4,7 +4,7 @@ use crate::{
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
-    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
     util::{COLLECTION, TABLE, TIMESERIES},
     BsonTypeInfo, Error,
@@ -125,7 +125,7 @@ pub struct MongoCollections {
     collections_for_db_list: Vec<CollectionsForDb>,
     collection_name_filter: Option<Regex>,
     table_types_filter: Option<Vec<CollectionType>>,
-    schema_mode: SchemaMode,
+    schema_mode: TypeMode,
 }
 
 // Statement related to a SQLColumns call.
@@ -140,7 +140,7 @@ impl MongoCollections {
         db_name_filter: &str,
         collection_name_filter: &str,
         table_type: &str,
-        schema_mode: SchemaMode,
+        schema_mode: TypeMode,
     ) -> Self {
         let db_name_filter_regex = to_name_regex(db_name_filter);
         let databases = mongo_connection
@@ -193,11 +193,11 @@ impl MongoCollections {
     }
 
     // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
-    pub fn all_schemas(schema_mode: SchemaMode) -> EmptyStatement {
+    pub fn all_schemas(schema_mode: TypeMode) -> EmptyStatement {
         EmptyStatement {
             resultset_metadata: match schema_mode {
-                SchemaMode::Standard => &STANDARD_COLLECTIONS_METADATA,
-                SchemaMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
+                TypeMode::Standard => &STANDARD_COLLECTIONS_METADATA,
+                TypeMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
             },
         }
     }
@@ -210,7 +210,7 @@ impl MongoCollections {
             collections_for_db_list: Vec::new(),
             table_types_filter: None,
             collection_name_filter: None,
-            schema_mode: SchemaMode::Standard,
+            schema_mode: TypeMode::Standard,
         }
     }
 }
@@ -325,8 +325,8 @@ impl MongoStatement for MongoCollections {
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
         match self.schema_mode {
-            SchemaMode::Standard => &STANDARD_COLLECTIONS_METADATA,
-            SchemaMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
+            TypeMode::Standard => &STANDARD_COLLECTIONS_METADATA,
+            TypeMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     col_metadata::MongoColMetadata,
-    schema_mode::{SchemaMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::EmptyStatement,
     BsonTypeInfo,
 };
@@ -213,11 +213,11 @@ lazy_static! {
 pub struct MongoForeignKeys {}
 
 impl MongoForeignKeys {
-    pub fn empty(schema_mode: SchemaMode) -> EmptyStatement {
+    pub fn empty(schema_mode: TypeMode) -> EmptyStatement {
         EmptyStatement {
             resultset_metadata: match schema_mode {
-                SchemaMode::Standard => &STANDARD_FK_METADATA,
-                SchemaMode::Simple => &SIMPLE_FK_METADATA,
+                TypeMode::Standard => &STANDARD_FK_METADATA,
+                TypeMode::Simple => &SIMPLE_FK_METADATA,
             },
         }
     }
