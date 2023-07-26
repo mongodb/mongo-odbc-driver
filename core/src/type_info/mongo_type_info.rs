@@ -3,8 +3,8 @@ use crate::{
     conn::MongoConnection,
     definitions::SqlDataType,
     err::Result,
-    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
+    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
     BsonTypeInfo, Error, TypeMode,
 };
 use bson::Bson;

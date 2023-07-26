@@ -4,8 +4,8 @@ use crate::{
     conn::MongoConnection,
     definitions::SqlDataType,
     err::{Error, Result},
-    type_info::{TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
+    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
     util::to_name_regex,
     BsonTypeInfo,
 };

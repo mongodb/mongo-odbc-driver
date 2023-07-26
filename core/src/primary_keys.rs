@@ -1,7 +1,7 @@
 use crate::{
     col_metadata::MongoColMetadata,
-    type_info::{BsonTypeInfo, TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::EmptyStatement,
+    type_info::{BsonTypeInfo, SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
 };
 use lazy_static::lazy_static;
 use odbc_sys::Nullability;

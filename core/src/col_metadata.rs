@@ -4,7 +4,7 @@ use crate::{
         simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
     },
-    type_info::{BsonTypeInfo, TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    type_info::{BsonTypeInfo, SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
     Error, Result,
 };
 use itertools::Itertools;
@@ -102,9 +102,7 @@ impl MongoColMetadata {
         type_mode: TypeMode,
     ) -> MongoColMetadata {
         let bson_type_info = match type_mode {
-            TypeMode::Standard => {
-                BsonTypeInfo::Standard(StandardBsonTypeInfo::from(field_schema))
-            }
+            TypeMode::Standard => BsonTypeInfo::Standard(StandardBsonTypeInfo::from(field_schema)),
             TypeMode::Simple => BsonTypeInfo::Simple(SimpleBsonTypeInfo::from(field_schema)),
         };
 

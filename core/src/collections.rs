@@ -4,8 +4,8 @@ use crate::{
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
-    type_info::{TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
+    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
     util::{COLLECTION, TABLE, TIMESERIES},
     BsonTypeInfo, Error,
 };

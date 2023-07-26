@@ -1,7 +1,7 @@
 use crate::{
     col_metadata::MongoColMetadata,
-    type_info::{TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::EmptyStatement,
+    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
     BsonTypeInfo,
 };
 use lazy_static::lazy_static;

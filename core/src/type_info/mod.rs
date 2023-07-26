@@ -1,8 +1,8 @@
 use crate::definitions::SqlDataType;
 
+pub mod mongo_type_info;
 mod simple_bson_type_info;
 mod standard_bson_type_info;
-pub mod mongo_type_info;
 
 pub use simple_bson_type_info::SimpleBsonTypeInfo;
 pub use standard_bson_type_info::StandardBsonTypeInfo;

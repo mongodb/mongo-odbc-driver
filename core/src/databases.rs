@@ -2,8 +2,8 @@ use crate::{
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
-    type_info::{BsonTypeInfo, TypeMode, SimpleBsonTypeInfo, StandardBsonTypeInfo},
     stmt::MongoStatement,
+    type_info::{BsonTypeInfo, SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
     Error,
 };
 use bson::Bson;

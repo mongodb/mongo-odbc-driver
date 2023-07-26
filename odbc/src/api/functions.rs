@@ -25,7 +25,7 @@ use logger::Logger;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
-    MongoTypesInfo, TypeMode, SqlDataType,
+    MongoTypesInfo, SqlDataType, TypeMode,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
