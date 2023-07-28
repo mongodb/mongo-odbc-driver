@@ -5,9 +5,9 @@ use crate::{
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
-    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
+    BsonTypeInfo, TypeMode,
     util::{COLLECTION, TABLE, TIMESERIES},
-    BsonTypeInfo, Error,
+    Error,
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
@@ -16,77 +16,45 @@ use odbc_sys::Nullability;
 use regex::Regex;
 
 lazy_static! {
-    static ref STANDARD_COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
+    static ref COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "REMARKS".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
-            Nullability::NULLABLE
-        ),
-    ];
-    static ref SIMPLE_COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "TABLE_CAT".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "TABLE_SCHEM".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "TABLE_NAME".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "TABLE_TYPE".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "REMARKS".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
     ];
@@ -125,7 +93,6 @@ pub struct MongoCollections {
     collections_for_db_list: Vec<CollectionsForDb>,
     collection_name_filter: Option<Regex>,
     table_types_filter: Option<Vec<CollectionType>>,
-    type_mode: TypeMode,
 }
 
 // Statement related to a SQLColumns call.
@@ -140,7 +107,6 @@ impl MongoCollections {
         db_name_filter: &str,
         collection_name_filter: &str,
         table_type: &str,
-        type_mode: TypeMode,
     ) -> Self {
         let db_name_filter_regex = to_name_regex(db_name_filter);
         let databases = mongo_connection
@@ -188,17 +154,13 @@ impl MongoCollections {
             collections_for_db_list: databases,
             collection_name_filter: to_name_regex(collection_name_filter),
             table_types_filter: table_type_filter_to_vec(table_type),
-            type_mode,
         }
     }
 
     // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
-    pub fn all_schemas(type_mode: TypeMode) -> EmptyStatement {
+    pub fn all_schemas() -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: match type_mode {
-                TypeMode::Standard => &STANDARD_COLLECTIONS_METADATA,
-                TypeMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
-            },
+            resultset_metadata: &COLLECTIONS_METADATA
         }
     }
 
@@ -210,7 +172,6 @@ impl MongoCollections {
             collections_for_db_list: Vec::new(),
             table_types_filter: None,
             collection_name_filter: None,
-            type_mode: TypeMode::Standard,
         }
     }
 }
@@ -324,10 +285,7 @@ impl MongoStatement for MongoCollections {
     }
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        match self.type_mode {
-            TypeMode::Standard => &STANDARD_COLLECTIONS_METADATA,
-            TypeMode::Simple => &SIMPLE_COLLECTIONS_METADATA,
-        }
+        &COLLECTIONS_METADATA
     }
 }
 

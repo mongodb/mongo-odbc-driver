@@ -39,7 +39,7 @@ pub struct SimpleTypeInfo{
 }
 
 impl SimpleTypeInfo {
-    pub fn new(precision: u16, octet_length: u16, fixed_bytes_length: u16) -> Option<Self>{
+    const fn new(precision: u16, octet_length: u16, fixed_bytes_length: u16) -> Option<Self>{
         Some(Self{
             sql_type: SqlDataType::VARCHAR,
             non_concise_type: SqlDataType::VARCHAR,
@@ -49,12 +49,7 @@ impl SimpleTypeInfo {
         })
     }
 
-
-}
-
-
-impl Default for SimpleTypeInfo{
-    fn default() -> Option<Self> {
+    const fn default() -> Option<Self> {
         Some(Self{
             sql_type: SqlDataType::VARCHAR,
             non_concise_type: SqlDataType::VARCHAR,
@@ -64,6 +59,9 @@ impl Default for SimpleTypeInfo{
         })
     }
 }
+
+
+
 
 pub const SQL_SEARCHABLE: i32 = 3;
 pub const SQL_PRED_BASIC: i32 = 2;
@@ -491,47 +489,47 @@ impl BsonTypeInfo  {
     };
 
     pub fn sql_type(&self, type_mode: TypeMode) -> SqlDataType{
-        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
-            self.type_info_fields.simple_type_info.unwrap().sql_type
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some(){
+            self.simple_type_info.clone().unwrap().sql_type
         }
         else {
-            self.type_info_fields.sql_type
+            self.sql_type
         }
     }
 
     pub fn non_concise_type(&self, type_mode: TypeMode) -> SqlDataType{
-        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
-            self.type_info_fields.simple_type_info.unwrap().non_concise_type
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some(){
+            self.simple_type_info.clone().unwrap().non_concise_type
         }
         else {
-            self.type_info_fields.non_concise_type
+            self.non_concise_type
         }
     }
 
     pub fn precision(&self, type_mode: TypeMode) -> Option<u16>{
-        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
-            self.type_info_fields.simple_type_info.unwrap().precision
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some(){
+            self.simple_type_info.clone().unwrap().precision
         }
         else {
-            self.type_info_fields.precision
+            self.precision
         }
     }
 
     pub fn octet_length(&self, type_mode: TypeMode) -> Option<u16>{
-        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
-            self.type_info_fields.simple_type_info.unwrap().octet_length
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some(){
+            self.simple_type_info.clone().unwrap().octet_length
         }
         else {
-            self.type_info_fields.octet_length
+            self.octet_length
         }
     }
 
     pub fn fixed_bytes_length(&self, type_mode: TypeMode) -> Option<u16>{
-        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
-            self.type_info_fields.simple_type_info.unwrap().fixed_bytes_length
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some(){
+            self.simple_type_info.clone().unwrap().fixed_bytes_length
         }
         else {
-            self.type_info_fields.fixed_bytes_length
+            self.fixed_bytes_length
         }
     }
 

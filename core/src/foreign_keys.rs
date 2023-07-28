@@ -1,210 +1,124 @@
 use crate::{
     col_metadata::MongoColMetadata,
     stmt::EmptyStatement,
-    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
-    BsonTypeInfo,
+    BsonTypeInfo, TypeMode,
+
 };
 use lazy_static::lazy_static;
 use odbc_sys::Nullability;
 
 lazy_static! {
-    static ref STANDARD_FK_METADATA: Vec<MongoColMetadata> = vec![
+    static ref FK_METADATA: Vec<MongoColMetadata> = vec![
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "PKTABLE_CAT".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "PKTABLE_SCHEM".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "PKTABLE_NAME".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "PKCOLUMN_NAME".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "FKTABLE_CAT".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "FKTABLE_SCHEM".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "FKTABLE_NAME".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "FKCOLUMN_NAME".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "KEY_SEQ".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::INT),
+            BsonTypeInfo::INT,
+            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "UPDATE_RULE".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::INT),
+            BsonTypeInfo::INT,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "DELETE_RULE".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::INT),
+            BsonTypeInfo::INT,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "FK_NAME".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "PK_NAME".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::STRING),
+            BsonTypeInfo::STRING,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info(
             "",
             "".to_string(),
             "DEFERRABILITY".to_string(),
-            BsonTypeInfo::Standard(StandardBsonTypeInfo::INT),
-            Nullability::NULLABLE
-        ),
-    ];
-    static ref SIMPLE_FK_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "PKTABLE_CAT".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "PKTABLE_SCHEM".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "PKTABLE_NAME".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "PKCOLUMN_NAME".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "FKTABLE_CAT".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "FKTABLE_SCHEM".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "FKTABLE_NAME".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "FKCOLUMN_NAME".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "KEY_SEQ".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::INT),
-            Nullability::NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "UPDATE_RULE".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::INT),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "DELETE_RULE".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::INT),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "FK_NAME".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "PK_NAME".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::STRING),
-            Nullability::NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
-            "",
-            "".to_string(),
-            "DEFERRABILITY".to_string(),
-            BsonTypeInfo::Simple(SimpleBsonTypeInfo::INT),
+            BsonTypeInfo::INT,
+            TypeMode::Standard,
             Nullability::NULLABLE
         ),
     ];
@@ -213,12 +127,9 @@ lazy_static! {
 pub struct MongoForeignKeys {}
 
 impl MongoForeignKeys {
-    pub fn empty(type_mode: TypeMode) -> EmptyStatement {
+    pub fn empty() -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: match type_mode {
-                TypeMode::Standard => &STANDARD_FK_METADATA,
-                TypeMode::Simple => &SIMPLE_FK_METADATA,
-            },
+            resultset_metadata: &FK_METADATA,
         }
     }
 }

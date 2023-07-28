@@ -1,5 +1,5 @@
 use crate::{
-    type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
+    BsonTypeInfo,
     Error,
 };
 use serde::{Deserialize, Serialize};
@@ -167,70 +167,42 @@ pub enum Items {
     Multiple(Vec<Schema>),
 }
 
-impl From<BsonTypeName> for StandardBsonTypeInfo {
+impl From<BsonTypeName> for BsonTypeInfo {
     fn from(v: BsonTypeName) -> Self {
         match v {
-            BsonTypeName::Array => StandardBsonTypeInfo::ARRAY,
-            BsonTypeName::Object => StandardBsonTypeInfo::OBJECT,
-            BsonTypeName::Null => StandardBsonTypeInfo::NULL,
-            BsonTypeName::String => StandardBsonTypeInfo::STRING,
-            BsonTypeName::Int => StandardBsonTypeInfo::INT,
-            BsonTypeName::Double => StandardBsonTypeInfo::DOUBLE,
-            BsonTypeName::Long => StandardBsonTypeInfo::LONG,
-            BsonTypeName::Decimal => StandardBsonTypeInfo::DECIMAL,
-            BsonTypeName::BinData => StandardBsonTypeInfo::BINDATA,
-            BsonTypeName::ObjectId => StandardBsonTypeInfo::OBJECTID,
-            BsonTypeName::Bool => StandardBsonTypeInfo::BOOL,
-            BsonTypeName::Date => StandardBsonTypeInfo::DATE,
-            BsonTypeName::Regex => StandardBsonTypeInfo::REGEX,
-            BsonTypeName::DbPointer => StandardBsonTypeInfo::DBPOINTER,
-            BsonTypeName::Javascript => StandardBsonTypeInfo::JAVASCRIPT,
-            BsonTypeName::Symbol => StandardBsonTypeInfo::SYMBOL,
-            BsonTypeName::JavascriptWithScope => StandardBsonTypeInfo::JAVASCRIPTWITHSCOPE,
-            BsonTypeName::Timestamp => StandardBsonTypeInfo::TIMESTAMP,
-            BsonTypeName::MinKey => StandardBsonTypeInfo::MINKEY,
-            BsonTypeName::MaxKey => StandardBsonTypeInfo::MAXKEY,
-            BsonTypeName::Undefined => StandardBsonTypeInfo::UNDEFINED,
-            BsonTypeName::Any => StandardBsonTypeInfo::BSON,
+            BsonTypeName::Array => BsonTypeInfo::ARRAY,
+            BsonTypeName::Object => BsonTypeInfo::OBJECT,
+            BsonTypeName::Null => BsonTypeInfo::NULL,
+            BsonTypeName::String => BsonTypeInfo::STRING,
+            BsonTypeName::Int => BsonTypeInfo::INT,
+            BsonTypeName::Double => BsonTypeInfo::DOUBLE,
+            BsonTypeName::Long => BsonTypeInfo::LONG,
+            BsonTypeName::Decimal => BsonTypeInfo::DECIMAL,
+            BsonTypeName::BinData => BsonTypeInfo::BINDATA,
+            BsonTypeName::ObjectId => BsonTypeInfo::OBJECTID,
+            BsonTypeName::Bool => BsonTypeInfo::BOOL,
+            BsonTypeName::Date => BsonTypeInfo::DATE,
+            BsonTypeName::Regex => BsonTypeInfo::REGEX,
+            BsonTypeName::DbPointer => BsonTypeInfo::DBPOINTER,
+            BsonTypeName::Javascript => BsonTypeInfo::JAVASCRIPT,
+            BsonTypeName::Symbol => BsonTypeInfo::SYMBOL,
+            BsonTypeName::JavascriptWithScope => BsonTypeInfo::JAVASCRIPTWITHSCOPE,
+            BsonTypeName::Timestamp => BsonTypeInfo::TIMESTAMP,
+            BsonTypeName::MinKey => BsonTypeInfo::MINKEY,
+            BsonTypeName::MaxKey => BsonTypeInfo::MAXKEY,
+            BsonTypeName::Undefined => BsonTypeInfo::UNDEFINED,
+            BsonTypeName::Any => BsonTypeInfo::BSON,
         }
     }
 }
 
-impl From<BsonTypeName> for SimpleBsonTypeInfo {
-    fn from(v: BsonTypeName) -> Self {
-        match v {
-            BsonTypeName::Array => SimpleBsonTypeInfo::ARRAY,
-            BsonTypeName::Object => SimpleBsonTypeInfo::OBJECT,
-            BsonTypeName::Null => SimpleBsonTypeInfo::NULL,
-            BsonTypeName::String => SimpleBsonTypeInfo::STRING,
-            BsonTypeName::Int => SimpleBsonTypeInfo::INT,
-            BsonTypeName::Double => SimpleBsonTypeInfo::DOUBLE,
-            BsonTypeName::Long => SimpleBsonTypeInfo::LONG,
-            BsonTypeName::Decimal => SimpleBsonTypeInfo::DECIMAL,
-            BsonTypeName::BinData => SimpleBsonTypeInfo::BINDATA,
-            BsonTypeName::ObjectId => SimpleBsonTypeInfo::OBJECTID,
-            BsonTypeName::Bool => SimpleBsonTypeInfo::BOOL,
-            BsonTypeName::Date => SimpleBsonTypeInfo::DATE,
-            BsonTypeName::Regex => SimpleBsonTypeInfo::REGEX,
-            BsonTypeName::DbPointer => SimpleBsonTypeInfo::DBPOINTER,
-            BsonTypeName::Javascript => SimpleBsonTypeInfo::JAVASCRIPT,
-            BsonTypeName::Symbol => SimpleBsonTypeInfo::SYMBOL,
-            BsonTypeName::JavascriptWithScope => SimpleBsonTypeInfo::JAVASCRIPTWITHSCOPE,
-            BsonTypeName::Timestamp => SimpleBsonTypeInfo::TIMESTAMP,
-            BsonTypeName::MinKey => SimpleBsonTypeInfo::MINKEY,
-            BsonTypeName::MaxKey => SimpleBsonTypeInfo::MAXKEY,
-            BsonTypeName::Undefined => SimpleBsonTypeInfo::UNDEFINED,
-            BsonTypeName::Any => SimpleBsonTypeInfo::BSON,
-        }
-    }
-}
 
 pub mod simplified {
 
     use crate::{
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
-        type_info::{SimpleBsonTypeInfo, StandardBsonTypeInfo},
+        BsonTypeInfo,
         Error,
     };
     use std::collections::{BTreeMap, BTreeSet};
@@ -364,17 +336,17 @@ pub mod simplified {
         }
     }
 
-    impl From<Atomic> for StandardBsonTypeInfo {
+    impl From<Atomic> for BsonTypeInfo {
         fn from(a: Atomic) -> Self {
             match a {
                 Atomic::Scalar(t) => t.into(),
-                Atomic::Object(_) => StandardBsonTypeInfo::OBJECT,
-                Atomic::Array(_) => StandardBsonTypeInfo::ARRAY,
+                Atomic::Object(_) => BsonTypeInfo::OBJECT,
+                Atomic::Array(_) => BsonTypeInfo::ARRAY,
             }
         }
     }
 
-    impl From<Schema> for StandardBsonTypeInfo {
+    impl From<Schema> for BsonTypeInfo {
         fn from(v: Schema) -> Self {
             match v {
                 Schema::Atomic(a) => a.into(),
@@ -386,41 +358,13 @@ pub mod simplified {
                             .collect::<Vec<Atomic>>();
                         (atomics.len() == 1)
                             .then(|| atomics.first().unwrap().to_owned().into())
-                            .unwrap_or(StandardBsonTypeInfo::BSON)
+                            .unwrap_or(BsonTypeInfo::BSON)
                     })
-                    .unwrap_or(StandardBsonTypeInfo::BSON),
+                    .unwrap_or(BsonTypeInfo::BSON),
             }
         }
     }
 
-    impl From<Atomic> for SimpleBsonTypeInfo {
-        fn from(a: Atomic) -> Self {
-            match a {
-                Atomic::Scalar(t) => t.into(),
-                Atomic::Object(_) => SimpleBsonTypeInfo::OBJECT,
-                Atomic::Array(_) => SimpleBsonTypeInfo::ARRAY,
-            }
-        }
-    }
-
-    impl From<Schema> for SimpleBsonTypeInfo {
-        fn from(v: Schema) -> Self {
-            match v {
-                Schema::Atomic(a) => a.into(),
-                Schema::AnyOf(b) => (b.len() == 2)
-                    .then(|| {
-                        let atomics = b
-                            .into_iter()
-                            .filter(|a| !matches!(a, Atomic::Scalar(BsonTypeName::Null)))
-                            .collect::<Vec<Atomic>>();
-                        (atomics.len() == 1)
-                            .then(|| atomics.first().unwrap().to_owned().into())
-                            .unwrap_or(SimpleBsonTypeInfo::BSON)
-                    })
-                    .unwrap_or(SimpleBsonTypeInfo::BSON),
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -944,7 +888,7 @@ mod unit {
     mod bson_type_info {
         use crate::{
             json_schema::{self, simplified, BsonType, BsonTypeName},
-            type_info::StandardBsonTypeInfo,
+            BsonTypeInfo,
         };
 
         #[test]
@@ -965,7 +909,7 @@ mod unit {
 
             let input = simplified::Schema::try_from(input_schema).unwrap();
 
-            assert_eq!(StandardBsonTypeInfo::INT, StandardBsonTypeInfo::from(input));
+            assert_eq!(BsonTypeInfo::INT, BsonTypeInfo::from(input));
         }
 
         #[test]
@@ -987,8 +931,8 @@ mod unit {
             let input = simplified::Schema::try_from(input_schema).unwrap();
 
             assert_eq!(
-                StandardBsonTypeInfo::BSON,
-                StandardBsonTypeInfo::from(input)
+                BsonTypeInfo::BSON,
+                BsonTypeInfo::from(input)
             );
         }
     }

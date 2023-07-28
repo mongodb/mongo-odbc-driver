@@ -4,8 +4,7 @@ use crate::{
         simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
     },
-    type_info::{BsonTypeInfo, SimpleBsonTypeInfo, StandardBsonTypeInfo, TypeMode},
-    Error, Result,
+    BsonTypeInfo,TypeMode, Error, Result,
 };
 use itertools::Itertools;
 use odbc_sys::Nullability;
@@ -55,40 +54,36 @@ impl MongoColMetadata {
         datasource_name: String,
         field_name: String,
         bson_type_info: BsonTypeInfo,
+        type_mode: TypeMode,
         nullability: Nullability,
     ) -> MongoColMetadata {
-        let specific_type_info = match bson_type_info {
-            BsonTypeInfo::Standard(standard) => standard.type_info_fields,
-            BsonTypeInfo::Simple(simple) => simple.type_info_fields,
-        };
-
         MongoColMetadata {
             // For base_col_name, base_table_name, and catalog_name, we do
             // not have this information in sqlGetResultSchema, so these will
             // always be empty string for now.
             base_col_name: "".to_string(),
             base_table_name: "".to_string(),
-            case_sensitive: specific_type_info.is_case_sensitive,
+            case_sensitive: bson_type_info.is_case_sensitive,
             catalog_name: "".to_string(),
-            display_size: specific_type_info.fixed_bytes_length,
-            fixed_prec_scale: specific_type_info.fixed_prec_scale,
+            display_size: bson_type_info.fixed_bytes_length,
+            fixed_prec_scale: bson_type_info.fixed_prec_scale,
             label: field_name.clone(),
-            length: specific_type_info.fixed_bytes_length,
-            literal_prefix: specific_type_info.literal_prefix,
-            literal_suffix: specific_type_info.literal_suffix,
+            length: bson_type_info.fixed_bytes_length(type_mode),
+            literal_prefix: bson_type_info.literal_prefix,
+            literal_suffix: bson_type_info.literal_suffix,
             col_name: field_name,
             nullability,
-            num_prec_radix: specific_type_info.num_prec_radix,
-            octet_length: specific_type_info.octet_length,
-            precision: specific_type_info.precision,
-            scale: specific_type_info.scale,
-            searchable: specific_type_info.searchable,
+            num_prec_radix: bson_type_info.num_prec_radix,
+            octet_length: bson_type_info.octet_length(type_mode),
+            precision: bson_type_info.precision(type_mode),
+            scale: bson_type_info.scale,
+            searchable: bson_type_info.searchable,
             table_name: datasource_name,
-            type_name: specific_type_info.type_name.to_string(),
-            sql_type: specific_type_info.sql_type,
-            non_concise_type: specific_type_info.non_concise_type,
-            sql_code: specific_type_info.sql_code,
-            is_unsigned: specific_type_info.is_unsigned.unwrap_or(true),
+            type_name: bson_type_info.type_name.to_string(),
+            sql_type: bson_type_info.sql_type(type_mode),
+            non_concise_type: bson_type_info.non_concise_type(type_mode),
+            sql_code: bson_type_info.sql_code,
+            is_unsigned: bson_type_info.is_unsigned.unwrap_or(true),
             is_updatable: false,
         }
     }
@@ -101,16 +96,14 @@ impl MongoColMetadata {
         nullability: Nullability,
         type_mode: TypeMode,
     ) -> MongoColMetadata {
-        let bson_type_info = match type_mode {
-            TypeMode::Standard => BsonTypeInfo::Standard(StandardBsonTypeInfo::from(field_schema)),
-            TypeMode::Simple => BsonTypeInfo::Simple(SimpleBsonTypeInfo::from(field_schema)),
-        };
+        let bson_type_info: BsonTypeInfo = field_schema.into();
 
         MongoColMetadata::new_metadata_from_bson_type_info(
             current_db,
             datasource_name,
             field_name,
             bson_type_info,
+            type_mode,
             nullability,
         )
     }
