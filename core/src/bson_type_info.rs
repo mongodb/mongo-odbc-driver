@@ -1,17 +1,77 @@
-use crate::{
-    definitions::SqlDataType,
-    type_info::{TypeInfoFields, SQL_PRED_BASIC, SQL_PRED_NONE, SQL_SEARCHABLE},
-};
+use crate::definitions::SqlDataType;
+
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum TypeMode {
+    Standard,
+    Simple,
+}
 
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct StandardBsonTypeInfo {
-    pub type_info_fields: TypeInfoFields,
+pub struct BsonTypeInfo {
+    pub type_name: &'static str,
+    pub sql_type: SqlDataType,
+    pub non_concise_type: SqlDataType,
+    pub searchable: i32,
+    pub is_case_sensitive: bool,
+    pub fixed_prec_scale: bool,
+    pub scale: Option<u16>,
+    pub precision: Option<u16>,
+    pub octet_length: Option<u16>,
+    pub fixed_bytes_length: Option<u16>,
+    pub literal_prefix: Option<&'static str>,
+    pub literal_suffix: Option<&'static str>,
+    pub sql_code: Option<i32>,
+    pub is_auto_unique_value: Option<bool>,
+    pub is_unsigned: Option<bool>,
+    pub num_prec_radix: Option<u16>,
+    pub simple_type_info: Option<SimpleTypeInfo>,
 }
 
-impl StandardBsonTypeInfo {
-    pub const DOUBLE: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct SimpleTypeInfo{
+    pub sql_type: SqlDataType,
+    pub non_concise_type: SqlDataType,
+    pub precision: Option<u16>,
+    pub octet_length: Option<u16>,
+    pub fixed_bytes_length: Option<u16>,
+}
+
+impl SimpleTypeInfo {
+    pub fn new(precision: u16, octet_length: u16, fixed_bytes_length: u16) -> Option<Self>{
+        Some(Self{
+            sql_type: SqlDataType::VARCHAR,
+            non_concise_type: SqlDataType::VARCHAR,
+            precision: Some(precision),
+            octet_length: Some(octet_length),
+            fixed_bytes_length: Some(fixed_bytes_length),
+        })
+    }
+
+
+}
+
+
+impl Default for SimpleTypeInfo{
+    fn default() -> Option<Self> {
+        Some(Self{
+            sql_type: SqlDataType::VARCHAR,
+            non_concise_type: SqlDataType::VARCHAR,
+            precision: None,
+            octet_length: None,
+            fixed_bytes_length: None,
+        })
+    }
+}
+
+pub const SQL_SEARCHABLE: i32 = 3;
+pub const SQL_PRED_BASIC: i32 = 2;
+pub const SQL_PRED_NONE: i32 = 0;
+
+
+impl BsonTypeInfo  {
+    pub const DOUBLE: BsonTypeInfo = BsonTypeInfo {
             type_name: "double",
             sql_type: SqlDataType::DOUBLE,
             non_concise_type: SqlDataType::DOUBLE,
@@ -28,10 +88,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: Some(false),
             is_unsigned: Some(false),
             num_prec_radix: Some(10),
-        },
+            simple_type_info: None,
     };
-    pub const STRING: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const STRING: BsonTypeInfo = BsonTypeInfo {
             type_name: "string",
             sql_type: SqlDataType::EXT_W_VARCHAR,
             non_concise_type: SqlDataType::VARCHAR,
@@ -48,10 +107,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: None,
     };
-    pub const OBJECT: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const OBJECT: BsonTypeInfo = BsonTypeInfo {
             type_name: "object",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -68,10 +126,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::default(),
     };
-    pub const ARRAY: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const ARRAY: BsonTypeInfo = BsonTypeInfo {
             type_name: "array",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -88,10 +145,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::default(),
     };
-    pub const BINDATA: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const BINDATA: BsonTypeInfo = BsonTypeInfo {
             type_name: "binData",
             sql_type: SqlDataType::EXT_BINARY,
             non_concise_type: SqlDataType::EXT_BINARY,
@@ -108,10 +164,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: None,
     };
-    pub const UNDEFINED: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const UNDEFINED: BsonTypeInfo = BsonTypeInfo {
             type_name: "undefined",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -128,10 +183,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::new(20, 20, 20),
     };
-    pub const OBJECTID: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const OBJECTID: BsonTypeInfo = BsonTypeInfo {
             type_name: "objectId",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -141,17 +195,16 @@ impl StandardBsonTypeInfo {
             scale: None,
             precision: Some(24),
             octet_length: Some(24),
-            fixed_bytes_length: None,
+            fixed_bytes_length: Some(24),
             literal_prefix: None,
             literal_suffix: None,
             sql_code: None,
             is_auto_unique_value: Some(true),
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::new(34, 34, 34),
     };
-    pub const BOOL: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const BOOL: BsonTypeInfo = BsonTypeInfo {
             type_name: "bool",
             sql_type: SqlDataType::EXT_BIT,
             non_concise_type: SqlDataType::EXT_BIT,
@@ -168,10 +221,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: None,
     };
-    pub const DATE: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const DATE: BsonTypeInfo = BsonTypeInfo {
             type_name: "date",
             sql_type: SqlDataType::TIMESTAMP,
             non_concise_type: SqlDataType::DATETIME,
@@ -188,10 +240,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: None,
     };
-    pub const NULL: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const NULL: BsonTypeInfo = BsonTypeInfo {
             type_name: "null",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -208,10 +259,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::new(4,4,4),
     };
-    pub const REGEX: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const REGEX: BsonTypeInfo = BsonTypeInfo {
             type_name: "regex",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -228,10 +278,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::default(),
     };
-    pub const DBPOINTER: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const DBPOINTER: BsonTypeInfo = BsonTypeInfo {
             type_name: "dbPointer",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -248,10 +297,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::default(),
     };
-    pub const JAVASCRIPT: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const JAVASCRIPT: BsonTypeInfo = BsonTypeInfo {
             type_name: "javascript",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -268,10 +316,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::default(),
     };
-    pub const SYMBOL: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const SYMBOL: BsonTypeInfo = BsonTypeInfo {
             type_name: "symbol",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -288,10 +335,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::default(),
     };
-    pub const JAVASCRIPTWITHSCOPE: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const JAVASCRIPTWITHSCOPE: BsonTypeInfo = BsonTypeInfo {
             type_name: "javascriptWithScope",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -308,10 +354,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::default(),
     };
-    pub const INT: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const INT: BsonTypeInfo = BsonTypeInfo {
             type_name: "int",
             sql_type: SqlDataType::INTEGER,
             non_concise_type: SqlDataType::INTEGER,
@@ -328,10 +373,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: Some(false),
             is_unsigned: Some(false),
             num_prec_radix: Some(10),
-        },
+            simple_type_info: None,
     };
-    pub const TIMESTAMP: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const TIMESTAMP: BsonTypeInfo = BsonTypeInfo {
             type_name: "timestamp",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -348,10 +392,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::new(68,68,68),
     };
-    pub const LONG: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const LONG: BsonTypeInfo = BsonTypeInfo {
             type_name: "long",
             sql_type: SqlDataType::EXT_BIG_INT,
             non_concise_type: SqlDataType::EXT_BIG_INT,
@@ -368,10 +411,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: Some(false),
             is_unsigned: Some(false),
             num_prec_radix: Some(10),
-        },
+            simple_type_info: None,
     };
-    pub const DECIMAL: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
             type_name: "decimal",
             sql_type: SqlDataType::DECIMAL,
             non_concise_type: SqlDataType::DECIMAL,
@@ -388,10 +430,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: Some(false),
             is_unsigned: Some(false),
             num_prec_radix: None,
-        },
+            simple_type_info: None,
     };
-    pub const MINKEY: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
             type_name: "minKey",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -408,10 +449,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::new(14,14,14),
     };
-    pub const MAXKEY: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const MAXKEY: BsonTypeInfo = BsonTypeInfo {
             type_name: "maxKey",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -428,10 +468,9 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::new(14,14,14),
     };
-    pub const BSON: StandardBsonTypeInfo = StandardBsonTypeInfo {
-        type_info_fields: TypeInfoFields {
+    pub const BSON: BsonTypeInfo = BsonTypeInfo {
             type_name: "bson",
             sql_type: SqlDataType::UNKNOWN_TYPE,
             non_concise_type: SqlDataType::UNKNOWN_TYPE,
@@ -448,6 +487,53 @@ impl StandardBsonTypeInfo {
             is_auto_unique_value: None,
             is_unsigned: None,
             num_prec_radix: None,
-        },
+            simple_type_info: SimpleTypeInfo::default(),
     };
+
+    pub fn sql_type(&self, type_mode: TypeMode) -> SqlDataType{
+        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
+            self.type_info_fields.simple_type_info.unwrap().sql_type
+        }
+        else {
+            self.type_info_fields.sql_type
+        }
+    }
+
+    pub fn non_concise_type(&self, type_mode: TypeMode) -> SqlDataType{
+        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
+            self.type_info_fields.simple_type_info.unwrap().non_concise_type
+        }
+        else {
+            self.type_info_fields.non_concise_type
+        }
+    }
+
+    pub fn precision(&self, type_mode: TypeMode) -> Option<u16>{
+        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
+            self.type_info_fields.simple_type_info.unwrap().precision
+        }
+        else {
+            self.type_info_fields.precision
+        }
+    }
+
+    pub fn octet_length(&self, type_mode: TypeMode) -> Option<u16>{
+        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
+            self.type_info_fields.simple_type_info.unwrap().octet_length
+        }
+        else {
+            self.type_info_fields.octet_length
+        }
+    }
+
+    pub fn fixed_bytes_length(&self, type_mode: TypeMode) -> Option<u16>{
+        if type_mode == TypeMode::Simple && self.type_info_fields.simple_type_info.is_some(){
+            self.type_info_fields.simple_type_info.unwrap().fixed_bytes_length
+        }
+        else {
+            self.type_info_fields.fixed_bytes_length
+        }
+    }
+
+
 }
