@@ -1,10 +1,6 @@
 use crate::{
-    col_metadata::MongoColMetadata,
-    conn::MongoConnection,
-    err::Result,
-    stmt::MongoStatement,
-    BsonTypeInfo, TypeMode,
-    Error,
+    col_metadata::MongoColMetadata, conn::MongoConnection, err::Result, stmt::MongoStatement,
+    BsonTypeInfo, Error, TypeMode,
 };
 use bson::Bson;
 use mongodb::options::ListDatabasesOptions;
@@ -55,7 +51,6 @@ lazy_static! {
             Nullability::NULLABLE
         ),
     ];
-
 }
 
 mod unit {

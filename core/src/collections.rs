@@ -5,9 +5,8 @@ use crate::{
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
-    BsonTypeInfo, TypeMode,
     util::{COLLECTION, TABLE, TIMESERIES},
-    Error,
+    BsonTypeInfo, Error, TypeMode,
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
@@ -160,7 +159,7 @@ impl MongoCollections {
     // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
     pub fn all_schemas() -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: &COLLECTIONS_METADATA
+            resultset_metadata: &COLLECTIONS_METADATA,
         }
     }
 

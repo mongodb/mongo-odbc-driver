@@ -1,8 +1,4 @@
-use crate::{
-    col_metadata::MongoColMetadata,
-    stmt::EmptyStatement,
-    BsonTypeInfo, TypeMode,
-};
+use crate::{col_metadata::MongoColMetadata, stmt::EmptyStatement, BsonTypeInfo, TypeMode};
 use lazy_static::lazy_static;
 use odbc_sys::Nullability;
 
@@ -57,7 +53,6 @@ lazy_static! {
             Nullability::NO_NULLS
         ),
     ];
-
 }
 
 pub struct MongoPrimaryKeys {}

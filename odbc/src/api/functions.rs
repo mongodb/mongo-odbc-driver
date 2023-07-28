@@ -3436,9 +3436,7 @@ fn sql_tables(
             Some(query_timeout),
         ))),
         ("", SQL_ALL_SCHEMAS, "", "") => Ok(Box::new(MongoCollections::all_schemas())),
-        ("", "", "", SQL_ALL_TABLE_TYPES) => {
-            Ok(Box::new(MongoTableTypes::all_table_types()))
-        }
+        ("", "", "", SQL_ALL_TABLE_TYPES) => Ok(Box::new(MongoTableTypes::all_table_types())),
         _ => Ok(Box::new(MongoCollections::list_tables(
             mongo_connection,
             Some(query_timeout),
@@ -3481,7 +3479,9 @@ pub unsafe extern "C" fn SQLTablesW(
             let table_t = input_text_to_string_w(table_type, name_length_4 as usize);
             let connection = stmt.connection;
             let mongo_statement = sql_tables(
-                (*connection).as_connection().unwrap()
+                (*connection)
+                    .as_connection()
+                    .unwrap()
                     .mongo_connection
                     .read()
                     .unwrap()

@@ -1,10 +1,6 @@
 use crate::{
-    col_metadata::MongoColMetadata,
-    conn::MongoConnection,
-    definitions::SqlDataType,
-    err::Result,
-    stmt::MongoStatement,
-    BsonTypeInfo, Error, TypeMode,
+    col_metadata::MongoColMetadata, conn::MongoConnection, definitions::SqlDataType, err::Result,
+    stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
 };
 use bson::Bson;
 use odbc_sys::Nullability;
@@ -248,7 +244,6 @@ impl MongoStatement for MongoTypesInfo {
         if self.current_type_index == 0 {
             return Err(Error::InvalidCursorState);
         }
-
 
         match DATA_TYPES.get(self.current_type_index - 1) {
             Some(type_info) => Ok(Some(match col_index {

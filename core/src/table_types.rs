@@ -1,7 +1,6 @@
 use crate::{
-    databases::{DATABASES_METADATA},
-    err::Result,
-    Error, MongoColMetadata, MongoConnection, MongoStatement,
+    databases::DATABASES_METADATA, err::Result, Error, MongoColMetadata, MongoConnection,
+    MongoStatement,
 };
 use bson::Bson;
 

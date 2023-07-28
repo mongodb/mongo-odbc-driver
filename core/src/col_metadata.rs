@@ -4,7 +4,7 @@ use crate::{
         simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
     },
-    BsonTypeInfo,TypeMode, Error, Result,
+    BsonTypeInfo, Error, Result, TypeMode,
 };
 use itertools::Itertools;
 use odbc_sys::Nullability;

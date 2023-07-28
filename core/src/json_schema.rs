@@ -1,7 +1,4 @@
-use crate::{
-    BsonTypeInfo,
-    Error,
-};
+use crate::{BsonTypeInfo, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -196,14 +193,12 @@ impl From<BsonTypeName> for BsonTypeInfo {
     }
 }
 
-
 pub mod simplified {
 
     use crate::{
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
-        BsonTypeInfo,
-        Error,
+        BsonTypeInfo, Error,
     };
     use std::collections::{BTreeMap, BTreeSet};
 
@@ -364,7 +359,6 @@ pub mod simplified {
             }
         }
     }
-
 }
 
 #[cfg(test)]
@@ -930,10 +924,7 @@ mod unit {
 
             let input = simplified::Schema::try_from(input_schema).unwrap();
 
-            assert_eq!(
-                BsonTypeInfo::BSON,
-                BsonTypeInfo::from(input)
-            );
+            assert_eq!(BsonTypeInfo::BSON, BsonTypeInfo::from(input));
         }
     }
 }

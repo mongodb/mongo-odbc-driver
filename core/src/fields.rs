@@ -5,8 +5,8 @@ use crate::{
     definitions::SqlDataType,
     err::{Error, Result},
     stmt::MongoStatement,
-    BsonTypeInfo, TypeMode,
     util::to_name_regex,
+    BsonTypeInfo, TypeMode,
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
