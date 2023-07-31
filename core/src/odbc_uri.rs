@@ -22,7 +22,7 @@ pub const UID: &str = "uid";
 pub const URI: &str = "uri";
 pub const APPNAME: &str = "appname";
 pub const LOGLEVEL: &str = "loglevel";
-pub const SIMPLE: &str = "simple_types_only";
+pub const SIMPLE_TYPES_ONLY: &str = "simple_types_only";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
