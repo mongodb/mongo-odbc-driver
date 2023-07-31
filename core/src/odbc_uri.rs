@@ -33,10 +33,23 @@ const SERVER_KWS: &[&str] = &[SERVER];
 
 lazy_static! {
     static ref KEYWORDS: RegexSet = RegexSetBuilder::new(
-        [DATABASE, DRIVER, DSN, PASSWORD, PWD, SERVER, USER, UID, URI, APPNAME, LOGLEVEL, SIMPLE_TYPES_ONLY]
-            .into_iter()
-            .map(|x| "^".to_string() + x + "$")
-            .collect::<Vec<_>>()
+        [
+            DATABASE,
+            DRIVER,
+            DSN,
+            PASSWORD,
+            PWD,
+            SERVER,
+            USER,
+            UID,
+            URI,
+            APPNAME,
+            LOGLEVEL,
+            SIMPLE_TYPES_ONLY
+        ]
+        .into_iter()
+        .map(|x| "^".to_string() + x + "$")
+        .collect::<Vec<_>>()
     )
     .case_insensitive(true)
     .build()
