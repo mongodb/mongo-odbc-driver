@@ -157,7 +157,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
-        simple_type_info: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const UNDEFINED: BsonTypeInfo = BsonTypeInfo {
         type_name: "undefined",
