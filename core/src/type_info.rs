@@ -192,13 +192,15 @@ lazy_static! {
 pub struct MongoTypesInfo {
     current_type_index: usize,
     sql_data_type: SqlDataType,
+    type_mode: TypeMode,
 }
 
 impl MongoTypesInfo {
-    pub fn new(sql_data_type: SqlDataType) -> MongoTypesInfo {
+    pub fn new(sql_data_type: SqlDataType, type_mode: TypeMode) -> MongoTypesInfo {
         MongoTypesInfo {
             current_type_index: 0,
             sql_data_type,
+            type_mode,
         }
     }
 }
@@ -210,7 +212,7 @@ impl MongoStatement for MongoTypesInfo {
         loop {
             self.current_type_index += 1;
             if self.current_type_index > DATA_TYPES.len()
-                || DATA_TYPES[self.current_type_index - 1].sql_type == self.sql_data_type
+                || DATA_TYPES[self.current_type_index - 1].sql_type(self.type_mode) == self.sql_data_type
                 || self.sql_data_type == SqlDataType::UNKNOWN_TYPE
             {
                 break;
@@ -248,8 +250,8 @@ impl MongoStatement for MongoTypesInfo {
         match DATA_TYPES.get(self.current_type_index - 1) {
             Some(type_info) => Ok(Some(match col_index {
                 1 | 13 => Bson::String(type_info.type_name.to_string()),
-                2 | 16 => Bson::Int32(type_info.sql_type as i32),
-                3 => match type_info.precision {
+                2 | 16 => Bson::Int32(type_info.sql_type(self.type_mode) as i32),
+                3 => match type_info.precision(self.type_mode) {
                     Some(precision) => Bson::Int32(precision as i32),
                     None => Bson::Null,
                 },

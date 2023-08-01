@@ -2600,7 +2600,13 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
             match FromPrimitive::from_i16(data_type) {
                 Some(sql_data_type) => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let types_info = MongoTypesInfo::new(sql_data_type);
+                    let type_mode = if stmt.connection.is_null() {
+                        TypeMode::Standard
+                    } else {
+                        let connection = must_be_valid!((*stmt.connection).as_connection());
+                        *connection.type_mode.read().unwrap()
+                    };
+                    let types_info = MongoTypesInfo::new(sql_data_type, type_mode);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
                 }
