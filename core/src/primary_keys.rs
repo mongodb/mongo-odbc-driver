@@ -4,52 +4,46 @@ use odbc_sys::Nullability;
 
 lazy_static! {
     static ref PK_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_NAME".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "KEY_SEQ".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "PK_NAME".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
     ];

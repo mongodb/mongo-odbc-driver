@@ -33,156 +33,137 @@ const DATA_TYPES: [BsonTypeInfo; 21] = [
 
 lazy_static! {
     pub static ref TYPES_INFO_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TYPE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "DATATYPE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_SIZE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "LITERAL_PREFIX".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "LITERAL_SUFFIX".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "CREATE_PARAMS".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "NULLABLE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "CASE_SENSITIVE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SEARCHABLE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "UNSIGNED_ATTRIBUTE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "FIXED_PREC_SCALE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "AUTO_UNIQUE_VALUE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "LOCAL_TYPE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "MINIMUM_SCALE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "MAXIMUM_SCALE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SQL_DATA_TYPE".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SQL_DATETIME_SUB".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "NUM_PREC_RADIX".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "INTERVAL_PRECISION".to_string(),
             BsonTypeInfo::INT,
-            TypeMode::Standard,
             Nullability::NULLABLE
         ),
     ];
@@ -212,7 +193,8 @@ impl MongoStatement for MongoTypesInfo {
         loop {
             self.current_type_index += 1;
             if self.current_type_index > DATA_TYPES.len()
-                || DATA_TYPES[self.current_type_index - 1].sql_type(self.type_mode) == self.sql_data_type
+                || DATA_TYPES[self.current_type_index - 1].sql_type(self.type_mode)
+                    == self.sql_data_type
                 || self.sql_data_type == SqlDataType::UNKNOWN_TYPE
             {
                 break;

@@ -90,6 +90,7 @@ pub struct IntegrationTest {
 pub struct TestEntry {
     pub description: String,
     pub db: String,
+    pub simple_type: Option<bool>,
     pub test_definition: TestDef,
     pub expected_result: Option<Vec<Vec<Value>>>,
     pub skip_reason: Option<String>,
@@ -142,7 +143,10 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
                 Some(sr) => println!("Skip Reason: {sr}"),
                 None => {
                     let mut conn_str = crate::common::generate_default_connection_str();
-                    conn_str.push_str(&("DATABASE=".to_owned() + &test.db));
+                    conn_str.push_str(&("DATABASE=".to_owned() + &test.db + ";"));
+                    if let Some(true) = test.simple_type {
+                        conn_str.push_str(&"SIMPLE_TYPES_ONLY=1;".to_owned());
+                    }
                     let conn_handle = connect_with_conn_string(env, conn_str).unwrap();
                     let test_result = match test.test_definition {
                         TestDef::Query(ref q) => run_query_test(q, &test, conn_handle, generate),

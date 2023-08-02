@@ -88,6 +88,23 @@ impl MongoColMetadata {
         }
     }
 
+    pub fn new_metadata_from_bson_type_info_default(
+        current_db: &str,
+        datasource_name: String,
+        field_name: String,
+        bson_type_info: BsonTypeInfo,
+        nullability: Nullability,
+    ) -> MongoColMetadata {
+        Self::new_metadata_from_bson_type_info(
+            current_db,
+            datasource_name,
+            field_name,
+            bson_type_info,
+            TypeMode::Standard,
+            nullability,
+        )
+    }
+
     pub fn new(
         current_db: &str,
         datasource_name: String,
