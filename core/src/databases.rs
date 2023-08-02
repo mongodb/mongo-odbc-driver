@@ -1,6 +1,6 @@
 use crate::{
     col_metadata::MongoColMetadata, conn::MongoConnection, err::Result, stmt::MongoStatement,
-    BsonTypeInfo, Error, TypeMode,
+    BsonTypeInfo, Error,
 };
 use bson::Bson;
 use mongodb::options::ListDatabasesOptions;

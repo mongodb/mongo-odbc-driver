@@ -6,7 +6,7 @@ use crate::{
     err::Result,
     stmt::MongoStatement,
     util::{COLLECTION, TABLE, TIMESERIES},
-    BsonTypeInfo, Error, TypeMode,
+    BsonTypeInfo, Error,
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;

@@ -145,7 +145,7 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
                     let mut conn_str = crate::common::generate_default_connection_str();
                     conn_str.push_str(&("DATABASE=".to_owned() + &test.db + ";"));
                     if let Some(true) = test.simple_type {
-                        conn_str.push_str(&"SIMPLE_TYPES_ONLY=1;".to_owned());
+                        conn_str.push_str(&"SIMPLE_TYPES_ONLY=1;");
                     }
                     let conn_handle = connect_with_conn_string(env, conn_str).unwrap();
                     let test_result = match test.test_definition {

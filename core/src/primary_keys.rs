@@ -1,4 +1,4 @@
-use crate::{col_metadata::MongoColMetadata, stmt::EmptyStatement, BsonTypeInfo, TypeMode};
+use crate::{col_metadata::MongoColMetadata, stmt::EmptyStatement, BsonTypeInfo};
 use lazy_static::lazy_static;
 use odbc_sys::Nullability;
 
