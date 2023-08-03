@@ -65,7 +65,7 @@ impl MongoColMetadata {
             base_table_name: "".to_string(),
             case_sensitive: bson_type_info.is_case_sensitive,
             catalog_name: "".to_string(),
-            display_size: bson_type_info.fixed_bytes_length,
+            display_size: bson_type_info.fixed_bytes_length(type_mode),
             fixed_prec_scale: bson_type_info.fixed_prec_scale,
             label: field_name.clone(),
             length: bson_type_info.fixed_bytes_length(type_mode),
