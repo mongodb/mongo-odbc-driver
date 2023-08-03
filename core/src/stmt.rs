@@ -53,6 +53,7 @@ mod unit {
             BsonTypeName,
         },
         stmt::{EmptyStatement, MongoStatement},
+        TypeMode,
     };
     use lazy_static::lazy_static;
     use odbc_sys::Nullability;
@@ -64,6 +65,7 @@ mod unit {
             "TABLE_CAT".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
             Nullability::NO_NULLS,
+            TypeMode::Standard
         )];
     }
 

@@ -4,7 +4,7 @@ use crate::{
         simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
     },
-    BsonTypeInfo, Error, Result,
+    BsonTypeInfo, Error, Result, TypeMode,
 };
 use itertools::Itertools;
 use odbc_sys::Nullability;
@@ -54,6 +54,7 @@ impl MongoColMetadata {
         datasource_name: String,
         field_name: String,
         bson_type_info: BsonTypeInfo,
+        type_mode: TypeMode,
         nullability: Nullability,
     ) -> MongoColMetadata {
         MongoColMetadata {
@@ -64,27 +65,44 @@ impl MongoColMetadata {
             base_table_name: "".to_string(),
             case_sensitive: bson_type_info.is_case_sensitive,
             catalog_name: "".to_string(),
-            display_size: bson_type_info.fixed_bytes_length,
+            display_size: bson_type_info.fixed_bytes_length(type_mode),
             fixed_prec_scale: bson_type_info.fixed_prec_scale,
             label: field_name.clone(),
-            length: bson_type_info.fixed_bytes_length,
+            length: bson_type_info.fixed_bytes_length(type_mode),
             literal_prefix: bson_type_info.literal_prefix,
             literal_suffix: bson_type_info.literal_suffix,
             col_name: field_name,
             nullability,
             num_prec_radix: bson_type_info.num_prec_radix,
-            octet_length: bson_type_info.octet_length,
-            precision: bson_type_info.precision,
+            octet_length: bson_type_info.octet_length(type_mode),
+            precision: bson_type_info.precision(type_mode),
             scale: bson_type_info.scale,
             searchable: bson_type_info.searchable,
             table_name: datasource_name,
             type_name: bson_type_info.type_name.to_string(),
-            sql_type: bson_type_info.sql_type,
-            non_concise_type: bson_type_info.non_concise_type,
+            sql_type: bson_type_info.sql_type(type_mode),
+            non_concise_type: bson_type_info.non_concise_type(type_mode),
             sql_code: bson_type_info.sql_code,
             is_unsigned: bson_type_info.is_unsigned.unwrap_or(true),
             is_updatable: false,
         }
+    }
+
+    pub fn new_metadata_from_bson_type_info_default(
+        current_db: &str,
+        datasource_name: String,
+        field_name: String,
+        bson_type_info: BsonTypeInfo,
+        nullability: Nullability,
+    ) -> MongoColMetadata {
+        Self::new_metadata_from_bson_type_info(
+            current_db,
+            datasource_name,
+            field_name,
+            bson_type_info,
+            TypeMode::Standard,
+            nullability,
+        )
     }
 
     pub fn new(
@@ -93,13 +111,16 @@ impl MongoColMetadata {
         field_name: String,
         field_schema: Schema,
         nullability: Nullability,
+        type_mode: TypeMode,
     ) -> MongoColMetadata {
         let bson_type_info: BsonTypeInfo = field_schema.into();
+
         MongoColMetadata::new_metadata_from_bson_type_info(
             current_db,
             datasource_name,
             field_name,
             bson_type_info,
+            type_mode,
             nullability,
         )
     }
@@ -145,6 +166,7 @@ impl SqlGetSchemaResponse {
     pub(crate) fn process_result_metadata(
         &self,
         current_db: &str,
+        type_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
@@ -160,8 +182,13 @@ impl SqlGetSchemaResponse {
             // 2. map each datasource_schema to a Result of an Iterator over MongoColMetadata.
             .map(|(datasource_name, datasource_schema)| {
                 Ok::<std::vec::IntoIter<MongoColMetadata>, Error>(
-                    Self::schema_to_col_metadata(&datasource_schema, current_db, &datasource_name)?
-                        .into_iter(),
+                    Self::schema_to_col_metadata(
+                        &datasource_schema,
+                        current_db,
+                        &datasource_name,
+                        type_mode,
+                    )?
+                    .into_iter(),
                 )
             })
             // 3. flatten each Ok(inner_iterator) into the top iterator, will short circuit if an
@@ -193,10 +220,16 @@ impl SqlGetSchemaResponse {
         &self,
         current_db: &str,
         current_collection: &str,
+        type_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let collection_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
-        Self::schema_to_col_metadata(&collection_schema, current_db, current_collection)
+        Self::schema_to_col_metadata(
+            &collection_schema,
+            current_db,
+            current_collection,
+            type_mode,
+        )
     }
 
     // Helper function that asserts the the passed object_schema is actually an ObjectSchema
@@ -207,6 +240,7 @@ impl SqlGetSchemaResponse {
         object_schema: &crate::json_schema::simplified::Schema,
         current_db: &str,
         current_collection: &str,
+        type_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
         let object_schema = object_schema.assert_object_schema()?;
 
@@ -228,6 +262,7 @@ impl SqlGetSchemaResponse {
                     name,
                     schema,
                     field_nullability,
+                    type_mode,
                 ))
             })
             .collect::<Result<Vec<_>>>()
@@ -300,7 +335,7 @@ mod unit {
         use crate::{
             col_metadata::{SqlGetSchemaResponse, VersionedJsonSchema},
             json_schema::{BsonType, BsonTypeName, Schema},
-            map, Error,
+            map, Error, TypeMode,
         };
 
         #[test]
@@ -316,7 +351,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_result_metadata("test_db");
+            let actual = input.process_result_metadata("test_db", TypeMode::Standard);
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema(_)) => (),
@@ -344,7 +379,7 @@ mod unit {
                 },
             };
 
-            let actual = input.process_result_metadata("test_db");
+            let actual = input.process_result_metadata("test_db", TypeMode::Standard);
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema(_)) => (),
@@ -392,7 +427,7 @@ mod unit {
                 },
             };
 
-            let res = input.process_result_metadata("test_db");
+            let res = input.process_result_metadata("test_db", TypeMode::Standard);
 
             match res {
                 Err(e) => panic!("unexpected error: {e:?}"),

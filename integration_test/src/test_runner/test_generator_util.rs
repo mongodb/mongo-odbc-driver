@@ -88,6 +88,7 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
     let test_entry = TestEntry {
         description: entry.description.clone(),
         db: entry.db.clone(),
+        is_simple_type: entry.is_simple_type,
         test_definition: entry.test_definition.clone(),
         expected_result: Some(expected_result),
         skip_reason: None,

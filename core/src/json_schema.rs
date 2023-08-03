@@ -881,8 +881,8 @@ mod unit {
     }
     mod bson_type_info {
         use crate::{
-            bson_type_info::BsonTypeInfo,
             json_schema::{self, simplified, BsonType, BsonTypeName},
+            BsonTypeInfo,
         };
 
         #[test]
