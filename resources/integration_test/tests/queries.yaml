@@ -67,6 +67,15 @@ tests:
     expected_scale: [ 0, 0, 0, 3, 0 ]
     expected_is_nullable: [ 1, 1, 1, 1, 1 ]
 
+  - description: select_star_unordered_using_simple_types_only_mode
+    test_definition: SELECT * FROM class
+    is_simple_type: true
+    db: integration_test
+    expected_display_size: [ 4, 1, 0, 16, 4 ]
+    expected_length: [ 4, 1, 0, 16, 4 ]
+    expected_sql_type: [ 4, -7, -9, 93, 4 ]
+    expected_precision: [ 10, 1, 0, 23, 10 ]
+
   - description: select_as_confirm_column_label
     test_definition: SELECT enrolled AS e, studentid AS s, name AS n FROM class
     db: integration_test
@@ -210,6 +219,10 @@ tests:
   - description: query_types_other
     test_definition: SELECT * FROM types_other
     db: integration_test
+    expected_sql_type: [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    expected_precision: [10, 0, 0, 0, 0, 0 ,0, 0, 24, 0, 0, 0]
+    expected_display_size: [4, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0]
+    expected_length: [4, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0]
     expected_result:
       - [
         "0", '[1,2,3,{"$oid":"000000000000000000000003"},{"$timestamp":{"t":200,"i":0}}]',
@@ -227,26 +240,14 @@ tests:
           # 11: {"$undefined":true},
       ]
 
-  - description: query_types_other using simple_types_only mode
+  - description: query_types_other_using_simple_types_only_mode
     test_definition: SELECT * FROM types_other
     db: integration_test
-    simple_type: true
-    expected_result:
-      - [
-        "0", '[1,2,3,{"$oid":"000000000000000000000003"},{"$timestamp":{"t":200,"i":0}}]',
-        '{"$dbPointer":{"$ref":"namespace","$id":{"$oid":"000000000000000000000001"}}}',
-        '{"$code":"function(){ }"}',
-        '{"$code":"function(){ }","$scope":{"foo":"bar"}}',
-        '{"$maxKey":1}',
-        '{"$minKey":1}',
-        '{"foo":"bar","objId":{"$oid":"000000000000000000000002"},"value":3,"time":{"$timestamp":{"t":200,"i":0}}}',
-        '{"$oid":"000000000000000000000001"}',
-        '{"$regularExpression":{"pattern":"a(bc)*","options":""}}',
-        '{"$symbol":"symbol"}',
-        '{"$timestamp":{"t":100,"i":0}}'
-        # Skip reason: SQL-395
-        # 11: {"$undefined":true},
-      ]
+    is_simple_type: true
+    expected_sql_type: [4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12]
+    expected_precision: [10, 0, 0, 0, 0, 14 ,14, 0, 34, 0, 0, 68]
+    expected_display_size: [4, 0, 0, 0, 0, 14, 14, 0, 34, 0, 0, 68]
+    expected_length: [4, 0, 0, 0, 0, 14, 14, 0, 34, 0, 0, 68]
 
   - description: query_array_and_document_as_string
     test_definition: SELECT `array`, `object` FROM types_other
