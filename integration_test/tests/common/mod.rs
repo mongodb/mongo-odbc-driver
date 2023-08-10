@@ -150,7 +150,9 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             str_len_ptr,
             DriverConnectOption::NoPrompt,
         ) {
-            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => (),
+            // Originally, this would return SUCCESS_WITH_INFO since we pass null_mut() as
+            // out_connection_string and 0 as buffer size. Now, this should always return SUCCESS.
+            SqlReturn::SUCCESS => (),
             sql_return => {
                 return Err(Error::DriverConnect(
                     sql_return_to_string(sql_return),
