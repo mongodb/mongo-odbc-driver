@@ -159,7 +159,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
                     return Err(Error::DriverConnect(
                         sql_return_to_string(SqlReturn::SUCCESS_WITH_INFO),
                         get_sql_diagnostics(HandleType::Dbc, dbc),
-                    ))
+                    ));
                 }
             }
             sql_return => {
