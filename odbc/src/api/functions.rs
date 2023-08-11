@@ -930,6 +930,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
     string_length_2: *mut SmallInt,
     driver_completion: DriverConnectOption,
 ) -> SqlReturn {
+    dbg!("!!!!");
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -959,6 +960,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             // We can also just return SUCCESS if the buffer_len is 0. Likely, users are not
             // expecting to get back a warning when they pass an empty buffer to this, especially
             // given that we only currently support DriverConnectOption::NoPrompt.
+            dbg!(buffer_len, out_connection_string);
             if buffer_len == 0 || out_connection_string.is_null() {
                 return SqlReturn::SUCCESS;
             }
