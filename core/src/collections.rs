@@ -1,13 +1,12 @@
 use crate::stmt::EmptyStatement;
 use crate::util::{is_match, table_type_filter_to_vec, to_name_regex};
 use crate::{
-    bson_type_info::BsonTypeInfo,
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
     util::{COLLECTION, TABLE, TIMESERIES},
-    Error,
+    BsonTypeInfo, Error,
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
@@ -17,35 +16,35 @@ use regex::Regex;
 
 lazy_static! {
     static ref COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "REMARKS".to_string(),

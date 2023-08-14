@@ -1,5 +1,4 @@
 use crate::{
-    bson_type_info::BsonTypeInfo,
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
@@ -7,6 +6,7 @@ use crate::{
     err::{Error, Result},
     stmt::MongoStatement,
     util::to_name_regex,
+    BsonTypeInfo, TypeMode,
 };
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
@@ -17,126 +17,126 @@ use std::collections::VecDeque;
 
 lazy_static! {
     static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_NAME".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "DATA_TYPE".to_string(),
             BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TYPE_NAME".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_SIZE".to_string(),
             BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "BUFFER_LENGTH".to_string(),
             BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "DECIMAL_DIGITS".to_string(),
             BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "NUM_PREC_RADIX".to_string(),
             BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "NULLABLE".to_string(),
             BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_DEF".to_string(),
             BsonTypeInfo::STRING,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SQL_DATA_TYPE".to_string(),
             BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SQL_DATETIME_SUB".to_string(),
             BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "CHAR_OCTET_LENGTH".to_string(),
             BsonTypeInfo::INT,
             Nullability::NULLABLE
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "ORDINAL_POSITION".to_string(),
             BsonTypeInfo::INT,
             Nullability::NO_NULLS
         ),
-        MongoColMetadata::new_metadata_from_bson_type_info(
+        MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "IS_NULLABLE".to_string(),
@@ -458,6 +458,7 @@ pub struct MongoFields {
     current_field_for_collection: isize,
     collection_name_filter: Option<Regex>,
     field_name_filter: Option<Regex>,
+    type_mode: TypeMode,
 }
 
 // Statement related to a SQLTables call.
@@ -474,6 +475,7 @@ impl MongoFields {
         db_name: Option<&str>,
         collection_name_filter: Option<&str>,
         field_name_filter: Option<&str>,
+        type_mode: TypeMode,
     ) -> Self {
         let dbs = db_name.map_or_else(
             || {
@@ -502,6 +504,7 @@ impl MongoFields {
             current_field_for_collection: -1,
             collection_name_filter: collection_name_filter.and_then(to_name_regex),
             field_name_filter: field_name_filter.and_then(to_name_regex),
+            type_mode,
         }
     }
 
@@ -514,6 +517,7 @@ impl MongoFields {
             current_field_for_collection: -1,
             collection_name_filter: None,
             field_name_filter: None,
+            type_mode: TypeMode::Standard,
         }
     }
 
@@ -554,6 +558,7 @@ impl MongoFields {
                     match current_col_metadata_response.process_collection_metadata(
                         &self.current_db_name,
                         collection_name.as_str(),
+                        self.type_mode,
                     ) {
                         Ok(current_col_metadata) => {
                             if !current_col_metadata.is_empty() {

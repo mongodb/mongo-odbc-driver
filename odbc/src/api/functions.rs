@@ -25,7 +25,7 @@ use logger::Logger;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
-    MongoTypesInfo, SqlDataType,
+    MongoTypesInfo, SqlDataType, TypeMode,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -663,11 +663,10 @@ pub unsafe extern "C" fn SQLColumnsW(
             } else {
                 Some(column_name_string.as_str())
             };
-            let connection = stmt.connection;
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+            let type_mode = *connection.type_mode.read().unwrap();
             let mongo_statement = Box::new(MongoFields::list_columns(
-                (*connection)
-                    .as_connection()
-                    .unwrap()
+                connection
                     .mongo_connection
                     .read()
                     .unwrap()
@@ -677,6 +676,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 catalog,
                 table,
                 column,
+                type_mode,
             ));
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
             SqlReturn::SUCCESS
@@ -882,6 +882,12 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         }
     }
 
+    if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
+        if simple.eq("1") {
+            *conn.type_mode.write().unwrap() = TypeMode::Simple;
+        }
+    }
+
     let mut conn_attrs = conn.attributes.write().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
         conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
@@ -900,6 +906,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         database,
         connection_timeout,
         login_timeout,
+        *conn.type_mode.read().unwrap(),
     )?)
 }
 
@@ -948,6 +955,13 @@ pub unsafe extern "C" fn SQLDriverConnectW(
                 odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
             *conn.mongo_connection.write().unwrap() = Some(mongo_connection);
             let buffer_len = usize::try_from(buffer_length).unwrap();
+            // We know the mysql ODBC driver returns SUCCESS if the out_connection_string is NULL.
+            // We can also just return SUCCESS if the buffer_len is 0. Likely, users are not
+            // expecting to get back a warning when they pass an empty buffer to this, especially
+            // given that we only currently support DriverConnectOption::NoPrompt.
+            if buffer_len == 0 || out_connection_string.is_null() {
+                return SqlReturn::SUCCESS;
+            }
             let sql_return = i16_len::set_output_wstring(
                 &odbc_uri_string,
                 out_connection_string,
@@ -1033,12 +1047,13 @@ pub unsafe extern "C" fn SQLExecDirectW(
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let mongo_statement = {
                 let connection = must_be_valid!((*stmt.connection).as_connection());
+                let type_mode = *connection.type_mode.read().unwrap();
                 let attributes = connection.attributes.read().unwrap();
                 let timeout = attributes.connection_timeout;
                 let current_db = attributes.current_catalog.as_ref().cloned();
                 if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref()
                 {
-                    MongoQuery::execute(mongo_connection, current_db, timeout, &query)
+                    MongoQuery::execute(mongo_connection, current_db, timeout, &query, type_mode)
                         .map_err(|e| e.into())
                 } else {
                     Err(ODBCError::InvalidCursorState)
@@ -2592,7 +2607,13 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
             match FromPrimitive::from_i16(data_type) {
                 Some(sql_data_type) => {
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let types_info = MongoTypesInfo::new(sql_data_type);
+                    let type_mode = if stmt.connection.is_null() {
+                        TypeMode::Standard
+                    } else {
+                        let connection = must_be_valid!((*stmt.connection).as_connection());
+                        *connection.type_mode.read().unwrap()
+                    };
+                    let types_info = MongoTypesInfo::new(sql_data_type, type_mode);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
                 }

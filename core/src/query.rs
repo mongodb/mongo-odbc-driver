@@ -3,7 +3,7 @@ use crate::{
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
-    Error,
+    Error, TypeMode,
 };
 use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{options::AggregateOptions, sync::Cursor};
@@ -29,6 +29,7 @@ impl MongoQuery {
         current_db: Option<String>,
         query_timeout: Option<u32>,
         query: &str,
+        type_mode: TypeMode,
     ) -> Result<Self> {
         let current_db = current_db.ok_or(Error::NoDatabase)?;
         let db = client.client.database(&current_db);
@@ -45,7 +46,8 @@ impl MongoQuery {
         )
         .map_err(Error::QueryDeserialization)?;
 
-        let metadata = get_result_schema_response.process_result_metadata(&current_db)?;
+        let metadata =
+            get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
 
         // 2. Run the $sql aggregation to get the result set cursor.
         let pipeline = vec![doc! {"$sql": {
@@ -99,8 +101,7 @@ impl MongoStatement for MongoQuery {
                     .deserialize_current()
                     .map_err(Error::QueryCursorUpdate)?,
             );
-        }
-        else {
+        } else {
             self.current = None;
         }
 

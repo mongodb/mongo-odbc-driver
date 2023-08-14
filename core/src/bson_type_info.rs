@@ -1,7 +1,13 @@
 use crate::definitions::SqlDataType;
 
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum TypeMode {
+    Standard,
+    Simple,
+}
+
 #[non_exhaustive]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BsonTypeInfo {
     pub type_name: &'static str,
     pub sql_type: SqlDataType,
@@ -19,6 +25,38 @@ pub struct BsonTypeInfo {
     pub is_auto_unique_value: Option<bool>,
     pub is_unsigned: Option<bool>,
     pub num_prec_radix: Option<u16>,
+    pub simple_type_info: Option<SimpleTypeInfo>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct SimpleTypeInfo {
+    pub sql_type: SqlDataType,
+    pub non_concise_type: SqlDataType,
+    pub precision: Option<u16>,
+    pub octet_length: Option<u16>,
+    pub fixed_bytes_length: Option<u16>,
+}
+
+impl SimpleTypeInfo {
+    const fn new(precision: u16, octet_length: u16, fixed_bytes_length: u16) -> Option<Self> {
+        Some(Self {
+            sql_type: SqlDataType::VARCHAR,
+            non_concise_type: SqlDataType::VARCHAR,
+            precision: Some(precision),
+            octet_length: Some(octet_length),
+            fixed_bytes_length: Some(fixed_bytes_length),
+        })
+    }
+
+    const fn default() -> Option<Self> {
+        Some(Self {
+            sql_type: SqlDataType::VARCHAR,
+            non_concise_type: SqlDataType::VARCHAR,
+            precision: None,
+            octet_length: None,
+            fixed_bytes_length: None,
+        })
+    }
 }
 
 pub const SQL_SEARCHABLE: i32 = 3;
@@ -43,6 +81,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: Some(10),
+        simple_type_info: None,
     };
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
@@ -61,6 +100,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: None,
     };
     pub const OBJECT: BsonTypeInfo = BsonTypeInfo {
         type_name: "object",
@@ -79,6 +119,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const ARRAY: BsonTypeInfo = BsonTypeInfo {
         type_name: "array",
@@ -97,6 +138,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const BINDATA: BsonTypeInfo = BsonTypeInfo {
         type_name: "binData",
@@ -115,6 +157,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const UNDEFINED: BsonTypeInfo = BsonTypeInfo {
         type_name: "undefined",
@@ -133,6 +176,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::new(20, 20, 20),
     };
     pub const OBJECTID: BsonTypeInfo = BsonTypeInfo {
         type_name: "objectId",
@@ -144,13 +188,14 @@ impl BsonTypeInfo {
         scale: None,
         precision: Some(24),
         octet_length: Some(24),
-        fixed_bytes_length: None,
+        fixed_bytes_length: Some(24),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
         is_auto_unique_value: Some(true),
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::new(34, 34, 34),
     };
     pub const BOOL: BsonTypeInfo = BsonTypeInfo {
         type_name: "bool",
@@ -169,6 +214,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: None,
     };
     pub const DATE: BsonTypeInfo = BsonTypeInfo {
         type_name: "date",
@@ -187,6 +233,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: None,
     };
     pub const NULL: BsonTypeInfo = BsonTypeInfo {
         type_name: "null",
@@ -205,6 +252,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: None,
     };
     pub const REGEX: BsonTypeInfo = BsonTypeInfo {
         type_name: "regex",
@@ -223,6 +271,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const DBPOINTER: BsonTypeInfo = BsonTypeInfo {
         type_name: "dbPointer",
@@ -241,6 +290,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const JAVASCRIPT: BsonTypeInfo = BsonTypeInfo {
         type_name: "javascript",
@@ -259,6 +309,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const SYMBOL: BsonTypeInfo = BsonTypeInfo {
         type_name: "symbol",
@@ -277,6 +328,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const JAVASCRIPTWITHSCOPE: BsonTypeInfo = BsonTypeInfo {
         type_name: "javascriptWithScope",
@@ -295,6 +347,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const INT: BsonTypeInfo = BsonTypeInfo {
         type_name: "int",
@@ -313,6 +366,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: Some(10),
+        simple_type_info: None,
     };
     pub const TIMESTAMP: BsonTypeInfo = BsonTypeInfo {
         type_name: "timestamp",
@@ -331,6 +385,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::new(68, 68, 68),
     };
     pub const LONG: BsonTypeInfo = BsonTypeInfo {
         type_name: "long",
@@ -349,25 +404,26 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: Some(10),
+        simple_type_info: None,
     };
     pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
         type_name: "decimal",
-        // TODO SQL-1068: Change to SqlDataType::DECIMAL
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::DECIMAL,
+        non_concise_type: SqlDataType::DECIMAL,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
-        precision: None,          // TODO SQL-1068: Some(34),
-        octet_length: None,       // TODO SQL-1068: Some(16),
-        fixed_bytes_length: None, // TODO SQL-1068: Some(16),
+        precision: Some(34),
+        octet_length: Some(16),
+        fixed_bytes_length: Some(16),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: None,
+        simple_type_info: None,
     };
     pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "minKey",
@@ -386,6 +442,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::new(14, 14, 14),
     };
     pub const MAXKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "maxKey",
@@ -404,6 +461,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::new(14, 14, 14),
     };
     pub const BSON: BsonTypeInfo = BsonTypeInfo {
         type_name: "bson",
@@ -422,5 +480,46 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
+
+    pub fn sql_type(&self, type_mode: TypeMode) -> SqlDataType {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            self.simple_type_info.clone().unwrap().sql_type
+        } else {
+            self.sql_type
+        }
+    }
+
+    pub fn non_concise_type(&self, type_mode: TypeMode) -> SqlDataType {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            self.simple_type_info.clone().unwrap().non_concise_type
+        } else {
+            self.non_concise_type
+        }
+    }
+
+    pub fn precision(&self, type_mode: TypeMode) -> Option<u16> {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            self.simple_type_info.clone().unwrap().precision
+        } else {
+            self.precision
+        }
+    }
+
+    pub fn octet_length(&self, type_mode: TypeMode) -> Option<u16> {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            self.simple_type_info.clone().unwrap().octet_length
+        } else {
+            self.octet_length
+        }
+    }
+
+    pub fn fixed_bytes_length(&self, type_mode: TypeMode) -> Option<u16> {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            self.simple_type_info.clone().unwrap().fixed_bytes_length
+        } else {
+            self.fixed_bytes_length
+        }
+    }
 }
