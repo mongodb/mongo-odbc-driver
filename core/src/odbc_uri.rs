@@ -353,9 +353,7 @@ impl ODBCUri {
 
     fn handle_app_name(&mut self, app_name: Option<String>) -> Option<String> {
         if let Some(ref app_name) = app_name {
-            if app_name.contains(POWERBI_CONNECTOR) {
-                log::info!("Connecting with PowerBI Connector version: {}", app_name);
-            }
+            log::info!("Connecting with : {app_name}");
         }
         Some(
             vec![
