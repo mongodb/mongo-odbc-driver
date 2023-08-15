@@ -352,7 +352,11 @@ impl ODBCUri {
     }
 
     fn handle_app_name(&mut self, app_name: Option<String>) -> Option<String> {
-        // log::info!("Connecting with PowerBI Connector version: {s}");
+        if let Some(ref app_name) = app_name {
+            if app_name.contains(POWERBI_CONNECTOR) {
+                log::info!("Connecting with PowerBI Connector version: {}", app_name);
+            }
+        }
         Some(
             vec![
                 Some(DEFAULT_APP_NAME.to_string()),
@@ -370,18 +374,6 @@ impl ODBCUri {
             }),
         )
     }
-
-    // fn handle_app_name(&mut self) -> Option<String> {
-    //     self.remove(&[APPNAME])
-    //         .map(|s| {
-    //             if s.contains(POWERBI_CONNECTOR) {
-    //                 format!("{}+{}", s, DRIVER_METRICS_VERSION.as_str())
-    //             } else {
-    //                 s
-    //             }
-    //         })
-    //         .or(Some(DEFAULT_APP_NAME.to_string()))
-    // }
 }
 
 mod unit {
