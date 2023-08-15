@@ -91,16 +91,20 @@ impl MongoStatement for MongoQuery {
             .resultset_cursor
             .advance()
             .map_err(Error::QueryCursorUpdate);
-        if let Ok(false) = res {
-            // deserialize_current unwraps None if we do not check the value of advance.
+
+        // Cursor::advance must return Ok(true) before Cursor::deserialize_current can be invoked.
+        // Calling Cursor::deserialize_current after Cursor::advance does not return true or without
+        // calling Cursor::advance at all may result in a panic
+        if let Ok(true) = res {
+            self.current = Some(
+                self.resultset_cursor
+                    .deserialize_current()
+                    .map_err(Error::QueryCursorUpdate)?,
+            );
+        } else {
             self.current = None;
-            return Ok((false, vec![]));
         }
-        self.current = Some(
-            self.resultset_cursor
-                .deserialize_current()
-                .map_err(Error::QueryCursorUpdate)?,
-        );
+
         Ok((res?, vec![]))
     }
 
