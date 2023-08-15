@@ -912,6 +912,34 @@ mod unit {
         }
 
         #[test]
+        fn app_name_in_odbc_uri_and_no_mongodb_uri() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DEFAULT_APP_NAME;
+            let uri_opts = ODBCUri::new(
+                "USER=foo;PWD=bar;SERVER=localhost:27017;APPNAME=powerbi-connector+1.0.0"
+                    .to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .unwrap();
+            assert_eq!(
+                format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
+                uri_opts.client_options.app_name.unwrap()
+            );
+        }
+
+        #[test]
+        fn no_app_name_in_odbc_uri_and_no_mongodb_uri() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DEFAULT_APP_NAME;
+            let uri_opts = ODBCUri::new("USER=foo;PWD=bar;SERVER=localhost:27017;".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .unwrap();
+            assert_eq!(*DEFAULT_APP_NAME, uri_opts.client_options.app_name.unwrap());
+        }
+
+        #[test]
         fn app_name_in_odbc_uri_shows_with_odbc_driver_version_added() {
             use crate::odbc_uri::ODBCUri;
             use constants::DEFAULT_APP_NAME;
@@ -974,6 +1002,21 @@ mod unit {
             .unwrap()
             .try_into_client_options()
             .unwrap();
+
+            assert_eq!(
+                DRIVER_SHORT_NAME,
+                uri_opts.client_options.driver_info.unwrap().name
+            );
+        }
+
+        #[test]
+        fn driver_info_with_no_mongodb_uri_and_no_odbc_uri_appname() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DRIVER_SHORT_NAME;
+            let uri_opts = ODBCUri::new("USER=foo;PWD=bar;SERVER=localhost:27017".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .unwrap();
 
             assert_eq!(
                 format!("{DRIVER_SHORT_NAME}",),
