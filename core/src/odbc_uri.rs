@@ -341,6 +341,13 @@ impl ODBCUri {
         })
     }
 
+    // handle_driver_info sets the driver name correctly for telemetry purposes.
+    // In all instances, it will append "mongodb-odbc" to the driver name. If
+    // the APPNAME ODBC URI property is provided and contains "powerbi-connector",
+    // it will also append "powerbi-connector"
+    // APPNAME.contains("powerbi-connector") -> "mongodb-odbc|powerbi-connector"
+    // !APPNAME.contains("powerbi-connector") -> "mongodb-odbc"
+    // this will materialize in telemetry as "mongo-rust-driver|mongodb-odbc|powerbi-connector"
     fn handle_driver_info(&self, app_name: &'_ str) -> DriverInfo {
         let driver_info = DriverInfo::builder();
         let driver_name = if app_name.contains(POWERBI_CONNECTOR) {
@@ -351,6 +358,14 @@ impl ODBCUri {
         driver_info.name(driver_name).build()
     }
 
+    // handle_app_name sets the appname correctly for telemetry purposes.
+    // In all instances, it will set the base appname as "mongo-odbc+<version>"
+    // If the APPNAME ODBC URI parameter is set and contains "powerbi-connector",
+    // it will include the APPNAME supplied, i.e. "mongodb-odbc+<version>|powerbi_connector+<version>"
+    // If an appName is included in the MongoDB URI, it will append that, i.e.
+    // "mongodb-odbc+<version>|powerbi_connector+<version>|<appName>"
+    // or "mongodb-odbc+<version>|<appName>" if no ODBC URI APPNAME is specified but there
+    // is one specified in the MongoDB URI.
     fn handle_app_name(&mut self, app_name: Option<String>) -> Option<String> {
         if let Some(ref app_name) = app_name {
             log::info!("Connecting with : {app_name}");
@@ -1017,7 +1032,7 @@ mod unit {
                 .unwrap();
 
             assert_eq!(
-                format!("{DRIVER_SHORT_NAME}",),
+                DRIVER_SHORT_NAME,
                 uri_opts.client_options.driver_info.unwrap().name
             );
         }
