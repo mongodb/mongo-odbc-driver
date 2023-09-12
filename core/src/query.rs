@@ -64,43 +64,6 @@ impl MongoQuery {
             type_mode,
         })
     }
-
-    // Create a new MongoQuery on the connection's current database. Execute a
-    // $sql aggregation with the given query and initialize the result set
-    // cursor. If there is a timeout, the query must finish before the timeout
-    // or an error is returned.
-    pub fn run_query(mut self, client: &MongoConnection) -> Result<Self> {
-        let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
-        let db = client.client.database(current_db);
-
-        // 2. Run the $sql aggregation to get the result set cursor.
-        let pipeline = vec![doc! {"$sql": {
-            "format": "odbc",
-            "formatVersion": 1,
-            "statement": &self.query,
-        }}];
-
-        let cursor: Cursor<Document> = match self.query_timeout {
-            Some(i) => {
-                if i > 0 {
-                    let opt = AggregateOptions::builder()
-                        .max_time(Duration::from_millis(i as u64))
-                        .build();
-                    db.aggregate(pipeline, opt)
-                        .map_err(Error::QueryExecutionFailed)?
-                } else {
-                    // If the query timeout is 0, it means "no timeout"
-                    db.aggregate(pipeline, None)
-                        .map_err(Error::QueryExecutionFailed)?
-                }
-            }
-            _ => db
-                .aggregate(pipeline, None)
-                .map_err(Error::QueryExecutionFailed)?,
-        };
-        self.resultset_cursor = Some(cursor);
-        Ok(self)
-    }
 }
 
 impl MongoStatement for MongoQuery {
@@ -149,6 +112,10 @@ impl MongoStatement for MongoQuery {
         &self.resultset_metadata
     }
 
+    // Create a new MongoQuery on the connection's current database. Execute a
+    // $sql aggregation with the given query and initialize the result set
+    // cursor. If there is a timeout, the query must finish before the timeout
+    // or an error is returned.
     fn execute(&mut self, mc: &MongoConnection) -> Result<bool> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = mc.client.database(current_db);

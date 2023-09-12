@@ -48,9 +48,8 @@ impl MongoConnection {
             uuid_repr,
         };
         // Verify that the connection is working and the user has access to the default DB
-        // let query =
+        // ADF is supposed to check permissions on this
         MongoQuery::prepare(&connection, current_db, None, "select 1", type_mode)?;
-        // query.execute(&connection)?;
 
         Ok(connection)
     }
