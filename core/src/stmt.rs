@@ -23,6 +23,11 @@ pub trait MongoStatement: Debug {
             .get((col_index - 1) as usize)
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)
     }
+    // add an execute function that implementers may override for custom execution of a task
+    // realistically, this is only for MongoQuery to actually execute
+    fn execute(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
+        Ok(true)
+    }
 }
 
 #[derive(Debug)]
@@ -74,6 +79,8 @@ mod unit {
         let mut test_empty = EmptyStatement {
             resultset_metadata: &EMPTY_TEST_METADATA,
         };
+
+        assert!(test_empty.execute(None).is_ok());
 
         assert_eq!(
             "TABLE_CAT",

@@ -12,19 +12,22 @@ use std::time::Duration;
 #[derive(Debug)]
 pub struct MongoQuery {
     // The cursor on the result set.
-    resultset_cursor: Cursor<Document>,
+    resultset_cursor: Option<Cursor<Document>>,
     // The result set metadata, sorted alphabetically by collection and field name.
     resultset_metadata: Vec<MongoColMetadata>,
     // The current deserialized "row".
     current: Option<Document>,
+    // The current database
+    current_db: Option<String>,
+    // The query
+    query: Option<String>,
+    // The query timeout
+    query_timeout: Option<u32>,
 }
 
 impl MongoQuery {
-    // Create a new MongoQuery on the connection's current database. Execute a
-    // $sql aggregation with the given query and initialize the result set
-    // cursor. If there is a timeout, the query must finish before the timeout
-    // or an error is returned.
-    pub fn execute(
+    // Create a MongoQuery with only the resultset_metadata.
+    pub fn prepare(
         client: &MongoConnection,
         current_db: Option<String>,
         query_timeout: Option<u32>,
@@ -49,14 +52,32 @@ impl MongoQuery {
         let metadata =
             get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
 
+        Ok(MongoQuery {
+            resultset_cursor: None,
+            resultset_metadata: metadata,
+            current: None,
+            current_db: Some(current_db),
+            query: Some(query.to_string()),
+            query_timeout,
+        })
+    }
+
+    // Create a new MongoQuery on the connection's current database. Execute a
+    // $sql aggregation with the given query and initialize the result set
+    // cursor. If there is a timeout, the query must finish before the timeout
+    // or an error is returned.
+    pub fn execute(mut self, client: &MongoConnection) -> Result<Self> {
+        let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
+        let db = client.client.database(&current_db);
+
         // 2. Run the $sql aggregation to get the result set cursor.
         let pipeline = vec![doc! {"$sql": {
             "format": "odbc",
             "formatVersion": 1,
-            "statement": query,
+            "statement": &self.query,
         }}];
 
-        let cursor: Cursor<Document> = match query_timeout {
+        let cursor: Cursor<Document> = match self.query_timeout {
             Some(i) => {
                 if i > 0 {
                     let opt = AggregateOptions::builder()
@@ -74,11 +95,8 @@ impl MongoQuery {
                 .aggregate(pipeline, None)
                 .map_err(Error::QueryExecutionFailed)?,
         };
-        Ok(MongoQuery {
-            resultset_cursor: cursor,
-            resultset_metadata: metadata,
-            current: None,
-        })
+        self.resultset_cursor = Some(cursor);
+        Ok(self)
     }
 }
 
@@ -89,8 +107,10 @@ impl MongoStatement for MongoQuery {
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         let res = self
             .resultset_cursor
-            .advance()
-            .map_err(Error::QueryCursorUpdate);
+            .as_mut()
+            .map_or(Err(Error::PrematurePreparedStatementIteration), |c| {
+                c.advance().map_err(Error::QueryCursorUpdate)
+            });
 
         // Cursor::advance must return Ok(true) before Cursor::deserialize_current can be invoked.
         // Calling Cursor::deserialize_current after Cursor::advance does not return true or without
@@ -98,6 +118,8 @@ impl MongoStatement for MongoQuery {
         if let Ok(true) = res {
             self.current = Some(
                 self.resultset_cursor
+                    .as_ref()
+                    .unwrap()
                     .deserialize_current()
                     .map_err(Error::QueryCursorUpdate)?,
             );

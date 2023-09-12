@@ -45,6 +45,8 @@ pub enum Error {
     ValueAccess(String, bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
+    #[error("Attempted to iterate a prepared statement before executing")]
+    PrematurePreparedStatementIteration,
 }
 
 impl Error {
@@ -73,7 +75,8 @@ impl Error {
             | Error::MissingFieldBsonType(_)
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
-            | Error::ValueAccess(_, _) => GENERAL_ERROR,
+            | Error::ValueAccess(_, _)
+            | Error::PrematurePreparedStatementIteration => GENERAL_ERROR,
         }
     }
 
@@ -109,7 +112,8 @@ impl Error {
             | Error::NoDatabase
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
-            | Error::ValueAccess(_, _) => 0,
+            | Error::ValueAccess(_, _)
+            | Error::PrematurePreparedStatementIteration => 0,
         }
     }
 }

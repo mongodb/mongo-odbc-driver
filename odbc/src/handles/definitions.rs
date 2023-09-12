@@ -1,7 +1,7 @@
 use crate::api::{definitions::*, errors::ODBCError};
 use cstr::{Charset, WideChar};
 use logger::Logger;
-use mongo_odbc_core::TypeMode;
+use mongo_odbc_core::{MongoQuery, TypeMode};
 use odbc_sys::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
 use std::{
     borrow::BorrowMut,
@@ -298,6 +298,7 @@ pub struct Statement {
     pub state: RwLock<StatementState>,
     // pub cursor: RwLock<Option<Box<Peekable<Cursor>>>>,
     pub errors: RwLock<Vec<ODBCError>>,
+    pub prepared_query: RwLock<Option<MongoQuery>>,
 }
 
 #[derive(Debug)]
@@ -427,6 +428,7 @@ impl Statement {
             }),
             errors: RwLock::new(vec![]),
             mongo_statement: RwLock::new(None),
+            prepared_query: RwLock::new(None),
         }
     }
 
