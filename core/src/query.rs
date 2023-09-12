@@ -68,7 +68,7 @@ impl MongoQuery {
     // or an error is returned.
     pub fn execute(mut self, client: &MongoConnection) -> Result<Self> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
-        let db = client.client.database(&current_db);
+        let db = client.client.database(current_db);
 
         // 2. Run the $sql aggregation to get the result set cursor.
         let pipeline = vec![doc! {"$sql": {

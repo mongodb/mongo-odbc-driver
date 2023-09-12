@@ -2779,7 +2779,7 @@ fn sql_prepare(
     connection: &Connection,
 ) -> Result<MongoQuery> {
     let mut query = unsafe { input_text_to_string_w(statement_text, text_length as usize) };
-    query = query.strip_suffix(";").unwrap_or(&query).to_string();
+    query = query.strip_suffix(';').unwrap_or(&query).to_string();
     let mongo_statement = {
         let type_mode = *connection.type_mode.read().unwrap();
         let attributes = connection.attributes.read().unwrap();

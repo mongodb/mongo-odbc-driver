@@ -61,7 +61,7 @@ pub struct Dsn {
 impl Dsn {
     #[allow(clippy::too_many_arguments)]
     pub fn new<S: Into<String> + Copy>(args: DsnArgs<S>) -> Result<Self, DsnError> {
-        let validation = vec![
+        let validation = [
             Dsn::check_value_length(&args.database.into()),
             unsafe { SQLValidDSNW(to_widechar_ptr(&args.dsn.into()).0) },
             Dsn::check_value_length(&args.password.into()),

@@ -181,7 +181,7 @@ impl ConfigGui {
         if let Some(opts) = self.validate_input() {
             if unsafe {
                 atlas_sql_test_connection(
-                    to_widechar_ptr(&opts.to_connection_string()).0 as *mut u16,
+                    to_widechar_ptr(&opts.to_connection_string()).0,
                     buffer.as_mut_ptr(),
                     buffer.len(),
                     &mut buffer_length,
