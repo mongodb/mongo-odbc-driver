@@ -1044,9 +1044,9 @@ pub unsafe extern "C" fn SQLExecDirectW(
                 mongo_handle
             );
 
-            let mongo_statement = odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+            odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
 
-            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            // *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
         statement_handle
@@ -1069,25 +1069,32 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
 
-            let mongo_statement = odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
-            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+            // *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
         statement_handle
     );
 }
 
-unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<MongoQuery> {
+unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool> {
     let mongo_statement = {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
-            let mut pq_lock = stmt.prepared_query.write().unwrap();
-            let prepared_query = pq_lock.take().unwrap();
-            // if this handle has an associated prepared_query, the application can freely call SQLExecute over and over with this query.
-            // This means we'll make a copy of the pre-executed MongoQuery and put it back in for execution again on a subsequent call.
-            let new_prepare = prepared_query.new_with_same_metadata();
-            *pq_lock = Some(new_prepare);
+            // let mut pq_lock = stmt.prepared_query.write().unwrap();
+            // let prepared_query = pq_lock.take().unwrap();
+            // // if this handle has an associated prepared_query, the application can freely call SQLExecute over and over with this query.
+            // // This means we'll make a copy of the pre-executed MongoQuery and put it back in for execution again on a subsequent call.
+            // let new_prepare = prepared_query.new_with_same_metadata();
+            // *pq_lock = Some(new_prepare);
 
-            prepared_query
+            // prepared_query
+            //     .execute(mongo_connection)
+            //     .map_err(|e| e.into())
+            stmt.mongo_statement
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
                 .execute(mongo_connection)
                 .map_err(|e| e.into())
         } else {
@@ -2793,14 +2800,15 @@ fn sql_prepare(
             // this is incredibly unfortunate, but we maintain two copies of the prepared query. One to use in the mongostatement,
             // and the other to put on the statement handle's prepared_query field.
             // Because there is no cursor yet in a prepared query MongoQuery, this isn't as consuming as it sounds.
-            let query =
-                MongoQuery::prepare(mongo_connection, current_db, timeout, &query, type_mode);
-            if let Ok(query) = query {
-                *stmt.prepared_query.write().unwrap() = Some(query.new_with_same_metadata());
-                Ok(query)
-            } else {
-                query.map_err(|e| e.into())
-            }
+            // let query =
+            MongoQuery::prepare(mongo_connection, current_db, timeout, &query, type_mode)
+                .map_err(|e| e.into())
+            // if let Ok(query) = query {
+            // *stmt.prepared_query.write().unwrap() = Some(query.new_with_same_metadata());
+            // Ok(query)
+            // } else {
+            // query.map_err(|e| e.into())
+            // }
         } else {
             Err(ODBCError::InvalidCursorState)
         }

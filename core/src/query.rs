@@ -9,18 +9,6 @@ use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use std::time::Duration;
 
-///
-/// MongoQuery represents a query, and potentially its results.
-///
-/// A MongoQuery can be in two states:
-///
-/// - prepared - `resultset_cursor` is `None`
-/// - executed - `resultset_cursor` is `Some`
-///
-/// When in a prepared state, a MongoQuery can be copied for re-use
-/// in prepared statements via the `new_with_same_metadata` function.
-/// See that function's documentation for important usage information.
-///
 #[derive(Debug)]
 pub struct MongoQuery {
     // The cursor on the result set.
@@ -66,7 +54,7 @@ impl MongoQuery {
         let metadata =
             get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
 
-        Ok(MongoQuery {
+        Ok(Self {
             resultset_cursor: None,
             resultset_metadata: metadata,
             current: None,
@@ -77,34 +65,11 @@ impl MongoQuery {
         })
     }
 
-    ///
-    /// Creates a copy with the same metadata.
-    ///
-    /// # Panics
-    /// Panics if this is not in a executed state,
-    /// i.e. `resultset_cursor.is_some()`
-    ///
-    pub fn new_with_same_metadata(&self) -> Self {
-        if self.resultset_cursor.is_some() {
-            unimplemented!()
-        } else {
-            Self {
-                resultset_cursor: None,
-                resultset_metadata: self.resultset_metadata.clone(),
-                current: None,
-                current_db: self.current_db.clone(),
-                query: self.query.clone(),
-                query_timeout: self.query_timeout,
-                type_mode: self.type_mode,
-            }
-        }
-    }
-
     // Create a new MongoQuery on the connection's current database. Execute a
     // $sql aggregation with the given query and initialize the result set
     // cursor. If there is a timeout, the query must finish before the timeout
     // or an error is returned.
-    pub fn execute(mut self, client: &MongoConnection) -> Result<Self> {
+    pub fn run_query(mut self, client: &MongoConnection) -> Result<Self> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = client.client.database(current_db);
 
@@ -182,5 +147,38 @@ impl MongoStatement for MongoQuery {
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
         &self.resultset_metadata
+    }
+
+    fn execute(&mut self, mc: &MongoConnection) -> Result<bool> {
+        let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
+        let db = mc.client.database(current_db);
+
+        // 2. Run the $sql aggregation to get the result set cursor.
+        let pipeline = vec![doc! {"$sql": {
+            "format": "odbc",
+            "formatVersion": 1,
+            "statement": &self.query,
+        }}];
+
+        let cursor: Cursor<Document> = match self.query_timeout {
+            Some(i) => {
+                if i > 0 {
+                    let opt = AggregateOptions::builder()
+                        .max_time(Duration::from_millis(i as u64))
+                        .build();
+                    db.aggregate(pipeline, opt)
+                        .map_err(Error::QueryExecutionFailed)?
+                } else {
+                    // If the query timeout is 0, it means "no timeout"
+                    db.aggregate(pipeline, None)
+                        .map_err(Error::QueryExecutionFailed)?
+                }
+            }
+            _ => db
+                .aggregate(pipeline, None)
+                .map_err(Error::QueryExecutionFailed)?,
+        };
+        self.resultset_cursor = Some(cursor);
+        Ok(true)
     }
 }

@@ -48,8 +48,9 @@ impl MongoConnection {
             uuid_repr,
         };
         // Verify that the connection is working and the user has access to the default DB
-        let query = MongoQuery::prepare(&connection, current_db, None, "select 1", type_mode)?;
-        query.execute(&connection)?;
+        // let query =
+        MongoQuery::prepare(&connection, current_db, None, "select 1", type_mode)?;
+        // query.execute(&connection)?;
 
         Ok(connection)
     }

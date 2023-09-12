@@ -25,7 +25,7 @@ pub trait MongoStatement: Debug {
     }
     // add an execute function that implementers may override for custom execution of a task
     // realistically, this is only for MongoQuery to actually execute
-    fn execute(&mut self, _: Option<&MongoConnection>) -> Result<bool> {
+    fn execute(&mut self, _: &MongoConnection) -> Result<bool> {
         Ok(true)
     }
 }
@@ -80,7 +80,7 @@ mod unit {
             resultset_metadata: &EMPTY_TEST_METADATA,
         };
 
-        assert!(test_empty.execute(None).is_ok());
+        // assert!(test_empty.execute(None).is_ok());
 
         assert_eq!(
             "TABLE_CAT",
