@@ -1,6 +1,6 @@
 use constants::{
-    GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER,
-    TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
+    FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX,
+    NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
 };
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
@@ -75,8 +75,8 @@ impl Error {
             | Error::MissingFieldBsonType(_)
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
-            | Error::ValueAccess(_, _)
-            | Error::PrematurePreparedStatementIteration => GENERAL_ERROR,
+            | Error::ValueAccess(_, _) => GENERAL_ERROR,
+            Error::PrematurePreparedStatementIteration => FUNCTION_SEQUENCE_ERROR,
         }
     }
 

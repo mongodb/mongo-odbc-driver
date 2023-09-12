@@ -26,7 +26,7 @@ pub trait MongoStatement: Debug {
     // add an execute function that implementers may override for custom execution of a task
     // realistically, this is only for MongoQuery to actually execute
     fn execute(&mut self, _: &MongoConnection) -> Result<bool> {
-        Ok(true)
+        Err(Error::PrematurePreparedStatementIteration)
     }
 }
 
