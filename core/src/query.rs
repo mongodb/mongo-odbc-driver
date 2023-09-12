@@ -9,6 +9,18 @@ use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{options::AggregateOptions, sync::Cursor};
 use std::time::Duration;
 
+///
+/// MongoQuery represents a query, and potentially its results.
+///
+/// A MongoQuery can be in two states:
+///
+/// - prepared - `resultset_cursor` is `None`
+/// - executed - `resultset_cursor` is `Some`
+///
+/// When in a prepared state, a MongoQuery can be copied for re-use
+/// in prepared statements via the `new_with_same_metadata` function.
+/// See that function's documentation for important usage information.
+///
 #[derive(Debug)]
 pub struct MongoQuery {
     // The cursor on the result set.
@@ -18,11 +30,13 @@ pub struct MongoQuery {
     // The current deserialized "row".
     current: Option<Document>,
     // The current database
-    current_db: Option<String>,
+    pub current_db: Option<String>,
     // The query
-    query: Option<String>,
+    pub query: String,
     // The query timeout
-    query_timeout: Option<u32>,
+    pub query_timeout: Option<u32>,
+    // The type mode associated with this query
+    pub type_mode: TypeMode,
 }
 
 impl MongoQuery {
@@ -57,9 +71,33 @@ impl MongoQuery {
             resultset_metadata: metadata,
             current: None,
             current_db: Some(current_db),
-            query: Some(query.to_string()),
+            query: query.to_string(),
             query_timeout,
+            type_mode,
         })
+    }
+
+    ///
+    /// Creates a copy with the same metadata.
+    ///
+    /// # Panics
+    /// Panics if this is not in a executed state,
+    /// i.e. `resultset_cursor.is_some()`
+    ///
+    pub fn new_with_same_metadata(&self) -> Self {
+        if self.resultset_cursor.is_some() {
+            unimplemented!()
+        } else {
+            Self {
+                resultset_cursor: None,
+                resultset_metadata: self.resultset_metadata.clone(),
+                current: None,
+                current_db: self.current_db.clone(),
+                query: self.query.clone(),
+                query_timeout: self.query_timeout,
+                type_mode: self.type_mode,
+            }
+        }
     }
 
     // Create a new MongoQuery on the connection's current database. Execute a

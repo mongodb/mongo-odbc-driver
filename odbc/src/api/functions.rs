@@ -1080,11 +1080,14 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<MongoQuery> {
     let mongo_statement = {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
-            stmt.prepared_query
-                .write()
-                .unwrap()
-                .take()
-                .unwrap()
+            let mut pq_lock = stmt.prepared_query.write().unwrap();
+            let prepared_query = pq_lock.take().unwrap();
+            // if this handle has an associated prepared_query, the application can freely call SQLExecute over and over with this query.
+            // This means we'll make a copy of the pre-executed MongoQuery and put it back in for execution again on a subsequent call.
+            let new_prepare = prepared_query.new_with_same_metadata();
+            *pq_lock = Some(new_prepare);
+
+            prepared_query
                 .execute(mongo_connection)
                 .map_err(|e| e.into())
         } else {
@@ -1280,6 +1283,8 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                     .as_statement()
                     .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_STMT_ERROR))?
             };
+            // ensure we take the prepared_query if one exists
+            stmt.prepared_query.write().unwrap().take();
             // Actually reading this value would make ASAN fail, but this
             // is what the ODBC standard expects.
             let conn = unsafe {
@@ -2771,7 +2776,6 @@ pub unsafe extern "C" fn SQLPrepareW(
     );
 }
 
-// helper function for SQLPrepare
 fn sql_prepare(
     statement_text: *const WideChar,
     text_length: Integer,
@@ -2788,19 +2792,15 @@ fn sql_prepare(
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
             // this is incredibly unfortunate, but we maintain two copies of the prepared query. One to use in the mongostatement,
             // and the other to put on the statement handle's prepared_query field.
-            // because there is no cursor yet in a prepared query MongoQuery, this isn't as consuming as it sounds.
-            let _ = MongoQuery::prepare(
-                mongo_connection,
-                current_db.clone(),
-                timeout,
-                &query,
-                type_mode,
-            )
-            .map(|q| {
-                *stmt.prepared_query.write().unwrap() = Some(q);
-            });
-            MongoQuery::prepare(mongo_connection, current_db, timeout, &query, type_mode)
-                .map_err(|e| e.into())
+            // Because there is no cursor yet in a prepared query MongoQuery, this isn't as consuming as it sounds.
+            let query =
+                MongoQuery::prepare(mongo_connection, current_db, timeout, &query, type_mode);
+            if let Ok(query) = query {
+                *stmt.prepared_query.write().unwrap() = Some(query.new_with_same_metadata());
+                Ok(query)
+            } else {
+                query.map_err(|e| e.into())
+            }
         } else {
             Err(ODBCError::InvalidCursorState)
         }
