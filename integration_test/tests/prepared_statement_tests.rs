@@ -33,7 +33,7 @@ mod integration {
                 SQLExecute(stmt)
             );
 
-            dbg!(get_sql_diagnostics);
+            dbg!(get_sql_diagnostics(HandleType::Stmt, stmt as Handle));
         }
         disconnect_and_close_handles(dbc, stmt);
     }
@@ -83,7 +83,7 @@ mod integration {
                 SQLFetch(stmt as HStmt),
             );
 
-            dbg!(get_sql_diagnostics);
+            dbg!(get_sql_diagnostics(HandleType::Stmt, stmt as Handle));
 
             disconnect_and_close_handles(dbc, stmt);
         }
