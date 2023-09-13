@@ -80,8 +80,6 @@ mod unit {
             resultset_metadata: &EMPTY_TEST_METADATA,
         };
 
-        // assert!(test_empty.execute(None).is_ok());
-
         assert_eq!(
             "TABLE_CAT",
             test_empty.get_col_metadata(1).unwrap().col_name

@@ -28,10 +28,7 @@ mod integration {
         unsafe {
             // Only prepared statement can be executed.
             // Calling SQLExecute before SQLPrepare is invalid.
-            assert_eq!(
-                SqlReturn::ERROR,
-                SQLExecute(stmt)
-            );
+            assert_eq!(SqlReturn::ERROR, SQLExecute(stmt));
 
             dbg!(get_sql_diagnostics(HandleType::Stmt, stmt as Handle));
         }
@@ -78,10 +75,7 @@ mod integration {
             // Retrieve result set metadata
             get_column_attributes(stmt as Handle, 2);
 
-            assert_eq!(
-                SqlReturn::ERROR,
-                SQLFetch(stmt as HStmt),
-            );
+            assert_eq!(SqlReturn::ERROR, SQLFetch(stmt as HStmt),);
 
             dbg!(get_sql_diagnostics(HandleType::Stmt, stmt as Handle));
 

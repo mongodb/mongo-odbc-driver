@@ -5,7 +5,7 @@ use crate::{
 };
 use crate::{map, SQLSetEnvAttr};
 use odbc_sys::{HEnv, HandleType, Integer, Pointer, SqlReturn};
-use std::{collections::BTreeMap, ffi::c_void, mem::size_of};
+use std::{collections::BTreeMap, mem::size_of};
 
 const OPTIONAL_VALUE_CHANGED: &str = "01S02\0";
 
@@ -136,7 +136,7 @@ mod unit {
                 SQLGetEnvAttr(
                     env_handle as *mut _,
                     EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
-                    std::ptr::null_mut() as *mut c_void,
+                    std::ptr::null_mut(),
                     0,
                     string_length_ptr
                 )
@@ -149,7 +149,7 @@ mod unit {
                 SQLGetEnvAttr(
                     env_handle as *mut _,
                     EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
-                    std::ptr::null_mut() as *mut c_void,
+                    std::ptr::null_mut(),
                     0,
                     std::ptr::null_mut()
                 )
@@ -262,7 +262,7 @@ mod unit {
                 SQLGetEnvAttr(
                     env_handle as *mut _,
                     EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
-                    std::ptr::null_mut() as *mut c_void,
+                    std::ptr::null_mut(),
                     0,
                     string_length_ptr
                 )
@@ -275,7 +275,7 @@ mod unit {
                 SQLGetEnvAttr(
                     env_handle as *mut _,
                     EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS as i32,
-                    std::ptr::null_mut() as *mut c_void,
+                    std::ptr::null_mut(),
                     0,
                     std::ptr::null_mut()
                 )

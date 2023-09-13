@@ -78,7 +78,7 @@ impl Error {
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
-            | Error::UnsupportedOperation(_)=> GENERAL_ERROR,
+            | Error::UnsupportedOperation(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
         }
     }

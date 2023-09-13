@@ -22,7 +22,7 @@ pub struct MongoQuery {
     // The query
     pub query: String,
     // The query timeout
-    pub query_timeout: Option<u32>
+    pub query_timeout: Option<u32>,
 }
 
 impl MongoQuery {
@@ -58,7 +58,7 @@ impl MongoQuery {
             current: None,
             current_db: Some(current_db),
             query: query.to_string(),
-            query_timeout
+            query_timeout,
         })
     }
 }
