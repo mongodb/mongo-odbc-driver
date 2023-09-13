@@ -41,12 +41,14 @@ pub enum Error {
     QueryExecutionFailed(mongodb::error::Error),
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
-    #[error("Error retreiving data for field {0}: {1}")]
+    #[error("Error retrieving data for field {0}: {1}")]
     ValueAccess(String, bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
-    #[error("Attempted to iterate a prepared statement before executing")]
-    PrematurePreparedStatementIteration,
+    #[error("Unsupported operation {0}")]
+    UnsupportedOperation(&'static str),
+    #[error("Statement not executed")]
+    StatementNotExecuted,
 }
 
 impl Error {
@@ -75,8 +77,9 @@ impl Error {
             | Error::MissingFieldBsonType(_)
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
-            | Error::ValueAccess(_, _) => GENERAL_ERROR,
-            Error::PrematurePreparedStatementIteration => FUNCTION_SEQUENCE_ERROR,
+            | Error::ValueAccess(_, _)
+            | Error::UnsupportedOperation(_)=> GENERAL_ERROR,
+            Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
         }
     }
 
@@ -113,7 +116,8 @@ impl Error {
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
-            | Error::PrematurePreparedStatementIteration => 0,
+            | Error::UnsupportedOperation(_)
+            | Error::StatementNotExecuted => 0,
         }
     }
 }

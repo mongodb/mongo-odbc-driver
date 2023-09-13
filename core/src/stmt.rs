@@ -23,10 +23,10 @@ pub trait MongoStatement: Debug {
             .get((col_index - 1) as usize)
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)
     }
-    // add an execute function that implementers may override for custom execution of a task
-    // realistically, this is only for MongoQuery to actually execute
+    // Executes a prepared statement.
+    // Only MongoQuery supports this workflow. The other statements don't.
     fn execute(&mut self, _: &MongoConnection) -> Result<bool> {
-        Err(Error::PrematurePreparedStatementIteration)
+        Err(Error::UnsupportedOperation("execute"))
     }
 }
 

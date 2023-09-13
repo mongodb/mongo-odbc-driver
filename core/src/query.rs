@@ -22,9 +22,7 @@ pub struct MongoQuery {
     // The query
     pub query: String,
     // The query timeout
-    pub query_timeout: Option<u32>,
-    // The type mode associated with this query
-    pub type_mode: TypeMode,
+    pub query_timeout: Option<u32>
 }
 
 impl MongoQuery {
@@ -60,8 +58,7 @@ impl MongoQuery {
             current: None,
             current_db: Some(current_db),
             query: query.to_string(),
-            query_timeout,
-            type_mode,
+            query_timeout
         })
     }
 }
@@ -74,7 +71,7 @@ impl MongoStatement for MongoQuery {
         let res = self
             .resultset_cursor
             .as_mut()
-            .map_or(Err(Error::PrematurePreparedStatementIteration), |c| {
+            .map_or(Err(Error::StatementNotExecuted), |c| {
                 c.advance().map_err(Error::QueryCursorUpdate)
             });
 
@@ -112,13 +109,12 @@ impl MongoStatement for MongoQuery {
         &self.resultset_metadata
     }
 
-    // Create a new MongoQuery on the connection's current database. Execute a
-    // $sql aggregation with the given query and initialize the result set
+    // Execute the $sql aggregation for the query and initialize the result set
     // cursor. If there is a timeout, the query must finish before the timeout
     // or an error is returned.
-    fn execute(&mut self, mc: &MongoConnection) -> Result<bool> {
+    fn execute(&mut self, connection: &MongoConnection) -> Result<bool> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
-        let db = mc.client.database(current_db);
+        let db = connection.client.database(current_db);
 
         // 2. Run the $sql aggregation to get the result set cursor.
         let pipeline = vec![doc! {"$sql": {
