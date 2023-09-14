@@ -1071,7 +1071,6 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
             let connection = must_be_valid!((*stmt.connection).as_connection());
 
             odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
-            // *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
         },
         statement_handle
