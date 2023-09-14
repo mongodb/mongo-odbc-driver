@@ -1036,36 +1036,19 @@ pub unsafe extern "C" fn SQLExecDirectW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let query = input_text_to_string_w(statement_text, text_length as usize);
             let mongo_handle = MongoHandleRef::from(statement_handle);
-            trace_odbc!(
-                debug,
-                mongo_handle,
-                format!("Executing following query: \"{query}\""),
-                function_name!()
-            );
             let stmt = must_be_valid!(mongo_handle.as_statement());
-            let mongo_statement = {
-                let connection = must_be_valid!((*stmt.connection).as_connection());
-                let type_mode = *connection.type_mode.read().unwrap();
-                let attributes = connection.attributes.read().unwrap();
-                let timeout = attributes.connection_timeout;
-                let current_db = attributes.current_catalog.as_ref().cloned();
-                if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref()
-                {
-                    MongoQuery::execute(mongo_connection, current_db, timeout, &query, type_mode)
-                        .map_err(|e| e.into())
-                } else {
-                    Err(ODBCError::InvalidCursorState)
-                }
-            };
-            if let Ok(mongo_statement) = mongo_statement {
-                *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
-                SqlReturn::SUCCESS
-            } else {
-                add_diag_info!(mongo_handle, mongo_statement.as_ref().unwrap_err().clone());
-                SqlReturn::ERROR
-            }
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+            let mongo_statement = odbc_unwrap!(
+                sql_prepare(statement_text, text_length, connection,),
+                mongo_handle
+            );
+
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+
+            odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+
+            SqlReturn::SUCCESS
         },
         statement_handle
     );
@@ -1080,7 +1063,36 @@ pub unsafe extern "C" fn SQLExecDirectW(
 #[no_mangle]
 #[named]
 pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
-    unsupported_function!(statement_handle)
+    panic_safe_exec_clear_diagnostics!(
+        debug,
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!(mongo_handle.as_statement());
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+
+            odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
+}
+
+unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool> {
+    let mongo_statement = {
+        if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
+            stmt.mongo_statement
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .execute(mongo_connection)
+                .map_err(|e| e.into())
+        } else {
+            Err(ODBCError::InvalidCursorState)
+        }
+    };
+
+    mongo_statement
 }
 
 ///
@@ -2737,11 +2749,48 @@ pub unsafe extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer
 #[no_mangle]
 #[named]
 pub unsafe extern "C" fn SQLPrepareW(
-    hstmt: HStmt,
-    _statement_text: *const WideChar,
-    _text_length: Integer,
+    statement_handle: HStmt,
+    statement_text: *const WideChar,
+    text_length: Integer,
 ) -> SqlReturn {
-    unsupported_function!(hstmt)
+    panic_safe_exec_clear_diagnostics!(
+        debug,
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!(mongo_handle.as_statement());
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+            let mongo_statement = odbc_unwrap!(
+                sql_prepare(statement_text, text_length, connection,),
+                mongo_handle
+            );
+
+            *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            SqlReturn::SUCCESS
+        },
+        statement_handle
+    );
+}
+
+fn sql_prepare(
+    statement_text: *const WideChar,
+    text_length: Integer,
+    connection: &Connection,
+) -> Result<MongoQuery> {
+    let mut query = unsafe { input_text_to_string_w(statement_text, text_length as usize) };
+    query = query.strip_suffix(';').unwrap_or(&query).to_string();
+    let mongo_statement = {
+        let type_mode = *connection.type_mode.read().unwrap();
+        let attributes = connection.attributes.read().unwrap();
+        let timeout = attributes.connection_timeout;
+        let current_db = attributes.current_catalog.as_ref().cloned();
+        if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
+            MongoQuery::prepare(mongo_connection, current_db, timeout, &query, type_mode)
+                .map_err(|e| e.into())
+        } else {
+            Err(ODBCError::InvalidCursorState)
+        }
+    };
+    mongo_statement
 }
 
 ///

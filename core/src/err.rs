@@ -1,6 +1,6 @@
 use constants::{
-    GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER,
-    TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
+    FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX,
+    NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
 };
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
@@ -41,10 +41,14 @@ pub enum Error {
     QueryExecutionFailed(mongodb::error::Error),
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
-    #[error("Error retreiving data for field {0}: {1}")]
+    #[error("Error retrieving data for field {0}: {1}")]
     ValueAccess(String, bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
+    #[error("Unsupported operation {0}")]
+    UnsupportedOperation(&'static str),
+    #[error("Statement not executed")]
+    StatementNotExecuted,
 }
 
 impl Error {
@@ -73,7 +77,9 @@ impl Error {
             | Error::MissingFieldBsonType(_)
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
-            | Error::ValueAccess(_, _) => GENERAL_ERROR,
+            | Error::ValueAccess(_, _)
+            | Error::UnsupportedOperation(_) => GENERAL_ERROR,
+            Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
         }
     }
 
@@ -109,7 +115,9 @@ impl Error {
             | Error::NoDatabase
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
-            | Error::ValueAccess(_, _) => 0,
+            | Error::ValueAccess(_, _)
+            | Error::UnsupportedOperation(_)
+            | Error::StatementNotExecuted => 0,
         }
     }
 }

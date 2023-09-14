@@ -12,19 +12,22 @@ use std::time::Duration;
 #[derive(Debug)]
 pub struct MongoQuery {
     // The cursor on the result set.
-    resultset_cursor: Cursor<Document>,
+    resultset_cursor: Option<Cursor<Document>>,
     // The result set metadata, sorted alphabetically by collection and field name.
     resultset_metadata: Vec<MongoColMetadata>,
     // The current deserialized "row".
     current: Option<Document>,
+    // The current database
+    pub current_db: Option<String>,
+    // The query
+    pub query: String,
+    // The query timeout
+    pub query_timeout: Option<u32>,
 }
 
 impl MongoQuery {
-    // Create a new MongoQuery on the connection's current database. Execute a
-    // $sql aggregation with the given query and initialize the result set
-    // cursor. If there is a timeout, the query must finish before the timeout
-    // or an error is returned.
-    pub fn execute(
+    // Create a MongoQuery with only the resultset_metadata.
+    pub fn prepare(
         client: &MongoConnection,
         current_db: Option<String>,
         query_timeout: Option<u32>,
@@ -49,35 +52,13 @@ impl MongoQuery {
         let metadata =
             get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
 
-        // 2. Run the $sql aggregation to get the result set cursor.
-        let pipeline = vec![doc! {"$sql": {
-            "format": "odbc",
-            "formatVersion": 1,
-            "statement": query,
-        }}];
-
-        let cursor: Cursor<Document> = match query_timeout {
-            Some(i) => {
-                if i > 0 {
-                    let opt = AggregateOptions::builder()
-                        .max_time(Duration::from_millis(i as u64))
-                        .build();
-                    db.aggregate(pipeline, opt)
-                        .map_err(Error::QueryExecutionFailed)?
-                } else {
-                    // If the query timeout is 0, it means "no timeout"
-                    db.aggregate(pipeline, None)
-                        .map_err(Error::QueryExecutionFailed)?
-                }
-            }
-            _ => db
-                .aggregate(pipeline, None)
-                .map_err(Error::QueryExecutionFailed)?,
-        };
-        Ok(MongoQuery {
-            resultset_cursor: cursor,
+        Ok(Self {
+            resultset_cursor: None,
             resultset_metadata: metadata,
             current: None,
+            current_db: Some(current_db),
+            query: query.to_string(),
+            query_timeout,
         })
     }
 }
@@ -89,8 +70,10 @@ impl MongoStatement for MongoQuery {
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         let res = self
             .resultset_cursor
-            .advance()
-            .map_err(Error::QueryCursorUpdate);
+            .as_mut()
+            .map_or(Err(Error::StatementNotExecuted), |c| {
+                c.advance().map_err(Error::QueryCursorUpdate)
+            });
 
         // Cursor::advance must return Ok(true) before Cursor::deserialize_current can be invoked.
         // Calling Cursor::deserialize_current after Cursor::advance does not return true or without
@@ -98,6 +81,8 @@ impl MongoStatement for MongoQuery {
         if let Ok(true) = res {
             self.current = Some(
                 self.resultset_cursor
+                    .as_ref()
+                    .unwrap()
                     .deserialize_current()
                     .map_err(Error::QueryCursorUpdate)?,
             );
@@ -122,5 +107,41 @@ impl MongoStatement for MongoQuery {
 
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
         &self.resultset_metadata
+    }
+
+    // Execute the $sql aggregation for the query and initialize the result set
+    // cursor. If there is a timeout, the query must finish before the timeout
+    // or an error is returned.
+    fn execute(&mut self, connection: &MongoConnection) -> Result<bool> {
+        let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
+        let db = connection.client.database(current_db);
+
+        // 2. Run the $sql aggregation to get the result set cursor.
+        let pipeline = vec![doc! {"$sql": {
+            "format": "odbc",
+            "formatVersion": 1,
+            "statement": &self.query,
+        }}];
+
+        let cursor: Cursor<Document> = match self.query_timeout {
+            Some(i) => {
+                if i > 0 {
+                    let opt = AggregateOptions::builder()
+                        .max_time(Duration::from_millis(i as u64))
+                        .build();
+                    db.aggregate(pipeline, opt)
+                        .map_err(Error::QueryExecutionFailed)?
+                } else {
+                    // If the query timeout is 0, it means "no timeout"
+                    db.aggregate(pipeline, None)
+                        .map_err(Error::QueryExecutionFailed)?
+                }
+            }
+            _ => db
+                .aggregate(pipeline, None)
+                .map_err(Error::QueryExecutionFailed)?,
+        };
+        self.resultset_cursor = Some(cursor);
+        Ok(true)
     }
 }

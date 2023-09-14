@@ -23,6 +23,11 @@ pub trait MongoStatement: Debug {
             .get((col_index - 1) as usize)
             .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)
     }
+    // Executes a prepared statement.
+    // Only MongoQuery supports this workflow. The other statements don't.
+    fn execute(&mut self, _: &MongoConnection) -> Result<bool> {
+        Err(Error::UnsupportedOperation("execute"))
+    }
 }
 
 #[derive(Debug)]

@@ -142,6 +142,10 @@ mod driver {
     #[test]
     fn logger() {
         let tmp_log = std::env::temp_dir().join(Path::new("mongo_odbc.log"));
+        // ensure we remove the log file if it exists. We don't care if it errors since
+        // that means it doesn't exist (most likely), or we don't have permissions to touch
+        // it, which will make this test very hard to run anyway!
+        fs::remove_file(&tmp_log).unwrap();
         let logger = Logger::new("");
 
         info!("info1");
