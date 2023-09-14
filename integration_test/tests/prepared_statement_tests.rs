@@ -30,7 +30,9 @@ mod integration {
             // Calling SQLExecute before SQLPrepare is invalid.
             assert_eq!(SqlReturn::ERROR, SQLExecute(stmt));
 
-            dbg!(get_sql_diagnostics(HandleType::Stmt, stmt as Handle));
+            let diagnostic = get_sql_diagnostics(HandleType::Stmt, stmt as Handle);
+            // This error is thrown by the DM
+            assert!(diagnostic.contains("Function sequence error"));
         }
         disconnect_and_close_handles(dbc, stmt);
     }
@@ -77,7 +79,8 @@ mod integration {
 
             assert_eq!(SqlReturn::ERROR, SQLFetch(stmt as HStmt),);
 
-            dbg!(get_sql_diagnostics(HandleType::Stmt, stmt as Handle));
+            let diagnostic = get_sql_diagnostics(HandleType::Stmt, stmt as Handle);
+            assert!(diagnostic.contains("Function sequence error"));
 
             disconnect_and_close_handles(dbc, stmt);
         }
@@ -102,14 +105,6 @@ mod integration {
 
             // Executing the prepared statement.
             // The $sql pipeline is now executed and the result set cursor.
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLExecute(stmt as HStmt),
-                "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
-            );
-
-            // A prepared statement can be executed multiple times.
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
@@ -145,6 +140,15 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
+                "{}",
+                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+            );
+
+            // Executing the prepared statement.
+            // The $sql pipeline is now executed and the result set cursor.
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLExecute(stmt as HStmt),
                 "{}",
                 get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
             );
