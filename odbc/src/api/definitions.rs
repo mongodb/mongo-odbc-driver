@@ -622,11 +622,15 @@ pub const SQL_CVT_GUID: u32 = 0x01000000;
 pub const MONGO_CAST_SUPPORT: u32 = SQL_CVT_CHAR
     | SQL_CVT_NUMERIC
     | SQL_CVT_INTEGER
+    | SQL_CVT_BIGINT
     | SQL_CVT_SMALLINT
     | SQL_CVT_FLOAT
     | SQL_CVT_REAL
     | SQL_CVT_DOUBLE
+    | SQL_CVT_WCHAR
     | SQL_CVT_VARCHAR
+    | SQL_CVT_WVARCHAR
+    | SQL_CVT_WLONGVARCHAR
     | SQL_CVT_BIT
     | SQL_CVT_TIMESTAMP;
 
@@ -636,6 +640,7 @@ pub const SQL_FN_NUM_CEILING: u32 = 0x00000020;
 pub const SQL_FN_NUM_COS: u32 = 0x00000040;
 pub const SQL_FN_NUM_FLOOR: u32 = 0x00000200;
 pub const SQL_FN_NUM_LOG: u32 = 0x00000400;
+pub const SQL_FN_NUM_LOG10: u32 = 0x00080000;
 pub const SQL_FN_NUM_MOD: u32 = 0x00000800;
 pub const SQL_FN_NUM_SIN: u32 = 0x00002000;
 pub const SQL_FN_NUM_SQRT: u32 = 0x00004000;
@@ -694,6 +699,23 @@ pub const SQL_FN_STR_POSITION: u32 = 0x00800000;
 // SQL_TIMEDATE_FUNCTIONS functions
 pub const SQL_FN_TD_CURRENT_TIMESTAMP: u32 = 0x00080000;
 pub const SQL_FN_TD_EXTRACT: u32 = 0x00100000;
+pub const SQL_FN_TD_NOW: u32 =                      0x00000001;
+pub const SQL_FN_TD_CURDATE: u32 =                  0x00000002;
+pub const SQL_FN_TD_DAYOFMONTH: u32 =               0x00000004;
+pub const SQL_FN_TD_DAYOFWEEK: u32 =                0x00000008;
+pub const SQL_FN_TD_DAYOFYEAR: u32 =                0x00000010;
+pub const SQL_FN_TD_MONTH: u32 =                    0x00000020;
+pub const SQL_FN_TD_QUARTER: u32 =                  0x00000040;
+pub const SQL_FN_TD_WEEK: u32 =                     0x00000080;
+pub const SQL_FN_TD_YEAR: u32 =                     0x00000100;
+pub const SQL_FN_TD_CURTIME: u32 =                  0x00000200;
+pub const SQL_FN_TD_HOUR: u32 =                     0x00000400;
+pub const SQL_FN_TD_MINUTE: u32 =                   0x00000800;
+pub const SQL_FN_TD_SECOND: u32 =                   0x00001000;
+pub const SQL_FN_TD_TIMESTAMPADD: u32 =             0x00002000;
+pub const SQL_FN_TD_TIMESTAMPDIFF: u32 =            0x00004000;
+pub const SQL_FN_TD_DAYNAME: u32 =                  0x00008000;
+pub const SQL_FN_TD_MONTHNAME: u32 =                0x00010000;
 
 // SQL_CATALOG_USAGE bitmasks
 pub const SQL_CU_DML_STATEMENTS: u32 = 0x00000001;

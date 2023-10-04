@@ -1969,6 +1969,8 @@ macro_rules! sql_get_info_helper {
                         | SQL_FN_NUM_DEGREES
                         | SQL_FN_NUM_POWER
                         | SQL_FN_NUM_RADIANS
+                        | SQL_FN_NUM_LOG 
+                        | SQL_FN_NUM_LOG10 
                         | SQL_FN_NUM_ROUND;
                     i16_len::set_output_fixed_data(
                         &NUMERIC_FUNCTIONS,
@@ -2001,7 +2003,21 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_TIMEDATE_FUNCTIONS => {
                     // MongoSQL supports the following timedate functions.
-                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP | SQL_FN_TD_EXTRACT;
+                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP 
+                        | SQL_FN_TD_NOW
+                        | SQL_FN_TD_QUARTER
+                        | SQL_FN_TD_TIMESTAMPADD 
+                        | SQL_FN_TD_TIMESTAMPDIFF
+                        | SQL_FN_TD_EXTRACT 
+                        | SQL_FN_TD_YEAR
+                        | SQL_FN_TD_MONTH
+                        | SQL_FN_TD_WEEK
+                        | SQL_FN_TD_DAYOFWEEK
+                        | SQL_FN_TD_DAYOFYEAR
+                        | SQL_FN_TD_DAYOFMONTH
+                        | SQL_FN_TD_HOUR
+                        | SQL_FN_TD_MINUTE
+                        | SQL_FN_TD_SECOND;
                     i16_len::set_output_fixed_data(
                         &TIMEDATE_FUNCTIONS,
                         info_value_ptr,
