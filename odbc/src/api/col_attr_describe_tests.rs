@@ -393,13 +393,13 @@ mod unit {
             (Desc::Updatable, 0),
             (Desc::Count, 18),
             (Desc::CaseSensitive, 1),
-            (Desc::DisplaySize, 0),
+            (Desc::DisplaySize, 65535),
             (Desc::FixedPrecScale, 0),
-            (Desc::Length, 0),
+            (Desc::Length, 65535),
             (Desc::Nullable, 0),
-            (Desc::OctetLength, 0),
-            (Desc::Precision, 0),
-            (Desc::Scale, 0),
+            (Desc::OctetLength, 65535),
+            (Desc::Precision, 65535),
+            (Desc::Scale, 65535),
             (Desc::Searchable, SQL_SEARCHABLE as isize),
             (Desc::Type, SqlDataType::EXT_W_VARCHAR as isize),
             (Desc::ConciseType, SqlDataType::EXT_W_VARCHAR as isize),
@@ -424,6 +424,7 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
+                dbg!(desc);
                 assert_eq!(expected, *numeric_attr_ptr);
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
@@ -465,9 +466,9 @@ mod unit {
             // data_type should be VARCHAR
             assert_eq!(SqlDataType::EXT_W_VARCHAR, data_type);
             // col_size should be 0
-            assert_eq!(0usize, *col_size);
-            // decimal_digits should be 0
-            assert_eq!(0i16, *decimal_digits);
+            assert_eq!(65535usize, *col_size);
+            // decimal_digits should be -1
+            assert_eq!(-1i16, *decimal_digits);
             // nullable should stay as NO_NULLS
             assert_eq!(Nullability::NO_NULLS, nullable);
             // name_buffer should contain TABLE_NAME

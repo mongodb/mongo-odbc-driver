@@ -40,8 +40,8 @@ pub struct SimpleTypeInfo {
 impl SimpleTypeInfo {
     const fn new(precision: u16, octet_length: u16, fixed_bytes_length: u16) -> Option<Self> {
         Some(Self {
-            sql_type: SqlDataType::VARCHAR,
-            non_concise_type: SqlDataType::VARCHAR,
+            sql_type: SqlDataType::EXT_W_VARCHAR,
+            non_concise_type: SqlDataType::EXT_W_VARCHAR,
             precision: Some(precision),
             octet_length: Some(octet_length),
             fixed_bytes_length: Some(fixed_bytes_length),
@@ -50,8 +50,8 @@ impl SimpleTypeInfo {
 
     const fn default() -> Option<Self> {
         Some(Self {
-            sql_type: SqlDataType::VARCHAR,
-            non_concise_type: SqlDataType::VARCHAR,
+            sql_type: SqlDataType::EXT_W_VARCHAR,
+            non_concise_type: SqlDataType::EXT_W_VARCHAR,
             precision: None,
             octet_length: None,
             fixed_bytes_length: None,
@@ -86,20 +86,42 @@ impl BsonTypeInfo {
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::EXT_W_VARCHAR,
+        non_concise_type: SqlDataType::EXT_W_VARCHAR,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: Some(65535),
+        precision: Some(65535),
+        octet_length: Some(65535),
+        fixed_bytes_length: Some(65535),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: Some(65535),
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: Some(65535),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = VARCHAR
+    pub const VARCHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "varchar",
+        sql_type: SqlDataType::VARCHAR,
         non_concise_type: SqlDataType::VARCHAR,
         searchable: SQL_SEARCHABLE,
         is_case_sensitive: true,
         fixed_prec_scale: false,
-        scale: None,
-        precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        scale: Some(65535),
+        precision: Some(65535),
+        octet_length: Some(65535),
+        fixed_bytes_length: Some(65535),
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
-        sql_code: None,
+        sql_code: Some(65535),
         is_auto_unique_value: None,
         is_unsigned: None,
-        num_prec_radix: None,
+        num_prec_radix: Some(65535),
         simple_type_info: None,
     };
     pub const OBJECT: BsonTypeInfo = BsonTypeInfo {
@@ -358,8 +380,8 @@ impl BsonTypeInfo {
         fixed_prec_scale: true,
         scale: Some(0),
         precision: Some(10),
-        octet_length: Some(4),
-        fixed_bytes_length: Some(4),
+        octet_length: Some(65535),
+        fixed_bytes_length: Some(65535),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
