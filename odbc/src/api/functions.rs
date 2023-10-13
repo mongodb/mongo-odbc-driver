@@ -1929,6 +1929,27 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
+                InfoType::SQL_OJ_CAPABILITIES => {
+                    const OJ_CAPABILITIES: u32 = SQL_OJ_LEFT
+                      | SQL_OJ_NOT_ORDERED
+                      | SQL_OJ_INNER
+                      | SQL_OJ_ALL_COMPARISON_OPS;
+                    i16_len::set_output_fixed_data(
+                        &OJ_CAPABILITIES,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_SQL92_RELATIONAL_JOIN_OPERATORS => {
+                    const JOIN_CAPABILITIES: u32 = SQL_SRJO_CROSS_JOIN
+                        | SQL_SRJO_INNER_JOIN
+                        | SQL_SRJO_LEFT_OUTER_JOIN;
+                    i16_len::set_output_fixed_data(
+                        &JOIN_CAPABILITIES,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
                 InfoType::SQL_CATALOG_NAME_SEPARATOR => {
                     // The name separator used by MongoSQL is '.'.
                     i16_len::set_output_wstring_as_bytes(

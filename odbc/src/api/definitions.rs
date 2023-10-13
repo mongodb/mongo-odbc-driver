@@ -650,6 +650,43 @@ pub const SQL_FN_NUM_POWER: u32 = 0x00100000;
 pub const SQL_FN_NUM_RADIANS: u32 = 0x00200000;
 pub const SQL_FN_NUM_ROUND: u32 = 0x00400000;
 
+// Join attributes
+#[allow(unused)]
+pub const SQL_OJ_LEFT : u32 = 0x00000001;
+#[allow(unused)]
+pub const SQL_OJ_RIGHT : u32 = 0x00000002;
+#[allow(unused)]
+pub const SQL_OJ_FULL : u32 = 0x00000004;
+#[allow(unused)]
+pub const SQL_OJ_NESTED : u32 = 0x00000008;
+#[allow(unused)]
+pub const SQL_OJ_NOT_ORDERED : u32 = 0x00000010;
+#[allow(unused)]
+pub const SQL_OJ_INNER : u32 = 0x00000020;
+#[allow(unused)]
+pub const SQL_OJ_ALL_COMPARISON_OPS : u32 = 0x00000040;
+#[allow(unused)]
+pub const SQL_SRJO_CORRESPONDING_CLAUSE : u32 = 0x00000001;
+#[allow(unused)]
+pub const SQL_SRJO_CROSS_JOIN : u32 = 0x00000002;
+#[allow(unused)]
+pub const SQL_SRJO_EXCEPT_JOIN : u32 = 0x00000004;
+#[allow(unused)]
+pub const SQL_SRJO_FULL_OUTER_JOIN : u32 = 0x00000008;
+#[allow(unused)]
+pub const SQL_SRJO_INNER_JOIN : u32 = 0x00000010;
+#[allow(unused)]
+pub const SQL_SRJO_INTERSECT_JOIN : u32 = 0x00000020;
+#[allow(unused)]
+pub const SQL_SRJO_LEFT_OUTER_JOIN : u32 = 0x00000040;
+#[allow(unused)]
+pub const SQL_SRJO_NATURAL_JOIN : u32 = 0x00000080;
+#[allow(unused)]
+pub const SQL_SRJO_RIGHT_OUTER_JOIN : u32 = 0x00000100;
+#[allow(unused)]
+pub const SQL_SRJO_UNION_JOIN : u32 = 0x00000200;
+
+
 // SQL_STRING_FUNCTIONS bitmasks
 #[allow(unused)]
 pub const SQL_FN_STR_CONCAT: u32 = 0x00000001;
@@ -743,12 +780,6 @@ pub const SQL_SP_IN: u32 = 0x00000400;
 pub const SQL_SP_BETWEEN: u32 = 0x00000800;
 pub const SQL_SP_COMPARISON: u32 = 0x00001000;
 pub const SQL_SP_QUANTIFIED_COMPARISON: u32 = 0x00002000;
-
-// SQL_SQL92_RELATIONAL_JOIN_OPERATORS bitmasks
-pub const SQL_SRJO_CROSS_JOIN: u32 = 0x00000002;
-pub const SQL_SRJO_INNER_JOIN: u32 = 0x00000010;
-pub const SQL_SRJO_LEFT_OUTER_JOIN: u32 = 0x00000040;
-pub const SQL_SRJO_RIGHT_OUTER_JOIN: u32 = 0x00000100;
 
 // SQL_AGGREGATE_FUNCTIONS bitmasks
 pub const SQL_AF_AVG: u32 = 0x00000001;
