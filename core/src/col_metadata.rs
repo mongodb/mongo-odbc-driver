@@ -389,7 +389,7 @@ mod unit {
         }
 
         #[test]
-        fn fields_sorted_alphabetically() {
+        fn fields_not_sorted() {
             let input = SqlGetSchemaResponse {
                 ok: 1,
                 schema: VersionedJsonSchema {
@@ -436,7 +436,7 @@ mod unit {
                     assert_eq!(3, actual.len());
 
                     for (idx, table_name, col_name) in
-                        [(0, "bar", "c"), (1, "foo", "a"), (2, "foo", "b")]
+                        [(0, "foo", "b"), (1, "foo", "a"), (2, "bar", "c")]
                     {
                         let md = &actual[idx];
                         assert_eq!(
