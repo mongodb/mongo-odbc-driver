@@ -634,8 +634,8 @@ mod unit {
                                     BsonTypeName::Null
                                 ])),
                                 properties: vec![
-                                    ("a".into(), Schema::default()),
                                     ("b".into(), Schema::default()),
+                                    ("a".into(), Schema::default()),
                                 ],
                                 additional_properties: Some(false),
                                 required: Some(vec!["a".into()]),
