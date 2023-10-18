@@ -196,7 +196,8 @@ pub mod simplified {
         json_schema::{self, BsonType, BsonTypeName, Items},
         BsonTypeInfo, Error,
     };
-    use std::collections::{BTreeMap, BTreeSet};
+    use linked_hash_map::LinkedHashMap;
+    use std::collections::BTreeSet;
 
     // A simplified JSON Schema, relative to the json_schema::Schema struct.
     // An instance of json_schema::simplified::Schema is semantically equivalent
@@ -221,7 +222,7 @@ pub mod simplified {
 
     #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
     pub struct ObjectSchema {
-        pub properties: BTreeMap<String, Schema>,
+        pub properties: LinkedHashMap<String, Schema>,
         pub required: BTreeSet<String>,
         pub additional_properties: bool,
     }
@@ -370,10 +371,7 @@ mod unit {
     }
 
     mod remove_multiple {
-        use crate::{
-            json_schema::{BsonType, BsonTypeName, Items, Schema},
-            map,
-        };
+        use crate::json_schema::{BsonType, BsonTypeName, Items, Schema};
 
         remove_multiple_test!(
             multiple_atomic,

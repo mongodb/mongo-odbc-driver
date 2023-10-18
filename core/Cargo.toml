@@ -26,6 +26,7 @@ cstr = { path = "../cstr" }
 fancy-regex = "0.11.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
 log = "0.4.14"
+linked-hash-map = { version = "0.5.6", features = ["serde_impl"]}
 
 [dependencies.mongodb]
 version = "2.6"

@@ -313,7 +313,7 @@ mod unit {
         use crate::{
             col_metadata::{SqlGetSchemaResponse, VersionedJsonSchema},
             json_schema::{BsonType, BsonTypeName, Schema},
-            map, Error, TypeMode,
+            Error, TypeMode,
         };
 
         #[test]
@@ -424,7 +424,7 @@ mod unit {
             };
 
             let res = input.process_result_metadata("test_db", TypeMode::Standard);
-
+            // println!("{:?}", res);
             match res {
                 Err(e) => panic!("unexpected error: {e:?}"),
                 Ok(actual) => {
