@@ -346,12 +346,13 @@ mod unit {
                     version: 1,
                     json_schema: Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                        properties: Some(map! {
-                            "a".to_string() => Schema {
+                        properties: vec![(
+                            "a".to_string(),
+                            Schema {
                                 bson_type: Some(BsonType::Single(BsonTypeName::Int)),
                                 ..Default::default()
-                            }
-                        }),
+                            },
+                        )],
                         ..Default::default()
                     },
                 },
@@ -374,32 +375,49 @@ mod unit {
                     version: 1,
                     json_schema: Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                        properties: Some(map! {
-                            "foo".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                properties: Some(map! {
-                                    "b".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    },
-                                    "a".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    }
-                                }),
-                                ..Default::default()
-                            },
-                            "bar".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                properties: Some(map! {
-                                    "c".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    }
-                                }),
-                                ..Default::default()
-                            }
-                        }),
+                        properties: vec![
+                            (
+                                "foo".to_string(),
+                                Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                    properties: vec![
+                                        (
+                                            "b".to_string(),
+                                            Schema {
+                                                bson_type: Some(BsonType::Single(
+                                                    BsonTypeName::Int,
+                                                )),
+                                                ..Default::default()
+                                            },
+                                        ),
+                                        (
+                                            "a".to_string(),
+                                            Schema {
+                                                bson_type: Some(BsonType::Single(
+                                                    BsonTypeName::Int,
+                                                )),
+                                                ..Default::default()
+                                            },
+                                        ),
+                                    ],
+                                    ..Default::default()
+                                },
+                            ),
+                            (
+                                "bar".to_string(),
+                                Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                    properties: vec![(
+                                        "c".to_string(),
+                                        Schema {
+                                            bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                            ..Default::default()
+                                        },
+                                    )],
+                                    ..Default::default()
+                                },
+                            ),
+                        ],
                         ..Default::default()
                     },
                 },

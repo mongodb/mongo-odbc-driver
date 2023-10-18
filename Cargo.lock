@@ -931,6 +931,7 @@ dependencies = [
  "odbc-sys",
  "regex",
  "serde",
+ "serde-tuple-vec-map",
  "shared_sql_utils",
  "thiserror",
  "windows 0.44.0",
@@ -1501,6 +1502,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32ac8da02677876d532745a130fc9d8e6edfa81a269b107c5b00829b91d8eb3c"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-tuple-vec-map"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a04d0ebe0de77d7d445bb729a895dcb0a288854b267ca85f030ce51cdc578c82"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

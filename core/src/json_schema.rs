@@ -1,14 +1,13 @@
 use crate::{BsonTypeInfo, Error};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Schema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bson_type: Option<BsonType>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub properties: Option<HashMap<String, Schema>>,
+    #[serde(with = "tuple_vec_map", skip_serializing_if = "Vec::is_empty", default)]
+    pub properties: Vec<(String, Schema)>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,14 +28,11 @@ impl Schema {
                 "Schema with bsonType and anyOf both defined is invalid",
             ));
         }
-        if let Some(props) = self.properties {
-            self.properties = Some(
-                props
-                    .into_iter()
-                    .map(|(k, x)| Ok((k, x.remove_multiple()?)))
-                    .collect::<Result<_, Error>>()?,
-            );
-        }
+        self.properties = self
+            .properties
+            .into_iter()
+            .map(|(k, x)| Ok((k, x.remove_multiple()?)))
+            .collect::<Result<_, Error>>()?;
         if let Some(items) = self.items {
             match items {
                 Items::Single(s) => {
@@ -51,7 +47,7 @@ impl Schema {
                 Items::Multiple(_) => {
                     self.items = Some(Items::Single(Box::new(Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Any)),
-                        properties: None,
+                        properties: vec![],
                         required: None,
                         additional_properties: None,
                         items: None,
@@ -92,7 +88,7 @@ impl Schema {
                         BsonTypeName::Array => {
                             Schema {
                                 bson_type: Some(BsonType::Single(*x)),
-                                properties: None,
+                                properties: vec![],
                                 required: None,
                                 additional_properties: None,
                                 items: self.items.clone(),
@@ -103,7 +99,7 @@ impl Schema {
                         _ => {
                             Schema {
                                 bson_type: Some(BsonType::Single(*x)),
-                                properties: None,
+                                properties: vec![],
                                 required: None,
                                 additional_properties: None,
                                 items: None,
@@ -114,7 +110,7 @@ impl Schema {
                     .collect(),
             );
             self.bson_type = None;
-            self.properties = None;
+            self.properties = vec![];
             self.required = None;
             self.additional_properties = None;
             self.items = None;
@@ -261,12 +257,12 @@ pub mod simplified {
             match schema {
                 json_schema::Schema {
                     bson_type: None,
-                    properties: None,
+                    properties,
                     required: None,
                     additional_properties: None | Some(false),
                     items: None,
                     any_of: None,
-                } => Ok(Atomic::Scalar(BsonTypeName::Any)),
+                } if properties.is_empty() => Ok(Atomic::Scalar(BsonTypeName::Any)),
                 json_schema::Schema {
                     bson_type: Some(bson_type),
                     properties,
@@ -286,7 +282,6 @@ pub mod simplified {
                     }
                     BsonType::Single(BsonTypeName::Object) => Ok(Atomic::Object(ObjectSchema {
                         properties: properties
-                            .unwrap_or_default()
                             .into_iter()
                             .map(|(prop, prop_schema)| Ok((prop, Schema::try_from(prop_schema)?)))
                             .collect::<Result<_>>()?,
@@ -384,7 +379,7 @@ mod unit {
             multiple_atomic,
             expected = Schema {
                 bson_type: None,
-                properties: None,
+                properties: vec![],
                 required: None,
                 additional_properties: None,
                 items: None,
@@ -395,7 +390,7 @@ mod unit {
                     },
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Null)),
-                        properties: None,
+                        properties: vec![],
                         required: None,
                         additional_properties: None,
                         items: None,
@@ -408,7 +403,7 @@ mod unit {
                     BsonTypeName::Int,
                     BsonTypeName::Null
                 ])),
-                properties: None,
+                properties: vec![],
                 required: None,
                 additional_properties: Some(false),
                 items: None,
@@ -420,10 +415,10 @@ mod unit {
             false_multiple,
             expected = Schema {
                 bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                properties: Some(map! {
-                    "x".into() => Schema::default(),
-                    "y".into() => Schema::default(),
-                }),
+                properties: vec![
+                    ("x".into(), Schema::default()),
+                    ("y".into(), Schema::default()),
+                ],
                 required: Some(vec!["x".into(), "y".into()]),
                 additional_properties: Some(false),
                 items: None,
@@ -431,10 +426,10 @@ mod unit {
             },
             input = Schema {
                 bson_type: Some(BsonType::Multiple(vec![BsonTypeName::Object,])),
-                properties: Some(map! {
-                    "x".into() => Schema::default(),
-                    "y".into() => Schema::default(),
-                }),
+                properties: vec![
+                    ("x".into(), Schema::default()),
+                    ("y".into(), Schema::default()),
+                ],
                 required: Some(vec!["x".into(), "y".into()]),
                 additional_properties: Some(false),
                 items: None,
@@ -446,17 +441,17 @@ mod unit {
             object_and_other,
             expected = Schema {
                 bson_type: None,
-                properties: None,
+                properties: vec![],
                 required: None,
                 additional_properties: None,
                 items: None,
                 any_of: Some(vec![
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                        properties: Some(map! {
-                            "x".into() => Schema::default(),
-                            "y".into() => Schema::default(),
-                        }),
+                        properties: vec![
+                            ("x".into(), Schema::default()),
+                            ("y".into(), Schema::default()),
+                        ],
                         required: Some(vec!["x".into(), "y".into()]),
                         additional_properties: Some(false),
                         items: None,
@@ -464,7 +459,7 @@ mod unit {
                     },
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Null)),
-                        properties: None,
+                        properties: vec![],
                         required: None,
                         additional_properties: None,
                         items: None,
@@ -477,10 +472,10 @@ mod unit {
                     BsonTypeName::Object,
                     BsonTypeName::Null
                 ])),
-                properties: Some(map! {
-                    "x".into() => Schema::default(),
-                    "y".into() => Schema::default(),
-                }),
+                properties: vec![
+                    ("x".into(), Schema::default()),
+                    ("y".into(), Schema::default()),
+                ],
                 required: Some(vec!["x".into(), "y".into()]),
                 additional_properties: Some(false),
                 items: None,
@@ -492,14 +487,14 @@ mod unit {
             array_and_other,
             expected = Schema {
                 bson_type: None,
-                properties: None,
+                properties: vec![],
                 required: None,
                 additional_properties: None,
                 items: None,
                 any_of: Some(vec![
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Array)),
-                        properties: None,
+                        properties: vec![],
                         required: None,
                         additional_properties: None,
                         items: Some(Items::Single(Box::default())),
@@ -507,7 +502,7 @@ mod unit {
                     },
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Null)),
-                        properties: None,
+                        properties: vec![],
                         required: None,
                         additional_properties: None,
                         items: None,
@@ -520,7 +515,7 @@ mod unit {
                     BsonTypeName::Array,
                     BsonTypeName::Null
                 ])),
-                properties: None,
+                properties: vec![],
                 required: None,
                 additional_properties: None,
                 items: Some(Items::Single(Box::default())),
@@ -532,75 +527,86 @@ mod unit {
             nested,
             expected = Schema {
                 bson_type: None,
-                properties: None,
+                properties: vec![],
                 required: None,
                 additional_properties: None,
                 items: None,
                 any_of: Some(vec![
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Array)),
-                        properties: None,
+                        properties: vec![],
                         required: None,
                         additional_properties: None,
-                        items: Some(Items::Single(Schema {
-                            bson_type: None,
-                            properties: None,
-                            required: None,
-                            additional_properties: None,
-                            items: None,
-                            any_of: Some(vec![Schema {
-                                 bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                 properties: Some(map! {
-                                     "x".into() => Schema {
-                                         bson_type: None,
-                                         properties: None,
-                                         required: None,
-                                         additional_properties: None,
-                                         items: None,
-                                         any_of: Some(vec![
-                                             Schema {
-                                                 bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                                 properties: Some(map!{
-                                                     "b".into() => Schema::default(),
-                                                     "a".into() => Schema::default(),
-                                                 }),
-                                                 required: Some(vec!["a".into()]),
-                                                 additional_properties: Some(false),
-                                                 items: None,
-                                                 any_of: None
-                                             },
-                                             Schema {
-                                                 bson_type: Some(BsonType::Single(BsonTypeName::Null)),
-                                                 properties: None,
-                                                 required: None,
-                                                 additional_properties: None,
-                                                 items: None,
-                                                 any_of: None
-                                             }
-                                         ])
-                                     },
-                                     "y".into() => Schema::default()
-                                 }),
-                                 required: Some(vec!["x".into(), "y".into()]),
-                                 additional_properties: Some(false),
-                                 items: None,
-                                    any_of: None
-                                 },
-                                 Schema {
-                                     bson_type: Some(BsonType::Single(BsonTypeName::Null)),
-                                     properties: None,
-                                     required: None,
-                                     additional_properties: None,
-                                     items: None,
-                                     any_of: None
-                                }
-                            ])
-                        }.into())),
+                        items: Some(Items::Single(
+                            Schema {
+                                bson_type: None,
+                                properties: vec![],
+                                required: None,
+                                additional_properties: None,
+                                items: None,
+                                any_of: Some(vec![
+                                    Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                        properties: vec![
+                                            (
+                                                "x".into(),
+                                                Schema {
+                                                    bson_type: None,
+                                                    properties: vec![],
+                                                    required: None,
+                                                    additional_properties: None,
+                                                    items: None,
+                                                    any_of: Some(vec![
+                                                        Schema {
+                                                            bson_type: Some(BsonType::Single(
+                                                                BsonTypeName::Object
+                                                            )),
+                                                            properties: vec![
+                                                                ("b".into(), Schema::default()),
+                                                                ("a".into(), Schema::default()),
+                                                            ],
+                                                            required: Some(vec!["a".into()]),
+                                                            additional_properties: Some(false),
+                                                            items: None,
+                                                            any_of: None
+                                                        },
+                                                        Schema {
+                                                            bson_type: Some(BsonType::Single(
+                                                                BsonTypeName::Null
+                                                            )),
+                                                            properties: vec![],
+                                                            required: None,
+                                                            additional_properties: None,
+                                                            items: None,
+                                                            any_of: None
+                                                        }
+                                                    ])
+                                                }
+                                            ),
+                                            ("y".into(), Schema::default())
+                                        ],
+                                        required: Some(vec!["x".into(), "y".into()]),
+                                        additional_properties: Some(false),
+                                        items: None,
+                                        any_of: None
+                                    },
+                                    Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Null)),
+                                        properties: vec![],
+                                        required: None,
+                                        additional_properties: None,
+                                        items: None,
+                                        any_of: None
+                                    }
+                                ])
+                            }
+                            .into()
+                        )),
                         any_of: None
                     },
                     Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Null)),
-                        properties: None,
+                        properties: vec![],
                         required: None,
                         additional_properties: None,
                         items: None,
@@ -613,7 +619,7 @@ mod unit {
                     BsonTypeName::Array,
                     BsonTypeName::Null
                 ])),
-                properties: None,
+                properties: vec![],
                 required: None,
                 additional_properties: None,
                 items: Some(Items::Single(Box::new(Schema {
@@ -621,24 +627,26 @@ mod unit {
                         BsonTypeName::Object,
                         BsonTypeName::Null
                     ])),
-                    properties: Some(map! {
-                    "x".into() =>
-                        Schema {
-                            bson_type: Some(BsonType::Multiple(vec![
-                                BsonTypeName::Object,
-                                BsonTypeName::Null
-                            ])),
-                            properties: Some(map! {
-                                "a".into() => Schema::default(),
-                                "b".into() => Schema::default(),
-                            }),
-                            additional_properties: Some(false),
-                            required: Some(vec!["a".into()]),
-                            items: None,
-                            any_of: None,
-                        },
-                        "y".into() => Schema::default(),
-                    }),
+                    properties: vec![
+                        (
+                            "x".into(),
+                            Schema {
+                                bson_type: Some(BsonType::Multiple(vec![
+                                    BsonTypeName::Object,
+                                    BsonTypeName::Null
+                                ])),
+                                properties: vec![
+                                    ("a".into(), Schema::default()),
+                                    ("b".into(), Schema::default()),
+                                ],
+                                additional_properties: Some(false),
+                                required: Some(vec!["a".into()]),
+                                items: None,
+                                any_of: None,
+                            }
+                        ),
+                        ("y".into(), Schema::default()),
+                    ],
                     required: Some(vec!["x".into(), "y".into()]),
                     additional_properties: Some(false),
                     items: None,
@@ -793,12 +801,13 @@ mod unit {
             })),
             input = json_schema::Schema {
                 bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                properties: Some(map! {
-                    "a".to_string() => json_schema::Schema {
+                properties: vec![(
+                    "a".to_string(),
+                    json_schema::Schema {
                         bson_type: Some(BsonType::Single(BsonTypeName::Int)),
                         ..Default::default()
                     }
-                }),
+                )],
                 required: Some(set! {"a".to_string()}),
                 additional_properties: Some(false),
                 ..Default::default()
