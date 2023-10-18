@@ -146,23 +146,7 @@ impl SqlGetSchemaResponse {
     /// Converts a sqlGetResultSchema command response into a list of column
     /// metadata. Ensures the top-level schema is an Object with properties,
     /// and ensures the same for each top-level property -- which correspond
-    /// to datasources. The metadata is sorted alphabetically by datasource
-    /// name and then by field name. As in, a result set with schema:
-    ///
-    ///   {
-    ///     bsonType: "object",
-    ///     properties: {
-    ///       "foo": {
-    ///         bsonType: "object",
-    ///         properties: { "b": { bsonType: "int" }, "a": { bsonType: "string" } }
-    ///       },
-    ///       "bar": {
-    ///         bsonType: "object",
-    ///         properties: { "c": { bsonType: "int" } }
-    ///       }
-    ///   }
-    ///
-    /// produces a list of metadata with the order: "bar.c", "foo.a", "foo.b".
+    /// to datasources.
     pub(crate) fn process_result_metadata(
         &self,
         current_db: &str,
@@ -174,11 +158,9 @@ impl SqlGetSchemaResponse {
 
         result_set_object_schema
             .clone()
-            // 1. Access result_set_schema.properties and sort alphabetically.
-            //    This means we are sorting by datasource name.
+            // 1. Access result_set_schema.properties
             .properties
             .into_iter()
-            .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
             // 2. map each datasource_schema to a Result of an Iterator over MongoColMetadata.
             .map(|(datasource_name, datasource_schema)| {
                 Ok::<std::vec::IntoIter<MongoColMetadata>, Error>(
@@ -234,8 +216,7 @@ impl SqlGetSchemaResponse {
 
     // Helper function that asserts the the passed object_schema is actually an ObjectSchema
     // (required), and then converts all the propety schemata of the properties into a
-    // Result<Vec<MongoColMetadata>>, one MongoColMetadata per property schema in lexicographical
-    // order.
+    // Result<Vec<MongoColMetadata>>, one MongoColMetadata per property schema in the order they arrive.
     fn schema_to_col_metadata(
         object_schema: &crate::json_schema::simplified::Schema,
         current_db: &str,
@@ -245,13 +226,10 @@ impl SqlGetSchemaResponse {
         let object_schema = object_schema.assert_object_schema()?;
 
         object_schema
-            // 1. Access object_schema.properties and sort alphabetically.
-            //    This means we are sorting by field name. This is necessary
-            //    because this defines our ordinal positions.
+            // 1. Access object_schema.properties
             .properties
             .clone()
             .into_iter()
-            .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
             // 2. Map each field into a MongoColMetadata.
             .map(|(name, schema)| {
                 let field_nullability = object_schema.get_field_nullability(name.clone())?;
