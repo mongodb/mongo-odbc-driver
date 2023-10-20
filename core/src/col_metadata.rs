@@ -183,21 +183,7 @@ impl SqlGetSchemaResponse {
 
     /// Converts a sqlGetSchema command response into a list of column
     /// metadata. Ensures the top-level schema is an Object with properties,
-    /// The metadata is sorted alphabetically by property name and then by field name.
-    /// As in, a result set with schema:
-    ///
-    ///   {
-    ///     bsonType: "object",
-    ///     properties: {
-    ///       "foo": {
-    ///         bsonType: "int",
-    ///       },
-    ///       "bar": {
-    ///         bsonType: "double",
-    ///       }
-    ///   }
-    ///
-    /// produces a list of metadata with the order: "bar", "foo".
+    /// in the order they are sent from the translation engine.
     pub(crate) fn process_collection_metadata(
         &self,
         current_db: &str,
@@ -424,7 +410,6 @@ mod unit {
             };
 
             let res = input.process_result_metadata("test_db", TypeMode::Standard);
-            // println!("{:?}", res);
             match res {
                 Err(e) => panic!("unexpected error: {e:?}"),
                 Ok(actual) => {
