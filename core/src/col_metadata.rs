@@ -169,6 +169,7 @@ impl SqlGetSchemaResponse {
                         current_db,
                         &datasource_name,
                         type_mode,
+                        false,
                     )?
                     .into_iter(),
                 )
@@ -182,8 +183,22 @@ impl SqlGetSchemaResponse {
     }
 
     /// Converts a sqlGetSchema command response into a list of column
-    /// metadata. Ensures the top-level schema is an Object with properties,
-    /// in the order they are sent from the translation engine.
+    /// metadata. Ensures the top-level schema is an Object with properties.
+    /// The metadata is sorted alphabetically by property name and then by field name.
+    /// As in, a result set with schema:
+    ///
+    ///   {
+    ///     bsonType: "object",
+    ///     properties: {
+    ///       "foo": {
+    ///         bsonType: "int",
+    ///       },
+    ///       "bar": {
+    ///         bsonType: "double",
+    ///       }
+    ///   }
+    ///
+    /// produces a list of metadata with the order: "bar", "foo".
     pub(crate) fn process_collection_metadata(
         &self,
         current_db: &str,
@@ -197,6 +212,7 @@ impl SqlGetSchemaResponse {
             current_db,
             current_collection,
             type_mode,
+            true,
         )
     }
 
@@ -208,14 +224,21 @@ impl SqlGetSchemaResponse {
         current_db: &str,
         current_collection: &str,
         type_mode: TypeMode,
+        sort_metadata: bool,
     ) -> Result<Vec<MongoColMetadata>> {
         let object_schema = object_schema.assert_object_schema()?;
 
         object_schema
-            // 1. Access object_schema.properties
+            // 1. Access object_schema.properties and sort alphabetically.
+            //    This means we are sorting by field name. This is necessary
+            //    because this defines our ordinal positions.
             .properties
             .clone()
             .into_iter()
+            .sorted_by(|a, b| match sort_metadata {
+                true => Ord::cmp(&a.0, &b.0),
+                false => Ord::cmp(&a.0, &a.0),
+            })
             // 2. Map each field into a MongoColMetadata.
             .map(|(name, schema)| {
                 let field_nullability = object_schema.get_field_nullability(name.clone())?;
