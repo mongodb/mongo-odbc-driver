@@ -218,7 +218,9 @@ impl SqlGetSchemaResponse {
 
     // Helper function that asserts the the passed object_schema is actually an ObjectSchema
     // (required), and then converts all the propety schemata of the properties into a
-    // Result<Vec<MongoColMetadata>>, one MongoColMetadata per property schema in the order they arrive.
+    // Result<Vec<MongoColMetadata>>, one MongoColMetadata per property schema. The sort_metadata
+    // flag determines if properies are sorted lexicographically, which we do for sqlGetSchema commands
+    // so that SQLColumns is deterministic, but do not do for result set schemas to align with the SQL-92 spec.
     fn schema_to_col_metadata(
         object_schema: &crate::json_schema::simplified::Schema,
         current_db: &str,
