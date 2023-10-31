@@ -2010,7 +2010,8 @@ macro_rules! sql_get_info_helper {
                         | SQL_FN_STR_OCTET_LENGTH
                         | SQL_FN_STR_POSITION
                         | SQL_FN_STR_UCASE
-                        | SQL_FN_STR_LCASE;
+                        | SQL_FN_STR_LCASE
+                        | SQL_FN_STR_REPLACE;
 
                     i16_len::set_output_fixed_data(
                         &STRING_FUNCTIONS,
