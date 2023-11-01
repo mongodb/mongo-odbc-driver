@@ -2180,7 +2180,8 @@ macro_rules! sql_get_info_helper {
                     // TIMEDATE_DIFF, so this value will not be used. For the
                     // MongoSQL DATEADD and DATEDIFF functions, we support the
                     // following intervals.
-                    const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_SECOND
+                    const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_FRAC_SECOND
+                        | SQL_FN_TSI_SECOND
                         | SQL_FN_TSI_MINUTE
                         | SQL_FN_TSI_HOUR
                         | SQL_FN_TSI_DAY

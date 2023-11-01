@@ -7,7 +7,8 @@ use odbc_sys::Nullability;
 
 use lazy_static::lazy_static;
 
-const DATA_TYPES: [BsonTypeInfo; 26] = [
+const DATA_TYPES: [BsonTypeInfo; 22] = [
+    BsonTypeInfo::VARCHAR,              // SqlDataType(12)
     BsonTypeInfo::STRING,              // SqlDataType(-9)
     BsonTypeInfo::BOOL,                // SqlDataType(-7)
     BsonTypeInfo::LONG,                // SqlDataType(-5)
@@ -29,11 +30,6 @@ const DATA_TYPES: [BsonTypeInfo; 26] = [
     BsonTypeInfo::INT,                 // SqlDataType(4)
     BsonTypeInfo::DOUBLE,              // SqlDataType(8)
     BsonTypeInfo::DATE,                // SqlDataType(93)
-    BsonTypeInfo::VARCHAR,
-    BsonTypeInfo::WVARCHAR,
-    BsonTypeInfo::CHAR,
-    BsonTypeInfo::LONGVARCHAR,
-    BsonTypeInfo::WLONGVARCHAR,
 ];
 
 lazy_static! {
