@@ -102,6 +102,9 @@ impl BsonTypeInfo {
         num_prec_radix: Some(65535),
         simple_type_info: None,
     };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = VARCHAR
     pub const VARCHAR: BsonTypeInfo = BsonTypeInfo {
         type_name: "varchar",
         sql_type: SqlDataType::VARCHAR,
