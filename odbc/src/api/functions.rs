@@ -1940,16 +1940,6 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
-                InfoType::SQL_SQL92_RELATIONAL_JOIN_OPERATORS => {
-                    const JOIN_CAPABILITIES: u32 = SQL_SRJO_CROSS_JOIN
-                        | SQL_SRJO_INNER_JOIN
-                        | SQL_SRJO_LEFT_OUTER_JOIN;
-                    i16_len::set_output_fixed_data(
-                        &JOIN_CAPABILITIES,
-                        info_value_ptr,
-                        string_length_ptr,
-                    )
-                }
                 InfoType::SQL_CATALOG_NAME_SEPARATOR => {
                     // The name separator used by MongoSQL is '.'.
                     i16_len::set_output_wstring_as_bytes(
@@ -1990,8 +1980,8 @@ macro_rules! sql_get_info_helper {
                         | SQL_FN_NUM_DEGREES
                         | SQL_FN_NUM_POWER
                         | SQL_FN_NUM_RADIANS
-                        | SQL_FN_NUM_LOG 
-                        | SQL_FN_NUM_LOG10 
+                        | SQL_FN_NUM_LOG
+                        | SQL_FN_NUM_LOG10
                         | SQL_FN_NUM_ROUND;
                     i16_len::set_output_fixed_data(
                         &NUMERIC_FUNCTIONS,
@@ -2025,12 +2015,12 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_TIMEDATE_FUNCTIONS => {
                     // MongoSQL supports the following timedate functions.
-                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP 
+                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP
                         | SQL_FN_TD_NOW
                         | SQL_FN_TD_QUARTER
-                        | SQL_FN_TD_TIMESTAMPADD 
+                        | SQL_FN_TD_TIMESTAMPADD
                         | SQL_FN_TD_TIMESTAMPDIFF
-                        | SQL_FN_TD_EXTRACT 
+                        | SQL_FN_TD_EXTRACT
                         | SQL_FN_TD_YEAR
                         | SQL_FN_TD_MONTH
                         | SQL_FN_TD_WEEK
@@ -2228,8 +2218,7 @@ macro_rules! sql_get_info_helper {
                     // MongoSQL supports the following SQL-92 JOIN operators.
                     const JOIN_OPS: u32 = SQL_SRJO_CROSS_JOIN
                         | SQL_SRJO_INNER_JOIN
-                        | SQL_SRJO_LEFT_OUTER_JOIN
-                        | SQL_SRJO_RIGHT_OUTER_JOIN;
+                        | SQL_SRJO_LEFT_OUTER_JOIN;
                     i16_len::set_output_fixed_data(&JOIN_OPS, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_AGGREGATE_FUNCTIONS => {
