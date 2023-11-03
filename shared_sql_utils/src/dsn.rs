@@ -228,14 +228,9 @@ impl Dsn {
     }
 
     pub fn to_connection_string(&self) -> String {
-        self.iter()
-            .map(|(key, value)| {
-                if value.is_empty() {
-                    return "".into();
-                }
-                format!("{key}={value};")
+        self.iter().fold("".into(), |acc, (key, value)| {
+                format!("{acc}{key}={value};")
             })
-            .collect::<String>()
     }
 }
 
