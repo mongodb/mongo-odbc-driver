@@ -229,8 +229,8 @@ impl Dsn {
 
     pub fn to_connection_string(&self) -> String {
         self.iter().fold("".into(), |acc, (key, value)| {
-                format!("{acc}{key}={value};")
-            })
+            format!("{acc}{key}={value};")
+        })
     }
 }
 
