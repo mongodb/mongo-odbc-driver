@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{
     definitions::SqlDataType,
     json_schema::{
@@ -131,6 +133,8 @@ impl MongoColMetadata {
 pub struct SqlGetSchemaResponse {
     pub ok: i32,
     pub schema: VersionedJsonSchema,
+    #[serde(rename = "selectOrder")]
+    pub select_order: Option<Vec<Vec<String>>>,
 }
 
 // Auxiliary struct representing part of the response for a sqlGetResultSchema
@@ -172,31 +176,38 @@ impl SqlGetSchemaResponse {
             self.schema.json_schema.clone().try_into()?;
         let result_set_object_schema = result_set_schema.assert_object_schema()?;
 
-        result_set_object_schema
-            .clone()
-            // 1. Access result_set_schema.properties and sort alphabetically.
-            //    This means we are sorting by datasource name.
-            .properties
-            .into_iter()
-            .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
-            // 2. map each datasource_schema to a Result of an Iterator over MongoColMetadata.
-            .map(|(datasource_name, datasource_schema)| {
-                Ok::<std::vec::IntoIter<MongoColMetadata>, Error>(
-                    Self::schema_to_col_metadata(
+        let mut processed_result_set_metadata: BTreeMap<Vec<String>, MongoColMetadata> =
+            result_set_object_schema
+                .clone()
+                // 1. Access result_set_schema.properties and sort alphabetically.
+                //    This means we are sorting by datasource name.
+                .properties
+                .into_iter()
+                // 2. map each datasource_schema to a Result of an Iterator over MongoColMetadata.
+                .map(|(datasource_name, datasource_schema)| {
+                    let schema = Self::schema_to_col_metadata(
                         &datasource_schema,
                         current_db,
                         &datasource_name,
                         type_mode,
-                    )?
-                    .into_iter(),
-                )
-            })
-            // 3. flatten each Ok(inner_iterator) into the top iterator, will short circuit if an
-            //    Err is hit and just return the first Error.
-            .flatten_ok()
-            // 4. collect the Iterator<Item=Result<MongoColMetadata>> into a
-            //    Result<Vec<MongoColMetadata>>
-            .collect()
+                    )?;
+                    Ok(schema.into_iter().map(|col| {
+                        (
+                            vec![col.table_name.clone(), col.col_name.clone()],
+                            col.clone(),
+                        )
+                    }))
+                })
+                .flatten_ok()
+                .collect::<Result<BTreeMap<Vec<String>, MongoColMetadata>>>()?;
+
+        Ok(self
+            .select_order
+            .clone()
+            .unwrap()
+            .into_iter()
+            .map(|key| processed_result_set_metadata.remove(&key).unwrap())
+            .collect())
     }
 
     /// Converts a sqlGetSchema command response into a list of column
@@ -349,6 +360,7 @@ mod unit {
                         ..Default::default()
                     },
                 },
+                select_order: None,
             };
 
             let actual = input.process_result_metadata("test_db", TypeMode::Standard);
@@ -377,6 +389,7 @@ mod unit {
                         ..Default::default()
                     },
                 },
+                select_order: None,
             };
 
             let actual = input.process_result_metadata("test_db", TypeMode::Standard);
@@ -389,7 +402,7 @@ mod unit {
         }
 
         #[test]
-        fn fields_sorted_alphabetically() {
+        fn fields_sorted_alphabetical_select_order() {
             let input = SqlGetSchemaResponse {
                 ok: 1,
                 schema: VersionedJsonSchema {
@@ -425,6 +438,11 @@ mod unit {
                         ..Default::default()
                     },
                 },
+                select_order: Some(vec![
+                    vec!["bar".to_string(), "c".to_string()],
+                    vec!["foo".to_string(), "a".to_string()],
+                    vec!["foo".to_string(), "b".to_string()],
+                ]),
             };
 
             let res = input.process_result_metadata("test_db", TypeMode::Standard);
@@ -437,6 +455,71 @@ mod unit {
 
                     for (idx, table_name, col_name) in
                         [(0, "bar", "c"), (1, "foo", "a"), (2, "foo", "b")]
+                    {
+                        let md = &actual[idx];
+                        assert_eq!(
+                            (table_name, col_name),
+                            (md.table_name.as_str(), md.col_name.as_str())
+                        )
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn fields_sorted_out_of_order_select_order() {
+            let input = SqlGetSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                        properties: Some(map! {
+                            "foo".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                properties: Some(map! {
+                                    "b".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    },
+                                    "a".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    }
+                                }),
+                                ..Default::default()
+                            },
+                            "bar".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                properties: Some(map! {
+                                    "c".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                        ..Default::default()
+                                    }
+                                }),
+                                ..Default::default()
+                            }
+                        }),
+                        ..Default::default()
+                    },
+                },
+                select_order: Some(vec![
+                    vec!["foo".to_string(), "b".to_string()],
+                    vec!["foo".to_string(), "a".to_string()],
+                    vec!["bar".to_string(), "c".to_string()],
+                ]),
+            };
+
+            let res = input.process_result_metadata("test_db", TypeMode::Standard);
+
+            match res {
+                Err(e) => panic!("unexpected error: {e:?}"),
+                Ok(actual) => {
+                    // There should be 3 fields
+                    assert_eq!(3, actual.len());
+
+                    for (idx, table_name, col_name) in
+                        [(0, "foo", "b"), (1, "foo", "a"), (2, "bar", "c")]
                     {
                         let md = &actual[idx];
                         assert_eq!(
