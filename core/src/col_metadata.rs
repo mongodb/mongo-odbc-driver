@@ -176,14 +176,17 @@ impl SqlGetSchemaResponse {
             self.schema.json_schema.clone().try_into()?;
         let result_set_object_schema = result_set_schema.assert_object_schema()?;
 
+        // create a map from the naming convention used by select order ([datasource name, column name]),
+        // to the schema 
         let mut processed_result_set_metadata: BTreeMap<Vec<String>, MongoColMetadata> =
             result_set_object_schema
                 .clone()
-                // 1. Access result_set_schema.properties and sort alphabetically.
-                //    This means we are sorting by datasource name.
+                // 1. Access result_set_schema.properties and turn into an iterator
                 .properties
                 .into_iter()
-                // 2. map each datasource_schema to a Result of an Iterator over MongoColMetadata.
+                // 2. for each datasource, convert the schema to column metadata. Then,
+                //    turn the resulting vector of metadata into key-value pairs for the 
+                //    metadata map we are creating.
                 .map(|(datasource_name, datasource_schema)| {
                     let schema = Self::schema_to_col_metadata(
                         &datasource_schema,
@@ -198,16 +201,30 @@ impl SqlGetSchemaResponse {
                         )
                     }))
                 })
+                // flatten the key-value pairs representing the metadata into a single vector,
+                // then finally convert to a BTree
                 .flatten_ok()
                 .collect::<Result<BTreeMap<Vec<String>, MongoColMetadata>>>()?;
 
-        Ok(self
-            .select_order
-            .clone()
-            .unwrap()
-            .into_iter()
-            .map(|key| processed_result_set_metadata.remove(&key).unwrap())
-            .collect())
+        Ok(match self.select_order {
+            // in the select list order is None, for example if using an older adf version or calling a 
+            // select 1 query, default to sorted order
+            None => {
+                processed_result_set_metadata
+                    .into_values()
+                    .sorted_by(|a, b| Ord::cmp(&a.table_name, &b.table_name))
+                    .collect()
+            }
+            // given a select order, we use the order provided by the select order list to convert the values of the
+            // btree map into an ordered vector
+            _ => self
+                .select_order
+                .clone()
+                .unwrap()
+                .into_iter()
+                .map(|key| processed_result_set_metadata.remove(&key).unwrap())
+                .collect(),
+        })
     }
 
     /// Converts a sqlGetSchema command response into a list of column
