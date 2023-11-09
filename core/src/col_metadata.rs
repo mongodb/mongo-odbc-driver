@@ -177,7 +177,7 @@ impl SqlGetSchemaResponse {
         let result_set_object_schema = result_set_schema.assert_object_schema()?;
 
         // create a map from the naming convention used by select order ([datasource name, column name]),
-        // to the schema 
+        // to the schema
         let mut processed_result_set_metadata: BTreeMap<Vec<String>, MongoColMetadata> =
             result_set_object_schema
                 .clone()
@@ -185,7 +185,7 @@ impl SqlGetSchemaResponse {
                 .properties
                 .into_iter()
                 // 2. for each datasource, convert the schema to column metadata. Then,
-                //    turn the resulting vector of metadata into key-value pairs for the 
+                //    turn the resulting vector of metadata into key-value pairs for the
                 //    metadata map we are creating.
                 .map(|(datasource_name, datasource_schema)| {
                     let schema = Self::schema_to_col_metadata(
@@ -207,14 +207,12 @@ impl SqlGetSchemaResponse {
                 .collect::<Result<BTreeMap<Vec<String>, MongoColMetadata>>>()?;
 
         Ok(match self.select_order {
-            // in the select list order is None, for example if using an older adf version or calling a 
+            // in the select list order is None, for example if using an older adf version or calling a
             // select 1 query, default to sorted order
-            None => {
-                processed_result_set_metadata
-                    .into_values()
-                    .sorted_by(|a, b| Ord::cmp(&a.table_name, &b.table_name))
-                    .collect()
-            }
+            None => processed_result_set_metadata
+                .into_values()
+                .sorted_by(|a, b| Ord::cmp(&a.table_name, &b.table_name))
+                .collect(),
             // given a select order, we use the order provided by the select order list to convert the values of the
             // btree map into an ordered vector
             _ => self
