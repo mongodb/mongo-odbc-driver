@@ -150,8 +150,9 @@ impl SqlGetSchemaResponse {
     /// Converts a sqlGetResultSchema command response into a list of column
     /// metadata. Ensures the top-level schema is an Object with properties,
     /// and ensures the same for each top-level property -- which correspond
-    /// to datasources. The metadata is sorted alphabetically by datasource
-    /// name and then by field name. As in, a result set with schema:
+    /// to datasources. The metadata is sorted by select order whne possible, and
+    /// when not, alphabetically by datasource name and then by field name.
+    /// The latter case, for a result set with schema:
     ///
     ///   {
     ///     bsonType: "object",
