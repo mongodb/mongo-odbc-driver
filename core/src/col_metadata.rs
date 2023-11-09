@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use crate::{
     definitions::SqlDataType,
@@ -178,7 +178,7 @@ impl SqlGetSchemaResponse {
 
         // create a map from the naming convention used by select order ([datasource name, column name]),
         // to the schema
-        let mut processed_result_set_metadata: BTreeMap<Vec<String>, MongoColMetadata> =
+        let mut processed_result_set_metadata: HashMap<Vec<String>, MongoColMetadata> =
             result_set_object_schema
                 .clone()
                 // 1. Access result_set_schema.properties and turn into an iterator
@@ -194,27 +194,23 @@ impl SqlGetSchemaResponse {
                         &datasource_name,
                         type_mode,
                     )?;
-                    Ok(schema.into_iter().map(|col| {
-                        (
-                            vec![col.table_name.clone(), col.col_name.clone()],
-                            col.clone(),
-                        )
-                    }))
+                    Ok(schema
+                        .into_iter()
+                        .map(|col| (vec![col.table_name.clone(), col.col_name.clone()], col)))
                 })
                 // flatten the key-value pairs representing the metadata into a single vector,
                 // then finally convert to a BTree
                 .flatten_ok()
-                .collect::<Result<BTreeMap<Vec<String>, MongoColMetadata>>>()?;
+                .collect::<Result<HashMap<Vec<String>, MongoColMetadata>>>()?;
 
         Ok(match self.select_order {
-            // in the select list order is None, for example if using an older adf version or calling a
-            // select 1 query, default to sorted order
+            // in the select list order is None, for example if using an older adf version, sort
             None => processed_result_set_metadata
                 .into_values()
                 .sorted_by(|a, b| Ord::cmp(&a.table_name, &b.table_name))
                 .collect(),
             // given a select order, we use the order provided by the select order list to convert the values of the
-            // btree map into an ordered vector
+            // map into an ordered vector
             _ => self
                 .select_order
                 .clone()
@@ -375,7 +371,7 @@ mod unit {
                         ..Default::default()
                     },
                 },
-                select_order: None,
+                select_order: Some(vec![]),
             };
 
             let actual = input.process_result_metadata("test_db", TypeMode::Standard);
@@ -404,7 +400,7 @@ mod unit {
                         ..Default::default()
                     },
                 },
-                select_order: None,
+                select_order: Some(vec![]),
             };
 
             let actual = input.process_result_metadata("test_db", TypeMode::Standard);
