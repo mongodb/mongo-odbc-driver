@@ -200,7 +200,7 @@ impl SqlGetSchemaResponse {
                         .map(|col| (vec![col.table_name.clone(), col.col_name.clone()], col)))
                 })
                 // flatten the key-value pairs representing the metadata into a single vector,
-                // then finally convert to a BTree
+                // then finally convert to a HashMap
                 .flatten_ok()
                 .collect::<Result<HashMap<Vec<String>, MongoColMetadata>>>()?;
 
@@ -208,14 +208,12 @@ impl SqlGetSchemaResponse {
             // in the select list order is None, for example if using an older adf version, sort
             None => processed_result_set_metadata
                 .into_values()
-                // .sorted_by(|a, b| Ord::cmp(&a.table_name, &b.table_name))
                 .sorted_by(|a, b| match Ord::cmp(&a.table_name, &b.table_name) {
                     core::cmp::Ordering::Equal => Ord::cmp(&a.col_name, &b.col_name),
                     v => v,
                 })
                 .collect(),
-            // given a select order, we use the order provided by the select order list to convert the values of the
-            // map into an ordered vector
+            // given a select order, convert the values of the map into an ordered vector
             _ => self
                 .select_order
                 .clone()
