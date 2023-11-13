@@ -216,10 +216,10 @@ impl SqlGetSchemaResponse {
             // given a select order, convert the values of the map into an ordered vector
             _ => self
                 .select_order
-                .clone()
+                .as_ref()
                 .unwrap()
-                .into_iter()
-                .map(|key| processed_result_set_metadata.remove(&key).unwrap())
+                .iter()
+                .map(|key| processed_result_set_metadata.remove(key).unwrap())
                 .collect(),
         })
     }
