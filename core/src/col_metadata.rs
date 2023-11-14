@@ -416,7 +416,7 @@ mod unit {
         }
 
         #[test]
-        fn fields_sorted_alphabetical_select_order() {
+        fn fields_sorted_alphabetical_no_select_order() {
             let input = SqlGetSchemaResponse {
                 ok: 1,
                 schema: VersionedJsonSchema {
@@ -452,11 +452,7 @@ mod unit {
                         ..Default::default()
                     },
                 },
-                select_order: Some(vec![
-                    vec!["bar".to_string(), "c".to_string()],
-                    vec!["foo".to_string(), "a".to_string()],
-                    vec!["foo".to_string(), "b".to_string()],
-                ]),
+                select_order: None,
             };
 
             let res = input.process_result_metadata("test_db", TypeMode::Standard);
