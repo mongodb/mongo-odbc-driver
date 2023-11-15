@@ -852,12 +852,15 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
             let conn = must_be_valid!((*conn_handle).as_connection());
             // set the mongo_connection to None. This will cause the previous mongo_connection
             // to drop and disconnect.
+            conn.mongo_connection
+                .write()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .client
+                .clone()
+                .shutdown();
             *conn.mongo_connection.write().unwrap() = None;
-            // Temporary workaround for https://jira.mongodb.org/browse/RUST-1099
-            // This allows time for the underlying async runtime to clean up all of its
-            // resources before we report back success and subsequently drop the connection
-            // handle entirely
-            std::thread::sleep(std::time::Duration::from_millis(200));
             SqlReturn::SUCCESS
         },
         connection_handle
