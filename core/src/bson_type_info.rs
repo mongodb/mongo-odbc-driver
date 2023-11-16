@@ -423,7 +423,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: None,
-        simple_type_info: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "minKey",
