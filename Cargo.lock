@@ -699,8 +699,11 @@ dependencies = [
  "constants",
  "cstr",
  "lazy_static",
+ "log",
+ "logger",
  "mongodb",
  "odbc-sys",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml 0.9.25",
@@ -842,6 +845,7 @@ dependencies = [
  "constants",
  "cstr",
  "directories",
+ "lazy_static",
  "log",
  "log4rs",
  "shared_sql_utils",
@@ -1627,6 +1631,7 @@ dependencies = [
 name = "shared_sql_utils"
 version = "0.0.0"
 dependencies = [
+ "constants",
  "cstr",
  "thiserror",
 ]

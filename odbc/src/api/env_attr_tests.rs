@@ -70,10 +70,6 @@ fn get_set_env_attr(
 }
 
 mod unit {
-    use std::cell::RefCell;
-
-    use logger::Logger;
-
     use super::*;
     // test_env_attr tests SQLGetEnvAttr and SQLSetEnvAttr with every
     // environment attribute value.
@@ -81,10 +77,7 @@ mod unit {
     fn test_env_attr() {
         unsafe {
             use crate::map;
-            let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
-                EnvState::Allocated,
-                RefCell::new(Logger::new("")),
-            ));
+            let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
             get_set_env_attr(
                 env_handle,
@@ -163,10 +156,7 @@ mod unit {
     fn test_optional_value_changed() {
         use cstr::WideChar;
         unsafe {
-            let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
-                EnvState::Allocated,
-                RefCell::new(Logger::new("")),
-            ));
+            let handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLSetEnvAttr(
@@ -209,8 +199,7 @@ mod unit {
     fn no_logger_does_not_block_operations() {
         unsafe {
             use crate::map;
-            let env_handle: *mut _ =
-                &mut MongoHandle::Env(Env::with_state(EnvState::Allocated, RefCell::new(None)));
+            let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
             get_set_env_attr(
                 env_handle,

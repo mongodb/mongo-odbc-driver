@@ -97,7 +97,7 @@ macro_rules! add_diag_with_function {
     ($handle:expr, $error:expr, $fct_name:expr) => {
         let handle_info = $handle.get_handle_info();
         let message = format!("{handle_info} {}:: {}", $fct_name, $error);
-        log::info!("{}", message);
+        log::error!("{}", message);
         $handle.add_diag_info($error);
     };
 }

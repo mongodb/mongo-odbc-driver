@@ -950,7 +950,8 @@ functions:
           export RUST_BACKTRACE=1
           ./resources/run_adf.sh start &&
           cargo run --bin data_loader &&
-          cargo test integration -- --nocapture
+          cargo test integration -- --skip test_driver_log_level --nocapture
+          cargo test --test connection_tests integration::test_driver_log_level -- --ignored --nocapture
           EXITCODE=$?
           echo "****** ls -l ./target/debug/deps *******"
           ls -l ./target/debug/deps
@@ -1052,7 +1053,9 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with ubuntu
-          cargo test integration
+          cargo test integration -- --skip test_driver_log_level --nocapture
+          cargo test --test connection_tests integration::test_driver_log_level -- --ignored --nocapture
+          
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1122,7 +1125,8 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc,cstr/utf32 integration
+          cargo test --features odbc-sys/iodbc,cstr/utf32 integration -- --skip test_driver_log_level --nocapture
+          cargo test --test connection_tests integration::test_driver_log_level --features odbc-sys/iodbc,cstr/utf32 -- --nocapture
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1190,13 +1194,16 @@ functions:
 
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          export RUSTFLAGS="-Z sanitizer=address"
 
           export RUST_BACKTRACE=1
           # Start a local ADF
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with asan
-          cargo test --target x86_64-unknown-linux-gnu integration
+          cargo test --target x86_64-unknown-linux-gnu integration -- --skip test_driver_log_level --nocapture
+          cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level -- --nocapture
+          
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1220,6 +1227,7 @@ functions:
 
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          export RUSTFLAGS="-Z sanitizer=address"
 
           export RUST_BACKTRACE=1
           # Start a local ADF
@@ -1412,8 +1420,6 @@ tasks:
         variants: [windows-64]
       - func: "run ubuntu unit tests"
         variants: [ubuntu2204]
-      - func: "run asan unit tests"
-        variants: [ubuntu2204]
       - func: "run macos unit tests"
         variants: [macos, macos-arm]
 
@@ -1444,6 +1450,18 @@ tasks:
       - func: "run macos integration tests"
         variants: [macos, macos-arm]
 
+  - name: asan-unit-tests
+    commands:
+      - func: "install rust toolchain"
+        variants: [ ubuntu2204]
+      # Driver managers are the needed for being able to link when building
+      - func: "install iODBC"
+        variants: [ macos, macos-arm ]
+      - func: "install unix odbc"
+        variants: [ ubuntu2204 ]
+      - func: "run asan unit tests"
+        variants: [ ubuntu2204 ]
+
   - name: result-set-test
     depends_on:
       - name: compile
@@ -1465,8 +1483,6 @@ tasks:
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
-        variants: [ubuntu2204]
-      - func: "run asan result-set tests"
         variants: [ubuntu2204]
       - func: "run macos result-set tests"
         variants: [macos, macos-arm]
@@ -1600,6 +1616,7 @@ buildvariants:
       - name: unit-test
       - name: integration-test
       - name: result-set-test
+      - name: asan-unit-tests
       - name: sign
 
   - name: macos

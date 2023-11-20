@@ -12,3 +12,4 @@ cstr = { path = "../cstr" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 constants = { path = "../constants" }
 directories = "5.0"
+lazy_static = "1"
