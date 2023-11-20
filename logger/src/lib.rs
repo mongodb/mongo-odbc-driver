@@ -18,7 +18,6 @@ use std::path::{Path, PathBuf};
 
 const LOG_FILE_SIZE: u64 = 1024 * 500;
 
-
 // The logger is global to the application.
 // The first initialization will create a logger a provide a handle back.
 // The logger configuration can then be updated through the handle.
