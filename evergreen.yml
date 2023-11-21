@@ -950,7 +950,7 @@ functions:
           export RUST_BACKTRACE=1
           ./resources/run_adf.sh start &&
           cargo run --bin data_loader &&
-          cargo test integration -- --skip test_driver_log_level --nocapture
+          cargo test integration -- --skip test_driver_log_level --nocapture &&
           cargo test --test connection_tests integration::test_driver_log_level -- --ignored --nocapture
           EXITCODE=$?
           echo "****** ls -l ./target/debug/deps *******"
@@ -1053,7 +1053,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with ubuntu
-          cargo test integration -- --skip test_driver_log_level --nocapture
+          cargo test integration -- --skip test_driver_log_level --nocapture &&
           cargo test --test connection_tests integration::test_driver_log_level -- --ignored --nocapture
           
           EXITCODE=$?
@@ -1125,7 +1125,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc,cstr/utf32 integration -- --skip test_driver_log_level --nocapture
+          cargo test --features odbc-sys/iodbc,cstr/utf32 integration -- --skip test_driver_log_level --nocapture &&
           cargo test --test connection_tests integration::test_driver_log_level --features odbc-sys/iodbc,cstr/utf32 -- --nocapture
           EXITCODE=$?
 
@@ -1201,7 +1201,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with asan
-          cargo test --target x86_64-unknown-linux-gnu integration -- --skip test_driver_log_level --nocapture
+          cargo test --target x86_64-unknown-linux-gnu integration -- --skip test_driver_log_level --nocapture &&
           cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level -- --nocapture
           
           EXITCODE=$?
@@ -1454,7 +1454,7 @@ tasks:
     commands:
       - func: "install rust toolchain"
         variants: [ ubuntu2204]
-      # Driver managers are the needed for being able to link when building
+      # Driver managers are needed to be able to link when building
       - func: "install iODBC"
         variants: [ macos, macos-arm ]
       - func: "install unix odbc"
