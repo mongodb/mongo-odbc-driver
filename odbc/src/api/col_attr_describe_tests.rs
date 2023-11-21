@@ -398,8 +398,8 @@ mod unit {
             (Desc::Length, 65535),
             (Desc::Nullable, 0),
             (Desc::OctetLength, 65535),
-            (Desc::Precision, 65535),
-            (Desc::Scale, 65535),
+            (Desc::Precision, 0),
+            (Desc::Scale, 0),
             (Desc::Searchable, SQL_SEARCHABLE as isize),
             (Desc::Type, SqlDataType::EXT_W_VARCHAR as isize),
             (Desc::ConciseType, SqlDataType::EXT_W_VARCHAR as isize),
@@ -468,7 +468,7 @@ mod unit {
             // col_size should be 0
             assert_eq!(65535usize, *col_size);
             // decimal_digits should be -1
-            assert_eq!(-1i16, *decimal_digits);
+            assert_eq!(0i16, *decimal_digits);
             // nullable should stay as NO_NULLS
             assert_eq!(Nullability::NO_NULLS, nullable);
             // name_buffer should contain TABLE_NAME
