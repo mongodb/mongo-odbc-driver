@@ -187,7 +187,7 @@ macro_rules! panic_safe_exec_keep_diagnostics {
     }};
 }
 pub(crate) use panic_safe_exec_keep_diagnostics;
-use shared_sql_utils::odbcinst::DriverSettings;
+use shared_sql_utils::driver_settings::DriverSettings;
 
 ///
 /// unsupported_function is a macro for correctly setting the state for unsupported functions.

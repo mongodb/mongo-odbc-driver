@@ -13,7 +13,7 @@ use log4rs::{
     encode::pattern::PatternEncoder,
     Handle,
 };
-use shared_sql_utils::odbcinst::DriverSettings;
+use shared_sql_utils::driver_settings::DriverSettings;
 use std::path::{Path, PathBuf};
 
 const LOG_FILE_SIZE: u64 = 1024 * 500;

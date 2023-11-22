@@ -11,10 +11,8 @@ mod integration {
     use logger::Logger;
     use odbc_sys::{SQLExecDirectW, SqlReturn};
     use regex::Regex;
-    use shared_sql_utils::odbcinst::{
-        DriverSettings, SQLWritePrivateProfileString, SQLWritePrivateProfileStringW, LOGLEVEL,
-        ODBCINSTINI,
-    };
+    use shared_sql_utils::driver_settings::{DriverSettings, LOGLEVEL, ODBCINSTINI};
+    use shared_sql_utils::odbcinst::{SQLWritePrivateProfileString, SQLWritePrivateProfileStringW};
     use std::{fs, str, thread, time};
 
     #[test]

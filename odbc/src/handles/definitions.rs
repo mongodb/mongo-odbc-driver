@@ -178,7 +178,7 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn with_state(state: EnvState /*logger: RefCell<Option<Logger>>*/) -> Self {
+    pub fn with_state(state: EnvState) -> Self {
         Self {
             attributes: RwLock::new(EnvAttributes::default()),
             state: RwLock::new(state),
