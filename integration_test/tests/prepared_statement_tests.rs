@@ -2,26 +2,20 @@ mod common;
 
 mod integration {
     use crate::common::{
-        allocate_env, allocate_statement, connect_with_conn_string, disconnect_and_close_handles,
+        allocate_env, connect_and_allocate_statement, disconnect_and_close_handles,
         fetch_and_get_data, get_column_attributes, get_sql_diagnostics,
     };
     use odbc_sys::{
-        CDataType, HDbc, HStmt, Handle, HandleType, SQLExecute, SQLFetch, SQLPrepareW, SmallInt,
+        CDataType, HStmt, Handle, HandleType, SQLExecute, SQLFetch, SQLPrepareW, SmallInt,
         SqlReturn, NTS,
     };
 
     use cstr::WideChar;
 
-    fn connect_and_allocate_statement() -> (HDbc, HStmt) {
-        let env_handle = allocate_env().unwrap();
-        let conn_str = crate::common::generate_default_connection_str();
-        let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
-        (conn_handle, allocate_statement(conn_handle).unwrap())
-    }
-
     #[test]
     fn test_error_execute_before_prepare() {
-        let (dbc, stmt) = connect_and_allocate_statement();
+        let env_handle = allocate_env().unwrap();
+        let (dbc, stmt) = connect_and_allocate_statement(env_handle, None);
 
         let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
         query.push(0);
@@ -35,11 +29,13 @@ mod integration {
             assert!(diagnostic.contains("Function sequence error"));
         }
         disconnect_and_close_handles(dbc, stmt);
+        let _ = unsafe { Box::from_raw(env_handle) };
     }
 
     #[test]
     fn test_prepare_get_resultset_metadata() {
-        let (dbc, stmt) = connect_and_allocate_statement();
+        let env_handle = allocate_env().unwrap();
+        let (dbc, stmt) = connect_and_allocate_statement(env_handle, None);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -58,11 +54,13 @@ mod integration {
 
             disconnect_and_close_handles(dbc, stmt);
         }
+        let _ = unsafe { Box::from_raw(env_handle) };
     }
 
     #[test]
     fn test_error_fetch_before_execute() {
-        let (dbc, stmt) = connect_and_allocate_statement();
+        let env_handle = allocate_env().unwrap();
+        let (dbc, stmt) = connect_and_allocate_statement(env_handle, None);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -84,11 +82,13 @@ mod integration {
 
             disconnect_and_close_handles(dbc, stmt);
         }
+        let _ = unsafe { Box::from_raw(env_handle) };
     }
 
     #[test]
     fn test_prepare_execute_retrieve_data() {
-        let (dbc, stmt) = connect_and_allocate_statement();
+        let env_handle = allocate_env().unwrap();
+        let (dbc, stmt) = connect_and_allocate_statement(env_handle, None);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -128,11 +128,13 @@ mod integration {
 
             disconnect_and_close_handles(dbc, stmt);
         }
+        let _ = unsafe { Box::from_raw(env_handle) };
     }
 
     #[test]
     fn test_prepare_execute_multiple_times() {
-        let (dbc, stmt) = connect_and_allocate_statement();
+        let env_handle = allocate_env().unwrap();
+        let (dbc, stmt) = connect_and_allocate_statement(env_handle, None);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -186,5 +188,6 @@ mod integration {
 
             disconnect_and_close_handles(dbc, stmt);
         }
+        let _ = unsafe { Box::from_raw(env_handle) };
     }
 }

@@ -570,7 +570,7 @@ macro_rules! fixed_data_with_warnings {
 }
 
 pub unsafe fn format_datetime(
-    mongo_handle: &mut MongoHandle,
+    mongo_handle: &MongoHandle,
     col_num: USmallInt,
     target_value_ptr: Pointer,
     str_len_or_ind_ptr: *mut Len,
@@ -606,7 +606,7 @@ pub unsafe fn format_datetime(
 }
 
 pub unsafe fn format_time(
-    mongo_handle: &mut MongoHandle,
+    mongo_handle: &MongoHandle,
     col_num: USmallInt,
     target_value_ptr: Pointer,
     str_len_or_ind_ptr: *mut Len,
@@ -638,7 +638,7 @@ pub unsafe fn format_time(
 }
 
 pub unsafe fn format_date(
-    mongo_handle: &mut MongoHandle,
+    mongo_handle: &MongoHandle,
     col_num: USmallInt,
     target_value_ptr: Pointer,
     str_len_or_ind_ptr: *mut Len,

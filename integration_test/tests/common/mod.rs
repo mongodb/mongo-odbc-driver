@@ -149,6 +149,21 @@ pub fn allocate_env() -> Result<HEnv> {
 }
 
 #[allow(dead_code)]
+/// Connect to a database and allocate a new statement
+/// Return the db and statement handles back for future use.
+pub fn connect_and_allocate_statement(
+    env_handle: HEnv,
+    in_connection_string: Option<String>,
+) -> (HDbc, HStmt) {
+    let conn_str = match in_connection_string {
+        Some(val) => val,
+        None => crate::common::generate_default_connection_str(),
+    };
+    let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
+    (conn_handle, allocate_statement(conn_handle).unwrap())
+}
+
+#[allow(dead_code)]
 /// Connects to database with provided connection string
 pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) -> Result<HDbc> {
     // Allocate a DBC handle
