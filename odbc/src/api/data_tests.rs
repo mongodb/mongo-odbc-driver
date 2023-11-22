@@ -21,7 +21,6 @@ use mongo_odbc_core::{
     TypeMode,
 };
 use odbc_sys::{Date, Nullability, SqlReturn, Time, Timestamp, WChar};
-use std::cell::RefCell;
 
 const ARRAY_COL: u16 = 1;
 const BIN_COL: u16 = 2;
@@ -523,7 +522,6 @@ lazy_static! {
 fn sql_fetch_and_more_results_basic_functionality(type_mode: TypeMode) {
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -562,7 +560,6 @@ fn indicator_missing(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -612,7 +609,6 @@ fn sql_get_wstring_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -711,7 +707,6 @@ fn sql_get_wstring_data_by_pieces(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -794,7 +789,6 @@ fn sql_get_guid_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -876,7 +870,6 @@ fn sql_get_string_data_by_pieces(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -929,7 +922,6 @@ fn sql_get_binary_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -1030,7 +1022,6 @@ fn sql_get_binary_data_by_pieces(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -1108,7 +1099,6 @@ fn sql_get_string_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -1207,7 +1197,6 @@ fn sql_get_bit_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -1407,7 +1396,6 @@ fn sql_get_i64_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -1600,7 +1588,6 @@ fn sql_get_u64_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -1799,7 +1786,6 @@ fn sql_get_i32_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -1992,7 +1978,6 @@ fn sql_get_u32_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -2191,7 +2176,6 @@ fn sql_get_f64_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -2377,7 +2361,6 @@ fn sql_get_f32_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -2563,7 +2546,6 @@ fn sql_get_datetime_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -2774,7 +2756,6 @@ fn sql_get_date_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -2978,7 +2959,6 @@ fn sql_get_time_data(mq: MongoQuery) {
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
-        RefCell::new(None),
     ))));
     let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
         env as *mut _,
@@ -3186,7 +3166,6 @@ mod unit_tests {
     fn unallocated_statement_sql_fetch() {
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
-            RefCell::new(None),
         ))));
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
             env as *mut _,
