@@ -9,7 +9,6 @@ use crate::{
     },
     handles::definitions::*,
     trace_odbc,
-    util::get_driver_path,
 };
 use bson::Bson;
 use constants::{
@@ -32,7 +31,7 @@ use odbc_sys::{
     Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
     Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };
-use std::{cell::RefCell, ptr::null_mut};
+use std::ptr::null_mut;
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 
 const NULL_HANDLE_ERROR: &str = "handle cannot be null";
@@ -188,6 +187,7 @@ macro_rules! panic_safe_exec_keep_diagnostics {
     }};
 }
 pub(crate) use panic_safe_exec_keep_diagnostics;
+use shared_sql_utils::driver_settings::DriverSettings;
 
 ///
 /// unsupported_function is a macro for correctly setting the state for unsupported functions.
@@ -256,14 +256,18 @@ fn sql_alloc_handle(
 ) -> Result<()> {
     match handle_type {
         HandleType::Env => {
-            let env = Env::with_state(
-                EnvState::Allocated,
-                RefCell::new(Logger::new(get_driver_path())),
-            );
+            let env = Env::with_state(EnvState::Allocated);
+
             let mh = Box::new(MongoHandle::Env(env));
             unsafe {
                 *output_handle = Box::into_raw(mh) as *mut _;
             }
+
+            // Read the log level from the driver settings and set the logger level accordingly
+            let driver_settings: DriverSettings =
+                DriverSettings::from_private_profile_string().unwrap_or_default();
+            Logger::set_log_level(driver_settings.log_level);
+
             Ok(())
         }
         HandleType::Dbc => {
@@ -852,12 +856,15 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
             let conn = must_be_valid!((*conn_handle).as_connection());
             // set the mongo_connection to None. This will cause the previous mongo_connection
             // to drop and disconnect.
+            conn.mongo_connection
+                .write()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .client
+                .clone()
+                .shutdown();
             *conn.mongo_connection.write().unwrap() = None;
-            // Temporary workaround for https://jira.mongodb.org/browse/RUST-1099
-            // This allows time for the underlying async runtime to clean up all of its
-            // resources before we report back success and subsequently drop the connection
-            // handle entirely
-            std::thread::sleep(std::time::Duration::from_millis(200));
             SqlReturn::SUCCESS
         },
         connection_handle
@@ -872,14 +879,9 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
 
     if let Some(log_level) = odbc_uri.remove(&["loglevel"]) {
-        let env = unsafe { conn.env.as_ref() };
-        if let Some(env) = env {
-            if let Some(env) = env.as_env() {
-                if let Some(logger) = env.logger.borrow().as_ref() {
-                    logger.set_log_level(log_level);
-                }
-            }
-        }
+        // The connection log level takes precedence over the driver log level
+        // Update the logger configuration. This will affect all logging from the application.
+        Logger::set_log_level(log_level);
     }
 
     if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
@@ -1069,7 +1071,6 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
-
             odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
             SqlReturn::SUCCESS
         },
@@ -1243,14 +1244,6 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
         // By making Boxes to the types and letting them go out of
         // scope, they will be dropped.
         HandleType::Env => {
-            unsafe {
-                (*handle)
-                    .as_env()
-                    .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_ENV_ERROR))?
-            }
-            .logger
-            .borrow_mut()
-            .take();
             let _ = unsafe {
                 (*handle)
                     .as_env()
@@ -1777,7 +1770,7 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
 }
 
 unsafe fn sql_get_env_attrw_helper(
-    env_handle: &mut MongoHandle,
+    env_handle: &MongoHandle,
     attribute: EnvironmentAttribute,
     value_ptr: Pointer,
     string_length: *mut Integer,
