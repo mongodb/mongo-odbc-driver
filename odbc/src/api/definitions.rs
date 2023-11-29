@@ -9,6 +9,7 @@ pub enum SqlBool {
 // Environment attributes
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum OdbcVersion {
+    Odbc2 = 2,
     Odbc3 = 3,
     Odbc3_80 = 380,
 }
