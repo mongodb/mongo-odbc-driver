@@ -398,7 +398,7 @@ mod unit {
             (Desc::Length, 65535),
             (Desc::Nullable, 0),
             (Desc::OctetLength, 65535),
-            (Desc::Precision, 0),
+            (Desc::Precision, 65535),
             (Desc::Scale, 0),
             (Desc::Searchable, SQL_SEARCHABLE as isize),
             (Desc::Type, SqlDataType::EXT_W_VARCHAR as isize),
