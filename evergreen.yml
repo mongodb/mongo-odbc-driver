@@ -177,7 +177,7 @@ functions:
             cargo set-version $RELEASE_VERSION
           fi
           cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get --entry="odbc/Cargo.toml" package.version --major --minor --patch --delimiter=".")
+          CARGO_PKGS_VERSION=$(cargo get --entry="odbc/Cargo.toml" package.version)
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             EXPECTED_RELEASE_VERSION="0.0.0"
           else
@@ -343,7 +343,7 @@ functions:
               MINOR_VERSION="0.1"
               VERSION_LABEL="0.1.0"
           else
-              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
+              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+.*|\1|')
               VERSION_LABEL="$RELEASE_VERSION"
           fi
 
@@ -1319,6 +1319,9 @@ functions:
         working_dir: mongosql-odbc-driver/resources/download-center/
         script: |
           ${prepare_shell}
+          if [[ $(git branch --show-current) != 'master' ]]; then
+             exit 0
+          fi
           # Update the template to generate the feed for this release
           sed -i 's@{RELEASE_VERSION}@'${RELEASE_VERSION}'@' mongo-odbc-downloads_template.json
           sed -i 's@{WINDOWS_INSTALLER_PATH}@'${WINDOWS_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json

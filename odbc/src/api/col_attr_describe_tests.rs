@@ -383,6 +383,7 @@ mod unit {
     // check the fields column for all the numeric attributes
     #[test]
     fn test_numeric_field_attributes() {
+        use mongo_odbc_core::STRING_SIZE;
         let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
         stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
         let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
@@ -393,12 +394,12 @@ mod unit {
             (Desc::Updatable, 0),
             (Desc::Count, 18),
             (Desc::CaseSensitive, 1),
-            (Desc::DisplaySize, 65535),
+            (Desc::DisplaySize, 0),
             (Desc::FixedPrecScale, 0),
-            (Desc::Length, 65535),
+            (Desc::Length, 0),
             (Desc::Nullable, 0),
-            (Desc::OctetLength, 65535),
-            (Desc::Precision, 0),
+            (Desc::OctetLength, STRING_SIZE as isize),
+            (Desc::Precision, STRING_SIZE as isize),
             (Desc::Scale, 0),
             (Desc::Searchable, SQL_SEARCHABLE as isize),
             (Desc::Type, SqlDataType::EXT_W_VARCHAR as isize),
@@ -424,8 +425,11 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                dbg!(desc);
-                assert_eq!(expected, *numeric_attr_ptr);
+                let val = *numeric_attr_ptr;
+                assert_eq!(
+                    expected, val,
+                    "Expect value {expected} for {desc:?}, but got {val}"
+                );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
@@ -466,8 +470,8 @@ mod unit {
             // data_type should be VARCHAR
             assert_eq!(SqlDataType::EXT_W_VARCHAR, data_type);
             // col_size should be 0
-            assert_eq!(65535usize, *col_size);
-            // decimal_digits should be -1
+            assert_eq!(0usize, *col_size);
+            // decimal_digits should be 0
             assert_eq!(0i16, *decimal_digits);
             // nullable should stay as NO_NULLS
             assert_eq!(Nullability::NO_NULLS, nullable);

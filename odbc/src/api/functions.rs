@@ -2010,7 +2010,6 @@ macro_rules! sql_get_info_helper {
                     // MongoSQL supports the following timedate functions.
                     const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP
                         | SQL_FN_TD_NOW
-                        | SQL_FN_TD_QUARTER
                         | SQL_FN_TD_TIMESTAMPADD
                         | SQL_FN_TD_TIMESTAMPDIFF
                         | SQL_FN_TD_EXTRACT
