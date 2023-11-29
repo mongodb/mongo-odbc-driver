@@ -12,7 +12,7 @@ tests:
     expected_is_searchable: [ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3, 3, 2 ]
     expected_is_unsigned: [ 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0 ]
     expected_sql_type: [ -9, -9, -9, -9, -9, -9, -9, -9, 4, 4, 4, -9, -9, 4 ]
-    expected_precision: [ 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 10, 0, 0, 10 ]
+    expected_precision: [ 65535, 65535, 65535, 65535, 65535, 65535, 65535, 65535, 10, 10, 10, 65535, 65535, 10 ]
     expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
     expected_nullability: [ 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1 ]
   - description: SQLGetTypeInfo function with zero types returned
@@ -28,7 +28,7 @@ tests:
     expected_is_searchable: [ 3, 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2 ]
     expected_is_unsigned: [ 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 ]
     expected_sql_type: [ -9, 4, 4, -9, -9, -9, 4, 4, 4, 4, 4, 4, -9, 4, 4, 4, 4, 4, 4 ]
-    expected_precision: [ 0, 10, 10, 0, 0, 0, 10, 10, 10, 10, 10, 10, 0, 10, 10, 10, 10, 10, 10 ]
+    expected_precision: [ 65535, 10, 10, 65535, 65535, 65535, 10, 10, 10, 10, 10, 10, 65535, 10, 10, 10, 10, 10, 10 ]
     expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
     expected_nullability: [ 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1 ]
   - description: SQLGetTypeInfo function with one type returned
@@ -45,15 +45,15 @@ tests:
     expected_is_searchable: [ 3, 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2 ]
     expected_is_unsigned: [ 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 ]
     expected_sql_type: [ -9, 4, 4, -9, -9, -9, 4, 4, 4, 4, 4, 4, -9, 4, 4, 4, 4, 4, 4 ]
-    expected_precision: [ 0, 10, 10, 0, 0, 0, 10, 10, 10, 10, 10, 10, 0, 10, 10, 10, 10, 10, 10 ]
+    expected_precision: [ 65535, 10, 10, 65535, 65535, 65535, 10, 10, 10, 10, 10, 10, 65535, 10, 10, 10, 10, 10, 10 ]
     expected_scale: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
     expected_nullability: [ 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1 ]
   - description: SQLGetTypeInfo function get all types
     test_definition: [ "sqlgettypeinfo", 0 ]
     db: integration_test
     expected_result:
-    - [ "varchar", 12, null, "'", "'", null, 1, 1, 3, null, 0, null, "varchar", null, null, 12, null, null, null ]
-    - [ "string", -9, null, "'", "'", null, 1, 1, 3, null, 0, null, "string", null, null, -9, null, null, null ]
+    - [ "varchar", 12, 65535, "'", "'", null, 1, 1, 3, null, 0, null, "varchar", null, null, 12, null, null, null ]
+    - [ "string", -9, 65535, "'", "'", null, 1, 1, 3, null, 0, null, "string", null, null, -9, null, null, null ]
     - [ "bool", -7, 1, null, null, null, 1, 0, 2, null, 0, null, "bool", null, null, -7, null, null, null ]
     - [ "long", -5, 19, null, null, null, 1, 0, 2, 0, 1, 0, "long", 0, 0, -5, null, 10, null ]
     - [ "binData", -2, null, null, null, null, 1, 0, 0, null, 0, null, "binData", null, null, -2, null, null, null ]
@@ -79,8 +79,8 @@ tests:
     db: integration_test
     is_simple_type: true
     expected_result:
-      - [ "varchar", 12, null, "'", "'", null, 1, 1, 3, null, 0, null, "varchar", null, null, 12, null, null, null ]
-      - [ "string", -9, null, "'", "'", null, 1, 1, 3, null, 0, null, "string", null, null, -9, null, null, null ]
+      - [ "varchar", 12, 65535, "'", "'", null, 1, 1, 3, null, 0, null, "varchar", null, null, 12, null, null, null ]
+      - [ "string", -9, 65535, "'", "'", null, 1, 1, 3, null, 0, null, "string", null, null, -9, null, null, null ]
       - [ "bool", -7, 1, null, null, null, 1, 0, 2, null, 0, null, "bool", null, null, -7, null, null, null ]
       - [ "long", -5, 19, null, null, null, 1, 0, 2, 0, 1, 0, "long", 0, 0, -5, null, 10, null ]
       - [ "binData", -9, null, null, null, null, 1, 0, 0, null, 0, null, "binData", null, null, -9, null, null, null ]
