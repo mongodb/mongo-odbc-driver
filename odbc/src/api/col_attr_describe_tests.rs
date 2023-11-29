@@ -467,7 +467,7 @@ mod unit {
             assert_eq!(SqlDataType::EXT_W_VARCHAR, data_type);
             // col_size should be 0
             assert_eq!(65535usize, *col_size);
-            // decimal_digits should be -1
+            // decimal_digits should be 0
             assert_eq!(0i16, *decimal_digits);
             // nullable should stay as NO_NULLS
             assert_eq!(Nullability::NO_NULLS, nullable);
