@@ -1,16 +1,10 @@
-use std::cell::RefCell;
-
 use crate::{handles::definitions::*, SQLAllocHandle, SQLFreeHandle};
-use logger::Logger;
 use odbc_sys::{Handle, HandleType, SqlReturn};
 
 #[test]
 fn test_env_alloc_free() {
     unsafe {
-        let mut handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
-            EnvState::Allocated,
-            RefCell::new(Logger::new("")),
-        ));
+        let mut handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let handle_ptr: *mut _ = &mut handle;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -37,10 +31,7 @@ fn test_env_alloc_free() {
 #[test]
 fn test_connection_alloc_free() {
     unsafe {
-        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
-            EnvState::Allocated,
-            RefCell::new(Logger::new("")),
-        ));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         let mut handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
             std::ptr::null_mut(),
@@ -100,10 +91,7 @@ fn test_connection_alloc_free() {
 #[test]
 fn test_statement_alloc_free() {
     unsafe {
-        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
-            EnvState::Allocated,
-            RefCell::new(Logger::new("")),
-        ));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
             env_handle,
@@ -160,10 +148,7 @@ fn test_statement_alloc_free() {
 #[test]
 fn test_descriptor_alloc_free() {
     unsafe {
-        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
-            EnvState::Allocated,
-            RefCell::new(Logger::new("")),
-        ));
+        let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
 
         let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
             env_handle,
@@ -200,10 +185,7 @@ fn test_descriptor_alloc_free() {
 #[test]
 fn test_invalid_free() {
     unsafe {
-        let mut env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
-            EnvState::Allocated,
-            RefCell::new(Logger::new("")),
-        ));
+        let mut env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let env_handle_ptr: *mut _ = &mut env_handle;
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -305,10 +287,7 @@ fn test_invalid_free() {
 #[test]
 fn test_invalid_alloc() {
     unsafe {
-        let mut handle: *mut _ = &mut MongoHandle::Env(Env::with_state(
-            EnvState::Allocated,
-            RefCell::new(Logger::new("")),
-        ));
+        let mut handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let handle_ptr: *mut _ = &mut handle;
         // first check null ptrs for the three handles that require parent handles
         assert_eq!(

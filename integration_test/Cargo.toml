@@ -13,8 +13,11 @@ odbc-sys = { path = "../odbc-sys", default-features = false }
 cstr = { path = "../cstr" }
 constants = { path = "../constants" }
 shared_sql_utils = { path = "../shared_sql_utils" }
+logger = { path = "../logger" }
+log = "0.4"
+regex = "1"
 
 [dependencies.mongodb]
-version = "2.6"
+version = "2.7"
 default-features = false
 features = ["tokio-sync"]

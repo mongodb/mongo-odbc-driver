@@ -228,14 +228,12 @@ impl Dsn {
     }
 
     pub fn to_connection_string(&self) -> String {
-        use std::fmt::Write;
-        let mut ret = String::new();
-        for (key, value) in self.iter() {
-            if !value.is_empty() {
-                write!(&mut ret, "{key}={value};").unwrap();
+        self.iter().fold(String::new(), |acc, (key, value)| {
+            if value.is_empty() {
+                return String::new();
             }
-        }
-        ret
+            format!("{acc};{key}={value};")
+        })
     }
 }
 

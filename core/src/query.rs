@@ -118,8 +118,6 @@ impl MongoStatement for MongoQuery {
 
         // 2. Run the $sql aggregation to get the result set cursor.
         let pipeline = vec![doc! {"$sql": {
-            "format": "odbc",
-            "formatVersion": 1,
             "statement": &self.query,
         }}];
 
