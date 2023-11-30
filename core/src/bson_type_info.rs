@@ -1,6 +1,6 @@
 use crate::definitions::SqlDataType;
 
-pub const STRING_SIZE: u16 = 65535;
+pub const STRING_SIZE: u16 = u16::MAX;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum TypeMode {
