@@ -23,32 +23,32 @@ lazy_static! {
     pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
 }
 
-// SQL states
-pub const NOT_IMPLEMENTED: &str = "HYC00";
-pub const TIMEOUT_EXPIRED: &str = "HYT00";
-pub const GENERAL_ERROR: &str = "HY000";
-pub const PROGRAM_TYPE_OUT_OF_RANGE: &str = "HY003";
-pub const INVALID_SQL_TYPE: &str = "HY004";
-pub const INVALID_ATTR_VALUE: &str = "HY024";
-pub const INVALID_INFO_TYPE_VALUE: &str = "HY096";
-pub const NO_DSN_OR_DRIVER: &str = "IM007";
-pub const GENERAL_WARNING: &str = "01000";
-pub const RIGHT_TRUNCATED: &str = "01004";
-pub const OPTION_CHANGED: &str = "01S02";
-pub const FRACTIONAL_TRUNCATION: &str = "01S07";
-pub const UNABLE_TO_CONNECT: &str = "08001";
-pub const INVALID_DESCRIPTOR_INDEX: &str = "07009";
-pub const NO_RESULTSET: &str = "07005";
-pub const RESTRICTED_DATATYPE: &str = "07006";
-pub const INVALID_CURSOR_STATE: &str = "24000";
-pub const FUNCTION_SEQUENCE_ERROR: &str = "HY010";
-pub const UNSUPPORTED_FIELD_DESCRIPTOR: &str = "HY091";
-pub const INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER: &str = "HY092";
-pub const INDICATOR_VARIABLE_REQUIRED: &str = "22002";
-pub const INTEGRAL_TRUNCATION: &str = "22003";
-pub const INVALID_DATETIME_FORMAT: &str = "22007";
-pub const INVALID_CHARACTER_VALUE: &str = "22018";
-pub const CONNECTION_NOT_OPEN: &str = "08003";
+// SQL states, stored as [ODBC2 state, ODBC3 state]
+pub const NOT_IMPLEMENTED: [&str; 2] = ["S1C00", "HYC00"];
+pub const TIMEOUT_EXPIRED:[&str; 2] = ["S1T00", "HYT00"];
+pub const GENERAL_ERROR: [&str; 2] = ["S1000", "HY000"];
+pub const PROGRAM_TYPE_OUT_OF_RANGE: [&str; 2] = ["S1003", "HY003"];
+pub const INVALID_SQL_TYPE: [&str; 2] = ["S1004", "HY004"];
+pub const INVALID_ATTR_VALUE: [&str; 2] = ["S1009", "HY024"];
+pub const INVALID_INFO_TYPE_VALUE: [&str; 2] = ["S1096", "HY096"];
+pub const NO_DSN_OR_DRIVER: [&str; 2] = ["IM007", "IM007"];
+pub const GENERAL_WARNING: [&str; 2] = ["01000", "01000"];
+pub const RIGHT_TRUNCATED: [&str; 2] = ["01004", "01004"];
+pub const OPTION_CHANGED: [&str; 2] = ["01S02", "01S02"];
+pub const FRACTIONAL_TRUNCATION: [&str; 2] = ["01S07", "01S07"];
+pub const UNABLE_TO_CONNECT: [&str; 2] = ["08001", "08001"];
+pub const INVALID_DESCRIPTOR_INDEX: [&str; 2] = ["07009", "07009"];
+pub const NO_RESULTSET: [&str; 2] = ["24000", "07005"];
+pub const RESTRICTED_DATATYPE: [&str; 2] = ["07006", "07006"];
+pub const INVALID_CURSOR_STATE: [&str; 2] = ["24000", "24000"];
+pub const FUNCTION_SEQUENCE_ERROR: [&str; 2] = ["S1010", "HY010"];
+pub const UNSUPPORTED_FIELD_DESCRIPTOR: [&str; 2] = ["S1091", "HY091"];
+pub const INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER: [&str; 2] = ["S1092", "HY092"];
+pub const INDICATOR_VARIABLE_REQUIRED: [&str; 2] = ["22002", "22002"];
+pub const INTEGRAL_TRUNCATION: [&str; 2] = ["22003", "22003"];
+pub const INVALID_DATETIME_FORMAT: [&str; 2] = ["22008", "22007"];
+pub const INVALID_CHARACTER_VALUE: [&str; 2] = ["22005", "22018"];
+pub const CONNECTION_NOT_OPEN: [&str; 2] = ["08003", "08003"];
 
 pub const SQL_ALL_TABLE_TYPES: &str = "%";
 pub const SQL_ALL_CATALOGS: &str = "%";
