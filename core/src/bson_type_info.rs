@@ -1,5 +1,7 @@
 use crate::definitions::SqlDataType;
 
+pub const STRING_SIZE: u16 = 65535;
+
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum TypeMode {
     Standard,
@@ -91,8 +93,8 @@ impl BsonTypeInfo {
         is_case_sensitive: true,
         fixed_prec_scale: false,
         scale: None,
-        precision: Some(65535),
-        octet_length: Some(65535),
+        precision: Some(STRING_SIZE),
+        octet_length: Some(STRING_SIZE),
         fixed_bytes_length: None,
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
@@ -113,8 +115,8 @@ impl BsonTypeInfo {
         is_case_sensitive: true,
         fixed_prec_scale: false,
         scale: None,
-        precision: Some(65535),
-        octet_length: Some(65535),
+        precision: Some(STRING_SIZE),
+        octet_length: Some(STRING_SIZE),
         fixed_bytes_length: None,
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
@@ -380,8 +382,8 @@ impl BsonTypeInfo {
         fixed_prec_scale: true,
         scale: Some(0),
         precision: Some(10),
-        octet_length: Some(65535),
-        fixed_bytes_length: Some(65535),
+        octet_length: Some(4),
+        fixed_bytes_length: Some(4),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,

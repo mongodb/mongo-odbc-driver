@@ -3,6 +3,7 @@ mod bson_type_info;
 use bson_type_info::BsonTypeInfo;
 pub use bson_type_info::TypeMode;
 pub use bson_type_info::SQL_SEARCHABLE;
+pub use bson_type_info::STRING_SIZE;
 
 mod collections;
 pub use collections::MongoCollections;

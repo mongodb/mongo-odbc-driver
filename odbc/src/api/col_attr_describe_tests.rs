@@ -383,6 +383,7 @@ mod unit {
     // check the fields column for all the numeric attributes
     #[test]
     fn test_numeric_field_attributes() {
+        use mongo_odbc_core::STRING_SIZE;
         let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
         stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
         let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
@@ -397,8 +398,8 @@ mod unit {
             (Desc::FixedPrecScale, 0),
             (Desc::Length, 0),
             (Desc::Nullable, 0),
-            (Desc::OctetLength, 65535),
-            (Desc::Precision, 65535),
+            (Desc::OctetLength, STRING_SIZE as isize),
+            (Desc::Precision, STRING_SIZE as isize),
             (Desc::Scale, 0),
             (Desc::Searchable, SQL_SEARCHABLE as isize),
             (Desc::Type, SqlDataType::EXT_W_VARCHAR as isize),
