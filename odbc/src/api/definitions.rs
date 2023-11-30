@@ -742,6 +742,7 @@ pub const SQL_FN_TD_DAYOFMONTH: u32 = 0x00000004;
 pub const SQL_FN_TD_DAYOFWEEK: u32 = 0x00000008;
 pub const SQL_FN_TD_DAYOFYEAR: u32 = 0x00000010;
 pub const SQL_FN_TD_MONTH: u32 = 0x00000020;
+#[allow(unused)]
 pub const SQL_FN_TD_QUARTER: u32 = 0x00000040;
 pub const SQL_FN_TD_WEEK: u32 = 0x00000080;
 pub const SQL_FN_TD_YEAR: u32 = 0x00000100;

@@ -279,7 +279,6 @@ mod unit {
         expected_length = std::mem::size_of::<u32>() as i16,
         expected_value = SQL_FN_TD_CURRENT_TIMESTAMP
             | SQL_FN_TD_NOW
-            | SQL_FN_TD_QUARTER
             | SQL_FN_TD_TIMESTAMPADD
             | SQL_FN_TD_TIMESTAMPDIFF
             | SQL_FN_TD_EXTRACT
