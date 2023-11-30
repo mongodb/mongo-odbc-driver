@@ -432,22 +432,22 @@ impl BsonTypeInfo {
     };
     pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
         type_name: "decimal",
-        sql_type: SqlDataType::DECIMAL,
-        non_concise_type: SqlDataType::DECIMAL,
+        sql_type: SqlDataType::UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
-        precision: Some(34),
-        octet_length: Some(16),
-        fixed_bytes_length: Some(16),
+        precision: None,
+        octet_length: None,
+        fixed_bytes_length: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: None,
-        simple_type_info: None,
+        simple_type_info: SimpleTypeInfo::default(),
     };
     pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "minKey",
