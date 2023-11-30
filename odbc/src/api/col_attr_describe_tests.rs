@@ -425,8 +425,11 @@ mod unit {
                         numeric_attr_ptr,
                     )
                 );
-                dbg!(desc);
-                assert_eq!(expected, *numeric_attr_ptr);
+                let val = *numeric_attr_ptr;
+                assert_eq!(
+                    expected, val,
+                    "Expect value {expected} for {desc:?}, but got {val}"
+                );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
