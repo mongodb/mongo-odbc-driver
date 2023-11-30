@@ -1319,6 +1319,9 @@ functions:
         working_dir: mongosql-odbc-driver/resources/download-center/
         script: |
           ${prepare_shell}
+          if [[ $(git branch --show-current) != 'master' ]]; then
+             exit 0
+          fi
           # Update the template to generate the feed for this release
           sed -i 's@{RELEASE_VERSION}@'${RELEASE_VERSION}'@' mongo-odbc-downloads_template.json
           sed -i 's@{WINDOWS_INSTALLER_PATH}@'${WINDOWS_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
