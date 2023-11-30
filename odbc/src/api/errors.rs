@@ -135,7 +135,7 @@ pub type Result<T> = std::result::Result<T, ODBCError>;
 
 impl ODBCError {
     pub fn get_sql_state(&self) -> &str {
-        match self {
+        let state = match self {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
@@ -169,7 +169,9 @@ impl ODBCError {
             ODBCError::NoResultSet => NO_RESULTSET,
             ODBCError::UnknownInfoType(_) => INVALID_INFO_TYPE_VALUE,
             ODBCError::ConnectionNotOpen => CONNECTION_NOT_OPEN,
-        }
+        };
+        // SQL-1687: use odbc version parameter to map sql state rather than hard coding ODBC 3.x sql states
+        state[1]
     }
 
     pub fn get_native_err_code(&self) -> i32 {

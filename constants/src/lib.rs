@@ -25,7 +25,7 @@ lazy_static! {
 
 // SQL states, stored as [ODBC2 state, ODBC3 state]
 pub const NOT_IMPLEMENTED: [&str; 2] = ["S1C00", "HYC00"];
-pub const TIMEOUT_EXPIRED:[&str; 2] = ["S1T00", "HYT00"];
+pub const TIMEOUT_EXPIRED: [&str; 2] = ["S1T00", "HYT00"];
 pub const GENERAL_ERROR: [&str; 2] = ["S1000", "HY000"];
 pub const PROGRAM_TYPE_OUT_OF_RANGE: [&str; 2] = ["S1003", "HY003"];
 pub const INVALID_SQL_TYPE: [&str; 2] = ["S1004", "HY004"];

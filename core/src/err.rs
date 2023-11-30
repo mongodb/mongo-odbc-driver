@@ -52,7 +52,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn get_sql_state(&self) -> &'static str {
+    pub fn get_sql_state(&self) -> [&'static str; 2] {
         match self {
             Error::CollectionCursorUpdate(err)
             | Error::DatabaseVersionRetreival(err)
