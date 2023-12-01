@@ -85,6 +85,11 @@ pub const INVALID_DESCRIPTOR_INDEX: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1002",
     odbc_3_state: "07009",
 };
+
+// ODBC 3.x SQLSTATE 07009 is mapped to ODBC 2.x SQLSTATE S1093 if the underlying function is SQLBindParameter or SQLDescribeParam.
+// S1093 is a DM error for SQLBindParameter, but not always for SQLDescribeParam.
+// If we implement the latter, we will need to add that error here.
+
 pub const INVALID_COLUMN_NUMBER: OdbcState<'static> = OdbcState {
     odbc_2_state: "07009",
     odbc_3_state: "07009",
