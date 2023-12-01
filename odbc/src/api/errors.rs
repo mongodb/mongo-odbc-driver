@@ -59,7 +59,7 @@ pub enum ODBCError {
     IndicatorVariableRequiredButNotSupplied,
     #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
     InvalidDescriptorIndex(u16),
-    #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
+    #[error("[{}][API] The column index {0} is out of bounds", VENDOR_IDENTIFIER)]
     InvalidColumnNumber(u16),
     #[error("[{}][API] No ResultSet", VENDOR_IDENTIFIER)]
     InvalidCursorState,
