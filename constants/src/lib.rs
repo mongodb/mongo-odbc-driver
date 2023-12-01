@@ -23,32 +23,112 @@ lazy_static! {
     pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
 }
 
-// SQL states, stored as [ODBC2 state, ODBC3 state]
-pub const NOT_IMPLEMENTED: [&str; 2] = ["S1C00", "HYC00"];
-pub const TIMEOUT_EXPIRED: [&str; 2] = ["S1T00", "HYT00"];
-pub const GENERAL_ERROR: [&str; 2] = ["S1000", "HY000"];
-pub const PROGRAM_TYPE_OUT_OF_RANGE: [&str; 2] = ["S1003", "HY003"];
-pub const INVALID_SQL_TYPE: [&str; 2] = ["S1004", "HY004"];
-pub const INVALID_ATTR_VALUE: [&str; 2] = ["S1009", "HY024"];
-pub const INVALID_INFO_TYPE_VALUE: [&str; 2] = ["S1096", "HY096"];
-pub const NO_DSN_OR_DRIVER: [&str; 2] = ["IM007", "IM007"];
-pub const GENERAL_WARNING: [&str; 2] = ["01000", "01000"];
-pub const RIGHT_TRUNCATED: [&str; 2] = ["01004", "01004"];
-pub const OPTION_CHANGED: [&str; 2] = ["01S02", "01S02"];
-pub const FRACTIONAL_TRUNCATION: [&str; 2] = ["01S07", "01S07"];
-pub const UNABLE_TO_CONNECT: [&str; 2] = ["08001", "08001"];
-pub const INVALID_DESCRIPTOR_INDEX: [&str; 2] = ["07009", "07009"];
-pub const NO_RESULTSET: [&str; 2] = ["24000", "07005"];
-pub const RESTRICTED_DATATYPE: [&str; 2] = ["07006", "07006"];
-pub const INVALID_CURSOR_STATE: [&str; 2] = ["24000", "24000"];
-pub const FUNCTION_SEQUENCE_ERROR: [&str; 2] = ["S1010", "HY010"];
-pub const UNSUPPORTED_FIELD_DESCRIPTOR: [&str; 2] = ["S1091", "HY091"];
-pub const INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER: [&str; 2] = ["S1092", "HY092"];
-pub const INDICATOR_VARIABLE_REQUIRED: [&str; 2] = ["22002", "22002"];
-pub const INTEGRAL_TRUNCATION: [&str; 2] = ["22003", "22003"];
-pub const INVALID_DATETIME_FORMAT: [&str; 2] = ["22008", "22007"];
-pub const INVALID_CHARACTER_VALUE: [&str; 2] = ["22005", "22018"];
-pub const CONNECTION_NOT_OPEN: [&str; 2] = ["08003", "08003"];
+pub struct OdbcState<'a> {
+    pub odbc_2_state: &'a str,
+    pub odbc_3_state: &'a str,
+}
+
+pub const NOT_IMPLEMENTED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1C00",
+    odbc_3_state: "HYC00",
+};
+pub const TIMEOUT_EXPIRED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1T00",
+    odbc_3_state: "HYT00",
+};
+pub const GENERAL_ERROR: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1000",
+    odbc_3_state: "HY000",
+};
+
+pub const PROGRAM_TYPE_OUT_OF_RANGE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1003",
+    odbc_3_state: "HY003",
+};
+pub const INVALID_SQL_TYPE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1004",
+    odbc_3_state: "HY004",
+};
+pub const INVALID_ATTR_VALUE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1009",
+    odbc_3_state: "HY024",
+};
+pub const INVALID_INFO_TYPE_VALUE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1096",
+    odbc_3_state: "HY096",
+};
+pub const NO_DSN_OR_DRIVER: OdbcState<'static> = OdbcState {
+    odbc_2_state: "IM007",
+    odbc_3_state: "IM007",
+};
+pub const GENERAL_WARNING: OdbcState<'static> = OdbcState {
+    odbc_2_state: "01000",
+    odbc_3_state: "01000",
+};
+pub const RIGHT_TRUNCATED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "01004",
+    odbc_3_state: "01004",
+};
+pub const OPTION_CHANGED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "01S02",
+    odbc_3_state: "01S02",
+};
+pub const FRACTIONAL_TRUNCATION: OdbcState<'static> = OdbcState {
+    odbc_2_state: "01S07",
+    odbc_3_state: "01S07",
+};
+pub const UNABLE_TO_CONNECT: OdbcState<'static> = OdbcState {
+    odbc_2_state: "08001",
+    odbc_3_state: "08001",
+};
+pub const INVALID_DESCRIPTOR_INDEX: OdbcState<'static> = OdbcState {
+    odbc_2_state: "07009",
+    odbc_3_state: "07009",
+};
+pub const NO_RESULTSET: OdbcState<'static> = OdbcState {
+    odbc_2_state: "24000",
+    odbc_3_state: "07005",
+};
+pub const RESTRICTED_DATATYPE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "07006",
+    odbc_3_state: "07006",
+};
+pub const INVALID_CURSOR_STATE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "24000",
+    odbc_3_state: "24000",
+};
+pub const FUNCTION_SEQUENCE_ERROR: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1010",
+    odbc_3_state: "HY010",
+};
+pub const UNSUPPORTED_FIELD_DESCRIPTOR: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1091",
+    odbc_3_state: "HY091",
+};
+pub const INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1092",
+    odbc_3_state: "HY092",
+};
+pub const INDICATOR_VARIABLE_REQUIRED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "22002",
+    odbc_3_state: "22002",
+};
+pub const INTEGRAL_TRUNCATION: OdbcState<'static> = OdbcState {
+    odbc_2_state: "22003",
+    odbc_3_state: "22003",
+};
+pub const INVALID_DATETIME_FORMAT: OdbcState<'static> = OdbcState {
+    odbc_2_state: "22008",
+    odbc_3_state: "22007",
+};
+pub const INVALID_CHARACTER_VALUE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "22005",
+    odbc_3_state: "22018",
+};
+pub const CONNECTION_NOT_OPEN: OdbcState<'static> = OdbcState {
+    odbc_2_state: "08003",
+    odbc_3_state: "08003",
+};
 
 pub const SQL_ALL_TABLE_TYPES: &str = "%";
 pub const SQL_ALL_CATALOGS: &str = "%";
