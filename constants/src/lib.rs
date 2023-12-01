@@ -82,6 +82,10 @@ pub const UNABLE_TO_CONNECT: OdbcState<'static> = OdbcState {
     odbc_3_state: "08001",
 };
 pub const INVALID_DESCRIPTOR_INDEX: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1002",
+    odbc_3_state: "07009",
+};
+pub const INVALID_COLUMN_NUMBER: OdbcState<'static> = OdbcState {
     odbc_2_state: "07009",
     odbc_3_state: "07009",
 };

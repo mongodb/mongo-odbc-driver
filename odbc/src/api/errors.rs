@@ -1,10 +1,10 @@
 use constants::{
     CONNECTION_NOT_OPEN, FRACTIONAL_TRUNCATION, GENERAL_ERROR, GENERAL_WARNING,
     INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION, INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER,
-    INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
-    INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED,
-    NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE,
-    RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_COLUMN_NUMBER, INVALID_CURSOR_STATE,
+    INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE,
+    NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE,
+    RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -59,6 +59,8 @@ pub enum ODBCError {
     IndicatorVariableRequiredButNotSupplied,
     #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
     InvalidDescriptorIndex(u16),
+    #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
+    InvalidColumnNumber(u16),
     #[error("[{}][API] No ResultSet", VENDOR_IDENTIFIER)]
     InvalidCursorState,
     #[error("[{}][API] Invalid SQL Type: {0}", VENDOR_IDENTIFIER)]
@@ -156,6 +158,7 @@ impl ODBCError {
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
             ODBCError::UnsupportedFieldDescriptor(_) => UNSUPPORTED_FIELD_DESCRIPTOR,
             ODBCError::InvalidDescriptorIndex(_) => INVALID_DESCRIPTOR_INDEX,
+            ODBCError::InvalidColumnNumber(_) => INVALID_COLUMN_NUMBER,
             ODBCError::InvalidSqlType(_) => INVALID_SQL_TYPE,
             ODBCError::RestrictedDataType(_, _) => RESTRICTED_DATATYPE,
             ODBCError::FractionalTruncation(_) => FRACTIONAL_TRUNCATION,
@@ -197,6 +200,7 @@ impl ODBCError {
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)
+            | ODBCError::InvalidColumnNumber(_)
             | ODBCError::RestrictedDataType(_, _)
             | ODBCError::IndicatorVariableRequiredButNotSupplied
             | ODBCError::FractionalTruncation(_)

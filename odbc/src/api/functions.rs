@@ -813,7 +813,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
                     );
                 }
             }
-            add_diag_info!(stmt_handle, ODBCError::InvalidDescriptorIndex(col_number));
+            add_diag_info!(stmt_handle, ODBCError::InvalidColumnNumber(col_number));
 
             SqlReturn::ERROR
         },
