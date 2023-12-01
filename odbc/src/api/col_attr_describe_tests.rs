@@ -265,7 +265,7 @@ mod unit {
                     )
                 );
                 assert_eq!(
-                    format!("[MongoDB][API] The field index {col_index} is out of bounds",),
+                    format!("[MongoDB][API] The column index {col_index} is out of bounds",),
                     format!(
                         "{}",
                         (*stmt_handle)

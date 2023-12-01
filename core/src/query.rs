@@ -97,7 +97,9 @@ impl MongoStatement for MongoQuery {
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
         let current = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
-        let md = self.get_col_metadata(col_index)?;
+        let md = self
+            .get_col_metadata(col_index)
+            .map_err(|_| Error::ColIndexOutOfBounds(col_index))?;
         let datasource = current
             .get_document(&md.table_name)
             .map_err(|e: ValueAccessError| Error::ValueAccess(col_index.to_string(), e))?;
