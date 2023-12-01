@@ -1494,28 +1494,28 @@ mod unit {
             type V = Vec<(&'static str, i32, Result<(), ()>, Option<&'static str>)>;
             let strings: HashMap<String, V> = map! {
                 (-PI).to_string() => vec![
-                    ("i64", -3, Ok(()), Some(FRACTIONAL_TRUNCATION[1])),
-                    ("i32", -3, Ok(()), Some(FRACTIONAL_TRUNCATION[1])),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
+                    ("i64", -3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
+                    ("i32", -3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
                 ],
                 PI.to_string() => vec![
-                    ("i64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION[1])),
-                    ("i32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION[1])),
-                    ("u64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION[1])),
-                    ("u32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION[1])),
+                    ("i64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
+                    ("i32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
+                    ("u64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
+                    ("u32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
                 ],
                 i128::MIN.to_string() => vec![
-                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
+                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
                 ],
                 i128::MAX.to_string() => vec![
-                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
+                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
                 ],
                 i32::MAX.to_string() => vec![
                     ("i64", i32::MAX, Ok(()), None),
@@ -1524,10 +1524,10 @@ mod unit {
                     ("u32", i32::MAX, Ok(()), None),
                 ],
                 "foo".to_string() => vec![
-                    ("i64", 0, Err(()), Some(INVALID_CHARACTER_VALUE[1])),
-                    ("i32", 0, Err(()), Some(INVALID_CHARACTER_VALUE[1])),
-                    ("u64", 0, Err(()), Some(INVALID_CHARACTER_VALUE[1])),
-                    ("u32", 0, Err(()), Some(INVALID_CHARACTER_VALUE[1])),
+                    ("i64", 0, Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
+                    ("i32", 0, Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
+                    ("u64", 0, Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
+                    ("u32", 0, Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
                 ],
             };
             strings.iter().for_each(|(k, v)| {
@@ -1549,11 +1549,11 @@ mod unit {
                 ],
                 f64::MAX.to_string() => vec![
                     ("f64", f64::MAX, Ok(()), None),
-                    ("f32", 0., Err(()), Some(INTEGRAL_TRUNCATION[1])),
+                    ("f32", 0., Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
                 ],
                 "foo".to_string() => vec![
-                    ("f64", 0., Err(()), Some(INVALID_CHARACTER_VALUE[1])),
-                    ("f32", 0., Err(()), Some(INVALID_CHARACTER_VALUE[1])),
+                    ("f64", 0., Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
+                    ("f32", 0., Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
                 ],
             };
             strings.iter().for_each(|(k, v)| {
@@ -1568,9 +1568,9 @@ mod unit {
             let int_64s: HashMap<i64, V> = map! {
                 i64::MAX => vec![
                     ("i64", i64::MAX, Ok(()), None),
-                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION[1])),
+                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
                     ("u64", i64::MAX, Ok(()), None),
-                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION[1]))
+                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state))
                 ],
                 i32::MAX as i64 => vec![
                     ("i64", i32::MAX as i64, Ok(()), None),
@@ -1580,15 +1580,15 @@ mod unit {
                 ],
                 i64::MIN => vec![
                     ("i64", i64::MIN, Ok(()), None),
-                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u64", 0i64, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION[1]))
+                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u64", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state))
                 ],
                 i32::MIN as i64 => vec![
                     ("i64", i32::MIN as i64, Ok(()), None),
                     ("i32", i32::MIN as i64, Ok(()), None),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION[1]))
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state))
                 ],
             };
 
@@ -1611,8 +1611,8 @@ mod unit {
                 i32::MIN => vec![
                     ("i64", i32::MIN, Ok(()), None),
                     ("i32", i32::MIN, Ok(()), None),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION[1])),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION[1]))
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state))
                 ]
             };
 
@@ -1663,7 +1663,7 @@ mod unit {
                     "2014-11-28 09:23:24.1234567890",
                     datetime_expectation_millis,
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION[1]),
+                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
                 ),
                 (
                     "2014-11-28T09:23:24.123456789Z",
@@ -1675,32 +1675,32 @@ mod unit {
                     "2014-11-28T09:23:24.1234567890Z",
                     datetime_expectation_millis,
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION[1]),
+                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
                 ),
                 ("2014-11-28", date_expectation, Ok(()), None),
                 (
                     "11/28/2014",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT[1]),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
                 ),
                 (
                     "2014-35-80",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT[1]),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
                 ),
                 (
                     "2014-30-90 09:23:24.1234567890",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT[1]),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
                 ),
                 (
                     "30:23:24",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT[1]),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
                 ),
                 (
                     "09:23:24",
@@ -1718,7 +1718,7 @@ mod unit {
                     "09:23:24.1234567898",
                     today_plus_time_millis_expectation,
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION[1]),
+                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
                 ),
             ];
             test_cases
@@ -1750,16 +1750,28 @@ mod unit {
             let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("2014-11-28", Ok(()), None),
-                ("11/28/2014", Err(()), Some(INVALID_DATETIME_FORMAT[1])),
-                ("2014-22-22", Err(()), Some(INVALID_DATETIME_FORMAT[1])),
-                ("10:15:30", Err(()), Some(INVALID_DATETIME_FORMAT[1])),
+                (
+                    "11/28/2014",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                ),
+                (
+                    "2014-22-22",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                ),
+                (
+                    "10:15:30",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                ),
                 ("2014-11-28 00:00:00", Ok(()), None),
                 ("2014-11-28 00:00:00.000", Ok(()), None),
                 ("2014-11-28T00:00:00Z", Ok(()), None),
                 (
                     "2014-11-28 10:15:30",
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION[1]),
+                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
                 ),
             ];
             test_cases.iter().for_each(|(input, result, info)| {
@@ -1791,7 +1803,7 @@ mod unit {
                 ("2014-11-28T00:00:00Z".parse().unwrap(), None),
                 (
                     "2014-11-28T10:15:30.123Z".parse().unwrap(),
-                    Some(FRACTIONAL_TRUNCATION[1]),
+                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
                 ),
             ];
             test_cases.iter().for_each(|(input, info)| {
@@ -1810,14 +1822,26 @@ mod unit {
             let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
                 ("10:15:30", Ok(()), None),
                 ("10:15:30.00000", Ok(()), None),
-                ("10:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT[1])),
-                ("25:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT[1])),
-                ("2022-10-15", Err(()), Some(INVALID_DATETIME_FORMAT[1])),
+                (
+                    "10:15:30.123",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                ),
+                (
+                    "25:15:30.123",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                ),
+                (
+                    "2022-10-15",
+                    Err(()),
+                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                ),
                 ("2014-11-28 10:15:30.000", Ok(()), None),
                 (
                     "2014-11-28 10:15:30.1243",
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION[1]),
+                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
                 ),
             ];
             test_cases.iter().for_each(|(input, result, info)| {
@@ -1849,7 +1873,7 @@ mod unit {
                 ("2014-11-28T10:15:30Z".parse().unwrap(), None),
                 (
                     "2014-11-28T10:15:30.123Z".parse().unwrap(),
-                    Some(FRACTIONAL_TRUNCATION[1]),
+                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
                 ),
             ];
             test_cases.iter().for_each(|(input, info)| {

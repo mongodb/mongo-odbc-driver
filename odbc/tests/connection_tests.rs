@@ -24,7 +24,8 @@ macro_rules! test_connection_diagnostics {
             let mut env_handl: Handle = null_mut();
             let mut conn_handl: Handle = null_mut();
 
-            let mut expected_sql_state_encoded = cstr::to_widechar_vec(expected_sql_state[1]);
+            let mut expected_sql_state_encoded =
+                cstr::to_widechar_vec(expected_sql_state.odbc_3_state);
             expected_sql_state_encoded.push(0);
             let mut in_connection_string_encoded = cstr::to_widechar_vec(in_connection_string);
             in_connection_string_encoded.push(0);
@@ -53,7 +54,7 @@ macro_rules! test_connection_diagnostics {
                 HandleType::Dbc,
                 conn_handl as *mut _,
                 1,
-                expected_sql_state[1],
+                expected_sql_state.odbc_3_state,
                 expected_error_message,
                 0,
             );

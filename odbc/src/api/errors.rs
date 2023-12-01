@@ -171,7 +171,7 @@ impl ODBCError {
             ODBCError::ConnectionNotOpen => CONNECTION_NOT_OPEN,
         };
         // SQL-1687: use odbc version parameter to map sql state rather than hard coding ODBC 3.x sql states
-        state[1]
+        state.odbc_3_state
     }
 
     pub fn get_native_err_code(&self) -> i32 {
