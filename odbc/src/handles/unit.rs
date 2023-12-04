@@ -390,12 +390,12 @@ fn test_odbc_ver() {
     ));
 
     // assert correct types for all handles
-    assert_eq!(odbc_2_env_handle.odbc_version(), OdbcVersion::Odbc2);
-    assert_eq!(odbc_2_conn_handle.odbc_version(), OdbcVersion::Odbc2);
-    assert_eq!(odbc_2_desc_handle.odbc_version(), OdbcVersion::Odbc2);
-    assert_eq!(odbc_2_stmt_handle.odbc_version(), OdbcVersion::Odbc2);
-    assert_eq!(odbc_3_env_handle.odbc_version(), OdbcVersion::Odbc3_80);
-    assert_eq!(odbc_3_conn_handle.odbc_version(), OdbcVersion::Odbc3_80);
-    assert_eq!(odbc_3_desc_handle.odbc_version(), OdbcVersion::Odbc3_80);
-    assert_eq!(odbc_3_stmt_handle.odbc_version(), OdbcVersion::Odbc3_80);
+    assert_eq!(odbc_2_env_handle.get_odbc_version(), OdbcVersion::Odbc2);
+    assert_eq!(odbc_2_conn_handle.get_odbc_version(), OdbcVersion::Odbc2);
+    assert_eq!(odbc_2_desc_handle.get_odbc_version(), OdbcVersion::Odbc2);
+    assert_eq!(odbc_2_stmt_handle.get_odbc_version(), OdbcVersion::Odbc2);
+    assert_eq!(odbc_3_env_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
+    assert_eq!(odbc_3_conn_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
+    assert_eq!(odbc_3_desc_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
+    assert_eq!(odbc_3_stmt_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
 }
