@@ -3,6 +3,7 @@ use crate::{
         data::i16_len,
         definitions::{DiagType, SQL_ROW_NUMBER_UNKNOWN},
     },
+    definitions::OdbcVersion,
     errors::ODBCError,
 };
 use cstr::WideChar;
@@ -35,6 +36,7 @@ pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WideChar) {
 pub unsafe fn get_diag_recw(
     error: &ODBCError,
     state: *mut WideChar,
+    odbc_ver: OdbcVersion,
     message_text: *mut WideChar,
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
@@ -43,7 +45,7 @@ pub unsafe fn get_diag_recw(
     if !native_error_ptr.is_null() {
         *native_error_ptr = error.get_native_err_code();
     }
-    set_sql_statew(error.get_sql_state(), state);
+    set_sql_statew(error.get_sql_state(odbc_ver), state);
     let message = format!("{error}");
     i16_len::set_output_wstring(
         &message,
@@ -87,6 +89,7 @@ pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Poin
 pub unsafe fn get_diag_field(
     errors: &Vec<ODBCError>,
     diag_identifier: DiagType,
+    odbc_ver: OdbcVersion,
     diag_info_ptr: Pointer,
     record_number: i16,
     buffer_length: i16,
@@ -107,7 +110,7 @@ pub unsafe fn get_diag_field(
                     // NOTE: return code is handled by driver manager; just return success
                     DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
                     DiagType::SQL_DIAG_SQLSTATE => i16_len::set_output_wstring_as_bytes(
-                        error.get_sql_state(),
+                        error.get_sql_state(odbc_ver),
                         diag_info_ptr,
                         buffer_length as usize,
                         string_length_ptr,

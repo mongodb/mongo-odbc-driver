@@ -8,6 +8,8 @@ use constants::{
 };
 use thiserror::Error;
 
+use crate::definitions::OdbcVersion;
+
 #[derive(Debug, Error, Clone)]
 pub enum ODBCError {
     #[error("[{}][API] {0}", VENDOR_IDENTIFIER)]
@@ -136,7 +138,7 @@ pub enum ODBCError {
 pub type Result<T> = std::result::Result<T, ODBCError>;
 
 impl ODBCError {
-    pub fn get_sql_state(&self) -> &str {
+    pub fn get_sql_state(&self, odbc_ver: OdbcVersion) -> &str {
         let state = match self {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
@@ -173,8 +175,10 @@ impl ODBCError {
             ODBCError::UnknownInfoType(_) => INVALID_INFO_TYPE_VALUE,
             ODBCError::ConnectionNotOpen => CONNECTION_NOT_OPEN,
         };
-        // SQL-1687: use odbc version parameter to map sql state rather than hard coding ODBC 3.x sql states
-        state.odbc_3_state
+        match odbc_ver {
+            OdbcVersion::Odbc2 => state.odbc_2_state,
+            OdbcVersion::Odbc3 | OdbcVersion::Odbc3_80 => state.odbc_3_state,
+        }
     }
 
     pub fn get_native_err_code(&self) -> i32 {
