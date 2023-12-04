@@ -92,6 +92,31 @@ impl MongoHandle {
         }
     }
 
+    /// get the odbc_version from the underlying env handle, used to handle
+    /// behavior that is different between odbc versions properly
+    pub fn get_odbc_version(&mut self) -> OdbcVersion {
+        let env = match self {
+            MongoHandle::Env(_) => self,
+            MongoHandle::Connection(conn) => conn.env,
+            MongoHandle::Descriptor(Descriptor {
+                connection: conn, ..
+            })
+            | MongoHandle::Statement(Statement {
+                connection: conn, ..
+            }) => unsafe { conn.as_ref().unwrap().as_connection().unwrap().env },
+        };
+        unsafe {
+            env.as_ref()
+                .unwrap()
+                .as_env()
+                .unwrap()
+                .attributes
+                .read()
+                .unwrap()
+                .odbc_ver
+        }
+    }
+
     ///
     /// Generate a String containing the current handle and its parents address.
     ///
