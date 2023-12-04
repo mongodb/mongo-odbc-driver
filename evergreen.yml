@@ -286,6 +286,30 @@ functions:
       params:
         file: mongosql-odbc-driver/expansions.yml
 
+  "compile release with debug info and asan flag":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          export RUSTFLAGS="-Z sanitizer=leak"
+          echo "env $(env)"
+          
+          ~/.cargo/bin/rustup default nightly
+          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          
+          # Build a release driver with debug information
+          cargo build --release
+          export DRIVER_LIB_PATH=$PWD/target/release
+
+          cat <<EOT >> expansions.yml
+            export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
+          EOT
+    - command: expansions.update
+      params:
+        file: mongosql-odbc-driver/expansions.yml
+
   "compile macos release":
     - command: shell.exec
       type: test
@@ -1194,7 +1218,7 @@ functions:
 
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-          export RUSTFLAGS="-Z sanitizer=address"
+          export RUSTFLAGS="-Z sanitizer=leak"
 
           export RUST_BACKTRACE=1
           # Start a local ADF
@@ -1443,13 +1467,14 @@ tasks:
         variants: [macos, macos-arm]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
-      # SQL-1794 - Enable ASAN for integration tests if possible
-      #- func: "run asan integration tests"
-      #  variants: [ ubuntu2204 ]
       - func: "run windows integration tests"
         variants: [windows-64]
       - func: "run macos integration tests"
         variants: [macos, macos-arm]
+      - func: "compile release with debug info and asan flag"
+        variants: [ ubuntu2204 ]
+      - func: "run asan integration tests"
+        variants: [ ubuntu2204 ]
 
   - name: asan-unit-tests
     commands:
