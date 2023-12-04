@@ -1317,7 +1317,7 @@ mod unit {
     mod conversion {
         use std::{collections::HashMap, f64::consts::PI};
 
-        use crate::{api::data::IntoCData, map};
+        use crate::{api::data::IntoCData, api::definitions::OdbcVersion, map};
         use bson::Bson;
         use constants::{
             FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE,
@@ -1341,7 +1341,7 @@ mod unit {
                             $input
                         );
                         if $info.is_some() {
-                            let odbc_info = r.1.unwrap().get_sql_state().to_string();
+                            let odbc_info = r.1.unwrap().get_sql_state(OdbcVersion::Odbc3_80).to_string();
                             let info = $info.unwrap();
                             assert_eq!(
                                 info, odbc_info,
@@ -1362,10 +1362,10 @@ mod unit {
                         let info = $info.unwrap();
                         assert_eq!(
                             info,
-                            e.get_sql_state(),
+                            e.get_sql_state(OdbcVersion::Odbc3_80),
                             "expected {:?}, got {:?} calling method {:?} on {}",
                             info,
-                            e.get_sql_state(),
+                            e.get_sql_state(OdbcVersion::Odbc3_80),
                             stringify!($method),
                             $input
                         );

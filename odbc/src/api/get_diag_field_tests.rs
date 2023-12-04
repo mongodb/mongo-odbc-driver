@@ -121,7 +121,7 @@ mod unit {
             ConnectionState::Allocated,
         ));
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
+            conn_handle,
             StatementState::Allocated,
         ));
         let handles: Vec<(HandleType, *mut MongoHandle)> = vec![

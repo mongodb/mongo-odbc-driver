@@ -12,19 +12,20 @@ mod unit {
     #[test]
     fn test_invalid_type_error() {
         // Test that a sql data type that is not defined in the enum yields the correct error
-        let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
         unsafe {
-            assert_eq!(SqlReturn::ERROR, SQLGetTypeInfoW(handle as *mut _, 100));
+            assert_eq!(SqlReturn::ERROR, SQLGetTypeInfoW(stmt as *mut _, 100));
             // use SQLGetDiagField to retreive and assert correct error message
             let message_text = &mut [0; 6] as *mut _ as *mut c_void;
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetDiagFieldW(
                     Stmt,
-                    handle as *mut _,
+                    stmt as *mut _,
                     1,
                     DiagType::SQL_DIAG_SQLSTATE as i16,
                     message_text,
