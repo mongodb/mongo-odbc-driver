@@ -1216,10 +1216,6 @@ functions:
           echo "ODBCSYSINI = $ODBCSYSINI"
           echo "----------------------------------------------"
 
-          ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-          export RUSTFLAGS="-Z sanitizer=leak"
-
           export RUST_BACKTRACE=1
           # Start a local ADF
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
