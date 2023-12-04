@@ -1,4 +1,6 @@
-use crate::{handles::definitions::*, SQLAllocHandle, SQLFreeHandle};
+use crate::{
+    api::definitions::OdbcVersion, handles::definitions::*, SQLAllocHandle, SQLFreeHandle,
+};
 use odbc_sys::{Handle, HandleType, SqlReturn};
 
 #[test]
@@ -346,4 +348,54 @@ fn test_invalid_alloc() {
             )
         );
     }
+}
+
+#[test]
+fn test_odbc_ver() {
+    // set up handles of each type with the underlying env handle being odbc 2
+    let odbc_2_env_handle: &mut MongoHandle =
+        &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+    odbc_2_env_handle
+        .as_env()
+        .unwrap()
+        .attributes
+        .write()
+        .unwrap()
+        .odbc_ver = OdbcVersion::Odbc2;
+    let odbc_2_conn_handle: &mut MongoHandle = &mut MongoHandle::Connection(
+        Connection::with_state(odbc_2_env_handle, ConnectionState::Allocated),
+    );
+    let odbc_2_desc_handle: &mut _ = &mut MongoHandle::Descriptor(Descriptor::with_state(
+        odbc_2_conn_handle,
+        DescriptorState::ExplicitlyAllocated,
+    ));
+    let odbc_2_stmt_handle: &mut _ = &mut MongoHandle::Statement(Statement::with_state(
+        odbc_2_conn_handle,
+        StatementState::Allocated,
+    ));
+
+    // set up handles of each type with the underling env handle being the default odbc 3_80
+    let odbc_3_env_handle: &mut MongoHandle =
+        &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+    let odbc_3_conn_handle: &mut MongoHandle = &mut MongoHandle::Connection(
+        Connection::with_state(odbc_3_env_handle, ConnectionState::Allocated),
+    );
+    let odbc_3_desc_handle: &mut _ = &mut MongoHandle::Descriptor(Descriptor::with_state(
+        odbc_3_conn_handle,
+        DescriptorState::ExplicitlyAllocated,
+    ));
+    let odbc_3_stmt_handle: &mut _ = &mut MongoHandle::Statement(Statement::with_state(
+        odbc_3_conn_handle,
+        StatementState::Allocated,
+    ));
+
+    // assert correct types for all handles
+    assert_eq!(odbc_2_env_handle.odbc_version(), OdbcVersion::Odbc2);
+    assert_eq!(odbc_2_conn_handle.odbc_version(), OdbcVersion::Odbc2);
+    assert_eq!(odbc_2_desc_handle.odbc_version(), OdbcVersion::Odbc2);
+    assert_eq!(odbc_2_stmt_handle.odbc_version(), OdbcVersion::Odbc2);
+    assert_eq!(odbc_3_env_handle.odbc_version(), OdbcVersion::Odbc3_80);
+    assert_eq!(odbc_3_conn_handle.odbc_version(), OdbcVersion::Odbc3_80);
+    assert_eq!(odbc_3_desc_handle.odbc_version(), OdbcVersion::Odbc3_80);
+    assert_eq!(odbc_3_stmt_handle.odbc_version(), OdbcVersion::Odbc3_80);
 }
