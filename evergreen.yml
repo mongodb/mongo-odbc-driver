@@ -1319,7 +1319,7 @@ functions:
         working_dir: mongosql-odbc-driver/resources/download-center/
         script: |
           ${prepare_shell}
-          if [[ $(git branch --show-current) != 'master' ]]; then
+          if [[ $(git rev-parse --abbrev-ref HEAD) != 'master' ]]; then
              exit 0
           fi
           # Update the template to generate the feed for this release
