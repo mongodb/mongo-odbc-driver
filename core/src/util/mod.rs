@@ -44,7 +44,7 @@ pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
 
 pub(crate) fn is_match(name: &str, filter: &str, odbc_version: OdbcVersion) -> bool {
     match odbc_version {
-        OdbcVersion::Odbc2 => name == filter,
+        OdbcVersion::Odbc2 => filter.is_empty() || name == filter,
         _ => match to_name_regex(filter) {
             Some(regex) => regex.is_match(name),
             None => true,
