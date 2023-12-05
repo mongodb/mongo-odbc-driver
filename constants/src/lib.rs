@@ -23,32 +23,121 @@ lazy_static! {
     pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
 }
 
-// SQL states
-pub const NOT_IMPLEMENTED: &str = "HYC00";
-pub const TIMEOUT_EXPIRED: &str = "HYT00";
-pub const GENERAL_ERROR: &str = "HY000";
-pub const PROGRAM_TYPE_OUT_OF_RANGE: &str = "HY003";
-pub const INVALID_SQL_TYPE: &str = "HY004";
-pub const INVALID_ATTR_VALUE: &str = "HY024";
-pub const INVALID_INFO_TYPE_VALUE: &str = "HY096";
-pub const NO_DSN_OR_DRIVER: &str = "IM007";
-pub const GENERAL_WARNING: &str = "01000";
-pub const RIGHT_TRUNCATED: &str = "01004";
-pub const OPTION_CHANGED: &str = "01S02";
-pub const FRACTIONAL_TRUNCATION: &str = "01S07";
-pub const UNABLE_TO_CONNECT: &str = "08001";
-pub const INVALID_DESCRIPTOR_INDEX: &str = "07009";
-pub const NO_RESULTSET: &str = "07005";
-pub const RESTRICTED_DATATYPE: &str = "07006";
-pub const INVALID_CURSOR_STATE: &str = "24000";
-pub const FUNCTION_SEQUENCE_ERROR: &str = "HY010";
-pub const UNSUPPORTED_FIELD_DESCRIPTOR: &str = "HY091";
-pub const INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER: &str = "HY092";
-pub const INDICATOR_VARIABLE_REQUIRED: &str = "22002";
-pub const INTEGRAL_TRUNCATION: &str = "22003";
-pub const INVALID_DATETIME_FORMAT: &str = "22007";
-pub const INVALID_CHARACTER_VALUE: &str = "22018";
-pub const CONNECTION_NOT_OPEN: &str = "08003";
+pub struct OdbcState<'a> {
+    pub odbc_2_state: &'a str,
+    pub odbc_3_state: &'a str,
+}
+
+pub const NOT_IMPLEMENTED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1C00",
+    odbc_3_state: "HYC00",
+};
+pub const TIMEOUT_EXPIRED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1T00",
+    odbc_3_state: "HYT00",
+};
+pub const GENERAL_ERROR: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1000",
+    odbc_3_state: "HY000",
+};
+
+pub const PROGRAM_TYPE_OUT_OF_RANGE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1003",
+    odbc_3_state: "HY003",
+};
+pub const INVALID_SQL_TYPE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1004",
+    odbc_3_state: "HY004",
+};
+pub const INVALID_ATTR_VALUE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1009",
+    odbc_3_state: "HY024",
+};
+pub const INVALID_INFO_TYPE_VALUE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1096",
+    odbc_3_state: "HY096",
+};
+pub const NO_DSN_OR_DRIVER: OdbcState<'static> = OdbcState {
+    odbc_2_state: "IM007",
+    odbc_3_state: "IM007",
+};
+pub const GENERAL_WARNING: OdbcState<'static> = OdbcState {
+    odbc_2_state: "01000",
+    odbc_3_state: "01000",
+};
+pub const RIGHT_TRUNCATED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "01004",
+    odbc_3_state: "01004",
+};
+pub const OPTION_CHANGED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "01S02",
+    odbc_3_state: "01S02",
+};
+pub const FRACTIONAL_TRUNCATION: OdbcState<'static> = OdbcState {
+    odbc_2_state: "01S07",
+    odbc_3_state: "01S07",
+};
+pub const UNABLE_TO_CONNECT: OdbcState<'static> = OdbcState {
+    odbc_2_state: "08001",
+    odbc_3_state: "08001",
+};
+pub const INVALID_DESCRIPTOR_INDEX: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1002",
+    odbc_3_state: "07009",
+};
+
+// ODBC 3.x SQLSTATE 07009 is mapped to ODBC 2.x SQLSTATE S1093 if the underlying function is SQLBindParameter or SQLDescribeParam.
+// S1093 is a DM error for SQLBindParameter, but not always for SQLDescribeParam.
+// If we implement the latter, we will need to add that error here.
+
+pub const INVALID_COLUMN_NUMBER: OdbcState<'static> = OdbcState {
+    odbc_2_state: "07009",
+    odbc_3_state: "07009",
+};
+pub const NO_RESULTSET: OdbcState<'static> = OdbcState {
+    odbc_2_state: "24000",
+    odbc_3_state: "07005",
+};
+pub const RESTRICTED_DATATYPE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "07006",
+    odbc_3_state: "07006",
+};
+pub const INVALID_CURSOR_STATE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "24000",
+    odbc_3_state: "24000",
+};
+pub const FUNCTION_SEQUENCE_ERROR: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1010",
+    odbc_3_state: "HY010",
+};
+pub const UNSUPPORTED_FIELD_DESCRIPTOR: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1091",
+    odbc_3_state: "HY091",
+};
+pub const INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1092",
+    odbc_3_state: "HY092",
+};
+pub const INDICATOR_VARIABLE_REQUIRED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "22002",
+    odbc_3_state: "22002",
+};
+pub const INTEGRAL_TRUNCATION: OdbcState<'static> = OdbcState {
+    odbc_2_state: "22003",
+    odbc_3_state: "22003",
+};
+pub const INVALID_DATETIME_FORMAT: OdbcState<'static> = OdbcState {
+    odbc_2_state: "22008",
+    odbc_3_state: "22007",
+};
+pub const INVALID_CHARACTER_VALUE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "22005",
+    odbc_3_state: "22018",
+};
+pub const CONNECTION_NOT_OPEN: OdbcState<'static> = OdbcState {
+    odbc_2_state: "08003",
+    odbc_3_state: "08003",
+};
 
 pub const SQL_ALL_TABLE_TYPES: &str = "%";
 pub const SQL_ALL_CATALOGS: &str = "%";
