@@ -3485,6 +3485,7 @@ fn sql_tables(
     schema: &str,
     table: &str,
     table_t: &str,
+    odbc_version: OdbcVersion,
 ) -> Result<Box<dyn MongoStatement>> {
     match (catalog, schema, table, table_t) {
         (SQL_ALL_CATALOGS, "", "", "") => Ok(Box::new(MongoDatabases::list_all_catalogs(
@@ -3499,6 +3500,7 @@ fn sql_tables(
             catalog,
             table,
             table_t,
+            odbc_version,
         ))),
     }
 }
@@ -3528,6 +3530,7 @@ pub unsafe extern "C" fn SQLTablesW(
         debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
+            let odbc_version = mongo_handle.get_odbc_version();
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog = input_text_to_string_w(catalog_name, name_length_1 as usize);
             let schema = input_text_to_string_w(schema_name, name_length_2 as usize);
@@ -3548,6 +3551,7 @@ pub unsafe extern "C" fn SQLTablesW(
                 &schema,
                 &table,
                 &table_t,
+                odbc_version,
             );
             let mongo_statement = odbc_unwrap!(mongo_statement, mongo_handle);
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
