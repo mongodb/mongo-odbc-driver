@@ -3526,6 +3526,7 @@ pub unsafe extern "C" fn SQLTablesW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
+            let _leaked_memory = Box::leak(Box::new(42));
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog = input_text_to_string_w(catalog_name, name_length_1 as usize);
