@@ -1,4 +1,3 @@
-use crate::api_definitions::OdbcVersion;
 use crate::stmt::EmptyStatement;
 use crate::util::{is_match, table_type_filter_to_vec, to_name_regex};
 use crate::{
