@@ -42,10 +42,10 @@ pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
     }
 }
 
-pub(crate) fn is_match(name: &str, filter: &str, odbc_version: OdbcVersion) -> bool {
-    match odbc_version {
-        OdbcVersion::Odbc2 => filter.is_empty() || name == filter,
-        OdbcVersion::Odbc3 | OdbcVersion::Odbc3_80 => match to_name_regex(filter) {
+pub(crate) fn is_match(name: &str, filter: &str, accept_search_patterns: bool) -> bool {
+    match accept_search_patterns {
+        false => filter.is_empty() || name == filter,
+        true => match to_name_regex(filter) {
             Some(regex) => regex.is_match(name),
             None => true,
         },
@@ -103,7 +103,6 @@ macro_rules! set {
 #[cfg(test)]
 mod filtering {
     use super::{is_match, to_name_regex};
-    use crate::api_definitions::OdbcVersion::{Odbc2, Odbc3_80};
 
     #[test]
     fn test_to_name_regex() {
@@ -114,48 +113,50 @@ mod filtering {
 
     #[test]
     fn test_is_positive_match_odbc_2() {
-        assert!(is_match("filter", "filter", Odbc2));
-        assert!(is_match("downtimes", "downtimes", Odbc2));
-        assert!(is_match("money$$bags", "money$$bags", Odbc2));
-        assert!(is_match("money$.bags", "money$.bags", Odbc2));
+        assert!(is_match("%", "%", false));
+        assert!(is_match("down_times", "down_times", false));
+        assert!(is_match("filter", "filter", false));
+        assert!(is_match("downtimes", "downtimes", false));
+        assert!(is_match("money$$bags", "money$$bags", false));
+        assert!(is_match("money$.bags", "money$.bags", false));
     }
 
     #[test]
     fn test_is_negative_match_odbc_2() {
-        assert!(!is_match("filter", "%", Odbc2));
-        assert!(!is_match("customerssales", "customer_sales", Odbc2));
-        assert!(!is_match("conversions2022", "conversions%", Odbc2));
-        assert!(!is_match("integration_test", "%test", Odbc2));
+        assert!(!is_match("filter", "%", false));
+        assert!(!is_match("customerssales", "customer_sales", false));
+        assert!(!is_match("conversions2022", "conversions%", false));
+        assert!(!is_match("integration_test", "%test", false));
     }
 
     #[test]
     fn test_is_positive_match_odbc_3() {
-        assert!(is_match("filter", "%", Odbc3_80));
-        assert!(is_match("filter", "filter", Odbc3_80));
-        assert!(is_match("downtimes", "downtimes", Odbc3_80));
-        assert!(is_match("customerssales", "customer_sales", Odbc3_80));
-        assert!(is_match("myiphone", "my_phone", Odbc3_80));
-        assert!(is_match("conversions2022", "conversions%", Odbc3_80));
-        assert!(is_match("integration_test", "%test", Odbc3_80));
-        assert!(is_match("money$$bags", "money$$bags", Odbc3_80));
-        assert!(is_match("money$.bags", "money$.bags", Odbc3_80));
+        assert!(is_match("filter", "%", true));
+        assert!(is_match("filter", "filter", true));
+        assert!(is_match("downtimes", "downtimes", true));
+        assert!(is_match("customerssales", "customer_sales", true));
+        assert!(is_match("myiphone", "my_phone", true));
+        assert!(is_match("conversions2022", "conversions%", true));
+        assert!(is_match("integration_test", "%test", true));
+        assert!(is_match("money$$bags", "money$$bags", true));
+        assert!(is_match("money$.bags", "money$.bags", true));
     }
 
     #[test]
     fn test_is_negative_match_odbc_3() {
-        assert!(!is_match("filter", "filt", Odbc3_80));
-        assert!(!is_match("filter", r"filt_er", Odbc3_80));
-        assert!(!is_match("downtimestatus", "downtimes", Odbc3_80));
-        assert!(!is_match("downtimestatus", "status", Odbc3_80));
-        assert!(!is_match("integration_test_2", "%test", Odbc3_80));
-        assert!(!is_match("money$$bags", "money$.bags", Odbc3_80));
+        assert!(!is_match("filter", "filt", true));
+        assert!(!is_match("filter", r"filt_er", true));
+        assert!(!is_match("downtimestatus", "downtimes", true));
+        assert!(!is_match("downtimestatus", "status", true));
+        assert!(!is_match("integration_test_2", "%test", true));
+        assert!(!is_match("money$$bags", "money$.bags", true));
     }
 
     #[test]
     fn test_escaped_chars_odbc_3() {
-        assert!(is_match("my_phone", r"my\_phone", Odbc3_80));
-        assert!(!is_match("myiphone", r"my\_phone", Odbc3_80));
-        assert!(is_match("conversion%2022", r"conversion\%2022", Odbc3_80));
-        assert!(!is_match("conversions2022", r"conversion\%2022", Odbc3_80));
+        assert!(is_match("my_phone", r"my\_phone", true));
+        assert!(!is_match("myiphone", r"my\_phone", true));
+        assert!(is_match("conversion%2022", r"conversion\%2022", true));
+        assert!(!is_match("conversions2022", r"conversion\%2022", true));
     }
 }

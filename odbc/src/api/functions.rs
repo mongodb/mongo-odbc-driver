@@ -3500,7 +3500,7 @@ fn sql_tables(
             catalog,
             table,
             table_t,
-            odbc_version,
+            odbc_version != OdbcVersion::Odbc2,
         ))),
     }
 }
