@@ -1,5 +1,5 @@
 use constants::{
-    CONNECTION_NOT_OPEN, FRACTIONAL_TRUNCATION, GENERAL_ERROR, GENERAL_WARNING,
+    OdbcState, CONNECTION_NOT_OPEN, FRACTIONAL_TRUNCATION, GENERAL_ERROR, GENERAL_WARNING,
     INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION, INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER,
     INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_COLUMN_NUMBER, INVALID_CURSOR_STATE,
     INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE,
@@ -136,8 +136,8 @@ pub enum ODBCError {
 pub type Result<T> = std::result::Result<T, ODBCError>;
 
 impl ODBCError {
-    pub fn get_sql_state(&self) -> &str {
-        let state = match self {
+    pub fn get_sql_state(&self) -> OdbcState {
+        match self {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
@@ -172,9 +172,7 @@ impl ODBCError {
             ODBCError::NoResultSet => NO_RESULTSET,
             ODBCError::UnknownInfoType(_) => INVALID_INFO_TYPE_VALUE,
             ODBCError::ConnectionNotOpen => CONNECTION_NOT_OPEN,
-        };
-        // SQL-1687: use odbc version parameter to map sql state rather than hard coding ODBC 3.x sql states
-        state.odbc_3_state
+        }
     }
 
     pub fn get_native_err_code(&self) -> i32 {

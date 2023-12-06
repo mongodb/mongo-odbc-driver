@@ -3,7 +3,7 @@ use crate::{
     api::{
         data::{i16_len, i32_len, ptr_safe_write},
         definitions::*,
-        diag::{get_diag_field, get_diag_recw, get_stmt_diag_field},
+        diag::{get_diag_fieldw, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
         util::{connection_attribute_to_string, statement_attribute_to_string},
     },
@@ -1597,10 +1597,12 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
         debug,
         || {
             let mongo_handle = handle as *mut MongoHandle;
+            let odbc_version = (*mongo_handle).get_odbc_version();
             let get_error = |errors: &Vec<ODBCError>, diag_identifier: DiagType| -> SqlReturn {
-                get_diag_field(
+                get_diag_fieldw(
                     errors,
                     diag_identifier,
+                    odbc_version,
                     diag_info_ptr,
                     record_number,
                     buffer_length,
@@ -1661,6 +1663,7 @@ macro_rules! sql_get_diag_rec_impl {
                     return SqlReturn::ERROR;
                 }
                 let mongo_handle = $handle as *mut MongoHandle;
+                let odbc_version = (*mongo_handle).get_odbc_version();
                 // Make the record number zero-indexed
                 let rec_number = ($rec_number - 1) as usize;
 
@@ -1669,6 +1672,7 @@ macro_rules! sql_get_diag_rec_impl {
                         Some(odbc_err) => $error_output_func(
                             odbc_err,
                             $state,
+                            odbc_version,
                             $message_text,
                             $buffer_length,
                             $text_length_ptr,

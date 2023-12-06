@@ -60,7 +60,7 @@ mod unit {
         validate_diag_rec(HandleType::Dbc, conn_handle);
 
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
+            conn_handle,
             StatementState::Allocated,
         ));
         validate_diag_rec(HandleType::Stmt, stmt_handle);

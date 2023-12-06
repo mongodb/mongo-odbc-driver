@@ -1341,7 +1341,7 @@ mod unit {
                             $input
                         );
                         if $info.is_some() {
-                            let odbc_info = r.1.unwrap().get_sql_state().to_string();
+                            let odbc_info = r.1.unwrap().get_sql_state().odbc_3_state.to_string();
                             let info = $info.unwrap();
                             assert_eq!(
                                 info, odbc_info,
@@ -1362,10 +1362,10 @@ mod unit {
                         let info = $info.unwrap();
                         assert_eq!(
                             info,
-                            e.get_sql_state(),
+                            e.get_sql_state().odbc_3_state,
                             "expected {:?}, got {:?} calling method {:?} on {}",
                             info,
-                            e.get_sql_state(),
+                            e.get_sql_state().odbc_3_state,
                             stringify!($method),
                             $input
                         );
