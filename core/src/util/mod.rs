@@ -112,6 +112,7 @@ mod filtering {
     #[test]
     fn test_is_positive_match_odbc_2() {
         assert!(is_match("%", "%", false));
+        assert!(is_match("%test", "%test", false));
         assert!(is_match("down_times", "down_times", false));
         assert!(is_match("filter", "filter", false));
         assert!(is_match("downtimes", "downtimes", false));
@@ -125,6 +126,7 @@ mod filtering {
         assert!(!is_match("customerssales", "customer_sales", false));
         assert!(!is_match("conversions2022", "conversions%", false));
         assert!(!is_match("integration_test", "%test", false));
+        assert!(!is_match("integration_test", "integrationstest", false));
     }
 
     #[test]
