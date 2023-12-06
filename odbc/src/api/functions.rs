@@ -3,7 +3,7 @@ use crate::{
     api::{
         data::{i16_len, i32_len, ptr_safe_write},
         definitions::*,
-        diag::{get_diag_field, get_diag_recw, get_stmt_diag_field},
+        diag::{get_diag_fieldw, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
         util::{connection_attribute_to_string, statement_attribute_to_string},
     },
@@ -1599,7 +1599,7 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
             let mongo_handle = handle as *mut MongoHandle;
             let odbc_version = (*mongo_handle).get_odbc_version();
             let get_error = |errors: &Vec<ODBCError>, diag_identifier: DiagType| -> SqlReturn {
-                get_diag_field(
+                get_diag_fieldw(
                     errors,
                     diag_identifier,
                     odbc_version,

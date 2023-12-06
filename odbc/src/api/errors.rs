@@ -1,5 +1,5 @@
 use constants::{
-    CONNECTION_NOT_OPEN, FRACTIONAL_TRUNCATION, GENERAL_ERROR, GENERAL_WARNING,
+    OdbcState, CONNECTION_NOT_OPEN, FRACTIONAL_TRUNCATION, GENERAL_ERROR, GENERAL_WARNING,
     INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION, INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER,
     INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_COLUMN_NUMBER, INVALID_CURSOR_STATE,
     INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE,
@@ -7,8 +7,6 @@ use constants::{
     RESTRICTED_DATATYPE, RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
-
-use crate::definitions::OdbcVersion;
 
 #[derive(Debug, Error, Clone)]
 pub enum ODBCError {
@@ -138,8 +136,8 @@ pub enum ODBCError {
 pub type Result<T> = std::result::Result<T, ODBCError>;
 
 impl ODBCError {
-    pub fn get_sql_state(&self, odbc_ver: OdbcVersion) -> &str {
-        let state = match self {
+    pub fn get_sql_state(&self) -> OdbcState {
+        match self {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::UnsupportedDriverConnectOption(_)
@@ -174,10 +172,6 @@ impl ODBCError {
             ODBCError::NoResultSet => NO_RESULTSET,
             ODBCError::UnknownInfoType(_) => INVALID_INFO_TYPE_VALUE,
             ODBCError::ConnectionNotOpen => CONNECTION_NOT_OPEN,
-        };
-        match odbc_ver {
-            OdbcVersion::Odbc2 => state.odbc_2_state,
-            OdbcVersion::Odbc3 | OdbcVersion::Odbc3_80 => state.odbc_3_state,
         }
     }
 
