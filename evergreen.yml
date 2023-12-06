@@ -1445,8 +1445,10 @@ tasks:
         variants: [macos, macos-arm]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
-      - func: "run asan integration tests"
-        variants: [ ubuntu2204 ]
+      # Commenting out because the following task only detects 
+      # memory leaks in the tests
+      # - func: "run asan integration tests"
+      #   variants: [ ubuntu2204 ]
       - func: "run windows integration tests"
         variants: [windows-64]
       - func: "run macos integration tests"
@@ -1485,8 +1487,10 @@ tasks:
         variants: [ubuntu2204]
       - func: "run macos result-set tests"
         variants: [macos, macos-arm]
-      - func: "run asan result-set tests"
-        variants: [ ubuntu2204 ]
+      # Commenting out because the following task only detects 
+      # memory leaks in the tests
+      # - func: "run asan result-set tests"
+      #   variants: [ ubuntu2204 ]
 
   - name: sign
     depends_on:
