@@ -1,5 +1,6 @@
 use crate::{
-    api::definitions::OdbcVersion, handles::definitions::*, SQLAllocHandle, SQLFreeHandle,
+    api::definitions::OdbcVersion, handles::definitions::*, has_odbc_3_behavior, SQLAllocHandle,
+    SQLFreeHandle,
 };
 use odbc_sys::{Handle, HandleType, SqlReturn};
 
@@ -398,4 +399,53 @@ fn test_odbc_ver() {
     assert_eq!(odbc_3_conn_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
     assert_eq!(odbc_3_desc_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
     assert_eq!(odbc_3_stmt_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
+}
+
+#[test]
+fn test_odbc_2_behavior() {
+    // set up handles of each type with the underlying env handle being odbc 2
+    let odbc_2_env_handle: &mut MongoHandle =
+        &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+    odbc_2_env_handle
+        .as_env()
+        .unwrap()
+        .attributes
+        .write()
+        .unwrap()
+        .odbc_ver = OdbcVersion::Odbc2;
+    let odbc_2_conn_handle: &mut MongoHandle = &mut MongoHandle::Connection(
+        Connection::with_state(odbc_2_env_handle, ConnectionState::Allocated),
+    );
+    let odbc_2_desc_handle: &mut _ = &mut MongoHandle::Descriptor(Descriptor::with_state(
+        odbc_2_conn_handle,
+        DescriptorState::ExplicitlyAllocated,
+    ));
+    let odbc_2_stmt_handle: &mut _ = &mut MongoHandle::Statement(Statement::with_state(
+        odbc_2_conn_handle,
+        StatementState::Allocated,
+    ));
+
+    // set up handles of each type with the underling env handle being the default odbc 3_80
+    let odbc_3_env_handle: &mut MongoHandle =
+        &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+    let odbc_3_conn_handle: &mut MongoHandle = &mut MongoHandle::Connection(
+        Connection::with_state(odbc_3_env_handle, ConnectionState::Allocated),
+    );
+    let odbc_3_desc_handle: &mut _ = &mut MongoHandle::Descriptor(Descriptor::with_state(
+        odbc_3_conn_handle,
+        DescriptorState::ExplicitlyAllocated,
+    ));
+    let odbc_3_stmt_handle: &mut _ = &mut MongoHandle::Statement(Statement::with_state(
+        odbc_3_conn_handle,
+        StatementState::Allocated,
+    ));
+
+    assert!(!has_odbc_3_behavior!(odbc_2_env_handle));
+    assert!(!has_odbc_3_behavior!(odbc_2_conn_handle));
+    assert!(!has_odbc_3_behavior!(odbc_2_desc_handle));
+    assert!(!has_odbc_3_behavior!(odbc_2_stmt_handle));
+    assert!(has_odbc_3_behavior!(odbc_3_env_handle));
+    assert!(has_odbc_3_behavior!(odbc_3_conn_handle));
+    assert!(has_odbc_3_behavior!(odbc_3_desc_handle));
+    assert!(has_odbc_3_behavior!(odbc_3_stmt_handle));
 }
