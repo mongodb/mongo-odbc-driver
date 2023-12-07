@@ -1,6 +1,7 @@
 use bson::doc;
 use constants::SQL_ALL_TABLE_TYPES;
 mod test_connection;
+use crate::definitions::SqlDataType;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use mongodb::results::CollectionType;
@@ -48,6 +49,23 @@ pub(crate) fn is_match(name: &str, filter: &str, accept_search_patterns: bool) -
         true => match to_name_regex(filter) {
             Some(regex) => regex.is_match(name),
             None => true,
+        },
+    }
+}
+
+/// handle_sql_type returns the proper sql type for the application's current behavior. When the
+/// driver's version is set to ODBC 2.x, the datetime types must be mapped to different SQL types
+pub fn handle_sql_type(map_datetime_types: bool, sql_type: SqlDataType) -> SqlDataType {
+    match map_datetime_types {
+        false => sql_type,
+        true => match sql_type {
+            // code for SQL_DATE from ODBC 2 is used as SQL_DATETIME in ODBC 3
+            SqlDataType::DATE => SqlDataType::DATETIME,
+            // code for SQL_TIME from ODBC 2 is used as SQL_EXT_TIME_OR_INTERVAL in ODBC 3
+            SqlDataType::TIME => SqlDataType::EXT_TIME_OR_INTERVAL,
+            // code for SQL_TIMESTAMP from ODBC 2 is used as SQL_EXT_TIMESTAMP in ODBC 3
+            SqlDataType::TIMESTAMP => SqlDataType::EXT_TIMESTAMP,
+            v => v,
         },
     }
 }
