@@ -43,10 +43,11 @@ mod unit {
     #[test]
     fn test_invalid_cursor_state_error() {
         // checks for invalid cursor state when calling get_value before next
-        let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let handle: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
         unsafe {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
