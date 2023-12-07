@@ -72,7 +72,7 @@ mod unit {
 
     #[test]
     fn test_odbc_2_date_maps_properly() {
-        // checks for invalid cursor state when calling get_value before next
+        // Checks that when ODBC Version is set to 2, the date returned has the proper sql type
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         env.as_env().unwrap().attributes.write().unwrap().odbc_ver = OdbcVersion::Odbc2;
         let conn =
