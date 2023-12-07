@@ -22,9 +22,9 @@ use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
 use mongo_odbc_core::{
-    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
-    MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
-    MongoTypesInfo, SqlDataType, TypeMode, util::handle_sql_type,
+    odbc_uri::ODBCUri, util::handle_sql_type, MongoColMetadata, MongoCollections, MongoConnection,
+    MongoDatabases, MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement,
+    MongoTableTypes, MongoTypesInfo, SqlDataType, TypeMode,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{

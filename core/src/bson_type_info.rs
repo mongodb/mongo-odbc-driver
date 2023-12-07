@@ -483,10 +483,10 @@ impl BsonTypeInfo {
         simple_type_info: SimpleTypeInfo::default(),
     };
 
-    // Datatypes needed for backwards compatibility
+    // Datatype needed for backwards compatibility
     pub const DATE_OLD: BsonTypeInfo = BsonTypeInfo {
         type_name: "date",
-        sql_type: SqlDataType::DATETIME,
+        sql_type: SqlDataType::EXT_TIMESTAMP,
         non_concise_type: SqlDataType::DATETIME,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
@@ -500,7 +500,7 @@ impl BsonTypeInfo {
         sql_code: Some(3),
         is_auto_unique_value: None,
         is_unsigned: None,
-        num_prec_radix: Some(10),
+        num_prec_radix: None,
         simple_type_info: None,
     };
 
