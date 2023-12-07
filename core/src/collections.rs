@@ -101,8 +101,8 @@ impl MongoCollections {
         db_name_filter: &str,
         collection_name_filter: &str,
         table_type: &str,
+        accept_search_patterns: bool,
     ) -> Self {
-        let db_name_filter_regex = to_name_regex(db_name_filter);
         let databases = mongo_connection
             .client
             .list_database_names(
@@ -115,7 +115,7 @@ impl MongoCollections {
             .iter()
             // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
             .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
-            .filter(|&db_name| is_match(db_name.as_str(), &db_name_filter_regex))
+            .filter(|&db_name| is_match(db_name, db_name_filter, accept_search_patterns))
             .map(|val| {
                 CollectionsForDb {
                 database_name: val.to_string(),
