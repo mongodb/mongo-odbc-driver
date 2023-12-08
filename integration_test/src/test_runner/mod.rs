@@ -635,7 +635,7 @@ fn get_column_attribute(
     let character_attrib_ptr: *mut std::ffi::c_void =
         Box::into_raw(Box::new([0; BUFFER_LENGTH])) as *mut _;
     let numeric_attrib_ptr = &mut 0;
-    unsafe {
+    let result = unsafe {
         match odbc_sys::SQLColAttributeW(
             stmt as *mut _,
             column as USmallInt,
@@ -659,14 +659,18 @@ fn get_column_attribute(
                 get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
             )),
         }
+    };
+    unsafe {
+        let _ = Box::from_raw(character_attrib_ptr as *mut [u8; BUFFER_LENGTH]);
     }
+    result
 }
 
 fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Value> {
     let out_len_or_ind = &mut 0;
     let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
     let mut data: Value = Default::default();
-    unsafe {
+    let result = unsafe {
         match odbc_sys::SQLGetData(
             stmt as *mut _,
             // Result set columns start at 1, the column input parameter is 0-indexed
@@ -700,7 +704,11 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
                 get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
             )),
         }
+    };
+    unsafe {
+        let _ = Box::from_raw(buffer as *mut [u8; BUFFER_LENGTH]);
     }
+    result
 }
 
 fn get_column_count(stmt: HStmt) -> Result<usize> {
