@@ -487,7 +487,7 @@ impl BsonTypeInfo {
     pub const DATE_OLD: BsonTypeInfo = BsonTypeInfo {
         type_name: "date",
         sql_type: SqlDataType::EXT_TIMESTAMP,
-        non_concise_type: SqlDataType::DATETIME,
+        non_concise_type: SqlDataType::EXT_TIMESTAMP,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: true,
