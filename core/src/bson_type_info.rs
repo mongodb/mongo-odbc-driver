@@ -484,10 +484,10 @@ impl BsonTypeInfo {
     };
 
     // Datatype needed for backwards compatibility
-    pub const DATE_OLD: BsonTypeInfo = BsonTypeInfo {
+    pub const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
         type_name: "date",
         sql_type: SqlDataType::EXT_TIMESTAMP,
-        non_concise_type: SqlDataType::EXT_TIMESTAMP,
+        non_concise_type: SqlDataType::DATETIME,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: true,

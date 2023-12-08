@@ -7,6 +7,8 @@ use odbc_sys::Nullability;
 
 use lazy_static::lazy_static;
 
+// order of array is by SqlDataType, since that is the ordering of the
+// SQLGetTypeInfo result set according to the spec
 const DATA_TYPES: [BsonTypeInfo; 22] = [
     BsonTypeInfo::STRING,              // SqlDataType(-9)
     BsonTypeInfo::BOOL,                // SqlDataType(-7)
@@ -28,7 +30,7 @@ const DATA_TYPES: [BsonTypeInfo; 22] = [
     BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
     BsonTypeInfo::INT,                 // SqlDataType(4)
     BsonTypeInfo::DOUBLE,              // SqlDataType(8)
-    BsonTypeInfo::DATE_OLD,            // SqlDataType(9)
+    BsonTypeInfo::LEGACY_DATE,         // SqlDataType(11)
     BsonTypeInfo::DATE,                // SqlDataType(93)
 ];
 

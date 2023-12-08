@@ -5,7 +5,7 @@ use crate::{
         definitions::*,
         diag::{get_diag_fieldw, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
-        util::{connection_attribute_to_string, statement_attribute_to_string},
+        util::{connection_attribute_to_string, handle_sql_type, statement_attribute_to_string},
     },
     handles::definitions::*,
     has_odbc_3_behavior, trace_odbc,
@@ -22,9 +22,9 @@ use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
 use mongo_odbc_core::{
-    odbc_uri::ODBCUri, util::handle_sql_type, MongoColMetadata, MongoCollections, MongoConnection,
-    MongoDatabases, MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement,
-    MongoTableTypes, MongoTypesInfo, SqlDataType, TypeMode,
+    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
+    MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
+    MongoTypesInfo, SqlDataType, TypeMode,
 };
 use num_traits::FromPrimitive;
 use odbc_sys::{
@@ -2613,10 +2613,10 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
         debug,
         || {
             let mongo_handle = MongoHandleRef::from(handle);
-            let map_datetime_types = !has_odbc_3_behavior!(mongo_handle);
+            let odbc_version = mongo_handle.get_odbc_version();
             match FromPrimitive::from_i16(data_type) {
                 Some(sql_data_type) => {
-                    let sql_data_type = handle_sql_type(map_datetime_types, sql_data_type);
+                    let sql_data_type = handle_sql_type(odbc_version, sql_data_type);
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
                     let type_mode = if stmt.connection.is_null() {
                         TypeMode::Standard
