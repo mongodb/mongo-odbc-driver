@@ -267,6 +267,21 @@ functions:
           # Compile debug build
           cargo build
 
+  "compile ubuntu with asan":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          ~/.cargo/bin/rustup default nightly
+          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+
+          export RUSTFLAGS="-Z sanitizer=address"
+          
+          cargo build --target x86_64-unknown-linux-gnu
+
   "compile release with debug info":
     - command: shell.exec
       params:
@@ -1173,7 +1188,7 @@ functions:
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
 
-          export RUSTFLAGS="-Z sanitizer=address"
+          export RUSTFLAGS="-Z sanitizer=leak"
           # we only run asan on the unit tests for now
           cargo test --target x86_64-unknown-linux-gnu unit
 
@@ -1192,11 +1207,13 @@ functions:
           echo "ODBCSYSINI = $ODBCSYSINI"
           echo "----------------------------------------------"
 
+          export RUSTFLAGS="-Z sanitizer=leak"
+          export RUST_BACKTRACE=1
+          echo "env $(env)"
+          
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-          export RUSTFLAGS="-Z sanitizer=address"
-
-          export RUST_BACKTRACE=1
+          
           # Start a local ADF
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
@@ -1227,7 +1244,7 @@ functions:
 
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-          export RUSTFLAGS="-Z sanitizer=address"
+          export RUSTFLAGS="-Z sanitizer=leak"
 
           export RUST_BACKTRACE=1
           # Start a local ADF
@@ -1443,9 +1460,10 @@ tasks:
         variants: [macos, macos-arm]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
-      # SQL-1794 - Enable ASAN for integration tests if possible
-      #- func: "run asan integration tests"
-      #  variants: [ ubuntu2204 ]
+      # Commenting out because the following task only detects 
+      # memory leaks in the tests
+      # - func: "run asan integration tests"
+      #   variants: [ ubuntu2204 ]
       - func: "run windows integration tests"
         variants: [windows-64]
       - func: "run macos integration tests"
@@ -1458,6 +1476,13 @@ tasks:
       - func: "install unix odbc"
         variants: [ ubuntu2204 ]
       - func: "run asan unit tests"
+        variants: [ ubuntu2204 ]
+
+  - name: asan-compile
+    commands:
+      - func: "install rust toolchain"
+        variants: [ ubuntu2204 ]
+      - func: "compile ubuntu with asan"
         variants: [ ubuntu2204 ]
 
   - name: result-set-test
@@ -1484,6 +1509,10 @@ tasks:
         variants: [ubuntu2204]
       - func: "run macos result-set tests"
         variants: [macos, macos-arm]
+      # Commenting out because the following task only detects 
+      # memory leaks in the tests
+      # - func: "run asan result-set tests"
+      #   variants: [ ubuntu2204 ]
 
   - name: sign
     depends_on:
@@ -1590,6 +1619,7 @@ buildvariants:
     tasks:
       - name: clippy
       - name: rustfmt
+      - name: asan-compile
 
   - name: windows-64
     tags: ["release-variant"]

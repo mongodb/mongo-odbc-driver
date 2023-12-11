@@ -48,23 +48,25 @@ macro_rules! test_connection_diagnostics {
                     driver_completion,
                 );
                 assert_eq!(expected_sql_return, actual_return_val);
-            };
 
-            verify_sql_diagnostics(
-                HandleType::Dbc,
-                conn_handl as *mut _,
-                1,
-                expected_sql_state.odbc_3_state,
-                expected_error_message,
-                0,
-            );
+                verify_sql_diagnostics(
+                    HandleType::Dbc,
+                    conn_handl as *mut _,
+                    1,
+                    expected_sql_state.odbc_3_state,
+                    expected_error_message,
+                    0,
+                );
+                let _ = SQLFreeHandle(HandleType::Dbc, conn_handl);
+                let _ = SQLFreeHandle(HandleType::Env, env_handl);
+            };
         }
     };
 }
 
 mod integration {
     use crate::common::verify_sql_diagnostics;
-    use atsql::{SQLAllocHandle, SQLDriverConnectW};
+    use atsql::{SQLAllocHandle, SQLDriverConnectW, SQLFreeHandle};
     use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
     use odbc_sys::{DriverConnectOption, Handle, HandleType, SqlReturn};
     use std::ptr::null_mut;
