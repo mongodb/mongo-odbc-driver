@@ -483,27 +483,6 @@ impl BsonTypeInfo {
         simple_type_info: SimpleTypeInfo::default(),
     };
 
-    // Datatype needed for backwards compatibility
-    pub const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
-        type_name: "date",
-        sql_type: SqlDataType::EXT_TIMESTAMP,
-        non_concise_type: SqlDataType::DATETIME,
-        searchable: SQL_PRED_BASIC,
-        is_case_sensitive: false,
-        fixed_prec_scale: true,
-        scale: Some(3),
-        precision: Some(23),
-        octet_length: Some(16),
-        fixed_bytes_length: Some(16),
-        literal_prefix: Some("'"),
-        literal_suffix: Some("'"),
-        sql_code: Some(3),
-        is_auto_unique_value: None,
-        is_unsigned: None,
-        num_prec_radix: None,
-        simple_type_info: None,
-    };
-
     pub fn sql_type(&self, type_mode: TypeMode) -> SqlDataType {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
             self.simple_type_info.clone().unwrap().sql_type
