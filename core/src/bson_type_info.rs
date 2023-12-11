@@ -9,22 +9,49 @@ pub enum TypeMode {
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BsonTypeInfo {
+    // This is the String bson typename as reported by the $type function in MQL
     pub type_name: &'static str,
+    // This is the SqlDataType integer as per the ODBC spec
     pub sql_type: SqlDataType,
+    // non_concise_type is also a SqlDataType integer, but it can differ from the sql_type for some
+    // types, e.g. TIMESTAMP
     pub non_concise_type: SqlDataType,
+    // An integer representing an enumeration of different searchability values:
+    // SQL_SEARCHABLE = 3; SQL_PRED_BASIC = 2; SQL_PRED_NONE = 0;
     pub searchable: i32,
+    // A boolean value reporting if a type is case_sensitive. True for Char-types, false for others
     pub is_case_sensitive: bool,
+    // A boolean dictating if the data type has predefined fixed precision and scale (which are data source-specific),
+    // such as a money data type. Note true for DOUBLE, where scale can differ
     pub fixed_prec_scale: bool,
+    // Scale for a datatype. If the datatype does not have fixed scale, this represents the largest
+    // possible scale.
     pub scale: Option<u16>,
+    // Precision for the data type. For char-data, this represents the largest possible character length, for numerical
+    // data, this represents the maximum number of decimal places.
     pub precision: Option<u16>,
+    // Maximum number of bytes (octets) for a given data type
     pub octet_length: Option<u16>,
+    // Number of bytes in a type that has fixed length, such as INT or DOUBLE
     pub fixed_bytes_length: Option<u16>,
+    // Prefix used for a literal of this type, such as ' for a char-type
     pub literal_prefix: Option<&'static str>,
+    // Suffix used for a literal of this type, such as ' for a char-type
     pub literal_suffix: Option<&'static str>,
+    // Additional info that is currently only applied to Dates
     pub sql_code: Option<i32>,
+    // Represents if this type is automatically unique in a given column, such as OBJECTID
     pub is_auto_unique_value: Option<bool>,
+    // A bool if data is unsigned, None if not applicable, such as a char-type
     pub is_unsigned: Option<bool>,
+    // If the data type is an approximate numeric type, this contains the value Some(2) to indicate
+    // that COLUMN_SIZE specifies a number of bits. For exact numeric types, this column contains
+    // the value Some(10) to indicate that COLUMN_SIZE specifies a number of decimal digits.
+    // Otherwise, this is None.
     pub num_prec_radix: Option<u16>,
+    // This is the type info we use when simple_type_mode is true. This is a convenience mode for
+    // BI tools where BSON types not directly representable as SQL data are rendered as extended
+    // json strings.
     pub simple_type_info: Option<SimpleTypeInfo>,
 }
 
@@ -70,7 +97,7 @@ impl BsonTypeInfo {
         non_concise_type: SqlDataType::DOUBLE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
-        fixed_prec_scale: true,
+        fixed_prec_scale: false,
         scale: Some(15),
         precision: Some(15),
         octet_length: Some(8),
@@ -80,7 +107,7 @@ impl BsonTypeInfo {
         sql_code: None,
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
-        num_prec_radix: Some(10),
+        num_prec_radix: Some(2),
         simple_type_info: None,
     };
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
