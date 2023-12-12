@@ -1,33 +1,58 @@
 use crate::{
-    col_metadata::MongoColMetadata, conn::MongoConnection, definitions::SqlDataType, err::Result,
-    stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
+    bson_type_info::SQL_PRED_BASIC, col_metadata::MongoColMetadata, conn::MongoConnection,
+    definitions::SqlDataType, err::Result, stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
 };
 use bson::Bson;
 use odbc_sys::Nullability;
 
 use lazy_static::lazy_static;
 
-const DATA_TYPES: [BsonTypeInfo; 21] = [
+// this type is needed for backwards compatibility when the application sets odbc version to 2.
+// when all types are requested from SQLGetTypeInfo, DATE and LEGACY_DATE should both be returned.
+const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
+    type_name: "date",
+    sql_type: SqlDataType::EXT_TIMESTAMP,
+    non_concise_type: SqlDataType::DATETIME,
+    searchable: SQL_PRED_BASIC,
+    is_case_sensitive: false,
+    fixed_prec_scale: true,
+    scale: Some(3),
+    precision: Some(23),
+    octet_length: Some(16),
+    fixed_bytes_length: Some(16),
+    literal_prefix: Some("'"),
+    literal_suffix: Some("'"),
+    sql_code: Some(3),
+    is_auto_unique_value: None,
+    is_unsigned: None,
+    num_prec_radix: None,
+    simple_type_info: None,
+};
+
+// order of array is by SqlDataType, since that is the ordering of the
+// SQLGetTypeInfo result set according to the spec
+const DATA_TYPES: [BsonTypeInfo; 22] = [
     BsonTypeInfo::STRING,              // SqlDataType(-9)
     BsonTypeInfo::BOOL,                // SqlDataType(-7)
     BsonTypeInfo::LONG,                // SqlDataType(-5)
     BsonTypeInfo::BINDATA,             // SqlDataType(-2)
     BsonTypeInfo::ARRAY,               // SqlDataType(0)
     BsonTypeInfo::BSON,                // SqlDataType(0)
-    BsonTypeInfo::DBPOINTER,           //SqlDataType(0)
+    BsonTypeInfo::DBPOINTER,           // SqlDataType(0)
     BsonTypeInfo::DECIMAL,             // SqlDataType(0)
-    BsonTypeInfo::JAVASCRIPT,          //SqlDataType(0)
+    BsonTypeInfo::JAVASCRIPT,          // SqlDataType(0)
     BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
     BsonTypeInfo::MAXKEY,              // SqlDataType(0)
     BsonTypeInfo::MINKEY,              // SqlDataType(0)
     BsonTypeInfo::NULL,                // SqlDataType(0)
     BsonTypeInfo::OBJECT,              // SqlDataType(0)
     BsonTypeInfo::OBJECTID,            // SqlDataType(0)
-    BsonTypeInfo::SYMBOL,              //SqlDataType(0)
+    BsonTypeInfo::SYMBOL,              // SqlDataType(0)
     BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
     BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
     BsonTypeInfo::INT,                 // SqlDataType(4)
     BsonTypeInfo::DOUBLE,              // SqlDataType(8)
+    LEGACY_DATE,                       // SqlDataType(11)
     BsonTypeInfo::DATE,                // SqlDataType(93)
 ];
 
