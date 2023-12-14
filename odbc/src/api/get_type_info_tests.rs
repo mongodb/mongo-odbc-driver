@@ -1,4 +1,9 @@
-use crate::{definitions::DiagType, handles::definitions::*, SQLGetDiagFieldW, SQLGetTypeInfoW};
+use crate::{
+    definitions::{DiagType, OdbcVersion},
+    handles::definitions::*,
+    SQLFetch, SQLGetDiagFieldW, SQLGetTypeInfoW,
+};
+use bson::Bson;
 use mongo_odbc_core::SqlDataType;
 use odbc_sys::{HandleType::Stmt, SqlReturn};
 
@@ -43,10 +48,11 @@ mod unit {
     #[test]
     fn test_invalid_cursor_state_error() {
         // checks for invalid cursor state when calling get_value before next
-        let handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let handle: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
         unsafe {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
@@ -61,6 +67,69 @@ mod unit {
                 .unwrap()
                 .get_value(1);
             assert!(value.is_err());
+        }
+    }
+
+    #[test]
+    fn test_odbc_2_returns_proper_date_type() {
+        // Checks that when ODBC Version is set to 2, the date returned has the proper sql type, which shoudld be mapped in SQLGetTypeInfo
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        env.as_env().unwrap().attributes.write().unwrap().odbc_ver = OdbcVersion::Odbc2;
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let handle: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+        unsafe {
+            let stmt = (*handle).as_statement().unwrap();
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetTypeInfoW(handle as *mut _, SqlDataType::TIMESTAMP as i16)
+            );
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(handle as *mut _));
+            let sql_type = stmt
+                .mongo_statement
+                .write()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get_value(2)
+                .unwrap();
+
+            // EXT_TIMESTAMP is a code that was remapped in ODBC 3, but also stands for SQL_TIMESTAMP, the ODBC 2 type
+            assert_eq!(
+                sql_type,
+                Some(Bson::Int32(SqlDataType::EXT_TIMESTAMP as i32))
+            );
+        }
+    }
+
+    #[test]
+    fn test_odbc_3_returns_proper_date_type() {
+        // Checks that when ODBC Version is set to 3, the date returned has the proper sql type
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        env.as_env().unwrap().attributes.write().unwrap().odbc_ver = OdbcVersion::Odbc3_80;
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let handle: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+        unsafe {
+            let stmt = (*handle).as_statement().unwrap();
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetTypeInfoW(handle as *mut _, SqlDataType::TIMESTAMP as i16)
+            );
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(handle as *mut _));
+            let sql_type = stmt
+                .mongo_statement
+                .write()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get_value(2)
+                .unwrap();
+
+            // check the proper ODBC 3 sql type, SQL_TYPE_TIMESTAMP, is returned
+            assert_eq!(sql_type, Some(Bson::Int32(SqlDataType::TIMESTAMP as i32)));
         }
     }
 }
