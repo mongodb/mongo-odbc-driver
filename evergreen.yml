@@ -1320,7 +1320,7 @@ functions:
         script: |
           ${prepare_shell}
           if [[ $(git branch --show-current) != 'master' ]]; then
-             exit 0
+             exit 1
           fi
           # Update the template to generate the feed for this release
           sed -i 's@{RELEASE_VERSION}@'${RELEASE_VERSION}'@' mongo-odbc-downloads_template.json
