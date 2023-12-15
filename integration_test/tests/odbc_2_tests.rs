@@ -5,10 +5,10 @@ mod integration {
         fetch_and_get_data, generate_default_connection_str, get_sql_diagnostics, BUFFER_LENGTH,
     };
     use odbc_sys::{
-        CDataType, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle,
-        HandleType, Len, Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFetch,
-        SQLGetData, SQLGetTypeInfo, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlDataType, SqlReturn,
-        NTS,
+        CDataType, ConnectionAttribute, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv,
+        HStmt, Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW,
+        SQLFetch, SQLGetData, SQLGetTypeInfo, SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW,
+        SmallInt, SqlDataType, SqlReturn, NTS,
     };
 
     use cstr::WideChar;
@@ -56,6 +56,22 @@ mod integration {
                     &mut dbc as *mut Handle
                 )
             );
+
+            // Causes iODBC to hang on `SetConnectOptionW` call
+            #[cfg(not(target_os = "macos"))]
+            {
+                // Set the login timeout
+                let login_timeout = 15;
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLSetConnectAttrW(
+                        dbc as HDbc,
+                        ConnectionAttribute::LoginTimeout,
+                        login_timeout as Pointer,
+                        0,
+                    )
+                );
+            }
 
             in_connection_string = generate_default_connection_str();
             let in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
@@ -120,8 +136,6 @@ mod integration {
     #[test]
     fn test_list_tables() {
         let env_handle = setup();
-        connect(env_handle);
-        let env_handle: HEnv = setup();
         let (conn_handle, _, _, _) = connect(env_handle);
         let mut stmt: Handle = null_mut();
 
@@ -195,8 +209,6 @@ mod integration {
     #[test]
     fn test_type_listing() {
         let env_handle = setup();
-        connect(env_handle);
-        let env_handle: HEnv = setup();
         let (conn_handle, _, _, _) = connect(env_handle);
         let mut stmt: Handle = null_mut();
 
