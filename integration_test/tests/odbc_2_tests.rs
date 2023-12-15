@@ -5,10 +5,10 @@ mod integration {
         fetch_and_get_data, generate_default_connection_str, get_sql_diagnostics, BUFFER_LENGTH,
     };
     use odbc_sys::{
-        AttrConnectionPooling, CDataType, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv,
-        HStmt, Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW,
-        SQLFetch, SQLGetData, SQLGetTypeInfo, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlDataType,
-        SqlReturn, NTS,
+        CDataType, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle,
+        HandleType, Len, Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFetch,
+        SQLGetData, SQLGetTypeInfo, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlDataType, SqlReturn,
+        NTS,
     };
 
     use cstr::WideChar;
@@ -31,16 +31,6 @@ mod integration {
                     env as HEnv,
                     EnvironmentAttribute::OdbcVersion,
                     2 as *mut _,
-                    0,
-                )
-            );
-
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLSetEnvAttr(
-                    env as HEnv,
-                    EnvironmentAttribute::ConnectionPooling,
-                    AttrConnectionPooling::OnePerHenv.into(),
                     0,
                 )
             );
@@ -67,10 +57,8 @@ mod integration {
                 )
             );
 
-            // Generate the connection string and add a null terminator because PowerBi uses NTS for the length
             in_connection_string = generate_default_connection_str();
-            let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
-            in_connection_string_encoded.push(0);
+            let in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
 
             let str_len_ptr = &mut 0;
             const BUFFER_LENGTH: SmallInt = 300;
