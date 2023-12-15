@@ -2,15 +2,13 @@ mod common;
 
 mod integration {
     use crate::common::{
-        fetch_and_get_data, generate_default_connection_str, get_column_attributes,
-        get_sql_diagnostics, sql_return_to_string, OutputBuffer, BUFFER_LENGTH,
+        fetch_and_get_data, generate_default_connection_str, get_sql_diagnostics, BUFFER_LENGTH,
     };
     use odbc_sys::{
-        AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute,
-        DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
-        Len, Pointer, SQLAllocHandle, SQLDataSourcesW, SQLDriverConnectW, SQLExecDirectW, SQLFetch,
-        SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLGetInfoW, SQLGetTypeInfo, SQLSetConnectAttrW,
-        SQLSetEnvAttr, SQLTablesW, SmallInt, SqlDataType, SqlReturn, NTS,
+        AttrConnectionPooling, CDataType, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv,
+        HStmt, Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW,
+        SQLFetch, SQLGetData, SQLGetTypeInfo, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlDataType,
+        SqlReturn, NTS,
     };
 
     use cstr::WideChar;
@@ -238,11 +236,10 @@ mod integration {
                 );
                 assert_eq!(*(output_buffer as *mut i16), datatype.0);
             }
-            
+
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as HStmt));
         }
     }
-
 
     #[test]
     fn test_data_retrieval() {
@@ -251,8 +248,6 @@ mod integration {
         let env_handle: HEnv = setup();
         let (conn_handle, _, _, _) = connect(env_handle);
         let mut stmt: Handle = null_mut();
-
-        let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
 
         unsafe {
             assert_eq!(
@@ -268,7 +263,7 @@ mod integration {
                 SQLGetTypeInfo(stmt as HStmt, SqlDataType::UNKNOWN_TYPE)
             );
 
-            let mut query: Vec<WideChar> = cstr::to_widechar_vec("select `timestamp` from types_other");
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec("select `stardate` from class");
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -279,10 +274,9 @@ mod integration {
 
             fetch_and_get_data(
                 stmt,
-                Some(1),
+                Some(5),
                 vec![SqlReturn::SUCCESS; 1],
                 vec![CDataType::TimeStamp],
-                // vec!{CDataType::WChar}
             );
         }
     }
