@@ -155,7 +155,7 @@ mod integration {
                 get_sql_diagnostics(HandleType::Env, env_handle as Handle)
             );
 
-            // assert all tables are returned from the previous SQLTables col
+            // assert all tables are returned from the previous SQLTables call
             for _ in 0..14 {
                 assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as HStmt));
             }
