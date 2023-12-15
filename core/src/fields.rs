@@ -459,12 +459,23 @@ pub struct MongoFields {
     collection_name_filter: Option<Regex>,
     field_name_filter: Option<Regex>,
     type_mode: TypeMode,
+    /// Whether this mongofield should map to odbc 3 types or not
+    odbc_3_types: bool,
 }
 
 // Statement related to a SQLTables call.
 // The Resultset columns are hard-coded and follow the ODBC resultset for SQLColumns :
 // TABLE_CAT, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE.
 impl MongoFields {
+    /// Whether to map the TIMESTAMP type (93) to EXT_TIMESTAMP (11) for odbc 2. Maps the type if `odbc_3_types` is `false`
+    /// AND the data_type is SqlDataType::TIMESTAMP, otherwise, this is an identity function.
+    /// See https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/datetime-data-type-changes?view=sql-server-ver16 for more information.
+    pub fn map_type_for_odbc_version(odbc_3_types: bool, data_type: SqlDataType) -> SqlDataType {
+        match (odbc_3_types, data_type) {
+            (false, SqlDataType::TIMESTAMP) => SqlDataType::EXT_TIMESTAMP,
+            _ => data_type,
+        }
+    }
     // Create a new MongoStatement to list tables with the given database (catalogs) and collection
     // (tables) names filters.
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
@@ -476,6 +487,7 @@ impl MongoFields {
         collection_name_filter: Option<&str>,
         field_name_filter: Option<&str>,
         type_mode: TypeMode,
+        odbc_3_types: bool,
     ) -> Self {
         let dbs = db_name.map_or_else(
             || {
@@ -505,6 +517,7 @@ impl MongoFields {
             collection_name_filter: collection_name_filter.and_then(to_name_regex),
             field_name_filter: field_name_filter.and_then(to_name_regex),
             type_mode,
+            odbc_3_types,
         }
     }
 
@@ -518,6 +531,7 @@ impl MongoFields {
             collection_name_filter: None,
             field_name_filter: None,
             type_mode: TypeMode::Standard,
+            odbc_3_types: true,
         }
     }
 
@@ -684,7 +698,10 @@ impl MongoStatement for MongoFields {
             2 => Bson::Null,
             3 => Bson::String(get_meta_data()?.table_name.clone()),
             4 => Bson::String(get_meta_data()?.col_name.clone()),
-            5 => Bson::Int32(get_meta_data()?.sql_type as i32),
+            5 => Bson::Int32(MongoFields::map_type_for_odbc_version(
+                !self.odbc_3_types,
+                get_meta_data()?.sql_type,
+            ) as i32),
             6 => Bson::String(get_meta_data()?.type_name.clone()),
             7 => Bson::Int32(get_meta_data()?.precision.unwrap_or(0) as i32),
             8 => Bson::Int32({
