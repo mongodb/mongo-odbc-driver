@@ -49,6 +49,7 @@ mod integration {
         env as HEnv
     }
 
+    // create a connection handle based on the underlying env handle
     fn connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
@@ -127,7 +128,7 @@ mod integration {
         connect(env_handle);
     }
 
-    /// Test list_tables
+    /// Test list_tables, which should yield all tables
     #[test]
     fn test_list_tables() {
         let env_handle = setup();
@@ -147,6 +148,8 @@ mod integration {
             );
             let mut table_view: Vec<WideChar> = cstr::to_widechar_vec("TABLE");
             table_view.push(0);
+
+            // list tables with null pointers for the table strings
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLTablesW(
@@ -164,6 +167,7 @@ mod integration {
                 get_sql_diagnostics(HandleType::Env, env_handle as Handle)
             );
 
+            // assert all tables are returned from the previous SQLTables col
             for _ in 0..14 {
                 assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as HStmt));
             }
@@ -197,6 +201,9 @@ mod integration {
         SqlDataType::TIMESTAMP,
     ];
 
+    /// call SQLGetTypeInfo to verify the correct types are returned. For all types,
+    /// we should get both date types back. For date, we should get the specific date type
+    /// we expect back.
     #[test]
     fn test_type_listing() {
         let env_handle = setup();
@@ -216,11 +223,12 @@ mod integration {
                     &mut stmt as *mut Handle
                 )
             );
+
+            // check that when requesting all types, both odbc 2 and 3 timestamp types are returned
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetTypeInfo(stmt as HStmt, SqlDataType::UNKNOWN_TYPE)
             );
-
             for datatype in EXPECTED_DATATYPES {
                 assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as HStmt));
                 assert_eq!(
@@ -238,6 +246,31 @@ mod integration {
             }
 
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as HStmt));
+
+            // test that SQLGetTypeInfo works properly with odbc 2.x date type
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetTypeInfo(stmt as HStmt, SqlDataType::EXT_TIMESTAMP)
+            );
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as HStmt));
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetData(
+                    stmt as HStmt,
+                    2,
+                    CDataType::SLong,
+                    output_buffer as Pointer,
+                    (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
+                    null_mut()
+                )
+            );
+            assert_eq!(*(output_buffer as *mut i16), 11);
+
+            // test that SQLGetTypeInfo returns an error for odbc 3.x date type
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLGetTypeInfo(stmt as HStmt, SqlDataType::TIMESTAMP)
+            );
         }
     }
 
@@ -263,6 +296,7 @@ mod integration {
                 SQLGetTypeInfo(stmt as HStmt, SqlDataType::UNKNOWN_TYPE)
             );
 
+            // query for date, which is stored as a string. We'll then convert to date using the odbc 2 type
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select `stardate` from class");
             query.push(0);
             assert_eq!(
@@ -272,6 +306,7 @@ mod integration {
                 get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
             );
 
+            // fetch date field as odbc 2.x TimeStamp
             fetch_and_get_data(
                 stmt,
                 Some(5),
