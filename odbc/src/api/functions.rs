@@ -3102,18 +3102,17 @@ unsafe fn sql_set_env_attrw_helper(
     match attribute {
         EnvironmentAttribute::SQL_ATTR_ODBC_VERSION => {
             match FromPrimitive::from_i32(value_ptr as i32) {
-                // SQL-1690: add support for ODBC2 in SQLSetEnvAttr
-                Some(OdbcVersion::Odbc2) | None => {
+                Some(version) => {
+                    env.attributes.write().unwrap().odbc_ver = version;
+                    SqlReturn::SUCCESS
+                }
+                None => {
                     add_diag_with_function!(
                         env_handle,
                         ODBCError::InvalidAttrValue("SQL_ATTR_ODBC_VERSION"),
                         "SQLSetEnvAttrW"
                     );
                     SqlReturn::ERROR
-                }
-                Some(version) => {
-                    env.attributes.write().unwrap().odbc_ver = version;
-                    SqlReturn::SUCCESS
                 }
             }
         }

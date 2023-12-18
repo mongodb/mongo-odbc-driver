@@ -83,9 +83,10 @@ mod unit {
                 env_handle,
                 EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
                 map! {
+                    OdbcVersion::Odbc2 as i32 => SqlReturn::SUCCESS,
                     OdbcVersion::Odbc3 as i32 => SqlReturn::SUCCESS,
                     OdbcVersion::Odbc3_80 as i32 => SqlReturn::SUCCESS,
-                    2 => SqlReturn::ERROR // Some number other than 3 and 380
+                    1 => SqlReturn::ERROR // Some number other than 2, 3 and 380
                 },
                 OdbcVersion::Odbc3_80 as i32,
             );
