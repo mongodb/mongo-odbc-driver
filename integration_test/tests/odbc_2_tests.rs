@@ -78,7 +78,7 @@ mod integration {
             }
 
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt_handle as HStmt));
-            disconnect_and_close_handles(conn_handle, stmt_handle as *mut _);
+            disconnect_and_close_handles(conn_handle, stmt_handle);
         }
         let _ = unsafe { Box::from_raw(env_handle) };
     }
@@ -166,7 +166,7 @@ mod integration {
                 SqlReturn::ERROR,
                 SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::TIMESTAMP)
             );
-            disconnect_and_close_handles(conn_handle, stmt_handle as *mut _);
+            disconnect_and_close_handles(conn_handle, stmt_handle);
         }
         let _ = unsafe { Box::from_raw(env_handle) };
     }
@@ -178,7 +178,7 @@ mod integration {
 
         unsafe {
             // query for date, which is stored as a string
-            let mut query: Vec<WideChar> = cstr::to_widechar_vec("select `stardate` from class");
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec("select `startdate` from class");
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -194,7 +194,7 @@ mod integration {
                 vec![SqlReturn::SUCCESS; 1],
                 vec![CDataType::TimeStamp],
             );
-            disconnect_and_close_handles(conn_handle, stmt_handle as *mut _);
+            disconnect_and_close_handles(conn_handle, stmt_handle);
         }
         let _ = unsafe { Box::from_raw(env_handle) };
     }
