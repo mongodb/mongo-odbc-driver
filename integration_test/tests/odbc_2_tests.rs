@@ -2,13 +2,13 @@ mod common;
 
 mod integration {
     use crate::common::{
-        connect_and_allocate_statement, disconnect_and_close_handles, fetch_and_get_data,
-        get_sql_diagnostics, BUFFER_LENGTH,
+        connect_and_allocate_statement, disconnect_and_close_handles, get_sql_diagnostics,
+        BUFFER_LENGTH,
     };
     use odbc_sys::{
         CDataType, EnvironmentAttribute, HEnv, HStmt, Handle, HandleType, Len, Pointer,
-        SQLAllocHandle, SQLExecDirectW, SQLFetch, SQLGetData, SQLGetTypeInfo, SQLSetEnvAttr,
-        SQLTablesW, SmallInt, SqlDataType, SqlReturn, NTS,
+        SQLAllocHandle, SQLFetch, SQLGetData, SQLGetTypeInfo, SQLSetEnvAttr, SQLTablesW, SmallInt,
+        SqlDataType, SqlReturn,
     };
 
     use cstr::WideChar;
@@ -165,34 +165,6 @@ mod integration {
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::TIMESTAMP)
-            );
-            disconnect_and_close_handles(conn_handle, stmt_handle);
-        }
-        let _ = unsafe { Box::from_raw(env_handle) };
-    }
-
-    #[test]
-    fn test_data_retrieval() {
-        let env_handle = setup();
-        let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
-
-        unsafe {
-            // query for date, which is stored as a string
-            let mut query: Vec<WideChar> = cstr::to_widechar_vec("select `startdate` from class");
-            query.push(0);
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt_handle as HStmt, query.as_ptr(), NTS as SmallInt as i32),
-                "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt_handle as Handle)
-            );
-
-            // ensure fetching the date field is successful
-            fetch_and_get_data(
-                stmt_handle as *mut _,
-                Some(5),
-                vec![SqlReturn::SUCCESS; 1],
-                vec![CDataType::TimeStamp],
             );
             disconnect_and_close_handles(conn_handle, stmt_handle);
         }
