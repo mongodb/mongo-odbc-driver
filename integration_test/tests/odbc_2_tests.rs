@@ -130,7 +130,7 @@ mod integration {
             // check that when requesting all types, both odbc 2 and 3 timestamp types are returned
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::UNKNOWN_TYPE)
+                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::ALL_TYPES)
             );
             for datatype in EXPECTED_DATATYPES {
                 assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as HStmt));

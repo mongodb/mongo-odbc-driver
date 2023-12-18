@@ -3,6 +3,7 @@
 pub struct SqlDataType(pub i16);
 
 impl SqlDataType {
+    pub const ALL_TYPES: SqlDataType = SqlDataType(0);
     pub const UNKNOWN_TYPE: SqlDataType = SqlDataType(0);
     // also called SQL_VARIANT_TYPE since odbc 4.0
     pub const CHAR: SqlDataType = SqlDataType(1);
