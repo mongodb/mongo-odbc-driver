@@ -1654,7 +1654,8 @@ buildvariants:
       - name: compile
       - name: compile-debug
       - name: unit-test
-      - name: integration-test
+      # SQL-1841: Investigate iodbc hanging with odbc 2 integration tests
+      # - name: integration-test
       - name: result-set-test
 
   - name: macos-arm
@@ -1664,7 +1665,8 @@ buildvariants:
       - name: compile
       - name: compile-debug
       - name: unit-test
-      - name: integration-test
+      # SQL-1841: Investigate iodbc hanging with odbc 2 integration tests
+      # - name: integration-test
       - name: result-set-test
 
   - name: release
