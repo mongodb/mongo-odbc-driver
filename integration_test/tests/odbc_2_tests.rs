@@ -183,7 +183,7 @@ mod integration {
         let (_, stmt_handle) = connect_and_allocate_statement(env_handle, None);
 
         unsafe {
-            // query for date, which is stored as a string. We'll then convert to date using the odbc 2 type
+            // query for date, which is stored as a string
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select `stardate` from class");
             query.push(0);
             assert_eq!(
@@ -193,7 +193,7 @@ mod integration {
                 get_sql_diagnostics(HandleType::Stmt, stmt_handle as Handle)
             );
 
-            // fetch date field as odbc 2.x TimeStamp
+            // ensure fetching the date field is successful
             fetch_and_get_data(
                 stmt_handle as *mut _,
                 Some(5),
