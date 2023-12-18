@@ -2,7 +2,7 @@ mod common;
 
 mod integration {
     use crate::common::{
-        connect_and_allocate_statement, connect_with_conn_string, fetch_and_get_data,
+        connect_and_allocate_statement, disconnect_and_close_handles, fetch_and_get_data,
         get_sql_diagnostics, BUFFER_LENGTH,
     };
     use odbc_sys::{
@@ -48,19 +48,9 @@ mod integration {
     #[test]
     fn test_list_tables() {
         let env_handle = setup();
-        let conn_str = crate::common::generate_default_connection_str();
-        let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
-        let mut stmt: Handle = null_mut();
+        let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
 
         unsafe {
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLAllocHandle(
-                    HandleType::Stmt,
-                    conn_handle as *mut _,
-                    &mut stmt as *mut Handle
-                )
-            );
             let mut table_view: Vec<WideChar> = cstr::to_widechar_vec("TABLE");
             table_view.push(0);
 
@@ -68,7 +58,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLTablesW(
-                    stmt as HStmt,
+                    stmt_handle as HStmt,
                     null_mut(),
                     0,
                     null_mut(),
@@ -84,11 +74,13 @@ mod integration {
 
             // assert all tables are returned from the previous SQLTables call
             for _ in 0..14 {
-                assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as HStmt));
+                assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as HStmt));
             }
 
-            assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as HStmt))
+            assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt_handle as HStmt));
+            disconnect_and_close_handles(conn_handle, stmt_handle as *mut _);
         }
+        let _ = unsafe { Box::from_raw(env_handle) };
     }
 
     const EXPECTED_DATATYPES: [SqlDataType; 22] = [
@@ -122,7 +114,7 @@ mod integration {
     #[test]
     fn test_type_listing() {
         let env_handle = setup();
-        let (_, stmt_handle) = connect_and_allocate_statement(env_handle, None);
+        let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
 
         let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
 
@@ -174,13 +166,15 @@ mod integration {
                 SqlReturn::ERROR,
                 SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::TIMESTAMP)
             );
+            disconnect_and_close_handles(conn_handle, stmt_handle as *mut _);
         }
+        let _ = unsafe { Box::from_raw(env_handle) };
     }
 
     #[test]
     fn test_data_retrieval() {
         let env_handle = setup();
-        let (_, stmt_handle) = connect_and_allocate_statement(env_handle, None);
+        let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
 
         unsafe {
             // query for date, which is stored as a string
@@ -200,6 +194,8 @@ mod integration {
                 vec![SqlReturn::SUCCESS; 1],
                 vec![CDataType::TimeStamp],
             );
+            disconnect_and_close_handles(conn_handle, stmt_handle as *mut _);
         }
+        let _ = unsafe { Box::from_raw(env_handle) };
     }
 }
