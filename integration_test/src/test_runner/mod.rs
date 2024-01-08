@@ -2,8 +2,8 @@ mod test_generator_util;
 
 use cstr::WideChar;
 use odbc_sys::{
-    AttrOdbcVersion, CDataType, Desc, EnvironmentAttribute, HDbc, HStmt, Handle, HandleType,
-    SmallInt, SqlReturn, USmallInt,
+    CDataType, Desc, EnvironmentAttribute, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn,
+    USmallInt,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
