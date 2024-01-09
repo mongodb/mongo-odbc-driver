@@ -249,6 +249,7 @@ impl<'a> DSNIterator<'a> {
                 ("Password", &dsn_opts.password),
                 ("Uri", &dsn_opts.uri),
                 ("User", &dsn_opts.user),
+                ("LogLevel", &dsn_opts.log_level),
                 // SQL-1281
                 // ("Logpath", &dsn_opts.logpath),
             ],
