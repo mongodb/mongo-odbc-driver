@@ -12,6 +12,7 @@ Windows Registry Editor Version 5.00
 "uri"="%ADF_TEST_URI%"
 "user"="%ADF_TEST_USER%"
 "database"="%ADF_TEST_DB%"
+"loglevel"="info"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI\ODBC Data Sources]
 "ADF_Test"="MongoDB Atlas SQL ODBC Driver"
