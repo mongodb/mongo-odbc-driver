@@ -156,7 +156,7 @@ fn get_expected_data_type(sql_type: &Value) -> CDataType {
                 SqlDataType::EXT_W_CHAR => CDataType::WChar,
                 SqlDataType::EXT_W_VARCHAR => CDataType::WChar,
                 SqlDataType::EXT_W_LONG_VARCHAR => CDataType::WChar,
-                // SqlDataType::EXT_GUID => CDataType::Guid,
+                SqlDataType::EXT_GUID => CDataType::Guid,
                 v => unreachable!("invalid sql_type encountered: {:?}", v),
             }
         }
