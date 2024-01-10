@@ -19,7 +19,6 @@ mod unit {
     // test unallocated_statement tests SQLColAttributeW when the mongo_statement inside
     // of the statement handle has not been allocated (before an execute or tables function
     // has been called).
-
     #[test]
     fn unallocated_statement_string_attr() {
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
