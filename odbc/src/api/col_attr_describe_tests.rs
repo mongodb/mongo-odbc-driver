@@ -78,6 +78,10 @@ mod unit {
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     #[test]
@@ -145,6 +149,10 @@ mod unit {
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     #[test]
@@ -196,6 +204,10 @@ mod unit {
                 ),
             );
             let _ = Box::from_raw(name_buffer as *mut WChar);
+        }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -264,6 +276,10 @@ mod unit {
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     #[test]
@@ -319,6 +335,10 @@ mod unit {
                 );
                 let _ = Box::from_raw(name_buffer as *mut WChar);
             }
+        }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -376,6 +396,10 @@ mod unit {
                     let _ = Box::from_raw(char_buffer as *mut WChar);
                 }
             }
+        }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -435,6 +459,8 @@ mod unit {
                 );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -498,6 +524,10 @@ mod unit {
                 );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
+        }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -572,6 +602,10 @@ mod unit {
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     // check the describe output
@@ -629,6 +663,8 @@ mod unit {
                 cstr::input_text_to_string_w(name_buffer as *const _, *out_name_length as usize)
             );
             let _ = Box::from_raw(name_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -696,6 +732,8 @@ mod unit {
                 cstr::input_text_to_string_w(name_buffer as *const _, *out_name_length as usize)
             );
             let _ = Box::from_raw(name_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 }
