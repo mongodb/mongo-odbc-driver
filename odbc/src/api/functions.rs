@@ -1313,7 +1313,6 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
-    error!("option is {_option}");
     unimpl!(statement_handle);
 }
 
