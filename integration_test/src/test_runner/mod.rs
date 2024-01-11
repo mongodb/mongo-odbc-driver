@@ -133,9 +133,10 @@ pub fn resultset_tests() -> Result<()> {
     run_resultset_tests(false)
 }
 
+#[cfg(target_os = "windows")]
 #[test]
 #[ignore]
-pub fn odbc2_resultset_sets() -> Result<()> {
+pub fn odbc2_resultset_tests() -> Result<()> {
     run_resultset_tests_odbc_2(false)
 }
 
@@ -180,12 +181,7 @@ pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
     unsafe {
         assert_eq!(
             SqlReturn::SUCCESS,
-            odbc_sys::SQLSetEnvAttr(
-                env,
-                EnvironmentAttribute::OdbcVersion,
-                2 as *mut std::ffi::c_void,
-                0,
-            )
+            odbc_sys::SQLSetEnvAttr(env, EnvironmentAttribute::OdbcVersion, 2 as *mut _, 0,)
         );
     }
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR_ODBC_2)).unwrap();
