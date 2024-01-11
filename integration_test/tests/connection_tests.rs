@@ -107,7 +107,6 @@ mod integration {
     // At connection time, when the connection string is processed, if there is a log level specified
     // the logger log level is updated to the connection log level.
     #[test]
-    #[ignore]
     fn test_driver_log_level() {
         let driver_settings: DriverSettings =
             DriverSettings::from_private_profile_string().unwrap_or_default();
