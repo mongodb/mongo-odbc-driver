@@ -8,12 +8,8 @@ use std::sync::RwLock;
 
 mod unit {
     use mongo_odbc_core::SqlDataType;
-    use odbc_sys::{EnvironmentAttribute, HEnv};
 
-    use crate::{
-        handles::definitions::{Connection, ConnectionState, Env, EnvState},
-        SQLSetEnvAttr,
-    };
+    use crate::handles::definitions::{Connection, ConnectionState, Env, EnvState};
 
     use super::*;
     // test unallocated_statement tests SQLColAttributeW when the mongo_statement inside
