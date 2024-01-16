@@ -13,7 +13,6 @@ const SERVER: &str = "server";
 const UID: &str = "uid";
 const URI: &str = "uri";
 const USER: &str = "user";
-const LOGLEVEL: &str = "loglevel";
 // SQL-1281
 // const LOGPATH: &str = "LOGPATH";
 
@@ -54,7 +53,6 @@ pub struct Dsn {
     pub user: String,
     pub server: String,
     pub driver_name: String,
-    pub log_level: Option<String>,
 }
 
 impl Dsn {
@@ -78,7 +76,6 @@ impl Dsn {
                 user: args.user.into(),
                 server: args.server.into(),
                 driver_name: args.driver_name.into(),
-                log_level: None,
             })
         } else if !validation[1] {
             Err(DsnError::Dsn(args.dsn.into()))
@@ -207,7 +204,6 @@ impl Dsn {
             URI => self.uri = value.to_string(),
             USER => self.user = value.to_string(),
             UID => self.user = value.to_string(),
-            LOGLEVEL => self.log_level = Some(value.to_string()),
             // SQL-1281
             // LOGPATH => self.logpath = value.to_string(),
             _ => {}
