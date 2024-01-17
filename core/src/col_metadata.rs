@@ -9,7 +9,7 @@ use crate::{
     BsonTypeInfo, Error, Result, TypeMode,
 };
 use itertools::Itertools;
-use odbc_sys::Nullability;
+use definitions::Nullability;
 use serde::{Deserialize, Serialize};
 
 // Metadata information for a column of the result set.
@@ -44,7 +44,7 @@ pub struct MongoColMetadata {
     // non-concise SqlDataType
     pub non_concise_type: SqlDataType,
     // sql_code, always NULL or SQL_CODE_TIMESTAMP (3) for our types
-    // odbc_sys does not define this enum yet, so we just use an i32.
+    //   does not define this enum yet, so we just use an i32.
     pub sql_code: Option<i32>,
     pub is_unsigned: bool,
     pub is_updatable: bool,
@@ -550,7 +550,7 @@ mod unit {
             },
             map, set, Error,
         };
-        use odbc_sys::Nullability;
+        use definitions::Nullability;
 
         macro_rules! get_field_nullability_test {
             ($func_name:ident, expected = $expected:expr, input_schema = $input_schema:expr, input_field = $input_field:expr) => {

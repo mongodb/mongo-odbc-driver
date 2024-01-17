@@ -4,7 +4,7 @@ use crate::{
     SQLGetDiagRecW, SQLGetEnvAttr,
 };
 use crate::{map, SQLSetEnvAttr};
-use odbc_sys::{HEnv, HandleType, Integer, Pointer, SqlReturn};
+use definitions::{HEnv, HandleType, Integer, Pointer, SqlReturn};
 use std::{collections::BTreeMap, mem::size_of};
 
 const OPTIONAL_VALUE_CHANGED: &str = "01S02\0";

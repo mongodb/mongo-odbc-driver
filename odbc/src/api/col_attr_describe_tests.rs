@@ -3,7 +3,7 @@ use crate::{
     SQLColAttributeW, SQLDescribeColW,
 };
 use mongo_odbc_core::{MongoFields, SQL_SEARCHABLE};
-use odbc_sys::{Desc, Nullability, SmallInt, SqlReturn, WChar};
+use definitions::{Desc, Nullability, SmallInt, SqlReturn, WChar};
 use std::sync::RwLock;
 
 mod unit {

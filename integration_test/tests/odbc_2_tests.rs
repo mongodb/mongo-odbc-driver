@@ -5,7 +5,7 @@ mod integration {
         connect_and_allocate_statement, disconnect_and_close_handles, get_sql_diagnostics,
         BUFFER_LENGTH,
     };
-    use odbc_sys::{
+    use definitions::{
         CDataType, EnvironmentAttribute, HEnv, HStmt, Handle, HandleType, Len, Pointer,
         SQLAllocHandle, SQLFetch, SQLGetData, SQLGetTypeInfo, SQLSetEnvAttr, SQLTablesW, SmallInt,
         SqlDataType, SqlReturn,
@@ -15,7 +15,7 @@ mod integration {
     use std::ptr::null_mut;
 
     // set up env handle and set odbc version to 2
-    fn setup() -> odbc_sys::HEnv {
+    fn setup() -> definitions::HEnv {
         let mut env: Handle = null_mut();
 
         unsafe {

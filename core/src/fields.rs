@@ -11,7 +11,7 @@ use crate::{
 use bson::{doc, Bson};
 use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
-use odbc_sys::Nullability;
+use definitions::Nullability;
 use regex::Regex;
 use std::collections::VecDeque;
 
@@ -316,7 +316,7 @@ mod unit {
     #[test]
     fn metadata_column_nullability() {
         use crate::{fields::MongoFields, stmt::MongoStatement};
-        use odbc_sys::Nullability;
+        use definitions::Nullability;
         // This gives us assurance that the types are all correct (note
         // that we do not have smallint, so we use int, however).
         assert_eq!(
@@ -690,7 +690,7 @@ impl MongoStatement for MongoFields {
             8 => Bson::Int32({
                 let l = get_meta_data()?.octet_length;
                 match l {
-                    None => odbc_sys::NO_TOTAL as i32,
+                    None => definitions::NO_TOTAL as i32,
                     Some(l) => l as i32,
                 }
             }),
@@ -712,7 +712,7 @@ impl MongoStatement for MongoFields {
             16 => Bson::Int32({
                 let l = get_meta_data()?.octet_length;
                 match l {
-                    None => odbc_sys::NO_TOTAL as i32,
+                    None => definitions::NO_TOTAL as i32,
                     Some(_) => 0i32,
                 }
             }),

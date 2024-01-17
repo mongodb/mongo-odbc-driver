@@ -3,7 +3,7 @@ use crate::{
     definitions::SqlDataType, err::Result, stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
 };
 use bson::Bson;
-use odbc_sys::Nullability;
+use definitions::Nullability;
 
 use lazy_static::lazy_static;
 

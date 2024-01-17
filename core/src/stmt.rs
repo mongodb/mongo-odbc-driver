@@ -61,7 +61,7 @@ mod unit {
         TypeMode,
     };
     use lazy_static::lazy_static;
-    use odbc_sys::Nullability;
+    use definitions::Nullability;
 
     lazy_static! {
         static ref EMPTY_TEST_METADATA: Vec<MongoColMetadata> = vec![MongoColMetadata::new(

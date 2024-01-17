@@ -7,8 +7,8 @@ use crate::{
     errors::ODBCError,
 };
 use cstr::WideChar;
-use odbc_sys::Pointer;
-use odbc_sys::{Integer, SmallInt, SqlReturn};
+use definitions::Pointer;
+use definitions::{Integer, SmallInt, SqlReturn};
 use std::ptr::copy_nonoverlapping;
 
 ///

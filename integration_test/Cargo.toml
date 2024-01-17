@@ -9,7 +9,7 @@ serde_json = "1"
 serde_yaml = "0.9.4"
 thiserror = "1"
 lazy_static = "1"
-odbc-sys = { path = "../odbc-sys", default-features = false }
+definitions = { path = "../definitions", default-features = false }
 cstr = { path = "../cstr" }
 constants = { path = "../constants" }
 shared_sql_utils = { path = "../shared_sql_utils" }

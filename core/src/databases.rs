@@ -4,7 +4,7 @@ use crate::{
 };
 use bson::Bson;
 use mongodb::options::ListDatabasesOptions;
-use odbc_sys::Nullability;
+use definitions::Nullability;
 
 use lazy_static::lazy_static;
 
@@ -139,7 +139,7 @@ mod unit {
     #[test]
     fn metadata_column_nullability() {
         use crate::{databases::MongoDatabases, stmt::MongoStatement};
-        use odbc_sys::Nullability;
+        use definitions::Nullability;
         assert_eq!(
             Nullability::NO_NULLS,
             MongoDatabases::empty()

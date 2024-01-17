@@ -7,7 +7,7 @@ mod unit {
         SQLGetConnectAttrW, SQLSetConnectAttrW,
     };
     use cstr::input_text_to_string_w;
-    use odbc_sys::{Integer, Pointer, SqlReturn, UInteger};
+    use definitions::{Integer, Pointer, SqlReturn, UInteger};
     use std::sync::RwLock;
 
     mod get {

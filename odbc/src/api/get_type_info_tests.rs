@@ -5,7 +5,7 @@ use crate::{
 };
 use bson::Bson;
 use mongo_odbc_core::SqlDataType;
-use odbc_sys::{HandleType::Stmt, SqlReturn};
+use definitions::{HandleType::Stmt, SqlReturn};
 
 const INVALID_SQL_TYPE: &str = "HY004\0";
 

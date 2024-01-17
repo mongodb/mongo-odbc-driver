@@ -10,7 +10,7 @@ macro_rules! test_connection_diagnostics {
         #[test]
         fn $func_name() {
             use cstr::WideChar;
-            use odbc_sys::SmallInt;
+            use definitions::SmallInt;
             let in_connection_string = $in_connection_string;
             let driver_completion = $driver_completion;
             let expected_sql_state = $expected_sql_state;
@@ -68,7 +68,7 @@ mod integration {
     use crate::common::verify_sql_diagnostics;
     use atsql::{SQLAllocHandle, SQLDriverConnectW, SQLFreeHandle};
     use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
-    use odbc_sys::{DriverConnectOption, Handle, HandleType, SqlReturn};
+    use definitions::{DriverConnectOption, Handle, HandleType, SqlReturn};
     use std::ptr::null_mut;
 
     test_connection_diagnostics! (

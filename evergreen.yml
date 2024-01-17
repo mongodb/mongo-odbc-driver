@@ -310,7 +310,7 @@ functions:
         script: |
           ${prepare_shell}
           # Compile release build
-          cargo build --release --features odbc-sys/iodbc,cstr/utf32
+          cargo build --release --features definitions/iodbc,cstr/utf32
 
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
@@ -324,7 +324,7 @@ functions:
         script: |
           ${prepare_shell}
           # Compile debug build
-          cargo build --features odbc-sys/iodbc,cstr/utf32
+          cargo build --features definitions/iodbc,cstr/utf32
 
   "compile macos release with debug info":
     - command: shell.exec
@@ -335,7 +335,7 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           # Build a release driver with debug information
-          cargo build --features odbc-sys/iodbc,cstr/utf32 --release
+          cargo build --features definitions/iodbc,cstr/utf32 --release
           export DRIVER_LIB_PATH=$PWD/target/release
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
@@ -1099,7 +1099,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc,cstr/utf32 -- --ignored
+          cargo test --features definitions/iodbc,cstr/utf32 -- --ignored
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1140,8 +1140,8 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc,cstr/utf32 integration -- --skip test_driver_log_level --nocapture &&
-          cargo test --test connection_tests integration::test_driver_log_level --features odbc-sys/iodbc,cstr/utf32 -- --nocapture
+          cargo test --features definitions/iodbc,cstr/utf32 integration -- --skip test_driver_log_level --nocapture &&
+          cargo test --test connection_tests integration::test_driver_log_level --features definitions/iodbc,cstr/utf32 -- --nocapture
           EXITCODE=$?
 
           # Stop the local ADF

@@ -79,11 +79,11 @@ To build and test the driver, the standard cargo commands can be used from the r
 
 For an unoptimized build with debugging information (most common), the following will build and output build files to the `target/debug` directory:
 - (windows, linux): `cargo build`
-- (macos): `cargo build --features odbc-sys/iodbc,cstr/utf32`
+- (macos): `cargo build --features definitions/iodbc,cstr/utf32`
 
 For an optimized build with debugging information, the following will build and output build files to the `target/release` directory:
 - (windows, linux): `cargo build --release`
-- (macos): `cargo build --features odbc-sys/iodbc,cstr/utf32 --release`
+- (macos): `cargo build --features definitions/iodbc,cstr/utf32 --release`
 
 ## Running Tests
 
@@ -92,7 +92,7 @@ For an optimized build with debugging information, the following will build and 
 Similar to building, standard cargo commands can be used here:
 
 - (windows, linux): `cargo test unit`
-- (macos): `cargo test --features odbc-sys/iodbc,cstr/utf32 unit`
+- (macos): `cargo test --features definitions/iodbc,cstr/utf32 unit`
 
 ### Other types of tests
 The other tests that are run are integration and result set tests. These involve more setup, and that setup is operating system dependent. Regardless of the operating system, the environment variables described above must be set.
@@ -106,11 +106,11 @@ cargo run --bin data_loader
 #### macos
 To run result set sets:
 ```
-cargo test  --features odbc-sys/iodbc,cstr/utf32 -- --ignored
+cargo test  --features definitions/iodbc,cstr/utf32 -- --ignored
 ```
 To run integration tests (note: at present, there is still work to be done to ensure these run properly. Some failures are expected):
 ```
-cargo test  --features odbc-sys/iodbc,cstr/utf32 integration
+cargo test  --features definitions/iodbc,cstr/utf32 integration
 ```
 
 #### windows

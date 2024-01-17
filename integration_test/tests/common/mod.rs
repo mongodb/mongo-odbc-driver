@@ -1,6 +1,6 @@
 use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
-use odbc_sys::{
+use definitions::{
     AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt,
     Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDisconnect,
     SQLDriverConnectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLMoreResults,

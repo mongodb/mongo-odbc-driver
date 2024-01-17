@@ -9,7 +9,7 @@ mod integration {
     use cstr::{to_char_ptr, to_widechar_ptr, WideChar};
     use lazy_static::lazy_static;
     use logger::Logger;
-    use odbc_sys::{SQLExecDirectW, SqlReturn};
+    use definitions::{SQLExecDirectW, SqlReturn};
     use regex::Regex;
     use shared_sql_utils::driver_settings::{DriverSettings, LOGLEVEL, ODBCINSTINI};
     use shared_sql_utils::odbcinst::{SQLWritePrivateProfileString, SQLWritePrivateProfileStringW};

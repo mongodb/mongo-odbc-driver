@@ -2,7 +2,7 @@ use crate::{
     api::definitions::OdbcVersion, handles::definitions::*, has_odbc_3_behavior, SQLAllocHandle,
     SQLFreeHandle,
 };
-use odbc_sys::{Handle, HandleType, SqlReturn};
+use definitions::{Handle, HandleType, SqlReturn};
 
 #[test]
 fn test_env_alloc_free() {

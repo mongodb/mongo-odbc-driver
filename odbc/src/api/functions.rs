@@ -27,7 +27,7 @@ use mongo_odbc_core::{
     MongoTypesInfo, SqlDataType, TypeMode,
 };
 use num_traits::FromPrimitive;
-use odbc_sys::{
+use definitions::{
     Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
     Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
 };

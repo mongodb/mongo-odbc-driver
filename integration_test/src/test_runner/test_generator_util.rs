@@ -2,7 +2,7 @@ use crate::test_runner::{
     fetch_row, get_column_attribute, get_column_count, get_data, Error, Result, TestEntry,
 };
 use lazy_static::lazy_static;
-use odbc_sys::{CDataType, Desc, HStmt, SqlDataType, USmallInt};
+use definitions::{CDataType, Desc, HStmt, SqlDataType, USmallInt};
 use serde_json::{Number, Value};
 use std::string::ToString;
 

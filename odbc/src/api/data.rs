@@ -10,7 +10,7 @@ use cstr::{
     write_binary_slice_to_buffer, write_fixed_data, write_string_slice_to_buffer,
     write_wstring_slice_to_buffer, WideChar,
 };
-use odbc_sys::{
+use definitions::{
     Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
 use regex::Regex;
@@ -763,7 +763,7 @@ pub unsafe fn format_bson_data(
                     .push(ODBCError::IndicatorVariableRequiredButNotSupplied);
                 return SqlReturn::SUCCESS_WITH_INFO;
             }
-            *str_len_or_ind_ptr = odbc_sys::NULL_DATA;
+            *str_len_or_ind_ptr = definitions::NULL_DATA;
             stmt.insert_var_data_cache(col_num, CachedData::Fixed);
             return SqlReturn::SUCCESS;
         }

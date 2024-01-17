@@ -1,5 +1,5 @@
 use crate::{api::errors::ODBCError, handles::definitions::*, SQLGetDiagFieldW};
-use odbc_sys::{HandleType, SqlReturn};
+use definitions::{HandleType, SqlReturn};
 
 const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
 

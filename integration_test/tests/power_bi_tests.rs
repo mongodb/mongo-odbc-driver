@@ -5,7 +5,7 @@ mod integration {
         fetch_and_get_data, generate_default_connection_str, get_column_attributes,
         get_sql_diagnostics, sql_return_to_string, OutputBuffer, BUFFER_LENGTH,
     };
-    use odbc_sys::{
+    use definitions::{
         AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute,
         DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
         Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFreeHandle, SQLGetInfoW,
@@ -67,7 +67,7 @@ mod integration {
     ///     - SQLAllocHandle(SQL_HANDLE_ENV)
     ///     - SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3)
     ///     - SQLSetEnvAttr(SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_HENV)
-    fn setup() -> odbc_sys::HEnv {
+    fn setup() -> definitions::HEnv {
         let mut env: Handle = null_mut();
 
         unsafe {
@@ -105,7 +105,7 @@ mod integration {
     /// - The string used as the input connection string
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
-    fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
+    fn power_bi_connect(env_handle: HEnv) -> (definitions::HDbc, String, String, SmallInt) {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         #[allow(unused_mut)]
@@ -169,7 +169,7 @@ mod integration {
             // The iodbc driver manager is multiplying the output length by size_of WideChar (u32)
             // for some reason. It is correct when returned from SQLDriverConnectW, but is 4x
             // bigger between return and here.
-            if odbc_sys::USING_IODBC {
+            if definitions::USING_IODBC {
                 output_len /= std::mem::size_of::<WideChar>() as i16;
             }
 
@@ -231,7 +231,7 @@ mod integration {
             // The output string should be the same as the input string except with extra curly braces around the driver name
             assert_eq!(input_len, output_len, "Expect that both connection the input connection string and output connection string have the same length but input string length is {input_len} and output string length is {output_len}");
 
-            // SQL_DRIVER_NAME is not accessible through odbc_sys
+            // SQL_DRIVER_NAME is not accessible through definitions
             /*
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -262,7 +262,7 @@ mod integration {
     }
 
     // Test PowerBI driver information retrieval
-    // This test is limited by the available InfoType values in odbc_sys
+    // This test is limited by the available InfoType values in definitions
     #[test]
     fn test_get_driver_info() {
         let env_handle: HEnv = setup();
@@ -411,7 +411,7 @@ mod integration {
                 )
             );
 
-            // SQL_DRIVER_ODBC_VER and SQL_DRIVER_NAME are not available through odbc_sys
+            // SQL_DRIVER_ODBC_VER and SQL_DRIVER_NAME are not available through definitions
             /*
             SQLGetInfoW(SQL_DRIVER_ODBC_VER)
             SQLGetInfoW(SQL_DRIVER_NAME)
@@ -435,7 +435,7 @@ mod integration {
                 get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
             );
 
-            // SQLGetFunctions is not available through odbc_sys
+            // SQLGetFunctions is not available through definitions
             /*
             SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
             */

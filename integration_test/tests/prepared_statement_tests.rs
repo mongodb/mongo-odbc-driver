@@ -5,7 +5,7 @@ mod integration {
         allocate_env, connect_and_allocate_statement, disconnect_and_close_handles,
         fetch_and_get_data, get_column_attributes, get_sql_diagnostics,
     };
-    use odbc_sys::{
+    use definitions::{
         CDataType, HStmt, Handle, HandleType, SQLExecute, SQLFetch, SQLPrepareW, SmallInt,
         SqlReturn, NTS,
     };

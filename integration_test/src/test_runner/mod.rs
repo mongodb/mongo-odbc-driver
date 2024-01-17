@@ -1,7 +1,7 @@
 mod test_generator_util;
 
 use cstr::WideChar;
-use odbc_sys::{CDataType, Desc, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn, USmallInt};
+use definitions::{CDataType, Desc, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn, USmallInt};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::value::Value;
@@ -241,7 +241,7 @@ fn run_query_test(query: &str, entry: &TestEntry, conn: HDbc, generate: bool) ->
     unsafe {
         let stmt: HStmt = allocate_statement(conn).unwrap();
 
-        match odbc_sys::SQLExecDirectW(stmt as HStmt, to_wstr_ptr(query).0, query.len() as i32) {
+        match definitions::SQLExecDirectW(stmt as HStmt, to_wstr_ptr(query).0, query.len() as i32) {
             SqlReturn::SUCCESS => {
                 if generate {
                     generate_baseline_test_file(entry, stmt)
@@ -274,15 +274,15 @@ fn run_function_test(
         "sqlgettypeinfo" => {
             check_array_length(function, 2)?;
             unsafe {
-                let data_type: odbc_sys::SqlDataType =
+                let data_type: definitions::SqlDataType =
                     std::mem::transmute(function[1].as_i64().unwrap() as i16);
-                Ok(odbc_sys::SQLGetTypeInfo(statement as HStmt, data_type))
+                Ok(definitions::SQLGetTypeInfo(statement as HStmt, data_type))
             }
         }
         "sqltables" => {
             check_array_length(function, 9)?;
             unsafe {
-                Ok(odbc_sys::SQLTables(
+                Ok(definitions::SQLTables(
                     statement as HStmt,
                     str_or_null(&function[1]),
                     to_i16(&function[2])?,
@@ -298,7 +298,7 @@ fn run_function_test(
         "sqltablesw" => {
             check_array_length(function, 9)?;
             unsafe {
-                Ok(odbc_sys::SQLTablesW(
+                Ok(definitions::SQLTablesW(
                     statement as HStmt,
                     wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
@@ -314,7 +314,7 @@ fn run_function_test(
         "sqlcolumns" => {
             check_array_length(function, 9)?;
             unsafe {
-                Ok(odbc_sys::SQLColumns(
+                Ok(definitions::SQLColumns(
                     statement as HStmt,
                     str_or_null(&function[1]),
                     to_i16(&function[2])?,
@@ -330,7 +330,7 @@ fn run_function_test(
         "sqlcolumnsw" => {
             check_array_length(function, 9)?;
             unsafe {
-                Ok(odbc_sys::SQLColumnsW(
+                Ok(definitions::SQLColumnsW(
                     statement as HStmt,
                     wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
@@ -346,7 +346,7 @@ fn run_function_test(
         "sqlforeignkeysw" => {
             check_array_length(function, 13)?;
             unsafe {
-                Ok(odbc_sys::SQLForeignKeysW(
+                Ok(definitions::SQLForeignKeysW(
                     statement as HStmt,
                     wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
@@ -369,7 +369,7 @@ fn run_function_test(
 
         "sqlprimarykeys" => {
             unsafe {
-                Ok(odbc_sys::SQLPrimaryKeys(
+                Ok(definitions::SQLPrimaryKeys(
                     statement as HStmt,
                     str_or_null(&function[1]),
                     to_i16(&function[2]),
@@ -382,7 +382,7 @@ fn run_function_test(
         }
         "sqlspecialcolumns" => {
             unsafe {
-                Ok(odbc_sys::SQLSpecialColumns(
+                Ok(definitions::SQLSpecialColumns(
                     statement as HStmt,
                     to_i16(&function[1]),
                     str_or_null(&function[2]),
@@ -398,7 +398,7 @@ fn run_function_test(
         }
         "sqlstatistics" => {
             unsafe {
-                Ok(odbc_sys::SQLStatistics(
+                Ok(definitions::SQLStatistics(
                     statement as HStmt,
                     str_or_null(&function[1]),
                     to_i16(&function[2]),
@@ -636,7 +636,7 @@ fn get_column_attribute(
         Box::into_raw(Box::new([0; BUFFER_LENGTH])) as *mut _;
     let numeric_attrib_ptr = &mut 0;
     let result = unsafe {
-        match odbc_sys::SQLColAttributeW(
+        match definitions::SQLColAttributeW(
             stmt as *mut _,
             column as USmallInt,
             field_identifier,
@@ -671,7 +671,7 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
     let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
     let mut data: Value = Default::default();
     let result = unsafe {
-        match odbc_sys::SQLGetData(
+        match definitions::SQLGetData(
             stmt as *mut _,
             // Result set columns start at 1, the column input parameter is 0-indexed
             column + 1,
@@ -714,7 +714,7 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
 fn get_column_count(stmt: HStmt) -> Result<usize> {
     unsafe {
         let columns = &mut 0;
-        match odbc_sys::SQLNumResultCols(stmt as HStmt, columns) {
+        match definitions::SQLNumResultCols(stmt as HStmt, columns) {
             SqlReturn::SUCCESS => Ok(*columns as usize),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLNumResultCols".to_string(),
@@ -727,7 +727,7 @@ fn get_column_count(stmt: HStmt) -> Result<usize> {
 
 fn fetch_row(stmt: HStmt) -> Result<bool> {
     unsafe {
-        match odbc_sys::SQLFetch(stmt as HStmt) {
+        match definitions::SQLFetch(stmt as HStmt) {
             SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(true),
             SqlReturn::NO_DATA => Ok(false),
             sql_return => Err(Error::OdbcFunctionFailed(
