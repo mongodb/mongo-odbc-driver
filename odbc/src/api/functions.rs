@@ -548,7 +548,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 }
                 Desc::LocalTypeName | Desc::SchemaName => string_col_attr(&|_| ""),
                 Desc::Name => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
-                Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.nullability.0 as Len),
+                Desc::Nullable => numeric_col_attr(&|x: &MongoColMetadata| x.nullability as Len),
                 Desc::NumPrecRadix => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len)
                 }

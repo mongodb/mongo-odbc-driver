@@ -21,35 +21,35 @@ lazy_static! {
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
     ];
 }
@@ -376,14 +376,14 @@ mod unit {
         use crate::{collections::MongoCollections, stmt::MongoStatement};
         use definitions::Nullability;
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
                 .get_col_metadata(1)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoCollections::empty()
                 .get_col_metadata(2)
                 .unwrap()
@@ -391,7 +391,7 @@ mod unit {
         );
         // Docs do not say NO_NULLS, but there is no way the tale name can be null.
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
                 .get_col_metadata(3)
                 .unwrap()
@@ -400,14 +400,14 @@ mod unit {
         // The docs also do not say NO_NULLS, but they enumerate every possible value and
         // NULL is not one of them.
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
                 .get_col_metadata(4)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoCollections::empty()
                 .get_col_metadata(5)
                 .unwrap()

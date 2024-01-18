@@ -21,119 +21,119 @@ lazy_static! {
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "DATA_TYPE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TYPE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_SIZE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "BUFFER_LENGTH".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "DECIMAL_DIGITS".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "NUM_PREC_RADIX".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "NULLABLE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_DEF".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SQL_DATA_TYPE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SQL_DATETIME_SUB".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "CHAR_OCTET_LENGTH".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "ORDINAL_POSITION".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
@@ -143,7 +143,7 @@ lazy_static! {
             // the docs do not say 'not NULL', but they also say the only possible values for
             // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
             // the empty varchar... so NO_NULLS seems correct to me.
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
     ];
 }
@@ -319,119 +319,119 @@ mod unit {
         // This gives us assurance that the types are all correct (note
         // that we do not have smallint, so we use int, however).
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(1)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(2)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(3)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(4)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(5)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(6)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(7)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(8)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(9)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(10)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(11)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(12)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(13)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(14)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(15)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoFields::empty()
                 .get_col_metadata(16)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(17)
                 .unwrap()
@@ -439,7 +439,7 @@ mod unit {
         );
         // This one deviates from the docs as mentioned.
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoFields::empty()
                 .get_col_metadata(18)
                 .unwrap()
@@ -700,7 +700,7 @@ impl MongoStatement for MongoFields {
                 }
                 _ => Bson::Null,
             },
-            11 => Bson::Int32(get_meta_data()?.nullability.0 as i32),
+            11 => Bson::Int32(get_meta_data()?.nullability as i32),
             12 => Bson::String("".to_string()),
             13 => Bson::Null,
             14 => Bson::Int32(get_meta_data()?.non_concise_type as i32),
@@ -719,9 +719,8 @@ impl MongoStatement for MongoFields {
             18 => Bson::String(
                 // odbc_sys should use an enum instead of constants...
                 match get_meta_data()?.nullability {
-                    Nullability::UNKNOWN | Nullability::NULLABLE => "YES",
-                    Nullability::NO_NULLS => "NO",
-                    _ => unreachable!(),
+                    Nullability::SQL_NULLABLE_UNKNOWN | Nullability::SQL_NULLABLE => "YES",
+                    Nullability::SQL_NO_NULLS => "NO"
                 }
                 .to_string(),
             ),

@@ -141,7 +141,7 @@ mod unit {
             let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
             let col_size = &mut 42usize;
             let decimal_digits = &mut 42i16;
-            let mut nullable = Nullability::NO_NULLS;
+            let mut nullable = Nullability::SQL_NO_NULLS;
             // test string attributes
             assert_eq!(
                 SqlReturn::ERROR,
@@ -248,7 +248,7 @@ mod unit {
                 let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
                 let col_size = &mut 42usize;
                 let decimal_digits = &mut 42i16;
-                let mut nullable = Nullability::NO_NULLS;
+                let mut nullable = Nullability::SQL_NO_NULLS;
                 // test string attributes
                 assert_eq!(
                     SqlReturn::ERROR,
@@ -444,7 +444,7 @@ mod unit {
             let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
             let col_size = &mut 42usize;
             let decimal_digits = &mut 42i16;
-            let mut nullable = Nullability::UNKNOWN;
+            let mut nullable = Nullability::SQL_NULLABLE_UNKNOWN;
             // test string attributes
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -469,7 +469,7 @@ mod unit {
             // decimal_digits should be 0
             assert_eq!(0i16, *decimal_digits);
             // nullable should stay as NO_NULLS
-            assert_eq!(Nullability::NO_NULLS, nullable);
+            assert_eq!(Nullability::SQL_NO_NULLS, nullable);
             // name_buffer should contain TABLE_NAME
             assert_eq!(
                 "TABLE_NAME".to_string(),

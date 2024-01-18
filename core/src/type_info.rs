@@ -63,133 +63,133 @@ lazy_static! {
             "".to_string(),
             "TYPE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "DATATYPE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "COLUMN_SIZE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "LITERAL_PREFIX".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "LITERAL_SUFFIX".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "CREATE_PARAMS".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "NULLABLE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "CASE_SENSITIVE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SEARCHABLE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "UNSIGNED_ATTRIBUTE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "FIXED_PREC_SCALE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "AUTO_UNIQUE_VALUE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "LOCAL_TYPE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "MINIMUM_SCALE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "MAXIMUM_SCALE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SQL_DATA_TYPE".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "SQL_DATETIME_SUB".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "NUM_PREC_RADIX".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "INTERVAL_PRECISION".to_string(),
             BsonTypeInfo::INT,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
     ];
 }
@@ -271,7 +271,7 @@ impl MongoStatement for MongoTypesInfo {
                     _ => Bson::Null,
                 },
                 6 => Bson::Null,
-                7 => Bson::Int32(Nullability::NULLABLE.0 as i32),
+                7 => Bson::Int32(Nullability::SQL_NULLABLE as i32),
                 8 => Bson::Int32(type_info.is_case_sensitive as i32),
                 9 => Bson::Int32(type_info.searchable),
                 10 => match type_info.is_unsigned {
