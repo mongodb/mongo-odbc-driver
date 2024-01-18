@@ -66,7 +66,7 @@ pub enum Concurrency {
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
-#[repr(i32)]
+#[repr(usize)]
 pub enum CursorType {
     ForwardOnly = 0,
     KeysetDriven = -1,
