@@ -5,8 +5,8 @@ use crate::{
     handles::definitions::{MongoHandle, MongoHandleRef, Statement, StatementState},
     panic_safe_exec_clear_diagnostics,
 };
-use function_name::named;
 use definitions::{HStmt, SqlReturn};
+use function_name::named;
 use std::{panic, sync::mpsc};
 
 mod unit {

@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 
 use crate::{
-    definitions::SqlDataType,
     json_schema::{
         simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
     },
     BsonTypeInfo, Error, Result, TypeMode,
 };
+use definitions::{Nullability, SqlDataType};
 use itertools::Itertools;
-use definitions::Nullability;
 use serde::{Deserialize, Serialize};
 
 // Metadata information for a column of the result set.

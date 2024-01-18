@@ -1,6 +1,6 @@
 use crate::{col_metadata::MongoColMetadata, stmt::EmptyStatement, BsonTypeInfo};
-use lazy_static::lazy_static;
 use definitions::Nullability;
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref FK_METADATA: Vec<MongoColMetadata> = vec![

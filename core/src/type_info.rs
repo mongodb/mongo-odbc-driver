@@ -1,9 +1,9 @@
 use crate::{
     bson_type_info::SQL_PRED_BASIC, col_metadata::MongoColMetadata, conn::MongoConnection,
-    definitions::SqlDataType, err::Result, stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
+    err::Result, stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
 };
 use bson::Bson;
-use definitions::Nullability;
+use definitions::{Nullability, SqlDataType};
 
 use lazy_static::lazy_static;
 
@@ -11,8 +11,8 @@ use lazy_static::lazy_static;
 // when all types are requested from SQLGetTypeInfo, DATE and LEGACY_DATE should both be returned.
 const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
     type_name: "date",
-    sql_type: SqlDataType::EXT_TIMESTAMP,
-    non_concise_type: SqlDataType::DATETIME,
+    sql_type: SqlDataType::SQL_TIMESTAMP,
+    non_concise_type: SqlDataType::SQL_DATETIME,
     searchable: SQL_PRED_BASIC,
     is_case_sensitive: false,
     fixed_prec_scale: true,
@@ -220,7 +220,7 @@ impl MongoStatement for MongoTypesInfo {
             if self.current_type_index > DATA_TYPES.len()
                 || DATA_TYPES[self.current_type_index - 1].sql_type(self.type_mode)
                     == self.sql_data_type
-                || self.sql_data_type == SqlDataType::UNKNOWN_TYPE
+                || self.sql_data_type == SqlDataType::SQL_UNKNOWN_TYPE
             {
                 break;
             }

@@ -2,16 +2,15 @@ use crate::{
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
-    definitions::SqlDataType,
     err::{Error, Result},
     stmt::MongoStatement,
     util::to_name_regex,
     BsonTypeInfo, TypeMode,
 };
 use bson::{doc, Bson};
+use definitions::{Nullability, SqlDataType};
 use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
-use definitions::Nullability;
 use regex::Regex;
 use std::collections::VecDeque;
 
@@ -696,7 +695,7 @@ impl MongoStatement for MongoFields {
             }),
             9 => Bson::Int32(get_meta_data()?.scale.unwrap_or(0) as i32),
             10 => match get_meta_data()?.sql_type {
-                SqlDataType::INTEGER | SqlDataType::DOUBLE | SqlDataType::DECIMAL => {
+                SqlDataType::SQL_INTEGER | SqlDataType::SQL_DOUBLE | SqlDataType::SQL_DECIMAL => {
                     Bson::Int32(10)
                 }
                 _ => Bson::Null,

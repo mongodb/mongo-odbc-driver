@@ -18,19 +18,19 @@ use constants::{
 
 use cstr::{input_text_to_string_w, Charset, WideChar};
 
+use definitions::{
+    Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
+    Nullability, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, ULen, USmallInt,
+};
 use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
-    MongoTypesInfo, SqlDataType, TypeMode,
+    MongoTypesInfo, TypeMode,
 };
 use num_traits::FromPrimitive;
-use definitions::{
-    Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
-    Nullability, Pointer, RetCode, SmallInt, SqlReturn, ULen, USmallInt,
-};
 use std::ptr::null_mut;
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
 

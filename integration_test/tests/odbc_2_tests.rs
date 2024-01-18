@@ -84,28 +84,28 @@ mod integration {
     }
 
     const EXPECTED_DATATYPES: [SqlDataType; 22] = [
-        SqlDataType::EXT_W_VARCHAR,
-        SqlDataType::EXT_BIT,
-        SqlDataType::EXT_BIG_INT,
-        SqlDataType::EXT_BINARY,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::UNKNOWN_TYPE,
-        SqlDataType::INTEGER,
-        SqlDataType::DOUBLE,
-        SqlDataType::EXT_TIMESTAMP,
-        SqlDataType::TIMESTAMP,
+        SqlDataType::SQL_WVARCHAR,
+        SqlDataType::SQL_BIT,
+        SqlDataType::SQL_BIGINT,
+        SqlDataType::SQL_BINARY,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_INTEGER,
+        SqlDataType::SQL_DOUBLE,
+        SqlDataType::SQL_TIMESTAMP,
+        SqlDataType::SQL_TYPE_TIMESTAMP,
     ];
 
     /// call SQLGetTypeInfo to verify the correct types are returned. For all types,
@@ -122,7 +122,7 @@ mod integration {
             // check that when requesting all types, both odbc 2 and 3 timestamp types are returned
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::ALL_TYPES)
+                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_UNKNOWN_TYPE)
             );
             for datatype in EXPECTED_DATATYPES {
                 assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as HStmt));
@@ -137,7 +137,7 @@ mod integration {
                         null_mut()
                     )
                 );
-                assert_eq!(*(output_buffer as *mut i16), datatype.0);
+                assert_eq!(*(output_buffer as *mut i16), datatype as i16);
             }
 
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt_handle as HStmt));
@@ -145,7 +145,7 @@ mod integration {
             // test that SQLGetTypeInfo works properly with odbc 2.x date type
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::EXT_TIMESTAMP)
+                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_TIMESTAMP)
             );
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as HStmt));
             assert_eq!(
@@ -164,7 +164,7 @@ mod integration {
             // test that SQLGetTypeInfo returns an error for odbc 3.x date type
             assert_eq!(
                 SqlReturn::ERROR,
-                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::TIMESTAMP)
+                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_TIMESTAMP)
             );
             disconnect_and_close_handles(conn_handle, stmt_handle);
         }

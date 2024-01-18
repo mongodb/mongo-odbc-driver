@@ -1,7 +1,9 @@
 mod test_generator_util;
 
 use cstr::WideChar;
-use definitions::{CDataType, Desc, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn, USmallInt};
+use definitions::{
+    CDataType, Desc, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn, USmallInt,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::value::Value;

@@ -9,9 +9,9 @@ use crate::{
     BsonTypeInfo, Error,
 };
 use bson::{doc, Bson};
+use definitions::Nullability;
 use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
-use definitions::Nullability;
 use regex::Regex;
 
 lazy_static! {

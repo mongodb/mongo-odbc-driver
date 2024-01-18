@@ -3,8 +3,8 @@ use crate::{
     BsonTypeInfo, Error,
 };
 use bson::Bson;
-use mongodb::options::ListDatabasesOptions;
 use definitions::Nullability;
+use mongodb::options::ListDatabasesOptions;
 
 use lazy_static::lazy_static;
 

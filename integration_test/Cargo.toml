@@ -16,6 +16,8 @@ shared_sql_utils = { path = "../shared_sql_utils" }
 logger = { path = "../logger" }
 log = "0.4"
 regex = "1"
+num-traits = "0.2.14"
+num-derive = "0.3.3"
 
 [dependencies.mongodb]
 version = "2.7"

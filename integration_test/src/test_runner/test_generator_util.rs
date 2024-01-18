@@ -1,8 +1,9 @@
 use crate::test_runner::{
     fetch_row, get_column_attribute, get_column_count, get_data, Error, Result, TestEntry,
 };
-use lazy_static::lazy_static;
 use definitions::{CDataType, Desc, HStmt, SqlDataType, USmallInt};
+use lazy_static::lazy_static;
+use num_traits::FromPrimitive;
 use serde_json::{Number, Value};
 use std::string::ToString;
 
@@ -127,39 +128,36 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
 // Get the expected CDataType for the provided sql_type.
 fn get_expected_data_type(sql_type: &Value) -> CDataType {
     match sql_type {
-        Value::Number(n) => {
-            let sdt = SqlDataType(n.as_i64().unwrap() as i16);
-            match sdt {
-                SqlDataType::UNKNOWN_TYPE => CDataType::Char,
-                SqlDataType::CHAR => CDataType::Char,
-                SqlDataType::NUMERIC => CDataType::Numeric,
-                SqlDataType::DECIMAL => CDataType::Numeric,
-                SqlDataType::INTEGER => CDataType::SLong,
-                SqlDataType::SMALLINT => CDataType::SShort,
-                SqlDataType::FLOAT => CDataType::Float,
-                SqlDataType::REAL => CDataType::Numeric,
-                SqlDataType::DOUBLE => CDataType::Double,
-                SqlDataType::DATETIME => CDataType::TypeTimestamp,
-                SqlDataType::VARCHAR => CDataType::Char,
-                SqlDataType::DATE => CDataType::TypeDate,
-                SqlDataType::TIME => CDataType::TypeTime,
-                SqlDataType::TIMESTAMP => CDataType::Char,
-                SqlDataType::EXT_TIME_OR_INTERVAL => CDataType::Char,
-                SqlDataType::EXT_TIMESTAMP => CDataType::Default,
-                SqlDataType::EXT_LONG_VARCHAR => CDataType::Char,
-                SqlDataType::EXT_BINARY => CDataType::Binary,
-                SqlDataType::EXT_VAR_BINARY => CDataType::Binary,
-                SqlDataType::EXT_LONG_VAR_BINARY => CDataType::Binary,
-                SqlDataType::EXT_BIG_INT => CDataType::SBigInt,
-                SqlDataType::EXT_TINY_INT => CDataType::STinyInt,
-                SqlDataType::EXT_BIT => CDataType::Bit,
-                SqlDataType::EXT_W_CHAR => CDataType::WChar,
-                SqlDataType::EXT_W_VARCHAR => CDataType::WChar,
-                SqlDataType::EXT_W_LONG_VARCHAR => CDataType::WChar,
-                SqlDataType::EXT_GUID => CDataType::Guid,
-                v => unreachable!("invalid sql_type encountered: {:?}", v),
-            }
-        }
+        Value::Number(n) => match FromPrimitive::from_i64(n.as_i64().unwrap()) {
+            Some(SqlDataType::SQL_UNKNOWN_TYPE) => CDataType::Char,
+            Some(SqlDataType::SQL_CHAR) => CDataType::Char,
+            Some(SqlDataType::SQL_NUMERIC) => CDataType::Numeric,
+            Some(SqlDataType::SQL_DECIMAL) => CDataType::Numeric,
+            Some(SqlDataType::SQL_INTEGER) => CDataType::SLong,
+            Some(SqlDataType::SQL_SMALLINT) => CDataType::SShort,
+            Some(SqlDataType::SQL_FLOAT) => CDataType::Float,
+            Some(SqlDataType::SQL_REAL) => CDataType::Numeric,
+            Some(SqlDataType::SQL_DOUBLE) => CDataType::Double,
+            Some(SqlDataType::SQL_DATETIME) => CDataType::TypeTimestamp,
+            Some(SqlDataType::SQL_VARCHAR) => CDataType::Char,
+            Some(SqlDataType::SQL_TYPE_DATE) => CDataType::TypeDate,
+            Some(SqlDataType::SQL_TYPE_TIME) => CDataType::TypeTime,
+            Some(SqlDataType::SQL_TYPE_TIMESTAMP) => CDataType::Char,
+            Some(SqlDataType::SQL_TIME_OR_INTERVAL) => CDataType::Char,
+            Some(SqlDataType::SQL_TIMESTAMP) => CDataType::Default,
+            Some(SqlDataType::SQL_LONGVARCHAR) => CDataType::Char,
+            Some(SqlDataType::SQL_BINARY) => CDataType::Binary,
+            Some(SqlDataType::SQL_VARBINARY) => CDataType::Binary,
+            Some(SqlDataType::SQL_LONGVARBINARY) => CDataType::Binary,
+            Some(SqlDataType::SQL_BIGINT) => CDataType::SBigInt,
+            Some(SqlDataType::SQL_TINYINT) => CDataType::STinyInt,
+            Some(SqlDataType::SQL_BIT) => CDataType::Bit,
+            Some(SqlDataType::SQL_WCHAR) => CDataType::WChar,
+            Some(SqlDataType::SQL_WVARCHAR) => CDataType::WChar,
+            Some(SqlDataType::SQL_WLONGVARCHAR) => CDataType::WChar,
+            Some(SqlDataType::SQL_GUID) => CDataType::Guid,
+            None => unreachable!("invalid sql_type encountered: {:?}", sql_type),
+        },
         v => unreachable!("sql_type should always be a number: {:?}", v),
     }
 }

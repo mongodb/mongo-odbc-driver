@@ -10,6 +10,7 @@ use bson::{
 };
 use chrono::prelude::*;
 use cstr::WideChar;
+use definitions::{Date, Nullability, SqlReturn, Time, Timestamp, WChar};
 use lazy_static::lazy_static;
 use mongo_odbc_core::{
     col_metadata::MongoColMetadata,
@@ -20,7 +21,6 @@ use mongo_odbc_core::{
     mock_query::MongoQuery,
     TypeMode,
 };
-use definitions::{Date, Nullability, SqlReturn, Time, Timestamp, WChar};
 
 const ARRAY_COL: u16 = 1;
 const BIN_COL: u16 = 2;

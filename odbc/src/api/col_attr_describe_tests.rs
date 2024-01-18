@@ -2,12 +2,12 @@ use crate::{
     handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW, SQLDescribeColW,
 };
-use mongo_odbc_core::{MongoFields, SQL_SEARCHABLE};
 use definitions::{Desc, Nullability, SmallInt, SqlReturn, WChar};
+use mongo_odbc_core::{MongoFields, SQL_SEARCHABLE};
 use std::sync::RwLock;
 
 mod unit {
-    use mongo_odbc_core::SqlDataType;
+    use definitions::SqlDataType;
 
     use super::*;
     // test unallocated_statement tests SQLColAttributeW when the mongo_statement inside
@@ -138,7 +138,7 @@ mod unit {
             let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
             let name_buffer_length: SmallInt = 20;
             let out_name_length = &mut 10;
-            let mut data_type = SqlDataType::UNKNOWN_TYPE;
+            let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
             let col_size = &mut 42usize;
             let decimal_digits = &mut 42i16;
             let mut nullable = Nullability::NO_NULLS;
@@ -245,7 +245,7 @@ mod unit {
                     Box::into_raw(Box::new([0u8; 40])) as *mut _;
                 let name_buffer_length: SmallInt = 20;
                 let out_name_length = &mut 10;
-                let mut data_type = SqlDataType::UNKNOWN_TYPE;
+                let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
                 let col_size = &mut 42usize;
                 let decimal_digits = &mut 42i16;
                 let mut nullable = Nullability::NO_NULLS;
@@ -401,8 +401,8 @@ mod unit {
             (Desc::Precision, 0),
             (Desc::Scale, 0),
             (Desc::Searchable, SQL_SEARCHABLE as isize),
-            (Desc::Type, SqlDataType::EXT_W_VARCHAR as isize),
-            (Desc::ConciseType, SqlDataType::EXT_W_VARCHAR as isize),
+            (Desc::Type, SqlDataType::SQL_WVARCHAR as isize),
+            (Desc::ConciseType, SqlDataType::SQL_WVARCHAR as isize),
             (Desc::Unsigned, 1),
         ] {
             unsafe {
@@ -441,7 +441,7 @@ mod unit {
             let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
             let name_buffer_length: SmallInt = 20;
             let out_name_length = &mut 0;
-            let mut data_type = SqlDataType::UNKNOWN_TYPE;
+            let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
             let col_size = &mut 42usize;
             let decimal_digits = &mut 42i16;
             let mut nullable = Nullability::UNKNOWN;
@@ -463,7 +463,7 @@ mod unit {
             // out_name_length should be 10
             assert_eq!(10, *out_name_length);
             // data_type should be VARCHAR
-            assert_eq!(SqlDataType::EXT_W_VARCHAR, data_type);
+            assert_eq!(SqlDataType::SQL_WVARCHAR, data_type);
             // col_size should be 0
             assert_eq!(0usize, *col_size);
             // decimal_digits should be 0

@@ -1,7 +1,7 @@
 use crate::api::{definitions::*, errors::ODBCError};
 use cstr::{Charset, WideChar};
-use mongo_odbc_core::TypeMode;
 use definitions::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
+use mongo_odbc_core::TypeMode;
 use std::{
     borrow::BorrowMut,
     collections::{HashMap, HashSet},

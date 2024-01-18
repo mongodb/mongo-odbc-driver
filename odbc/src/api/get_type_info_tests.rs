@@ -4,8 +4,7 @@ use crate::{
     SQLFetch, SQLGetDiagFieldW, SQLGetTypeInfoW,
 };
 use bson::Bson;
-use mongo_odbc_core::SqlDataType;
-use definitions::{HandleType::Stmt, SqlReturn};
+use definitions::{HandleType::Stmt, SqlDataType, SqlReturn};
 
 const INVALID_SQL_TYPE: &str = "HY004\0";
 
@@ -57,7 +56,7 @@ mod unit {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfoW(handle as *mut _, SqlDataType::INTEGER as i16)
+                SQLGetTypeInfoW(handle as *mut _, SqlDataType::SQL_INTEGER as i16)
             );
             let value = stmt
                 .mongo_statement
@@ -83,7 +82,7 @@ mod unit {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfoW(handle as *mut _, SqlDataType::TIMESTAMP as i16)
+                SQLGetTypeInfoW(handle as *mut _, SqlDataType::SQL_TYPE_TIMESTAMP as i16)
             );
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(handle as *mut _));
             let sql_type = stmt
@@ -98,7 +97,7 @@ mod unit {
             // EXT_TIMESTAMP is a code that was remapped in ODBC 3, but also stands for SQL_TIMESTAMP, the ODBC 2 type
             assert_eq!(
                 sql_type,
-                Some(Bson::Int32(SqlDataType::EXT_TIMESTAMP as i32))
+                Some(Bson::Int32(SqlDataType::SQL_TIMESTAMP as i32))
             );
         }
     }
@@ -116,7 +115,7 @@ mod unit {
             let stmt = (*handle).as_statement().unwrap();
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfoW(handle as *mut _, SqlDataType::TIMESTAMP as i16)
+                SQLGetTypeInfoW(handle as *mut _, SqlDataType::SQL_TYPE_TIMESTAMP as i16)
             );
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(handle as *mut _));
             let sql_type = stmt
@@ -129,7 +128,7 @@ mod unit {
                 .unwrap();
 
             // check the proper ODBC 3 sql type, SQL_TYPE_TIMESTAMP, is returned
-            assert_eq!(sql_type, Some(Bson::Int32(SqlDataType::TIMESTAMP as i32)));
+            assert_eq!(sql_type, Some(Bson::Int32(SqlDataType::SQL_TYPE_TIMESTAMP as i32)));
         }
     }
 }

@@ -446,39 +446,6 @@ pub enum CDataType {
 #[allow(non_camel_case_types)]
 #[repr(i16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
-pub enum SqlDataType {
-    SQL_UNKNOWN_TYPE = 0,
-    SQL_CHAR = 1,
-    SQL_NUMERIC = 2,
-    SQL_DECIMAL = 3,
-    SQL_INTEGER = 4,
-    SQL_SMALLINT = 5,
-    SQL_FLOAT = 6,
-    SQL_REAL = 7,
-    SQL_DOUBLE = 8,
-    SQL_DATETIME = 9,
-    SQL_VARCHAR = 12,
-    SQL_TYPE_DATE = 91,
-    SQL_TYPE_TIME = 92,
-    SQL_TYPE_TIMESTAMP = 93,
-    SQL_TIME_OR_INTERVAL = 10,
-    SQL_TIMESTAMP = 11,
-    SQL_LONGVARCHAR = -1,
-    SQL_BINARY = -2,
-    SQL_VARBINARY = -3,
-    SQL_LONGVARBINARY = -4,
-    SQL_BIGINT = -5,
-    SQL_TINYINT = -6,
-    SQL_BIT = -7,
-    SQL_WCHAR = -8,
-    SQL_WVARCHAR = -9,
-    SQL_WLONGVARCHAR = -10,
-    SQL_GUID = -11,
-}
-
-#[allow(non_camel_case_types)]
-#[repr(i16)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum DiagType {
     SQL_DIAG_RETURNCODE = 1,
     SQL_DIAG_NUMBER = 2,

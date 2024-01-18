@@ -339,6 +339,8 @@ name = "definitions"
 version = "0.0.0"
 dependencies = [
  "cstr",
+ "num-derive",
+ "num-traits",
 ]
 
 [[package]]
@@ -723,6 +725,8 @@ dependencies = [
  "log",
  "logger",
  "mongodb",
+ "num-derive",
+ "num-traits",
  "regex",
  "serde",
  "serde_json",

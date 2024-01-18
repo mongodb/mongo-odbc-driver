@@ -60,8 +60,8 @@ mod unit {
         stmt::{EmptyStatement, MongoStatement},
         TypeMode,
     };
-    use lazy_static::lazy_static;
     use definitions::Nullability;
+    use lazy_static::lazy_static;
 
     lazy_static! {
         static ref EMPTY_TEST_METADATA: Vec<MongoColMetadata> = vec![MongoColMetadata::new(
