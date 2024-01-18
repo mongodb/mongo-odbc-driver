@@ -1,15 +1,15 @@
-/// Used by `SQLBindParameter`.
+use num_derive::FromPrimitive;
+
+#[allow(non_camel_case_types)]
 #[repr(i16)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum ParamType {
-    Unknown = 0,
-    Input = 1,
-    InputOutput = 2,
-    ResultCol = 3,
-    Output = 4,
-    ReturnValue = 5,
-    #[cfg(feature = "odbc_version_3_80")]
-    InputOutputStream = 8,
-    #[cfg(feature = "odbc_version_3_80")]
-    OutputStream = 16,
+    SQL_PARAM_TYPE_UNKNOWN = 0,
+    SQL_PARAM_INPUT = 1,
+    SQL_PARAM_INPUT_OUTPUT = 2,
+    SQL_RESULT_COL = 3,
+    SQL_PARAM_OUTPUT = 4,
+    SQL_RETURN_VALUE = 5,
+    SQL_PARAM_INPUT_OUTPUT_STREAM = 8,
+    SQL_PARAM_OUTPUT_STREAM = 16,
 }

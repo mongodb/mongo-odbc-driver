@@ -30,7 +30,7 @@ fn allocate_connection() {
             SqlReturn::SUCCESS,
             SQLSetEnvAttr(
                 env as HEnv,
-                EnvironmentAttribute::OdbcVersion,
+                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
                 AttrOdbcVersion::Odbc3.into(),
                 0
             )

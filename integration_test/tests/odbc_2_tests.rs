@@ -28,7 +28,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetEnvAttr(
                     env as HEnv,
-                    EnvironmentAttribute::OdbcVersion,
+                    EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
                     2 as *mut _,
                     0,
                 )
@@ -131,7 +131,7 @@ mod integration {
                     SQLGetData(
                         stmt_handle as HStmt,
                         2,
-                        CDataType::SLong,
+                        CDataType::SQL_C_SLONG,
                         output_buffer as Pointer,
                         (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
                         null_mut()
@@ -153,7 +153,7 @@ mod integration {
                 SQLGetData(
                     stmt_handle as HStmt,
                     2,
-                    CDataType::SLong,
+                    CDataType::SQL_C_SLONG,
                     output_buffer as Pointer,
                     (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
                     null_mut()

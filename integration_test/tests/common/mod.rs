@@ -137,7 +137,7 @@ pub fn allocate_env() -> Result<HEnv> {
         }
         match SQLSetEnvAttr(
             env as HEnv,
-            EnvironmentAttribute::OdbcVersion,
+            EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
             AttrOdbcVersion::Odbc3.into(),
             0,
         ) {

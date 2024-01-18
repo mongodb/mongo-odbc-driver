@@ -1,28 +1,26 @@
 use crate::Pointer;
+use num_derive::FromPrimitive;
 
 /// Governs behaviour of EnvironmentAttribute
+#[allow(non_camel_case_types)]
 #[repr(i32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum EnvironmentAttribute {
-    OdbcVersion = 200,
-    ConnectionPooling = 201,
-    CpMatch = 202,
-    // This attribute was commented out because there is no mention of it in the ODBC specification
-    // nor does this attribute exist in unixODBC or iODBC implementations. This attribute exists in
-    // Microsoft implementation only and it's usage is unclear.
-    // For private driver manager
-    // SQL_ATTR_APPLICATION_KEY = 203,
-    OutputNts = 10001,
+    SQL_ATTR_ODBC_VERSION = 200,
+    SQL_ATTR_CONNECTION_POOLING = 201,
+    SQL_ATTR_CP_MATCH = 202,
+    SQL_ATTR_OUTPUT_NTS = 10001,
+    SQL_ATTR_DRIVER_UNICODE_TYPE = 1065,
 }
 
 /// ODBC verions
 ///
 /// Possible values for `OdbcVersion` attribute set with `SQLSetEnvAttr` to declare ODBC version
 #[repr(i32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum AttrOdbcVersion {
     // Not supported by this crate
-    // SQL_OV_ODBC2 = 2,
+    Odbc2 = 2,
     Odbc3 = 3,
     #[cfg(feature = "odbc_version_3_80")]
     Odbc3_80 = 380,
@@ -42,7 +40,7 @@ impl From<AttrOdbcVersion> for Pointer {
 ///
 /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetenvattr-function>
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum AttrConnectionPooling {
     /// Connection pooling is turned off. This is the default.
     Off = 0,
@@ -76,7 +74,7 @@ impl From<AttrConnectionPooling> for Pointer {
 /// Possible values for `CpMatch` attribute set with [`crate::SQLSetEnvAttr`] to define which connection
 /// attributes must match for a connection returned from the pool
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum AttrCpMatch {
     /// Only connections that exactly match the connection options in the call and the connection
     /// attributes set by the application are reused. This is the default.
@@ -112,90 +110,51 @@ impl From<AttrCpMatch> for Pointer {
 /// `QueryTimeout` statement attributes can be set at any time, but it is driver-specific whether
 /// they are applied before the statement is used again. The remaining statement attributes can be
 /// set at any time.
+#[allow(non_camel_case_types)]
 #[repr(i32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum StatementAttribute {
-    /// SQL_ATTR_APP_ROW_DESC
-    AppRowDesc = 10010,
-    /// SQL_ATTR_APP_PARAM_DESC
-    AppParamDesc = 10011,
-    /// SQL_ATTR_IMP_ROW_DESC
-    ImpRowDesc = 10012,
-    /// SQL_ATTR_IMP_PARAM_DESC
-    ImpParamDesc = 10013,
-    /// SQL_ATTR_CURSOR_SCROLLABLE
-    CursorScrollable = -1,
-    /// SQL_ATTR_CURSOR_SENSITIVITY
-    CursorSensitivity = -2,
-
-    // Extensions
-    /// SQL_ATTR_ASYNC_ENABLE
-    AsyncEnable = 4,
-    /// SQL_ATTR_CONCURRENCY
-    Concurrency = 7,
-    /// SQL_ATTR_CURSOR_TYPE
-    CursorType = 6,
-    /// SQL_ATTR_ENABLE_AUTO_IPD
-    EnableAutoIpd = 15,
-    /// SQL_ATTR_FETCH_BOOKMARK_PTR
-    FetchBookmarkPtr = 16,
-    /// SQL_ATTR_KEYSET_SIZE
-    KeysetSize = 8,
-    /// SQL_ATTR_MAX_LENGTH
-    MaxLength = 3,
-    /// SQL_ATTR_MAX_ROWS
-    MaxRows = 1,
-    /// SQL_ATTR_NOSCAN
-    NoScan = 2,
-    /// SQL_ATTR_PARAM_BIND_OFFSET_PTR
-    ParamBindOffsetPtr = 17,
-    /// SQL_ATTR_PARAM_BIND_TYPE
-    ParamBindType = 18,
-    /// SQL_ATTR_PARAM_OPERATION_PTR
-    ParamOpterationPtr = 19,
-    /// SQL_ATTR_PARAM_STATUS_PTR
-    ParamStatusPtr = 20,
-    /// SQL_ATTR_PARAMS_PROCESSED_PTR
-    ParamsProcessedPtr = 21,
-    // SQL_ATTR_PARAMSET_SIZE
-    ParamsetSize = 22,
-    /// SQL_ATTR_QUERY_TIMEOUT
-    QueryTimeout = 0,
-    /// SQL_ATTR_RETRIEVE_DATA
-    RetrieveData = 11,
-    /// SQL_ATTR_ROW_BIND_OFFSET_PTR
-    RowBindOffsetPtr = 23,
-    /// SQL_ATTR_ROW_BIND_TYPE
-    RowBindType = 5,
-    /// SQL_ATTR_ROW_NUMBER `GetStmtAttr`
-    RowNumber = 14,
-    /// SQL_ATTR_ROW_OPERATION_PTR
-    RowOperationPtr = 24,
-    /// SQL_ATTR_ROW_STATUS_PTR
-    RowStatusPtr = 25,
-    /// SQL_ATTR_ROWS_FETCHED_PTR
-    RowsFetchedPtr = 26,
-    /// SQL_ATTR_ROW_ARRAY_SIZE
-    RowArraySize = 27,
-    /// SQL_ATTR_SIMULATE_CURSOR
-    SimulateCursor = 10,
-    /// SQL_ATTR_USE_BOOKMARKS
-    UseBookmarks = 12,
-    #[cfg(feature = "odbc_version_3_80")]
-    /// SQL_ATTR_ASYNC_STMT_EVENT
-    AsyncStmtEvent = 29,
-    #[cfg(feature = "odbc_version_4")]
-    /// SQL_ATTR_SAMPLE_SIZE
-    SampleSize = 30,
-    #[cfg(feature = "odbc_version_4")]
-    /// SQL_ATTR_DYNAMIC_COLUMNS
-    DynamicColumns = 31,
-    #[cfg(feature = "odbc_version_4")]
-    /// SQL_ATTR_TYPE_EXCEPTION_BEHAVIOR
-    TypeExceptionBehaviour = 32,
-    #[cfg(feature = "odbc_version_4")]
-    /// SQL_ATTR_LENGTH_EXCEPTION_BEHAVIOR
-    LengthExceptionBehaviour = 33,
-    /// SQL_ATTR_METADATA_ID
-    MetadataId = 10014,
+    SQL_ATTR_CURSOR_SCROLLABLE = -1,
+    SQL_ATTR_CURSOR_SENSITIVITY = -2,
+    SQL_ATTR_QUERY_TIMEOUT = 0,
+    SQL_ATTR_MAX_ROWS = 1,
+    SQL_ATTR_NOSCAN = 2,
+    SQL_ATTR_MAX_LENGTH = 3,
+    SQL_ATTR_ASYNC_ENABLE = 4,
+    SQL_ATTR_ROW_BIND_TYPE = 5,
+    SQL_ATTR_CURSOR_TYPE = 6,
+    SQL_ATTR_CONCURRENCY = 7,
+    SQL_ATTR_KEYSET_SIZE = 8,
+    // Never renamed to SQL_ATTR_ROWSET_SIZE
+    SQL_ROWSET_SIZE = 9,
+    SQL_ATTR_SIMULATE_CURSOR = 10,
+    SQL_ATTR_RETRIEVE_DATA = 11,
+    SQL_ATTR_USE_BOOKMARKS = 12,
+    // Also has no SQL_ATTR version
+    SQL_GET_BOOKMARK = 13,
+    SQL_ATTR_ROW_NUMBER = 14,
+    SQL_ATTR_ENABLE_AUTO_IPD = 15,
+    SQL_ATTR_FETCH_BOOKMARK_PTR = 16,
+    SQL_ATTR_PARAM_BIND_OFFSET_PTR = 17,
+    SQL_ATTR_PARAM_BIND_TYPE = 18,
+    SQL_ATTR_PARAM_OPERATION_PTR = 19,
+    SQL_ATTR_PARAM_STATUS_PTR = 20,
+    SQL_ATTR_PARAMS_PROCESSED_PTR = 21,
+    SQL_ATTR_PARAMSET_SIZE = 22,
+    SQL_ATTR_ROW_BIND_OFFSET_PTR = 23,
+    SQL_ATTR_ROW_OPERATION_PTR = 24,
+    SQL_ATTR_ROW_STATUS_PTR = 25,
+    SQL_ATTR_ROWS_FETCHED_PTR = 26,
+    SQL_ATTR_ROW_ARRAY_SIZE = 27,
+    // there is no 28, apparently
+    SQL_ATTR_ASYNC_STMT_EVENT = 29,
+    SQL_ATTR_SAMPLE_SIZE = 30,
+    SQL_ATTR_DYNAMIC_COLUMNS = 31,
+    SQL_ATTR_TYPE_EXCEPTION_BEHAVIOR = 32,
+    SQL_ATTR_LENGTH_EXCEPTION_BEHAVIOR = 33,
+    SQL_ATTR_APP_ROW_DESC = 10010,
+    SQL_ATTR_APP_PARAM_DESC = 10011,
+    SQL_ATTR_IMP_ROW_DESC = 10012,
+    SQL_ATTR_IMP_PARAM_DESC = 10013,
+    SQL_ATTR_METADATA_ID = 10014,
 }

@@ -1,10 +1,9 @@
 use crate::{
-    definitions::*,
     handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
 };
 use cstr::{input_text_to_string_w, WideChar};
-use definitions::{InfoType, Pointer, SmallInt, SqlReturn, UInteger, USmallInt};
+use definitions::*;
 
 macro_rules! test_get_info {
     ($func_name:ident,

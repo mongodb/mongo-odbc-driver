@@ -1,10 +1,12 @@
 use crate::{
-    api::definitions::*,
     handles::definitions::{Env, EnvState, MongoHandle},
     SQLGetDiagRecW, SQLGetEnvAttr,
 };
 use crate::{map, SQLSetEnvAttr};
-use definitions::{HEnv, HandleType, Integer, Pointer, SqlReturn};
+use definitions::{
+    AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, HEnv, HandleType,
+    Integer, Pointer, SqlBool, SqlReturn,
+};
 use std::{collections::BTreeMap, mem::size_of};
 
 const OPTIONAL_VALUE_CHANGED: &str = "01S02\0";
@@ -83,12 +85,12 @@ mod unit {
                 env_handle,
                 EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
                 map! {
-                    OdbcVersion::Odbc2 as i32 => SqlReturn::SUCCESS,
-                    OdbcVersion::Odbc3 as i32 => SqlReturn::SUCCESS,
-                    OdbcVersion::Odbc3_80 as i32 => SqlReturn::SUCCESS,
+                    AttrOdbcVersion::Odbc2 as i32 => SqlReturn::SUCCESS,
+                    AttrOdbcVersion::Odbc3 as i32 => SqlReturn::SUCCESS,
+                    AttrOdbcVersion::Odbc3_80 as i32 => SqlReturn::SUCCESS,
                     1 => SqlReturn::ERROR // Some number other than 2, 3 and 380
                 },
-                OdbcVersion::Odbc3_80 as i32,
+                AttrOdbcVersion::Odbc3_80 as i32,
             );
 
             get_set_env_attr(
@@ -105,22 +107,22 @@ mod unit {
                 env_handle,
                 EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING,
                 map! {
-                    ConnectionPooling::Off as i32 => SqlReturn::SUCCESS,
-                    ConnectionPooling::OnePerHEnv as i32 => SqlReturn::SUCCESS_WITH_INFO,
-                    ConnectionPooling::OnePerDriver as i32 => SqlReturn::SUCCESS_WITH_INFO,
-                    ConnectionPooling::DriverAware as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    AttrConnectionPooling::Off as i32 => SqlReturn::SUCCESS,
+                    AttrConnectionPooling::OnePerHenv as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    AttrConnectionPooling::OnePerDriver as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    AttrConnectionPooling::DriverAware as i32 => SqlReturn::SUCCESS_WITH_INFO,
                 },
-                ConnectionPooling::Off as i32,
+                AttrConnectionPooling::Off as i32,
             );
 
             get_set_env_attr(
                 env_handle,
                 EnvironmentAttribute::SQL_ATTR_CP_MATCH,
                 map! {
-                    CpMatch::Strict as i32 => SqlReturn::SUCCESS,
-                    CpMatch::Relaxed as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    AttrCpMatch::Strict as i32 => SqlReturn::SUCCESS,
+                    AttrCpMatch::Relaxed as i32 => SqlReturn::SUCCESS_WITH_INFO,
                 },
-                CpMatch::Strict as i32,
+                AttrCpMatch::Strict as i32,
             );
 
             // SQLGetEnvAttr where value_ptr is null
@@ -163,7 +165,7 @@ mod unit {
                 SQLSetEnvAttr(
                     handle as HEnv,
                     EnvironmentAttribute::SQL_ATTR_CP_MATCH as i32,
-                    CpMatch::Relaxed as i32 as Pointer,
+                    AttrCpMatch::Relaxed as i32 as Pointer,
                     0
                 )
             );

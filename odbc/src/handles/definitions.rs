@@ -1,6 +1,10 @@
-use crate::api::{definitions::*, errors::ODBCError};
+use crate::api::errors::ODBCError;
 use cstr::{Charset, WideChar};
-use definitions::{HDbc, HDesc, HEnv, HStmt, Handle, Len, Pointer, ULen, USmallInt};
+use definitions::{
+    AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, Concurrency,
+    CursorScrollable, CursorSensitivity, CursorType, HDbc, HDesc, HEnv, HStmt, Handle, Len, NoScan,
+    Pointer, RetrieveData, SimulateCursor, SqlBool, ULen, USmallInt, UseBookmarks,
+};
 use mongo_odbc_core::TypeMode;
 use std::{
     borrow::BorrowMut,
@@ -135,7 +139,7 @@ impl MongoHandle {
 
     /// get the odbc_version from the underlying env handle, used to handle
     /// behavior that is different between odbc versions properly
-    pub fn get_odbc_version(&mut self) -> OdbcVersion {
+    pub fn get_odbc_version(&mut self) -> AttrOdbcVersion {
         let env = match self {
             MongoHandle::Env(_) => self,
             MongoHandle::Connection(conn) => conn.env,
@@ -164,8 +168,8 @@ impl MongoHandle {
 macro_rules! has_odbc_3_behavior {
     ($handle:expr) => {{
         match (*$handle).get_odbc_version() {
-            OdbcVersion::Odbc2 => false,
-            OdbcVersion::Odbc3 | OdbcVersion::Odbc3_80 => true,
+            AttrOdbcVersion::Odbc2 => false,
+            AttrOdbcVersion::Odbc3 | AttrOdbcVersion::Odbc3_80 => true,
         }
     }};
 }
@@ -226,20 +230,20 @@ impl Env {
 
 #[derive(Debug)]
 pub struct EnvAttributes {
-    pub odbc_ver: OdbcVersion,
+    pub odbc_ver: AttrOdbcVersion,
     pub output_nts: SqlBool,
-    pub connection_pooling: ConnectionPooling,
-    pub cp_match: CpMatch,
+    pub connection_pooling: AttrConnectionPooling,
+    pub cp_match: AttrCpMatch,
     pub driver_unicode_type: Charset,
 }
 
 impl Default for EnvAttributes {
     fn default() -> Self {
         Self {
-            odbc_ver: OdbcVersion::Odbc3_80,
+            odbc_ver: AttrOdbcVersion::Odbc3_80,
             output_nts: SqlBool::True,
-            connection_pooling: ConnectionPooling::Off,
-            cp_match: CpMatch::Strict,
+            connection_pooling: AttrConnectionPooling::Off,
+            cp_match: AttrCpMatch::Strict,
             driver_unicode_type: cstr::CHARSET,
         }
     }

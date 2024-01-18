@@ -116,7 +116,7 @@ mod integration {
                 stmt as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SLong, CDataType::WChar],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
             );
 
             assert_eq!(
@@ -168,7 +168,7 @@ mod integration {
                 stmt as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SLong, CDataType::WChar],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
             );
 
             // A prepared statement can be executed multiple times.
@@ -183,7 +183,7 @@ mod integration {
                 stmt as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SLong, CDataType::WChar],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
             );
 
             disconnect_and_close_handles(dbc, stmt);

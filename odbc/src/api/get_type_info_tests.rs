@@ -1,10 +1,6 @@
-use crate::{
-    definitions::{DiagType, OdbcVersion},
-    handles::definitions::*,
-    SQLFetch, SQLGetDiagFieldW, SQLGetTypeInfoW,
-};
+use crate::{handles::definitions::*, SQLFetch, SQLGetDiagFieldW, SQLGetTypeInfoW};
 use bson::Bson;
-use definitions::{HandleType::Stmt, SqlDataType, SqlReturn};
+use definitions::{AttrOdbcVersion, DiagType, HandleType::Stmt, SqlDataType, SqlReturn};
 
 const INVALID_SQL_TYPE: &str = "HY004\0";
 
@@ -73,7 +69,7 @@ mod unit {
     fn test_odbc_2_returns_proper_date_type() {
         // Checks that when ODBC Version is set to 2, the date returned has the proper sql type, which shoudld be mapped in SQLGetTypeInfo
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
-        env.as_env().unwrap().attributes.write().unwrap().odbc_ver = OdbcVersion::Odbc2;
+        env.as_env().unwrap().attributes.write().unwrap().odbc_ver = AttrOdbcVersion::Odbc2;
         let conn =
             &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
         let handle: *mut _ =
@@ -106,7 +102,7 @@ mod unit {
     fn test_odbc_3_returns_proper_date_type() {
         // Checks that when ODBC Version is set to 3, the date returned has the proper sql type
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
-        env.as_env().unwrap().attributes.write().unwrap().odbc_ver = OdbcVersion::Odbc3_80;
+        env.as_env().unwrap().attributes.write().unwrap().odbc_ver = AttrOdbcVersion::Odbc3_80;
         let conn =
             &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
         let handle: *mut _ =

@@ -80,7 +80,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetEnvAttr(
                     env as HEnv,
-                    EnvironmentAttribute::OdbcVersion,
+                    EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
                     AttrOdbcVersion::Odbc3.into(),
                     0,
                 )
@@ -90,7 +90,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetEnvAttr(
                     env as HEnv,
-                    EnvironmentAttribute::ConnectionPooling,
+                    EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING,
                     AttrConnectionPooling::OnePerHenv.into(),
                     0,
                 )
@@ -421,7 +421,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetConnectAttrW(
                     conn_handle,
-                    ConnectionAttribute::CurrentCatalog,
+                    ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG,
                     current_db.0 as *mut _,
                     current_db.1.len() as i32
                 )
@@ -468,7 +468,7 @@ mod integration {
                 stmt,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SLong, CDataType::WChar],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
             );
         }
     }
@@ -553,7 +553,7 @@ mod integration {
                     SqlReturn::SUCCESS,
                     SqlReturn::NO_DATA,
                 ],
-                vec![CDataType::WChar; 5],
+                vec![CDataType::SQL_C_WCHAR; 5],
             );
         }
     }

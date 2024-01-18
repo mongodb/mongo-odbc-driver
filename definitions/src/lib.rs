@@ -9,17 +9,19 @@
 //! in the cargo.toml
 
 pub use self::{
-    attributes::*, bulk_operation::*, c_data_type::*, desc::*, fetch_orientation::*, functions::*,
-    indicator::*, info_type::*, interval::*, nullability::*, param_type::*, sql_data_type::*,
-    sqlreturn::*,
+    attributes::*, bulk_operation::*, c_data_type::*, desc::*, diag_type::*, fetch_orientation::*,
+    functions::*, indicator::*, info_type::*, interval::*, nullability::*, param_type::*,
+    sql_data_type::*, sqlreturn::*,
 };
 use cstr::WideChar;
+use num_derive::FromPrimitive;
 use std::os::raw::{c_int, c_void};
 
 mod attributes;
 mod bulk_operation;
 mod c_data_type;
 mod desc;
+mod diag_type;
 mod fetch_orientation;
 mod functions;
 mod indicator;
@@ -71,6 +73,9 @@ pub type ULen = usize;
 pub type HWnd = Pointer;
 
 pub type RetCode = i16;
+
+// Diag constants
+pub const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
 
 // flags for null-terminated string
 pub const NTS: isize = -3;
@@ -217,31 +222,33 @@ pub struct Guid {
 }
 
 /// Connection attributes for `SQLSetConnectAttr`
+#[allow(non_camel_case_types)]
 #[repr(i32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum ConnectionAttribute {
-    AsyncEnable = 4,
-    AccessMode = 101,
-    AutoCommit = 102,
-    LoginTimeout = 103,
-    Trace = 104,
-    TraceFile = 105,
-    TranslateLib = 106,
-    TranslateOption = 107,
-    TxnIsolation = 108,
-    CurrentCatalog = 109,
-    OdbcCursors = 110,
-    QuietMode = 111,
-    PacketSize = 112,
-    ConnectionTimeout = 113,
-    DisconnectBehaviour = 114,
-    AsyncDbcFunctionsEnable = 117,
-    AsyncDbcEvent = 119,
-    EnlistInDtc = 1207,
-    EnlistInXa = 1208,
-    ConnectionDead = 1209,
-    AutoIpd = 10001,
-    MetadataId = 10014,
+    SQL_ATTR_ASYNC_ENABLE = 4,
+    SQL_ATTR_ACCESS_MODE = 101,
+    SQL_ATTR_AUTOCOMMIT = 102,
+    SQL_ATTR_LOGIN_TIMEOUT = 103,
+    SQL_ATTR_TRACE = 104,
+    SQL_ATTR_TRACEFILE = 105,
+    SQL_ATTR_TRANSLATE_LIB = 106,
+    SQL_ATTR_TRANSLATE_OPTION = 107,
+    SQL_ATTR_TXN_ISOLATION = 108,
+    SQL_ATTR_CURRENT_CATALOG = 109,
+    SQL_ATTR_ODBC_CURSORS = 110,
+    SQL_ATTR_QUIET_MODE = 111,
+    SQL_ATTR_PACKET_SIZE = 112,
+    SQL_ATTR_CONNECTION_TIMEOUT = 113,
+    SQL_ATTR_DISCONNECT_BEHAVIOR = 114,
+    SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE = 117,
+    SQL_ATTR_ASYNC_DBC_EVENT = 119,
+    SQL_ATTR_ENLIST_IN_DTC = 1207,
+    SQL_ATTR_ENLIST_IN_XA = 1208,
+    SQL_ATTR_CONNECTION_DEAD = 1209,
+    SQL_ATTR_APP_WCHAR_TYPE = 1061,
+    SQL_ATTR_AUTO_IPD = 10001,
+    SQL_ATTR_METADATA_ID = 10014,
 }
 
 /// `DiagIdentifier` for `SQLGetDiagField`
@@ -355,12 +362,12 @@ pub enum DynamicDiagnosticIdentifier {
     UpdateWhere = 82,
 }
 
-/// Completion types for `SQLEndTrans`
+#[allow(non_camel_case_types)]
 #[repr(i16)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum CompletionType {
-    Commit = 0,
-    Rollback = 1,
+    SQL_COMMIT = 0,
+    SQL_ROLLBACK = 1,
 }
 
 pub const MAX_NUMERIC_LEN: usize = 16;
@@ -374,3 +381,274 @@ pub struct Numeric {
     pub sign: Char,
     pub val: [Char; MAX_NUMERIC_LEN],
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+pub enum SqlBool {
+    False = 0,
+    True,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum CursorScrollable {
+    NonScrollable = 0,
+    Scrollable,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum CursorSensitivity {
+    Unspecified = 0,
+    Insensitive,
+    Sensitive,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum AsyncEnable {
+    Off = 0,
+    On,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum Concurrency {
+    ReadOnly = 1,
+    Lock = 2,
+    RowVer = 4,
+    Values = 8,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum CursorType {
+    ForwardOnly = 0,
+    KeysetDriven = -1,
+    Dynamic = -2,
+    Static = -3,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum NoScan {
+    Off = 0,
+    On,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum BindType {
+    BindByColumn = 0,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ParamOperationPtr {}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ParamStatusPtr {}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ParamsProcessedPtr {}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ParamsetSize {}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum RetrieveData {
+    Off = 0,
+    On,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum RowOperationPtr {}
+
+#[derive(Clone, Copy, Debug)]
+pub enum SimulateCursor {
+    NonUnique = 0,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum UseBookmarks {
+    Off = 0,
+    Variable = 2,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum AsyncStmtEvent {}
+
+pub const SQL_CB_NULL: u16 = 0x0000;
+pub const SQL_U16_ZERO: u16 = 0x0000;
+pub const SQL_CL_START: u16 = 0x0001;
+pub const SQL_U32_ZERO: u32 = 0x0;
+pub const SQL_OIC_CORE: u32 = 0x00000001;
+pub const SQL_SC_SQL92_ENTRY: u32 = 0x00000001;
+pub const SQL_INFO_Y: &str = "Y";
+pub const SQL_GB_GROUP_BY_CONTAINS_SELECT: u16 = 0x0002;
+pub const SQL_CB_PRESERVE: u16 = 2;
+pub const SQL_CA1_NEXT: u32 = 0x00000001;
+pub const SQL_CA2_READ_ONLY_CONCURRENCY: u32 = 0x00000001;
+#[allow(unused)]
+pub const SQL_CA2_MAX_ROWS_SELECT: u32 = 0x00000080;
+pub const SQL_CA2_CRC_EXACT: u32 = 0x00001000;
+pub const MONGO_CA2_SUPPORT: u32 = SQL_CA2_CRC_EXACT | SQL_CA2_READ_ONLY_CONCURRENCY;
+pub const SQL_SO_FORWARD_ONLY: u32 = 0x00000001;
+pub const SQL_SO_STATIC: u32 = 0x00000010;
+pub const MONGO_SO_SUPPORT: u32 = SQL_SO_FORWARD_ONLY | SQL_SO_STATIC;
+pub const SQL_TXN_SERIALIZABLE: u32 = 0x00000008;
+pub const SQL_SCCO_READ_ONLY: u32 = 0x00000001;
+pub const SQL_LCK_NO_CHANGE: u32 = 0x00000001;
+
+// SQL_CONVERT_FUNCTIONS bitmask
+pub const SQL_FN_CVT_CAST: u32 = 0x00000002;
+
+// BitMask for supported CAST Types
+pub const SQL_CVT_CHAR: u32 = 0x00000001;
+pub const SQL_CVT_NUMERIC: u32 = 0x00000002;
+#[allow(unused)]
+pub const SQL_CVT_DECIMAL: u32 = 0x00000004;
+pub const SQL_CVT_INTEGER: u32 = 0x00000008;
+pub const SQL_CVT_SMALLINT: u32 = 0x00000010;
+pub const SQL_CVT_FLOAT: u32 = 0x00000020;
+pub const SQL_CVT_REAL: u32 = 0x00000040;
+pub const SQL_CVT_DOUBLE: u32 = 0x00000080;
+pub const SQL_CVT_VARCHAR: u32 = 0x00000100;
+#[allow(unused)]
+pub const SQL_CVT_LONGVARCHAR: u32 = 0x00000200;
+#[allow(unused)]
+pub const SQL_CVT_BINARY: u32 = 0x00000400;
+#[allow(unused)]
+pub const SQL_CVT_VARBINARY: u32 = 0x00000800;
+pub const SQL_CVT_BIT: u32 = 0x00001000;
+#[allow(unused)]
+pub const SQL_CVT_TINYINT: u32 = 0x00002000;
+#[allow(unused)]
+pub const SQL_CVT_BIGINT: u32 = 0x00004000;
+#[allow(unused)]
+pub const SQL_CVT_DATE: u32 = 0x00008000;
+#[allow(unused)]
+pub const SQL_CVT_TIME: u32 = 0x00010000;
+pub const SQL_CVT_TIMESTAMP: u32 = 0x00020000;
+#[allow(unused)]
+pub const SQL_CVT_LONGVARBINARY: u32 = 0x00040000;
+#[allow(unused)]
+pub const SQL_CVT_INTERVAL_YEAR_MONTH: u32 = 0x00080000;
+#[allow(unused)]
+pub const SQL_CVT_INTERVAL_DAY_TIME: u32 = 0x00100000;
+#[allow(unused)]
+pub const SQL_CVT_WCHAR: u32 = 0x00200000;
+#[allow(unused)]
+pub const SQL_CVT_WLONGVARCHAR: u32 = 0x00400000;
+#[allow(unused)]
+pub const SQL_CVT_WVARCHAR: u32 = 0x00800000;
+#[allow(unused)]
+pub const SQL_CVT_GUID: u32 = 0x01000000;
+pub const MONGO_CAST_SUPPORT: u32 = SQL_CVT_CHAR
+    | SQL_CVT_NUMERIC
+    | SQL_CVT_INTEGER
+    | SQL_CVT_SMALLINT
+    | SQL_CVT_FLOAT
+    | SQL_CVT_REAL
+    | SQL_CVT_DOUBLE
+    | SQL_CVT_VARCHAR
+    | SQL_CVT_BIT
+    | SQL_CVT_TIMESTAMP;
+
+// SQL_NUMERIC_FUNCTIONS bitmasks
+pub const SQL_FN_NUM_ABS: u32 = 0x00000001;
+pub const SQL_FN_NUM_CEILING: u32 = 0x00000020;
+pub const SQL_FN_NUM_COS: u32 = 0x00000040;
+pub const SQL_FN_NUM_FLOOR: u32 = 0x00000200;
+pub const SQL_FN_NUM_LOG: u32 = 0x00000400;
+pub const SQL_FN_NUM_MOD: u32 = 0x00000800;
+pub const SQL_FN_NUM_SIN: u32 = 0x00002000;
+pub const SQL_FN_NUM_SQRT: u32 = 0x00004000;
+pub const SQL_FN_NUM_TAN: u32 = 0x00008000;
+pub const SQL_FN_NUM_DEGREES: u32 = 0x00040000;
+pub const SQL_FN_NUM_POWER: u32 = 0x00100000;
+pub const SQL_FN_NUM_RADIANS: u32 = 0x00200000;
+pub const SQL_FN_NUM_ROUND: u32 = 0x00400000;
+
+// SQL_STRING_FUNCTIONS bitmasks
+#[allow(unused)]
+pub const SQL_FN_STR_CONCAT: u32 = 0x00000001;
+#[allow(unused)]
+pub const SQL_FN_STR_INSERT: u32 = 0x00000002;
+#[allow(unused)]
+pub const SQL_FN_STR_LEFT: u32 = 0x00000004;
+#[allow(unused)]
+pub const SQL_FN_STR_LTRIM: u32 = 0x00000008;
+#[allow(unused)]
+pub const SQL_FN_STR_LENGTH: u32 = 0x00000010;
+#[allow(unused)]
+pub const SQL_FN_STR_LOCATE: u32 = 0x00000020;
+#[allow(unused)]
+pub const SQL_FN_STR_LCASE: u32 = 0x00000040;
+#[allow(unused)]
+pub const SQL_FN_STR_REPEAT: u32 = 0x00000080;
+#[allow(unused)]
+pub const SQL_FN_STR_REPLACE: u32 = 0x00000100;
+#[allow(unused)]
+pub const SQL_FN_STR_SUBSTRING: u32 = 0x00000800;
+#[allow(unused)]
+pub const SQL_FN_STR_UCASE: u32 = 0x00001000;
+#[allow(unused)]
+pub const SQL_FN_STR_ASCII: u32 = 0x00002000;
+#[allow(unused)]
+pub const SQL_FN_STR_CHAR: u32 = 0x00004000;
+#[allow(unused)]
+pub const SQL_FN_STR_DIFFERENCE: u32 = 0x00008000;
+#[allow(unused)]
+pub const SQL_FN_STR_LOCATE_2: u32 = 0x00010000;
+#[allow(unused)]
+pub const SQL_FN_STR_SOUNDEX: u32 = 0x00020000;
+#[allow(unused)]
+pub const SQL_FN_STR_SPACE: u32 = 0x00040000;
+#[allow(unused)]
+pub const SQL_FN_STR_BIT_LENGTH: u32 = 0x00080000;
+#[allow(unused)]
+pub const SQL_FN_STR_CHAR_LENGTH: u32 = 0x00100000;
+#[allow(unused)]
+pub const SQL_FN_STR_CHARACTER_LENGTH: u32 = 0x00200000;
+#[allow(unused)]
+pub const SQL_FN_STR_OCTET_LENGTH: u32 = 0x00400000;
+#[allow(unused)]
+pub const SQL_FN_STR_POSITION: u32 = 0x00800000;
+
+// SQL_TIMEDATE_FUNCTIONS functions
+pub const SQL_FN_TD_CURRENT_TIMESTAMP: u32 = 0x00080000;
+pub const SQL_FN_TD_EXTRACT: u32 = 0x00100000;
+
+// SQL_CATALOG_USAGE bitmasks
+pub const SQL_CU_DML_STATEMENTS: u32 = 0x00000001;
+
+// SQL_GETDATA_EXTENSIONS bitmasks
+pub const SQL_GD_ANY_COLUMN: u32 = 0x00000001;
+pub const SQL_GD_ANY_ORDER: u32 = 0x00000002;
+
+// SQL_TIMEDATE_ADD_INTERVALS and SQL_TIMEDATE_DIFF_INTERVALS functions
+pub const SQL_FN_TSI_SECOND: u32 = 0x00000002;
+pub const SQL_FN_TSI_MINUTE: u32 = 0x00000004;
+pub const SQL_FN_TSI_HOUR: u32 = 0x00000008;
+pub const SQL_FN_TSI_DAY: u32 = 0x00000010;
+pub const SQL_FN_TSI_WEEK: u32 = 0x00000020;
+pub const SQL_FN_TSI_MONTH: u32 = 0x00000040;
+pub const SQL_FN_TSI_QUARTER: u32 = 0x00000080;
+pub const SQL_FN_TSI_YEAR: u32 = 0x00000100;
+
+// SQL_SQL92_PREDICATES bitmasks
+pub const SQL_SP_EXISTS: u32 = 0x00000001;
+pub const SQL_SP_ISNOTNULL: u32 = 0x00000002;
+pub const SQL_SP_ISNULL: u32 = 0x00000004;
+pub const SQL_SP_LIKE: u32 = 0x00000200;
+pub const SQL_SP_IN: u32 = 0x00000400;
+pub const SQL_SP_BETWEEN: u32 = 0x00000800;
+pub const SQL_SP_COMPARISON: u32 = 0x00001000;
+pub const SQL_SP_QUANTIFIED_COMPARISON: u32 = 0x00002000;
+
+// SQL_SQL92_RELATIONAL_JOIN_OPERATORS bitmasks
+pub const SQL_SRJO_CROSS_JOIN: u32 = 0x00000002;
+pub const SQL_SRJO_INNER_JOIN: u32 = 0x00000010;
+pub const SQL_SRJO_LEFT_OUTER_JOIN: u32 = 0x00000040;
+pub const SQL_SRJO_RIGHT_OUTER_JOIN: u32 = 0x00000100;
+
+// SQL_AGGREGATE_FUNCTIONS bitmasks
+pub const SQL_AF_AVG: u32 = 0x00000001;
+pub const SQL_AF_COUNT: u32 = 0x00000002;
+pub const SQL_AF_MAX: u32 = 0x00000004;
+pub const SQL_AF_MIN: u32 = 0x00000008;
+pub const SQL_AF_SUM: u32 = 0x00000010;
+pub const SQL_AF_DISTINCT: u32 = 0x00000020;
+pub const SQL_AF_ALL: u32 = 0x00000040;

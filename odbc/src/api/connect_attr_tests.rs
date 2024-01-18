@@ -1,13 +1,12 @@
 mod unit {
     use crate::{
-        api::definitions::ConnectionAttribute,
         errors::ODBCError,
         handles::definitions::{Connection, ConnectionAttributes, ConnectionState, MongoHandle},
         util::connection_attribute_to_string,
         SQLGetConnectAttrW, SQLSetConnectAttrW,
     };
     use cstr::input_text_to_string_w;
-    use definitions::{Integer, Pointer, SqlReturn, UInteger};
+    use definitions::{ConnectionAttribute, Integer, Pointer, SqlReturn, UInteger};
     use std::sync::RwLock;
 
     mod get {

@@ -1,9 +1,11 @@
 use crate::{
-    api::definitions::*,
     handles::definitions::{MongoHandle, Statement, StatementState},
     map, SQLGetStmtAttrW, SQLSetStmtAttrW,
 };
-use definitions::{HStmt, Integer, Pointer, SqlReturn, ULen, USmallInt};
+use definitions::{
+    AsyncEnable, BindType, CursorScrollable, CursorSensitivity, CursorType, HStmt, Integer, NoScan,
+    Pointer, RetrieveData, SqlBool, SqlReturn, StatementAttribute, ULen, USmallInt, UseBookmarks,
+};
 use std::{collections::BTreeMap, mem::size_of};
 
 fn get_set_stmt_attr(

@@ -556,7 +556,8 @@ fn sql_fetch_and_more_results_basic_functionality(type_mode: TypeMode) {
 }
 
 fn indicator_missing(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -604,8 +605,9 @@ fn indicator_missing(mq: MongoQuery) {
 }
 
 fn sql_get_wstring_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
     use cstr::input_text_to_string_w;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -701,8 +703,9 @@ fn sql_get_wstring_data(mq: MongoQuery) {
 }
 
 fn sql_get_wstring_data_by_pieces(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
     use cstr::input_text_to_string_w;
+    use definitions::CDataType;
     use std::mem::size_of;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
@@ -785,7 +788,8 @@ fn sql_get_wstring_data_by_pieces(mq: MongoQuery) {
 }
 
 fn sql_get_guid_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -865,8 +869,9 @@ fn sql_get_guid_data(mq: MongoQuery) {
 }
 
 fn sql_get_string_data_by_pieces(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
     use cstr::input_text_to_string_a;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -918,7 +923,8 @@ fn sql_get_string_data_by_pieces(mq: MongoQuery) {
 }
 
 fn sql_get_binary_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1018,7 +1024,8 @@ fn sql_get_binary_data(mq: MongoQuery) {
 }
 
 fn sql_get_binary_data_by_pieces(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1094,8 +1101,9 @@ fn sql_get_binary_data_by_pieces(mq: MongoQuery) {
 }
 
 fn sql_get_string_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
     use cstr::input_text_to_string_a;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1193,7 +1201,8 @@ fn sql_get_string_data(mq: MongoQuery) {
 }
 
 fn sql_get_bit_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1392,7 +1401,8 @@ fn sql_get_bit_data(mq: MongoQuery) {
 }
 
 fn sql_get_i64_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1584,7 +1594,8 @@ fn sql_get_i64_data(mq: MongoQuery) {
 }
 
 fn sql_get_u64_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1782,7 +1793,8 @@ fn sql_get_u64_data(mq: MongoQuery) {
 }
 
 fn sql_get_i32_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1974,7 +1986,8 @@ fn sql_get_i32_data(mq: MongoQuery) {
 }
 
 fn sql_get_u32_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2172,7 +2185,8 @@ fn sql_get_u32_data(mq: MongoQuery) {
 }
 
 fn sql_get_f64_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2357,7 +2371,8 @@ fn sql_get_f64_data(mq: MongoQuery) {
 }
 
 fn sql_get_f32_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2542,7 +2557,8 @@ fn sql_get_f32_data(mq: MongoQuery) {
 }
 
 fn sql_get_datetime_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2752,7 +2768,8 @@ fn sql_get_datetime_data(mq: MongoQuery) {
 }
 
 fn sql_get_date_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2955,7 +2972,8 @@ fn sql_get_date_data(mq: MongoQuery) {
 }
 
 fn sql_get_time_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,

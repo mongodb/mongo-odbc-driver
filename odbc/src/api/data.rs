@@ -1,6 +1,5 @@
 use crate::{
     add_diag_with_function,
-    api::definitions::CDataType,
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle, Statement},
 };
@@ -11,7 +10,7 @@ use cstr::{
     write_wstring_slice_to_buffer, WideChar,
 };
 use definitions::{
-    Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
+    CDataType, Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
 use regex::Regex;
 use serde_json::{json, Value};

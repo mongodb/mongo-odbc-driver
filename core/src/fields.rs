@@ -720,7 +720,7 @@ impl MongoStatement for MongoFields {
                 // odbc_sys should use an enum instead of constants...
                 match get_meta_data()?.nullability {
                     Nullability::SQL_NULLABLE_UNKNOWN | Nullability::SQL_NULLABLE => "YES",
-                    Nullability::SQL_NO_NULLS => "NO"
+                    Nullability::SQL_NO_NULLS => "NO",
                 }
                 .to_string(),
             ),

@@ -336,7 +336,9 @@ impl ObjectSchema {
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Any)) => Ok(Nullability::SQL_NULLABLE),
             // Case 3: field is scalar/array/object schema
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Null))
-            | Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)) => Ok(Nullability::SQL_NULLABLE),
+            | Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)) => {
+                Ok(Nullability::SQL_NULLABLE)
+            }
             Schema::Atomic(Atomic::Scalar(_))
             | Schema::Atomic(Atomic::Array(_))
             | Schema::Atomic(Atomic::Object(_)) => Ok(nullable),

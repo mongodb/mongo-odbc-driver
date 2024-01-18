@@ -454,13 +454,13 @@ fn validate_result_set(entry: &TestEntry, stmt: HStmt) -> Result<()> {
                     let expected_field = expected_row.get(i).unwrap();
                     let expected_data_type = if expected_field.is_number() {
                         match expected_field.is_f64() {
-                            true => CDataType::Double,
-                            false => CDataType::SLong,
+                            true => CDataType::SQL_C_DOUBLE,
+                            false => CDataType::SQL_C_SLONG,
                         }
                     } else if expected_field.is_boolean() {
-                        CDataType::Bit
+                        CDataType::SQL_C_BIT
                     } else {
-                        CDataType::Char
+                        CDataType::SQL_C_CHAR
                     };
                     let actual_field = get_data(stmt, i as USmallInt, expected_data_type)?;
 
@@ -687,14 +687,14 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
                     data = json!(null);
                 } else {
                     match data_type {
-                        CDataType::Char => {
+                        CDataType::SQL_C_CHAR => {
                             data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
                                 [0..*out_len_or_ind as usize]
                                 .to_string());
                         }
-                        CDataType::SLong => data = json!(*(buffer as *const i32)),
-                        CDataType::Double => data = json!(*(buffer as *const f64)),
-                        CDataType::Bit => data = json!(*(buffer as *const bool)),
+                        CDataType::SQL_C_SLONG => data = json!(*(buffer as *const i32)),
+                        CDataType::SQL_C_DOUBLE => data = json!(*(buffer as *const f64)),
+                        CDataType::SQL_C_BIT => data = json!(*(buffer as *const bool)),
                         _ => {}
                     };
                 }

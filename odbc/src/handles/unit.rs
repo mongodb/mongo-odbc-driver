@@ -1,8 +1,5 @@
-use crate::{
-    api::definitions::OdbcVersion, handles::definitions::*, has_odbc_3_behavior, SQLAllocHandle,
-    SQLFreeHandle,
-};
-use definitions::{Handle, HandleType, SqlReturn};
+use crate::{handles::definitions::*, has_odbc_3_behavior, SQLAllocHandle, SQLFreeHandle};
+use definitions::{AttrOdbcVersion, Handle, HandleType, SqlReturn};
 
 #[test]
 fn test_env_alloc_free() {
@@ -362,7 +359,7 @@ fn test_odbc_ver() {
         .attributes
         .write()
         .unwrap()
-        .odbc_ver = OdbcVersion::Odbc2;
+        .odbc_ver = AttrOdbcVersion::Odbc2;
     let odbc_2_conn_handle: &mut MongoHandle = &mut MongoHandle::Connection(
         Connection::with_state(odbc_2_env_handle, ConnectionState::Allocated),
     );
@@ -391,14 +388,35 @@ fn test_odbc_ver() {
     ));
 
     // assert correct types for all handles
-    assert_eq!(odbc_2_env_handle.get_odbc_version(), OdbcVersion::Odbc2);
-    assert_eq!(odbc_2_conn_handle.get_odbc_version(), OdbcVersion::Odbc2);
-    assert_eq!(odbc_2_desc_handle.get_odbc_version(), OdbcVersion::Odbc2);
-    assert_eq!(odbc_2_stmt_handle.get_odbc_version(), OdbcVersion::Odbc2);
-    assert_eq!(odbc_3_env_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
-    assert_eq!(odbc_3_conn_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
-    assert_eq!(odbc_3_desc_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
-    assert_eq!(odbc_3_stmt_handle.get_odbc_version(), OdbcVersion::Odbc3_80);
+    assert_eq!(odbc_2_env_handle.get_odbc_version(), AttrOdbcVersion::Odbc2);
+    assert_eq!(
+        odbc_2_conn_handle.get_odbc_version(),
+        AttrOdbcVersion::Odbc2
+    );
+    assert_eq!(
+        odbc_2_desc_handle.get_odbc_version(),
+        AttrOdbcVersion::Odbc2
+    );
+    assert_eq!(
+        odbc_2_stmt_handle.get_odbc_version(),
+        AttrOdbcVersion::Odbc2
+    );
+    assert_eq!(
+        odbc_3_env_handle.get_odbc_version(),
+        AttrOdbcVersion::Odbc3_80
+    );
+    assert_eq!(
+        odbc_3_conn_handle.get_odbc_version(),
+        AttrOdbcVersion::Odbc3_80
+    );
+    assert_eq!(
+        odbc_3_desc_handle.get_odbc_version(),
+        AttrOdbcVersion::Odbc3_80
+    );
+    assert_eq!(
+        odbc_3_stmt_handle.get_odbc_version(),
+        AttrOdbcVersion::Odbc3_80
+    );
 }
 
 #[test]
@@ -412,7 +430,7 @@ fn test_odbc_2_behavior() {
         .attributes
         .write()
         .unwrap()
-        .odbc_ver = OdbcVersion::Odbc2;
+        .odbc_ver = AttrOdbcVersion::Odbc2;
     let odbc_2_conn_handle: &mut MongoHandle = &mut MongoHandle::Connection(
         Connection::with_state(odbc_2_env_handle, ConnectionState::Allocated),
     );
