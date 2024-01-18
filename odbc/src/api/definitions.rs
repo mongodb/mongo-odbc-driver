@@ -100,7 +100,7 @@ pub enum ParamsProcessedPtr {}
 pub enum ParamsetSize {}
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
-#[repr(i32)]
+#[repr(u32)]
 pub enum RetrieveData {
     Off = 0,
     On,
