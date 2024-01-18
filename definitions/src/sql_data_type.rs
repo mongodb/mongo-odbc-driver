@@ -91,4 +91,19 @@ pub enum SqlDataType {
     SQL_WVARCHAR = -9,
     SQL_WLONGVARCHAR = -10,
     SQL_GUID = -11,
+
+    // additional spec types: https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-data-types?view=sql-server-ver16
+    SQL_INTERVAL_YEAR = 101,
+    SQL_INTERVAL_MONTH = 102,
+    SQL_INTERVAL_DAY = 103,
+    SQL_INTERVAL_HOUR = 104,
+    SQL_INTERVAL_MINUTE = 105,
+    SQL_INTERVAL_SECOND = 106,
+    SQL_INTERVAL_YEAR_TO_MONTH = 107,
+    SQL_INTERVAL_DAY_TO_HOUR = 108,
+    SQL_INTERVAL_DAY_TO_MINUTE = 109,
+    SQL_INTERVAL_DAY_TO_SECOND = 110,
+    SQL_INTERVAL_HOUR_TO_MINUTE = 111,
+    SQL_INTERVAL_HOUR_TO_SECOND = 112,
+    SQL_INTERVAL_MINUTE_TO_SECOND = 113,
 }

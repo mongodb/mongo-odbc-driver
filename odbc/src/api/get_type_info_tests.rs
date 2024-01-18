@@ -128,7 +128,10 @@ mod unit {
                 .unwrap();
 
             // check the proper ODBC 3 sql type, SQL_TYPE_TIMESTAMP, is returned
-            assert_eq!(sql_type, Some(Bson::Int32(SqlDataType::SQL_TYPE_TIMESTAMP as i32)));
+            assert_eq!(
+                sql_type,
+                Some(Bson::Int32(SqlDataType::SQL_TYPE_TIMESTAMP as i32))
+            );
         }
     }
 }
