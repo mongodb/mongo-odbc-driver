@@ -110,7 +110,7 @@ pub enum RetrieveData {
 pub enum RowOperationPtr {}
 
 #[derive(Clone, Copy, Debug)]
-#[repr(i32)]
+#[repr(u32)]
 pub enum SimulateCursor {
     NonUnique = 0,
 }
