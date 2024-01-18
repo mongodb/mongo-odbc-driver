@@ -17,7 +17,7 @@ pub enum OdbcVersion {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
-#[repr(i32)]
+#[repr(u32)]
 pub enum ConnectionPooling {
     Off = 0,
     OnePerDriver,
