@@ -82,7 +82,7 @@ pub enum NoScan {
 }
 
 #[derive(Clone, Copy, Debug)]
-#[repr(i32)]
+#[repr(u32)]
 pub enum BindType {
     BindByColumn = 0,
 }
