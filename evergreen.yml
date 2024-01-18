@@ -120,14 +120,12 @@ functions:
                   exit 1;
               fi
               export DEFAULT_HOST_OPTIONS="--default-host $HOST"
-              export DEFAULT_TOOLCHAIN="1.74.1-$HOST"
+              export DEFAULT_TOOLCHAIN="stable-$HOST"
           fi
 
           # install rustup from scratch
           rm -rf ~/.rustup
           curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path $DEFAULT_HOST_OPTIONS
-          rustup install 1.74.1
-          rustup default 1.74.1
 
           # rustup installs into C:\Users\$USER instead of
           # C:\home\$USER, so we symlink both .rustup and .cargo
@@ -135,10 +133,8 @@ functions:
               ln -sf /cygdrive/c/Users/$USER/.rustup/ ~/.rustup
               ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
 
-              #rustup toolchain install $DEFAULT_TOOLCHAIN
-              #rustup default $DEFAULT_TOOLCHAIN
-              rustup install 1.74.1
-              rustup default 1.74.1
+              rustup toolchain install $DEFAULT_TOOLCHAIN
+              rustup default $DEFAULT_TOOLCHAIN
           fi
 
           echo --------- rustup show -----------
@@ -253,7 +249,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          ~/.cargo/bin/rustup default 1.74.1
           # Compile release build
           cargo build --release
 
@@ -269,7 +264,6 @@ functions:
         script: |
           ${prepare_shell}
 
-          ~/.cargo/bin/rustup default 1.74.1
           # Compile debug build
           cargo build
 
@@ -1047,7 +1041,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          ~/.cargo/bin/rustup default 1.74.1
+          ~/.cargo/bin/rustup default stable
 
           # we only run ubuntu on the unit tests for now
           cargo test unit
@@ -1067,7 +1061,7 @@ functions:
           echo "ODBCSYSINI = $ODBCSYSINI"
           echo "----------------------------------------------"
 
-          ~/.cargo/bin/rustup default 1.74.1
+          ~/.cargo/bin/rustup default stable
 
           export RUST_BACKTRACE=1
           # Start a local ADF
@@ -1098,7 +1092,7 @@ functions:
           echo "ODBCINSTINI = $ODBCINSTINI"
           echo "----------------------------------------------"
 
-          ~/.cargo/bin/rustup default 1.74.1
+          ~/.cargo/bin/rustup default stable
 
           export RUST_BACKTRACE=1
           # Start a local ADF
@@ -1120,7 +1114,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          ~/.cargo/bin/rustup default 1.74.1
+          ~/.cargo/bin/rustup default stable
 
           cargo test unit
 
@@ -1139,7 +1133,7 @@ functions:
           echo "ODBCINSTINI = $ODBCINSTINI"
           echo "----------------------------------------------"
 
-          ~/.cargo/bin/rustup default 1.74.1
+          ~/.cargo/bin/rustup default stable
 
           export RUST_BACKTRACE=1
           # Start a local ADF
@@ -1169,7 +1163,7 @@ functions:
           echo "ODBCSYSINI = $ODBCSYSINI"
           echo "----------------------------------------------"
 
-          ~/.cargo/bin/rustup default 1.74.1
+          ~/.cargo/bin/rustup default stable
 
           export RUST_BACKTRACE=1
           # Start a local ADF
