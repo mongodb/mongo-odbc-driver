@@ -75,7 +75,7 @@ pub enum CursorType {
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
-#[repr(i32)]
+#[repr(u32)]
 pub enum NoScan {
     Off = 0,
     On,
