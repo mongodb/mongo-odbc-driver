@@ -50,7 +50,7 @@ pub enum CursorSensitivity {
 }
 
 #[derive(Clone, Copy, Debug)]
-#[repr(i32)]
+#[repr(u32)]
 pub enum AsyncEnable {
     Off = 0,
     On,
