@@ -116,7 +116,7 @@ pub enum SimulateCursor {
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
-#[repr(i32)]
+#[repr(u32)]
 pub enum UseBookmarks {
     Off = 0,
     Variable = 2,
