@@ -42,7 +42,7 @@ pub enum CursorScrollable {
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
-#[repr(i32)]
+#[repr(usize)]
 pub enum CursorSensitivity {
     Unspecified = 0,
     Insensitive,
