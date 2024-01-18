@@ -57,7 +57,7 @@ pub enum AsyncEnable {
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
-#[repr(i32)]
+#[repr(usize)]
 pub enum Concurrency {
     ReadOnly = 1,
     Lock = 2,
