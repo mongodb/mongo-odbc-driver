@@ -35,7 +35,7 @@ pub enum CpMatch {
 // Statement attributes
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
-#[repr(i32)]
+#[repr(usize)]
 pub enum CursorScrollable {
     NonScrollable = 0,
     Scrollable,
