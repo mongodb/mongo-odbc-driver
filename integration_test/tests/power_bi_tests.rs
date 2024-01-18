@@ -247,14 +247,14 @@ mod integration {
 
             test_get_info!(
                 conn_handle,
-                InfoType::DbmsName,
+                InfoType::SQL_DBMS_NAME,
                 14 * (std::mem::size_of::<WideChar>() as i16),
                 DataType::WChar
             );
 
             test_get_info!(
                 conn_handle,
-                InfoType::DbmsVer,
+                InfoType::SQL_DBMS_VER,
                 29 * (std::mem::size_of::<WideChar>() as i16),
                 DataType::WChar
             );
@@ -271,7 +271,7 @@ mod integration {
         unsafe {
             test_get_info!(
                 conn_handle,
-                InfoType::IdentifierQuoteChar,
+                InfoType::SQL_IDENTIFIER_QUOTE_CHAR,
                 (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -283,31 +283,31 @@ mod integration {
             // InfoType::SQL_SQL_CONFORMANCE
             test_get_info!(
                 conn_handle,
-                InfoType::MaxColumnsInOrderBy,
+                InfoType::SQL_MAX_COLUMNS_IN_ORDER_BY,
                 2,
                 DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                InfoType::MaxIdentifierLen,
+                InfoType::SQL_MAX_IDENTIFIER_LEN,
                 2,
                 DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                InfoType::MaxColumnsInGroupBy,
+                InfoType::SQL_MAX_COLUMNS_IN_GROUP_BY,
                 2,
                 DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                InfoType::MaxColumnsInSelect,
+                InfoType::SQL_MAX_COLUMNS_IN_SELECT,
                 2,
                 DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                InfoType::OrderByColumnsInSelect,
+                InfoType::SQL_ORDER_BY_COLUMNS_IN_SELECT,
                 (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -325,7 +325,7 @@ mod integration {
             // InfoType::SQL_CONCAT_NULL_BEHAVIOR
             test_get_info!(
                 conn_handle,
-                InfoType::CatalogName,
+                InfoType::SQL_CATALOG_NAME,
                 (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -334,7 +334,7 @@ mod integration {
             // InfoType::SQL_ODBC_INTERFACE_CONFORMANCE
             test_get_info!(
                 conn_handle,
-                InfoType::SearchPatternEscape,
+                InfoType::SQL_SEARCH_PATTERN_ESCAPE,
                 (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -364,7 +364,7 @@ mod integration {
             // InfoType::SQL_CONVERT_WVARCHAR
             test_get_info!(
                 conn_handle,
-                InfoType::SpecialCharacters,
+                InfoType::SQL_SPECIAL_CHARACTERS,
                 (22 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -443,7 +443,7 @@ mod integration {
             //SQLGetInfoW(SQL_GETDATA_EXTENSIONS)
             test_get_info!(
                 conn_handle,
-                InfoType::GetDataExtensions,
+                InfoType::SQL_GETDATA_EXTENSIONS,
                 2,
                 DataType::USmallInt
             );

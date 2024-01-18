@@ -4,7 +4,7 @@ use crate::{
     SQLGetInfoW,
 };
 use cstr::{input_text_to_string_w, WideChar};
-use definitions::{Pointer, SmallInt, SqlReturn, UInteger, USmallInt};
+use definitions::{InfoType, Pointer, SmallInt, SqlReturn, UInteger, USmallInt};
 
 macro_rules! test_get_info {
     ($func_name:ident,

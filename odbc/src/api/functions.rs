@@ -19,7 +19,7 @@ use constants::{
 use cstr::{input_text_to_string_w, Charset, WideChar};
 
 use definitions::{
-    Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len,
+    Desc, DriverConnectOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len,
     Nullability, Pointer, RetCode, SmallInt, SqlDataType, SqlReturn, ULen, USmallInt,
 };
 use function_name::named;
