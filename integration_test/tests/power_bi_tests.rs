@@ -131,7 +131,7 @@ mod integration {
                     SqlReturn::SUCCESS,
                     SQLSetConnectAttrW(
                         dbc as HDbc,
-                        ConnectionAttribute::LoginTimeout,
+                        ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT,
                         login_timeout as Pointer,
                         0,
                     )

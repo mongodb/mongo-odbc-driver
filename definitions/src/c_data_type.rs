@@ -53,6 +53,6 @@ pub enum CDataType {
 }
 
 #[cfg(windows)]
-pub use CDataType::ULong as UBigInt;
+pub use CDataType::SQL_C_ULONG as UBigInt;
 #[cfg(not(windows))]
 pub use CDataType::SQL_C_ULONG as Bookmark;
