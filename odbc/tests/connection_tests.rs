@@ -32,11 +32,15 @@ macro_rules! test_connection_diagnostics {
 
             unsafe {
                 let _ = SQLAllocHandle(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     std::ptr::null_mut(),
                     &mut env_handl as *mut Handle,
                 );
-                let _ = SQLAllocHandle(HandleType::Dbc, env_handl, &mut conn_handl as *mut Handle);
+                let _ = SQLAllocHandle(
+                    HandleType::SQL_HANDLE_DBC,
+                    env_handl,
+                    &mut conn_handl as *mut Handle,
+                );
                 let actual_return_val = SQLDriverConnectW(
                     conn_handl as *mut _,
                     std::ptr::null_mut(),
@@ -50,15 +54,15 @@ macro_rules! test_connection_diagnostics {
                 assert_eq!(expected_sql_return, actual_return_val);
 
                 verify_sql_diagnostics(
-                    HandleType::Dbc,
+                    HandleType::SQL_HANDLE_DBC,
                     conn_handl as *mut _,
                     1,
                     expected_sql_state.odbc_3_state,
                     expected_error_message,
                     0,
                 );
-                let _ = SQLFreeHandle(HandleType::Dbc, conn_handl);
-                let _ = SQLFreeHandle(HandleType::Env, env_handl);
+                let _ = SQLFreeHandle(HandleType::SQL_HANDLE_DBC, conn_handl);
+                let _ = SQLFreeHandle(HandleType::SQL_HANDLE_ENV, env_handl);
             };
         }
     };
@@ -74,7 +78,7 @@ mod integration {
     test_connection_diagnostics! (
             missing_user_in_connection_string,
             in_connection_string = "Driver=MongoDB Atlas SQL ODBC Driver;SERVER=N_A;PWD=N_A",
-            driver_completion = DriverConnectOption::NoPrompt,
+            driver_completion = DriverConnectOption::SQL_DRIVER_NO_PROMPT,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
             expected_error_message = "[MongoDB][Core] Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri"
@@ -82,7 +86,7 @@ mod integration {
     test_connection_diagnostics! (
             missing_pwd_in_connection_string,
             in_connection_string = "Driver=MongoDB Atlas SQL ODBC Driver;SERVER=N_A;USER=N_A",
-            driver_completion = DriverConnectOption::NoPrompt,
+            driver_completion = DriverConnectOption::SQL_DRIVER_NO_PROMPT,
             expected_sql_state = UNABLE_TO_CONNECT,
             expected_sql_return = SqlReturn::ERROR,
             expected_error_message = "[MongoDB][Core] Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri"
@@ -90,7 +94,7 @@ mod integration {
     test_connection_diagnostics!(
         missing_driver_in_connection_string,
         in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
-        driver_completion = DriverConnectOption::NoPrompt,
+        driver_completion = DriverConnectOption::SQL_DRIVER_NO_PROMPT,
         expected_sql_state = NO_DSN_OR_DRIVER,
         expected_sql_return = SqlReturn::ERROR,
         expected_error_message =
@@ -99,27 +103,27 @@ mod integration {
     test_connection_diagnostics!(
         unsupported_driver_connect_option_prompt,
         in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
-        driver_completion = DriverConnectOption::Prompt,
+        driver_completion = DriverConnectOption::SQL_DRIVER_PROMPT,
         expected_sql_state = NOT_IMPLEMENTED,
         expected_sql_return = SqlReturn::ERROR,
-        expected_error_message = "[MongoDB][API] The driver connect option Prompt is not supported"
+        expected_error_message = "[MongoDB][API] The driver connect option SQL_DRIVER_PROMPT is not supported"
     );
     test_connection_diagnostics!(
         unsupported_driver_connect_option_complete,
         in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
-        driver_completion = DriverConnectOption::Complete,
+        driver_completion = DriverConnectOption::SQL_DRIVER_COMPLETE,
         expected_sql_state = NOT_IMPLEMENTED,
         expected_sql_return = SqlReturn::ERROR,
         expected_error_message =
-            "[MongoDB][API] The driver connect option Complete is not supported"
+            "[MongoDB][API] The driver connect option SQL_DRIVER_COMPLETE is not supported"
     );
     test_connection_diagnostics!(
         unsupported_driver_connect_option_complete_required,
         in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
-        driver_completion = DriverConnectOption::CompleteRequired,
+        driver_completion = DriverConnectOption::SQL_DRIVER_COMPLETE_REQUIRED,
         expected_sql_state = NOT_IMPLEMENTED,
         expected_sql_return = SqlReturn::ERROR,
         expected_error_message =
-            "[MongoDB][API] The driver connect option CompleteRequired is not supported"
+            "[MongoDB][API] The driver connect option SQL_DRIVER_COMPLETE_REQUIRED is not supported"
     );
 }

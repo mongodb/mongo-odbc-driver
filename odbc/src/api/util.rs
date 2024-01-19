@@ -83,7 +83,7 @@ pub(crate) fn statement_attribute_to_string(attr: StatementAttribute) -> String 
 /// driver's version is set to ODBC 2.x, the datetime types must be mapped to different SQL types
 pub fn handle_sql_type(odbc_version: AttrOdbcVersion, sql_type: SqlDataType) -> SqlDataType {
     match odbc_version {
-        AttrOdbcVersion::Odbc2 => match sql_type {
+        AttrOdbcVersion::SQL_OV_ODBC2 => match sql_type {
             // code for SQL_DATE from ODBC 2 is used as SQL_DATETIME in ODBC 3
             SqlDataType::SQL_TYPE_DATE => SqlDataType::SQL_DATETIME,
             // code for SQL_TIME from ODBC 2 is used as SQL_EXT_TIME_OR_INTERVAL in ODBC 3

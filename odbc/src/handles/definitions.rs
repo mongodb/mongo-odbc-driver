@@ -168,8 +168,8 @@ impl MongoHandle {
 macro_rules! has_odbc_3_behavior {
     ($handle:expr) => {{
         match (*$handle).get_odbc_version() {
-            AttrOdbcVersion::Odbc2 => false,
-            AttrOdbcVersion::Odbc3 | AttrOdbcVersion::Odbc3_80 => true,
+            AttrOdbcVersion::SQL_OV_ODBC2 => false,
+            AttrOdbcVersion::SQL_OV_ODBC3 | AttrOdbcVersion::SQL_OV_ODBC3_80 => true,
         }
     }};
 }
@@ -240,10 +240,10 @@ pub struct EnvAttributes {
 impl Default for EnvAttributes {
     fn default() -> Self {
         Self {
-            odbc_ver: AttrOdbcVersion::Odbc3_80,
-            output_nts: SqlBool::True,
-            connection_pooling: AttrConnectionPooling::Off,
-            cp_match: AttrCpMatch::Strict,
+            odbc_ver: AttrOdbcVersion::SQL_OV_ODBC3_80,
+            output_nts: SqlBool::SQL_TRUE,
+            connection_pooling: AttrConnectionPooling::SQL_CP_OFF,
+            cp_match: AttrCpMatch::SQL_CP_STRICT_MATCH,
             driver_unicode_type: cstr::CHARSET,
         }
     }
@@ -424,13 +424,13 @@ impl Statement {
                 app_param_desc: Box::into_raw(Box::new(MongoHandle::Descriptor(
                     implicit_param_row_desc,
                 ))),
-                async_enable: AsyncEnable::Off,
+                async_enable: AsyncEnable::SQL_ASYNC_ENABLE_OFF,
                 async_stmt_event: null_mut(),
-                cursor_scrollable: CursorScrollable::NonScrollable,
-                cursor_sensitivity: CursorSensitivity::Insensitive,
-                concurrency: Concurrency::ReadOnly,
-                cursor_type: CursorType::ForwardOnly,
-                enable_auto_ipd: SqlBool::False,
+                cursor_scrollable: CursorScrollable::SQL_NONSCROLLABLE,
+                cursor_sensitivity: CursorSensitivity::SQL_INSENSITIVE,
+                concurrency: Concurrency::SQL_CONCUR_READ_ONLY,
+                cursor_type: CursorType::SQL_CURSOR_FORWARD_ONLY,
+                enable_auto_ipd: SqlBool::SQL_FALSE,
                 fetch_bookmark_ptr: null_mut(),
                 imp_row_desc: Box::into_raw(Box::new(MongoHandle::Descriptor(
                     implicit_app_imp_desc,
@@ -440,9 +440,9 @@ impl Statement {
                 ))),
                 max_length: 0,
                 max_rows: 0,
-                no_scan: NoScan::Off,
+                no_scan: NoScan::SQL_NOSCAN_OFF,
                 param_bind_offset_ptr: null_mut(),
-                param_bind_type: BindType::BindByColumn as usize,
+                param_bind_type: BindType::SQL_BIND_BY_COLUMN as usize,
                 param_operation_ptr: null_mut(),
                 param_processed_ptr: null_mut(),
                 param_status_ptr: null_mut(),
@@ -451,7 +451,7 @@ impl Statement {
                 retrieve_data: RetrieveData::Off,
                 row_array_size: 1,
                 row_bind_offset_ptr: null_mut(),
-                row_bind_type: BindType::BindByColumn as usize,
+                row_bind_type: BindType::SQL_BIND_BY_COLUMN as usize,
                 row_index_is_valid: false,
                 row_number: 0,
                 row_operation_ptr: null_mut(),

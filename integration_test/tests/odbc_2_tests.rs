@@ -21,7 +21,11 @@ mod integration {
         unsafe {
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLAllocHandle(HandleType::Env, null_mut(), &mut env as *mut Handle)
+                SQLAllocHandle(
+                    HandleType::SQL_HANDLE_ENV,
+                    null_mut(),
+                    &mut env as *mut Handle
+                )
             );
 
             assert_eq!(
@@ -69,7 +73,7 @@ mod integration {
                     table_view.len() as SmallInt - 1
                 ),
                 "{}",
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
             );
 
             // assert all tables are returned from the previous SQLTables call

@@ -254,7 +254,7 @@ fn run_query_test(query: &str, entry: &TestEntry, conn: HDbc, generate: bool) ->
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLExecDirectW".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle),
             )),
         }
     }
@@ -422,7 +422,7 @@ fn run_function_test(
         return Err(Error::OdbcFunctionFailed(
             function_name,
             sql_return_to_string(sql_return_val),
-            get_sql_diagnostics(HandleType::Stmt, statement as *mut _),
+            get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, statement as *mut _),
         ));
     }
     if generate {
@@ -544,84 +544,84 @@ fn validate_result_set_metadata(entry: &TestEntry, column_count: usize, stmt: HS
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::CatalogName,
+        Desc::SQL_DESC_CATALOG_NAME,
         &entry.expected_catalog_name,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::CaseSensitive,
+        Desc::SQL_DESC_CASE_SENSITIVE,
         &entry.expected_case_sensitive,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::DisplaySize,
+        Desc::SQL_DESC_DISPLAY_SIZE,
         &entry.expected_display_size,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Length,
+        Desc::SQL_DESC_LENGTH,
         &entry.expected_length,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Name,
+        Desc::SQL_DESC_NAME,
         &entry.expected_column_name,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Searchable,
+        Desc::SQL_DESC_SEARCHABLE,
         &entry.expected_is_searchable,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Unsigned,
+        Desc::SQL_DESC_UNSIGNED,
         &entry.expected_is_unsigned,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Type,
+        Desc::SQL_DESC_TYPE,
         &entry.expected_sql_type,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::TypeName,
+        Desc::SQL_DESC_TYPE_NAME,
         &entry.expected_bson_type,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Precision,
+        Desc::SQL_DESC_PRECISION,
         &entry.expected_precision,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Scale,
+        Desc::SQL_DESC_SCALE,
         &entry.expected_scale,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Nullable,
+        Desc::SQL_DESC_NULLABLE,
         &entry.expected_nullability,
     )?;
     Ok(())
@@ -658,7 +658,7 @@ fn get_column_attribute(
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLColAttributeW".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as *mut _),
             )),
         }
     };
@@ -703,7 +703,7 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLGetData".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as *mut _),
             )),
         }
     };
@@ -721,7 +721,7 @@ fn get_column_count(stmt: HStmt) -> Result<usize> {
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLNumResultCols".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as *mut _),
             )),
         }
     }
@@ -735,7 +735,7 @@ fn fetch_row(stmt: HStmt) -> Result<bool> {
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLFetch".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as *mut _),
             )),
         }
     }

@@ -42,7 +42,7 @@ mod integration {
                 "Expected {}, got {}. Diagnostic message is: {}",
                 sql_return_to_string(SqlReturn::SUCCESS),
                 sql_return_to_string(outcome),
-                get_sql_diagnostics(HandleType::Dbc, conn_handle as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, conn_handle as Handle)
             );
 
             let length = buffer.data_length.clone();
@@ -73,7 +73,11 @@ mod integration {
         unsafe {
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLAllocHandle(HandleType::Env, null_mut(), &mut env as *mut Handle)
+                SQLAllocHandle(
+                    HandleType::SQL_HANDLE_ENV,
+                    null_mut(),
+                    &mut env as *mut Handle
+                )
             );
 
             assert_eq!(
@@ -81,7 +85,7 @@ mod integration {
                 SQLSetEnvAttr(
                     env as HEnv,
                     EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
-                    AttrOdbcVersion::Odbc3.into(),
+                    AttrOdbcVersion::SQL_OV_ODBC3.into(),
                     0,
                 )
             );
@@ -91,7 +95,7 @@ mod integration {
                 SQLSetEnvAttr(
                     env as HEnv,
                     EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING,
-                    AttrConnectionPooling::OnePerHenv.into(),
+                    AttrConnectionPooling::SQL_CP_ONE_PER_HENV.into(),
                     0,
                 )
             );
@@ -116,7 +120,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::Dbc,
+                    HandleType::SQL_HANDLE_DBC,
                     env_handle as *mut _,
                     &mut dbc as *mut Handle
                 )
@@ -159,10 +163,10 @@ mod integration {
                     out_connection_string_buff,
                     BUFFER_LENGTH,
                     str_len_ptr,
-                    DriverConnectOption::NoPrompt,
+                    DriverConnectOption::SQL_DRIVER_NO_PROMPT,
                 ),
                 "{}",
-                get_sql_diagnostics(HandleType::Dbc, dbc)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, dbc)
             );
 
             output_len = *str_len_ptr;
@@ -202,9 +206,9 @@ mod integration {
             // Verify that freeing the handle is working as expected
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLFreeHandle(HandleType::Env, env_handle as Handle),
+                SQLFreeHandle(HandleType::SQL_HANDLE_ENV, env_handle as Handle),
                 "{}",
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
             );
         }
     }
@@ -405,7 +409,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::Stmt,
+                    HandleType::SQL_HANDLE_STMT,
                     conn_handle as *mut _,
                     &mut stmt as *mut Handle
                 )
@@ -432,7 +436,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecDirectW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // SQLGetFunctions is not available through definitions
@@ -503,7 +507,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::Stmt,
+                    HandleType::SQL_HANDLE_STMT,
                     conn_handle as *mut _,
                     &mut stmt as *mut Handle
                 )
@@ -524,7 +528,7 @@ mod integration {
                     table_view.len() as SmallInt - 1
                 ),
                 "{}",
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
             );
 
             //  - SQLNumResultCols()

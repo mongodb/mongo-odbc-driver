@@ -16,16 +16,17 @@ pub enum EnvironmentAttribute {
 /// ODBC verions
 ///
 /// Possible values for `OdbcVersion` attribute set with `SQLSetEnvAttr` to declare ODBC version
+#[allow(non_camel_case_types)]
 #[repr(i32)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum AttrOdbcVersion {
     // Not supported by this crate
-    Odbc2 = 2,
-    Odbc3 = 3,
+    SQL_OV_ODBC2 = 2,
+    SQL_OV_ODBC3 = 3,
     #[cfg(feature = "odbc_version_3_80")]
-    Odbc3_80 = 380,
+    SQL_OV_ODBC3_80 = 380,
     #[cfg(feature = "odbc_version_4")]
-    Odbc4 = 400,
+    SQL_OV_ODBC4 = 400,
 }
 
 impl From<AttrOdbcVersion> for Pointer {
@@ -39,27 +40,28 @@ impl From<AttrOdbcVersion> for Pointer {
 /// pooling scheme will be used.
 ///
 /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetenvattr-function>
+#[allow(non_camel_case_types)]
 #[repr(u32)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum AttrConnectionPooling {
     /// Connection pooling is turned off. This is the default.
-    Off = 0,
+    SQL_CP_OFF = 0,
     /// A single connection pool is supported for each driver. Every connection in a pool is
     /// associated with one driver.
-    OnePerDriver = 1,
+    SQL_CP_ONE_PER_DRIVER = 1,
     /// A single connection pool is supported for each environment. Every connection in a pool is
     /// associated with one environment.
-    OnePerHenv = 2,
+    SQL_CP_ONE_PER_HENV = 2,
     /// Use the connection-pool awareness feature of the driver, if it is available. If the driver
     /// does not support connection-pool awareness, `DriverAware` is ignored and `OnePerHenv` is
     /// used.
-    DriverAware = 3,
+    SQL_CP_DRIVER_AWARE = 3,
 }
 
 /// Connection pool default configuration
 impl Default for AttrConnectionPooling {
     fn default() -> Self {
-        AttrConnectionPooling::Off
+        AttrConnectionPooling::SQL_CP_OFF
     }
 }
 
@@ -73,21 +75,22 @@ impl From<AttrConnectionPooling> for Pointer {
 ///
 /// Possible values for `CpMatch` attribute set with [`crate::SQLSetEnvAttr`] to define which connection
 /// attributes must match for a connection returned from the pool
+#[allow(non_camel_case_types)]
 #[repr(u32)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum AttrCpMatch {
     /// Only connections that exactly match the connection options in the call and the connection
     /// attributes set by the application are reused. This is the default.
-    Strict = 0,
+    SQL_CP_STRICT_MATCH = 0,
     /// Connections with matching connection string keywords can be used. Keywords must match, but
     /// not all connection attributes must match.
-    Relaxed = 1,
+    SQL_CP_RELAXED_MATCH = 1,
 }
 
 /// Default matching for connections returned from the pool
 impl Default for AttrCpMatch {
     fn default() -> Self {
-        AttrCpMatch::Strict
+        AttrCpMatch::SQL_CP_STRICT_MATCH
     }
 }
 

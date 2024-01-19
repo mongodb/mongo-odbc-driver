@@ -21,15 +21,15 @@ mod unit {
         ));
 
         for desc in [
-            Desc::BaseColumnName,
-            Desc::BaseTableName,
-            Desc::CatalogName,
-            Desc::Label,
-            Desc::LiteralPrefix,
-            Desc::LiteralSuffix,
-            Desc::Name,
-            Desc::TableName,
-            Desc::TypeName,
+            Desc::SQL_DESC_BASE_COLUMN_NAME,
+            Desc::SQL_DESC_BASE_TABLE_NAME,
+            Desc::SQL_DESC_CATALOG_NAME,
+            Desc::SQL_DESC_LABEL,
+            Desc::SQL_DESC_LITERAL_PREFIX,
+            Desc::SQL_DESC_LITERAL_SUFFIX,
+            Desc::SQL_DESC_NAME,
+            Desc::SQL_DESC_TABLE_NAME,
+            Desc::SQL_DESC_TYPE_NAME,
         ] {
             unsafe {
                 let char_buffer: *mut std::ffi::c_void =
@@ -75,22 +75,22 @@ mod unit {
         ));
 
         for desc in [
-            Desc::AutoUniqueValue,
-            Desc::CaseSensitive,
-            Desc::Count,
-            Desc::DisplaySize,
-            Desc::FixedPrecScale,
-            Desc::Length,
-            Desc::Nullable,
-            Desc::OctetLength,
-            Desc::Precision,
-            Desc::Scale,
-            Desc::Searchable,
-            Desc::Type,
-            Desc::ConciseType,
-            Desc::Unnamed,
-            Desc::Updatable,
-            Desc::Unsigned,
+            Desc::SQL_DESC_AUTO_UNIQUE_VALUE,
+            Desc::SQL_DESC_CASE_SENSITIVE,
+            Desc::SQL_DESC_COUNT,
+            Desc::SQL_DESC_DISPLAY_SIZE,
+            Desc::SQL_DESC_FIXED_PREC_SCALE,
+            Desc::SQL_DESC_LENGTH,
+            Desc::SQL_DESC_NULLABLE,
+            Desc::SQL_DESC_OCTET_LENGTH,
+            Desc::SQL_DESC_PRECISION,
+            Desc::SQL_DESC_SCALE,
+            Desc::SQL_DESC_SEARCHABLE,
+            Desc::SQL_DESC_TYPE,
+            Desc::SQL_DESC_CONCISE_TYPE,
+            Desc::SQL_DESC_UNNAMED,
+            Desc::SQL_DESC_UPDATABLE,
+            Desc::SQL_DESC_UNSIGNED,
         ] {
             unsafe {
                 let char_buffer: *mut std::ffi::c_void =
@@ -181,22 +181,22 @@ mod unit {
         ));
 
         for desc in [
-            Desc::OctetLengthPtr,
-            Desc::DatetimeIntervalCode,
-            Desc::IndicatorPtr,
-            Desc::DataPtr,
-            Desc::AllocType,
-            Desc::ArraySize,
-            Desc::ArrayStatusPtr,
-            Desc::BindOffsetPtr,
-            Desc::BindType,
-            Desc::DatetimeIntervalPrecision,
-            Desc::MaximumScale,
-            Desc::MinimumScale,
-            Desc::NumPrecRadix,
-            Desc::ParameterType,
-            Desc::RowsProcessedPtr,
-            Desc::RowVer,
+            Desc::SQL_DESC_OCTET_LENGTH_PTR,
+            Desc::SQL_DESC_DATETIME_INTERVAL_CODE,
+            Desc::SQL_DESC_INDICATOR_PTR,
+            Desc::SQL_DESC_DATA_PTR,
+            Desc::SQL_DESC_ALLOC_TYPE,
+            Desc::SQL_DESC_ARRAY_SIZE,
+            Desc::SQL_DESC_ARRAY_STATUS_PTR,
+            Desc::SQL_DESC_BIND_OFFSET_PTR,
+            Desc::SQL_DESC_BIND_TYPE,
+            Desc::SQL_DESC_DATETIME_INTERVAL_PRECISION,
+            Desc::SQL_DESC_MAXIMUM_SCALE,
+            Desc::SQL_DESC_MINIMUM_SCALE,
+            Desc::SQL_DESC_NUM_PREC_RADIX,
+            Desc::SQL_DESC_PARAMETER_TYPE,
+            Desc::SQL_DESC_ROWS_PROCESSED_PTR,
+            Desc::SQL_DESC_ROWVER,
         ] {
             unsafe {
                 let char_buffer: *mut std::ffi::c_void =
@@ -288,9 +288,9 @@ mod unit {
         let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         for desc in [
             // string descriptor
-            Desc::TypeName,
+            Desc::SQL_DESC_TYPE_NAME,
             // numeric descriptor
-            Desc::Type,
+            Desc::SQL_DESC_TYPE,
         ] {
             unsafe {
                 for col_index in [0, 30] {
@@ -339,15 +339,15 @@ mod unit {
             let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
             let col_index = 3; //TABLE_NAME
             for (desc, expected) in [
-                (Desc::BaseColumnName, ""),
-                (Desc::BaseTableName, ""),
-                (Desc::CatalogName, ""),
-                (Desc::Label, "TABLE_NAME"),
-                (Desc::LiteralPrefix, "'"),
-                (Desc::LiteralSuffix, "'"),
-                (Desc::Name, "TABLE_NAME"),
-                (Desc::TableName, ""),
-                (Desc::TypeName, "string"),
+                (Desc::SQL_DESC_BASE_COLUMN_NAME, ""),
+                (Desc::SQL_DESC_BASE_TABLE_NAME, ""),
+                (Desc::SQL_DESC_CATALOG_NAME, ""),
+                (Desc::SQL_DESC_LABEL, "TABLE_NAME"),
+                (Desc::SQL_DESC_LITERAL_PREFIX, "'"),
+                (Desc::SQL_DESC_LITERAL_SUFFIX, "'"),
+                (Desc::SQL_DESC_NAME, "TABLE_NAME"),
+                (Desc::SQL_DESC_TABLE_NAME, ""),
+                (Desc::SQL_DESC_TYPE_NAME, "string"),
             ] {
                 let char_buffer: *mut std::ffi::c_void =
                     Box::into_raw(Box::new([0u8; 200])) as *mut _;
@@ -388,22 +388,25 @@ mod unit {
         let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         let col_index = 3; //TABLE_NAME
         for (desc, expected) in [
-            (Desc::AutoUniqueValue, 0isize),
-            (Desc::Unnamed, 0),
-            (Desc::Updatable, 0),
-            (Desc::Count, 18),
-            (Desc::CaseSensitive, 1),
-            (Desc::DisplaySize, 0),
-            (Desc::FixedPrecScale, 0),
-            (Desc::Length, 0),
-            (Desc::Nullable, 0),
-            (Desc::OctetLength, 0),
-            (Desc::Precision, 0),
-            (Desc::Scale, 0),
-            (Desc::Searchable, SQL_SEARCHABLE as isize),
-            (Desc::Type, SqlDataType::SQL_WVARCHAR as isize),
-            (Desc::ConciseType, SqlDataType::SQL_WVARCHAR as isize),
-            (Desc::Unsigned, 1),
+            (Desc::SQL_DESC_AUTO_UNIQUE_VALUE, 0isize),
+            (Desc::SQL_DESC_UNNAMED, 0),
+            (Desc::SQL_DESC_UPDATABLE, 0),
+            (Desc::SQL_DESC_COUNT, 18),
+            (Desc::SQL_DESC_CASE_SENSITIVE, 1),
+            (Desc::SQL_DESC_DISPLAY_SIZE, 0),
+            (Desc::SQL_DESC_FIXED_PREC_SCALE, 0),
+            (Desc::SQL_DESC_LENGTH, 0),
+            (Desc::SQL_DESC_NULLABLE, 0),
+            (Desc::SQL_DESC_OCTET_LENGTH, 0),
+            (Desc::SQL_DESC_PRECISION, 0),
+            (Desc::SQL_DESC_SCALE, 0),
+            (Desc::SQL_DESC_SEARCHABLE, SQL_SEARCHABLE as isize),
+            (Desc::SQL_DESC_TYPE, SqlDataType::SQL_WVARCHAR as isize),
+            (
+                Desc::SQL_DESC_CONCISE_TYPE,
+                SqlDataType::SQL_WVARCHAR as isize,
+            ),
+            (Desc::SQL_DESC_UNSIGNED, 1),
         ] {
             unsafe {
                 let char_buffer: *mut std::ffi::c_void =

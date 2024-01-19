@@ -9,7 +9,7 @@ fn test_env_alloc_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
-                HandleType::Env,
+                HandleType::SQL_HANDLE_ENV,
                 std::ptr::null_mut(),
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -21,7 +21,7 @@ fn test_env_alloc_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLFreeHandle(
-                HandleType::Env,
+                HandleType::SQL_HANDLE_ENV,
                 std::mem::transmute::<*mut MongoHandle, Handle>(handle),
             )
         );
@@ -41,7 +41,7 @@ fn test_connection_alloc_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
-                HandleType::Dbc,
+                HandleType::SQL_HANDLE_DBC,
                 env_handle as *mut _,
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -67,7 +67,7 @@ fn test_connection_alloc_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLFreeHandle(
-                HandleType::Dbc,
+                HandleType::SQL_HANDLE_DBC,
                 std::mem::transmute::<*mut MongoHandle, Handle>(handle),
             )
         );
@@ -106,7 +106,7 @@ fn test_statement_alloc_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
-                HandleType::Stmt,
+                HandleType::SQL_HANDLE_STMT,
                 conn_handle as *mut _,
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -128,7 +128,7 @@ fn test_statement_alloc_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLFreeHandle(
-                HandleType::Stmt,
+                HandleType::SQL_HANDLE_STMT,
                 std::mem::transmute::<*mut MongoHandle, Handle>(handle),
             )
         );
@@ -163,7 +163,7 @@ fn test_descriptor_alloc_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
-                HandleType::Desc,
+                HandleType::SQL_HANDLE_DESC,
                 conn_handle as *mut _,
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -175,7 +175,7 @@ fn test_descriptor_alloc_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLFreeHandle(
-                HandleType::Desc,
+                HandleType::SQL_HANDLE_DESC,
                 std::mem::transmute::<*mut MongoHandle, Handle>(handle),
             )
         );
@@ -190,7 +190,7 @@ fn test_invalid_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
-                HandleType::Env,
+                HandleType::SQL_HANDLE_ENV,
                 std::ptr::null_mut(),
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(env_handle_ptr),
             )
@@ -202,21 +202,21 @@ fn test_invalid_free() {
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
-                HandleType::Dbc,
+                HandleType::SQL_HANDLE_DBC,
                 std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
             )
         );
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
-                HandleType::Stmt,
+                HandleType::SQL_HANDLE_STMT,
                 std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
             )
         );
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
-                HandleType::Desc,
+                HandleType::SQL_HANDLE_DESC,
                 std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
             )
         );
@@ -229,7 +229,7 @@ fn test_invalid_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLAllocHandle(
-                HandleType::Dbc,
+                HandleType::SQL_HANDLE_DBC,
                 env_handle as *mut _,
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(conn_handle_ptr),
             )
@@ -246,21 +246,21 @@ fn test_invalid_free() {
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
-                HandleType::Env,
+                HandleType::SQL_HANDLE_ENV,
                 std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
             )
         );
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
-                HandleType::Stmt,
+                HandleType::SQL_HANDLE_STMT,
                 std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
             )
         );
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLFreeHandle(
-                HandleType::Desc,
+                HandleType::SQL_HANDLE_DESC,
                 std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
             )
         );
@@ -270,14 +270,14 @@ fn test_invalid_free() {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLFreeHandle(
-                HandleType::Dbc,
+                HandleType::SQL_HANDLE_DBC,
                 std::mem::transmute::<*mut MongoHandle, Handle>(conn_handle),
             )
         );
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLFreeHandle(
-                HandleType::Env,
+                HandleType::SQL_HANDLE_ENV,
                 std::mem::transmute::<*mut MongoHandle, Handle>(env_handle),
             )
         );
@@ -293,7 +293,7 @@ fn test_invalid_alloc() {
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
-                HandleType::Dbc,
+                HandleType::SQL_HANDLE_DBC,
                 std::ptr::null_mut(),
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -301,7 +301,7 @@ fn test_invalid_alloc() {
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
-                HandleType::Stmt,
+                HandleType::SQL_HANDLE_STMT,
                 std::ptr::null_mut(),
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -309,7 +309,7 @@ fn test_invalid_alloc() {
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
-                HandleType::Desc,
+                HandleType::SQL_HANDLE_DESC,
                 std::ptr::null_mut(),
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -324,7 +324,7 @@ fn test_invalid_alloc() {
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
-                HandleType::Dbc,
+                HandleType::SQL_HANDLE_DBC,
                 stmt_handle as *mut _,
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -332,7 +332,7 @@ fn test_invalid_alloc() {
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
-                HandleType::Stmt,
+                HandleType::SQL_HANDLE_STMT,
                 stmt_handle as *mut _,
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -340,7 +340,7 @@ fn test_invalid_alloc() {
         assert_eq!(
             SqlReturn::INVALID_HANDLE,
             SQLAllocHandle(
-                HandleType::Desc,
+                HandleType::SQL_HANDLE_DESC,
                 stmt_handle as *mut _,
                 std::mem::transmute::<*mut *mut MongoHandle, *mut Handle>(handle_ptr),
             )
@@ -359,7 +359,7 @@ fn test_odbc_ver() {
         .attributes
         .write()
         .unwrap()
-        .odbc_ver = AttrOdbcVersion::Odbc2;
+        .odbc_ver = AttrOdbcVersion::SQL_OV_ODBC2;
     let odbc_2_conn_handle: &mut MongoHandle = &mut MongoHandle::Connection(
         Connection::with_state(odbc_2_env_handle, ConnectionState::Allocated),
     );
@@ -388,34 +388,37 @@ fn test_odbc_ver() {
     ));
 
     // assert correct types for all handles
-    assert_eq!(odbc_2_env_handle.get_odbc_version(), AttrOdbcVersion::Odbc2);
+    assert_eq!(
+        odbc_2_env_handle.get_odbc_version(),
+        AttrOdbcVersion::SQL_OV_ODBC2
+    );
     assert_eq!(
         odbc_2_conn_handle.get_odbc_version(),
-        AttrOdbcVersion::Odbc2
+        AttrOdbcVersion::SQL_OV_ODBC2
     );
     assert_eq!(
         odbc_2_desc_handle.get_odbc_version(),
-        AttrOdbcVersion::Odbc2
+        AttrOdbcVersion::SQL_OV_ODBC2
     );
     assert_eq!(
         odbc_2_stmt_handle.get_odbc_version(),
-        AttrOdbcVersion::Odbc2
+        AttrOdbcVersion::SQL_OV_ODBC2
     );
     assert_eq!(
         odbc_3_env_handle.get_odbc_version(),
-        AttrOdbcVersion::Odbc3_80
+        AttrOdbcVersion::SQL_OV_ODBC3_80
     );
     assert_eq!(
         odbc_3_conn_handle.get_odbc_version(),
-        AttrOdbcVersion::Odbc3_80
+        AttrOdbcVersion::SQL_OV_ODBC3_80
     );
     assert_eq!(
         odbc_3_desc_handle.get_odbc_version(),
-        AttrOdbcVersion::Odbc3_80
+        AttrOdbcVersion::SQL_OV_ODBC3_80
     );
     assert_eq!(
         odbc_3_stmt_handle.get_odbc_version(),
-        AttrOdbcVersion::Odbc3_80
+        AttrOdbcVersion::SQL_OV_ODBC3_80
     );
 }
 
@@ -430,7 +433,7 @@ fn test_odbc_2_behavior() {
         .attributes
         .write()
         .unwrap()
-        .odbc_ver = AttrOdbcVersion::Odbc2;
+        .odbc_ver = AttrOdbcVersion::SQL_OV_ODBC2;
     let odbc_2_conn_handle: &mut MongoHandle = &mut MongoHandle::Connection(
         Connection::with_state(odbc_2_env_handle, ConnectionState::Allocated),
     );

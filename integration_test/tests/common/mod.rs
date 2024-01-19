@@ -131,14 +131,18 @@ pub fn allocate_env() -> Result<HEnv> {
     let mut env: Handle = null_mut();
 
     unsafe {
-        match SQLAllocHandle(HandleType::Env, null_mut(), &mut env as *mut Handle) {
+        match SQLAllocHandle(
+            HandleType::SQL_HANDLE_ENV,
+            null_mut(),
+            &mut env as *mut Handle,
+        ) {
             SqlReturn::SUCCESS => (),
             sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
         }
         match SQLSetEnvAttr(
             env as HEnv,
             EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
-            AttrOdbcVersion::Odbc3.into(),
+            AttrOdbcVersion::SQL_OV_ODBC3.into(),
             0,
         ) {
             SqlReturn::SUCCESS => (),
@@ -170,7 +174,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
     let mut dbc: Handle = null_mut();
     unsafe {
         match SQLAllocHandle(
-            HandleType::Dbc,
+            HandleType::SQL_HANDLE_DBC,
             env_handle as *mut _,
             &mut dbc as *mut Handle,
         ) {
@@ -188,7 +192,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             null_mut(),
             0,
             str_len_ptr,
-            DriverConnectOption::NoPrompt,
+            DriverConnectOption::SQL_DRIVER_NO_PROMPT,
         ) {
             // Originally, this would return SUCCESS_WITH_INFO since we pass null_mut() as
             // out_connection_string and 0 as buffer size. Now, this should always return SUCCESS.
@@ -198,14 +202,14 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
                 if !cfg!(windows) {
                     return Err(Error::DriverConnect(
                         sql_return_to_string(SqlReturn::SUCCESS_WITH_INFO),
-                        get_sql_diagnostics(HandleType::Dbc, dbc),
+                        get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, dbc),
                     ));
                 }
             }
             sql_return => {
                 return Err(Error::DriverConnect(
                     sql_return_to_string(sql_return),
-                    get_sql_diagnostics(HandleType::Dbc, dbc),
+                    get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, dbc),
                 ))
             }
         }
@@ -218,7 +222,11 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
 pub fn allocate_statement(dbc: HDbc) -> Result<HStmt> {
     let mut stmt: Handle = null_mut();
     unsafe {
-        match SQLAllocHandle(HandleType::Stmt, dbc as *mut _, &mut stmt as *mut Handle) {
+        match SQLAllocHandle(
+            HandleType::SQL_HANDLE_STMT,
+            dbc as *mut _,
+            &mut stmt as *mut Handle,
+        ) {
             SqlReturn::SUCCESS => (),
             sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
         }
@@ -235,23 +243,23 @@ pub fn disconnect_and_close_handles(dbc: HDbc, stmt: HStmt) {
     unsafe {
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLFreeHandle(HandleType::Stmt, stmt as Handle),
+            SQLFreeHandle(HandleType::SQL_HANDLE_STMT, stmt as Handle),
             "{}",
-            get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+            get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
         );
 
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLDisconnect(dbc),
             "{}",
-            get_sql_diagnostics(HandleType::Dbc, dbc as Handle)
+            get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, dbc as Handle)
         );
 
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLFreeHandle(HandleType::Dbc, dbc as Handle),
+            SQLFreeHandle(HandleType::SQL_HANDLE_DBC, dbc as Handle),
             "{}",
-            get_sql_diagnostics(HandleType::Stmt, dbc as Handle)
+            get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, dbc as Handle)
         );
     }
 }
@@ -278,7 +286,7 @@ pub fn fetch_and_get_data(
             assert!(
                 result == SqlReturn::SUCCESS || result == SqlReturn::NO_DATA,
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
             match result {
                 SqlReturn::SUCCESS => {
@@ -295,7 +303,7 @@ pub fn fetch_and_get_data(
                                 str_len_ptr
                             ),
                             "{}",
-                            get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                            get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                         );
                     }
                 }
@@ -335,19 +343,19 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
             SqlReturn::SUCCESS,
             SQLNumResultCols(stmt as HStmt, column_count_ptr),
             "{}",
-            get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+            get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
         );
         assert_eq!(expected_col_count, *column_count_ptr);
 
         let numeric_attribute_ptr = &mut 0;
         const FIELD_IDS: [Desc; 7] = [
-            Desc::ConciseType,
-            Desc::Unsigned,
-            Desc::Name,
-            Desc::Nullable,
-            Desc::TypeName,
-            Desc::Length,
-            Desc::Scale,
+            Desc::SQL_DESC_CONCISE_TYPE,
+            Desc::SQL_DESC_UNSIGNED,
+            Desc::SQL_DESC_NAME,
+            Desc::SQL_DESC_NULLABLE,
+            Desc::SQL_DESC_TYPE_NAME,
+            Desc::SQL_DESC_LENGTH,
+            Desc::SQL_DESC_SCALE,
         ];
         for col_num in 0..*column_count_ptr {
             FIELD_IDS.iter().for_each(|field_type| {
@@ -363,7 +371,7 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
                         numeric_attribute_ptr,
                     ),
                     "{}",
-                    get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                    get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                 );
             });
         }

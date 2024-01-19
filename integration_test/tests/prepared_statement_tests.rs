@@ -24,7 +24,7 @@ mod integration {
             // Calling SQLExecute before SQLPrepare is invalid.
             assert_eq!(SqlReturn::ERROR, SQLExecute(stmt));
 
-            let diagnostic = get_sql_diagnostics(HandleType::Stmt, stmt as Handle);
+            let diagnostic = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             // This error is thrown by the DM
             assert!(diagnostic.contains("Function sequence error"));
         }
@@ -46,7 +46,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Retrieve result set metadata
@@ -69,7 +69,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Retrieve result set metadata
@@ -77,7 +77,7 @@ mod integration {
 
             assert_eq!(SqlReturn::ERROR, SQLFetch(stmt as HStmt),);
 
-            let diagnostic = get_sql_diagnostics(HandleType::Stmt, stmt as Handle);
+            let diagnostic = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             assert!(diagnostic.contains("Function sequence error"));
 
             disconnect_and_close_handles(dbc, stmt);
@@ -97,7 +97,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Retrieve result set metadata
@@ -109,7 +109,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             fetch_and_get_data(
@@ -123,7 +123,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             disconnect_and_close_handles(dbc, stmt);
@@ -143,7 +143,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Executing the prepared statement.
@@ -152,7 +152,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Executing the prepared statement.
@@ -161,7 +161,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             fetch_and_get_data(
@@ -176,7 +176,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             fetch_and_get_data(

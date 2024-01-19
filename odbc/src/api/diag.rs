@@ -40,8 +40,10 @@ pub unsafe fn get_diag_recw(
         *native_error_ptr = error.get_native_err_code();
     }
     let sql_state = match odbc_ver {
-        AttrOdbcVersion::Odbc2 => error.get_sql_state().odbc_2_state,
-        AttrOdbcVersion::Odbc3 | AttrOdbcVersion::Odbc3_80 => error.get_sql_state().odbc_3_state,
+        AttrOdbcVersion::SQL_OV_ODBC2 => error.get_sql_state().odbc_2_state,
+        AttrOdbcVersion::SQL_OV_ODBC3 | AttrOdbcVersion::SQL_OV_ODBC3_80 => {
+            error.get_sql_state().odbc_3_state
+        }
     };
     set_sql_statew(sql_state, state);
     let message = format!("{error}");
@@ -109,8 +111,8 @@ pub unsafe fn get_diag_fieldw(
                     DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
                     DiagType::SQL_DIAG_SQLSTATE => {
                         let sql_state = match odbc_ver {
-                            AttrOdbcVersion::Odbc2 => error.get_sql_state().odbc_2_state,
-                            AttrOdbcVersion::Odbc3 | AttrOdbcVersion::Odbc3_80 => {
+                            AttrOdbcVersion::SQL_OV_ODBC2 => error.get_sql_state().odbc_2_state,
+                            AttrOdbcVersion::SQL_OV_ODBC3 | AttrOdbcVersion::SQL_OV_ODBC3_80 => {
                                 error.get_sql_state().odbc_3_state
                             }
                         };

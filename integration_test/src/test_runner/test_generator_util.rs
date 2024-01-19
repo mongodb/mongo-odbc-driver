@@ -35,40 +35,41 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
     let mut expected_nullability: Vec<Value> = vec![];
 
     for i in 1..(column_count + 1) {
-        let catalog_name = get_column_attribute(stmt, i, Desc::CatalogName, &STRING_VAL)?;
+        let catalog_name = get_column_attribute(stmt, i, Desc::SQL_DESC_CATALOG_NAME, &STRING_VAL)?;
         expected_catalog_name.push(catalog_name);
 
-        let case_sensitive = get_column_attribute(stmt, i, Desc::CaseSensitive, &STRING_VAL)?;
+        let case_sensitive =
+            get_column_attribute(stmt, i, Desc::SQL_DESC_CASE_SENSITIVE, &STRING_VAL)?;
         expected_case_sensitive.push(case_sensitive);
 
-        let column_name = get_column_attribute(stmt, i, Desc::Name, &STRING_VAL)?;
+        let column_name = get_column_attribute(stmt, i, Desc::SQL_DESC_NAME, &STRING_VAL)?;
         expected_column_name.push(column_name);
 
-        let display_size = get_column_attribute(stmt, i, Desc::DisplaySize, &NUMBER_VAL)?;
+        let display_size = get_column_attribute(stmt, i, Desc::SQL_DESC_DISPLAY_SIZE, &NUMBER_VAL)?;
         expected_display_size.push(display_size);
 
-        let length = get_column_attribute(stmt, i, Desc::Length, &NUMBER_VAL)?;
+        let length = get_column_attribute(stmt, i, Desc::SQL_DESC_LENGTH, &NUMBER_VAL)?;
         expected_length.push(length);
 
-        let is_searchable = get_column_attribute(stmt, i, Desc::Searchable, &NUMBER_VAL)?;
+        let is_searchable = get_column_attribute(stmt, i, Desc::SQL_DESC_SEARCHABLE, &NUMBER_VAL)?;
         expected_is_searchable.push(is_searchable);
 
-        let is_unsigned = get_column_attribute(stmt, i, Desc::Unsigned, &NUMBER_VAL)?;
+        let is_unsigned = get_column_attribute(stmt, i, Desc::SQL_DESC_UNSIGNED, &NUMBER_VAL)?;
         expected_is_unsigned.push(is_unsigned);
 
-        let sql_type = get_column_attribute(stmt, i, Desc::Type, &NUMBER_VAL)?;
+        let sql_type = get_column_attribute(stmt, i, Desc::SQL_DESC_TYPE, &NUMBER_VAL)?;
         expected_sql_type.push(sql_type);
 
-        let bson_type = get_column_attribute(stmt, i, Desc::TypeName, &STRING_VAL)?;
+        let bson_type = get_column_attribute(stmt, i, Desc::SQL_DESC_TYPE_NAME, &STRING_VAL)?;
         expected_bson_type.push(bson_type);
 
-        let precision = get_column_attribute(stmt, i, Desc::Precision, &NUMBER_VAL)?;
+        let precision = get_column_attribute(stmt, i, Desc::SQL_DESC_PRECISION, &NUMBER_VAL)?;
         expected_precision.push(precision);
 
-        let scale = get_column_attribute(stmt, i, Desc::Scale, &NUMBER_VAL)?;
+        let scale = get_column_attribute(stmt, i, Desc::SQL_DESC_SCALE, &NUMBER_VAL)?;
         expected_scale.push(scale);
 
-        let nullability = get_column_attribute(stmt, i, Desc::Nullable, &NUMBER_VAL)?;
+        let nullability = get_column_attribute(stmt, i, Desc::SQL_DESC_NULLABLE, &NUMBER_VAL)?;
         expected_nullability.push(nullability);
     }
 
