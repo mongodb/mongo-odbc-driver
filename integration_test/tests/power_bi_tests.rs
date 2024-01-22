@@ -144,7 +144,7 @@ mod integration {
             in_connection_string_encoded.push(0);
 
             let str_len_ptr = &mut 0;
-            const BUFFER_LENGTH: SmallInt = 300;
+            const BUFFER_LENGTH: SmallInt = 1024;
             let mut out_connection_string_buff: [WideChar; BUFFER_LENGTH as usize - 1] =
                 [0; (BUFFER_LENGTH as usize - 1)];
             let out_connection_string_buff = &mut out_connection_string_buff as *mut WideChar;

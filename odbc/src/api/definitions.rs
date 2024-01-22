@@ -1,6 +1,7 @@
 use num_derive::FromPrimitive;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+#[repr(i32)]
 pub enum SqlBool {
     False = 0,
     True,
@@ -8,6 +9,7 @@ pub enum SqlBool {
 
 // Environment attributes
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+#[repr(u32)]
 pub enum OdbcVersion {
     Odbc2 = 2,
     Odbc3 = 3,
@@ -15,6 +17,7 @@ pub enum OdbcVersion {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+#[repr(u32)]
 pub enum ConnectionPooling {
     Off = 0,
     OnePerDriver,
@@ -23,6 +26,7 @@ pub enum ConnectionPooling {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+#[repr(u32)]
 pub enum CpMatch {
     Strict = 0,
     Relaxed,
@@ -31,12 +35,14 @@ pub enum CpMatch {
 // Statement attributes
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
 pub enum CursorScrollable {
     NonScrollable = 0,
     Scrollable,
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
 pub enum CursorSensitivity {
     Unspecified = 0,
     Insensitive,
@@ -44,12 +50,14 @@ pub enum CursorSensitivity {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[repr(u32)]
 pub enum AsyncEnable {
     Off = 0,
     On,
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
 pub enum Concurrency {
     ReadOnly = 1,
     Lock = 2,
@@ -58,20 +66,23 @@ pub enum Concurrency {
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
 pub enum CursorType {
     ForwardOnly = 0,
-    KeysetDriven = -1,
-    Dynamic = -2,
-    Static = -3,
+    KeysetDriven = 1,
+    Dynamic = 2,
+    Static = 3,
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
 pub enum NoScan {
     Off = 0,
     On,
 }
 
 #[derive(Clone, Copy, Debug)]
+#[repr(u32)]
 pub enum BindType {
     BindByColumn = 0,
 }
@@ -89,6 +100,7 @@ pub enum ParamsProcessedPtr {}
 pub enum ParamsetSize {}
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
 pub enum RetrieveData {
     Off = 0,
     On,
@@ -98,11 +110,13 @@ pub enum RetrieveData {
 pub enum RowOperationPtr {}
 
 #[derive(Clone, Copy, Debug)]
+#[repr(u32)]
 pub enum SimulateCursor {
     NonUnique = 0,
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
 pub enum UseBookmarks {
     Off = 0,
     Variable = 2,
