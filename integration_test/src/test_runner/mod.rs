@@ -1,7 +1,10 @@
 mod test_generator_util;
 
 use cstr::WideChar;
-use odbc_sys::{CDataType, Desc, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn, USmallInt};
+use odbc_sys::{
+    CDataType, Desc, EnvironmentAttribute, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn,
+    USmallInt,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::value::Value;
@@ -16,6 +19,7 @@ use crate::{
 use thiserror::Error;
 
 const TEST_FILE_DIR: &str = "../resources/integration_test/tests";
+const TEST_FILE_DIR_ODBC_2: &str = "../resources/integration_test/odbc2";
 const SQL_NULL_DATA: isize = -1;
 const BUFFER_LENGTH: usize = 1000;
 
@@ -129,12 +133,58 @@ pub fn resultset_tests() -> Result<()> {
     run_resultset_tests(false)
 }
 
+#[cfg(target_os = "windows")]
+#[test]
+#[ignore]
+pub fn odbc2_resultset_tests() -> Result<()> {
+    run_resultset_tests_odbc_2(false)
+}
+
 /// Run an integration test. The generate argument indicates whether
 /// the test results should written to a file for baseline test file
 /// generation, or be asserted for correctness.
 pub fn run_resultset_tests(generate: bool) -> Result<()> {
     let env = allocate_env().unwrap();
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
+    for path in paths {
+        let yaml = parse_test_file_yaml(&path).unwrap();
+
+        for test in yaml.tests {
+            match test.skip_reason {
+                Some(sr) => println!("Skip Reason: {sr}"),
+                None => {
+                    let mut conn_str = crate::common::generate_default_connection_str();
+                    conn_str.push_str(&("DATABASE=".to_owned() + &test.db + ";"));
+                    if let Some(true) = test.is_simple_type {
+                        conn_str.push_str("SIMPLE_TYPES_ONLY=1;");
+                    }
+                    let conn_handle = connect_with_conn_string(env, conn_str).unwrap();
+                    let test_result = match test.test_definition {
+                        TestDef::Query(ref q) => run_query_test(q, &test, conn_handle, generate),
+                        TestDef::Function(ref f) => {
+                            run_function_test(f, &test, conn_handle, generate)
+                        }
+                    };
+                    assert_eq!(Ok(()), test_result);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Runs odbc 2 compatibility integration test. The generate argument indicates whether
+/// the test results should written to a file for baseline test file
+/// generation, or be asserted for correctness.
+pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
+    let env = allocate_env().unwrap();
+    unsafe {
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            odbc_sys::SQLSetEnvAttr(env, EnvironmentAttribute::OdbcVersion, 2 as *mut _, 0,)
+        );
+    }
+    let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR_ODBC_2)).unwrap();
     for path in paths {
         let yaml = parse_test_file_yaml(&path).unwrap();
 
