@@ -463,6 +463,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
         debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
+            let odbc_version = mongo_handle.get_odbc_version();
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let mongo_stmt = stmt.mongo_statement.read().unwrap();
             stmt.errors.write().unwrap().clear();
@@ -574,7 +575,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref())
                 }
                 Desc::SQL_DESC_TYPE | Desc::SQL_DESC_CONCISE_TYPE => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.sql_type as Len)
+                    numeric_col_attr(&|x: &MongoColMetadata| {
+                        handle_sql_type(odbc_version, x.sql_type) as Len
+                    })
                 }
                 Desc::SQL_DESC_UNSIGNED => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len)
@@ -657,6 +660,7 @@ pub unsafe extern "C" fn SQLColumnsW(
         debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
+            let odbc_3_data_types = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog_string = input_text_to_string_w(catalog_name, catalog_name_length as usize);
             let catalog = if catalog_name.is_null() || catalog_string.is_empty() {
@@ -692,6 +696,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 table,
                 column,
                 type_mode,
+                odbc_3_data_types,
             ));
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
             SqlReturn::SUCCESS
@@ -803,6 +808,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
         debug,
         || {
             let stmt_handle = MongoHandleRef::from(hstmt);
+            let odbc_version = stmt_handle.get_odbc_version();
             {
                 let stmt = must_be_valid!(stmt_handle.as_statement());
                 let mongo_stmt = stmt.mongo_statement.write().unwrap();
@@ -812,7 +818,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
                 }
                 let col_metadata = mongo_stmt.as_ref().unwrap().get_col_metadata(col_number);
                 if let Ok(col_metadata) = col_metadata {
-                    *data_type = col_metadata.sql_type;
+                    *data_type = handle_sql_type(odbc_version, col_metadata.sql_type);
                     *col_size = col_metadata.display_size.unwrap_or(0) as usize;
                     *decimal_digits = col_metadata.scale.unwrap_or(0) as i16;
                     *nullable = col_metadata.nullability;

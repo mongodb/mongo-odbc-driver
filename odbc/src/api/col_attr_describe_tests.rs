@@ -9,16 +9,24 @@ use std::sync::RwLock;
 mod unit {
     use definitions::SqlDataType;
 
+    use crate::handles::definitions::{Connection, ConnectionState, Env, EnvState};
+
     use super::*;
     // test unallocated_statement tests SQLColAttributeW when the mongo_statement inside
     // of the statement handle has not been allocated (before an execute or tables function
     // has been called).
     #[test]
     fn unallocated_statement_string_attr() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
 
         for desc in [
             Desc::SQL_DESC_BASE_COLUMN_NAME,
@@ -65,14 +73,24 @@ mod unit {
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     #[test]
     fn unallocated_statement_numeric_attr() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
 
         for desc in [
             Desc::SQL_DESC_AUTO_UNIQUE_VALUE,
@@ -126,14 +144,25 @@ mod unit {
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     #[test]
     fn unallocated_statement_describe_col() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
+
         unsafe {
             let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
             let name_buffer_length: SmallInt = 20;
@@ -171,14 +200,24 @@ mod unit {
             );
             let _ = Box::from_raw(name_buffer as *mut WChar);
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     #[test]
     fn unallocated_statement_unsupported_attr() {
-        let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
-            StatementState::Allocated,
-        ));
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
 
         for desc in [
             Desc::SQL_DESC_OCTET_LENGTH_PTR,
@@ -232,13 +271,26 @@ mod unit {
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     #[test]
     fn test_index_out_of_bounds_describe() {
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+
+        let mut stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
         stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
+
         unsafe {
             for col_index in [0, 30] {
                 let name_buffer: *mut std::ffi::c_void =
@@ -279,11 +331,23 @@ mod unit {
                 let _ = Box::from_raw(name_buffer as *mut WChar);
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     #[test]
     fn test_index_out_of_bounds_attr() {
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+
+        let mut stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
         stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
         let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         for desc in [
@@ -328,13 +392,26 @@ mod unit {
                 }
             }
         }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
     }
 
     // check the fields column for all the string attributes
     #[test]
     fn test_string_field_attributes() {
         unsafe {
-            let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+            let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+                EnvState::ConnectionAllocated,
+            ))));
+            let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+                env as *mut _,
+                ConnectionState::Connected,
+            ))));
+
+            let mut stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+
             stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
             let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
             let col_index = 3; //TABLE_NAME
@@ -377,13 +454,23 @@ mod unit {
                 );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
     // check the fields column for all the numeric attributes
     #[test]
     fn test_numeric_field_attributes() {
-        let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+            env as *mut _,
+            ConnectionState::Connected,
+        ))));
+
+        let mut stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
         stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
         let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         let col_index = 3; //TABLE_NAME
@@ -425,11 +512,20 @@ mod unit {
                         buffer_length,
                         out_length,
                         numeric_attr_ptr,
-                    )
+                    ),
+                    "expected success but got failure"
                 );
-                assert_eq!(expected, *numeric_attr_ptr);
+                assert_eq!(
+                    expected, *numeric_attr_ptr,
+                    "expected {} but got {}",
+                    expected, *numeric_attr_ptr
+                );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
+        }
+        unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 
@@ -437,7 +533,16 @@ mod unit {
     #[test]
     fn test_describe_col() {
         unsafe {
-            let mut stmt = Statement::with_state(std::ptr::null_mut(), StatementState::Allocated);
+            let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+                EnvState::ConnectionAllocated,
+            ))));
+            let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+                env as *mut _,
+                ConnectionState::Connected,
+            ))));
+
+            let mut stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+
             stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
             let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
             let col_index = 3; //TABLE_NAME
@@ -479,6 +584,8 @@ mod unit {
                 cstr::input_text_to_string_w(name_buffer as *const _, *out_name_length as usize)
             );
             let _ = Box::from_raw(name_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 }
