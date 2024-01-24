@@ -6,21 +6,21 @@ use crate::{
         errors::{ODBCError, Result},
         util::{connection_attribute_to_string, handle_sql_type, statement_attribute_to_string},
     },
-    handles::definitions::{
-        Connection, ConnectionState, Descriptor, DescriptorState, Env, EnvState, MongoHandle,
-        MongoHandleRef, Statement, StatementState,
-    },
+    handles::definitions::*,
     has_odbc_3_behavior, trace_odbc,
 };
 use bson::Bson;
-use constants::{
-    DBMS_NAME, DRIVER_NAME, DRIVER_ODBC_VERSION, ODBC_VERSION, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
-    SQL_ALL_TABLE_TYPES,
-};
+use constants::*;
 
 use cstr::{input_text_to_string_w, Charset, WideChar};
 
-use definitions::*;
+use definitions::{
+    AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
+    ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
+    DriverConnectOption, EnvironmentAttribute, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
+    InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode, RetrieveData, SmallInt, SqlBool,
+    SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt, UseBookmarks,
+};
 use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;

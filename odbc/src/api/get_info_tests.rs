@@ -2,6 +2,7 @@ use crate::{
     handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
 };
+use constants::*;
 use cstr::{input_text_to_string_w, WideChar};
 use definitions::*;
 
