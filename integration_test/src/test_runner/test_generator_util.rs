@@ -144,7 +144,7 @@ fn get_expected_data_type(sql_type: &Value) -> CDataType {
             Some(SqlDataType::SQL_TYPE_DATE) => CDataType::SQL_C_TYPE_DATE,
             Some(SqlDataType::SQL_TYPE_TIME) => CDataType::SQL_C_TYPE_TIME,
             Some(SqlDataType::SQL_TYPE_TIMESTAMP) => CDataType::SQL_C_CHAR,
-            Some(SqlDataType::SQL_TIME_OR_INTERVAL) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL) => CDataType::SQL_C_CHAR,
             Some(SqlDataType::SQL_TIMESTAMP) => CDataType::SQL_C_DEFAULT,
             Some(SqlDataType::SQL_LONGVARCHAR) => CDataType::SQL_C_CHAR,
             Some(SqlDataType::SQL_BINARY) => CDataType::SQL_C_BINARY,

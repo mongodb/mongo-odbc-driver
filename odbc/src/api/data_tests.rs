@@ -679,7 +679,7 @@ fn sql_get_wstring_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -999,7 +999,7 @@ fn sql_get_binary_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1177,7 +1177,7 @@ fn sql_get_string_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1377,7 +1377,7 @@ fn sql_get_bit_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1570,7 +1570,7 @@ fn sql_get_i64_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1769,7 +1769,7 @@ fn sql_get_u64_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1962,7 +1962,7 @@ fn sql_get_i32_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2161,7 +2161,7 @@ fn sql_get_u32_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2347,7 +2347,7 @@ fn sql_get_f64_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2533,7 +2533,7 @@ fn sql_get_f32_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2744,7 +2744,7 @@ fn sql_get_datetime_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2948,7 +2948,7 @@ fn sql_get_date_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -3151,7 +3151,7 @@ fn sql_get_time_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(definitions::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(

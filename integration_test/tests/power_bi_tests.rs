@@ -9,7 +9,7 @@ mod integration {
         AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute,
         DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
         Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFreeHandle, SQLGetInfoW,
-        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, NTS,
+        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, SQL_NTS,
     };
 
     use cstr::WideChar;
@@ -159,7 +159,7 @@ mod integration {
                     dbc as HDbc,
                     null_mut(),
                     in_connection_string_encoded.as_ptr(),
-                    NTS as SmallInt,
+                    SQL_NTS as SmallInt,
                     out_connection_string_buff,
                     BUFFER_LENGTH,
                     str_len_ptr,
@@ -434,7 +434,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
+                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS as SmallInt as i32),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );

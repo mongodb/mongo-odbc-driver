@@ -706,7 +706,7 @@ impl MongoStatement for MongoFields {
             8 => Bson::Int32({
                 let l = get_meta_data()?.octet_length;
                 match l {
-                    None => definitions::NO_TOTAL as i32,
+                    None => definitions::SQL_NO_TOTAL as i32,
                     Some(l) => l as i32,
                 }
             }),
@@ -728,7 +728,7 @@ impl MongoStatement for MongoFields {
             16 => Bson::Int32({
                 let l = get_meta_data()?.octet_length;
                 match l {
-                    None => definitions::NO_TOTAL as i32,
+                    None => definitions::SQL_NO_TOTAL as i32,
                     Some(_) => 0i32,
                 }
             }),

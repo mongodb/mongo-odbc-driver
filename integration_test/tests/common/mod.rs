@@ -4,7 +4,7 @@ use definitions::{
     AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt,
     Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDisconnect,
     SQLDriverConnectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLMoreResults,
-    SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, NTS,
+    SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
 use std::ptr::null_mut;
 use std::{env, slice};
@@ -188,7 +188,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             dbc as HDbc,
             null_mut(),
             in_connection_string_encoded.as_ptr(),
-            NTS as SmallInt,
+            SQL_NTS as SmallInt,
             null_mut(),
             0,
             str_len_ptr,

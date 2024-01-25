@@ -762,7 +762,7 @@ pub unsafe fn format_bson_data(
                     .push(ODBCError::IndicatorVariableRequiredButNotSupplied);
                 return SqlReturn::SUCCESS_WITH_INFO;
             }
-            *str_len_or_ind_ptr = definitions::NULL_DATA;
+            *str_len_or_ind_ptr = definitions::SQL_NULL_DATA;
             stmt.insert_var_data_cache(col_num, CachedData::Fixed);
             return SqlReturn::SUCCESS;
         }

@@ -78,13 +78,12 @@ pub type RetCode = i16;
 pub const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
 
 // flags for null-terminated string
-pub const NTS: isize = -3;
-pub const NTSL: isize = -3;
+pub const SQL_NTS: isize = -3;
+pub const SQL_NTSL: isize = -3;
 
 /// Maximum message length
-pub const MAX_MESSAGE_LENGTH: SmallInt = 512;
-pub const SQLSTATE_SIZE: usize = 5;
-pub const SQLSTATE_SIZEW: usize = 10;
+pub const SQL_MAX_MESSAGE_LENGTH: SmallInt = 512;
+pub const SQL_SQLSTATE_SIZE: usize = 5;
 
 /// SQL Free Statement options
 #[allow(non_camel_case_types)]
@@ -114,8 +113,8 @@ pub enum FreeStmtOption {
 
 /// Represented in C headers as SQLSMALLINT
 #[allow(non_camel_case_types)]
-#[repr(i16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(i16)]
 pub enum HandleType {
     SQL_HANDLE_ENV = 1,
     SQL_HANDLE_DBC = 2,
@@ -125,8 +124,8 @@ pub enum HandleType {
 
 /// Options for `SQLDriverConnect`
 #[allow(non_camel_case_types)]
-#[repr(u16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(u16)]
 pub enum DriverConnectOption {
     SQL_DRIVER_NO_PROMPT = 0,
     SQL_DRIVER_COMPLETE = 1,
@@ -135,17 +134,11 @@ pub enum DriverConnectOption {
 }
 
 // Attribute for string lengths
-
-/// SQL_IS_POINTER
-pub const IS_POINTER: i32 = -4;
-/// SQL_IS_UINTEGER
-pub const IS_UINTEGER: i32 = -5;
-/// SQL_IS_INTEGER
-pub const IS_INTEGER: i32 = -6;
-/// SQL_IS_USMALLINT
-pub const IS_USMALLINT: i32 = -7;
-/// SQL_IS_SMALLINT
-pub const IS_SMALLINT: i32 = -8;
+pub const SQL_IS_POINTER: i32 = -4;
+pub const SQL_IS_UINTEGER: i32 = -5;
+pub const SQL_IS_INTEGER: i32 = -6;
+pub const SQL_IS_USMALLINT: i32 = -7;
+pub const SQL_IS_SMALLINT: i32 = -8;
 
 /// SQL_YEAR_MONTH_STRUCT
 #[repr(C)]
@@ -224,40 +217,10 @@ pub struct Guid {
     pub d4: [u8; 8],
 }
 
-/// Connection attributes for `SQLSetConnectAttr`
-#[allow(non_camel_case_types)]
-#[repr(i32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
-pub enum ConnectionAttribute {
-    SQL_ATTR_ASYNC_ENABLE = 4,
-    SQL_ATTR_ACCESS_MODE = 101,
-    SQL_ATTR_AUTOCOMMIT = 102,
-    SQL_ATTR_LOGIN_TIMEOUT = 103,
-    SQL_ATTR_TRACE = 104,
-    SQL_ATTR_TRACEFILE = 105,
-    SQL_ATTR_TRANSLATE_LIB = 106,
-    SQL_ATTR_TRANSLATE_OPTION = 107,
-    SQL_ATTR_TXN_ISOLATION = 108,
-    SQL_ATTR_CURRENT_CATALOG = 109,
-    SQL_ATTR_ODBC_CURSORS = 110,
-    SQL_ATTR_QUIET_MODE = 111,
-    SQL_ATTR_PACKET_SIZE = 112,
-    SQL_ATTR_CONNECTION_TIMEOUT = 113,
-    SQL_ATTR_DISCONNECT_BEHAVIOR = 114,
-    SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE = 117,
-    SQL_ATTR_ASYNC_DBC_EVENT = 119,
-    SQL_ATTR_ENLIST_IN_DTC = 1207,
-    SQL_ATTR_ENLIST_IN_XA = 1208,
-    SQL_ATTR_CONNECTION_DEAD = 1209,
-    SQL_ATTR_APP_WCHAR_TYPE = 1061,
-    SQL_ATTR_AUTO_IPD = 10001,
-    SQL_ATTR_METADATA_ID = 10014,
-}
-
 /// `DiagIdentifier` for `SQLGetDiagField`
 #[allow(non_camel_case_types)]
-#[repr(i32)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(i32)]
 pub enum HeaderDiagnosticIdentifier {
     SQL_DIAG_RETURNCODE = 1,
     SQL_DIAG_NUMBER = 2,
@@ -277,8 +240,8 @@ pub enum HeaderDiagnosticIdentifier {
 }
 
 #[allow(non_camel_case_types)]
-#[repr(i32)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+#[repr(i32)]
 pub enum AsyncConnectionBehavior {
     SQL_ASYNC_DBC_ENABLE_ON = 1,
     #[default]
@@ -286,8 +249,8 @@ pub enum AsyncConnectionBehavior {
 }
 
 #[allow(non_camel_case_types)]
-#[repr(i32)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(i32)]
 pub enum DynamicDiagnosticIdentifier {
     SQL_DIAG_ALTER_DOMAIN = 3,
     SQL_DIAG_ALTER_TABLE = 4,
@@ -322,8 +285,8 @@ pub enum DynamicDiagnosticIdentifier {
 }
 
 #[allow(non_camel_case_types)]
-#[repr(i16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+#[repr(i16)]
 pub enum CompletionType {
     SQL_COMMIT = 0,
     SQL_ROLLBACK = 1,
@@ -343,6 +306,7 @@ pub struct Numeric {
 
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+#[repr(i32)]
 pub enum SqlBool {
     SQL_FALSE = 0,
     SQL_TRUE,
@@ -350,6 +314,7 @@ pub enum SqlBool {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
 pub enum CursorScrollable {
     SQL_NONSCROLLABLE = 0,
     SQL_SCROLLABLE,
@@ -357,6 +322,7 @@ pub enum CursorScrollable {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
 pub enum CursorSensitivity {
     SQL_UNSPECIFIED = 0,
     SQL_INSENSITIVE,
@@ -365,6 +331,7 @@ pub enum CursorSensitivity {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug)]
+#[repr(u32)]
 pub enum AsyncEnable {
     SQL_ASYNC_ENABLE_OFF = 0,
     SQL_ASYNC_ENABLE_ON,
@@ -372,6 +339,7 @@ pub enum AsyncEnable {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
 pub enum Concurrency {
     SQL_CONCUR_READ_ONLY = 1,
     SQL_CONCUR_LOCK = 2,
@@ -381,6 +349,7 @@ pub enum Concurrency {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
 pub enum CursorType {
     SQL_CURSOR_FORWARD_ONLY = 0,
     SQL_CURSOR_KEYSET_DRIVEN = 1,
@@ -390,6 +359,7 @@ pub enum CursorType {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
 pub enum NoScan {
     SQL_NOSCAN_OFF = 0,
     SQL_NOSCAN_ON,
@@ -397,12 +367,13 @@ pub enum NoScan {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug)]
+#[repr(u32)]
 pub enum BindType {
     SQL_BIND_BY_COLUMN = 0,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum ParamOperationPtr {}
+pub enum ParamfOperationPtr {}
 
 #[derive(Clone, Copy, Debug)]
 pub enum ParamStatusPtr {}
@@ -414,6 +385,7 @@ pub enum ParamsProcessedPtr {}
 pub enum ParamsetSize {}
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
 pub enum RetrieveData {
     Off = 0,
     On,
@@ -423,11 +395,13 @@ pub enum RetrieveData {
 pub enum RowOperationPtr {}
 
 #[derive(Clone, Copy, Debug)]
+#[repr(u32)]
 pub enum SimulateCursor {
     NonUnique = 0,
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
 pub enum UseBookmarks {
     Off = 0,
     Variable = 2,

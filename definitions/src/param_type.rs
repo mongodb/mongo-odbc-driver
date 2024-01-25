@@ -1,8 +1,8 @@
 use num_derive::FromPrimitive;
 
 #[allow(non_camel_case_types)]
-#[repr(i16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+#[repr(i16)]
 pub enum ParamType {
     SQL_PARAM_TYPE_UNKNOWN = 0,
     SQL_PARAM_INPUT = 1,

@@ -1,8 +1,8 @@
 use num_derive::FromPrimitive;
 
 #[allow(non_camel_case_types)]
-#[repr(i16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+#[repr(i16)]
 pub enum SqlDataType {
     SQL_UNKNOWN_TYPE = 0,
     SQL_CHAR = 1,
@@ -18,7 +18,7 @@ pub enum SqlDataType {
     SQL_TYPE_DATE = 91,
     SQL_TYPE_TIME = 92,
     SQL_TYPE_TIMESTAMP = 93,
-    SQL_TIME_OR_INTERVAL = 10,
+    SQL_INTERVAL = 10,
     SQL_TIMESTAMP = 11,
     SQL_LONGVARCHAR = -1,
     SQL_BINARY = -2,

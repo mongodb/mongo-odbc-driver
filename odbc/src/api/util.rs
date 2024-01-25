@@ -87,7 +87,7 @@ pub fn handle_sql_type(odbc_version: AttrOdbcVersion, sql_type: SqlDataType) -> 
             // code for SQL_DATE from ODBC 2 is used as SQL_DATETIME in ODBC 3
             SqlDataType::SQL_TYPE_DATE => SqlDataType::SQL_DATETIME,
             // code for SQL_TIME from ODBC 2 is used as SQL_EXT_TIME_OR_INTERVAL in ODBC 3
-            SqlDataType::SQL_TYPE_TIME => SqlDataType::SQL_TIME_OR_INTERVAL,
+            SqlDataType::SQL_TYPE_TIME => SqlDataType::SQL_INTERVAL,
             // code for SQL_TIMESTAMP from ODBC 2 is used as SQL_EXT_TIMESTAMP in ODBC 3
             SqlDataType::SQL_TYPE_TIMESTAMP => SqlDataType::SQL_TIMESTAMP,
             v => v,
