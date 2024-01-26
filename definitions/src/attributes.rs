@@ -100,6 +100,9 @@ impl From<AttrCpMatch> for Pointer {
     }
 }
 
+const SQL_ATTR_ASYNC_ENABLE: i32 = 4;
+const SQL_ATTR_METADATA_ID: i32 = 10014;
+
 /// Statement attributes are characteristics of the statement. For example, whether to use bookmarks
 /// and what kind of cursor to use with the statement's result set are statement attributes.
 ///
@@ -123,7 +126,7 @@ pub enum StatementAttribute {
     SQL_ATTR_MAX_ROWS = 1,
     SQL_ATTR_NOSCAN = 2,
     SQL_ATTR_MAX_LENGTH = 3,
-    SQL_ATTR_ASYNC_ENABLE = 4,
+    SQL_ATTR_ASYNC_ENABLE = SQL_ATTR_ASYNC_ENABLE,
     SQL_ATTR_ROW_BIND_TYPE = 5,
     SQL_ATTR_CURSOR_TYPE = 6,
     SQL_ATTR_CONCURRENCY = 7,
@@ -159,7 +162,7 @@ pub enum StatementAttribute {
     SQL_ATTR_APP_PARAM_DESC = 10011,
     SQL_ATTR_IMP_ROW_DESC = 10012,
     SQL_ATTR_IMP_PARAM_DESC = 10013,
-    SQL_ATTR_METADATA_ID = 10014,
+    SQL_ATTR_METADATA_ID = SQL_ATTR_METADATA_ID,
 }
 
 /// Connection attributes for `SQLSetConnectAttr`
@@ -167,7 +170,7 @@ pub enum StatementAttribute {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 #[repr(i32)]
 pub enum ConnectionAttribute {
-    SQL_ATTR_ASYNC_ENABLE = 4,
+    SQL_ATTR_ASYNC_ENABLE = SQL_ATTR_ASYNC_ENABLE,
     SQL_ATTR_ACCESS_MODE = 101,
     SQL_ATTR_AUTOCOMMIT = 102,
     SQL_ATTR_LOGIN_TIMEOUT = 103,
@@ -189,5 +192,5 @@ pub enum ConnectionAttribute {
     SQL_ATTR_CONNECTION_DEAD = 1209,
     SQL_ATTR_APP_WCHAR_TYPE = 1061,
     SQL_ATTR_AUTO_IPD = 10001,
-    SQL_ATTR_METADATA_ID = 10014,
+    SQL_ATTR_METADATA_ID = SQL_ATTR_METADATA_ID,
 }

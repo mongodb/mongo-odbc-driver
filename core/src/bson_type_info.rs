@@ -1,4 +1,4 @@
-use definitions::SqlDataType;
+use definitions::{SqlCode, SqlDataType};
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum TypeMode {
@@ -39,7 +39,7 @@ pub struct BsonTypeInfo {
     // Suffix used for a literal of this type, such as ' for a char-type
     pub literal_suffix: Option<&'static str>,
     // Additional info that is currently only applied to Dates
-    pub sql_code: Option<i32>,
+    pub sql_code: Option<SqlCode>,
     // Represents if this type is automatically unique in a given column, such as OBJECTID
     pub is_auto_unique_value: Option<bool>,
     // A bool if data is unsigned, None if not applicable, such as a char-type
@@ -256,7 +256,7 @@ impl BsonTypeInfo {
         fixed_bytes_length: Some(16),
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
-        sql_code: Some(3),
+        sql_code: Some(SqlCode::SQL_CODE_TIMESTAMP),
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,

@@ -144,12 +144,12 @@ pub const SQL_ALL_CATALOGS: &str = "%";
 pub const SQL_ALL_SCHEMAS: &str = "%";
 
 pub const SQL_CB_NULL: u16 = 0x0000;
-pub const SQL_U16_ZERO: u16 = 0x0000;
+pub const MAX_COLUMNS_U16_ZERO: u16 = 0x0000;
 pub const SQL_CL_START: u16 = 0x0001;
-pub const SQL_U32_ZERO: u32 = 0x0;
+pub const MAX_COLUMNS_U32_ZERO: u32 = 0x0;
 pub const SQL_OIC_CORE: u32 = 0x00000001;
 pub const SQL_SC_SQL92_ENTRY: u32 = 0x00000001;
-pub const SQL_INFO_Y: &str = "Y";
+pub const COLUMN_ALIAS_INFO_Y: &str = "Y";
 pub const SQL_GB_GROUP_BY_CONTAINS_SELECT: u16 = 0x0002;
 pub const SQL_CB_PRESERVE: u16 = 2;
 pub const SQL_CA1_NEXT: u32 = 0x00000001;

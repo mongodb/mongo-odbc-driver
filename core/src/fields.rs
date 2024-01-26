@@ -723,7 +723,7 @@ impl MongoStatement for MongoFields {
             14 => Bson::Int32(get_meta_data()?.non_concise_type as i32),
             15 => match get_meta_data()?.sql_code {
                 None => Bson::Null,
-                Some(x) => Bson::Int32(x),
+                Some(x) => Bson::Int32(x as i32),
             },
             16 => Bson::Int32({
                 let l = get_meta_data()?.octet_length;

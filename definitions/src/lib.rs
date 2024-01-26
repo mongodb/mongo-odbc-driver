@@ -309,7 +309,7 @@ pub struct Numeric {
 #[repr(i32)]
 pub enum SqlBool {
     SQL_FALSE = 0,
-    SQL_TRUE,
+    SQL_TRUE = 1,
 }
 
 #[allow(non_camel_case_types)]
@@ -317,7 +317,7 @@ pub enum SqlBool {
 #[repr(usize)]
 pub enum CursorScrollable {
     SQL_NONSCROLLABLE = 0,
-    SQL_SCROLLABLE,
+    SQL_SCROLLABLE = 1,
 }
 
 #[allow(non_camel_case_types)]
@@ -325,8 +325,8 @@ pub enum CursorScrollable {
 #[repr(usize)]
 pub enum CursorSensitivity {
     SQL_UNSPECIFIED = 0,
-    SQL_INSENSITIVE,
-    SQL_SENSITIVE,
+    SQL_INSENSITIVE = 1,
+    SQL_SENSITIVE = 2,
 }
 
 #[allow(non_camel_case_types)]
@@ -334,7 +334,7 @@ pub enum CursorSensitivity {
 #[repr(u32)]
 pub enum AsyncEnable {
     SQL_ASYNC_ENABLE_OFF = 0,
-    SQL_ASYNC_ENABLE_ON,
+    SQL_ASYNC_ENABLE_ON = 1,
 }
 
 #[allow(non_camel_case_types)]
@@ -362,7 +362,7 @@ pub enum CursorType {
 #[repr(u32)]
 pub enum NoScan {
     SQL_NOSCAN_OFF = 0,
-    SQL_NOSCAN_ON,
+    SQL_NOSCAN_ON = 1,
 }
 
 #[allow(non_camel_case_types)]
@@ -405,6 +405,15 @@ pub enum SimulateCursor {
 pub enum UseBookmarks {
     Off = 0,
     Variable = 2,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, FromPrimitive)]
+#[repr(usize)]
+pub enum SqlCode {
+    SQL_CODE_DATE = 1,
+    SQL_CODE_TIME = 2,
+    SQL_CODE_TIMESTAMP = 3,
 }
 
 #[derive(Clone, Copy, Debug)]

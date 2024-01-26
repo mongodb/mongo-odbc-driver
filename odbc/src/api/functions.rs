@@ -2013,7 +2013,7 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_SYSTEM_FUNCTIONS => {
                     // MongoSQL does not support any of the ODBC system functions.
-                    i16_len::set_output_fixed_data(&SQL_U32_ZERO, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(&MAX_COLUMNS_U32_ZERO, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_TIMEDATE_FUNCTIONS => {
                     // MongoSQL supports the following timedate functions.
@@ -2064,7 +2064,7 @@ macro_rules! sql_get_info_helper {
                 InfoType::SQL_COLUMN_ALIAS => {
                     // MongoSQL does support column aliases.
                     i16_len::set_output_wstring_as_bytes(
-                        SQL_INFO_Y,
+                        COLUMN_ALIAS_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
@@ -2083,7 +2083,7 @@ macro_rules! sql_get_info_helper {
                 InfoType::SQL_ORDER_BY_COLUMNS_IN_SELECT => {
                     // MongoSQL does require ORDER BY columns to be in the SELECT list.
                     i16_len::set_output_wstring_as_bytes(
-                        SQL_INFO_Y,
+                        COLUMN_ALIAS_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
@@ -2095,7 +2095,7 @@ macro_rules! sql_get_info_helper {
                     //
                     // As noted for InfoType::OwnerTerm, the MongoSQL ODBC driver
                     // does not support "schema" in the data hierarchy.
-                    i16_len::set_output_fixed_data(&SQL_U32_ZERO, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(&MAX_COLUMNS_U32_ZERO, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_CATALOG_USAGE => {
                     // This return value indicates support for SELECT as well as
@@ -2111,7 +2111,7 @@ macro_rules! sql_get_info_helper {
                 InfoType::SQL_DATA_SOURCE_READ_ONLY => {
                     // MongoSQL is read-only.
                     i16_len::set_output_wstring_as_bytes(
-                        SQL_INFO_Y,
+                        COLUMN_ALIAS_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
@@ -2150,7 +2150,7 @@ macro_rules! sql_get_info_helper {
                 | InfoType::SQL_MAX_COLUMNS_IN_SELECT => {
                     // MongoSQL does not have an explicit maximum number of
                     // columns allowed in a GROUP BY, ORDER BY, or SELECT clause.
-                    i16_len::set_output_fixed_data(&SQL_U16_ZERO, info_value_ptr, string_length_ptr)
+                    i16_len::set_output_fixed_data(&MAX_COLUMNS_U16_ZERO, info_value_ptr, string_length_ptr)
                 }
 
                 InfoType::SQL_TIMEDATE_ADD_INTERVALS | InfoType::SQL_TIMEDATE_DIFF_INTERVALS => {
@@ -2227,7 +2227,7 @@ macro_rules! sql_get_info_helper {
                 InfoType::SQL_CATALOG_NAME => {
                     // MongoSQL does support catalog (database) names.
                     i16_len::set_output_wstring_as_bytes(
-                        SQL_INFO_Y,
+                        COLUMN_ALIAS_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,
@@ -2292,7 +2292,7 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_NEED_LONG_DATA_LEN => {
                     i16_len::set_output_wstring_as_bytes(
-                        SQL_INFO_Y,
+                        COLUMN_ALIAS_INFO_Y,
                         info_value_ptr,
                         buffer_length as usize,
                         string_length_ptr,

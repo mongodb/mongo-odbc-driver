@@ -7,7 +7,7 @@ use crate::{
     },
     BsonTypeInfo, Error, Result, TypeMode,
 };
-use definitions::{Nullability, SqlDataType};
+use definitions::{Nullability, SqlCode, SqlDataType};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
@@ -42,9 +42,7 @@ pub struct MongoColMetadata {
     pub sql_type: SqlDataType,
     // non-concise SqlDataType
     pub non_concise_type: SqlDataType,
-    // sql_code, always NULL or SQL_CODE_TIMESTAMP (3) for our types
-    //   does not define this enum yet, so we just use an i32.
-    pub sql_code: Option<i32>,
+    pub sql_code: Option<SqlCode>,
     pub is_unsigned: bool,
     pub is_updatable: bool,
 }

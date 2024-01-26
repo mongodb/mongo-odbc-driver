@@ -3,7 +3,7 @@ use crate::{
     err::Result, stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
 };
 use bson::Bson;
-use definitions::{Nullability, SqlDataType};
+use definitions::{Nullability, SqlCode, SqlDataType};
 
 use lazy_static::lazy_static;
 
@@ -22,7 +22,7 @@ const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
     fixed_bytes_length: Some(16),
     literal_prefix: Some("'"),
     literal_suffix: Some("'"),
-    sql_code: Some(3),
+    sql_code: Some(SqlCode::SQL_CODE_TIMESTAMP),
     is_auto_unique_value: None,
     is_unsigned: None,
     num_prec_radix: None,
@@ -288,7 +288,7 @@ impl MongoStatement for MongoTypesInfo {
                     None => Bson::Null,
                 },
                 17 => match type_info.sql_code {
-                    Some(subcode) => Bson::Int32(subcode),
+                    Some(subcode) => Bson::Int32(subcode as i32),
                     _ => Bson::Null,
                 },
                 18 => match type_info.num_prec_radix {
