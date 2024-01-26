@@ -10,6 +10,9 @@ pub enum EnvironmentAttribute {
     SQL_ATTR_CONNECTION_POOLING = 201,
     SQL_ATTR_CP_MATCH = 202,
     SQL_ATTR_OUTPUT_NTS = 10001,
+    // this is an iODBC specific attribute that the DM uses to check which encoding we're using.
+    // We currently have the cstr/utf32 feature to handle encoding issues with iODBC, however if
+    // in the future if we can use utf16 with iODBC, this will be useful.
     SQL_ATTR_DRIVER_UNICODE_TYPE = 1065,
 }
 
