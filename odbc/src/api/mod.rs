@@ -1,4 +1,3 @@
-pub(crate) mod definitions;
 pub(crate) mod diag;
 pub(crate) mod errors;
 mod functions;

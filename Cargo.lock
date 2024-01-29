@@ -335,6 +335,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2e66c9d817f1720209181c316d28635c050fa304f9c79e47a520882661b7308"
 
 [[package]]
+name = "definitions"
+version = "0.0.0"
+dependencies = [
+ "cstr",
+ "num-derive",
+ "num-traits",
+]
+
+[[package]]
 name = "deranged"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -711,11 +720,13 @@ version = "0.0.0"
 dependencies = [
  "constants",
  "cstr",
+ "definitions",
  "lazy_static",
  "log",
  "logger",
  "mongodb",
- "odbc-sys",
+ "num-derive",
+ "num-traits",
  "regex",
  "serde",
  "serde_json",
@@ -937,6 +948,7 @@ dependencies = [
  "chrono",
  "constants",
  "cstr",
+ "definitions",
  "fancy-regex",
  "itertools",
  "lazy_static",
@@ -945,7 +957,6 @@ dependencies = [
  "mongodb",
  "num-derive",
  "num-traits",
- "odbc-sys",
  "regex",
  "serde",
  "shared_sql_utils",
@@ -961,6 +972,7 @@ dependencies = [
  "chrono",
  "constants",
  "cstr",
+ "definitions",
  "function_name",
  "lazy_static",
  "log",
@@ -969,7 +981,6 @@ dependencies = [
  "mongodb",
  "num-derive",
  "num-traits",
- "odbc-sys",
  "regex",
  "serde",
  "serde_json",
@@ -1100,13 +1111,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8bda667d9f2b5051b8833f59f3bf748b28ef54f850f4fcb389a252aa383866d1"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "odbc-sys"
-version = "0.0.0"
-dependencies = [
- "cstr",
 ]
 
 [[package]]

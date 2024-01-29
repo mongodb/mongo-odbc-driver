@@ -10,8 +10,6 @@ mod conn;
 pub use conn::MongoConnection;
 mod databases;
 pub use databases::MongoDatabases;
-mod definitions;
-pub use definitions::SqlDataType;
 mod table_types;
 pub use table_types::MongoTableTypes;
 mod err;

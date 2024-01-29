@@ -1,17 +1,13 @@
 [package]
-name = "odbc-sys"
+name = "definitions"
 version = "0.0.0"
-authors = ["Markus Klein"]
-license = "MIT"
-description = "ODBC ffi bindings"
-repository = "https://github.com/pacman82/odbc-sys"
-keywords = ["sql","database","odbc","ffi"]
 build = "build.rs"
-categories = ["external-ffi-bindings", "database"]
 edition = "2021"
 
 [dependencies]
 cstr = { path = "../cstr" }
+num-traits = "0.2.14"
+num-derive = "0.3.3"
 
 [features]
 default = ["odbc_version_3_80"]

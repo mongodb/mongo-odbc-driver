@@ -1,9 +1,11 @@
 use crate::{
-    api::definitions::*,
     handles::definitions::{MongoHandle, Statement, StatementState},
     map, SQLGetStmtAttrW, SQLSetStmtAttrW,
 };
-use odbc_sys::{HStmt, Integer, Pointer, SqlReturn, ULen, USmallInt};
+use definitions::{
+    AsyncEnable, BindType, CursorScrollable, CursorSensitivity, CursorType, HStmt, Integer, NoScan,
+    Pointer, RetrieveData, SqlBool, SqlReturn, StatementAttribute, ULen, USmallInt, UseBookmarks,
+};
 use std::{collections::BTreeMap, mem::size_of};
 
 fn get_set_stmt_attr(
@@ -173,31 +175,31 @@ mod unit {
             stmt_handle,
             StatementAttribute::SQL_ATTR_CURSOR_SCROLLABLE,
             map! {
-                CursorScrollable::NonScrollable as i32 => SqlReturn::SUCCESS,
-                CursorScrollable::Scrollable as i32 => SqlReturn::ERROR,
+                CursorScrollable::SQL_NONSCROLLABLE as i32 => SqlReturn::SUCCESS,
+                CursorScrollable::SQL_SCROLLABLE as i32 => SqlReturn::ERROR,
             },
-            CursorScrollable::NonScrollable as usize,
+            CursorScrollable::SQL_NONSCROLLABLE as usize,
         );
         get_set_stmt_attr(
             stmt_handle,
             StatementAttribute::SQL_ATTR_CURSOR_SENSITIVITY,
             map! {
-                CursorSensitivity::Insensitive as i32 => SqlReturn::SUCCESS,
-                CursorSensitivity::Sensitive as i32 => SqlReturn::ERROR,
-                CursorSensitivity::Unspecified as i32 => SqlReturn::ERROR
+                CursorSensitivity::SQL_INSENSITIVE as i32 => SqlReturn::SUCCESS,
+                CursorSensitivity::SQL_SENSITIVE as i32 => SqlReturn::ERROR,
+                CursorSensitivity::SQL_UNSPECIFIED as i32 => SqlReturn::ERROR
             },
-            CursorSensitivity::Insensitive as usize,
+            CursorSensitivity::SQL_INSENSITIVE as usize,
         );
         get_set_stmt_attr(
             stmt_handle,
             StatementAttribute::SQL_ATTR_CURSOR_TYPE,
             map! {
-                CursorType::ForwardOnly as i32 => SqlReturn::SUCCESS,
-                CursorType::Dynamic as i32 => SqlReturn::SUCCESS_WITH_INFO,
-                CursorType::KeysetDriven as i32 => SqlReturn::SUCCESS_WITH_INFO,
-                CursorType::Static as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                CursorType::SQL_CURSOR_FORWARD_ONLY as i32 => SqlReturn::SUCCESS,
+                CursorType::SQL_CURSOR_DYNAMIC as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                CursorType::SQL_CURSOR_KEYSET_DRIVEN as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                CursorType::SQL_CURSOR_STATIC as i32 => SqlReturn::SUCCESS_WITH_INFO,
             },
-            CursorType::ForwardOnly as usize,
+            CursorType::SQL_CURSOR_FORWARD_ONLY as usize,
         );
         get_set_stmt_attr(
             stmt_handle,
@@ -220,10 +222,10 @@ mod unit {
             stmt_handle,
             StatementAttribute::SQL_ATTR_NOSCAN,
             map! {
-                NoScan::Off as i32 => SqlReturn::SUCCESS,
-                NoScan::On as i32 => SqlReturn::SUCCESS
+                NoScan::SQL_NOSCAN_OFF as i32 => SqlReturn::SUCCESS,
+                NoScan::SQL_NOSCAN_ON as i32 => SqlReturn::SUCCESS
             },
-            NoScan::Off as usize,
+            NoScan::SQL_NOSCAN_OFF as usize,
         );
         get_set_stmt_attr(
             stmt_handle,
@@ -246,10 +248,10 @@ mod unit {
             stmt_handle,
             StatementAttribute::SQL_ATTR_ROW_BIND_TYPE,
             map! {
-                BindType::BindByColumn as i32 => SqlReturn::SUCCESS,
+                BindType::SQL_BIND_BY_COLUMN as i32 => SqlReturn::SUCCESS,
                 10 => SqlReturn::SUCCESS // Any number besides 0
             },
-            BindType::BindByColumn as usize,
+            BindType::SQL_BIND_BY_COLUMN as usize,
         );
         get_set_stmt_attr(
             stmt_handle,
@@ -306,19 +308,19 @@ mod unit {
             stmt_handle,
             StatementAttribute::SQL_ATTR_ASYNC_ENABLE,
             map! {
-                AsyncEnable::Off as i32 => SqlReturn::ERROR,
-                AsyncEnable::On as i32 => SqlReturn::ERROR,
+                AsyncEnable::SQL_ASYNC_ENABLE_OFF as i32 => SqlReturn::ERROR,
+                AsyncEnable::SQL_ASYNC_ENABLE_ON as i32 => SqlReturn::ERROR,
             },
-            AsyncEnable::Off as usize,
+            AsyncEnable::SQL_ASYNC_ENABLE_OFF as usize,
         );
         get_set_stmt_attr(
             stmt_handle,
             StatementAttribute::SQL_ATTR_ENABLE_AUTO_IPD,
             map! {
-                SqlBool::False as i32 => SqlReturn::ERROR,
-                SqlBool::True as i32 => SqlReturn::ERROR,
+                SqlBool::SQL_FALSE as i32 => SqlReturn::ERROR,
+                SqlBool::SQL_TRUE as i32 => SqlReturn::ERROR,
             },
-            SqlBool::False as usize,
+            SqlBool::SQL_FALSE as usize,
         );
         get_set_stmt_attr(
             stmt_handle,

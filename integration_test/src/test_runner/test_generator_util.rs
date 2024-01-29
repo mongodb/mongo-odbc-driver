@@ -1,8 +1,9 @@
 use crate::test_runner::{
     fetch_row, get_column_attribute, get_column_count, get_data, Error, Result, TestEntry,
 };
+use definitions::{CDataType, Desc, HStmt, SqlDataType, USmallInt};
 use lazy_static::lazy_static;
-use odbc_sys::{CDataType, Desc, HStmt, SqlDataType, USmallInt};
+use num_traits::FromPrimitive;
 use serde_json::{Number, Value};
 use std::string::ToString;
 
@@ -34,40 +35,41 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
     let mut expected_nullability: Vec<Value> = vec![];
 
     for i in 1..(column_count + 1) {
-        let catalog_name = get_column_attribute(stmt, i, Desc::CatalogName, &STRING_VAL)?;
+        let catalog_name = get_column_attribute(stmt, i, Desc::SQL_DESC_CATALOG_NAME, &STRING_VAL)?;
         expected_catalog_name.push(catalog_name);
 
-        let case_sensitive = get_column_attribute(stmt, i, Desc::CaseSensitive, &STRING_VAL)?;
+        let case_sensitive =
+            get_column_attribute(stmt, i, Desc::SQL_DESC_CASE_SENSITIVE, &STRING_VAL)?;
         expected_case_sensitive.push(case_sensitive);
 
-        let column_name = get_column_attribute(stmt, i, Desc::Name, &STRING_VAL)?;
+        let column_name = get_column_attribute(stmt, i, Desc::SQL_DESC_NAME, &STRING_VAL)?;
         expected_column_name.push(column_name);
 
-        let display_size = get_column_attribute(stmt, i, Desc::DisplaySize, &NUMBER_VAL)?;
+        let display_size = get_column_attribute(stmt, i, Desc::SQL_DESC_DISPLAY_SIZE, &NUMBER_VAL)?;
         expected_display_size.push(display_size);
 
-        let length = get_column_attribute(stmt, i, Desc::Length, &NUMBER_VAL)?;
+        let length = get_column_attribute(stmt, i, Desc::SQL_DESC_LENGTH, &NUMBER_VAL)?;
         expected_length.push(length);
 
-        let is_searchable = get_column_attribute(stmt, i, Desc::Searchable, &NUMBER_VAL)?;
+        let is_searchable = get_column_attribute(stmt, i, Desc::SQL_DESC_SEARCHABLE, &NUMBER_VAL)?;
         expected_is_searchable.push(is_searchable);
 
-        let is_unsigned = get_column_attribute(stmt, i, Desc::Unsigned, &NUMBER_VAL)?;
+        let is_unsigned = get_column_attribute(stmt, i, Desc::SQL_DESC_UNSIGNED, &NUMBER_VAL)?;
         expected_is_unsigned.push(is_unsigned);
 
-        let sql_type = get_column_attribute(stmt, i, Desc::Type, &NUMBER_VAL)?;
+        let sql_type = get_column_attribute(stmt, i, Desc::SQL_DESC_TYPE, &NUMBER_VAL)?;
         expected_sql_type.push(sql_type);
 
-        let bson_type = get_column_attribute(stmt, i, Desc::TypeName, &STRING_VAL)?;
+        let bson_type = get_column_attribute(stmt, i, Desc::SQL_DESC_TYPE_NAME, &STRING_VAL)?;
         expected_bson_type.push(bson_type);
 
-        let precision = get_column_attribute(stmt, i, Desc::Precision, &NUMBER_VAL)?;
+        let precision = get_column_attribute(stmt, i, Desc::SQL_DESC_PRECISION, &NUMBER_VAL)?;
         expected_precision.push(precision);
 
-        let scale = get_column_attribute(stmt, i, Desc::Scale, &NUMBER_VAL)?;
+        let scale = get_column_attribute(stmt, i, Desc::SQL_DESC_SCALE, &NUMBER_VAL)?;
         expected_scale.push(scale);
 
-        let nullability = get_column_attribute(stmt, i, Desc::Nullable, &NUMBER_VAL)?;
+        let nullability = get_column_attribute(stmt, i, Desc::SQL_DESC_NULLABLE, &NUMBER_VAL)?;
         expected_nullability.push(nullability);
     }
 
@@ -127,39 +129,49 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
 // Get the expected CDataType for the provided sql_type.
 fn get_expected_data_type(sql_type: &Value) -> CDataType {
     match sql_type {
-        Value::Number(n) => {
-            let sdt = SqlDataType(n.as_i64().unwrap() as i16);
-            match sdt {
-                SqlDataType::UNKNOWN_TYPE => CDataType::Char,
-                SqlDataType::CHAR => CDataType::Char,
-                SqlDataType::NUMERIC => CDataType::Numeric,
-                SqlDataType::DECIMAL => CDataType::Numeric,
-                SqlDataType::INTEGER => CDataType::SLong,
-                SqlDataType::SMALLINT => CDataType::SShort,
-                SqlDataType::FLOAT => CDataType::Float,
-                SqlDataType::REAL => CDataType::Numeric,
-                SqlDataType::DOUBLE => CDataType::Double,
-                SqlDataType::DATETIME => CDataType::TypeTimestamp,
-                SqlDataType::VARCHAR => CDataType::Char,
-                SqlDataType::DATE => CDataType::TypeDate,
-                SqlDataType::TIME => CDataType::TypeTime,
-                SqlDataType::TIMESTAMP => CDataType::Char,
-                SqlDataType::EXT_TIME_OR_INTERVAL => CDataType::Char,
-                SqlDataType::EXT_TIMESTAMP => CDataType::Default,
-                SqlDataType::EXT_LONG_VARCHAR => CDataType::Char,
-                SqlDataType::EXT_BINARY => CDataType::Binary,
-                SqlDataType::EXT_VAR_BINARY => CDataType::Binary,
-                SqlDataType::EXT_LONG_VAR_BINARY => CDataType::Binary,
-                SqlDataType::EXT_BIG_INT => CDataType::SBigInt,
-                SqlDataType::EXT_TINY_INT => CDataType::STinyInt,
-                SqlDataType::EXT_BIT => CDataType::Bit,
-                SqlDataType::EXT_W_CHAR => CDataType::WChar,
-                SqlDataType::EXT_W_VARCHAR => CDataType::WChar,
-                SqlDataType::EXT_W_LONG_VARCHAR => CDataType::WChar,
-                SqlDataType::EXT_GUID => CDataType::Guid,
-                v => unreachable!("invalid sql_type encountered: {:?}", v),
-            }
-        }
+        Value::Number(n) => match FromPrimitive::from_i64(n.as_i64().unwrap()) {
+            Some(SqlDataType::SQL_UNKNOWN_TYPE) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_CHAR) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_NUMERIC) => CDataType::SQL_C_NUMERIC,
+            Some(SqlDataType::SQL_DECIMAL) => CDataType::SQL_C_NUMERIC,
+            Some(SqlDataType::SQL_INTEGER) => CDataType::SQL_C_SLONG,
+            Some(SqlDataType::SQL_SMALLINT) => CDataType::SQL_C_SSHORT,
+            Some(SqlDataType::SQL_FLOAT) => CDataType::SQL_C_FLOAT,
+            Some(SqlDataType::SQL_REAL) => CDataType::SQL_C_NUMERIC,
+            Some(SqlDataType::SQL_DOUBLE) => CDataType::SQL_C_DOUBLE,
+            Some(SqlDataType::SQL_DATETIME) => CDataType::SQL_C_TYPE_TIMESTAMP,
+            Some(SqlDataType::SQL_VARCHAR) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_TYPE_DATE) => CDataType::SQL_C_TYPE_DATE,
+            Some(SqlDataType::SQL_TYPE_TIME) => CDataType::SQL_C_TYPE_TIME,
+            Some(SqlDataType::SQL_TYPE_TIMESTAMP) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_TIMESTAMP) => CDataType::SQL_C_DEFAULT,
+            Some(SqlDataType::SQL_LONGVARCHAR) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_BINARY) => CDataType::SQL_C_BINARY,
+            Some(SqlDataType::SQL_VARBINARY) => CDataType::SQL_C_BINARY,
+            Some(SqlDataType::SQL_LONGVARBINARY) => CDataType::SQL_C_BINARY,
+            Some(SqlDataType::SQL_BIGINT) => CDataType::SQL_C_SBIGINT,
+            Some(SqlDataType::SQL_TINYINT) => CDataType::SQL_C_STINYINT,
+            Some(SqlDataType::SQL_BIT) => CDataType::SQL_C_BIT,
+            Some(SqlDataType::SQL_WCHAR) => CDataType::SQL_C_WCHAR,
+            Some(SqlDataType::SQL_WVARCHAR) => CDataType::SQL_C_WCHAR,
+            Some(SqlDataType::SQL_WLONGVARCHAR) => CDataType::SQL_C_WCHAR,
+            Some(SqlDataType::SQL_GUID) => CDataType::SQL_C_GUID,
+            Some(SqlDataType::SQL_INTERVAL_DAY) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_YEAR) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_MONTH) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_HOUR) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_MINUTE) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_SECOND) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_YEAR_TO_MONTH) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_DAY_TO_HOUR) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_DAY_TO_MINUTE) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_DAY_TO_SECOND) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_HOUR_TO_MINUTE) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_HOUR_TO_SECOND) => CDataType::SQL_C_CHAR,
+            Some(SqlDataType::SQL_INTERVAL_MINUTE_TO_SECOND) => CDataType::SQL_C_CHAR,
+            None => unreachable!("invalid sql_type encountered: {:?}", sql_type),
+        },
         v => unreachable!("sql_type should always be a number: {:?}", v),
     }
 }

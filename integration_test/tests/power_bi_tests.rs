@@ -5,11 +5,11 @@ mod integration {
         fetch_and_get_data, generate_default_connection_str, get_column_attributes,
         get_sql_diagnostics, sql_return_to_string, OutputBuffer, BUFFER_LENGTH,
     };
-    use odbc_sys::{
+    use definitions::{
         AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute,
         DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
         Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFreeHandle, SQLGetInfoW,
-        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, NTS,
+        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, SQL_NTS,
     };
 
     use cstr::WideChar;
@@ -42,7 +42,7 @@ mod integration {
                 "Expected {}, got {}. Diagnostic message is: {}",
                 sql_return_to_string(SqlReturn::SUCCESS),
                 sql_return_to_string(outcome),
-                get_sql_diagnostics(HandleType::Dbc, conn_handle as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, conn_handle as Handle)
             );
 
             let length = buffer.data_length.clone();
@@ -67,21 +67,25 @@ mod integration {
     ///     - SQLAllocHandle(SQL_HANDLE_ENV)
     ///     - SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3)
     ///     - SQLSetEnvAttr(SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_HENV)
-    fn setup() -> odbc_sys::HEnv {
+    fn setup() -> definitions::HEnv {
         let mut env: Handle = null_mut();
 
         unsafe {
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLAllocHandle(HandleType::Env, null_mut(), &mut env as *mut Handle)
+                SQLAllocHandle(
+                    HandleType::SQL_HANDLE_ENV,
+                    null_mut(),
+                    &mut env as *mut Handle
+                )
             );
 
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLSetEnvAttr(
                     env as HEnv,
-                    EnvironmentAttribute::OdbcVersion,
-                    AttrOdbcVersion::Odbc3.into(),
+                    EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+                    AttrOdbcVersion::SQL_OV_ODBC3.into(),
                     0,
                 )
             );
@@ -90,8 +94,8 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetEnvAttr(
                     env as HEnv,
-                    EnvironmentAttribute::ConnectionPooling,
-                    AttrConnectionPooling::OnePerHenv.into(),
+                    EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING,
+                    AttrConnectionPooling::SQL_CP_ONE_PER_HENV.into(),
                     0,
                 )
             );
@@ -105,7 +109,7 @@ mod integration {
     /// - The string used as the input connection string
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
-    fn power_bi_connect(env_handle: HEnv) -> (odbc_sys::HDbc, String, String, SmallInt) {
+    fn power_bi_connect(env_handle: HEnv) -> (definitions::HDbc, String, String, SmallInt) {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         #[allow(unused_mut)]
@@ -116,7 +120,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::Dbc,
+                    HandleType::SQL_HANDLE_DBC,
                     env_handle as *mut _,
                     &mut dbc as *mut Handle
                 )
@@ -131,7 +135,7 @@ mod integration {
                     SqlReturn::SUCCESS,
                     SQLSetConnectAttrW(
                         dbc as HDbc,
-                        ConnectionAttribute::LoginTimeout,
+                        ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT,
                         login_timeout as Pointer,
                         0,
                     )
@@ -155,21 +159,21 @@ mod integration {
                     dbc as HDbc,
                     null_mut(),
                     in_connection_string_encoded.as_ptr(),
-                    NTS as SmallInt,
+                    SQL_NTS as SmallInt,
                     out_connection_string_buff,
                     BUFFER_LENGTH,
                     str_len_ptr,
-                    DriverConnectOption::NoPrompt,
+                    DriverConnectOption::SQL_DRIVER_NO_PROMPT,
                 ),
                 "{}",
-                get_sql_diagnostics(HandleType::Dbc, dbc)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, dbc)
             );
 
             output_len = *str_len_ptr;
             // The iodbc driver manager is multiplying the output length by size_of WideChar (u32)
             // for some reason. It is correct when returned from SQLDriverConnectW, but is 4x
             // bigger between return and here.
-            if odbc_sys::USING_IODBC {
+            if definitions::USING_IODBC {
                 output_len /= std::mem::size_of::<WideChar>() as i16;
             }
 
@@ -202,9 +206,9 @@ mod integration {
             // Verify that freeing the handle is working as expected
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLFreeHandle(HandleType::Env, env_handle as Handle),
+                SQLFreeHandle(HandleType::SQL_HANDLE_ENV, env_handle as Handle),
                 "{}",
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
             );
         }
     }
@@ -231,7 +235,7 @@ mod integration {
             // The output string should be the same as the input string except with extra curly braces around the driver name
             assert_eq!(input_len, output_len, "Expect that both connection the input connection string and output connection string have the same length but input string length is {input_len} and output string length is {output_len}");
 
-            // SQL_DRIVER_NAME is not accessible through odbc_sys
+            // SQL_DRIVER_NAME is not accessible through definitions
             /*
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -247,14 +251,14 @@ mod integration {
 
             test_get_info!(
                 conn_handle,
-                InfoType::DbmsName,
+                InfoType::SQL_DBMS_NAME,
                 14 * (std::mem::size_of::<WideChar>() as i16),
                 DataType::WChar
             );
 
             test_get_info!(
                 conn_handle,
-                InfoType::DbmsVer,
+                InfoType::SQL_DBMS_VER,
                 29 * (std::mem::size_of::<WideChar>() as i16),
                 DataType::WChar
             );
@@ -262,7 +266,7 @@ mod integration {
     }
 
     // Test PowerBI driver information retrieval
-    // This test is limited by the available InfoType values in odbc_sys
+    // This test is limited by the available InfoType values in definitions
     #[test]
     fn test_get_driver_info() {
         let env_handle: HEnv = setup();
@@ -271,7 +275,7 @@ mod integration {
         unsafe {
             test_get_info!(
                 conn_handle,
-                InfoType::IdentifierQuoteChar,
+                InfoType::SQL_IDENTIFIER_QUOTE_CHAR,
                 (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -283,31 +287,31 @@ mod integration {
             // InfoType::SQL_SQL_CONFORMANCE
             test_get_info!(
                 conn_handle,
-                InfoType::MaxColumnsInOrderBy,
+                InfoType::SQL_MAX_COLUMNS_IN_ORDER_BY,
                 2,
                 DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                InfoType::MaxIdentifierLen,
+                InfoType::SQL_MAX_IDENTIFIER_LEN,
                 2,
                 DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                InfoType::MaxColumnsInGroupBy,
+                InfoType::SQL_MAX_COLUMNS_IN_GROUP_BY,
                 2,
                 DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                InfoType::MaxColumnsInSelect,
+                InfoType::SQL_MAX_COLUMNS_IN_SELECT,
                 2,
                 DataType::USmallInt
             );
             test_get_info!(
                 conn_handle,
-                InfoType::OrderByColumnsInSelect,
+                InfoType::SQL_ORDER_BY_COLUMNS_IN_SELECT,
                 (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -325,7 +329,7 @@ mod integration {
             // InfoType::SQL_CONCAT_NULL_BEHAVIOR
             test_get_info!(
                 conn_handle,
-                InfoType::CatalogName,
+                InfoType::SQL_CATALOG_NAME,
                 (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -334,7 +338,7 @@ mod integration {
             // InfoType::SQL_ODBC_INTERFACE_CONFORMANCE
             test_get_info!(
                 conn_handle,
-                InfoType::SearchPatternEscape,
+                InfoType::SQL_SEARCH_PATTERN_ESCAPE,
                 (2 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -364,7 +368,7 @@ mod integration {
             // InfoType::SQL_CONVERT_WVARCHAR
             test_get_info!(
                 conn_handle,
-                InfoType::SpecialCharacters,
+                InfoType::SQL_SPECIAL_CHARACTERS,
                 (22 * std::mem::size_of::<WideChar>()) as i16,
                 DataType::WChar
             );
@@ -405,13 +409,13 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::Stmt,
+                    HandleType::SQL_HANDLE_STMT,
                     conn_handle as *mut _,
                     &mut stmt as *mut Handle
                 )
             );
 
-            // SQL_DRIVER_ODBC_VER and SQL_DRIVER_NAME are not available through odbc_sys
+            // SQL_DRIVER_ODBC_VER and SQL_DRIVER_NAME are not available through definitions
             /*
             SQLGetInfoW(SQL_DRIVER_ODBC_VER)
             SQLGetInfoW(SQL_DRIVER_NAME)
@@ -421,7 +425,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetConnectAttrW(
                     conn_handle,
-                    ConnectionAttribute::CurrentCatalog,
+                    ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG,
                     current_db.0 as *mut _,
                     current_db.1.len() as i32
                 )
@@ -430,12 +434,12 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
+                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
-            // SQLGetFunctions is not available through odbc_sys
+            // SQLGetFunctions is not available through definitions
             /*
             SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
             */
@@ -443,7 +447,7 @@ mod integration {
             //SQLGetInfoW(SQL_GETDATA_EXTENSIONS)
             test_get_info!(
                 conn_handle,
-                InfoType::GetDataExtensions,
+                InfoType::SQL_GETDATA_EXTENSIONS,
                 2,
                 DataType::USmallInt
             );
@@ -468,7 +472,7 @@ mod integration {
                 stmt,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SLong, CDataType::WChar],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
             );
         }
     }
@@ -503,7 +507,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::Stmt,
+                    HandleType::SQL_HANDLE_STMT,
                     conn_handle as *mut _,
                     &mut stmt as *mut Handle
                 )
@@ -524,7 +528,7 @@ mod integration {
                     table_view.len() as SmallInt - 1
                 ),
                 "{}",
-                get_sql_diagnostics(HandleType::Env, env_handle as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
             );
 
             //  - SQLNumResultCols()
@@ -553,7 +557,7 @@ mod integration {
                     SqlReturn::SUCCESS,
                     SqlReturn::NO_DATA,
                 ],
-                vec![CDataType::WChar; 5],
+                vec![CDataType::SQL_C_WCHAR; 5],
             );
         }
     }

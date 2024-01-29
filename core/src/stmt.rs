@@ -60,8 +60,8 @@ mod unit {
         stmt::{EmptyStatement, MongoStatement},
         TypeMode,
     };
+    use definitions::Nullability;
     use lazy_static::lazy_static;
-    use odbc_sys::Nullability;
 
     lazy_static! {
         static ref EMPTY_TEST_METADATA: Vec<MongoColMetadata> = vec![MongoColMetadata::new(
@@ -69,7 +69,7 @@ mod unit {
             "".to_string(),
             "TABLE_CAT".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             TypeMode::Standard
         )];
     }

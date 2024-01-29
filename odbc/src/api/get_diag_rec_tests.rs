@@ -1,5 +1,5 @@
 use crate::{api::errors::ODBCError, handles::definitions::*, SQLGetDiagRecW};
-use odbc_sys::{HandleType, SqlReturn};
+use definitions::{HandleType, SqlReturn};
 
 const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
 
@@ -51,19 +51,19 @@ mod unit {
         }
 
         let env_handle: *mut _ = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
-        validate_diag_rec(HandleType::Env, env_handle);
+        validate_diag_rec(HandleType::SQL_HANDLE_ENV, env_handle);
 
         let conn_handle: *mut _ = &mut MongoHandle::Connection(Connection::with_state(
             env_handle,
             ConnectionState::Allocated,
         ));
-        validate_diag_rec(HandleType::Dbc, conn_handle);
+        validate_diag_rec(HandleType::SQL_HANDLE_DBC, conn_handle);
 
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
             conn_handle,
             StatementState::Allocated,
         ));
-        validate_diag_rec(HandleType::Stmt, stmt_handle);
+        validate_diag_rec(HandleType::SQL_HANDLE_STMT, stmt_handle);
     }
 
     #[test]
@@ -86,7 +86,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLGetDiagRecW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     1,
                     sql_state,
@@ -106,7 +106,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetDiagRecW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     2,
                     sql_state,
@@ -147,7 +147,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetDiagRecW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     1,
                     sql_state,
@@ -161,7 +161,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetDiagRecW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     0,
                     sql_state,
@@ -175,7 +175,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::NO_DATA,
                 SQLGetDiagRecW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     3,
                     sql_state,

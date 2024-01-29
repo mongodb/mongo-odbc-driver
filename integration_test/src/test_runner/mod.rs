@@ -1,7 +1,7 @@
 mod test_generator_util;
 
 use cstr::WideChar;
-use odbc_sys::{
+use definitions::{
     CDataType, Desc, EnvironmentAttribute, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn,
     USmallInt,
 };
@@ -181,7 +181,12 @@ pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
     unsafe {
         assert_eq!(
             SqlReturn::SUCCESS,
-            odbc_sys::SQLSetEnvAttr(env, EnvironmentAttribute::OdbcVersion, 2 as *mut _, 0,)
+            definitions::SQLSetEnvAttr(
+                env,
+                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+                2 as *mut _,
+                0,
+            )
         );
     }
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR_ODBC_2)).unwrap();
@@ -291,7 +296,7 @@ fn run_query_test(query: &str, entry: &TestEntry, conn: HDbc, generate: bool) ->
     unsafe {
         let stmt: HStmt = allocate_statement(conn).unwrap();
 
-        match odbc_sys::SQLExecDirectW(stmt as HStmt, to_wstr_ptr(query).0, query.len() as i32) {
+        match definitions::SQLExecDirectW(stmt as HStmt, to_wstr_ptr(query).0, query.len() as i32) {
             SqlReturn::SUCCESS => {
                 if generate {
                     generate_baseline_test_file(entry, stmt)
@@ -302,7 +307,7 @@ fn run_query_test(query: &str, entry: &TestEntry, conn: HDbc, generate: bool) ->
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLExecDirectW".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle),
             )),
         }
     }
@@ -324,15 +329,15 @@ fn run_function_test(
         "sqlgettypeinfo" => {
             check_array_length(function, 2)?;
             unsafe {
-                let data_type: odbc_sys::SqlDataType =
+                let data_type: definitions::SqlDataType =
                     std::mem::transmute(function[1].as_i64().unwrap() as i16);
-                Ok(odbc_sys::SQLGetTypeInfo(statement as HStmt, data_type))
+                Ok(definitions::SQLGetTypeInfo(statement as HStmt, data_type))
             }
         }
         "sqltables" => {
             check_array_length(function, 9)?;
             unsafe {
-                Ok(odbc_sys::SQLTables(
+                Ok(definitions::SQLTables(
                     statement as HStmt,
                     str_or_null(&function[1]),
                     to_i16(&function[2])?,
@@ -348,7 +353,7 @@ fn run_function_test(
         "sqltablesw" => {
             check_array_length(function, 9)?;
             unsafe {
-                Ok(odbc_sys::SQLTablesW(
+                Ok(definitions::SQLTablesW(
                     statement as HStmt,
                     wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
@@ -364,7 +369,7 @@ fn run_function_test(
         "sqlcolumns" => {
             check_array_length(function, 9)?;
             unsafe {
-                Ok(odbc_sys::SQLColumns(
+                Ok(definitions::SQLColumns(
                     statement as HStmt,
                     str_or_null(&function[1]),
                     to_i16(&function[2])?,
@@ -380,7 +385,7 @@ fn run_function_test(
         "sqlcolumnsw" => {
             check_array_length(function, 9)?;
             unsafe {
-                Ok(odbc_sys::SQLColumnsW(
+                Ok(definitions::SQLColumnsW(
                     statement as HStmt,
                     wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
@@ -396,7 +401,7 @@ fn run_function_test(
         "sqlforeignkeysw" => {
             check_array_length(function, 13)?;
             unsafe {
-                Ok(odbc_sys::SQLForeignKeysW(
+                Ok(definitions::SQLForeignKeysW(
                     statement as HStmt,
                     wstr_or_null(&function[1]).0,
                     to_i16(&function[2])?,
@@ -419,7 +424,7 @@ fn run_function_test(
 
         "sqlprimarykeys" => {
             unsafe {
-                Ok(odbc_sys::SQLPrimaryKeys(
+                Ok(definitions::SQLPrimaryKeys(
                     statement as HStmt,
                     str_or_null(&function[1]),
                     to_i16(&function[2]),
@@ -432,7 +437,7 @@ fn run_function_test(
         }
         "sqlspecialcolumns" => {
             unsafe {
-                Ok(odbc_sys::SQLSpecialColumns(
+                Ok(definitions::SQLSpecialColumns(
                     statement as HStmt,
                     to_i16(&function[1]),
                     str_or_null(&function[2]),
@@ -448,7 +453,7 @@ fn run_function_test(
         }
         "sqlstatistics" => {
             unsafe {
-                Ok(odbc_sys::SQLStatistics(
+                Ok(definitions::SQLStatistics(
                     statement as HStmt,
                     str_or_null(&function[1]),
                     to_i16(&function[2]),
@@ -470,7 +475,7 @@ fn run_function_test(
         return Err(Error::OdbcFunctionFailed(
             function_name,
             sql_return_to_string(sql_return_val),
-            get_sql_diagnostics(HandleType::Stmt, statement as *mut _),
+            get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, statement as *mut _),
         ));
     }
     if generate {
@@ -502,13 +507,13 @@ fn validate_result_set(entry: &TestEntry, stmt: HStmt) -> Result<()> {
                     let expected_field = expected_row.get(i).unwrap();
                     let expected_data_type = if expected_field.is_number() {
                         match expected_field.is_f64() {
-                            true => CDataType::Double,
-                            false => CDataType::SLong,
+                            true => CDataType::SQL_C_DOUBLE,
+                            false => CDataType::SQL_C_SLONG,
                         }
                     } else if expected_field.is_boolean() {
-                        CDataType::Bit
+                        CDataType::SQL_C_BIT
                     } else {
-                        CDataType::Char
+                        CDataType::SQL_C_CHAR
                     };
                     let actual_field = get_data(stmt, i as USmallInt, expected_data_type)?;
 
@@ -592,84 +597,84 @@ fn validate_result_set_metadata(entry: &TestEntry, column_count: usize, stmt: HS
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::CatalogName,
+        Desc::SQL_DESC_CATALOG_NAME,
         &entry.expected_catalog_name,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::CaseSensitive,
+        Desc::SQL_DESC_CASE_SENSITIVE,
         &entry.expected_case_sensitive,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::DisplaySize,
+        Desc::SQL_DESC_DISPLAY_SIZE,
         &entry.expected_display_size,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Length,
+        Desc::SQL_DESC_LENGTH,
         &entry.expected_length,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Name,
+        Desc::SQL_DESC_NAME,
         &entry.expected_column_name,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Searchable,
+        Desc::SQL_DESC_SEARCHABLE,
         &entry.expected_is_searchable,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Unsigned,
+        Desc::SQL_DESC_UNSIGNED,
         &entry.expected_is_unsigned,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Type,
+        Desc::SQL_DESC_TYPE,
         &entry.expected_sql_type,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::TypeName,
+        Desc::SQL_DESC_TYPE_NAME,
         &entry.expected_bson_type,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Precision,
+        Desc::SQL_DESC_PRECISION,
         &entry.expected_precision,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Scale,
+        Desc::SQL_DESC_SCALE,
         &entry.expected_scale,
     )?;
     validate_result_set_metadata_helper(
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::Nullable,
+        Desc::SQL_DESC_NULLABLE,
         &entry.expected_nullability,
     )?;
     Ok(())
@@ -686,7 +691,7 @@ fn get_column_attribute(
         Box::into_raw(Box::new([0; BUFFER_LENGTH])) as *mut _;
     let numeric_attrib_ptr = &mut 0;
     let result = unsafe {
-        match odbc_sys::SQLColAttributeW(
+        match definitions::SQLColAttributeW(
             stmt as *mut _,
             column as USmallInt,
             field_identifier,
@@ -706,7 +711,7 @@ fn get_column_attribute(
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLColAttributeW".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as *mut _),
             )),
         }
     };
@@ -721,7 +726,7 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
     let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; BUFFER_LENGTH])) as *mut _;
     let mut data: Value = Default::default();
     let result = unsafe {
-        match odbc_sys::SQLGetData(
+        match definitions::SQLGetData(
             stmt as *mut _,
             // Result set columns start at 1, the column input parameter is 0-indexed
             column + 1,
@@ -735,14 +740,14 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
                     data = json!(null);
                 } else {
                     match data_type {
-                        CDataType::Char => {
+                        CDataType::SQL_C_CHAR => {
                             data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
                                 [0..*out_len_or_ind as usize]
                                 .to_string());
                         }
-                        CDataType::SLong => data = json!(*(buffer as *const i32)),
-                        CDataType::Double => data = json!(*(buffer as *const f64)),
-                        CDataType::Bit => data = json!(*(buffer as *const bool)),
+                        CDataType::SQL_C_SLONG => data = json!(*(buffer as *const i32)),
+                        CDataType::SQL_C_DOUBLE => data = json!(*(buffer as *const f64)),
+                        CDataType::SQL_C_BIT => data = json!(*(buffer as *const bool)),
                         _ => {}
                     };
                 }
@@ -751,7 +756,7 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLGetData".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as *mut _),
             )),
         }
     };
@@ -764,12 +769,12 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
 fn get_column_count(stmt: HStmt) -> Result<usize> {
     unsafe {
         let columns = &mut 0;
-        match odbc_sys::SQLNumResultCols(stmt as HStmt, columns) {
+        match definitions::SQLNumResultCols(stmt as HStmt, columns) {
             SqlReturn::SUCCESS => Ok(*columns as usize),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLNumResultCols".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as *mut _),
             )),
         }
     }
@@ -777,13 +782,13 @@ fn get_column_count(stmt: HStmt) -> Result<usize> {
 
 fn fetch_row(stmt: HStmt) -> Result<bool> {
     unsafe {
-        match odbc_sys::SQLFetch(stmt as HStmt) {
+        match definitions::SQLFetch(stmt as HStmt) {
             SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(true),
             SqlReturn::NO_DATA => Ok(false),
             sql_return => Err(Error::OdbcFunctionFailed(
                 "SQLFetch".to_string(),
                 sql_return_to_string(sql_return),
-                get_sql_diagnostics(HandleType::Stmt, stmt as *mut _),
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as *mut _),
             )),
         }
     }

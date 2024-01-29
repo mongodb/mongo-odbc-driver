@@ -1,5 +1,4 @@
-use crate::definitions::{ConnectionAttribute, OdbcVersion, StatementAttribute};
-use mongo_odbc_core::SqlDataType;
+use definitions::{AttrOdbcVersion, ConnectionAttribute, SqlDataType, StatementAttribute};
 
 pub(crate) fn connection_attribute_to_string(attr: ConnectionAttribute) -> String {
     match attr {
@@ -82,15 +81,15 @@ pub(crate) fn statement_attribute_to_string(attr: StatementAttribute) -> String 
 
 /// handle_sql_type returns the proper sql type for the application's current behavior. When the
 /// driver's version is set to ODBC 2.x, the datetime types must be mapped to different SQL types
-pub fn handle_sql_type(odbc_version: OdbcVersion, sql_type: SqlDataType) -> SqlDataType {
+pub fn handle_sql_type(odbc_version: AttrOdbcVersion, sql_type: SqlDataType) -> SqlDataType {
     match odbc_version {
-        OdbcVersion::Odbc2 => match sql_type {
+        AttrOdbcVersion::SQL_OV_ODBC2 => match sql_type {
             // code for SQL_DATE from ODBC 2 is used as SQL_DATETIME in ODBC 3
-            SqlDataType::DATE => SqlDataType::DATETIME,
+            SqlDataType::SQL_TYPE_DATE => SqlDataType::SQL_DATETIME,
             // code for SQL_TIME from ODBC 2 is used as SQL_EXT_TIME_OR_INTERVAL in ODBC 3
-            SqlDataType::TIME => SqlDataType::EXT_TIME_OR_INTERVAL,
+            SqlDataType::SQL_TYPE_TIME => SqlDataType::SQL_INTERVAL,
             // code for SQL_TIMESTAMP from ODBC 2 is used as SQL_EXT_TIMESTAMP in ODBC 3
-            SqlDataType::TIMESTAMP => SqlDataType::EXT_TIMESTAMP,
+            SqlDataType::SQL_TYPE_TIMESTAMP => SqlDataType::SQL_TIMESTAMP,
             v => v,
         },
         _ => sql_type,

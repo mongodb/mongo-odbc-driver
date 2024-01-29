@@ -1,14 +1,8 @@
-use crate::{
-    api::{
-        data::i16_len,
-        definitions::{DiagType, SQL_ROW_NUMBER_UNKNOWN},
-    },
-    definitions::OdbcVersion,
-    errors::ODBCError,
-};
+use crate::{api::data::i16_len, errors::ODBCError};
 use cstr::WideChar;
-use odbc_sys::Pointer;
-use odbc_sys::{Integer, SmallInt, SqlReturn};
+use definitions::{
+    AttrOdbcVersion, DiagType, Integer, Pointer, SmallInt, SqlReturn, SQL_ROW_NUMBER_UNKNOWN,
+};
 use std::ptr::copy_nonoverlapping;
 
 ///
@@ -36,7 +30,7 @@ pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WideChar) {
 pub unsafe fn get_diag_recw(
     error: &ODBCError,
     state: *mut WideChar,
-    odbc_ver: OdbcVersion,
+    odbc_ver: AttrOdbcVersion,
     message_text: *mut WideChar,
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
@@ -46,8 +40,10 @@ pub unsafe fn get_diag_recw(
         *native_error_ptr = error.get_native_err_code();
     }
     let sql_state = match odbc_ver {
-        OdbcVersion::Odbc2 => error.get_sql_state().odbc_2_state,
-        OdbcVersion::Odbc3 | OdbcVersion::Odbc3_80 => error.get_sql_state().odbc_3_state,
+        AttrOdbcVersion::SQL_OV_ODBC2 => error.get_sql_state().odbc_2_state,
+        AttrOdbcVersion::SQL_OV_ODBC3 | AttrOdbcVersion::SQL_OV_ODBC3_80 => {
+            error.get_sql_state().odbc_3_state
+        }
     };
     set_sql_statew(sql_state, state);
     let message = format!("{error}");
@@ -93,7 +89,7 @@ pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Poin
 pub unsafe fn get_diag_fieldw(
     errors: &Vec<ODBCError>,
     diag_identifier: DiagType,
-    odbc_ver: OdbcVersion,
+    odbc_ver: AttrOdbcVersion,
     diag_info_ptr: Pointer,
     record_number: i16,
     buffer_length: i16,
@@ -115,8 +111,8 @@ pub unsafe fn get_diag_fieldw(
                     DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
                     DiagType::SQL_DIAG_SQLSTATE => {
                         let sql_state = match odbc_ver {
-                            OdbcVersion::Odbc2 => error.get_sql_state().odbc_2_state,
-                            OdbcVersion::Odbc3 | OdbcVersion::Odbc3_80 => {
+                            AttrOdbcVersion::SQL_OV_ODBC2 => error.get_sql_state().odbc_2_state,
+                            AttrOdbcVersion::SQL_OV_ODBC3 | AttrOdbcVersion::SQL_OV_ODBC3_80 => {
                                 error.get_sql_state().odbc_3_state
                             }
                         };
