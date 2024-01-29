@@ -372,27 +372,12 @@ pub enum BindType {
     SQL_BIND_BY_COLUMN = 0,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum ParamfOperationPtr {}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ParamStatusPtr {}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ParamsProcessedPtr {}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ParamsetSize {}
-
 #[derive(Clone, Copy, Debug, FromPrimitive)]
 #[repr(u32)]
 pub enum RetrieveData {
     Off = 0,
     On,
 }
-
-#[derive(Clone, Copy, Debug)]
-pub enum RowOperationPtr {}
 
 #[derive(Clone, Copy, Debug)]
 #[repr(u32)]
@@ -415,6 +400,3 @@ pub enum SqlCode {
     SQL_CODE_TIME = 2,
     SQL_CODE_TIMESTAMP = 3,
 }
-
-#[derive(Clone, Copy, Debug)]
-pub enum AsyncStmtEvent {}
