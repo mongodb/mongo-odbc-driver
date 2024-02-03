@@ -118,6 +118,10 @@ pub const INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER: OdbcState<'static> = OdbcState
     odbc_2_state: "S1092",
     odbc_3_state: "HY092",
 };
+pub const FETCH_TYPE_OUT_OF_RANGE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1106",
+    odbc_3_state: "HY106",
+};
 pub const INDICATOR_VARIABLE_REQUIRED: OdbcState<'static> = OdbcState {
     odbc_2_state: "22002",
     odbc_3_state: "22002",

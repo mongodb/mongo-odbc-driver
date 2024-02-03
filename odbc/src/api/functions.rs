@@ -17,9 +17,10 @@ use cstr::{input_text_to_string_w, Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
     ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
-    DriverConnectOption, EnvironmentAttribute, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
-    InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode, RetrieveData, SmallInt, SqlBool,
-    SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt, UseBookmarks,
+    DriverConnectOption, EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd,
+    Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
+    RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
+    UseBookmarks,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -1126,9 +1127,7 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
 pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
     panic_safe_exec_clear_diagnostics!(
         debug,
-        || {
-            sql_fetch_helper(statement_handle, "SQLFetch")
-        },
+        || { sql_fetch_helper(statement_handle, "SQLFetch") },
         statement_handle
     );
 }
@@ -1191,10 +1190,28 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetchScroll(
     statement_handle: HStmt,
-    _fetch_orientation: USmallInt,
+    fetch_orientation: USmallInt,
     _fetch_offset: Len,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec_clear_diagnostics!(
+        debug,
+        || {
+            match FromPrimitive::from_i32(fetch_orientation as i32) {
+                Some(FetchOrientation::SQL_FETCH_NEXT) => {
+                    sql_fetch_helper(statement_handle, "SQLFetch")
+                }
+                _ => {
+                    let stmt_handle = MongoHandleRef::from(statement_handle);
+                    add_diag_info!(
+                        stmt_handle,
+                        ODBCError::FetchTypeOutOfRange(fetch_orientation)
+                    );
+                    SqlReturn::ERROR
+                }
+            }
+        },
+        statement_handle
+    );
 }
 
 ///
