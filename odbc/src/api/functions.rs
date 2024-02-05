@@ -1198,7 +1198,7 @@ pub unsafe extern "C" fn SQLFetchScroll(
         || {
             match FromPrimitive::from_i32(fetch_orientation as i32) {
                 Some(FetchOrientation::SQL_FETCH_NEXT) => {
-                    sql_fetch_helper(statement_handle, "SQLFetch")
+                    sql_fetch_helper(statement_handle, "SQLFetchScroll")
                 }
                 _ => {
                     let stmt_handle = MongoHandleRef::from(statement_handle);
