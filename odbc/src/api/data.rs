@@ -1319,7 +1319,7 @@ mod unit {
         use crate::{api::data::IntoCData, map};
         use bson::Bson;
         use constants::{
-            FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE,
+            OdbcState, FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE,
             INVALID_DATETIME_FORMAT,
         };
 
@@ -1340,12 +1340,11 @@ mod unit {
                             $input
                         );
                         if $info.is_some() {
-                            let odbc_info = r.1.unwrap().get_sql_state().odbc_3_state.to_string();
                             let info = $info.unwrap();
                             assert_eq!(
-                                info, odbc_info,
+                                info, r.1.clone().unwrap().get_sql_state(),
                                 "expected success with info {:?}, got {:?} calling method {} with {}",
-                                info, odbc_info, stringify!($method), $input
+                                info, r.1.unwrap().get_sql_state(), stringify!($method), $input
                             );
                         }
                     }
@@ -1361,10 +1360,10 @@ mod unit {
                         let info = $info.unwrap();
                         assert_eq!(
                             info,
-                            e.get_sql_state().odbc_3_state,
+                            e.get_sql_state(),
                             "expected {:?}, got {:?} calling method {:?} on {}",
                             info,
-                            e.get_sql_state().odbc_3_state,
+                            e.get_sql_state(),
                             stringify!($method),
                             $input
                         );
@@ -1490,31 +1489,36 @@ mod unit {
         // an f64
         #[test]
         fn string_conversions_to_numerics() {
-            type V = Vec<(&'static str, i32, Result<(), ()>, Option<&'static str>)>;
+            type V = Vec<(
+                &'static str,
+                i32,
+                Result<(), ()>,
+                Option<OdbcState<'static>>,
+            )>;
             let strings: HashMap<String, V> = map! {
                 (-PI).to_string() => vec![
-                    ("i64", -3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
-                    ("i32", -3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("i64", -3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("i32", -3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
                 ],
                 PI.to_string() => vec![
-                    ("i64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
-                    ("i32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
-                    ("u64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
-                    ("u32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION.odbc_3_state)),
+                    ("i64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("i32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("u64", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
+                    ("u32", 3, Ok(()), Some(FRACTIONAL_TRUNCATION)),
                 ],
                 i128::MIN.to_string() => vec![
-                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
                 ],
                 i128::MAX.to_string() => vec![
-                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("i64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("i32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
                 ],
                 i32::MAX.to_string() => vec![
                     ("i64", i32::MAX, Ok(()), None),
@@ -1523,10 +1527,10 @@ mod unit {
                     ("u32", i32::MAX, Ok(()), None),
                 ],
                 "foo".to_string() => vec![
-                    ("i64", 0, Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
-                    ("i32", 0, Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
-                    ("u64", 0, Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
-                    ("u32", 0, Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
+                    ("i64", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
+                    ("i32", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
+                    ("u64", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
+                    ("u32", 0, Err(()), Some(INVALID_CHARACTER_VALUE)),
                 ],
             };
             strings.iter().for_each(|(k, v)| {
@@ -1536,7 +1540,12 @@ mod unit {
         }
         #[test]
         fn string_conversions_to_floats() {
-            type V = Vec<(&'static str, f64, Result<(), ()>, Option<&'static str>)>;
+            type V = Vec<(
+                &'static str,
+                f64,
+                Result<(), ()>,
+                Option<OdbcState<'static>>,
+            )>;
             let strings: HashMap<String, V> = map! {
                 (-PI).to_string() => vec![
                     ("f64", -PI, Ok(()), None),
@@ -1548,11 +1557,11 @@ mod unit {
                 ],
                 f64::MAX.to_string() => vec![
                     ("f64", f64::MAX, Ok(()), None),
-                    ("f32", 0., Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("f32", 0., Err(()), Some(INTEGRAL_TRUNCATION)),
                 ],
                 "foo".to_string() => vec![
-                    ("f64", 0., Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
-                    ("f32", 0., Err(()), Some(INVALID_CHARACTER_VALUE.odbc_3_state)),
+                    ("f64", 0., Err(()), Some(INVALID_CHARACTER_VALUE)),
+                    ("f32", 0., Err(()), Some(INVALID_CHARACTER_VALUE)),
                 ],
             };
             strings.iter().for_each(|(k, v)| {
@@ -1563,13 +1572,18 @@ mod unit {
 
         #[test]
         fn int64_conversions_to_numerics() {
-            type V = Vec<(&'static str, i64, Result<(), ()>, Option<&'static str>)>;
+            type V = Vec<(
+                &'static str,
+                i64,
+                Result<(), ()>,
+                Option<OdbcState<'static>>,
+            )>;
             let int_64s: HashMap<i64, V> = map! {
                 i64::MAX => vec![
                     ("i64", i64::MAX, Ok(()), None),
-                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
+                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION)),
                     ("u64", i64::MAX, Ok(()), None),
-                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state))
+                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION))
                 ],
                 i32::MAX as i64 => vec![
                     ("i64", i32::MAX as i64, Ok(()), None),
@@ -1579,15 +1593,15 @@ mod unit {
                 ],
                 i64::MIN => vec![
                     ("i64", i64::MIN, Ok(()), None),
-                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u64", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state))
+                    ("i32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u64", 0i64, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION))
                 ],
                 i32::MIN as i64 => vec![
                     ("i64", i32::MIN as i64, Ok(()), None),
                     ("i32", i32::MIN as i64, Ok(()), None),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state))
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION))
                 ],
             };
 
@@ -1599,7 +1613,12 @@ mod unit {
 
         #[test]
         fn int_32_conversions_to_numerics() {
-            type V = Vec<(&'static str, i32, Result<(), ()>, Option<&'static str>)>;
+            type V = Vec<(
+                &'static str,
+                i32,
+                Result<(), ()>,
+                Option<OdbcState<'static>>,
+            )>;
             let int_32s: HashMap<i32, V> = map! {
                 i32::MAX => vec![
                     ("i64", i32::MAX, Ok(()), None),
@@ -1610,8 +1629,8 @@ mod unit {
                 i32::MIN => vec![
                     ("i64", i32::MIN, Ok(()), None),
                     ("i32", i32::MIN, Ok(()), None),
-                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state)),
-                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION.odbc_3_state))
+                    ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
+                    ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION))
                 ]
             };
 
@@ -1643,7 +1662,7 @@ mod unit {
                 &'static str,
                 DateTime<Utc>,
                 Result<(), ()>,
-                Option<&'static str>,
+                Option<OdbcState<'static>>,
             )>;
             let test_cases: V = vec![
                 (
@@ -1662,7 +1681,7 @@ mod unit {
                     "2014-11-28 09:23:24.1234567890",
                     datetime_expectation_millis,
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
+                    Some(FRACTIONAL_TRUNCATION),
                 ),
                 (
                     "2014-11-28T09:23:24.123456789Z",
@@ -1674,32 +1693,32 @@ mod unit {
                     "2014-11-28T09:23:24.1234567890Z",
                     datetime_expectation_millis,
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
+                    Some(FRACTIONAL_TRUNCATION),
                 ),
                 ("2014-11-28", date_expectation, Ok(()), None),
                 (
                     "11/28/2014",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                    Some(INVALID_DATETIME_FORMAT),
                 ),
                 (
                     "2014-35-80",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                    Some(INVALID_DATETIME_FORMAT),
                 ),
                 (
                     "2014-30-90 09:23:24.1234567890",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                    Some(INVALID_DATETIME_FORMAT),
                 ),
                 (
                     "30:23:24",
                     datetime_expectation_no_millis,
                     Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
+                    Some(INVALID_DATETIME_FORMAT),
                 ),
                 (
                     "09:23:24",
@@ -1717,7 +1736,7 @@ mod unit {
                     "09:23:24.1234567898",
                     today_plus_time_millis_expectation,
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
+                    Some(FRACTIONAL_TRUNCATION),
                 ),
             ];
             test_cases
@@ -1747,31 +1766,15 @@ mod unit {
         #[test]
         fn string_conversions_to_dates() {
             let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
-            let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
+            let test_cases: Vec<(&str, Result<(), ()>, Option<OdbcState<'static>>)> = vec![
                 ("2014-11-28", Ok(()), None),
-                (
-                    "11/28/2014",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
-                ),
-                (
-                    "2014-22-22",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
-                ),
-                (
-                    "10:15:30",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
-                ),
+                ("11/28/2014", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("2014-22-22", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("10:15:30", Err(()), Some(INVALID_DATETIME_FORMAT)),
                 ("2014-11-28 00:00:00", Ok(()), None),
                 ("2014-11-28 00:00:00.000", Ok(()), None),
                 ("2014-11-28T00:00:00Z", Ok(()), None),
-                (
-                    "2014-11-28 10:15:30",
-                    Ok(()),
-                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
-                ),
+                ("2014-11-28 10:15:30", Ok(()), Some(FRACTIONAL_TRUNCATION)),
             ];
             test_cases.iter().for_each(|(input, result, info)| {
                 match result {
@@ -1798,11 +1801,11 @@ mod unit {
         #[test]
         fn datetime_conversions_to_dates() {
             let date_expectation = NaiveDate::from_ymd_opt(2014, 11, 28).unwrap();
-            let test_cases: [(chrono::DateTime<Utc>, Option<&str>); 2] = [
+            let test_cases: [(chrono::DateTime<Utc>, Option<OdbcState<'static>>); 2] = [
                 ("2014-11-28T00:00:00Z".parse().unwrap(), None),
                 (
                     "2014-11-28T10:15:30.123Z".parse().unwrap(),
-                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
+                    Some(FRACTIONAL_TRUNCATION),
                 ),
             ];
             test_cases.iter().for_each(|(input, info)| {
@@ -1818,29 +1821,17 @@ mod unit {
         #[test]
         fn string_conversions_to_times() {
             let time_expectation = NaiveTime::from_hms_opt(10, 15, 30).unwrap();
-            let test_cases: Vec<(&str, Result<(), ()>, Option<&'static str>)> = vec![
+            let test_cases: Vec<(&str, Result<(), ()>, Option<OdbcState<'static>>)> = vec![
                 ("10:15:30", Ok(()), None),
                 ("10:15:30.00000", Ok(()), None),
-                (
-                    "10:15:30.123",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
-                ),
-                (
-                    "25:15:30.123",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
-                ),
-                (
-                    "2022-10-15",
-                    Err(()),
-                    Some(INVALID_DATETIME_FORMAT.odbc_3_state),
-                ),
+                ("10:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("25:15:30.123", Err(()), Some(INVALID_DATETIME_FORMAT)),
+                ("2022-10-15", Err(()), Some(INVALID_DATETIME_FORMAT)),
                 ("2014-11-28 10:15:30.000", Ok(()), None),
                 (
                     "2014-11-28 10:15:30.1243",
                     Ok(()),
-                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
+                    Some(FRACTIONAL_TRUNCATION),
                 ),
             ];
             test_cases.iter().for_each(|(input, result, info)| {
@@ -1868,11 +1859,11 @@ mod unit {
         #[test]
         fn datetime_conversions_to_times() {
             let time_expectation = NaiveTime::from_hms_opt(10, 15, 30).unwrap();
-            let test_cases: [(chrono::DateTime<Utc>, Option<&str>); 2] = [
+            let test_cases: [(chrono::DateTime<Utc>, Option<OdbcState<'static>>); 2] = [
                 ("2014-11-28T10:15:30Z".parse().unwrap(), None),
                 (
                     "2014-11-28T10:15:30.123Z".parse().unwrap(),
-                    Some(FRACTIONAL_TRUNCATION.odbc_3_state),
+                    Some(FRACTIONAL_TRUNCATION),
                 ),
             ];
             test_cases.iter().for_each(|(input, info)| {
