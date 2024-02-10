@@ -198,6 +198,7 @@ functions:
     - command: shell.exec
       type: system
       params:
+        silent: true
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
           docker run \
@@ -218,6 +219,7 @@ functions:
     - command: shell.exec
       type: system
       params:
+        silent: true
         working_dir: mongosql-odbc-driver/installer/tgz
         script: |
           docker run \
