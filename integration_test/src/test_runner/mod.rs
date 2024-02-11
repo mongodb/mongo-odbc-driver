@@ -317,7 +317,7 @@ fn run_query_test(query: &str, entry: &TestEntry, conn: HDbc, generate: bool) ->
 /// whether the test results should written to a file for baseline
 /// test file generation, or be asserted for correctness.
 fn run_function_test(
-    function: &Vec<Value>,
+    function: &[Value],
     entry: &TestEntry,
     conn: HDbc,
     generate: bool,
