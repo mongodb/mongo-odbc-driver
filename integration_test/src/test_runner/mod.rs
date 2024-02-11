@@ -282,7 +282,7 @@ fn to_i16(value: &Value) -> Result<i16> {
     i16::try_from(val).map_err(|e| Error::ValueOverflowI16(val, e.to_string()))
 }
 
-fn check_array_length(array: &Vec<Value>, length: usize) -> Result<()> {
+fn check_array_length(array: &[Value], length: usize) -> Result<()> {
     if array.len() < length {
         return Err(Error::NotEnoughArguments(length, array.len()));
     }
