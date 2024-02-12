@@ -1501,7 +1501,7 @@ tasks:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       # - func: "install iODBC"
       #   variants: [macos, macos-arm]
       - func: "install unix odbc"
