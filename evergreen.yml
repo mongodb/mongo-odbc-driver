@@ -176,7 +176,7 @@ functions:
             cargo install cargo-edit
             cargo set-version $RELEASE_VERSION
           fi
-          cargo install cargo-get
+          cargo install --locked cargo-get
           CARGO_PKGS_VERSION=$(cargo get --entry="odbc/Cargo.toml" package.version --major --minor --patch --delimiter=".")
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             EXPECTED_RELEASE_VERSION="0.0.0"
