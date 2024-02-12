@@ -176,7 +176,7 @@ functions:
             cargo install cargo-edit
             cargo set-version $RELEASE_VERSION
           fi
-          cargo install --locked cargo-get
+          cargo install cargo-get
           CARGO_PKGS_VERSION=$(cargo get --entry="odbc/Cargo.toml" package.version --major --minor --patch --delimiter=".")
           if [[ "${triggered_by_git_tag}" == "" ]]; then
             EXPECTED_RELEASE_VERSION="0.0.0"
@@ -1404,7 +1404,7 @@ tasks:
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
