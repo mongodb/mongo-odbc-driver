@@ -1425,7 +1425,7 @@ tasks:
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
@@ -1438,7 +1438,7 @@ tasks:
   - name: unit-test
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install unix odbc"
@@ -1455,7 +1455,7 @@ tasks:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install unix odbc"
