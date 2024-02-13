@@ -199,11 +199,14 @@ functions:
       type: system
       params:
         silent: true
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_jsign_image} \
@@ -220,11 +223,14 @@ functions:
       type: system
       params:
         silent: true
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         working_dir: mongosql-odbc-driver/installer/tgz
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
@@ -234,10 +240,13 @@ functions:
       params:
         working_dir: mongosql-odbc-driver/installer/tgz
         silent: false
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
