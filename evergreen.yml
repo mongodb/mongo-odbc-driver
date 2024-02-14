@@ -198,11 +198,15 @@ functions:
     - command: shell.exec
       type: system
       params:
+        silent: true
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_jsign_image} \
@@ -218,11 +222,15 @@ functions:
     - command: shell.exec
       type: system
       params:
+        silent: true
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         working_dir: mongosql-odbc-driver/installer/tgz
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
@@ -231,11 +239,14 @@ functions:
       type: system
       params:
         working_dir: mongosql-odbc-driver/installer/tgz
-        silent: false
+        silent: true
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
@@ -1393,7 +1404,7 @@ tasks:
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
@@ -1414,7 +1425,7 @@ tasks:
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
@@ -1427,7 +1438,7 @@ tasks:
   - name: unit-test
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install unix odbc"
@@ -1444,7 +1455,7 @@ tasks:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install unix odbc"
@@ -1490,7 +1501,7 @@ tasks:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       # - func: "install iODBC"
       #   variants: [macos, macos-arm]
       - func: "install unix odbc"

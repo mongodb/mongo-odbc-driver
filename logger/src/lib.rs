@@ -33,9 +33,7 @@ lazy_static! {
         let driver_settings: DriverSettings =
             DriverSettings::from_private_profile_string().unwrap_or_default();
 
-        // Due to numerous reasons why the logger could fail to initialize, we wrap it in a catch_unwind
-        // so that logger failure does not cause our dll to crash.
-        match std::panic::catch_unwind(|| {
+        let logging_body = || {
             let log_dir = Logger::get_log_dir(driver_settings.driver);
             if let Some(log_dir_str) = log_dir.to_str() {
                 if let Ok(appender) = Logger::file_appender(log_dir_str) {
@@ -50,7 +48,11 @@ lazy_static! {
             } else {
                 None
             }
-        }) {
+        };
+
+        // Due to numerous reasons why the logger could fail to initialize, we wrap it in a catch_unwind
+        // so that logger failure does not cause our dll to crash.
+        match std::panic::catch_unwind(logging_body) {
             Ok(logger) => logger,
             Err(_) => None,
         }

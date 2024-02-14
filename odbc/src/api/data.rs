@@ -4,7 +4,9 @@ use crate::{
     handles::definitions::{CachedData, MongoHandle, Statement},
 };
 use bson::{spec::BinarySubtype, Bson, UuidRepresentation};
-use chrono::{offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
+use chrono::{
+    offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike,
+};
 use cstr::{
     write_binary_slice_to_buffer, write_fixed_data, write_string_slice_to_buffer,
     write_wstring_slice_to_buffer, WideChar,
@@ -386,7 +388,7 @@ impl IntoCData for Bson {
                     (Utc::now().naive_utc().date(), time)
                 };
                 Ok((
-                    DateTime::<Utc>::from_utc(NaiveDateTime::new(date, time), Utc),
+                    TimeZone::from_utc_datetime(&Utc, &NaiveDateTime::new(date, time)),
                     string_contains_fractional_precision_micros(s)
                         .then_some(ODBCError::FractionalSecondsTruncation(s.clone())),
                 ))
@@ -1623,20 +1625,23 @@ mod unit {
 
         #[test]
         fn string_conversions_to_datetimes() {
+            use chrono::TimeZone;
             let date_expectation: DateTime<Utc> = "2014-11-28T00:00:00Z".parse().unwrap();
             let datetime_expectation_no_millis: DateTime<Utc> =
                 "2014-11-28T09:23:24Z".parse().unwrap();
             let datetime_expectation_millis: DateTime<Utc> =
                 "2014-11-28T09:23:24.123456789Z".parse().unwrap();
-            let today_plus_time_no_millis_expectation =
-                DateTime::from_utc(Utc::now().date_naive().and_hms_opt(9, 23, 24).unwrap(), Utc);
-            let today_plus_time_millis_expectation = DateTime::from_utc(
-                Utc::now()
+            let today_plus_time_no_millis_expectation = TimeZone::from_utc_datetime(
+                &Utc,
+                &Utc::now().date_naive().and_hms_opt(9, 23, 24).unwrap(),
+            );
+            let today_plus_time_millis_expectation = TimeZone::from_utc_datetime(
+                &Utc,
+                &Utc::now()
                     .naive_utc()
                     .date()
                     .and_hms_nano_opt(9, 23, 24, 123456789)
                     .unwrap(),
-                Utc,
             );
 
             type V = Vec<(

@@ -87,7 +87,7 @@ pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Poin
 /// This writes to multiple raw C-pointers
 ///
 pub unsafe fn get_diag_fieldw(
-    errors: &Vec<ODBCError>,
+    errors: &[ODBCError],
     diag_identifier: DiagType,
     odbc_ver: AttrOdbcVersion,
     diag_info_ptr: Pointer,

@@ -15,7 +15,6 @@ const DRIVERS_SECTION: &str = "ODBC Drivers";
 
 lazy_static! {
     pub static ref LOGGER_FILE: Mutex<File> = match std::fs::OpenOptions::new()
-        .write(true)
         .create(true)
         .append(true)
         .open(LOG_FILE)
