@@ -21,7 +21,7 @@ pub trait MongoStatement: Debug {
         }
         self.get_resultset_metadata()
             .get((col_index - 1) as usize)
-            .map_or(Err(Error::ColIndexOutOfBounds(col_index)), Ok)
+            .ok_or(Error::ColIndexOutOfBounds(col_index))
     }
     // Executes a prepared statement.
     // Only MongoQuery supports this workflow. The other statements don't.
