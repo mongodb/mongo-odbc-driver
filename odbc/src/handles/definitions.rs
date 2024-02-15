@@ -1,4 +1,5 @@
 use crate::api::errors::ODBCError;
+use bson::{Bson, Uuid};
 use cstr::{Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, Concurrency,
@@ -331,6 +332,7 @@ pub struct Statement {
     pub var_data_cache: RwLock<Option<HashMap<USmallInt, CachedData>>>,
     pub attributes: RwLock<StatementAttributes>,
     pub state: RwLock<StatementState>,
+    pub statement_id: RwLock<Bson>,
     // pub cursor: RwLock<Option<Box<Peekable<Cursor>>>>,
     pub errors: RwLock<Vec<ODBCError>>,
 }
@@ -385,18 +387,18 @@ impl Drop for StatementAttributes {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StatementState {
-    Allocated,
-    _Prepared,
-    _PreparedHasResultSet,
-    _ExecutedNoResultSet,
-    _ExecutedHasResultSet,
-    _CursorFetchSet,
-    _CursorExtendedFetchSet,
-    _FunctionNeedsDataNoParam,
-    _FunctionNeedsDataNoPut,
-    _FunctionNeedsDataPutCalled,
-    _Executing,
-    _AsyncCancelled,
+    Allocated,                   // S1
+    _Prepared,                   // S2: prepared statement, no resultset will be created
+    _PreparedHasResultSet, // S3: prepared satatement, a (possibly empty) resultset will be created
+    _ExecutedNoResultSet,  // S4
+    _ExecutedHasResultSet, // S5: statement executed and a (possibly empty) result set was created. The cursor is open and positioned before the first row of the result set.
+    _CursorFetchSet,       // S6: cursor positioned with SQLFetch or SQLFetchScroll
+    _CursorExtendedFetchSet, // S7: cursor positioned with SQLExtendedFetch.
+    _FunctionNeedsDataNoParam, // S8
+    _FunctionNeedsDataNoPut, // S9
+    _FunctionNeedsDataPutCalled, // S10
+    _Executing,            // S11: used when an async func returns SQL_STILL_EXECUTING
+    _AsyncCancelled, // S12: used when SQLCancel is called on a function that was SQL_STILL_EXECUTING
 }
 
 impl Statement {
@@ -416,6 +418,7 @@ impl Statement {
         Self {
             connection,
             state: RwLock::new(state),
+            statement_id: RwLock::new(Uuid::new().into()),
             var_data_cache: RwLock::new(None),
             attributes: RwLock::new(StatementAttributes {
                 app_row_desc: Box::into_raw(Box::new(MongoHandle::Descriptor(

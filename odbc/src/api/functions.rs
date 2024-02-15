@@ -1098,6 +1098,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 }
 
 unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool> {
+    let stmt_id = (*stmt.statement_id.read().unwrap()).clone();
     let mongo_statement = {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
             stmt.mongo_statement
@@ -1105,7 +1106,7 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
                 .unwrap()
                 .as_mut()
                 .unwrap()
-                .execute(mongo_connection)
+                .execute(mongo_connection, stmt_id)
                 .map_err(|e| e.into())
         } else {
             Err(ODBCError::InvalidCursorState)

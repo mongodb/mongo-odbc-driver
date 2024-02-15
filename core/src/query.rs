@@ -114,7 +114,7 @@ impl MongoStatement for MongoQuery {
     // Execute the $sql aggregation for the query and initialize the result set
     // cursor. If there is a timeout, the query must finish before the timeout
     // or an error is returned.
-    fn execute(&mut self, connection: &MongoConnection) -> Result<bool> {
+    fn execute(&mut self, connection: &MongoConnection, stmt_id: Bson) -> Result<bool> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = connection.client.database(current_db);
 
@@ -123,22 +123,23 @@ impl MongoStatement for MongoQuery {
             "statement": &self.query,
         }}];
 
+        let opt = AggregateOptions::builder().comment_bson(stmt_id);
         let cursor: Cursor<Document> = match self.query_timeout {
             Some(i) => {
                 if i > 0 {
-                    let opt = AggregateOptions::builder()
-                        .max_time(Duration::from_millis(i as u64))
-                        .build();
-                    db.aggregate(pipeline, opt)
-                        .map_err(Error::QueryExecutionFailed)?
+                    db.aggregate(
+                        pipeline,
+                        opt.max_time(Duration::from_millis(i as u64)).build(),
+                    )
+                    .map_err(Error::QueryExecutionFailed)?
                 } else {
                     // If the query timeout is 0, it means "no timeout"
-                    db.aggregate(pipeline, None)
+                    db.aggregate(pipeline, opt.build())
                         .map_err(Error::QueryExecutionFailed)?
                 }
             }
             _ => db
-                .aggregate(pipeline, None)
+                .aggregate(pipeline, opt.build())
                 .map_err(Error::QueryExecutionFailed)?,
         };
         self.resultset_cursor = Some(cursor);
