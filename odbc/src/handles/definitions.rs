@@ -387,18 +387,19 @@ impl Drop for StatementAttributes {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StatementState {
-    Allocated,                   // S1
-    _Prepared,                   // S2: prepared statement, no resultset will be created
-    _PreparedHasResultSet, // S3: prepared satatement, a (possibly empty) resultset will be created
-    _ExecutedNoResultSet,  // S4
-    _ExecutedHasResultSet, // S5: statement executed and a (possibly empty) result set was created. The cursor is open and positioned before the first row of the result set.
-    _CursorFetchSet,       // S6: cursor positioned with SQLFetch or SQLFetchScroll
-    _CursorExtendedFetchSet, // S7: cursor positioned with SQLExtendedFetch.
-    _FunctionNeedsDataNoParam, // S8
-    _FunctionNeedsDataNoPut, // S9
-    _FunctionNeedsDataPutCalled, // S10
-    _Executing,            // S11: used when an async func returns SQL_STILL_EXECUTING
-    _AsyncCancelled, // S12: used when SQLCancel is called on a function that was SQL_STILL_EXECUTING
+    Allocated,
+    _Prepared,
+    _PreparedHasResultSet,
+    _ExecutedNoResultSet,
+    _ExecutedHasResultSet,
+    _CursorFetchSet,
+    _CursorExtendedFetchSet,
+    _FunctionNeedsDataNoParam,
+    _FunctionNeedsDataNoPut,
+    _FunctionNeedsDataPutCalled,
+    _Executing,
+    SynchronousQueryExecuting,
+    _AsyncCancelled,
 }
 
 impl Statement {
