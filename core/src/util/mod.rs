@@ -40,10 +40,15 @@ pub(crate) fn to_name_regex(filter: &str) -> Option<Regex> {
     }
 }
 
-pub(crate) fn is_match(name: &str, filter: &Option<Regex>) -> bool {
-    match filter {
-        Some(regex) => regex.is_match(name),
-        None => true,
+/// is_match compares `name` to `filter` either directly or via regex, depending on
+/// the value `accept_search_patterns`. Empty strings for filters will match everything.
+pub(crate) fn is_match(name: &str, filter: &str, accept_search_patterns: bool) -> bool {
+    match accept_search_patterns {
+        false => filter.is_empty() || name == filter,
+        true => match to_name_regex(filter) {
+            Some(regex) => regex.is_match(name),
+            None => true,
+        },
     }
 }
 
@@ -107,39 +112,53 @@ mod filtering {
     }
 
     #[test]
-    fn test_is_positive_match() {
-        assert!(is_match("filter", &to_name_regex("%")));
-        assert!(is_match("filter", &to_name_regex("filter")));
-        assert!(is_match("downtimes", &to_name_regex("downtimes")));
-        assert!(is_match("customerssales", &to_name_regex("customer_sales")));
-        assert!(is_match("myiphone", &to_name_regex("my_phone")));
-        assert!(is_match("conversions2022", &to_name_regex("conversions%")));
-        assert!(is_match("integration_test", &to_name_regex("%test")));
-        assert!(is_match("money$$bags", &to_name_regex("money$$bags")));
-        assert!(is_match("money$.bags", &to_name_regex("money$.bags")));
+    fn test_is_positive_match_literal() {
+        assert!(is_match("%", "%", false));
+        assert!(is_match("%test", "%test", false));
+        assert!(is_match("down_times", "down_times", false));
+        assert!(is_match("filter", "filter", false));
+        assert!(is_match("downtimes", "downtimes", false));
+        assert!(is_match("money$$bags", "money$$bags", false));
+        assert!(is_match("money$.bags", "money$.bags", false));
     }
 
     #[test]
-    fn test_is_negative_match() {
-        assert!(!is_match("filter", &to_name_regex("filt")));
-        assert!(!is_match("filter", &to_name_regex(r"filt_er")));
-        assert!(!is_match("downtimestatus", &to_name_regex("downtimes")));
-        assert!(!is_match("downtimestatus", &to_name_regex("status")));
-        assert!(!is_match("integration_test_2", &to_name_regex("%test")));
-        assert!(!is_match("money$$bags", &to_name_regex("money$.bags")));
+    fn test_is_negative_match_literal() {
+        assert!(!is_match("filter", "%", false));
+        assert!(!is_match("customerssales", "customer_sales", false));
+        assert!(!is_match("conversions2022", "conversions%", false));
+        assert!(!is_match("integration_test", "%test", false));
+        assert!(!is_match("integration_test", "integrationstest", false));
     }
 
     #[test]
-    fn test_escaped_chars() {
-        assert!(is_match("my_phone", &to_name_regex(r"my\_phone")));
-        assert!(!is_match("myiphone", &to_name_regex(r"my\_phone")));
-        assert!(is_match(
-            "conversion%2022",
-            &to_name_regex(r"conversion\%2022")
-        ));
-        assert!(!is_match(
-            "conversions2022",
-            &to_name_regex(r"conversion\%2022")
-        ));
+    fn test_is_positive_match_pattern() {
+        assert!(is_match("filter", "%", true));
+        assert!(is_match("filter", "filter", true));
+        assert!(is_match("downtimes", "downtimes", true));
+        assert!(is_match("customerssales", "customer_sales", true));
+        assert!(is_match("myiphone", "my_phone", true));
+        assert!(is_match("conversions2022", "conversions%", true));
+        assert!(is_match("integration_test", "%test", true));
+        assert!(is_match("money$$bags", "money$$bags", true));
+        assert!(is_match("money$.bags", "money$.bags", true));
+    }
+
+    #[test]
+    fn test_is_negative_match_odbc_pattern() {
+        assert!(!is_match("filter", "filt", true));
+        assert!(!is_match("filter", r"filt_er", true));
+        assert!(!is_match("downtimestatus", "downtimes", true));
+        assert!(!is_match("downtimestatus", "status", true));
+        assert!(!is_match("integration_test_2", "%test", true));
+        assert!(!is_match("money$$bags", "money$.bags", true));
+    }
+
+    #[test]
+    fn test_escaped_chars_in_pattern() {
+        assert!(is_match("my_phone", r"my\_phone", true));
+        assert!(!is_match("myiphone", r"my\_phone", true));
+        assert!(is_match("conversion%2022", r"conversion\%2022", true));
+        assert!(!is_match("conversions2022", r"conversion\%2022", true));
     }
 }

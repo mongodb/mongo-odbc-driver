@@ -1,10 +1,11 @@
 use constants::{
-    CONNECTION_NOT_OPEN, FRACTIONAL_TRUNCATION, GENERAL_ERROR, GENERAL_WARNING,
-    INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION, INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER,
-    INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT,
-    INVALID_DESCRIPTOR_INDEX, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED,
-    NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE,
-    RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    OdbcState, CONNECTION_NOT_OPEN, FETCH_TYPE_OUT_OF_RANGE, FRACTIONAL_TRUNCATION, GENERAL_ERROR,
+    GENERAL_WARNING, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
+    INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE,
+    INVALID_COLUMN_NUMBER, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX,
+    INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET,
+    OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE, RIGHT_TRUNCATED,
+    UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -59,6 +60,8 @@ pub enum ODBCError {
     IndicatorVariableRequiredButNotSupplied,
     #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
     InvalidDescriptorIndex(u16),
+    #[error("[{}][API] The column index {0} is out of bounds", VENDOR_IDENTIFIER)]
+    InvalidColumnNumber(u16),
     #[error("[{}][API] No ResultSet", VENDOR_IDENTIFIER)]
     InvalidCursorState,
     #[error("[{}][API] Invalid SQL Type: {0}", VENDOR_IDENTIFIER)]
@@ -69,6 +72,8 @@ pub enum ODBCError {
     InvalidAttrValue(&'static str),
     #[error("[{}][API] Invalid attribute identifier {0}", VENDOR_IDENTIFIER)]
     InvalidAttrIdentifier(i32),
+    #[error("[{}][API] Fetch type out of range {0}", VENDOR_IDENTIFIER)]
+    FetchTypeOutOfRange(u16),
     #[error("[{}][API] Invalid target type {0}", VENDOR_IDENTIFIER)]
     InvalidTargetType(i16),
     #[error(
@@ -134,7 +139,7 @@ pub enum ODBCError {
 pub type Result<T> = std::result::Result<T, ODBCError>;
 
 impl ODBCError {
-    pub fn get_sql_state(&self) -> &str {
+    pub fn get_sql_state(&self) -> OdbcState {
         match self {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
@@ -148,6 +153,7 @@ impl ODBCError {
             ODBCError::Core(c) => c.get_sql_state(),
             ODBCError::InvalidAttrValue(_) => INVALID_ATTR_VALUE,
             ODBCError::InvalidAttrIdentifier(_) => INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER,
+            ODBCError::FetchTypeOutOfRange(_) => FETCH_TYPE_OUT_OF_RANGE,
             ODBCError::InvalidCursorState => INVALID_CURSOR_STATE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::InvalidTargetType(_) => PROGRAM_TYPE_OUT_OF_RANGE,
@@ -156,6 +162,7 @@ impl ODBCError {
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
             ODBCError::UnsupportedFieldDescriptor(_) => UNSUPPORTED_FIELD_DESCRIPTOR,
             ODBCError::InvalidDescriptorIndex(_) => INVALID_DESCRIPTOR_INDEX,
+            ODBCError::InvalidColumnNumber(_) => INVALID_COLUMN_NUMBER,
             ODBCError::InvalidSqlType(_) => INVALID_SQL_TYPE,
             ODBCError::RestrictedDataType(_, _) => RESTRICTED_DATATYPE,
             ODBCError::FractionalTruncation(_) => FRACTIONAL_TRUNCATION,
@@ -184,6 +191,7 @@ impl ODBCError {
             | ODBCError::UnimplementedDataType(_)
             | ODBCError::InvalidAttrValue(_)
             | ODBCError::InvalidAttrIdentifier(_)
+            | ODBCError::FetchTypeOutOfRange(_)
             | ODBCError::InvalidCursorState
             | ODBCError::InvalidHandleType(_)
             | ODBCError::InvalidTargetType(_)
@@ -195,6 +203,7 @@ impl ODBCError {
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)
+            | ODBCError::InvalidColumnNumber(_)
             | ODBCError::RestrictedDataType(_, _)
             | ODBCError::IndicatorVariableRequiredButNotSupplied
             | ODBCError::FractionalTruncation(_)

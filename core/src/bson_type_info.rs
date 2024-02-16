@@ -1,4 +1,4 @@
-use crate::definitions::SqlDataType;
+use definitions::{SqlCode, SqlDataType};
 
 pub const STRING_SIZE: u16 = u16::MAX;
 
@@ -11,22 +11,49 @@ pub enum TypeMode {
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BsonTypeInfo {
+    // This is the String bson typename as reported by the $type function in MQL
     pub type_name: &'static str,
+    // This is the SqlDataType integer as per the ODBC spec
     pub sql_type: SqlDataType,
+    // non_concise_type is also a SqlDataType integer, but it can differ from the sql_type for some
+    // types, e.g. TIMESTAMP
     pub non_concise_type: SqlDataType,
+    // An integer representing an enumeration of different searchability values:
+    // SQL_SEARCHABLE = 3; SQL_PRED_BASIC = 2; SQL_PRED_NONE = 0;
     pub searchable: i32,
+    // A boolean value reporting if a type is case_sensitive. True for Char-types, false for others
     pub is_case_sensitive: bool,
+    // A boolean dictating if the data type has predefined fixed precision and scale (which are data source-specific),
+    // such as a money data type. Note true for DOUBLE, where scale can differ
     pub fixed_prec_scale: bool,
+    // Scale for a datatype. If the datatype does not have fixed scale, this represents the largest
+    // possible scale.
     pub scale: Option<u16>,
+    // Precision for the data type. For char-data, this represents the largest possible character length, for numerical
+    // data, this represents the maximum number of decimal places.
     pub precision: Option<u16>,
+    // Maximum number of bytes (octets) for a given data type
     pub octet_length: Option<u16>,
+    // Number of bytes in a type that has fixed length, such as INT or DOUBLE
     pub fixed_bytes_length: Option<u16>,
+    // Prefix used for a literal of this type, such as ' for a char-type
     pub literal_prefix: Option<&'static str>,
+    // Suffix used for a literal of this type, such as ' for a char-type
     pub literal_suffix: Option<&'static str>,
-    pub sql_code: Option<i32>,
+    // Additional info that is currently only applied to Dates
+    pub sql_code: Option<SqlCode>,
+    // Represents if this type is automatically unique in a given column, such as OBJECTID
     pub is_auto_unique_value: Option<bool>,
+    // A bool if data is unsigned, None if not applicable, such as a char-type
     pub is_unsigned: Option<bool>,
+    // If the data type is an approximate numeric type, this contains the value Some(2) to indicate
+    // that COLUMN_SIZE specifies a number of bits. For exact numeric types, this column contains
+    // the value Some(10) to indicate that COLUMN_SIZE specifies a number of decimal digits.
+    // Otherwise, this is None.
     pub num_prec_radix: Option<u16>,
+    // This is the type info we use when simple_type_mode is true. This is a convenience mode for
+    // BI tools where BSON types not directly representable as SQL data are rendered as extended
+    // json strings.
     pub simple_type_info: Option<SimpleTypeInfo>,
 }
 
@@ -68,11 +95,11 @@ pub const SQL_PRED_NONE: i32 = 0;
 impl BsonTypeInfo {
     pub const DOUBLE: BsonTypeInfo = BsonTypeInfo {
         type_name: "double",
-        sql_type: SqlDataType::DOUBLE,
-        non_concise_type: SqlDataType::DOUBLE,
+        sql_type: SqlDataType::SQL_DOUBLE,
+        non_concise_type: SqlDataType::SQL_DOUBLE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
-        fixed_prec_scale: true,
+        fixed_prec_scale: false,
         scale: Some(15),
         precision: Some(15),
         octet_length: Some(8),
@@ -82,7 +109,7 @@ impl BsonTypeInfo {
         sql_code: None,
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
-        num_prec_radix: Some(10),
+        num_prec_radix: Some(2),
         simple_type_info: None,
     };
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
@@ -128,8 +155,8 @@ impl BsonTypeInfo {
     };
     pub const OBJECT: BsonTypeInfo = BsonTypeInfo {
         type_name: "object",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_NONE,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -147,8 +174,8 @@ impl BsonTypeInfo {
     };
     pub const ARRAY: BsonTypeInfo = BsonTypeInfo {
         type_name: "array",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_NONE,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -166,8 +193,8 @@ impl BsonTypeInfo {
     };
     pub const BINDATA: BsonTypeInfo = BsonTypeInfo {
         type_name: "binData",
-        sql_type: SqlDataType::EXT_BINARY,
-        non_concise_type: SqlDataType::EXT_BINARY,
+        sql_type: SqlDataType::SQL_BINARY,
+        non_concise_type: SqlDataType::SQL_BINARY,
         searchable: SQL_PRED_NONE,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -185,8 +212,8 @@ impl BsonTypeInfo {
     };
     pub const UNDEFINED: BsonTypeInfo = BsonTypeInfo {
         type_name: "undefined",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_NONE,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -204,8 +231,8 @@ impl BsonTypeInfo {
     };
     pub const OBJECTID: BsonTypeInfo = BsonTypeInfo {
         type_name: "objectId",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -223,8 +250,8 @@ impl BsonTypeInfo {
     };
     pub const BOOL: BsonTypeInfo = BsonTypeInfo {
         type_name: "bool",
-        sql_type: SqlDataType::EXT_BIT,
-        non_concise_type: SqlDataType::EXT_BIT,
+        sql_type: SqlDataType::SQL_BIT,
+        non_concise_type: SqlDataType::SQL_BIT,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -242,8 +269,8 @@ impl BsonTypeInfo {
     };
     pub const DATE: BsonTypeInfo = BsonTypeInfo {
         type_name: "date",
-        sql_type: SqlDataType::TIMESTAMP,
-        non_concise_type: SqlDataType::DATETIME,
+        sql_type: SqlDataType::SQL_TYPE_TIMESTAMP,
+        non_concise_type: SqlDataType::SQL_DATETIME,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: true,
@@ -253,7 +280,7 @@ impl BsonTypeInfo {
         fixed_bytes_length: Some(16),
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
-        sql_code: Some(3),
+        sql_code: Some(SqlCode::SQL_CODE_TIMESTAMP),
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
@@ -261,8 +288,8 @@ impl BsonTypeInfo {
     };
     pub const NULL: BsonTypeInfo = BsonTypeInfo {
         type_name: "null",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_NONE,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -280,8 +307,8 @@ impl BsonTypeInfo {
     };
     pub const REGEX: BsonTypeInfo = BsonTypeInfo {
         type_name: "regex",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -299,8 +326,8 @@ impl BsonTypeInfo {
     };
     pub const DBPOINTER: BsonTypeInfo = BsonTypeInfo {
         type_name: "dbPointer",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -318,8 +345,8 @@ impl BsonTypeInfo {
     };
     pub const JAVASCRIPT: BsonTypeInfo = BsonTypeInfo {
         type_name: "javascript",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -337,8 +364,8 @@ impl BsonTypeInfo {
     };
     pub const SYMBOL: BsonTypeInfo = BsonTypeInfo {
         type_name: "symbol",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -356,8 +383,8 @@ impl BsonTypeInfo {
     };
     pub const JAVASCRIPTWITHSCOPE: BsonTypeInfo = BsonTypeInfo {
         type_name: "javascriptWithScope",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -375,8 +402,8 @@ impl BsonTypeInfo {
     };
     pub const INT: BsonTypeInfo = BsonTypeInfo {
         type_name: "int",
-        sql_type: SqlDataType::INTEGER,
-        non_concise_type: SqlDataType::INTEGER,
+        sql_type: SqlDataType::SQL_INTEGER,
+        non_concise_type: SqlDataType::SQL_INTEGER,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: true,
@@ -394,8 +421,8 @@ impl BsonTypeInfo {
     };
     pub const TIMESTAMP: BsonTypeInfo = BsonTypeInfo {
         type_name: "timestamp",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -413,8 +440,8 @@ impl BsonTypeInfo {
     };
     pub const LONG: BsonTypeInfo = BsonTypeInfo {
         type_name: "long",
-        sql_type: SqlDataType::EXT_BIG_INT,
-        non_concise_type: SqlDataType::EXT_BIG_INT,
+        sql_type: SqlDataType::SQL_BIGINT,
+        non_concise_type: SqlDataType::SQL_BIGINT,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: true,
@@ -432,8 +459,8 @@ impl BsonTypeInfo {
     };
     pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
         type_name: "decimal",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -451,8 +478,8 @@ impl BsonTypeInfo {
     };
     pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "minKey",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -470,8 +497,8 @@ impl BsonTypeInfo {
     };
     pub const MAXKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "maxKey",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
@@ -489,8 +516,8 @@ impl BsonTypeInfo {
     };
     pub const BSON: BsonTypeInfo = BsonTypeInfo {
         type_name: "bson",
-        sql_type: SqlDataType::UNKNOWN_TYPE,
-        non_concise_type: SqlDataType::UNKNOWN_TYPE,
+        sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: SqlDataType::SQL_UNKNOWN_TYPE,
         searchable: SQL_PRED_NONE,
         is_case_sensitive: false,
         fixed_prec_scale: false,

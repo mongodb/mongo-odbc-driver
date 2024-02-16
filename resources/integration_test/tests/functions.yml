@@ -72,7 +72,8 @@ tests:
     - [ "timestamp", 0, null, null, null, null, 1, 0, 2, null, 0, null, "timestamp", null, null, 0, null, null, null ]
     - [ "undefined", 0, null, null, null, null, 1, 0, 0, null, 0, null, "undefined", null, null, 0, null, null, null ]
     - [ "int", 4, 10, null, null, null, 1, 0, 2, 0, 1, 0, "int", 0, 0, 4, null, 10, null ]
-    - [ "double", 8, 15, null, null, null, 1, 0, 2, 0, 1, 0, "double", 15, 15, 8, null, 10, null ]
+    - [ "double", 8, 15, null, null, null, 1, 0, 2, 0, 0, 0, "double", 15, 15, 8, null, 2, null ]
+    - [ "date", 11, 23, "'", "'", null, 1, 0, 2, null, 1, null, "date", 3, 3, 11, 3, null, null ]
     - [ "date", 93, 23, "'", "'", null, 1, 0, 2, null, 1, null, "date", 3, 3, 93, 3, null, null ]
   - description: SQLGetTypeInfo function get all types in simple_types_only mode
     test_definition: [ "sqlgettypeinfo", 0 ]
@@ -99,5 +100,6 @@ tests:
       - [ "timestamp", -9, 68, null, null, null, 1, 0, 2, null, 0, null, "timestamp", null, null, -9, null, null, null ]
       - [ "undefined", -9, 20, null, null, null, 1, 0, 0, null, 0, null, "undefined", null, null, -9, null, null, null ]
       - [ "int", 4, 10, null, null, null, 1, 0, 2, 0, 1, 0, "int", 0, 0, 4, null, 10, null ]
-      - [ "double", 8, 15, null, null, null, 1, 0, 2, 0, 1, 0, "double", 15, 15, 8, null, 10, null ]
+      - [ "double", 8, 15, null, null, null, 1, 0, 2, 0, 0, 0, "double", 15, 15, 8, null, 2, null ]
+      - [ "date", 11, 23, "'", "'", null, 1, 0, 2, null, 1, null, "date", 3, 3, 11, 3, null, null ]
       - [ "date", 93, 23, "'", "'", null, 1, 0, 2, null, 1, null, "date", 3, 3, 93, 3, null, null ]

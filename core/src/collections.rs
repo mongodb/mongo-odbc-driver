@@ -9,9 +9,9 @@ use crate::{
     BsonTypeInfo, Error,
 };
 use bson::{doc, Bson};
+use definitions::Nullability;
 use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
-use odbc_sys::Nullability;
 use regex::Regex;
 
 lazy_static! {
@@ -21,35 +21,35 @@ lazy_static! {
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NO_NULLS
+            Nullability::SQL_NO_NULLS
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::NULLABLE
+            Nullability::SQL_NULLABLE
         ),
     ];
 }
@@ -101,8 +101,8 @@ impl MongoCollections {
         db_name_filter: &str,
         collection_name_filter: &str,
         table_type: &str,
+        accept_search_patterns: bool,
     ) -> Self {
-        let db_name_filter_regex = to_name_regex(db_name_filter);
         let databases = mongo_connection
             .client
             .list_database_names(
@@ -115,7 +115,7 @@ impl MongoCollections {
             .iter()
             // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
             .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
-            .filter(|&db_name| is_match(db_name.as_str(), &db_name_filter_regex))
+            .filter(|&db_name| is_match(db_name, db_name_filter, accept_search_patterns))
             .map(|val| {
                 CollectionsForDb {
                 database_name: val.to_string(),
@@ -174,7 +174,7 @@ impl MongoStatement for MongoCollections {
     // Move the cursor to the next CollectionSpecification.
     // When cursor is exhausted move to next database in list
     // Return true if moving was successful, false otherwise.
-    #[allow(clippy::blocks_in_if_conditions)]
+    #[allow(clippy::blocks_in_conditions)]
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         if self.current_database_index.is_none() {
             if self.collections_for_db_list.is_empty() {
@@ -374,16 +374,16 @@ mod unit {
     #[test]
     fn metadata_column_nullability() {
         use crate::{collections::MongoCollections, stmt::MongoStatement};
-        use odbc_sys::Nullability;
+        use definitions::Nullability;
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
                 .get_col_metadata(1)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoCollections::empty()
                 .get_col_metadata(2)
                 .unwrap()
@@ -391,7 +391,7 @@ mod unit {
         );
         // Docs do not say NO_NULLS, but there is no way the tale name can be null.
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
                 .get_col_metadata(3)
                 .unwrap()
@@ -400,14 +400,14 @@ mod unit {
         // The docs also do not say NO_NULLS, but they enumerate every possible value and
         // NULL is not one of them.
         assert_eq!(
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
                 .get_col_metadata(4)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
-            Nullability::NULLABLE,
+            Nullability::SQL_NULLABLE,
             MongoCollections::empty()
                 .get_col_metadata(5)
                 .unwrap()

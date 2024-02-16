@@ -5,9 +5,9 @@ mod integration {
         allocate_env, connect_and_allocate_statement, disconnect_and_close_handles,
         fetch_and_get_data, get_column_attributes, get_sql_diagnostics,
     };
-    use odbc_sys::{
+    use definitions::{
         CDataType, HStmt, Handle, HandleType, SQLExecute, SQLFetch, SQLPrepareW, SmallInt,
-        SqlReturn, NTS,
+        SqlReturn, SQL_NTS,
     };
 
     use cstr::WideChar;
@@ -24,7 +24,7 @@ mod integration {
             // Calling SQLExecute before SQLPrepare is invalid.
             assert_eq!(SqlReturn::ERROR, SQLExecute(stmt));
 
-            let diagnostic = get_sql_diagnostics(HandleType::Stmt, stmt as Handle);
+            let diagnostic = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             // This error is thrown by the DM
             assert!(diagnostic.contains("Function sequence error"));
         }
@@ -44,9 +44,9 @@ mod integration {
             // Only the result set metadata are retrieved and stored
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Retrieve result set metadata
@@ -67,9 +67,9 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Retrieve result set metadata
@@ -77,7 +77,7 @@ mod integration {
 
             assert_eq!(SqlReturn::ERROR, SQLFetch(stmt as HStmt),);
 
-            let diagnostic = get_sql_diagnostics(HandleType::Stmt, stmt as Handle);
+            let diagnostic = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             assert!(diagnostic.contains("Function sequence error"));
 
             disconnect_and_close_handles(dbc, stmt);
@@ -95,9 +95,9 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Retrieve result set metadata
@@ -109,21 +109,21 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             fetch_and_get_data(
                 stmt as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SLong, CDataType::WChar],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
             );
 
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             disconnect_and_close_handles(dbc, stmt);
@@ -141,9 +141,9 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(stmt as HStmt, query.as_ptr(), NTS as SmallInt as i32),
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS as SmallInt as i32),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Executing the prepared statement.
@@ -152,7 +152,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             // Executing the prepared statement.
@@ -161,14 +161,14 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             fetch_and_get_data(
                 stmt as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SLong, CDataType::WChar],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
             );
 
             // A prepared statement can be executed multiple times.
@@ -176,14 +176,14 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecute(stmt as HStmt),
                 "{}",
-                get_sql_diagnostics(HandleType::Stmt, stmt as Handle)
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
             fetch_and_get_data(
                 stmt as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SLong, CDataType::WChar],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
             );
 
             disconnect_and_close_handles(dbc, stmt);
