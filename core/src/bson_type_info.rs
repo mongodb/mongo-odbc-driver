@@ -69,8 +69,8 @@ pub struct SimpleTypeInfo {
 impl SimpleTypeInfo {
     const fn new(precision: u16, octet_length: u16, fixed_bytes_length: u16) -> Option<Self> {
         Some(Self {
-            sql_type: SqlDataType::EXT_W_VARCHAR,
-            non_concise_type: SqlDataType::EXT_W_VARCHAR,
+            sql_type: SqlDataType::SQL_WVARCHAR,
+            non_concise_type: SqlDataType::SQL_WVARCHAR,
             precision: Some(precision),
             octet_length: Some(octet_length),
             fixed_bytes_length: Some(fixed_bytes_length),
@@ -79,8 +79,8 @@ impl SimpleTypeInfo {
 
     const fn default() -> Option<Self> {
         Some(Self {
-            sql_type: SqlDataType::EXT_W_VARCHAR,
-            non_concise_type: SqlDataType::EXT_W_VARCHAR,
+            sql_type: SqlDataType::SQL_WVARCHAR,
+            non_concise_type: SqlDataType::SQL_WVARCHAR,
             precision: None,
             octet_length: None,
             fixed_bytes_length: None,
@@ -114,8 +114,8 @@ impl BsonTypeInfo {
     };
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
-        sql_type: SqlDataType::EXT_W_VARCHAR,
-        non_concise_type: SqlDataType::EXT_W_VARCHAR,
+        sql_type: SqlDataType::SQL_WVARCHAR,
+        non_concise_type: SqlDataType::SQL_WVARCHAR,
         searchable: SQL_SEARCHABLE,
         is_case_sensitive: true,
         fixed_prec_scale: false,
@@ -136,8 +136,8 @@ impl BsonTypeInfo {
     // sqltype = VARCHAR
     pub const VARCHAR: BsonTypeInfo = BsonTypeInfo {
         type_name: "varchar",
-        sql_type: SqlDataType::VARCHAR,
-        non_concise_type: SqlDataType::VARCHAR,
+        sql_type: SqlDataType::SQL_VARCHAR,
+        non_concise_type: SqlDataType::SQL_VARCHAR,
         searchable: SQL_SEARCHABLE,
         is_case_sensitive: true,
         fixed_prec_scale: false,

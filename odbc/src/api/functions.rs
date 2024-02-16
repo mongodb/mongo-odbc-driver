@@ -18,9 +18,8 @@ use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
     ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
     DriverConnectOption, EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd,
-    Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
-    RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
-    UseBookmarks,
+    Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer, RetCode, RetrieveData,
+    SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt, UseBookmarks,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -1853,6 +1852,8 @@ macro_rules! sql_get_info_helper {
  $buffer_length:ident,
  $string_length_ptr:ident,
  ) => {{
+    use constants::*;
+    use definitions::InfoType;
     let connection_handle = $connection_handle;
     let info_type = $info_type;
     let info_value_ptr = $info_value_ptr;

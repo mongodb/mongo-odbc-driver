@@ -230,6 +230,7 @@ pub const SQL_FN_NUM_CEILING: u32 = 0x00000020;
 pub const SQL_FN_NUM_COS: u32 = 0x00000040;
 pub const SQL_FN_NUM_FLOOR: u32 = 0x00000200;
 pub const SQL_FN_NUM_LOG: u32 = 0x00000400;
+pub const SQL_FN_NUM_LOG10: u32 = 0x00080000;
 pub const SQL_FN_NUM_MOD: u32 = 0x00000800;
 pub const SQL_FN_NUM_SIN: u32 = 0x00002000;
 pub const SQL_FN_NUM_SQRT: u32 = 0x00004000;
@@ -238,6 +239,26 @@ pub const SQL_FN_NUM_DEGREES: u32 = 0x00040000;
 pub const SQL_FN_NUM_POWER: u32 = 0x00100000;
 pub const SQL_FN_NUM_RADIANS: u32 = 0x00200000;
 pub const SQL_FN_NUM_ROUND: u32 = 0x00400000;
+
+pub const SQL_FN_TD_NOW: u32 = 0x00000001;
+pub const SQL_FN_TD_CURDATE: u32 = 0x00000002;
+pub const SQL_FN_TD_DAYOFMONTH: u32 = 0x00000004;
+pub const SQL_FN_TD_DAYOFWEEK: u32 = 0x00000008;
+pub const SQL_FN_TD_DAYOFYEAR: u32 = 0x00000010;
+pub const SQL_FN_TD_MONTH: u32 = 0x00000020;
+pub const SQL_FN_TD_QUARTER: u32 = 0x00000040;
+pub const SQL_FN_TD_WEEK: u32 = 0x00000080;
+pub const SQL_FN_TD_YEAR: u32 = 0x00000100;
+pub const SQL_FN_TD_CURTIME: u32 = 0x00000200;
+pub const SQL_FN_TD_HOUR: u32 = 0x00000400;
+pub const SQL_FN_TD_MINUTE: u32 = 0x00000800;
+pub const SQL_FN_TD_SECOND: u32 = 0x00001000;
+pub const SQL_FN_TD_TIMESTAMPADD: u32 = 0x00002000;
+pub const SQL_FN_TD_TIMESTAMPDIFF: u32 = 0x00004000;
+pub const SQL_FN_TD_DAYNAME: u32 = 0x00008000;
+pub const SQL_FN_TD_MONTHNAME: u32 = 0x00010000;
+pub const SQL_FN_TD_CURRENT_DATE: u32 = 0x00020000;
+pub const SQL_FN_TD_CURRENT_TIME: u32 = 0x00040000;
 
 // SQL_STRING_FUNCTIONS bitmasks
 #[allow(unused)]
@@ -297,6 +318,7 @@ pub const SQL_GD_ANY_COLUMN: u32 = 0x00000001;
 pub const SQL_GD_ANY_ORDER: u32 = 0x00000002;
 
 // SQL_TIMEDATE_ADD_INTERVALS and SQL_TIMEDATE_DIFF_INTERVALS functions
+pub const SQL_FN_TSI_FRAC_SECOND: u32 = 0x00000001;
 pub const SQL_FN_TSI_SECOND: u32 = 0x00000002;
 pub const SQL_FN_TSI_MINUTE: u32 = 0x00000004;
 pub const SQL_FN_TSI_HOUR: u32 = 0x00000008;
@@ -330,6 +352,11 @@ pub const SQL_AF_MIN: u32 = 0x00000008;
 pub const SQL_AF_SUM: u32 = 0x00000010;
 pub const SQL_AF_DISTINCT: u32 = 0x00000020;
 pub const SQL_AF_ALL: u32 = 0x00000040;
+
+pub const SQL_OJ_LEFT: u32 = 0x00000001;
+pub const SQL_OJ_NOT_ORDERED: u32 = 0x00000010;
+pub const SQL_OJ_INNER: u32 = 0x00000020;
+pub const SQL_OJ_ALL_COMPARISON_OPS: u32 = 0x00000040;
 
 fn format_driver_version() -> String {
     // The driver version can be obtained from the Cargo.toml file.
