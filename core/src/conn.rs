@@ -67,24 +67,27 @@ impl MongoConnection {
 
     /// cancels all queries for a given statement id
     pub fn cancel_queries_for_statement(&self, statement_id: Bson) -> Result<bool> {
+        // use $currentOp to list all queries currently running
         let admin_db = self.client.database("admin");
         let current_ops_pipeline = vec![doc! {"$currentOp": {}}];
         let mut cursor = admin_db
             .aggregate(current_ops_pipeline, None)
             .map_err(Error::QueryExecutionFailed)?;
+
+        // iterate through all running operations, looking for commands
         while cursor.advance().map_err(Error::QueryCursorUpdate)? {
             let operation = cursor
                 .deserialize_current()
                 .map_err(Error::QueryCursorUpdate)?;
+            // the statement id is sent in the comment field of the command. A matching row will look like:
+            // {"opid": ..., "command": {"aggregate": 1, "pipeline": [...], "comment": <statement id>, }}
             if let Some(Bson::Document(d)) = operation.get("command") {
-                if let Some(comment) = d.get("comment") {
-                    if comment == &statement_id {
-                        if let Some(operation_id) = operation.get("opid") {
-                            let killop_doc = doc! { "killOp": 1, "op": operation_id};
-                            admin_db
-                                .run_command(killop_doc, None)
-                                .map_err(Error::QueryExecutionFailed)?;
-                        }
+                if d.get("comment") == Some(&statement_id) {
+                    if let Some(operation_id) = operation.get("opid") {
+                        let killop_doc = doc! { "killOp": 1, "op": operation_id};
+                        admin_db
+                            .run_command(killop_doc, None)
+                            .map_err(Error::QueryExecutionFailed)?;
                     }
                 }
             };

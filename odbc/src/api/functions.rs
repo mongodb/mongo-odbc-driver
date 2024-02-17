@@ -418,20 +418,25 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
-            // let state =  ;
+
+            // use the statement state to determine if a query is executing or not
             match *(stmt.state.read().unwrap()) {
+                // if a query is executing, verify we have a connection (we must to be executing a query) and use that connection to kill
+                // queries associated with the current statement handle
                 StatementState::SynchronousQueryExecuting => {
                     let stmt_id = stmt.statement_id.read().unwrap().clone();
                     let conn = must_be_valid!((*stmt.connection).as_connection());
                     if let Some(mongo_connection) = conn.mongo_connection.read().unwrap().as_ref() {
-                        if let Err(e) = mongo_connection.cancel_queries_for_statement(stmt_id) {
-                            stmt.errors.write().unwrap().push(e.into());
-                            return SqlReturn::ERROR;
-                        }
-                        // odbc_unwrap!(, mongo_handle);
+                        odbc_unwrap!(
+                            mongo_connection.cancel_queries_for_statement(stmt_id),
+                            MongoHandleRef::from(statement_handle)
+                        );
                         SqlReturn::SUCCESS
                     } else {
-                        // add_diag_info!(mongo_handle, ODBCError::InvalidCursorState);
+                        stmt.errors
+                            .write()
+                            .unwrap()
+                            .push(ODBCError::InvalidCursorState);
                         SqlReturn::ERROR
                     }
                 }

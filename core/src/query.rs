@@ -6,7 +6,11 @@ use crate::{
     Error, TypeMode,
 };
 use bson::{doc, document::ValueAccessError, Bson, Document};
-use mongodb::{error::{CommandError, ErrorKind}, options::AggregateOptions, sync::Cursor};
+use mongodb::{
+    error::{CommandError, ErrorKind},
+    options::AggregateOptions,
+    sync::Cursor,
+};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -132,7 +136,7 @@ impl MongoStatement for MongoQuery {
                 code: 11601, // interrupted
                 ..
             }) => Error::QueryCancelled,
-            _ => Error::QueryExecutionFailed(e)
+            _ => Error::QueryExecutionFailed(e),
         };
 
         let cursor: Cursor<Document> = match self.query_timeout {
