@@ -9,7 +9,7 @@ use crate::{
     handles::definitions::*,
     has_odbc_3_behavior, trace_odbc,
 };
-use bson::Bson;
+use bson::{doc, Bson};
 use constants::*;
 
 use cstr::{input_text_to_string_w, Charset, WideChar};
@@ -417,8 +417,24 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
         debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
-            let stmt = must_be_stmt!(mongo_handle);
-            match *stmt.state.read().unwrap() {
+            let stmt = must_be_valid!(mongo_handle.as_statement());
+            // let state =  ;
+            match *(stmt.state.read().unwrap()) {
+                StatementState::SynchronousQueryExecuting => {
+                    let stmt_id = stmt.statement_id.read().unwrap().clone();
+                    let conn = must_be_valid!((*stmt.connection).as_connection());
+                    if let Some(mongo_connection) = conn.mongo_connection.read().unwrap().as_ref() {
+                        if let Err(e) = mongo_connection.cancel_queries_for_statement(stmt_id) {
+                            stmt.errors.write().unwrap().push(e.into());
+                            return SqlReturn::ERROR;
+                        }
+                        // odbc_unwrap!(, mongo_handle);
+                        SqlReturn::SUCCESS
+                    } else {
+                        // add_diag_info!(mongo_handle, ODBCError::InvalidCursorState);
+                        SqlReturn::ERROR
+                    }
+                }
                 _ => SqlReturn::SUCCESS,
             }
         },
@@ -1117,7 +1133,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 }
 
 unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool> {
-    let stmt_id = (*stmt.statement_id.read().unwrap()).clone();
+    let stmt_id = stmt.statement_id.read().unwrap().clone();
     let mongo_statement = {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
             stmt.mongo_statement

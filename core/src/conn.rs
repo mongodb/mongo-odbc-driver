@@ -1,7 +1,7 @@
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
-use bson::{doc, UuidRepresentation};
+use bson::{doc, Bson, UuidRepresentation};
 use mongodb::sync::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -63,6 +63,33 @@ impl MongoConnection {
         let build_info: BuildInfoResult =
             bson::from_document(cmd_res).map_err(Error::DatabaseVersionDeserialization)?;
         Ok(build_info.data_lake.version)
+    }
+
+    /// cancels all queries for a given statement id
+    pub fn cancel_queries_for_statement(&self, statement_id: Bson) -> Result<bool> {
+        let admin_db = self.client.database("admin");
+        let current_ops_pipeline = vec![doc! {"$currentOp": {}}];
+        let mut cursor = admin_db
+            .aggregate(current_ops_pipeline, None)
+            .map_err(Error::QueryExecutionFailed)?;
+        while cursor.advance().map_err(Error::QueryCursorUpdate)? {
+            let operation = cursor
+                .deserialize_current()
+                .map_err(Error::QueryCursorUpdate)?;
+            if let Some(Bson::Document(d)) = operation.get("command") {
+                if let Some(comment) = d.get("comment") {
+                    if comment == &statement_id {
+                        if let Some(operation_id) = operation.get("opid") {
+                            let killop_doc = doc! { "killOp": 1, "op": operation_id};
+                            admin_db
+                                .run_command(killop_doc, None)
+                                .map_err(Error::QueryExecutionFailed)?;
+                        }
+                    }
+                }
+            };
+        }
+        Ok(true)
     }
 }
 
