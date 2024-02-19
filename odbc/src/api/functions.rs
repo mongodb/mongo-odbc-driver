@@ -17,9 +17,10 @@ use cstr::{input_text_to_string_w, Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
     ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
-    DriverConnectOption, EnvironmentAttribute, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType,
-    InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode, RetrieveData, SmallInt, SqlBool,
-    SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt, UseBookmarks,
+    DriverConnectOption, EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd,
+    Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
+    RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
+    UseBookmarks,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -1167,55 +1168,57 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
 pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
     panic_safe_exec_clear_diagnostics!(
         debug,
-        || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
-            let stmt = must_be_valid!(mongo_handle.as_statement());
-            let move_to_next_result = {
-                let connection = must_be_valid!((*stmt.connection).as_connection());
-                match stmt.mongo_statement.write().unwrap().as_mut() {
-                    Some(mongo_stmt) => mongo_stmt
-                        .next(connection.mongo_connection.read().unwrap().as_ref())
-                        .map_err(|e| e.into()),
-                    None => Err(ODBCError::InvalidCursorState),
-                }
-            };
-
-            if let Ok((has_next, warnings_opt)) = move_to_next_result {
-                let mut stmt_attrs = stmt.attributes.write().unwrap();
-
-                // Add any warnings to the diagnostic records and log them
-                warnings_opt.iter().for_each(|warning| {
-                    add_diag_info!(
-                        MongoHandleRef::from(statement_handle),
-                        ODBCError::GeneralWarning(warning.to_string())
-                    );
-                });
-                if !has_next {
-                    stmt_attrs.row_index_is_valid = false;
-                    // No more rows
-                    return SqlReturn::NO_DATA;
-                }
-                stmt_attrs.row_index_is_valid = true;
-
-                *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
-
-                if !warnings_opt.is_empty() {
-                    // No warnings and there is a next row
-                    SqlReturn::SUCCESS_WITH_INFO
-                } else {
-                    SqlReturn::SUCCESS
-                }
-            } else {
-                add_diag_info!(
-                    mongo_handle,
-                    move_to_next_result.as_ref().unwrap_err().clone()
-                );
-                // An error happened
-                SqlReturn::ERROR
-            }
-        },
+        || { sql_fetch_helper(statement_handle, "SQLFetch") },
         statement_handle
     );
+}
+
+unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlReturn {
+    let mongo_handle = MongoHandleRef::from(statement_handle);
+    let stmt = must_be_valid!(mongo_handle.as_statement());
+    let move_to_next_result = {
+        let connection = must_be_valid!((*stmt.connection).as_connection());
+        match stmt.mongo_statement.write().unwrap().as_mut() {
+            Some(mongo_stmt) => mongo_stmt
+                .next(connection.mongo_connection.read().unwrap().as_ref())
+                .map_err(|e| e.into()),
+            None => Err(ODBCError::InvalidCursorState),
+        }
+    };
+
+    if let Ok((has_next, warnings_opt)) = move_to_next_result {
+        let mut stmt_attrs = stmt.attributes.write().unwrap();
+        warnings_opt.iter().for_each(|warning| {
+            add_diag_with_function!(
+                MongoHandleRef::from(statement_handle),
+                ODBCError::GeneralWarning(warning.to_string()),
+                function_name.to_string()
+            );
+        });
+        if !has_next {
+            stmt_attrs.row_index_is_valid = false;
+            // No more rows
+            return SqlReturn::NO_DATA;
+        }
+        stmt_attrs.row_index_is_valid = true;
+
+        *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
+
+        if !warnings_opt.is_empty() {
+            // No warnings and there is a next row
+            SqlReturn::SUCCESS_WITH_INFO
+        } else {
+            SqlReturn::SUCCESS
+        }
+    } else {
+        add_diag_with_function!(
+            mongo_handle,
+            move_to_next_result.as_ref().unwrap_err().clone(),
+            function_name.to_string()
+        );
+        // An error happened
+        SqlReturn::ERROR
+    }
 }
 
 ///
@@ -1228,10 +1231,28 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetchScroll(
     statement_handle: HStmt,
-    _fetch_orientation: USmallInt,
+    fetch_orientation: USmallInt,
     _fetch_offset: Len,
 ) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec_clear_diagnostics!(
+        debug,
+        || {
+            match FromPrimitive::from_i32(fetch_orientation as i32) {
+                Some(FetchOrientation::SQL_FETCH_NEXT) => {
+                    sql_fetch_helper(statement_handle, "SQLFetchScroll")
+                }
+                _ => {
+                    let stmt_handle = MongoHandleRef::from(statement_handle);
+                    add_diag_info!(
+                        stmt_handle,
+                        ODBCError::FetchTypeOutOfRange(fetch_orientation)
+                    );
+                    SqlReturn::ERROR
+                }
+            }
+        },
+        statement_handle
+    );
 }
 
 ///
