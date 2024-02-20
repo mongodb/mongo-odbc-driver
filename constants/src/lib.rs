@@ -23,6 +23,7 @@ lazy_static! {
     pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
 }
 
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub struct OdbcState<'a> {
     pub odbc_2_state: &'a str,
     pub odbc_3_state: &'a str,
