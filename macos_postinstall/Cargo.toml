@@ -7,6 +7,6 @@ authors = [
 edition = "2021"
 
 [dependencies]
-rust-ini = "0.18.0"
+rust-ini = "0.20.0"
 itertools = "0.10.5"
 lazy_static = "1"
