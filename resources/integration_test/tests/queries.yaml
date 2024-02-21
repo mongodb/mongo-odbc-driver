@@ -94,7 +94,7 @@ tests:
     expected_is_searchable: [2, 2, 3]
     expected_is_unsigned: [1, 0, 1]
     expected_sql_type: [-7, 4, -9]
-    expected_precision: [ 1, 10, 0 ]
+    expected_precision: [ 1, 10, 65535 ]
     expected_scale: [ 0, 0, 0 ]
     expected_is_nullable: [1, 1, 1]
 
@@ -120,7 +120,7 @@ tests:
     expected_is_searchable: [3, 2, 2]
     expected_is_unsigned: [1, 0, 0]
     expected_sql_type: [-9, 4, 8]
-    expected_precision: [0, 10, 15]
+    expected_precision: [65535, 10, 15]
     expected_scale: [0, 0, 15]
     expected_is_nullable: [1, 1, 1]
 

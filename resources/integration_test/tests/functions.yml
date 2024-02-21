@@ -88,7 +88,7 @@ tests:
       - [ "array", -9, null, null, null, null, 1, 0, 0, null, 0, null, "array", null, null, -9, null, null, null ]
       - [ "bson", -9, null, null, null, null, 1, 0, 0, null, 0, null, "bson", null, null, -9, null, null, null ]
       - [ "dbPointer", -9, null, null, null, null, 1, 0, 2, null, 0, null, "dbPointer", null, null, -9, null, null, null ]
-      - [ "decimal", 3, 34, null, null, null, 1, 0, 2, 0, 0, 0, "decimal", null, null, 3, null, null, null ]
+      - [ "decimal", -9, null, null, null, null, 1, 0, 2, 0, 0, 0, "decimal", null, null, -9, null, null, null ]
       - [ "javascript", -9, null, null, null, null, 1, 0, 2, null, 0, null, "javascript", null, null, -9, null, null, null ]
       - [ "javascriptWithScope", -9, null, null, null, null, 1, 0, 2, null, 0, null, "javascriptWithScope", null, null, -9, null, null, null ]
       - [ "maxKey", -9, 14, null, null, null, 1, 0, 2, null, 0, null, "maxKey", null, null, -9, null, null, null ]
