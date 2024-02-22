@@ -17,7 +17,7 @@ tests:
     expected_is_searchable: [2, 2, 3, 2, 2]
     expected_is_unsigned: [0, 1, 1, 1, 0]
     expected_sql_type: [4, -7, -9, 11, 4]
-    expected_precision: [10, 1, 0, 23, 10]
+    expected_precision: [10, 1, 65535, 23, 10]
     expected_scale: [0, 0, 0, 3, 0]
     expected_is_nullable: [1, 1, 1, 1, 1]
 
@@ -28,4 +28,4 @@ tests:
     expected_display_size: [4, 1, 0, 16, 4]
     expected_length: [4, 1, 0, 16, 4]
     expected_sql_type: [4, -7, -9, 11, 4]
-    expected_precision: [10, 1, 0, 23, 10]
+    expected_precision: [10, 1, 65535, 23, 10]
