@@ -17,8 +17,8 @@ use cstr::{input_text_to_string_w, Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
     ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
-    DriverConnectOption, EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd,
-    Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
+    DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc, HDesc, HEnv,
+    HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
     RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
     UseBookmarks,
 };
@@ -1348,8 +1348,33 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
-    unimpl!(statement_handle);
+pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) -> SqlReturn {
+    // unimpl!(statement_handle);
+    panic_safe_exec_clear_diagnostics!(
+        debug,
+        || {
+            // todo
+            match FromPrimitive::from_i16(option as i16) {
+                Some(FreeStmtOption::SQL_CLOSE) => {
+                    // todo: need to actually implement
+                    //   - Drop all pending results form the cursor
+                    //   - Close the cursor
+                    //   - return SUCCESS
+                    SqlReturn::SUCCESS
+                }
+                Some(FreeStmtOption::SQL_UNBIND) => {
+                    // todo: need to actually implement
+                    //   - Release all column buffers bound by SQLBindCol
+                    //   - Follow example from linked branch (clear out the list of bound columns from the statement handle)
+                    //   - return SUCCESS
+                    SqlReturn::SUCCESS
+                }
+                Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS
+                _ => SqlReturn::ERROR // todo: add detailed error? HY092 is the one listed on the docs page, but that one in this repo seems strongly coupled with Attributes not Options
+            }
+        },
+        statement_handle
+    )
 }
 
 ///
