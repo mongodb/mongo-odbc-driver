@@ -1353,6 +1353,9 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+
             match FromPrimitive::from_i16(option as i16) {
                 Some(FreeStmtOption::SQL_CLOSE) => {
                     // todo: need to actually implement
@@ -1362,17 +1365,14 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
                     SqlReturn::SUCCESS
                 }
                 Some(FreeStmtOption::SQL_UNBIND) => {
-                    // todo: need to actually implement
-                    //   - Release all column buffers bound by SQLBindCol
-                    //   - Follow example from linked branch (clear out the list of bound columns from the statement handle)
-                    //   - return SUCCESS
+                    // Release all column buffers bound by SQLBindCol
+                    // by removing the bound_cols map.
+                    *stmt.bound_cols.write().unwrap() = None;
                     SqlReturn::SUCCESS
                 }
                 Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS
                 _ => {
-                    // TODO: Note that InvalidAttrIdentifier in this repo only refers to Attributes/functions related to Attributes.
-                    //       Although, the error code HY092 is meant to apply to Attributes _and_ Options, according to the docs.
-                    add_diag_info!(MongoHandleRef::from(statement_handle), ODBCError::InvalidAttrIdentifier(option as i32));
+                    add_diag_info!(mongo_handle, ODBCError::InvalidAttrIdentifier(option as i32));
                     SqlReturn::ERROR
                 }
             }
