@@ -82,14 +82,6 @@ pub struct ConfigGui {
     #[nwg_layout_item(layout: grid,  row: 5, col: 2, col_span: 7)]
     database_input: nwg::TextInput,
 
-    #[nwg_control(flags: "VISIBLE", text: "Log Level")]
-    #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 2)]
-    log_level_field: nwg::Label,
-
-    #[nwg_control(flags: "VISIBLE", text: "Info")]
-    #[nwg_layout_item(layout: grid,  row: 6, col: 3, col_span: 6)]
-    log_level_input: nwg::TextInput,
-
     #[nwg_control(flags: "VISIBLE", text: "Test")]
     #[nwg_events( OnButtonClick: [ConfigGui::test_connection] )]
     #[nwg_layout_item(layout: grid,  row: 10, col: 0, col_span: 1)]
@@ -134,25 +126,13 @@ impl ConfigGui {
             self.password_input.text().is_empty(),
             self.mongodb_uri_input.text().is_empty(),
             self.user_input.text().is_empty(),
-            self.log_level_input.text().is_empty(),
         ) {
-            (false, false, false, false, false, false) => {}
+            (false, false, false, false, false) => {}
             _ => {
                 nwg::modal_error_message(
                     &self.window,
                     "Error",
                     "All fields are required and cannot be empty.",
-                );
-                return None;
-            }
-        }
-        match self.log_level_input.text().to_lowercase().as_str() {
-            "info" | "debug" | "error" => {}
-            _ => {
-                nwg::modal_error_message(
-                    &self.window,
-                    "Error",
-                    "Log level must be one of: Info, Debug, Error.",
                 );
                 return None;
             }
@@ -165,7 +145,6 @@ impl ConfigGui {
             user: self.user_input.text().as_str(),
             server: "",
             driver_name: self.driver_name.text().as_str(),
-            log_level: self.log_level_input.text().as_str(),
         }) {
             Err(e) => {
                 nwg::modal_error_message(&self.window, "Error", &e.to_string());

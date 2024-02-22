@@ -9,17 +9,19 @@
 //! in the cargo.toml
 
 pub use self::{
-    attributes::*, bulk_operation::*, c_data_type::*, desc::*, fetch_orientation::*, functions::*,
-    indicator::*, info_type::*, interval::*, nullability::*, param_type::*, sql_data_type::*,
-    sqlreturn::*,
+    attributes::*, bulk_operation::*, c_data_type::*, desc::*, diag_type::*, fetch_orientation::*,
+    functions::*, indicator::*, info_type::*, interval::*, nullability::*, param_type::*,
+    sql_data_type::*, sqlreturn::*,
 };
 use cstr::WideChar;
+use num_derive::FromPrimitive;
 use std::os::raw::{c_int, c_void};
 
 mod attributes;
 mod bulk_operation;
 mod c_data_type;
 mod desc;
+mod diag_type;
 mod fetch_orientation;
 mod functions;
 mod indicator;
@@ -72,16 +74,19 @@ pub type HWnd = Pointer;
 
 pub type RetCode = i16;
 
+// Diag constants
+pub const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
+
 // flags for null-terminated string
-pub const NTS: isize = -3;
-pub const NTSL: isize = -3;
+pub const SQL_NTS: isize = -3;
+pub const SQL_NTSL: isize = -3;
 
 /// Maximum message length
-pub const MAX_MESSAGE_LENGTH: SmallInt = 512;
-pub const SQLSTATE_SIZE: usize = 5;
-pub const SQLSTATE_SIZEW: usize = 10;
+pub const SQL_MAX_MESSAGE_LENGTH: SmallInt = 512;
+pub const SQL_SQLSTATE_SIZE: usize = 5;
 
 /// SQL Free Statement options
+#[allow(non_camel_case_types)]
 #[repr(u16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum FreeStmtOption {
@@ -90,7 +95,7 @@ pub enum FreeStmtOption {
     /// statement again with the same or different parameter values. If no cursor is open, this
     /// option has no effect for the application. `SQLCloseCursor` can also be called to close a
     /// cursor.
-    Close = 0,
+    SQL_CLOSE = 0,
     // SQL_DROP = 1, is deprecated in favour of SQLFreeHandle
     /// Sets the `SQL_DESC_COUNT` field of the ARD to 0, releasing all column buffers bound by
     /// `SQLBindCol` for the given StatementHandle. This does not unbind the bookmark column; to do
@@ -98,46 +103,42 @@ pub enum FreeStmtOption {
     /// Notice that if this operation is performed on an explicitly allocated descriptor that is
     /// shared by more than one statement, the operation will affect the bindings of all statements
     /// that share the descriptor.
-    Unbind = 2,
+    SQL_UNBIND = 2,
     /// Sets the `SQL_DESC_COUNT` field of the APD to 0, releasing all parameter buffers set by
     /// `SQLBindParameter` for the given StatementHandle. If this operation is performed on an
     /// explicitly allocated descriptor that is shared by more than one statement, this operation
     /// will affect the bindings of all the statements that share the descriptor.
-    ResetParams = 3,
+    SQL_RESET_PARAMS = 3,
 }
 
 /// Represented in C headers as SQLSMALLINT
-#[repr(i16)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(i16)]
 pub enum HandleType {
-    Env = 1,
-    Dbc = 2,
-    Stmt = 3,
-    Desc = 4,
+    SQL_HANDLE_ENV = 1,
+    SQL_HANDLE_DBC = 2,
+    SQL_HANDLE_STMT = 3,
+    SQL_HANDLE_DESC = 4,
 }
 
 /// Options for `SQLDriverConnect`
-#[repr(u16)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(u16)]
 pub enum DriverConnectOption {
-    NoPrompt = 0,
-    Complete = 1,
-    Prompt = 2,
-    CompleteRequired = 3,
+    SQL_DRIVER_NO_PROMPT = 0,
+    SQL_DRIVER_COMPLETE = 1,
+    SQL_DRIVER_PROMPT = 2,
+    SQL_DRIVER_COMPLETE_REQUIRED = 3,
 }
 
 // Attribute for string lengths
-
-/// SQL_IS_POINTER
-pub const IS_POINTER: i32 = -4;
-/// SQL_IS_UINTEGER
-pub const IS_UINTEGER: i32 = -5;
-/// SQL_IS_INTEGER
-pub const IS_INTEGER: i32 = -6;
-/// SQL_IS_USMALLINT
-pub const IS_USMALLINT: i32 = -7;
-/// SQL_IS_SMALLINT
-pub const IS_SMALLINT: i32 = -8;
+pub const SQL_IS_POINTER: i32 = -4;
+pub const SQL_IS_UINTEGER: i32 = -5;
+pub const SQL_IS_INTEGER: i32 = -6;
+pub const SQL_IS_USMALLINT: i32 = -7;
+pub const SQL_IS_SMALLINT: i32 = -8;
 
 /// SQL_YEAR_MONTH_STRUCT
 #[repr(C)]
@@ -216,151 +217,79 @@ pub struct Guid {
     pub d4: [u8; 8],
 }
 
-/// Connection attributes for `SQLSetConnectAttr`
-#[repr(i32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum ConnectionAttribute {
-    AsyncEnable = 4,
-    AccessMode = 101,
-    AutoCommit = 102,
-    LoginTimeout = 103,
-    Trace = 104,
-    TraceFile = 105,
-    TranslateLib = 106,
-    TranslateOption = 107,
-    TxnIsolation = 108,
-    CurrentCatalog = 109,
-    OdbcCursors = 110,
-    QuietMode = 111,
-    PacketSize = 112,
-    ConnectionTimeout = 113,
-    DisconnectBehaviour = 114,
-    AsyncDbcFunctionsEnable = 117,
-    AsyncDbcEvent = 119,
-    EnlistInDtc = 1207,
-    EnlistInXa = 1208,
-    ConnectionDead = 1209,
-    AutoIpd = 10001,
-    MetadataId = 10014,
-}
-
 /// `DiagIdentifier` for `SQLGetDiagField`
-#[repr(i32)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(i32)]
 pub enum HeaderDiagnosticIdentifier {
-    /// SQL_DIAG_RETURNCODE
-    ReturnCode = 1,
-    /// SQL_DIAG_NUMBER
-    Number = 2,
-    /// SQL_DIAG_ROW_COUNT
-    RowCount = 3,
-    /// SQL_DIAG_SQLSTATE
-    SqlState = 4,
-    /// SQL_DIAG_NATIVE
-    Native = 5,
-    /// SQL_DIAG_MESSAGE_TEXT
-    MessageText = 6,
-    /// SQL_DIAG_DYNAMIC_FUNCTION
-    DynamicFunction = 7,
-    /// SQL_DIAG_CLASS_ORIGIN
-    ClassOrigin = 8,
-    /// SQL_DIAG_SUBCLASS_ORIGIN
-    SubclassOrigin = 9,
-    /// SQL_DIAG_CONNECTION_NAME
-    ConnectionName = 10,
-    /// SQL_DIAG_SERVER_NAME
-    ServerName = 11,
-    /// SQL_DIAG_DYNAMIC_FUNCTION_CODE
-    DynamicFunctionCode = 12,
-    /// SQL_DIAG_CURSOR_ROW_COUNT
-    CursorRowCount = -1249,
-    /// SQL_DIAG_ROW_NUMBER
-    RowNumber = -1248,
-    /// SQL_DIAG_COLUMN_NUMBER
-    ColumnNumber = -1247,
+    SQL_DIAG_RETURNCODE = 1,
+    SQL_DIAG_NUMBER = 2,
+    SQL_DIAG_ROW_COUNT = 3,
+    SQL_DIAG_SQLSTATE = 4,
+    SQL_DIAG_NATIVE = 5,
+    SQL_DIAG_MESSAGE_TEXT = 6,
+    SQL_DIAG_DYNAMIC_FUNCTION = 7,
+    SQL_DIAG_CLASS_ORIGIN = 8,
+    SQL_DIAG_SUBCLASS_ORIGIN = 9,
+    SQL_DIAG_CONNECTION_NAME = 10,
+    SQL_DIAG_SERVER_NAME = 11,
+    SQL_DIAG_DYNAMIC_FUNCTION_CODE = 12,
+    SQL_DIAG_CURSOR_ROW_COUNT = -1249,
+    SQL_DIAG_ROW_NUMBER = -1248,
+    SQL_DIAG_COLUMN_NUMBER = -1247,
 }
 
-#[repr(i32)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum AsyncConnectionBehavior {
-    /// SQL_ASYNC_DBC_ENABLE_ON
-    On = 1,
-    /// SQL_ASYNC_DBC_ENABLE_OFF = 0
-    #[default]
-    Off = 0,
-}
-
 #[repr(i32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum DynamicDiagnosticIdentifier {
-    /// SQL_DIAG_ALTER_DOMAIN
-    AlterDomain = 3,
-    /// SQL_DIAG_ALTER_TABLE,
-    AlterTable = 4,
-    /// SQL_DIAG_CALL
-    Call = 7,
-    /// SQL_DIAG_CREATE_ASSERTION
-    CreateAssertion = 6,
-    /// SQL_DIAG_CREATE_CHARACTER_SET
-    CreateCharacterSet = 8,
-    /// SQL_DIAG_CREATE_COLLATION,
-    CreateCollation = 10,
-    /// SQL_DIAG_CREATE_DOMAIN
-    CreateDomain = 23,
-    /// SQL_DIAG_CREATE_INDEX
-    CreateIndex = -1,
-    /// SQL_DIAG_CREATE_SCHEMA
-    CreateSchema = 64,
-    /// SQL_DIAG_CREATE_TABLE
-    CreateTable = 77,
-    /// SQL_DIAG_CREATE_TRANSLATION
-    CreateTranslation = 79,
-    /// SQL_DIAG_CREATE_VIEW
-    CreateView = 84,
-    /// SQL_DIAG_DELETE_WHERE
-    DeleteWhere = 19,
-    /// SQL_DIAG_DROP_ASSERTION
-    DropAssertion = 24,
-    /// SQL_DIAG_DROP_CHARACTER_SET
-    DropCharacterSet = 25,
-    /// SQL_DIAG_DROP_COLLATION
-    DropCollation = 26,
-    /// SQL_DIAG_DROP_DOMAIN
-    DropDomain = 27,
-    /// SQL_DIAG_DROP_INDEX
-    DropIndex = -2,
-    /// SQL_DIAG_DROP_SCHEMA
-    DropSchema = 31,
-    /// SQL_DIAG_DROP_TABLE
-    DropTable = 32,
-    /// SQL_DIAG_DROP_TRANSLATION
-    DropTranslation = 33,
-    /// SQL_DIAG_DROP_VIEW
-    DropView = 36,
-    /// SQL_DIAG_DYNAMIC_DELETE_CURSOR
-    DynamicDeleteCursor = 38,
-    /// SQL_DIAG_DYNAMIC_UPDATE_CURSOR
-    DynamicUpdateCursor = 81,
-    /// SQL_DIAG_GRANT
-    Grant = 48,
-    /// SQL_DIAG_INSERT
-    Insert = 50,
-    /// SQL_DIAG_REVOKE
-    Revoke = 59,
-    // SQL_DIAG_SELECT_CURSOR
-    SelectCursor = 85,
-    /// SQL_DIAG_UNKNOWN_STATEMENT = 0,
-    UnknownStatement = 0,
-    /// SQL_DIAG_UPDATE_WHERE = 82,
-    UpdateWhere = 82,
+pub enum AsyncConnectionBehavior {
+    SQL_ASYNC_DBC_ENABLE_ON = 1,
+    #[default]
+    SQL_ASYNC_DBC_ENABLE_OFF = 0,
 }
 
-/// Completion types for `SQLEndTrans`
-#[repr(i16)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(i32)]
+pub enum DynamicDiagnosticIdentifier {
+    SQL_DIAG_ALTER_DOMAIN = 3,
+    SQL_DIAG_ALTER_TABLE = 4,
+    SQL_DIAG_CALL = 7,
+    SQL_DIAG_CREATE_ASSERTION = 6,
+    SQL_DIAG_CREATE_CHARACTER_SET = 8,
+    SQL_DIAG_CREATE_COLLATION = 10,
+    SQL_DIAG_CREATE_DOMAIN = 23,
+    SQL_DIAG_CREATE_INDEX = -1,
+    SQL_DIAG_CREATE_SCHEMA = 64,
+    SQL_DIAG_CREATE_TABLE = 77,
+    SQL_DIAG_CREATE_TRANSLATION = 79,
+    SQL_DIAG_CREATE_VIEW = 84,
+    SQL_DIAG_DELETE_WHERE = 19,
+    SQL_DIAG_DROP_ASSERTION = 24,
+    SQL_DIAG_DROP_CHARACTER_SET = 25,
+    SQL_DIAG_DROP_COLLATION = 26,
+    SQL_DIAG_DROP_DOMAIN = 27,
+    SQL_DIAG_DROP_INDEX = -2,
+    SQL_DIAG_DROP_SCHEMA = 31,
+    SQL_DIAG_DROP_TABLE = 32,
+    SQL_DIAG_DROP_TRANSLATION = 33,
+    SQL_DIAG_DROP_VIEW = 36,
+    SQL_DIAG_DYNAMIC_DELETE_CURSOR = 38,
+    SQL_DIAG_DYNAMIC_UPDATE_CURSOR = 81,
+    SQL_DIAG_GRANT = 48,
+    SQL_DIAG_INSERT = 50,
+    SQL_DIAG_REVOKE = 59,
+    SQL_DIAG_SELECT_CURSOR = 85,
+    SQL_DIAG_UNKNOWN_STATEMENT = 0,
+    SQL_DIAG_UPDATE_WHERE = 82,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
+#[repr(i16)]
 pub enum CompletionType {
-    Commit = 0,
-    Rollback = 1,
+    SQL_COMMIT = 0,
+    SQL_ROLLBACK = 1,
 }
 
 pub const MAX_NUMERIC_LEN: usize = 16;
@@ -373,4 +302,101 @@ pub struct Numeric {
     /// 1 if positive, 0 if negative
     pub sign: Char,
     pub val: [Char; MAX_NUMERIC_LEN],
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive)]
+#[repr(i32)]
+pub enum SqlBool {
+    SQL_FALSE = 0,
+    SQL_TRUE = 1,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
+pub enum CursorScrollable {
+    SQL_NONSCROLLABLE = 0,
+    SQL_SCROLLABLE = 1,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
+pub enum CursorSensitivity {
+    SQL_UNSPECIFIED = 0,
+    SQL_INSENSITIVE = 1,
+    SQL_SENSITIVE = 2,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug)]
+#[repr(u32)]
+pub enum AsyncEnable {
+    SQL_ASYNC_ENABLE_OFF = 0,
+    SQL_ASYNC_ENABLE_ON = 1,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(usize)]
+pub enum Concurrency {
+    SQL_CONCUR_READ_ONLY = 1,
+    SQL_CONCUR_LOCK = 2,
+    SQL_CONCUR_ROWVER = 3,
+    SQL_CONCUR_VALUES = 4,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
+pub enum CursorType {
+    SQL_CURSOR_FORWARD_ONLY = 0,
+    SQL_CURSOR_KEYSET_DRIVEN = 1,
+    SQL_CURSOR_DYNAMIC = 2,
+    SQL_CURSOR_STATIC = 3,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
+pub enum NoScan {
+    SQL_NOSCAN_OFF = 0,
+    SQL_NOSCAN_ON = 1,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug)]
+#[repr(u32)]
+pub enum BindType {
+    SQL_BIND_BY_COLUMN = 0,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
+pub enum RetrieveData {
+    Off = 0,
+    On,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(u32)]
+pub enum SimulateCursor {
+    NonUnique = 0,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[repr(u32)]
+pub enum UseBookmarks {
+    Off = 0,
+    Variable = 2,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, FromPrimitive)]
+#[repr(usize)]
+pub enum SqlCode {
+    SQL_CODE_DATE = 1,
+    SQL_CODE_TIME = 2,
+    SQL_CODE_TIMESTAMP = 3,
 }

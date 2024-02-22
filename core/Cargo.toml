@@ -10,7 +10,7 @@ authors = [
 edition = "2021"
 
 [dependencies]
-odbc-sys = { path = "../odbc-sys" }
+definitions = { path = "../definitions" }
 bson = "2"
 thiserror = "1"
 constants = { path = "../constants" }
@@ -28,7 +28,7 @@ shared_sql_utils = { path = "../shared_sql_utils" }
 log = "0.4.14"
 
 [dependencies.mongodb]
-version = "2.7"
+version = "2"
 default-features = false
 features = ["tokio-sync"]
 

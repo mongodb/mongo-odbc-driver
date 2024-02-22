@@ -1,10 +1,12 @@
 use crate::{
-    api::definitions::*,
     handles::definitions::{Env, EnvState, MongoHandle},
     SQLGetDiagRecW, SQLGetEnvAttr,
 };
 use crate::{map, SQLSetEnvAttr};
-use odbc_sys::{HEnv, HandleType, Integer, Pointer, SqlReturn};
+use definitions::{
+    AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, HEnv, HandleType,
+    Integer, Pointer, SqlBool, SqlReturn,
+};
 use std::{collections::BTreeMap, mem::size_of};
 
 const OPTIONAL_VALUE_CHANGED: &str = "01S02\0";
@@ -83,43 +85,44 @@ mod unit {
                 env_handle,
                 EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
                 map! {
-                    OdbcVersion::Odbc3 as i32 => SqlReturn::SUCCESS,
-                    OdbcVersion::Odbc3_80 as i32 => SqlReturn::SUCCESS,
-                    2 => SqlReturn::ERROR // Some number other than 3 and 380
+                    AttrOdbcVersion::SQL_OV_ODBC2 as i32 => SqlReturn::SUCCESS,
+                    AttrOdbcVersion::SQL_OV_ODBC3 as i32 => SqlReturn::SUCCESS,
+                    AttrOdbcVersion::SQL_OV_ODBC3_80 as i32 => SqlReturn::SUCCESS,
+                    1 => SqlReturn::ERROR // Some number other than 2, 3 and 380
                 },
-                OdbcVersion::Odbc3_80 as i32,
+                AttrOdbcVersion::SQL_OV_ODBC3_80 as i32,
             );
 
             get_set_env_attr(
                 env_handle,
                 EnvironmentAttribute::SQL_ATTR_OUTPUT_NTS,
                 map! {
-                    SqlBool::True as i32 => SqlReturn::SUCCESS,
-                    SqlBool::False as i32 => SqlReturn::ERROR
+                    SqlBool::SQL_TRUE as i32 => SqlReturn::SUCCESS,
+                    SqlBool::SQL_FALSE as i32 => SqlReturn::ERROR
                 },
-                SqlBool::True as i32,
+                SqlBool::SQL_TRUE as i32,
             );
 
             get_set_env_attr(
                 env_handle,
                 EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING,
                 map! {
-                    ConnectionPooling::Off as i32 => SqlReturn::SUCCESS,
-                    ConnectionPooling::OnePerHEnv as i32 => SqlReturn::SUCCESS_WITH_INFO,
-                    ConnectionPooling::OnePerDriver as i32 => SqlReturn::SUCCESS_WITH_INFO,
-                    ConnectionPooling::DriverAware as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    AttrConnectionPooling::SQL_CP_OFF as i32 => SqlReturn::SUCCESS,
+                    AttrConnectionPooling::SQL_CP_ONE_PER_HENV as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    AttrConnectionPooling::SQL_CP_ONE_PER_DRIVER as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    AttrConnectionPooling:: SQL_CP_DRIVER_AWARE as i32 => SqlReturn::SUCCESS_WITH_INFO,
                 },
-                ConnectionPooling::Off as i32,
+                AttrConnectionPooling::SQL_CP_OFF as i32,
             );
 
             get_set_env_attr(
                 env_handle,
                 EnvironmentAttribute::SQL_ATTR_CP_MATCH,
                 map! {
-                    CpMatch::Strict as i32 => SqlReturn::SUCCESS,
-                    CpMatch::Relaxed as i32 => SqlReturn::SUCCESS_WITH_INFO,
+                    AttrCpMatch:: SQL_CP_STRICT_MATCH as i32 => SqlReturn::SUCCESS,
+                    AttrCpMatch:: SQL_CP_RELAXED_MATCH as i32 => SqlReturn::SUCCESS_WITH_INFO,
                 },
-                CpMatch::Strict as i32,
+                AttrCpMatch::SQL_CP_STRICT_MATCH as i32,
             );
 
             // SQLGetEnvAttr where value_ptr is null
@@ -162,7 +165,7 @@ mod unit {
                 SQLSetEnvAttr(
                     handle as HEnv,
                     EnvironmentAttribute::SQL_ATTR_CP_MATCH as i32,
-                    CpMatch::Relaxed as i32 as Pointer,
+                    AttrCpMatch::SQL_CP_RELAXED_MATCH as i32 as Pointer,
                     0
                 )
             );
@@ -174,7 +177,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetDiagRecW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     handle as *mut _,
                     1,
                     sql_state,

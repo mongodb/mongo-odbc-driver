@@ -9,15 +9,17 @@ serde_json = "1"
 serde_yaml = "0.9.4"
 thiserror = "1"
 lazy_static = "1"
-odbc-sys = { path = "../odbc-sys", default-features = false }
+definitions = { path = "../definitions", default-features = false }
 cstr = { path = "../cstr" }
 constants = { path = "../constants" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 logger = { path = "../logger" }
 log = "0.4"
 regex = "1"
+num-traits = "0.2.14"
+num-derive = "0.3.3"
 
 [dependencies.mongodb]
-version = "2.7"
+version = "2"
 default-features = false
 features = ["tokio-sync"]

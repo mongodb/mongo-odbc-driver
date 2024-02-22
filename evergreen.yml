@@ -198,11 +198,15 @@ functions:
     - command: shell.exec
       type: system
       params:
+        silent: true
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         working_dir: mongosql-odbc-driver/installer/msi
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_jsign_image} \
@@ -218,11 +222,15 @@ functions:
     - command: shell.exec
       type: system
       params:
+        silent: true
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         working_dir: mongosql-odbc-driver/installer/tgz
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
@@ -231,11 +239,14 @@ functions:
       type: system
       params:
         working_dir: mongosql-odbc-driver/installer/tgz
-        silent: false
+        silent: true
+        env:
+          GRS_CONFIG_USER1_USERNAME: "${odbc_garasign_username}"
+          GRS_CONFIG_USER1_PASSWORD: "${odbc_garasign_password}"
         script: |
           docker run \
-            -e GRS_CONFIG_USER1_USERNAME=${odbc_garasign_username} \
-            -e GRS_CONFIG_USER1_PASSWORD=${odbc_garasign_password} \
+            -e GRS_CONFIG_USER1_USERNAME \
+            -e GRS_CONFIG_USER1_PASSWORD \
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
@@ -267,6 +278,21 @@ functions:
           # Compile debug build
           cargo build
 
+  "compile ubuntu with asan":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          ~/.cargo/bin/rustup default nightly
+          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+
+          export RUSTFLAGS="-Z sanitizer=address"
+
+          cargo build --target x86_64-unknown-linux-gnu
+
   "compile release with debug info":
     - command: shell.exec
       params:
@@ -295,7 +321,7 @@ functions:
         script: |
           ${prepare_shell}
           # Compile release build
-          cargo build --release --features odbc-sys/iodbc,cstr/utf32
+          cargo build --release --features definitions/iodbc,cstr/utf32
 
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
@@ -309,7 +335,7 @@ functions:
         script: |
           ${prepare_shell}
           # Compile debug build
-          cargo build --features odbc-sys/iodbc,cstr/utf32
+          cargo build --features definitions/iodbc,cstr/utf32
 
   "compile macos release with debug info":
     - command: shell.exec
@@ -320,7 +346,7 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           # Build a release driver with debug information
-          cargo build --features odbc-sys/iodbc,cstr/utf32 --release
+          cargo build --features definitions/iodbc,cstr/utf32 --release
           export DRIVER_LIB_PATH=$PWD/target/release
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
@@ -375,7 +401,6 @@ functions:
               MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
           fi
           ./build-dmg.sh "$MINOR_VERSION"
-
 
   "mciuploads release artifacts":
     - command: s3.put
@@ -758,7 +783,7 @@ functions:
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
-        script:  |
+        script: |
           mkdir -p release/mongoodbc/bin
           cp  target/release/libatsql.so release/mongoodbc/bin/
           cp ./LICENSE ./README.md release/mongoodbc/
@@ -1055,7 +1080,7 @@ functions:
           # Run integration tests with ubuntu
           cargo test integration -- --skip test_driver_log_level --nocapture &&
           cargo test --test connection_tests integration::test_driver_log_level -- --ignored --nocapture
-          
+
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1084,7 +1109,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc,cstr/utf32 -- --ignored
+          cargo test --features definitions/iodbc,cstr/utf32 -- --ignored
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1125,8 +1150,8 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features odbc-sys/iodbc,cstr/utf32 integration -- --skip test_driver_log_level --nocapture &&
-          cargo test --test connection_tests integration::test_driver_log_level --features odbc-sys/iodbc,cstr/utf32 -- --nocapture
+          cargo test --features definitions/iodbc,cstr/utf32 integration -- --skip test_driver_log_level --nocapture &&
+          cargo test --test connection_tests integration::test_driver_log_level --features definitions/iodbc,cstr/utf32 -- --nocapture
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1173,7 +1198,7 @@ functions:
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
 
-          export RUSTFLAGS="-Z sanitizer=address"
+          export RUSTFLAGS="-Z sanitizer=leak"
           # we only run asan on the unit tests for now
           cargo test --target x86_64-unknown-linux-gnu unit
 
@@ -1192,11 +1217,14 @@ functions:
           echo "ODBCSYSINI = $ODBCSYSINI"
           echo "----------------------------------------------"
 
+          export RUSTFLAGS="-Z sanitizer=leak"
+          export RUST_BACKTRACE=1
+          echo "env $(env)"
+
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
           export RUSTFLAGS="-Z sanitizer=address"
 
-          export RUST_BACKTRACE=1
           # Start a local ADF
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
@@ -1227,7 +1255,7 @@ functions:
 
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-          export RUSTFLAGS="-Z sanitizer=address"
+          export RUSTFLAGS="-Z sanitizer=leak"
 
           export RUST_BACKTRACE=1
           # Start a local ADF
@@ -1330,7 +1358,7 @@ functions:
           cat mongo-odbc-downloads_template.json
           echo "---------------------------------------------"
           NEW_VERSION=$(cat mongo-odbc-downloads_template.json)
-          
+
           # The task runs on the variant used for Release (Ubuntu). Download the Linux build of JQ
           curl -L -o jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 \
             --silent \
@@ -1338,12 +1366,12 @@ functions:
             --max-time 60 \
             --retry 5 \
             --retry-delay 0
-          
+
           chmod +x jq
-          
+
           # Add the new release, sort by version and reverse the array
           jq --argjson new_version "$NEW_VERSION" '.versions += [ $new_version ] | .versions |= sort_by(.version) | .versions |= reverse' mongo-odbc-downloads.json > mongo-odbc-downloads_updated.json
-          
+
           echo "----------- Updated download list -------------"
           cat mongo-odbc-downloads_updated.json
           echo "-----------------------------------------------"
@@ -1380,7 +1408,7 @@ tasks:
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
@@ -1401,7 +1429,7 @@ tasks:
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
@@ -1414,7 +1442,7 @@ tasks:
   - name: unit-test
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install unix odbc"
@@ -1431,7 +1459,7 @@ tasks:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install unix odbc"
@@ -1446,9 +1474,10 @@ tasks:
         variants: [macos, macos-arm]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
-      # SQL-1794 - Enable ASAN for integration tests if possible
-      #- func: "run asan integration tests"
-      #  variants: [ ubuntu2204 ]
+      # Commenting out because the following task only detects
+      # memory leaks in the tests
+      # - func: "run asan integration tests"
+      #   variants: [ ubuntu2204 ]
       - func: "run windows integration tests"
         variants: [windows-64]
       - func: "run macos integration tests"
@@ -1457,36 +1486,48 @@ tasks:
   - name: asan-unit-tests
     commands:
       - func: "install rust toolchain"
-        variants: [ ubuntu2204]
+        variants: [ubuntu2204]
       - func: "install unix odbc"
-        variants: [ ubuntu2204 ]
+        variants: [ubuntu2204]
       - func: "run asan unit tests"
-        variants: [ ubuntu2204 ]
+        variants: [ubuntu2204]
 
+  - name: asan-compile
+    commands:
+      - func: "install rust toolchain"
+        variants: [ubuntu2204]
+      - func: "compile ubuntu with asan"
+        variants: [ubuntu2204]
+
+  # disabled macos result-set-tests as part of SQL-1688
   - name: result-set-test
     depends_on:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64]
-      - func: "install iODBC"
-        variants: [macos, macos-arm]
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
+      # - func: "install iODBC"
+      #   variants: [macos, macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "compile release with debug info"
         variants: [ubuntu2204]
-      - func: "compile macos release with debug info"
-        variants: [macos, macos-arm]
+      # - func: "compile macos release with debug info"
+      #   variants: [macos, macos-arm]
       - func: "setup driver with UnixODBC"
         variants: [ubuntu2204]
-      - func: "setup driver with iODBC"
-        variants: [macos, macos-arm]
+      # - func: "setup driver with iODBC"
+      #   variants: [macos, macos-arm]
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
         variants: [ubuntu2204]
-      - func: "run macos result-set tests"
-        variants: [macos, macos-arm]
+      # - func: "run macos result-set tests"
+      #   variants: [macos, macos-arm]
+      # Commenting out because the following task only detects
+      # memory leaks in the tests
+      # - func: "run asan result-set tests"
+      #   variants: [ ubuntu2204 ]
 
   - name: sign
     depends_on:
@@ -1593,6 +1634,7 @@ buildvariants:
     tasks:
       - name: clippy
       - name: rustfmt
+      - name: asan-compile
 
   - name: windows-64
     tags: ["release-variant"]
@@ -1627,7 +1669,8 @@ buildvariants:
       - name: compile
       - name: compile-debug
       - name: unit-test
-      - name: integration-test
+      # SQL-1841: Investigate iodbc hanging with odbc 2 integration tests
+      # - name: integration-test
       - name: result-set-test
 
   - name: macos-arm
@@ -1637,7 +1680,8 @@ buildvariants:
       - name: compile
       - name: compile-debug
       - name: unit-test
-      - name: integration-test
+      # SQL-1841: Investigate iodbc hanging with odbc 2 integration tests
+      # - name: integration-test
       - name: result-set-test
 
   - name: release

@@ -42,7 +42,9 @@ impl MongoStatement for MongoQuery {
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row has not been retrieved (next must be called at least once before get_value).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
-        let md = self.get_col_metadata(col_index)?;
+        let md = self
+            .get_col_metadata(col_index)
+            .map_err(|_| Error::ColIndexOutOfBounds(col_index))?;
         let datasource = self.resultset[self.current.ok_or(Error::InvalidCursorState)?]
             .get_document(&md.table_name)
             .map_err(|e: ValueAccessError| Error::ValueAccess(col_index.to_string(), e))?;

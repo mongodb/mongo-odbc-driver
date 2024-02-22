@@ -10,6 +10,7 @@ use bson::{
 };
 use chrono::prelude::*;
 use cstr::WideChar;
+use definitions::{Date, Nullability, SqlReturn, Time, Timestamp, WChar};
 use lazy_static::lazy_static;
 use mongo_odbc_core::{
     col_metadata::MongoColMetadata,
@@ -20,7 +21,6 @@ use mongo_odbc_core::{
     mock_query::MongoQuery,
     TypeMode,
 };
-use odbc_sys::{Date, Nullability, SqlReturn, Time, Timestamp, WChar};
 
 const ARRAY_COL: u16 = 1;
 const BIN_COL: u16 = 2;
@@ -124,7 +124,7 @@ lazy_static! {
                     Schema::Atomic(Atomic::Array(Box::new(Schema::Atomic(Atomic::Scalar(
                         BsonTypeName::Int,
                     ))))),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -132,7 +132,7 @@ lazy_static! {
                     "test".to_string(),
                     "binary".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -140,7 +140,7 @@ lazy_static! {
                     "test".to_string(),
                     "bool".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Bool)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -148,7 +148,7 @@ lazy_static! {
                     "test".to_string(),
                     "datetime".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Date)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -163,7 +163,7 @@ lazy_static! {
                         required: set! {"x".to_string(), "y".to_string()},
                         additional_properties: false,
                     })),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -171,7 +171,7 @@ lazy_static! {
                     "test".to_string(),
                     "f64".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Double)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -179,7 +179,7 @@ lazy_static! {
                     "test".to_string(),
                     "i3232".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -187,7 +187,7 @@ lazy_static! {
                     "test".to_string(),
                     "i3264".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Long)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -195,7 +195,7 @@ lazy_static! {
                     "test".to_string(),
                     "js".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Javascript)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -203,7 +203,7 @@ lazy_static! {
                     "test".to_string(),
                     "js_w_s".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::JavascriptWithScope)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -211,7 +211,7 @@ lazy_static! {
                     "test".to_string(),
                     "max_key".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::MaxKey)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -219,7 +219,7 @@ lazy_static! {
                     "test".to_string(),
                     "min_key".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::MinKey)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -227,7 +227,7 @@ lazy_static! {
                     "test".to_string(),
                     "null".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Null)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -235,7 +235,7 @@ lazy_static! {
                     "test".to_string(),
                     "oid".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::ObjectId)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -243,7 +243,7 @@ lazy_static! {
                     "test".to_string(),
                     "regex".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Regex)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -251,7 +251,7 @@ lazy_static! {
                     "test".to_string(),
                     "string".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -259,7 +259,7 @@ lazy_static! {
                     "test".to_string(),
                     "undefined".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -267,7 +267,7 @@ lazy_static! {
                     "test".to_string(),
                     "unicode".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -275,7 +275,7 @@ lazy_static! {
                     "test".to_string(),
                     "negative_long".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Long)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -283,7 +283,7 @@ lazy_static! {
                     "test".to_string(),
                     "unit_str".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
                 MongoColMetadata::new(
@@ -291,7 +291,7 @@ lazy_static! {
                     "test".to_string(),
                     "guid".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
             ],
@@ -345,7 +345,7 @@ lazy_static! {
                     Schema::Atomic(Atomic::Array(Box::new(Schema::Atomic(Atomic::Scalar(
                         BsonTypeName::Int,
                     ))))),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -353,7 +353,7 @@ lazy_static! {
                     "test".to_string(),
                     "binary".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -361,7 +361,7 @@ lazy_static! {
                     "test".to_string(),
                     "bool".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Bool)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -369,7 +369,7 @@ lazy_static! {
                     "test".to_string(),
                     "datetime".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Date)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -384,7 +384,7 @@ lazy_static! {
                         required: set! {"x".to_string(), "y".to_string()},
                         additional_properties: false,
                     })),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -392,7 +392,7 @@ lazy_static! {
                     "test".to_string(),
                     "f64".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Double)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -400,7 +400,7 @@ lazy_static! {
                     "test".to_string(),
                     "i3232".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -408,7 +408,7 @@ lazy_static! {
                     "test".to_string(),
                     "i3264".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Long)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -416,7 +416,7 @@ lazy_static! {
                     "test".to_string(),
                     "js".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Javascript)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -424,7 +424,7 @@ lazy_static! {
                     "test".to_string(),
                     "js_w_s".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::JavascriptWithScope)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -432,7 +432,7 @@ lazy_static! {
                     "test".to_string(),
                     "max_key".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::MaxKey)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -440,7 +440,7 @@ lazy_static! {
                     "test".to_string(),
                     "min_key".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::MinKey)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -448,7 +448,7 @@ lazy_static! {
                     "test".to_string(),
                     "null".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Null)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -456,7 +456,7 @@ lazy_static! {
                     "test".to_string(),
                     "oid".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::ObjectId)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -464,7 +464,7 @@ lazy_static! {
                     "test".to_string(),
                     "regex".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Regex)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -472,7 +472,7 @@ lazy_static! {
                     "test".to_string(),
                     "string".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -480,7 +480,7 @@ lazy_static! {
                     "test".to_string(),
                     "undefined".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Undefined)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -488,7 +488,7 @@ lazy_static! {
                     "test".to_string(),
                     "unicode".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -496,7 +496,7 @@ lazy_static! {
                     "test".to_string(),
                     "negative_long".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Long)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -504,7 +504,7 @@ lazy_static! {
                     "test".to_string(),
                     "unit_str".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
                 MongoColMetadata::new(
@@ -512,7 +512,7 @@ lazy_static! {
                     "test".to_string(),
                     "guid".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
-                    Nullability::NO_NULLS,
+                    Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
             ],
@@ -539,7 +539,7 @@ fn sql_fetch_and_more_results_basic_functionality(type_mode: TypeMode) {
             "a".to_string(),
             "b".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-            Nullability::NO_NULLS,
+            Nullability::SQL_NO_NULLS,
             type_mode,
         )],
     )));
@@ -556,7 +556,8 @@ fn sql_fetch_and_more_results_basic_functionality(type_mode: TypeMode) {
 }
 
 fn indicator_missing(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -604,8 +605,9 @@ fn indicator_missing(mq: MongoQuery) {
 }
 
 fn sql_get_wstring_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
     use cstr::input_text_to_string_w;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -677,7 +679,7 @@ fn sql_get_wstring_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -701,8 +703,9 @@ fn sql_get_wstring_data(mq: MongoQuery) {
 }
 
 fn sql_get_wstring_data_by_pieces(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
     use cstr::input_text_to_string_w;
+    use definitions::CDataType;
     use std::mem::size_of;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
@@ -785,7 +788,8 @@ fn sql_get_wstring_data_by_pieces(mq: MongoQuery) {
 }
 
 fn sql_get_guid_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -865,8 +869,9 @@ fn sql_get_guid_data(mq: MongoQuery) {
 }
 
 fn sql_get_string_data_by_pieces(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
     use cstr::input_text_to_string_a;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -918,7 +923,8 @@ fn sql_get_string_data_by_pieces(mq: MongoQuery) {
 }
 
 fn sql_get_binary_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -993,7 +999,7 @@ fn sql_get_binary_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1018,7 +1024,8 @@ fn sql_get_binary_data(mq: MongoQuery) {
 }
 
 fn sql_get_binary_data_by_pieces(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1094,8 +1101,9 @@ fn sql_get_binary_data_by_pieces(mq: MongoQuery) {
 }
 
 fn sql_get_string_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
     use cstr::input_text_to_string_a;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1169,7 +1177,7 @@ fn sql_get_string_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1193,7 +1201,8 @@ fn sql_get_string_data(mq: MongoQuery) {
 }
 
 fn sql_get_bit_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1368,7 +1377,7 @@ fn sql_get_bit_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1392,7 +1401,8 @@ fn sql_get_bit_data(mq: MongoQuery) {
 }
 
 fn sql_get_i64_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1560,7 +1570,7 @@ fn sql_get_i64_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1584,7 +1594,8 @@ fn sql_get_i64_data(mq: MongoQuery) {
 }
 
 fn sql_get_u64_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1758,7 +1769,7 @@ fn sql_get_u64_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1782,7 +1793,8 @@ fn sql_get_u64_data(mq: MongoQuery) {
 }
 
 fn sql_get_i32_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -1950,7 +1962,7 @@ fn sql_get_i32_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -1974,7 +1986,8 @@ fn sql_get_i32_data(mq: MongoQuery) {
 }
 
 fn sql_get_u32_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2148,7 +2161,7 @@ fn sql_get_u32_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2172,7 +2185,8 @@ fn sql_get_u32_data(mq: MongoQuery) {
 }
 
 fn sql_get_f64_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2333,7 +2347,7 @@ fn sql_get_f64_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2357,7 +2371,8 @@ fn sql_get_f64_data(mq: MongoQuery) {
 }
 
 fn sql_get_f32_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2518,7 +2533,7 @@ fn sql_get_f32_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2542,7 +2557,8 @@ fn sql_get_f32_data(mq: MongoQuery) {
 }
 
 fn sql_get_datetime_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2728,7 +2744,7 @@ fn sql_get_datetime_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2752,7 +2768,8 @@ fn sql_get_datetime_data(mq: MongoQuery) {
 }
 
 fn sql_get_date_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -2931,7 +2948,7 @@ fn sql_get_date_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(
@@ -2955,7 +2972,8 @@ fn sql_get_date_data(mq: MongoQuery) {
 }
 
 fn sql_get_time_data(mq: MongoQuery) {
-    use crate::api::{definitions::CDataType, functions::SQLGetData};
+    use crate::api::functions::SQLGetData;
+    use definitions::CDataType;
 
     let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
         EnvState::ConnectionAllocated,
@@ -3133,7 +3151,7 @@ fn sql_get_time_data(mq: MongoQuery) {
                         out_len_or_ind,
                     )
                 );
-                assert_eq!(odbc_sys::NULL_DATA, *out_len_or_ind);
+                assert_eq!(definitions::SQL_NULL_DATA, *out_len_or_ind);
                 assert_eq!(
                     SqlReturn::NO_DATA,
                     SQLGetData(

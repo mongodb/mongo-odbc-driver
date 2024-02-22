@@ -1,6 +1,6 @@
 use constants::{
-    FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX,
-    NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
+    OdbcState, FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE,
+    INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
 };
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
@@ -52,7 +52,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn get_sql_state(&self) -> &'static str {
+    pub fn get_sql_state(&self) -> OdbcState {
         match self {
             Error::CollectionCursorUpdate(err)
             | Error::DatabaseVersionRetreival(err)

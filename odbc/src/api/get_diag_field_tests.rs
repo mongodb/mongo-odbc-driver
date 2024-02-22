@@ -1,5 +1,5 @@
 use crate::{api::errors::ODBCError, handles::definitions::*, SQLGetDiagFieldW};
-use odbc_sys::{HandleType, SqlReturn};
+use definitions::{HandleType, SqlReturn};
 
 const UNIMPLEMENTED_FUNC: &str = "HYC00\0";
 
@@ -121,13 +121,13 @@ mod unit {
             ConnectionState::Allocated,
         ));
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(Statement::with_state(
-            std::ptr::null_mut(),
+            conn_handle,
             StatementState::Allocated,
         ));
         let handles: Vec<(HandleType, *mut MongoHandle)> = vec![
-            (HandleType::Env, env_handle),
-            (HandleType::Dbc, conn_handle),
-            (HandleType::Stmt, stmt_handle),
+            (HandleType::SQL_HANDLE_ENV, env_handle),
+            (HandleType::SQL_HANDLE_DBC, conn_handle),
+            (HandleType::SQL_HANDLE_STMT, stmt_handle),
         ];
         handles.iter().for_each(|(handle_type, handle)| {
             unsafe {
@@ -142,7 +142,7 @@ mod unit {
             validate_return_code(*handle_type, *handle);
 
             //statement only
-            if *handle_type == HandleType::Stmt {
+            if *handle_type == HandleType::SQL_HANDLE_STMT {
                 // SQL_DIAG_ROW_NUMBER
                 validate_integer_diag_field(*handle_type, *handle, -1248, -2i64);
                 // SQL_DIAG_ROW_COUNT
@@ -169,7 +169,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
                 SQLGetDiagFieldW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     1,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
@@ -188,7 +188,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLGetDiagFieldW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     2,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
@@ -220,7 +220,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetDiagFieldW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     1,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
@@ -233,7 +233,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetDiagFieldW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     0,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
@@ -246,7 +246,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::NO_DATA,
                 SQLGetDiagFieldW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     3,
                     6, //DiagType::SQL_DIAG_MESSAGE_TEXT
@@ -259,7 +259,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetDiagFieldW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     1,
                     -1249, // DiagType::SQL_DIAG_ROW_COUNT
@@ -271,7 +271,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetDiagFieldW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     1,
                     -1248, // DiagType::SQL_DIAG_ROW_NUMBER
@@ -284,7 +284,7 @@ mod unit {
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLGetDiagFieldW(
-                    HandleType::Env,
+                    HandleType::SQL_HANDLE_ENV,
                     env_handle as *mut _,
                     1,
                     12, // DiagType::SQL_DIAG_DYNAMIC_FUNCTION_CODE

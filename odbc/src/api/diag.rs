@@ -1,13 +1,8 @@
-use crate::{
-    api::{
-        data::i16_len,
-        definitions::{DiagType, SQL_ROW_NUMBER_UNKNOWN},
-    },
-    errors::ODBCError,
-};
+use crate::{api::data::i16_len, errors::ODBCError};
 use cstr::WideChar;
-use odbc_sys::Pointer;
-use odbc_sys::{Integer, SmallInt, SqlReturn};
+use definitions::{
+    AttrOdbcVersion, DiagType, Integer, Pointer, SmallInt, SqlReturn, SQL_ROW_NUMBER_UNKNOWN,
+};
 use std::ptr::copy_nonoverlapping;
 
 ///
@@ -35,6 +30,7 @@ pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WideChar) {
 pub unsafe fn get_diag_recw(
     error: &ODBCError,
     state: *mut WideChar,
+    odbc_ver: AttrOdbcVersion,
     message_text: *mut WideChar,
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
@@ -43,7 +39,13 @@ pub unsafe fn get_diag_recw(
     if !native_error_ptr.is_null() {
         *native_error_ptr = error.get_native_err_code();
     }
-    set_sql_statew(error.get_sql_state(), state);
+    let sql_state = match odbc_ver {
+        AttrOdbcVersion::SQL_OV_ODBC2 => error.get_sql_state().odbc_2_state,
+        AttrOdbcVersion::SQL_OV_ODBC3 | AttrOdbcVersion::SQL_OV_ODBC3_80 => {
+            error.get_sql_state().odbc_3_state
+        }
+    };
+    set_sql_statew(sql_state, state);
     let message = format!("{error}");
     i16_len::set_output_wstring(
         &message,
@@ -84,9 +86,10 @@ pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Poin
 /// # Safety
 /// This writes to multiple raw C-pointers
 ///
-pub unsafe fn get_diag_field(
-    errors: &Vec<ODBCError>,
+pub unsafe fn get_diag_fieldw(
+    errors: &[ODBCError],
     diag_identifier: DiagType,
+    odbc_ver: AttrOdbcVersion,
     diag_info_ptr: Pointer,
     record_number: i16,
     buffer_length: i16,
@@ -106,12 +109,20 @@ pub unsafe fn get_diag_field(
                 match diag_identifier {
                     // NOTE: return code is handled by driver manager; just return success
                     DiagType::SQL_DIAG_RETURNCODE => SqlReturn::SUCCESS,
-                    DiagType::SQL_DIAG_SQLSTATE => i16_len::set_output_wstring_as_bytes(
-                        error.get_sql_state(),
-                        diag_info_ptr,
-                        buffer_length as usize,
-                        string_length_ptr,
-                    ),
+                    DiagType::SQL_DIAG_SQLSTATE => {
+                        let sql_state = match odbc_ver {
+                            AttrOdbcVersion::SQL_OV_ODBC2 => error.get_sql_state().odbc_2_state,
+                            AttrOdbcVersion::SQL_OV_ODBC3 | AttrOdbcVersion::SQL_OV_ODBC3_80 => {
+                                error.get_sql_state().odbc_3_state
+                            }
+                        };
+                        i16_len::set_output_wstring_as_bytes(
+                            sql_state,
+                            diag_info_ptr,
+                            buffer_length as usize,
+                            string_length_ptr,
+                        )
+                    }
                     DiagType::SQL_DIAG_NATIVE => i16_len::set_output_fixed_data(
                         &error.get_native_err_code(),
                         diag_info_ptr,
