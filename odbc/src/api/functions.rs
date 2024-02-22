@@ -1353,7 +1353,6 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            // todo
             match FromPrimitive::from_i16(option as i16) {
                 Some(FreeStmtOption::SQL_CLOSE) => {
                     // todo: need to actually implement
@@ -1370,7 +1369,12 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
                     SqlReturn::SUCCESS
                 }
                 Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS
-                _ => SqlReturn::ERROR // todo: add detailed error? HY092 is the one listed on the docs page, but that one in this repo seems strongly coupled with Attributes not Options
+                _ => {
+                    // TODO: Note that InvalidAttrIdentifier in this repo only refers to Attributes/functions related to Attributes.
+                    //       Although, the error code HY092 is meant to apply to Attributes _and_ Options, according to the docs.
+                    add_diag_info!(MongoHandleRef::from(statement_handle), ODBCError::InvalidAttrIdentifier(option as i32));
+                    SqlReturn::ERROR
+                }
             }
         },
         statement_handle
