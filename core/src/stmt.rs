@@ -28,6 +28,11 @@ pub trait MongoStatement: Debug {
     fn execute(&mut self, _: &MongoConnection) -> Result<bool> {
         Err(Error::UnsupportedOperation("execute"))
     }
+    // Closes the cursor.
+    // Only MongoQuery supports this workflow. The other statements don't.
+    fn close_cursor(&mut self) -> Result<()> {
+        Err(Error::UnsupportedOperation("close_cursor"))
+    }
 }
 
 #[derive(Debug)]
