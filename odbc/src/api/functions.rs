@@ -1357,6 +1357,7 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
             let stmt = must_be_valid!((*mongo_handle).as_statement());
 
             match FromPrimitive::from_i16(option as i16) {
+                // Drop all pending results from the cursor and close the cursor.
                 Some(FreeStmtOption::SQL_CLOSE) => {
                     // todo: need to actually implement
                     //   - Drop all pending results form the cursor
@@ -1364,12 +1365,12 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
                     //   - return SUCCESS
                     SqlReturn::SUCCESS
                 }
+                // Release all column buffers bound by SQLBindCol by removing the bound_cols map.
                 Some(FreeStmtOption::SQL_UNBIND) => {
-                    // Release all column buffers bound by SQLBindCol
-                    // by removing the bound_cols map.
                     *stmt.bound_cols.write().unwrap() = None;
                     SqlReturn::SUCCESS
                 }
+                // We do not implement SQLBindParameter, so this is a no-op.
                 Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS
                 _ => {
                     add_diag_info!(mongo_handle, ODBCError::InvalidAttrIdentifier(option as i32));
