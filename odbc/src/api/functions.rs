@@ -1371,9 +1371,12 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
                     SqlReturn::SUCCESS
                 }
                 // We do not implement SQLBindParameter, so this is a no-op.
-                Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS
+                Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS,
                 _ => {
-                    add_diag_info!(mongo_handle, ODBCError::InvalidAttrIdentifier(option as i32));
+                    add_diag_info!(
+                        mongo_handle,
+                        ODBCError::InvalidAttrIdentifier(option as i32)
+                    );
                     SqlReturn::ERROR
                 }
             }
