@@ -1356,13 +1356,16 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
 
-            match FromPrimitive::from_i16(option as i16) {
+            match FromPrimitive::from_i16(option) {
                 // Drop all pending results from the cursor and close the cursor.
                 Some(FreeStmtOption::SQL_CLOSE) => {
-                    // todo: need to actually implement
-                    //   - Drop all pending results form the cursor
-                    //   - Close the cursor
-                    //   - return SUCCESS
+                    let _ = stmt
+                        .mongo_statement
+                        .write()
+                        .unwrap()
+                        .as_mut()
+                        .unwrap()
+                        .close_cursor();
                     SqlReturn::SUCCESS
                 }
                 // Release all column buffers bound by SQLBindCol by removing the bound_cols map.
