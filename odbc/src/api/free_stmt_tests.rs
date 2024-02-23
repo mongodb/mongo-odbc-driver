@@ -83,7 +83,7 @@ mod unit {
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
             let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": "y"}],
+                vec![doc! {"x": "y"}, doc! {"x": "z"}],
                 vec![MongoColMetadata::new(
                     "test_db",
                     "dn".to_string(),
@@ -106,8 +106,7 @@ mod unit {
                 SQLFreeStmt(stmt as *mut _, FreeStmtOption::SQL_CLOSE as i16)
             );
 
-            // Assert that the mongo_statement closed the cursor (no resultset, no current)
-            // but retained the metadata.
+            // Assert that the mongo_statement closed the cursor (no resultset, no current).
             match s
                 .mongo_statement
                 .read()
@@ -129,6 +128,7 @@ mod unit {
                 .unwrap()
                 .next(None)
             {
+                // we expect false since there should be no data to iterate after SQLFreeStmt
                 Ok((false, _)) => {}
                 _ => panic!("cursor not closed -- able to call next()"),
             }
