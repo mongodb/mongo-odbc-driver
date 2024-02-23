@@ -88,7 +88,6 @@ mod integration {
     }
 
     const EXPECTED_DATATYPES: [SqlDataType; 23] = [
-        SqlDataType::SQL_VARCHAR,
         SqlDataType::SQL_WVARCHAR,
         SqlDataType::SQL_BIT,
         SqlDataType::SQL_BIGINT,
@@ -110,6 +109,7 @@ mod integration {
         SqlDataType::SQL_INTEGER,
         SqlDataType::SQL_DOUBLE,
         SqlDataType::SQL_TIMESTAMP,
+        SqlDataType::SQL_VARCHAR,
         SqlDataType::SQL_TYPE_TIMESTAMP,
     ];
 
