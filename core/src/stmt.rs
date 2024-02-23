@@ -30,9 +30,7 @@ pub trait MongoStatement: Debug {
     }
     // Closes the cursor.
     // Only MongoQuery supports this workflow. The other statements don't.
-    fn close_cursor(&mut self) -> Result<()> {
-        Err(Error::UnsupportedOperation("close_cursor"))
-    }
+    fn close_cursor(&mut self) {}
 }
 
 #[derive(Debug)]

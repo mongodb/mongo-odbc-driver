@@ -1359,8 +1359,7 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
             match FromPrimitive::from_i16(option) {
                 // Drop all pending results from the cursor and close the cursor.
                 Some(FreeStmtOption::SQL_CLOSE) => {
-                    let _ = stmt
-                        .mongo_statement
+                    stmt.mongo_statement
                         .write()
                         .unwrap()
                         .as_mut()

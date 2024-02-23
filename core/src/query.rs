@@ -146,9 +146,8 @@ impl MongoStatement for MongoQuery {
     }
 
     // Close the cursor by setting the current value and cursor to None.
-    fn close_cursor(&mut self) -> Result<()> {
+    fn close_cursor(&mut self) {
         self.current = None;
         self.resultset_cursor = None;
-        Ok(())
     }
 }
