@@ -1374,15 +1374,7 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
                 }
                 // We do not implement SQLBindParameter, so this is a no-op.
                 Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS,
-                _ => {
-                    // TODO: This is handled by the DM, so really this is an unreachable branch.
-                    //       Should we include the error in diagnostics or is it not worth?
-                    // add_diag_info!(
-                    //     mongo_handle,
-                    //     ODBCError::InvalidAttrIdentifier(option as i32)
-                    // );
-                    SqlReturn::ERROR
-                }
+                _ => SqlReturn::ERROR,
             }
         },
         statement_handle
