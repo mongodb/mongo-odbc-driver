@@ -8,10 +8,14 @@ mod unit {
     };
     use bson::doc;
     use definitions::{FreeStmtOption, Nullability, SqlReturn};
-    use mongo_odbc_core::json_schema::simplified::{Atomic, Schema};
-    use mongo_odbc_core::json_schema::BsonTypeName;
-    use mongo_odbc_core::{mock_query::MongoQuery, MongoColMetadata, MongoStatement};
-    use mongo_odbc_core::{Error, TypeMode};
+    use mongo_odbc_core::{
+        json_schema::{
+            simplified::{Atomic, Schema},
+            BsonTypeName,
+        },
+        mock_query::MongoQuery,
+        Error, MongoColMetadata, MongoCollections, MongoStatement, TypeMode,
+    };
     use std::ptr::null_mut;
 
     fn create_stmt_handle() -> *mut MongoHandle {
@@ -132,6 +136,27 @@ mod unit {
                 Ok((false, _)) => {}
                 _ => panic!("cursor not closed -- able to call next()"),
             }
+        }
+    }
+
+    #[test]
+    fn test_free_stmt_close_non_query() {
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+
+        unsafe {
+            // Using a MongoCollections mongo_statement means there is no additional data
+            // to set or test.
+            let s = (*stmt).as_statement().unwrap();
+            *s.mongo_statement.write().unwrap() = Some(Box::new(MongoCollections::empty()));
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLFreeStmt(stmt as *mut _, FreeStmtOption::SQL_CLOSE as i16)
+            );
         }
     }
 }
