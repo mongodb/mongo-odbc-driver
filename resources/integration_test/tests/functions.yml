@@ -80,7 +80,6 @@ tests:
     db: integration_test
     is_simple_type: true
     expected_result:
-      - [ "varchar", 12, 65535, "'", "'", null, 1, 1, 3, null, 0, null, "varchar", null, null, 12, null, null, null ]
       - [ "string", -9, 65535, "'", "'", null, 1, 1, 3, null, 0, null, "string", null, null, -9, null, null, null ]
       - [ "bool", -7, 1, null, null, null, 1, 0, 2, null, 0, null, "bool", null, null, -7, null, null, null ]
       - [ "long", -5, 19, null, null, null, 1, 0, 2, 0, 1, 0, "long", 0, 0, -5, null, 10, null ]
@@ -102,4 +101,5 @@ tests:
       - [ "int", 4, 10, null, null, null, 1, 0, 2, 0, 1, 0, "int", 0, 0, 4, null, 10, null ]
       - [ "double", 8, 15, null, null, null, 1, 0, 2, 0, 0, 0, "double", 15, 15, 8, null, 2, null ]
       - [ "date", 11, 23, "'", "'", null, 1, 0, 2, null, 1, null, "date", 3, 3, 11, 3, null, null ]
+      - [ "varchar", 12, 65535, "'", "'", null, 1, 1, 3, null, 0, null, "varchar", null, null, 12, null, null, null ]
       - [ "date", 93, 23, "'", "'", null, 1, 0, 2, null, 1, null, "date", 3, 3, 93, 3, null, null ]
