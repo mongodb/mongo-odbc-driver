@@ -1231,7 +1231,6 @@ functions:
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --skip test_driver_log_level --nocapture &&
           cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level -- --nocapture
-          
           EXITCODE=$?
 
           # Stop the local ADF
