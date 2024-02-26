@@ -17,8 +17,8 @@ use cstr::{input_text_to_string_w, Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
     ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
-    DriverConnectOption, EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv, HStmt, HWnd,
-    Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
+    DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc, HDesc, HEnv,
+    HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
     RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
     UseBookmarks,
 };
@@ -1348,8 +1348,37 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
-    unimpl!(statement_handle);
+pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) -> SqlReturn {
+    // unimpl!(statement_handle);
+    panic_safe_exec_clear_diagnostics!(
+        debug,
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+
+            match FromPrimitive::from_i16(option) {
+                // Drop all pending results from the cursor and close the cursor.
+                Some(FreeStmtOption::SQL_CLOSE) => {
+                    stmt.mongo_statement
+                        .write()
+                        .unwrap()
+                        .as_mut()
+                        .unwrap()
+                        .close_cursor();
+                    SqlReturn::SUCCESS
+                }
+                // Release all column buffers bound by SQLBindCol by removing the bound_cols map.
+                Some(FreeStmtOption::SQL_UNBIND) => {
+                    *stmt.bound_cols.write().unwrap() = None;
+                    SqlReturn::SUCCESS
+                }
+                // We do not implement SQLBindParameter, so this is a no-op.
+                Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS,
+                _ => SqlReturn::ERROR,
+            }
+        },
+        statement_handle
+    )
 }
 
 ///
