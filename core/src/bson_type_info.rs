@@ -1,6 +1,6 @@
 use definitions::{SqlCode, SqlDataType};
 
-pub const STRING_SIZE: u16 = u16::MAX;
+pub const MAX_STRING_SIZE: u16 = u16::MAX;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum TypeMode {
@@ -120,8 +120,8 @@ impl BsonTypeInfo {
         is_case_sensitive: true,
         fixed_prec_scale: false,
         scale: None,
-        precision: Some(STRING_SIZE),
-        octet_length: Some(STRING_SIZE),
+        precision: Some(MAX_STRING_SIZE),
+        octet_length: Some(MAX_STRING_SIZE),
         fixed_bytes_length: None,
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
@@ -142,8 +142,8 @@ impl BsonTypeInfo {
         is_case_sensitive: true,
         fixed_prec_scale: false,
         scale: None,
-        precision: Some(STRING_SIZE),
-        octet_length: Some(STRING_SIZE),
+        precision: Some(MAX_STRING_SIZE),
+        octet_length: Some(MAX_STRING_SIZE),
         fixed_bytes_length: None,
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
