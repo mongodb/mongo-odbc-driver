@@ -1223,7 +1223,6 @@ functions:
 
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
-          export RUSTFLAGS="-Z sanitizer=address"
 
           # Start a local ADF
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
