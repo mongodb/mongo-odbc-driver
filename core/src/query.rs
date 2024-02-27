@@ -127,7 +127,14 @@ impl MongoStatement for MongoQuery {
             "statement": &self.query,
         }}];
 
-        let opt = AggregateOptions::builder().comment_bson(stmt_id);
+        let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
+        // If the query timeout is 0, it means "no timeout"
+        let options = if self.query_timeout.is_some_and(|timeout| timeout > 0) {
+            opt.max_time(Duration::from_millis(self.query_timeout.unwrap() as u64))
+                .build()
+        } else {
+            opt.build()
+        };
 
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
         // denote this to the program, otherwise return a generic query execution error
@@ -139,24 +146,7 @@ impl MongoStatement for MongoQuery {
             _ => Error::QueryExecutionFailed(e),
         };
 
-        let cursor: Cursor<Document> = match self.query_timeout {
-            Some(i) => {
-                if i > 0 {
-                    db.aggregate(
-                        pipeline,
-                        opt.max_time(Duration::from_millis(i as u64)).build(),
-                    )
-                    .map_err(map_query_error)?
-                } else {
-                    // If the query timeout is 0, it means "no timeout"
-                    db.aggregate(pipeline, opt.build())
-                        .map_err(map_query_error)?
-                }
-            }
-            _ => db
-                .aggregate(pipeline, opt.build())
-                .map_err(map_query_error)?,
-        };
+        let cursor: Cursor<Document> = db.aggregate(pipeline, options).map_err(map_query_error)?;
         self.resultset_cursor = Some(cursor);
         Ok(true)
     }

@@ -119,6 +119,8 @@ mod integration {
         unsafe { assert_eq!(SQLCancel(stmt as *mut _), SqlReturn::SUCCESS) }
     }
 
+    // checks that cancel gracefully handles the case where a query was executing when cancel is called,
+    // but is no longer executing when killop is ultimately issued
     #[test]
     fn test_cancel_running_query_not_executing() {
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
