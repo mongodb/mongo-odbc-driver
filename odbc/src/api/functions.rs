@@ -18,7 +18,7 @@ use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
     ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
     DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc, HDesc, HEnv,
-    HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
+    HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
     RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
     UseBookmarks,
 };
