@@ -81,7 +81,7 @@ impl SimpleTypeInfo {
         Some(Self {
             sql_type: SqlDataType::SQL_WVARCHAR,
             non_concise_type: SqlDataType::SQL_WVARCHAR,
-            precision: Some(MAX_STRING_SIZE),
+            precision: None,
             octet_length: None,
             fixed_bytes_length: None,
         })
@@ -120,7 +120,7 @@ impl BsonTypeInfo {
         is_case_sensitive: true,
         fixed_prec_scale: false,
         scale: None,
-        precision: Some(MAX_STRING_SIZE),
+        precision: None,
         octet_length: None,
         fixed_bytes_length: None,
         literal_prefix: Some("'"),
