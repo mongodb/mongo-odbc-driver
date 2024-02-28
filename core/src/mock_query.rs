@@ -55,4 +55,10 @@ impl MongoStatement for MongoQuery {
     fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
         &self.resultset_metadata
     }
+
+    // Close the cursor by setting the current value and cursor to None.
+    fn close_cursor(&mut self) {
+        self.current = None;
+        self.resultset = vec![];
+    }
 }

@@ -3,7 +3,7 @@ use cstr::{Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, Concurrency,
     CursorScrollable, CursorSensitivity, CursorType, HDbc, HDesc, HEnv, HStmt, Handle, Len, NoScan,
-    Pointer, RetrieveData, SimulateCursor, SqlBool, ULen, USmallInt, UseBookmarks,
+    Pointer, RetrieveData, SimulateCursor, SmallInt, SqlBool, ULen, USmallInt, UseBookmarks,
 };
 use mongo_odbc_core::TypeMode;
 use std::{
@@ -333,6 +333,15 @@ pub struct Statement {
     pub state: RwLock<StatementState>,
     // pub cursor: RwLock<Option<Box<Peekable<Cursor>>>>,
     pub errors: RwLock<Vec<ODBCError>>,
+    pub bound_cols: RwLock<Option<HashMap<USmallInt, BoundColInfo>>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct BoundColInfo {
+    pub target_type: SmallInt,
+    pub target_buffer: Pointer,
+    pub buffer_length: Len,
+    pub length_or_indicator: *mut Len,
 }
 
 #[derive(Debug)]
@@ -462,6 +471,7 @@ impl Statement {
             }),
             errors: RwLock::new(vec![]),
             mongo_statement: RwLock::new(None),
+            bound_cols: RwLock::new(None),
         }
     }
 
