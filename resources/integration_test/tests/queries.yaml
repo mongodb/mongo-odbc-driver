@@ -15,7 +15,7 @@ tests:
     expected_is_searchable: [2, 3]
     expected_is_unsigned: [0, 1]
     expected_sql_type: [4, -9]
-    expected_precision: [10, 65535]
+    expected_precision: [10, 0]
     expected_scale: [0, 0]
     expected_nullability: [1, 1]
 
@@ -63,7 +63,7 @@ tests:
     expected_is_searchable: [ 2, 2, 3, 2, 2 ]
     expected_is_unsigned: [0, 1, 1, 1, 0]
     expected_sql_type: [ 4, -7, -9, 93, 4 ]
-    expected_precision: [ 10, 1, 65535, 23, 10 ]
+    expected_precision: [ 10, 1, 0, 23, 10 ]
     expected_scale: [ 0, 0, 0, 3, 0 ]
     expected_is_nullable: [ 1, 1, 1, 1, 1 ]
 
@@ -74,7 +74,7 @@ tests:
     expected_display_size: [ 4, 1, 0, 16, 4 ]
     expected_length: [ 4, 1, 0, 16, 4 ]
     expected_sql_type: [ 4, -7, -9, 93, 4 ]
-    expected_precision: [ 10, 1, 65535, 23, 10 ]
+    expected_precision: [ 10, 1, 0, 23, 10 ]
 
   - description: select_as_confirm_column_label
     test_definition: SELECT enrolled AS e, studentid AS s, name AS n FROM class
@@ -94,7 +94,7 @@ tests:
     expected_is_searchable: [2, 2, 3]
     expected_is_unsigned: [1, 0, 1]
     expected_sql_type: [-7, 4, -9]
-    expected_precision: [ 1, 10, 65535 ]
+    expected_precision: [ 1, 10, 0 ]
     expected_scale: [ 0, 0, 0 ]
     expected_is_nullable: [1, 1, 1]
 
@@ -120,7 +120,7 @@ tests:
     expected_is_searchable: [3, 2, 2]
     expected_is_unsigned: [1, 0, 0]
     expected_sql_type: [-9, 4, 8]
-    expected_precision: [65535, 10, 15]
+    expected_precision: [0, 10, 15]
     expected_scale: [0, 0, 15]
     expected_is_nullable: [1, 1, 1]
 
@@ -245,7 +245,7 @@ tests:
     db: integration_test
     is_simple_type: true
     expected_sql_type: [4, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9]
-    expected_precision: [10, 65535, 65535, 65535, 65535, 14 ,14, 65535, 34, 65535, 65535, 68]
+    expected_precision: [10, 0, 0, 0, 0, 14 ,14, 0, 34, 0, 0, 68]
     expected_display_size: [4, 0, 0, 0, 0, 14, 14, 0, 34, 0, 0, 68]
     expected_length: [4, 0, 0, 0, 0, 14, 14, 0, 34, 0, 0, 68]
 

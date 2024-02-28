@@ -485,7 +485,7 @@ mod unit {
             (Desc::SQL_DESC_LENGTH, 0),
             (Desc::SQL_DESC_NULLABLE, 0),
             (Desc::SQL_DESC_OCTET_LENGTH, 0),
-            (Desc::SQL_DESC_PRECISION, 65535),
+            (Desc::SQL_DESC_PRECISION, 0),
             (Desc::SQL_DESC_SCALE, 0),
             (Desc::SQL_DESC_SEARCHABLE, SQL_SEARCHABLE as isize),
             (Desc::SQL_DESC_TYPE, SqlDataType::SQL_WVARCHAR as isize),
