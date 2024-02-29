@@ -54,6 +54,7 @@ MONGOHOUSE_URI=git@github.com:10gen/mongohouse.git
 MONGO_DB_PATH=$LOCAL_INSTALL_DIR/test_db
 LOGS_PATH=$LOCAL_INSTALL_DIR/logs
 DB_CONFIG_PATH=$(pwd)/resources/integration_test/testdata/adf_db_config.json
+# this config enables match filters after currentOp
 ADF_CONFIG_PATH=$(pwd)/resources/integration_test/config/adf_config.yaml
 MONGOD_PORT=28017
 MONGOHOUSED_PORT=27017

@@ -15,7 +15,7 @@ mod integration {
         format!("mongodb://{user_name}:{password}@{host}")
     }
 
-    // skip-reason: https://jira.mongodb.org/browse/MHOUSE-9953
+    // skip-reason: SQL-1959
     // the local adf currently can't be configured to handle killop commands; it is on be default in production
     // this ticket will make killop configurable locally.
     // #[test]
