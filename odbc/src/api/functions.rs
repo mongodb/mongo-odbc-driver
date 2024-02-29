@@ -18,7 +18,7 @@ use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
     ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
     DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc, HDesc, HEnv,
-    HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
+    HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
     RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
     UseBookmarks,
 };
@@ -1882,6 +1882,8 @@ macro_rules! sql_get_info_helper {
  $buffer_length:ident,
  $string_length_ptr:ident,
  ) => {{
+    use constants::*;
+    use definitions::InfoType;
     let connection_handle = $connection_handle;
     let info_type = $info_type;
     let info_value_ptr = $info_value_ptr;
@@ -1995,6 +1997,17 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
+                InfoType::SQL_OJ_CAPABILITIES => {
+                    const OJ_CAPABILITIES: u32 = SQL_OJ_LEFT
+                      | SQL_OJ_NOT_ORDERED
+                      | SQL_OJ_INNER
+                      | SQL_OJ_ALL_COMPARISON_OPS;
+                    i16_len::set_output_fixed_data(
+                        &OJ_CAPABILITIES,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
                 InfoType::SQL_CATALOG_NAME_SEPARATOR => {
                     // The name separator used by MongoSQL is '.'.
                     i16_len::set_output_wstring_as_bytes(
@@ -2035,6 +2048,8 @@ macro_rules! sql_get_info_helper {
                         | SQL_FN_NUM_DEGREES
                         | SQL_FN_NUM_POWER
                         | SQL_FN_NUM_RADIANS
+                        | SQL_FN_NUM_LOG
+                        | SQL_FN_NUM_LOG10
                         | SQL_FN_NUM_ROUND;
                     i16_len::set_output_fixed_data(
                         &NUMERIC_FUNCTIONS,
@@ -2053,7 +2068,8 @@ macro_rules! sql_get_info_helper {
                         | SQL_FN_STR_OCTET_LENGTH
                         | SQL_FN_STR_POSITION
                         | SQL_FN_STR_UCASE
-                        | SQL_FN_STR_LCASE;
+                        | SQL_FN_STR_LCASE
+                        | SQL_FN_STR_REPLACE;
 
                     i16_len::set_output_fixed_data(
                         &STRING_FUNCTIONS,
@@ -2067,7 +2083,20 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_TIMEDATE_FUNCTIONS => {
                     // MongoSQL supports the following timedate functions.
-                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP | SQL_FN_TD_EXTRACT;
+                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP
+                        | SQL_FN_TD_NOW
+                        | SQL_FN_TD_TIMESTAMPADD
+                        | SQL_FN_TD_TIMESTAMPDIFF
+                        | SQL_FN_TD_EXTRACT
+                        | SQL_FN_TD_YEAR
+                        | SQL_FN_TD_MONTH
+                        | SQL_FN_TD_WEEK
+                        | SQL_FN_TD_DAYOFWEEK
+                        | SQL_FN_TD_DAYOFYEAR
+                        | SQL_FN_TD_DAYOFMONTH
+                        | SQL_FN_TD_HOUR
+                        | SQL_FN_TD_MINUTE
+                        | SQL_FN_TD_SECOND;
                     i16_len::set_output_fixed_data(
                         &TIMEDATE_FUNCTIONS,
                         info_value_ptr,
@@ -2208,7 +2237,8 @@ macro_rules! sql_get_info_helper {
                     // TIMEDATE_DIFF, so this value will not be used. For the
                     // MongoSQL DATEADD and DATEDIFF functions, we support the
                     // following intervals.
-                    const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_SECOND
+                    const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_FRAC_SECOND
+                        | SQL_FN_TSI_SECOND
                         | SQL_FN_TSI_MINUTE
                         | SQL_FN_TSI_HOUR
                         | SQL_FN_TSI_DAY
@@ -2255,8 +2285,7 @@ macro_rules! sql_get_info_helper {
                     // MongoSQL supports the following SQL-92 JOIN operators.
                     const JOIN_OPS: u32 = SQL_SRJO_CROSS_JOIN
                         | SQL_SRJO_INNER_JOIN
-                        | SQL_SRJO_LEFT_OUTER_JOIN
-                        | SQL_SRJO_RIGHT_OUTER_JOIN;
+                        | SQL_SRJO_LEFT_OUTER_JOIN;
                     i16_len::set_output_fixed_data(&JOIN_OPS, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_AGGREGATE_FUNCTIONS => {

@@ -1,5 +1,7 @@
 use definitions::{SqlCode, SqlDataType};
 
+pub const MAX_STRING_SIZE: u16 = u16::MAX;
+
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum TypeMode {
     Standard,
@@ -67,8 +69,8 @@ pub struct SimpleTypeInfo {
 impl SimpleTypeInfo {
     const fn new(precision: u16, octet_length: u16, fixed_bytes_length: u16) -> Option<Self> {
         Some(Self {
-            sql_type: SqlDataType::SQL_VARCHAR,
-            non_concise_type: SqlDataType::SQL_VARCHAR,
+            sql_type: SqlDataType::SQL_WVARCHAR,
+            non_concise_type: SqlDataType::SQL_WVARCHAR,
             precision: Some(precision),
             octet_length: Some(octet_length),
             fixed_bytes_length: Some(fixed_bytes_length),
@@ -77,8 +79,8 @@ impl SimpleTypeInfo {
 
     const fn default() -> Option<Self> {
         Some(Self {
-            sql_type: SqlDataType::SQL_VARCHAR,
-            non_concise_type: SqlDataType::SQL_VARCHAR,
+            sql_type: SqlDataType::SQL_WVARCHAR,
+            non_concise_type: SqlDataType::SQL_WVARCHAR,
             precision: None,
             octet_length: None,
             fixed_bytes_length: None,
@@ -113,12 +115,34 @@ impl BsonTypeInfo {
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::SQL_WVARCHAR,
-        non_concise_type: SqlDataType::SQL_VARCHAR,
+        non_concise_type: SqlDataType::SQL_WVARCHAR,
         searchable: SQL_SEARCHABLE,
         is_case_sensitive: true,
         fixed_prec_scale: false,
         scale: None,
         precision: None,
+        octet_length: None,
+        fixed_bytes_length: None,
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = VARCHAR
+    pub const VARCHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "varchar",
+        sql_type: SqlDataType::SQL_VARCHAR,
+        non_concise_type: SqlDataType::SQL_VARCHAR,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        precision: Some(MAX_STRING_SIZE),
         octet_length: None,
         fixed_bytes_length: None,
         literal_prefix: Some("'"),
