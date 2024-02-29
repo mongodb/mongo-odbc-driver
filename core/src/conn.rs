@@ -77,7 +77,7 @@ impl MongoConnection {
             .aggregate(current_ops_pipeline, None)
             .map_err(Error::QueryExecutionFailed)?;
 
-        // iterate through all running operations, looking for commands
+        // iterate through the results and kill the operations
         while cursor.advance().map_err(Error::QueryCursorUpdate)? {
             let operation = cursor
                 .deserialize_current()
