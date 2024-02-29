@@ -54,6 +54,7 @@ MONGOHOUSE_URI=git@github.com:10gen/mongohouse.git
 MONGO_DB_PATH=$LOCAL_INSTALL_DIR/test_db
 LOGS_PATH=$LOCAL_INSTALL_DIR/logs
 DB_CONFIG_PATH=$(pwd)/resources/integration_test/testdata/adf_db_config.json
+ADF_CONFIG_PATH=$(pwd)/resources/integration_test/config/adf_config.yaml
 MONGOD_PORT=28017
 MONGOHOUSED_PORT=27017
 export COMPUTE_MODE_MONGODB_PORT=47017
@@ -415,9 +416,15 @@ if [ $ARG = $START ]; then
     mkdir -p $TMP_DIR
     mkdir -p $LOGS_PATH
     # Start mongohoused with appropriate config
-    $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
-      --config ./testdata/config/inline_local/frontend-agent-backend.yaml >> $LOGS_PATH/${MONGOHOUSED}.log &
-    echo $! > $TMP_DIR/${MONGOHOUSED}.pid
+    if [[ $OS =~ ^CYGWIN ]]; then
+      $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
+        --config $(cygpath -m ${ADF_CONFIG_PATH}) >> $LOGS_PATH/${MONGOHOUSED}.log &
+      echo $! > $TMP_DIR/${MONGOHOUSED}.pid
+    else
+      $GO run -tags mongosql ./cmd/mongohoused/mongohoused.go \
+        --config $ADF_CONFIG_PATH >> $LOGS_PATH/${MONGOHOUSED}.log &
+      echo $! > $TMP_DIR/${MONGOHOUSED}.pid
+    fi
 
     waitCounter=0
     while : ; do
