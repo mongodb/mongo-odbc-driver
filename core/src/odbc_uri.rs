@@ -367,13 +367,15 @@ impl ODBCUri {
     // or "mongodb-odbc+<version>|<appName>" if no ODBC URI APPNAME is specified but there
     // is one specified in the MongoDB URI.
     fn handle_app_name(&mut self, app_name: Option<String>) -> Option<String> {
-        if let Some(ref app_name) = app_name {
-            log::info!("Connecting with : {app_name}");
+        let odbc_uri_app_name = self.remove(&[APPNAME]);
+        if let Some(ref odbc_uri_app_name) = odbc_uri_app_name {
+            log::info!("Connecting with : {odbc_uri_app_name}");
         }
+
         Some(
             vec![
                 Some(DEFAULT_APP_NAME.to_string()),
-                self.remove(&[APPNAME]),
+                odbc_uri_app_name,
                 app_name,
             ]
             .into_iter()
