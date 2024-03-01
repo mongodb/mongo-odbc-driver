@@ -1454,6 +1454,14 @@ unsafe fn sql_get_connect_attrw_helper(
                 let login_timeout = attributes.login_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
             }
+            // according to the spec, SQL_ATTR_CONNECTION_DEAD just returns the latest status of the connection, not the current status
+            ConnectionAttribute::SQL_ATTR_CONNECTION_DEAD => {
+                let connection_dead = match *conn.mongo_connection.write().unwrap() {
+                    Some(_) => SqlBool::SQL_FALSE,
+                    None => SqlBool::SQL_TRUE,
+                };
+                i32_len::set_output_fixed_data(&connection_dead, value_ptr, string_length_ptr)
+            }
             ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => {
                 let connection_timeout = attributes.connection_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
