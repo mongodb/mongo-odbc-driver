@@ -68,11 +68,11 @@ impl MongoConnection {
     /// cancels all queries for a given statement id
     pub fn cancel_queries_for_statement(&self, statement_id: Bson) -> Result<bool> {
         // use $currentOp and match the comment field to identify any queries issued by the current statement
-        let admin_db = self.client.database("admin");
         let current_ops_pipeline = vec![
             doc! {"$currentOp": {}},
             doc! {"$match": {"command.comment": statement_id}},
         ];
+        let admin_db = self.client.database("admin");
         let mut cursor = admin_db
             .aggregate(current_ops_pipeline, None)
             .map_err(Error::QueryExecutionFailed)?;
