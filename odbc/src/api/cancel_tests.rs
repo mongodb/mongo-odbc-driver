@@ -16,7 +16,7 @@ mod integration {
     }
 
     // skip-reason: SQL-1959
-    // the local adf currently can't be configured to handle killop commands; it is on be default in production
+    // the local adf currently can't be configured to handle killop commands; it is on by default in production
     // this ticket will make killop configurable locally.
     // #[test]
     // fn test_cancel_running_query() {
