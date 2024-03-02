@@ -1,6 +1,7 @@
 use constants::{
     OdbcState, FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE,
-    INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
+    INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, OPERATION_CANCELLED, TIMEOUT_EXPIRED,
+    UNABLE_TO_CONNECT,
 };
 use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
 use thiserror::Error;
@@ -33,6 +34,8 @@ pub enum Error {
     MongoParseConnectionString(mongodb::error::Error),
     #[error("No database provided for query")]
     NoDatabase,
+    #[error("Query was cancelled")]
+    QueryCancelled,
     #[error("Getting query result failed with error: {0}")]
     QueryCursorUpdate(mongodb::error::Error),
     #[error("Getting metadata for query failed with error: {0}")]
@@ -80,6 +83,7 @@ impl Error {
             | Error::ValueAccess(_, _)
             | Error::UnsupportedOperation(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
+            Error::QueryCancelled => OPERATION_CANCELLED,
         }
     }
 
@@ -113,6 +117,7 @@ impl Error {
             | Error::MissingConnection(_)
             | Error::MissingFieldBsonType(_)
             | Error::NoDatabase
+            | Error::QueryCancelled
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)

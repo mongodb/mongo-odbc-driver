@@ -41,7 +41,6 @@ pub const GENERAL_ERROR: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1000",
     odbc_3_state: "HY000",
 };
-
 pub const PROGRAM_TYPE_OUT_OF_RANGE: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1003",
     odbc_3_state: "HY003",
@@ -49,6 +48,10 @@ pub const PROGRAM_TYPE_OUT_OF_RANGE: OdbcState<'static> = OdbcState {
 pub const INVALID_SQL_TYPE: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1004",
     odbc_3_state: "HY004",
+};
+pub const OPERATION_CANCELLED: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1008",
+    odbc_3_state: "HY008",
 };
 pub const INVALID_ATTR_VALUE: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1009",

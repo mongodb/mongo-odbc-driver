@@ -9,7 +9,7 @@ use crate::{
     handles::definitions::*,
     has_odbc_3_behavior, trace_odbc,
 };
-use bson::Bson;
+use bson::{doc, Bson};
 use constants::*;
 
 use cstr::{input_text_to_string_w, Charset, WideChar};
@@ -414,7 +414,38 @@ pub unsafe extern "C" fn SQLBulkOperations(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec_keep_diagnostics!(
+        debug,
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!(mongo_handle.as_statement());
+
+            // use the statement state to determine if a query is executing or not
+            match *(stmt.state.read().unwrap()) {
+                // if a query is executing, verify we have a connection (we must to be executing a query) and use that connection to kill
+                // queries associated with the current statement handle
+                StatementState::SynchronousQueryExecuting => {
+                    let stmt_id = stmt.statement_id.read().unwrap().clone();
+                    let conn = must_be_valid!((*stmt.connection).as_connection());
+                    if let Some(mongo_connection) = conn.mongo_connection.read().unwrap().as_ref() {
+                        odbc_unwrap!(
+                            mongo_connection.cancel_queries_for_statement(stmt_id),
+                            MongoHandleRef::from(statement_handle)
+                        );
+                        SqlReturn::SUCCESS
+                    } else {
+                        stmt.errors
+                            .write()
+                            .unwrap()
+                            .push(ODBCError::InvalidCursorState);
+                        SqlReturn::ERROR
+                    }
+                }
+                _ => SqlReturn::SUCCESS,
+            }
+        },
+        statement_handle
+    )
 }
 
 ///
@@ -1068,7 +1099,13 @@ pub unsafe extern "C" fn SQLExecDirectW(
 
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
 
+            // set the statment state to executing so SQLCancel knows to search the op log for hanging queries
+            *stmt.state.write().unwrap() = StatementState::SynchronousQueryExecuting;
+
             odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+
+            // return the statement state to its original value
+            *stmt.state.write().unwrap() = StatementState::Allocated;
 
             SqlReturn::SUCCESS
         },
@@ -1091,7 +1128,11 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
+            // set the statment state to executing so SQLCancel knows to search the op log for hanging queries
+            *stmt.state.write().unwrap() = StatementState::SynchronousQueryExecuting;
             odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+            // return the statement state to its original value
+            *stmt.state.write().unwrap() = StatementState::Allocated;
             SqlReturn::SUCCESS
         },
         statement_handle
@@ -1099,6 +1140,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 }
 
 unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool> {
+    let stmt_id = stmt.statement_id.read().unwrap().clone();
     let mongo_statement = {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
             stmt.mongo_statement
@@ -1106,7 +1148,7 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
                 .unwrap()
                 .as_mut()
                 .unwrap()
-                .execute(mongo_connection)
+                .execute(mongo_connection, stmt_id)
                 .map_err(|e| e.into())
         } else {
             Err(ODBCError::InvalidCursorState)

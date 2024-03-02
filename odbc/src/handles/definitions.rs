@@ -1,4 +1,5 @@
 use crate::api::errors::ODBCError;
+use bson::{Bson, Uuid};
 use cstr::{Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, Concurrency,
@@ -331,6 +332,7 @@ pub struct Statement {
     pub var_data_cache: RwLock<Option<HashMap<USmallInt, CachedData>>>,
     pub attributes: RwLock<StatementAttributes>,
     pub state: RwLock<StatementState>,
+    pub statement_id: RwLock<Bson>,
     // pub cursor: RwLock<Option<Box<Peekable<Cursor>>>>,
     pub errors: RwLock<Vec<ODBCError>>,
     pub bound_cols: RwLock<Option<HashMap<USmallInt, BoundColInfo>>>,
@@ -405,6 +407,7 @@ pub enum StatementState {
     _FunctionNeedsDataNoPut,
     _FunctionNeedsDataPutCalled,
     _Executing,
+    SynchronousQueryExecuting,
     _AsyncCancelled,
 }
 
@@ -425,6 +428,7 @@ impl Statement {
         Self {
             connection,
             state: RwLock::new(state),
+            statement_id: RwLock::new(Uuid::new().into()),
             var_data_cache: RwLock::new(None),
             attributes: RwLock::new(StatementAttributes {
                 app_row_desc: Box::into_raw(Box::new(MongoHandle::Descriptor(
