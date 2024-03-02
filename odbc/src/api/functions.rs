@@ -1131,6 +1131,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
             // set the statment state to executing so SQLCancel knows to search the op log for hanging queries
             *stmt.state.write().unwrap() = StatementState::SynchronousQueryExecuting;
             odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+            // return the statement state to its original value
             *stmt.state.write().unwrap() = StatementState::Allocated;
             SqlReturn::SUCCESS
         },
