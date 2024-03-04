@@ -3,6 +3,8 @@ pub(crate) mod errors;
 mod functions;
 pub use functions::*;
 #[cfg(test)]
+mod cancel_tests;
+#[cfg(test)]
 mod col_attr_describe_tests;
 #[cfg(test)]
 mod connect_attr_tests;
@@ -11,6 +13,8 @@ pub(crate) mod data;
 mod data_tests;
 #[cfg(test)]
 mod env_attr_tests;
+#[cfg(test)]
+mod free_stmt_tests;
 #[cfg(test)]
 mod get_diag_field_tests;
 #[cfg(test)]

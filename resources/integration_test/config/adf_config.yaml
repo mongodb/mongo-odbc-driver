@@ -1,0 +1,106 @@
+hostProvider: local
+hostRegion: local
+environment: local
+
+showInternalErrors: false
+
+diagnostics:
+  bindAddr: ":8080"
+  metrics:
+    enabled: true
+    endpoint: /metrics
+  pprof:
+    enabled: true
+    endpoint: /debug/pprof
+
+agent:
+  bindAddr: "localhost:8027"
+
+backend:
+  bindAddr: "localhost:8029"
+
+frontend:
+  bindAddr: ":27017"
+  cursor:
+    metadata:
+      memory: true
+  resultCache:
+    metadata:
+      memory: true
+
+execution:
+  currentOp:
+    mongodb:
+      uri: mongodb://localhost:28017
+      database: adf
+      collection: queries
+  queryHistory:
+    memory: true
+  computeModeMongod:
+    port: ${COMPUTE_MODE_MONGOD_PORT:=47017}
+    exponentialRetry:
+      maxAttempts: 1
+  mongoClient:
+    cache:
+      enabled: true
+  remote:
+    uris:
+      local: "localhost:8027"
+    branchingFactor: 2
+    maxSerialNum: 1
+    rpcChunkSize: 10B
+
+dls:
+  frontend:
+    catalog:
+      disabled: true
+    expirationRules:
+      disabled: true
+  agent:
+    catalog:
+      disabled: true
+    mdsAccess:
+      disabled: true
+  backend:
+    mdsPrefix:
+      awsBucket: data-lake-storage-mds-
+    mdsContainerCreation:
+      disabled: true
+    dlzAccess:
+      testDLZ:
+        disabled: true
+    expirationRules:
+      disabled: true
+
+query:
+  killOp:
+    server:
+      mongodb:
+        uri: "mongodb://localhost:28017"
+        database: adf
+        collection: killop
+
+tenant:
+  config:
+    server:
+      inline:
+        file: "./testdata/config/inline_local/tenant-config.json"
+  storageconfig:
+    server:
+      inline:
+        file: "./testdata/config/inline_local/tenant-config.json"
+  schema:
+    server:
+      memory:
+        - database: "test"
+          collection: "quux"
+          schemaFile: "./testdata/tenantschema/quux.json"
+        - database: "test"
+          collection: "bar"
+          schemaFile: "./testdata/tenantschema/bar.json"
+        - database: "test2"
+          collection: "cities"
+          schemaFile: "./testdata/tenantschema/cities.json"
+    client:
+      uri: "localhost:8029"
+      token: "frontend-auth-token"

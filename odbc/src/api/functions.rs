@@ -9,7 +9,7 @@ use crate::{
     handles::definitions::*,
     has_odbc_3_behavior, trace_odbc,
 };
-use bson::Bson;
+use bson::{doc, Bson};
 use constants::*;
 
 use cstr::{input_text_to_string_w, Charset, WideChar};
@@ -17,10 +17,10 @@ use cstr::{input_text_to_string_w, Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, CDataType,
     Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc,
-    DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, HDbc, HDesc, HEnv,
-    HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
-    RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
-    UseBookmarks,
+    DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc,
+    HDesc, HEnv, HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability,
+    Pointer, RetCode, RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute,
+    ULen, USmallInt, UseBookmarks,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -481,7 +481,38 @@ pub unsafe extern "C" fn SQLBulkOperations(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
-    unimpl!(statement_handle);
+    panic_safe_exec_keep_diagnostics!(
+        debug,
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!(mongo_handle.as_statement());
+
+            // use the statement state to determine if a query is executing or not
+            match *(stmt.state.read().unwrap()) {
+                // if a query is executing, verify we have a connection (we must to be executing a query) and use that connection to kill
+                // queries associated with the current statement handle
+                StatementState::SynchronousQueryExecuting => {
+                    let stmt_id = stmt.statement_id.read().unwrap().clone();
+                    let conn = must_be_valid!((*stmt.connection).as_connection());
+                    if let Some(mongo_connection) = conn.mongo_connection.read().unwrap().as_ref() {
+                        odbc_unwrap!(
+                            mongo_connection.cancel_queries_for_statement(stmt_id),
+                            MongoHandleRef::from(statement_handle)
+                        );
+                        SqlReturn::SUCCESS
+                    } else {
+                        stmt.errors
+                            .write()
+                            .unwrap()
+                            .push(ODBCError::InvalidCursorState);
+                        SqlReturn::ERROR
+                    }
+                }
+                _ => SqlReturn::SUCCESS,
+            }
+        },
+        statement_handle
+    )
 }
 
 ///
@@ -1135,7 +1166,13 @@ pub unsafe extern "C" fn SQLExecDirectW(
 
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
 
+            // set the statment state to executing so SQLCancel knows to search the op log for hanging queries
+            *stmt.state.write().unwrap() = StatementState::SynchronousQueryExecuting;
+
             odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+
+            // return the statement state to its original value
+            *stmt.state.write().unwrap() = StatementState::Allocated;
 
             SqlReturn::SUCCESS
         },
@@ -1158,7 +1195,11 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
+            // set the statment state to executing so SQLCancel knows to search the op log for hanging queries
+            *stmt.state.write().unwrap() = StatementState::SynchronousQueryExecuting;
             odbc_unwrap!(sql_execute(stmt, connection), mongo_handle);
+            // return the statement state to its original value
+            *stmt.state.write().unwrap() = StatementState::Allocated;
             SqlReturn::SUCCESS
         },
         statement_handle
@@ -1166,6 +1207,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 }
 
 unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool> {
+    let stmt_id = stmt.statement_id.read().unwrap().clone();
     let mongo_statement = {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
             stmt.mongo_statement
@@ -1173,7 +1215,7 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
                 .unwrap()
                 .as_mut()
                 .unwrap()
-                .execute(mongo_connection)
+                .execute(mongo_connection, stmt_id)
                 .map_err(|e| e.into())
         } else {
             Err(ODBCError::InvalidCursorState)
@@ -1448,8 +1490,37 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 ///
 #[named]
 #[no_mangle]
-pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, _option: SmallInt) -> SqlReturn {
-    unimpl!(statement_handle);
+pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) -> SqlReturn {
+    // unimpl!(statement_handle);
+    panic_safe_exec_clear_diagnostics!(
+        debug,
+        || {
+            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+
+            match FromPrimitive::from_i16(option) {
+                // Drop all pending results from the cursor and close the cursor.
+                Some(FreeStmtOption::SQL_CLOSE) => {
+                    stmt.mongo_statement
+                        .write()
+                        .unwrap()
+                        .as_mut()
+                        .unwrap()
+                        .close_cursor();
+                    SqlReturn::SUCCESS
+                }
+                // Release all column buffers bound by SQLBindCol by removing the bound_cols map.
+                Some(FreeStmtOption::SQL_UNBIND) => {
+                    *stmt.bound_cols.write().unwrap() = None;
+                    SqlReturn::SUCCESS
+                }
+                // We do not implement SQLBindParameter, so this is a no-op.
+                Some(FreeStmtOption::SQL_RESET_PARAMS) => SqlReturn::SUCCESS,
+                _ => SqlReturn::ERROR,
+            }
+        },
+        statement_handle
+    )
 }
 
 ///
@@ -1953,6 +2024,8 @@ macro_rules! sql_get_info_helper {
  $buffer_length:ident,
  $string_length_ptr:ident,
  ) => {{
+    use constants::*;
+    use definitions::InfoType;
     let connection_handle = $connection_handle;
     let info_type = $info_type;
     let info_value_ptr = $info_value_ptr;
@@ -2066,6 +2139,17 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
+                InfoType::SQL_OJ_CAPABILITIES => {
+                    const OJ_CAPABILITIES: u32 = SQL_OJ_LEFT
+                      | SQL_OJ_NOT_ORDERED
+                      | SQL_OJ_INNER
+                      | SQL_OJ_ALL_COMPARISON_OPS;
+                    i16_len::set_output_fixed_data(
+                        &OJ_CAPABILITIES,
+                        info_value_ptr,
+                        string_length_ptr,
+                    )
+                }
                 InfoType::SQL_CATALOG_NAME_SEPARATOR => {
                     // The name separator used by MongoSQL is '.'.
                     i16_len::set_output_wstring_as_bytes(
@@ -2106,6 +2190,8 @@ macro_rules! sql_get_info_helper {
                         | SQL_FN_NUM_DEGREES
                         | SQL_FN_NUM_POWER
                         | SQL_FN_NUM_RADIANS
+                        | SQL_FN_NUM_LOG
+                        | SQL_FN_NUM_LOG10
                         | SQL_FN_NUM_ROUND;
                     i16_len::set_output_fixed_data(
                         &NUMERIC_FUNCTIONS,
@@ -2124,7 +2210,8 @@ macro_rules! sql_get_info_helper {
                         | SQL_FN_STR_OCTET_LENGTH
                         | SQL_FN_STR_POSITION
                         | SQL_FN_STR_UCASE
-                        | SQL_FN_STR_LCASE;
+                        | SQL_FN_STR_LCASE
+                        | SQL_FN_STR_REPLACE;
 
                     i16_len::set_output_fixed_data(
                         &STRING_FUNCTIONS,
@@ -2138,7 +2225,20 @@ macro_rules! sql_get_info_helper {
                 }
                 InfoType::SQL_TIMEDATE_FUNCTIONS => {
                     // MongoSQL supports the following timedate functions.
-                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP | SQL_FN_TD_EXTRACT;
+                    const TIMEDATE_FUNCTIONS: u32 = SQL_FN_TD_CURRENT_TIMESTAMP
+                        | SQL_FN_TD_NOW
+                        | SQL_FN_TD_TIMESTAMPADD
+                        | SQL_FN_TD_TIMESTAMPDIFF
+                        | SQL_FN_TD_EXTRACT
+                        | SQL_FN_TD_YEAR
+                        | SQL_FN_TD_MONTH
+                        | SQL_FN_TD_WEEK
+                        | SQL_FN_TD_DAYOFWEEK
+                        | SQL_FN_TD_DAYOFYEAR
+                        | SQL_FN_TD_DAYOFMONTH
+                        | SQL_FN_TD_HOUR
+                        | SQL_FN_TD_MINUTE
+                        | SQL_FN_TD_SECOND;
                     i16_len::set_output_fixed_data(
                         &TIMEDATE_FUNCTIONS,
                         info_value_ptr,
@@ -2279,7 +2379,8 @@ macro_rules! sql_get_info_helper {
                     // TIMEDATE_DIFF, so this value will not be used. For the
                     // MongoSQL DATEADD and DATEDIFF functions, we support the
                     // following intervals.
-                    const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_SECOND
+                    const TIMEDATE_INTERVALS: u32 = SQL_FN_TSI_FRAC_SECOND
+                        | SQL_FN_TSI_SECOND
                         | SQL_FN_TSI_MINUTE
                         | SQL_FN_TSI_HOUR
                         | SQL_FN_TSI_DAY
@@ -2326,8 +2427,7 @@ macro_rules! sql_get_info_helper {
                     // MongoSQL supports the following SQL-92 JOIN operators.
                     const JOIN_OPS: u32 = SQL_SRJO_CROSS_JOIN
                         | SQL_SRJO_INNER_JOIN
-                        | SQL_SRJO_LEFT_OUTER_JOIN
-                        | SQL_SRJO_RIGHT_OUTER_JOIN;
+                        | SQL_SRJO_LEFT_OUTER_JOIN;
                     i16_len::set_output_fixed_data(&JOIN_OPS, info_value_ptr, string_length_ptr)
                 }
                 InfoType::SQL_AGGREGATE_FUNCTIONS => {

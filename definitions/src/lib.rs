@@ -88,7 +88,7 @@ pub const SQL_SQLSTATE_SIZE: usize = 5;
 /// SQL Free Statement options
 #[allow(non_camel_case_types)]
 #[repr(u16)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum FreeStmtOption {
     /// Closes the cursor associated with StatementHandle (if one was defined) and discards all
     /// pending results. The application can reopen this cursor later by executing a SELECT

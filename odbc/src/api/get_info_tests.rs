@@ -242,6 +242,8 @@ mod unit {
             | SQL_FN_NUM_DEGREES
             | SQL_FN_NUM_POWER
             | SQL_FN_NUM_RADIANS
+            | SQL_FN_NUM_LOG
+            | SQL_FN_NUM_LOG10
             | SQL_FN_NUM_ROUND,
         actual_value_modifier = modify_u32_value,
     );
@@ -260,7 +262,8 @@ mod unit {
             | SQL_FN_STR_OCTET_LENGTH
             | SQL_FN_STR_POSITION
             | SQL_FN_STR_UCASE
-            | SQL_FN_STR_LCASE,
+            | SQL_FN_STR_LCASE
+            | SQL_FN_STR_REPLACE,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -274,7 +277,20 @@ mod unit {
         info_type = InfoType::SQL_TIMEDATE_FUNCTIONS as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = SQL_FN_TD_CURRENT_TIMESTAMP | SQL_FN_TD_EXTRACT,
+        expected_value = SQL_FN_TD_CURRENT_TIMESTAMP
+            | SQL_FN_TD_NOW
+            | SQL_FN_TD_TIMESTAMPADD
+            | SQL_FN_TD_TIMESTAMPDIFF
+            | SQL_FN_TD_EXTRACT
+            | SQL_FN_TD_YEAR
+            | SQL_FN_TD_MONTH
+            | SQL_FN_TD_WEEK
+            | SQL_FN_TD_DAYOFWEEK
+            | SQL_FN_TD_DAYOFYEAR
+            | SQL_FN_TD_DAYOFMONTH
+            | SQL_FN_TD_HOUR
+            | SQL_FN_TD_MINUTE
+            | SQL_FN_TD_SECOND,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -651,7 +667,8 @@ mod unit {
             | SQL_FN_TSI_WEEK
             | SQL_FN_TSI_MONTH
             | SQL_FN_TSI_QUARTER
-            | SQL_FN_TSI_YEAR,
+            | SQL_FN_TSI_YEAR
+            | SQL_FN_TSI_FRAC_SECOND,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -667,7 +684,8 @@ mod unit {
             | SQL_FN_TSI_WEEK
             | SQL_FN_TSI_MONTH
             | SQL_FN_TSI_QUARTER
-            | SQL_FN_TSI_YEAR,
+            | SQL_FN_TSI_YEAR
+            | SQL_FN_TSI_FRAC_SECOND,
         actual_value_modifier = modify_u32_value,
     );
 
@@ -719,10 +737,7 @@ mod unit {
         info_type = InfoType::SQL_SQL92_RELATIONAL_JOIN_OPERATORS as u16,
         expected_sql_return = SqlReturn::SUCCESS,
         expected_length = std::mem::size_of::<u32>() as i16,
-        expected_value = SQL_SRJO_CROSS_JOIN
-            | SQL_SRJO_INNER_JOIN
-            | SQL_SRJO_LEFT_OUTER_JOIN
-            | SQL_SRJO_RIGHT_OUTER_JOIN,
+        expected_value = SQL_SRJO_CROSS_JOIN | SQL_SRJO_INNER_JOIN | SQL_SRJO_LEFT_OUTER_JOIN,
         actual_value_modifier = modify_u32_value,
     );
 

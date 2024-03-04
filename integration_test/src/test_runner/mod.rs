@@ -133,7 +133,7 @@ pub fn resultset_tests() -> Result<()> {
     run_resultset_tests(false)
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 #[test]
 #[ignore]
 pub fn odbc2_resultset_tests() -> Result<()> {

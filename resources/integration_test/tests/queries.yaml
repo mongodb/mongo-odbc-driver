@@ -244,7 +244,7 @@ tests:
     test_definition: SELECT * FROM types_other
     db: integration_test
     is_simple_type: true
-    expected_sql_type: [4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12]
+    expected_sql_type: [4, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9]
     expected_precision: [10, 0, 0, 0, 0, 14 ,14, 0, 34, 0, 0, 68]
     expected_display_size: [4, 0, 0, 0, 0, 14, 14, 0, 34, 0, 0, 68]
     expected_length: [4, 0, 0, 0, 0, 14, 14, 0, 34, 0, 0, 68]

@@ -6,7 +6,11 @@ use crate::{
     Error, TypeMode,
 };
 use bson::{doc, document::ValueAccessError, Bson, Document};
-use mongodb::{options::AggregateOptions, sync::Cursor};
+use mongodb::{
+    error::{CommandError, ErrorKind},
+    options::AggregateOptions,
+    sync::Cursor,
+};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -114,7 +118,7 @@ impl MongoStatement for MongoQuery {
     // Execute the $sql aggregation for the query and initialize the result set
     // cursor. If there is a timeout, the query must finish before the timeout
     // or an error is returned.
-    fn execute(&mut self, connection: &MongoConnection) -> Result<bool> {
+    fn execute(&mut self, connection: &MongoConnection, stmt_id: Bson) -> Result<bool> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = connection.client.database(current_db);
 
@@ -123,25 +127,33 @@ impl MongoStatement for MongoQuery {
             "statement": &self.query,
         }}];
 
-        let cursor: Cursor<Document> = match self.query_timeout {
-            Some(i) => {
-                if i > 0 {
-                    let opt = AggregateOptions::builder()
-                        .max_time(Duration::from_millis(i as u64))
-                        .build();
-                    db.aggregate(pipeline, opt)
-                        .map_err(Error::QueryExecutionFailed)?
-                } else {
-                    // If the query timeout is 0, it means "no timeout"
-                    db.aggregate(pipeline, None)
-                        .map_err(Error::QueryExecutionFailed)?
-                }
-            }
-            _ => db
-                .aggregate(pipeline, None)
-                .map_err(Error::QueryExecutionFailed)?,
+        let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
+        // If the query timeout is 0, it means "no timeout"
+        let options = if self.query_timeout.is_some_and(|timeout| timeout > 0) {
+            opt.max_time(Duration::from_millis(self.query_timeout.unwrap() as u64))
+                .build()
+        } else {
+            opt.build()
         };
+
+        // handle an error coming back from execution; if it was cancelled, throw a specific error to
+        // denote this to the program, otherwise return a generic query execution error
+        let map_query_error = |e: mongodb::error::Error| match *e.kind {
+            ErrorKind::Command(CommandError {
+                code: 11601, // interrupted
+                ..
+            }) => Error::QueryCancelled,
+            _ => Error::QueryExecutionFailed(e),
+        };
+
+        let cursor: Cursor<Document> = db.aggregate(pipeline, options).map_err(map_query_error)?;
         self.resultset_cursor = Some(cursor);
         Ok(true)
+    }
+
+    // Close the cursor by setting the current value and cursor to None.
+    fn close_cursor(&mut self) {
+        self.current = None;
+        self.resultset_cursor = None;
     }
 }
