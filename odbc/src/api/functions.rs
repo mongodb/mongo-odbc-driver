@@ -373,7 +373,7 @@ pub unsafe extern "C" fn SQLBindCol(
 
             // columns are 1-indexed as per the ODBC spec.
             if (col_number as usize) > col_max_size || col_number <= 0 {
-                add_diag_info!(stmt_handle, ODBCError::InvalidColumnNumber(col_number));
+                add_diag_info!(mongo_handle, ODBCError::InvalidColumnNumber(col_number));
                 return SqlReturn::ERROR;
             }
 
