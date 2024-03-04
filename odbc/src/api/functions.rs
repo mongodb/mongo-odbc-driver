@@ -3075,6 +3075,16 @@ unsafe fn set_connect_attrw_helper(
                 conn.attributes.write().unwrap().current_catalog = Some(current_db);
                 SqlReturn::SUCCESS
             }
+            // we use 0 (no timeout throughout the driver); only allow the user to set this value if they are setting to 0
+            ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => match (value_ptr as u32) == 0 {
+                true => SqlReturn::SUCCESS,
+                false => {
+                    conn_handle.add_diag_info(ODBCError::GeneralWarning(
+                        "Driver only accepts 0 for SQL_ATTR_CONNECTION_TIMEOUT".into(),
+                    ));
+                    SqlReturn::SUCCESS_WITH_INFO
+                }
+            },
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
                     connection_attribute_to_string(attribute),
