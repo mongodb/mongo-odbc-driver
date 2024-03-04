@@ -15,12 +15,12 @@ use constants::*;
 use cstr::{input_text_to_string_w, Charset, WideChar};
 
 use definitions::{
-    AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType, Concurrency,
-    ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc, DiagType,
-    DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc, HDesc, HEnv,
-    HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer, RetCode,
-    RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
-    UseBookmarks,
+    AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType,
+    Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc,
+    DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc,
+    HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer,
+    RetCode, RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
+    USmallInt, UseBookmarks,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -583,11 +583,13 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::SQL_DESC_UNSIGNED => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len)
                 }
+                Desc::SQL_DESC_ALLOC_TYPE => {
+                    numeric_col_attr(&|_| AllocType::SQL_DESC_ALLOC_AUTO as Len)
+                }
                 desc @ (Desc::SQL_DESC_OCTET_LENGTH_PTR
                 | Desc::SQL_DESC_DATETIME_INTERVAL_CODE
                 | Desc::SQL_DESC_INDICATOR_PTR
                 | Desc::SQL_DESC_DATA_PTR
-                | Desc::SQL_DESC_ALLOC_TYPE
                 | Desc::SQL_DESC_ARRAY_SIZE
                 | Desc::SQL_DESC_ARRAY_STATUS_PTR
                 | Desc::SQL_DESC_BIND_OFFSET_PTR
