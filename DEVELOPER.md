@@ -106,7 +106,7 @@ cargo run --bin data_loader
 #### macos
 To run result set sets:
 ```
-cargo test  --features definitions/iodbc,cstr/utf32 -- --ignored
+cargo test --package integration_test --lib test_runner --features definitions/iodbc,cstr/utf32,integration_test/result_set
 ```
 To run integration tests (note: at present, there is still work to be done to ensure these run properly. Some failures are expected):
 ```
@@ -116,7 +116,7 @@ cargo test  --features definitions/iodbc,cstr/utf32 integration
 #### windows
 To run result set sets:
 ```
-cargo test -- --ignored
+cargo test --package integration_test --lib test_runner --features integration_test/result_set
 ```
 To run integration tests (note: at present, there is still work to be done to ensure these run properly. Some failures are expected):
 ```

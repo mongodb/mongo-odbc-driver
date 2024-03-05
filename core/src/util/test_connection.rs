@@ -109,7 +109,6 @@ mod test {
 
     #[test]
     #[cfg(feature = "bad_host")]
-    // this test is ignored due to the 30 second connection timeout
     fn bad_host() {
         let mut buffer = [0; 1024];
         let mut buffer_len = 0;
