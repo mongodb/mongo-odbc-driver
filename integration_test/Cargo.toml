@@ -23,3 +23,7 @@ num-derive = "0.3.3"
 version = "2"
 default-features = false
 features = ["tokio-sync"]
+
+[features]
+result_set = []
+temp = []

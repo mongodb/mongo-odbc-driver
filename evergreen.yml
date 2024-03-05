@@ -1109,7 +1109,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
-          cargo test --features definitions/iodbc,cstr/utf32 -- --ignored
+          cargo test --package integration_test --lib test_runner --features definitions/iodbc,cstr/utf32,integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1180,7 +1180,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with ubuntu
-          cargo test -- --ignored
+          cargo test --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1260,7 +1260,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with asan
-          cargo test --target x86_64-unknown-linux-gnu -- --ignored
+          cargo test --target x86_64-unknown-linux-gnu --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1279,7 +1279,7 @@ functions:
         export RUST_BACKTRACE=1
         ./resources/run_adf.sh start &&
         cargo run --bin data_loader &&
-        cargo test -- --ignored
+        cargo test --package integration_test --lib test_runner --features integration_test/result_set
         EXITCODE=$?
         # The execution termimated with a segfault
         if [ $EXITCODE -eq 139 ]; then
