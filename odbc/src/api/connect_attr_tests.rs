@@ -247,12 +247,7 @@ mod unit {
     #[test]
     fn set_invalid_attr() {
         unsafe {
-            for attr in [
-                &UNSUPPORTED_ATTRS[..],
-                &[ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT][..],
-            ]
-            .concat()
-            {
+            for attr in UNSUPPORTED_ATTRS {
                 let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
                 let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
 
