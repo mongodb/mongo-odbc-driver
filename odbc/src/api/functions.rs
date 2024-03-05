@@ -357,7 +357,8 @@ pub unsafe extern "C" fn SQLBindCol(
                     .unwrap()
                     .row_bind_offset_ptr
                     .is_null()
-                || stmt.attributes.read().unwrap().row_bind_type != BindType::SQL_BIND_BY_COLUMN
+                || stmt.attributes.read().unwrap().row_bind_type
+                    != (BindType::SQL_BIND_BY_COLUMN as usize)
             {
                 return unsupported_function!(hstmt);
             }
