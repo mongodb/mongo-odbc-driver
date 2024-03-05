@@ -360,7 +360,7 @@ pub unsafe extern "C" fn SQLBindCol(
                 || stmt.attributes.read().unwrap().row_bind_type
                     != (BindType::SQL_BIND_BY_COLUMN as usize)
             {
-                unsupported_function!(hstmt);
+                unsupported_function!(hstmt)
             }
 
             // makes sure that col_number is in bounds
