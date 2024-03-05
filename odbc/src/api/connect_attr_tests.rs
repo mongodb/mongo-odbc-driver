@@ -139,6 +139,15 @@ mod unit {
             expected_value = 42u32,
             actual_value_modifier = modify_numeric_attr,
         );
+
+        test_get_attr!(
+            connection_dead,
+            attribute = ConnectionAttribute::SQL_ATTR_CONNECTION_DEAD as i32,
+            expected_sql_return = SqlReturn::SUCCESS,
+            expected_length = std::mem::size_of::<u32>() as i32,
+            expected_value = 1u32,
+            actual_value_modifier = modify_numeric_attr,
+        );
     }
 
     // Test setting LoginTimeout attribute.
@@ -190,7 +199,7 @@ mod unit {
         }
     }
 
-    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 19] = [
+    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 18] = [
         ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE,
         ConnectionAttribute::SQL_ATTR_ACCESS_MODE,
         ConnectionAttribute::SQL_ATTR_AUTOCOMMIT,
@@ -207,7 +216,6 @@ mod unit {
         ConnectionAttribute::SQL_ATTR_ASYNC_DBC_EVENT,
         ConnectionAttribute::SQL_ATTR_ENLIST_IN_DTC,
         ConnectionAttribute::SQL_ATTR_ENLIST_IN_XA,
-        ConnectionAttribute::SQL_ATTR_CONNECTION_DEAD,
         ConnectionAttribute::SQL_ATTR_AUTO_IPD,
         ConnectionAttribute::SQL_ATTR_METADATA_ID,
     ];
