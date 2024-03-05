@@ -374,6 +374,7 @@ pub unsafe extern "C" fn SQLBindCol(
 
             // columns are 1-indexed as per the ODBC spec.
             if (col_number as usize) > col_max_size || col_number <= 0 {
+                let mongo_handle = MongoHandleRef::from(hstmt);
                 add_diag_info!(mongo_handle, ODBCError::InvalidColumnNumber(col_number));
                 return SqlReturn::ERROR;
             }
@@ -1290,7 +1291,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                     ),
                     None => {
                         add_diag_with_function!(
-                            mongo_handle,
+                            mongo_handle_for_sql_get_data_helper,
                             ODBCError::InvalidTargetType(bound_col_info.target_type),
                             "SQLBindCol"
                         );
