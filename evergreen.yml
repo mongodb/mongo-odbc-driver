@@ -977,7 +977,7 @@ functions:
           cargo run --bin data_loader &&
           cargo test integration -- --skip test_driver_log_level --nocapture &&
           cargo test --test connection_tests integration::test_driver_log_level -- --nocapture &&
-          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host -- --exact --nocapture
+          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features core/bad_host -- --exact --nocapture
           EXITCODE=$?
           echo "****** ls -l ./target/debug/deps *******"
           ls -l ./target/debug/deps
@@ -1081,7 +1081,7 @@ functions:
           # Run integration tests with ubuntu
           cargo test integration -- --skip test_driver_log_level --nocapture &&
           cargo test --test connection_tests integration::test_driver_log_level -- --nocapture &&
-          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host -- --exact --nocapture
+          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features core/bad_host -- --exact --nocapture
 
           EXITCODE=$?
 
@@ -1154,7 +1154,7 @@ functions:
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --skip test_driver_log_level --nocapture &&
           cargo test --test connection_tests integration::test_driver_log_level --features definitions/iodbc,cstr/utf32 -- --nocapture &&
-          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features definitions/iodbc,cstr/utf32 -- --exact --nocapture
+          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features definitions/iodbc,cstr/utf32,core/bad_host -- --exact --nocapture
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1233,7 +1233,7 @@ functions:
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --skip test_driver_log_level --nocapture &&
           cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level -- --nocapture &&
-          cargo test --target x86_64-unknown-linux-gnu --package mongo-odbc-core --lib util::test_connection::test::bad_host -- --exact --nocapture
+          cargo test --target x86_64-unknown-linux-gnu --package mongo-odbc-core --lib util::test_connection::test::bad_host --features core/bad_host -- --exact --nocapture
           EXITCODE=$?
 
           # Stop the local ADF
