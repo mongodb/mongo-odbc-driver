@@ -976,7 +976,7 @@ functions:
           ./resources/run_adf.sh start &&
           cargo run --bin data_loader &&
           cargo test integration -- --skip test_driver_log_level --nocapture &&
-          cargo test --test connection_tests integration::test_driver_log_level -- --ignored --nocapture
+          cargo test --test connection_tests integration::test_driver_log_level -- --nocapture
           EXITCODE=$?
           echo "****** ls -l ./target/debug/deps *******"
           ls -l ./target/debug/deps
@@ -1079,7 +1079,7 @@ functions:
 
           # Run integration tests with ubuntu
           cargo test integration -- --skip test_driver_log_level --nocapture &&
-          cargo test --test connection_tests integration::test_driver_log_level -- --ignored --nocapture
+          cargo test --test connection_tests integration::test_driver_log_level -- --nocapture
 
           EXITCODE=$?
 
