@@ -360,7 +360,7 @@ pub unsafe extern "C" fn SQLBindCol(
                 || stmt.attributes.read().unwrap().row_bind_type
                     != (BindType::SQL_BIND_BY_COLUMN as usize)
             {
-                return unsupported_function!(hstmt);
+                unsupported_function!(hstmt);
             }
 
             // makes sure that col_number is in bounds
@@ -373,7 +373,7 @@ pub unsafe extern "C" fn SQLBindCol(
             let col_max_size = mongo_stmt.as_ref().unwrap().get_resultset_metadata().len();
 
             // columns are 1-indexed as per the ODBC spec.
-            if (col_number as usize) > col_max_size || col_number <= 0 {
+            if (col_number as usize) > col_max_size || col_number == 0 {
                 let mongo_handle = MongoHandleRef::from(hstmt);
                 add_diag_info!(mongo_handle, ODBCError::InvalidColumnNumber(col_number));
                 return SqlReturn::ERROR;
