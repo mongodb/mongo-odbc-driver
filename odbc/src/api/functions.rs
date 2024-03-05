@@ -18,9 +18,9 @@ use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, CDataType,
     Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc,
     DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc,
-    HDesc, HEnv, HStmt, HWnd, Handle, HandleType, InfoType, Integer, Len, NoScan, Nullability,
-    Pointer, RetCode, RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute,
-    ULen, USmallInt, UseBookmarks,
+    HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer,
+    RetCode, RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
+    USmallInt, UseBookmarks,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -1288,9 +1288,10 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                         bound_col_info.length_or_indicator,
                     ),
                     None => {
-                        add_diag_info!(
+                        add_diag_with_function!(
                             mongo_handle,
-                            ODBCError::InvalidTargetType(bound_col_info.target_type)
+                            ODBCError::InvalidTargetType(bound_col_info.target_type),
+                            "SQLBindCol"
                         );
                         SqlReturn::ERROR
                     }
