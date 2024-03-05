@@ -126,13 +126,6 @@ impl fmt::Display for TestDef {
     }
 }
 
-#[test]
-#[cfg(feature = "temp")]
-fn t() {
-    println!("yes");
-    assert!(false)
-}
-
 /// resultset_tests runs the query and function tests contained in the TEST_FILE_DIR directory
 #[test]
 #[cfg(feature = "result_set")]
