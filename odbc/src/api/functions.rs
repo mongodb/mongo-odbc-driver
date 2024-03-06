@@ -1458,7 +1458,7 @@ unsafe fn sql_get_connect_attrw_helper(
             }
             // according to the spec, SQL_ATTR_CONNECTION_DEAD just returns the latest status of the connection, not the current status
             ConnectionAttribute::SQL_ATTR_CONNECTION_DEAD => {
-                let connection_dead = match *conn.mongo_connection.write().unwrap() {
+                let connection_dead = match *conn.mongo_connection.read().unwrap() {
                     Some(_) => SqlBool::SQL_FALSE,
                     None => SqlBool::SQL_TRUE,
                 };
