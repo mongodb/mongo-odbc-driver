@@ -8,7 +8,7 @@ mod unit {
     };
     use bson::doc;
     use definitions::{
-        BindType, CDataType, Len, Nullability, SQLBindCol, SQLFetch, SmallInt, SqlReturn,
+        BindType, CDataType, Len, Nullability, SQLBindCol, SQLFetch, SmallInt, SqlReturn, WChar,
     };
     use mongo_odbc_core::{
         json_schema::{
@@ -84,7 +84,9 @@ mod unit {
                     }
                 }),
                 *s.bound_cols.read().unwrap()
-            )
+            );
+
+            let _ = Box::from_raw(buffer as *mut WChar);
         }
     }
 
@@ -203,6 +205,8 @@ mod unit {
                 SqlReturn::ERROR,
                 SQLBindCol(stmt as *mut _, 3, CDataType::SQL_C_SLONG, buffer, 4, ind)
             );
+
+            let _ = Box::from_raw(buffer as *mut WChar);
         }
     }
 
