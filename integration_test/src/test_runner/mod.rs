@@ -128,14 +128,14 @@ impl fmt::Display for TestDef {
 
 /// resultset_tests runs the query and function tests contained in the TEST_FILE_DIR directory
 #[test]
-#[ignore]
+#[cfg(feature = "result_set")]
 pub fn resultset_tests() -> Result<()> {
     run_resultset_tests(false)
 }
 
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 #[test]
-#[ignore]
+#[cfg(feature = "result_set")]
 pub fn odbc2_resultset_tests() -> Result<()> {
     run_resultset_tests_odbc_2(false)
 }
