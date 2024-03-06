@@ -15,10 +15,10 @@ use constants::*;
 use cstr::{input_text_to_string_w, Charset, WideChar};
 
 use definitions::{
-    AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, CDataType,
-    Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc,
-    DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc,
-    HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer,
+    AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType,
+    CDataType, Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType,
+    Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption,
+    HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer,
     RetCode, RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
     USmallInt, UseBookmarks,
 };
@@ -683,11 +683,13 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Desc::SQL_DESC_UNSIGNED => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len)
                 }
+                Desc::SQL_DESC_ALLOC_TYPE => {
+                    numeric_col_attr(&|_| AllocType::SQL_DESC_ALLOC_AUTO as Len)
+                }
                 desc @ (Desc::SQL_DESC_OCTET_LENGTH_PTR
                 | Desc::SQL_DESC_DATETIME_INTERVAL_CODE
                 | Desc::SQL_DESC_INDICATOR_PTR
                 | Desc::SQL_DESC_DATA_PTR
-                | Desc::SQL_DESC_ALLOC_TYPE
                 | Desc::SQL_DESC_ARRAY_SIZE
                 | Desc::SQL_DESC_ARRAY_STATUS_PTR
                 | Desc::SQL_DESC_BIND_OFFSET_PTR
@@ -1598,6 +1600,14 @@ unsafe fn sql_get_connect_attrw_helper(
             ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT => {
                 let login_timeout = attributes.login_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&login_timeout, value_ptr, string_length_ptr)
+            }
+            // according to the spec, SQL_ATTR_CONNECTION_DEAD just returns the latest status of the connection, not the current status
+            ConnectionAttribute::SQL_ATTR_CONNECTION_DEAD => {
+                let connection_dead = match *conn.mongo_connection.read().unwrap() {
+                    Some(_) => SqlBool::SQL_FALSE,
+                    None => SqlBool::SQL_TRUE,
+                };
+                i32_len::set_output_fixed_data(&connection_dead, value_ptr, string_length_ptr)
             }
             ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => {
                 let connection_timeout = attributes.connection_timeout.unwrap_or(0);
@@ -3212,6 +3222,16 @@ unsafe fn set_connect_attrw_helper(
                 conn.attributes.write().unwrap().current_catalog = Some(current_db);
                 SqlReturn::SUCCESS
             }
+            // we use 0 (no timeout throughout the driver); only allow the user to set this value if they are setting to 0
+            ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => match (value_ptr as u32) == 0 {
+                true => SqlReturn::SUCCESS,
+                false => {
+                    conn_handle.add_diag_info(ODBCError::GeneralWarning(
+                        "Driver only accepts 0 for SQL_ATTR_CONNECTION_TIMEOUT".into(),
+                    ));
+                    SqlReturn::SUCCESS_WITH_INFO
+                }
+            },
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
                     connection_attribute_to_string(attribute),
