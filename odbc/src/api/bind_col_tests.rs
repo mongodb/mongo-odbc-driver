@@ -121,6 +121,12 @@ mod unit {
                     target_buffer: null_mut(),
                     buffer_length: 1,
                     length_or_indicator: null_mut(),
+                },
+                2 => BoundColInfo {
+                    target_type: CDataType::SQL_C_SLONG as SmallInt,
+                    target_buffer: null_mut(),
+                    buffer_length: 1,
+                    length_or_indicator: null_mut(),
                 }
             });
 
@@ -169,14 +175,22 @@ mod unit {
                     stmt as *mut _,
                     1,
                     CDataType::SQL_C_SLONG as SmallInt,
-                    null_mut(),
+                    null_mut(), // Note that when TargetValuePtr is null, the driver unbinds the data buffer for the column specified by ColumnNumber
                     0,
                     indicator
                 )
             );
 
-            // Assert that bound_cols is an empty map after SQLBindCol is called.
-            assert_eq!(Some(map! {}), *s.bound_cols.read().unwrap())
+            // Assert that bound_cols only has one mapping after SQLBindCol is called.
+            assert_eq!(
+                Some(map! {2 => BoundColInfo {
+                    target_type: CDataType::SQL_C_SLONG as SmallInt,
+                    target_buffer: null_mut(),
+                    buffer_length: 1,
+                    length_or_indicator: null_mut(),
+                }}),
+                *s.bound_cols.read().unwrap()
+            )
         }
     }
 

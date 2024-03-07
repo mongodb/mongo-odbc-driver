@@ -1278,10 +1278,10 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
         let mut success_with_info_encountered = false;
 
-        if stmt.bound_cols.read().unwrap().is_some() {
+        if let Some(ref bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
             let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
 
-            for (col, bound_col_info) in stmt.bound_cols.read().unwrap().as_ref().unwrap().iter() {
+            for (col, bound_col_info) in bound_cols.iter() {
                 let sql_return = match FromPrimitive::from_i16(bound_col_info.target_type) {
                     Some(valid_type) => sql_get_data_helper(
                         mongo_handle_for_sql_get_data_helper,
