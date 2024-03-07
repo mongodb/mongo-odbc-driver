@@ -119,7 +119,7 @@ mod unit {
             // Set the bound_cols to non-None initially.
             *s.bound_cols.write().unwrap() = Some(map! {
                 1 => BoundColInfo {
-                    target_type: CDataType::SQL_C_SLONG as SmallInt,,
+                    target_type: CDataType::SQL_C_SLONG as SmallInt,
                     target_buffer: null_mut(),
                     buffer_length: 1,
                     length_or_indicator: null_mut(),
