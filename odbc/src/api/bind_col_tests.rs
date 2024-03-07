@@ -19,7 +19,7 @@ mod unit {
     use std::ptr::null_mut;
 
     #[test]
-    fn test_bind() {
+    fn test_binding_column() {
         // Set up MongoHandle
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let conn =
@@ -102,7 +102,7 @@ mod unit {
     }
 
     #[test]
-    fn test_unbind() {
+    fn test_unbinding_column() {
         // Set up MongoHandle
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let conn =
