@@ -47,11 +47,9 @@ Additionally, the following ODBC functions are currently not supported by the dr
 
 | Function             |
 |----------------------|
-| SQLBindCol           |
 | SQLBindParameter     |
 | SQLBrowseConnectW    |
 | SQLBulkOperations    |
-| SQLCancel            |
 | SQLCancelHandle      |
 | SQLColumnPrivilegesW |
 | SQLCompleteAsync     |
@@ -59,8 +57,6 @@ Additionally, the following ODBC functions are currently not supported by the dr
 | SQLCopyDesc          |
 | SQLDescribeParam     |
 | SQLEndTran           |
-| SQLFetchScroll       |
-| SQLFreeStmt          |
 | SQLGetCursorNameW    |
 | SQLGetDescFieldW     |
 | SQLGetDescRecW       |
