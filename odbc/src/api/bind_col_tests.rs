@@ -4,12 +4,10 @@ mod unit {
             BoundColInfo, Connection, ConnectionState, Env, EnvState, MongoHandle, Statement,
             StatementState,
         },
-        map,
+        map, SQLBindCol, SQLFetch,
     };
     use bson::doc;
-    use definitions::{
-        BindType, CDataType, Len, Nullability, SQLBindCol, SQLFetch, SmallInt, SqlReturn, WChar,
-    };
+    use definitions::{BindType, CDataType, Len, Nullability, SmallInt, SqlReturn, WChar};
     use mongo_odbc_core::{
         json_schema::{
             simplified::{Atomic, Schema},
@@ -78,7 +76,7 @@ mod unit {
                 SQLBindCol(
                     stmt as *mut _,
                     1,
-                    CDataType::SQL_C_SLONG,
+                    CDataType::SQL_C_SLONG as SmallInt,
                     buffer,
                     4,
                     indicator
@@ -170,7 +168,7 @@ mod unit {
                 SQLBindCol(
                     stmt as *mut _,
                     1,
-                    CDataType::SQL_C_SLONG,
+                    CDataType::SQL_C_SLONG as SmallInt,
                     null_mut(),
                     0,
                     indicator
@@ -240,7 +238,7 @@ mod unit {
                 SQLBindCol(
                     stmt as *mut _,
                     3,
-                    CDataType::SQL_C_SLONG,
+                    CDataType::SQL_C_SLONG as SmallInt,
                     buffer,
                     4,
                     indicator
