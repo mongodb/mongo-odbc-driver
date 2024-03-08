@@ -3658,17 +3658,13 @@ unsafe fn sql_set_stmt_attrw_helper(
             SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE | StatementAttribute::SQL_ROWSET_SIZE => {
-            match FromPrimitive::from_i32(value_ptr as i32) {
-                Some(ras) => {
-                    stmt.attributes.write().unwrap().row_array_size = ras;
-                    SqlReturn::SUCCESS
-                }
-                None => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ROW_ARRAY_SIZE"));
-                    SqlReturn::ERROR
-                }
+            if value_ptr as ULen != 1{
+                add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("`column binding with arrays`"), "SQLSetStmtAttrW");
+                return SqlReturn::ERROR;
             }
+
+            stmt.attributes.write().unwrap().row_array_size = 1;
+            SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_SIMULATE_CURSOR => {
             add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("SQL_ATTR_SIMULATE_CURSOR"), "SQLSetStmtAttrW");
