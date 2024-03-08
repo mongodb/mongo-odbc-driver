@@ -4,7 +4,7 @@ mod unit {
             BoundColInfo, Connection, ConnectionState, Env, EnvState, MongoHandle, Statement,
             StatementState,
         },
-        map, SQLBindCol, SQLFetch,
+        map, SQLBindCol,
     };
     use bson::doc;
     use definitions::{BindType, CDataType, Len, Nullability, SmallInt, SqlReturn, WChar};
@@ -19,7 +19,7 @@ mod unit {
     use std::ptr::null_mut;
 
     #[test]
-    fn test_binding_column() {
+    fn test_binding_and_rebinding_column() {
         // Set up MongoHandle
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let conn =
@@ -68,7 +68,10 @@ mod unit {
             *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query.clone()));
 
             let indicator: *mut Len = null_mut();
-            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 4])) as *mut _;
+
+            // Test binding a new column
+            let new_binding_buffer: *mut std::ffi::c_void =
+                Box::into_raw(Box::new([0u8; 4])) as *mut _;
 
             // Assert that SQLBindCol is successful
             assert_eq!(
@@ -77,7 +80,7 @@ mod unit {
                     stmt as *mut _,
                     1,
                     CDataType::SQL_C_SLONG as SmallInt,
-                    buffer,
+                    new_binding_buffer,
                     4,
                     indicator
                 )
@@ -88,7 +91,7 @@ mod unit {
                 Some(map! {
                     1 => BoundColInfo {
                         target_type: CDataType::SQL_C_SLONG as SmallInt,
-                        target_buffer: buffer,
+                        target_buffer: new_binding_buffer,
                         buffer_length: 4,
                         length_or_indicator: indicator,
                     }
@@ -96,8 +99,39 @@ mod unit {
                 *s.bound_cols.read().unwrap()
             );
 
-            // free buffer
-            let _ = Box::from_raw(buffer as *mut WChar);
+            // Test rebinding a column
+            let rebinding_buffer: *mut std::ffi::c_void =
+                Box::into_raw(Box::new([0u8; 4])) as *mut _;
+
+            // Assert that SQLBindCol is successful
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLBindCol(
+                    stmt as *mut _,
+                    1,
+                    CDataType::SQL_C_SLONG as SmallInt,
+                    rebinding_buffer,
+                    4,
+                    indicator
+                )
+            );
+
+            // Assert that bound_cols has the correct value inside
+            assert_eq!(
+                Some(map! {
+                    1 => BoundColInfo {
+                        target_type: CDataType::SQL_C_SLONG as SmallInt,
+                        target_buffer: rebinding_buffer,
+                        buffer_length: 4,
+                        length_or_indicator: indicator,
+                    }
+                }),
+                *s.bound_cols.read().unwrap()
+            );
+
+            // free buffers
+            let _ = Box::from_raw(new_binding_buffer as *mut WChar);
+            let _ = Box::from_raw(rebinding_buffer as *mut WChar);
         }
     }
 
