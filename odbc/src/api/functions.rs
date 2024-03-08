@@ -370,10 +370,10 @@ pub unsafe extern "C" fn SQLBindCol(
                 return SqlReturn::ERROR;
             }
 
-            let col_max_size = mongo_stmt.as_ref().unwrap().get_resultset_metadata().len();
+            let max_col_index = mongo_stmt.as_ref().unwrap().get_resultset_metadata().len();
 
             // columns are 1-indexed as per the ODBC spec.
-            if (col_number as usize) > col_max_size || col_number == 0 {
+            if (col_number as usize) > max_col_index || col_number == 0 {
                 let mongo_handle = MongoHandleRef::from(hstmt);
                 add_diag_info!(mongo_handle, ODBCError::InvalidColumnNumber(col_number));
                 return SqlReturn::ERROR;
@@ -381,6 +381,13 @@ pub unsafe extern "C" fn SQLBindCol(
 
             if stmt.bound_cols.read().unwrap().is_none() {
                 *stmt.bound_cols.write().unwrap() = Some(HashMap::new());
+            }
+
+            // make sure that target_type is valid.
+            if <CDataType as FromPrimitive>::from_i16(target_type).is_none() {
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(mongo_handle, ODBCError::InvalidTargetType(target_type));
+                return SqlReturn::ERROR;
             }
 
             // Unbind column if target_value is null
@@ -392,7 +399,7 @@ pub unsafe extern "C" fn SQLBindCol(
                     .unwrap()
                     .remove(&col_number);
             }
-            // Bind column
+            // Bind column or rebind column with a new value
             else {
                 let bound_col_info = BoundColInfo {
                     target_type,
@@ -1276,30 +1283,20 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
         *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
 
+        // If there are bound columns, then copy data from the result set into the bound buffers.
         let mut success_with_info_encountered = false;
-
-        if let Some(ref bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
+        if let Some(bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
             let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
 
             for (col, bound_col_info) in bound_cols.iter() {
-                let sql_return = match FromPrimitive::from_i16(bound_col_info.target_type) {
-                    Some(valid_type) => sql_get_data_helper(
-                        mongo_handle_for_sql_get_data_helper,
-                        *col,
-                        valid_type,
-                        bound_col_info.target_buffer,
-                        bound_col_info.buffer_length,
-                        bound_col_info.length_or_indicator,
-                    ),
-                    None => {
-                        add_diag_with_function!(
-                            mongo_handle_for_sql_get_data_helper,
-                            ODBCError::InvalidTargetType(bound_col_info.target_type),
-                            "SQLBindCol"
-                        );
-                        SqlReturn::ERROR
-                    }
-                };
+                let sql_return = sql_get_data_helper(
+                    mongo_handle_for_sql_get_data_helper,
+                    *col,
+                    FromPrimitive::from_i16(bound_col_info.target_type).unwrap(),
+                    bound_col_info.target_buffer,
+                    bound_col_info.buffer_length,
+                    bound_col_info.length_or_indicator,
+                );
 
                 match sql_return {
                     SqlReturn::ERROR => return SqlReturn::ERROR,

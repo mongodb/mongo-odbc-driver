@@ -282,19 +282,6 @@ mod unit {
             s.attributes.write().unwrap().row_array_size = 1;
             s.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as usize;
 
-            // Give bound_cols a column binding with an invalid target_type. The target_type check is in SQLFetch, so if
-            // there is an attempt to create a column binding with an invalid target_type, it will be added to bind_cols,
-            // and SQLBindCol will return SQLReturn::Success. Then, everything will operate as if nothing is wrong until
-            // SQLFetch accesses bound_cols and checks for an invalid target_type. At this point, the error will occur.
-            *s.bound_cols.write().unwrap() = Some(map! {
-                1 => BoundColInfo {
-                    target_type: 500,
-                    target_buffer: null_mut(),
-                    buffer_length: 1,
-                    length_or_indicator: null_mut(),
-                }
-            });
-
             // Set the mongo_statement to have non-empty cursor initially.
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
@@ -326,8 +313,17 @@ mod unit {
             // Set the mongo_statement
             *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query.clone()));
 
-            // Assert that SQLFetch returns an error because the target_type check is in SQLFetch instead of SQLBindCol
-            assert_eq!(SqlReturn::ERROR, SQLFetch(stmt as *mut _));
+            let indicator: *mut Len = null_mut();
+            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 4])) as *mut _;
+
+            // Assert that SQLBindCol returns an error. The target_type is set to 500 which is an arbitrary, invalid target_type.
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLBindCol(stmt as *mut _, 3, 500, buffer, 4, indicator)
+            );
+
+            // free buffer
+            let _ = Box::from_raw(buffer as *mut WChar);
         }
     }
 }
