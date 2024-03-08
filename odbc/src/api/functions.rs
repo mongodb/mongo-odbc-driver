@@ -350,17 +350,41 @@ pub unsafe extern "C" fn SQLBindCol(
             let stmt = must_be_valid!((*mongo_handle).as_statement());
 
             // Currently, we only support column binding of one row at a time.
-            if stmt.attributes.read().unwrap().row_array_size != 1
-                || !stmt
-                    .attributes
-                    .read()
-                    .unwrap()
-                    .row_bind_offset_ptr
-                    .is_null()
-                || stmt.attributes.read().unwrap().row_bind_type
-                    != (BindType::SQL_BIND_BY_COLUMN as usize)
+            // Make sure that column-wise binding is being used.
+            if stmt.attributes.read().unwrap().row_bind_type != BindType::SQL_BIND_BY_COLUMN as ULen
             {
-                unsupported_function!(hstmt)
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::Unimplemented("`row-wise column binding`")
+                );
+                return SqlReturn::ERROR;
+            }
+
+            // Make sure that offsets are not being used in column binding.
+            if !stmt
+                .attributes
+                .read()
+                .unwrap()
+                .row_bind_offset_ptr
+                .is_null()
+            {
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::Unimplemented("`column binding with offsets`")
+                );
+                return SqlReturn::ERROR;
+            }
+
+            // Make sure we are only binding one row at a time (i.e., row_array_size is one).
+            if stmt.attributes.read().unwrap().row_array_size != 1 {
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::Unimplemented("`column binding with arrays`")
+                );
+                return SqlReturn::ERROR;
             }
 
             // makes sure that col_number is in bounds
@@ -3599,11 +3623,22 @@ unsafe fn sql_set_stmt_attrw_helper(
             }
         }
         StatementAttribute::SQL_ATTR_ROW_BIND_OFFSET_PTR => {
-            add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("SQL_ATTR_ROW_BIND_OFFSET_PTR"), "SQLSetStmtAttrW");
-            SqlReturn::ERROR
+            if !value_ptr.is_null(){
+                add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("`column binding with offsets`"), "SQLSetStmtAttrW");
+                return SqlReturn::ERROR;
+            }
+
+            stmt.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
+            SqlReturn::SUCCESS
+
         }
         StatementAttribute::SQL_ATTR_ROW_BIND_TYPE => {
-            stmt.attributes.write().unwrap().row_bind_type = value_ptr as ULen;
+            if value_ptr as ULen != BindType::SQL_BIND_BY_COLUMN as ULen{
+                add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("`row-wise column binding`"), "SQLSetStmtAttrW");
+                return SqlReturn::ERROR;
+            }
+
+            stmt.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as ULen;
             SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_ROW_NUMBER => {
