@@ -387,7 +387,7 @@ pub unsafe extern "C" fn SQLBindCol(
                 return SqlReturn::ERROR;
             }
 
-            // makes sure that col_number is in bounds
+            // Make sure that a query was executed/prepared and the number of columns for the resultset is known.
             let mongo_stmt = stmt.mongo_statement.read().unwrap();
             if mongo_stmt.is_none() {
                 stmt.errors.write().unwrap().push(ODBCError::NoResultSet);
@@ -396,7 +396,7 @@ pub unsafe extern "C" fn SQLBindCol(
 
             let max_col_index = mongo_stmt.as_ref().unwrap().get_resultset_metadata().len();
 
-            // columns are 1-indexed as per the ODBC spec.
+            // Make sure that col_number is in bounds. Columns are 1-indexed as per the ODBC spec.
             if (col_number as usize) > max_col_index || col_number == 0 {
                 let mongo_handle = MongoHandleRef::from(hstmt);
                 add_diag_info!(mongo_handle, ODBCError::InvalidColumnNumber(col_number));
