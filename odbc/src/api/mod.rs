@@ -3,6 +3,8 @@ pub(crate) mod errors;
 mod functions;
 pub use functions::*;
 #[cfg(test)]
+mod bind_col_tests;
+#[cfg(test)]
 mod cancel_tests;
 #[cfg(test)]
 mod col_attr_describe_tests;

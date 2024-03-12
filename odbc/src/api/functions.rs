@@ -15,10 +15,10 @@ use constants::*;
 use cstr::{input_text_to_string_w, Charset, WideChar};
 
 use definitions::{
-    AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, CDataType,
-    Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType, Desc,
-    DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc,
-    HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer,
+    AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType,
+    CDataType, Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType,
+    Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption,
+    HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer,
     RetCode, RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
     USmallInt, UseBookmarks,
 };
@@ -337,13 +337,113 @@ fn sql_alloc_handle(
 #[no_mangle]
 pub unsafe extern "C" fn SQLBindCol(
     hstmt: HStmt,
-    _col_number: USmallInt,
-    _target_type: SmallInt,
-    _target_value: Pointer,
-    _buffer_length: Len,
-    _length_or_indicatior: *mut Len,
+    col_number: USmallInt,
+    target_type: SmallInt,
+    target_value: Pointer,
+    buffer_length: Len,
+    length_or_indicator: *mut Len,
 ) -> SqlReturn {
-    unimpl!(hstmt);
+    panic_safe_exec_keep_diagnostics!(
+        debug,
+        || {
+            let mongo_handle = MongoHandleRef::from(hstmt);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+
+            // Currently, we only support column binding of one row at a time.
+            // Make sure that column-wise binding is being used.
+            if stmt.attributes.read().unwrap().row_bind_type != BindType::SQL_BIND_BY_COLUMN as ULen
+            {
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::Unimplemented("`row-wise column binding`")
+                );
+                return SqlReturn::ERROR;
+            }
+
+            // Make sure that offsets are not being used in column binding.
+            if !stmt
+                .attributes
+                .read()
+                .unwrap()
+                .row_bind_offset_ptr
+                .is_null()
+            {
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::Unimplemented("`column binding with offsets`")
+                );
+                return SqlReturn::ERROR;
+            }
+
+            // Make sure we are only binding one row at a time (i.e., row_array_size is one).
+            if stmt.attributes.read().unwrap().row_array_size != 1 {
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::Unimplemented("`column binding with arrays`")
+                );
+                return SqlReturn::ERROR;
+            }
+
+            // Make sure that a query was executed/prepared and the number of columns for the resultset is known.
+            let mongo_stmt = stmt.mongo_statement.read().unwrap();
+            if mongo_stmt.is_none() {
+                stmt.errors.write().unwrap().push(ODBCError::NoResultSet);
+                return SqlReturn::ERROR;
+            }
+
+            let max_col_index = mongo_stmt.as_ref().unwrap().get_resultset_metadata().len();
+
+            // Make sure that col_number is in bounds. Columns are 1-indexed as per the ODBC spec.
+            if (col_number as usize) > max_col_index || col_number == 0 {
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(mongo_handle, ODBCError::InvalidColumnNumber(col_number));
+                return SqlReturn::ERROR;
+            }
+
+            if stmt.bound_cols.read().unwrap().is_none() {
+                *stmt.bound_cols.write().unwrap() = Some(HashMap::new());
+            }
+
+            // make sure that target_type is valid.
+            if <CDataType as FromPrimitive>::from_i16(target_type).is_none() {
+                let mongo_handle = MongoHandleRef::from(hstmt);
+                add_diag_info!(mongo_handle, ODBCError::InvalidTargetType(target_type));
+                return SqlReturn::ERROR;
+            }
+
+            // Unbind column if target_value is null
+            if target_value.is_null() {
+                stmt.bound_cols
+                    .write()
+                    .unwrap()
+                    .as_mut()
+                    .unwrap()
+                    .remove(&col_number);
+            }
+            // Bind column or rebind column with a new value
+            else {
+                let bound_col_info = BoundColInfo {
+                    target_type,
+                    target_buffer: target_value,
+                    buffer_length,
+                    length_or_indicator,
+                };
+
+                stmt.bound_cols
+                    .write()
+                    .unwrap()
+                    .as_mut()
+                    .unwrap()
+                    .insert(col_number, bound_col_info);
+            }
+
+            SqlReturn::SUCCESS
+        },
+        hstmt
+    );
 }
 
 ///
@@ -1207,7 +1307,31 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
         *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
 
-        if !warnings_opt.is_empty() {
+        // If there are bound columns, then copy data from the result set into the bound buffers.
+        let mut success_with_info_encountered = false;
+        if let Some(bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
+            let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
+
+            for (col, bound_col_info) in bound_cols.iter() {
+                let sql_return = sql_get_data_helper(
+                    mongo_handle_for_sql_get_data_helper,
+                    *col,
+                    FromPrimitive::from_i16(bound_col_info.target_type).unwrap(),
+                    bound_col_info.target_buffer,
+                    bound_col_info.buffer_length,
+                    bound_col_info.length_or_indicator,
+                );
+
+                match sql_return {
+                    SqlReturn::ERROR => return SqlReturn::ERROR,
+                    SqlReturn::SUCCESS_WITH_INFO => {
+                        success_with_info_encountered = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        if !warnings_opt.is_empty() || success_with_info_encountered {
             // No warnings and there is a next row
             SqlReturn::SUCCESS_WITH_INFO
         } else {
@@ -3499,11 +3623,22 @@ unsafe fn sql_set_stmt_attrw_helper(
             }
         }
         StatementAttribute::SQL_ATTR_ROW_BIND_OFFSET_PTR => {
-            add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("SQL_ATTR_ROW_BIND_OFFSET_PTR"), "SQLSetStmtAttrW");
-            SqlReturn::ERROR
+            if !value_ptr.is_null(){
+                add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("`column binding with offsets`"), "SQLSetStmtAttrW");
+                return SqlReturn::ERROR;
+            }
+
+            stmt.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
+            SqlReturn::SUCCESS
+
         }
         StatementAttribute::SQL_ATTR_ROW_BIND_TYPE => {
-            stmt.attributes.write().unwrap().row_bind_type = value_ptr as ULen;
+            if value_ptr as ULen != BindType::SQL_BIND_BY_COLUMN as ULen{
+                add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("`row-wise column binding`"), "SQLSetStmtAttrW");
+                return SqlReturn::ERROR;
+            }
+
+            stmt.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as ULen;
             SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_ROW_NUMBER => {
@@ -3523,17 +3658,13 @@ unsafe fn sql_set_stmt_attrw_helper(
             SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE | StatementAttribute::SQL_ROWSET_SIZE => {
-            match FromPrimitive::from_i32(value_ptr as i32) {
-                Some(ras) => {
-                    stmt.attributes.write().unwrap().row_array_size = ras;
-                    SqlReturn::SUCCESS
-                }
-                None => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ROW_ARRAY_SIZE"));
-                    SqlReturn::ERROR
-                }
+            if value_ptr as ULen != 1{
+                add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("`column binding with arrays`"), "SQLSetStmtAttrW");
+                return SqlReturn::ERROR;
             }
+
+            stmt.attributes.write().unwrap().row_array_size = 1;
+            SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_SIMULATE_CURSOR => {
             add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("SQL_ATTR_SIMULATE_CURSOR"), "SQLSetStmtAttrW");
