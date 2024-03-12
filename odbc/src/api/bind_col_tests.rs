@@ -427,26 +427,9 @@ mod unit {
                 )
             );
 
-            // Free memory and set row_bind_offset_ptr to null. Set row_array_size to an invalid number.
+            // Free memory and set row_bind_offset_ptr to null. Set row_bind_type to an invalid number.
             let _ = Box::from_raw(s.attributes.write().unwrap().row_bind_offset_ptr as *mut WChar);
             s.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
-            s.attributes.write().unwrap().row_array_size = 100;
-
-            // Assert that SQLBindCol returns an error because row_array_size is not 1.
-            assert_eq!(
-                SqlReturn::ERROR,
-                SQLBindCol(
-                    stmt as *mut _,
-                    1,
-                    CDataType::SQL_C_SLONG as SmallInt,
-                    buffer,
-                    4,
-                    indicator
-                )
-            );
-
-            // set row_array_size to 1 and set row_bind_type to an invalid number.
-            s.attributes.write().unwrap().row_array_size = 1;
             s.attributes.write().unwrap().row_bind_type = 10;
 
             // Assert that SQLBindCol returns an error because row_bind_type is not 0 (i.e., BindType::SQL_BIND_BY_COLUMN).

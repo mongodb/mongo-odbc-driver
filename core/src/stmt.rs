@@ -3,6 +3,7 @@ use crate::{
     MongoColMetadata, MongoConnection,
 };
 use bson::Bson;
+use definitions::ULen;
 use std::fmt::Debug;
 
 pub trait MongoStatement: Debug {
@@ -25,7 +26,7 @@ pub trait MongoStatement: Debug {
     }
     // Executes a prepared statement.
     // Only MongoQuery supports this workflow. The other statements don't.
-    fn execute(&mut self, _: &MongoConnection, _: Bson) -> Result<bool> {
+    fn execute(&mut self, _: &MongoConnection, _: Bson, _: ULen) -> Result<bool> {
         Err(Error::UnsupportedOperation("execute"))
     }
     // Closes the cursor.

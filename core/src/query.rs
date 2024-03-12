@@ -6,6 +6,7 @@ use crate::{
     Error, TypeMode,
 };
 use bson::{doc, document::ValueAccessError, Bson, Document};
+use definitions::ULen;
 use mongodb::{
     error::{CommandError, ErrorKind},
     options::AggregateOptions,
@@ -118,7 +119,12 @@ impl MongoStatement for MongoQuery {
     // Execute the $sql aggregation for the query and initialize the result set
     // cursor. If there is a timeout, the query must finish before the timeout
     // or an error is returned.
-    fn execute(&mut self, connection: &MongoConnection, stmt_id: Bson) -> Result<bool> {
+    fn execute(
+        &mut self,
+        connection: &MongoConnection,
+        stmt_id: Bson,
+        rowset_size: ULen,
+    ) -> Result<bool> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = connection.client.database(current_db);
 
@@ -131,6 +137,14 @@ impl MongoStatement for MongoQuery {
         // If the query timeout is 0, it means "no timeout"
         let options = if self.query_timeout.is_some_and(|timeout| timeout > 0) {
             opt.max_time(Duration::from_millis(self.query_timeout.unwrap() as u64))
+                .batch_size({
+                    // Natacha and I aren't actually sure what the default batch size is, but we think it might be like 101.
+                    if rowset_size > 101 {
+                        rowset_size as u32
+                    } else {
+                        101
+                    }
+                })
                 .build()
         } else {
             opt.build()
