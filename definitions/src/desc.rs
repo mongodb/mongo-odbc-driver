@@ -189,3 +189,12 @@ pub enum Desc {
     #[cfg(feature = "odbc_version_4")]
     SQL_DESC_MIME_TYPE = 36,
 }
+
+/// Used in `SQLColAttributeW`.
+#[allow(non_camel_case_types)]
+#[repr(u16)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum AllocType {
+    SQL_DESC_ALLOC_AUTO = 1,
+    SQL_DESC_ALLOC_USER = 2,
+}
