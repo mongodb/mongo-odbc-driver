@@ -1274,8 +1274,10 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     let mut success_with_info_encountered = false;
     let mut global_warnings_opt: Vec<Error> = Vec::new();
 
-    // use index to figure out which buffer in array of buffers to use
-    for index in 0..stmt.attributes.read().unwrap().row_array_size {
+    let rowset_size = stmt.attributes.read().unwrap().row_array_size;
+
+    // Use index to figure out which buffer in the array of buffers to use.
+    for index in 0..rowset_size {
         let move_to_next_result = {
             let connection = must_be_valid!((*stmt.connection).as_connection());
             match stmt.mongo_statement.write().unwrap().as_mut() {
