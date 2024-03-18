@@ -136,18 +136,22 @@ impl MongoStatement for MongoQuery {
         let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
         // If the query timeout is 0, it means "no timeout"
         let options = if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            opt.max_time(Duration::from_millis(self.query_timeout.unwrap() as u64))
-                .batch_size({
-                    // Natacha and I aren't actually sure what the default batch size is, but we think it might be like 101.
-                    if rowset_size > 101 {
-                        rowset_size
-                    } else {
-                        101
-                    }
-                })
-                .build()
+            let opt_with_timeout =
+                opt.max_time(Duration::from_millis(self.query_timeout.unwrap() as u64));
+
+            // 100 is an arbitrary value.
+            if rowset_size > 100 {
+                opt_with_timeout.batch_size(rowset_size).build()
+            } else {
+                opt_with_timeout.build()
+            }
         } else {
-            opt.build()
+            // 100 is an arbitrary value
+            if rowset_size > 100 {
+                opt.batch_size(rowset_size).build()
+            } else {
+                opt.build()
+            }
         };
 
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
