@@ -1289,7 +1289,6 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
         };
 
         if let Ok((has_next, mut warnings_opt)) = move_to_next_result {
-            let mut stmt_attrs = stmt.attributes.write().unwrap();
             warnings_opt.iter().for_each(|warning| {
                 add_diag_with_function!(
                     MongoHandleRef::from(statement_handle),
