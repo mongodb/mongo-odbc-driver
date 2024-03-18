@@ -1298,11 +1298,9 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 );
             });
             if !has_next {
-                stmt_attrs.row_index_is_valid = false;
                 // No more rows
                 return SqlReturn::NO_DATA;
             }
-            stmt_attrs.row_index_is_valid = true;
 
             *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
 
