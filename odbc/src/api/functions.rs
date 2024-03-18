@@ -1235,7 +1235,11 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
     let stmt_id = stmt.statement_id.read().unwrap().clone();
     let mongo_statement = {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
-            let rowset_size = stmt.attributes.read().unwrap().row_array_size;
+            let rowset_size = match u32::try_from(stmt.attributes.read().unwrap().row_array_size) {
+                Ok(size) => size,
+                Err(_) => unreachable!(),
+            };
+
             stmt.mongo_statement
                 .write()
                 .unwrap()
@@ -3662,16 +3666,16 @@ unsafe fn sql_set_stmt_attrw_helper(
             SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE | StatementAttribute::SQL_ROWSET_SIZE => {
-            match FromPrimitive::from_i32(value_ptr as i32) {
-                Some(ras) => {
-                    stmt.attributes.write().unwrap().row_array_size = ras;
+
+            match u32::try_from(value_ptr as ULen){
+                Ok(ras) => {
+                    stmt.attributes.write().unwrap().row_array_size = ras as ULen;
                     SqlReturn::SUCCESS
-                }
-                None => {
-                    stmt_handle
-                        .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ROW_ARRAY_SIZE"));
-                    SqlReturn::ERROR
-                }
+                },
+                Err(_) => {
+                    stmt.attributes.write().unwrap().row_array_size = u32::MAX as ULen;
+                    SqlReturn::SUCCESS_WITH_INFO
+                },
             }
         }
         StatementAttribute::SQL_ATTR_SIMULATE_CURSOR => {

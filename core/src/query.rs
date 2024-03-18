@@ -123,7 +123,7 @@ impl MongoStatement for MongoQuery {
         &mut self,
         connection: &MongoConnection,
         stmt_id: Bson,
-        rowset_size: ULen,
+        rowset_size: u32,
     ) -> Result<bool> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = connection.client.database(current_db);
@@ -140,7 +140,7 @@ impl MongoStatement for MongoQuery {
                 .batch_size({
                     // Natacha and I aren't actually sure what the default batch size is, but we think it might be like 101.
                     if rowset_size > 101 {
-                        rowset_size as u32
+                        rowset_size
                     } else {
                         101
                     }

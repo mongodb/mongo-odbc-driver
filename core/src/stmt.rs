@@ -26,7 +26,7 @@ pub trait MongoStatement: Debug {
     }
     // Executes a prepared statement.
     // Only MongoQuery supports this workflow. The other statements don't.
-    fn execute(&mut self, _: &MongoConnection, _: Bson, _: ULen) -> Result<bool> {
+    fn execute(&mut self, _: &MongoConnection, _: Bson, _: u32) -> Result<bool> {
         Err(Error::UnsupportedOperation("execute"))
     }
     // Closes the cursor.

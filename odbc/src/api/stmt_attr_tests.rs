@@ -289,7 +289,8 @@ mod unit {
             stmt_handle,
             StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE,
             map! {
-                10 => SqlReturn::SUCCESS // Any number
+                10 => SqlReturn::SUCCESS, // Any number within the u32 range
+                // Add test showing that u32::MAX+1 returns SUCCESS_WITH_INFO
             },
             1,
         );
