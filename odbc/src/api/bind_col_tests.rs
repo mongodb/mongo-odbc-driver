@@ -40,25 +40,15 @@ mod unit {
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
             let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": "y"}, doc! {"x": "z"}],
-                vec![
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                ],
+                vec![doc! {"x": 1}, doc! {"x": 2}],
+                vec![MongoColMetadata::new(
+                    "",
+                    "".to_string(),
+                    "x".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                )],
             );
 
             // Must call next to set the `current` field.
@@ -173,25 +163,15 @@ mod unit {
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
             let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": "y"}, doc! {"x": "z"}],
-                vec![
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                ],
+                vec![doc! {"x": 1}, doc! {"x": 2}],
+                vec![MongoColMetadata::new(
+                    "",
+                    "".to_string(),
+                    "x".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                )],
             );
 
             // Must call next to set the `current` field.
@@ -250,25 +230,15 @@ mod unit {
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
             let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": "y"}, doc! {"x": "z"}],
-                vec![
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                ],
+                vec![doc! {"x": 1}, doc! {"x": 2}],
+                vec![MongoColMetadata::new(
+                    "",
+                    "".to_string(),
+                    "x".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                )],
             );
 
             // Must call next to set the `current` field.
@@ -320,25 +290,15 @@ mod unit {
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
             let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": "y"}, doc! {"x": "z"}],
-                vec![
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                ],
+                vec![doc! {"x": 1}, doc! {"x": 2}],
+                vec![MongoColMetadata::new(
+                    "",
+                    "".to_string(),
+                    "x".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                )],
             );
 
             // Must call next to set the `current` field.
@@ -378,25 +338,15 @@ mod unit {
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
             let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": "y"}, doc! {"x": "z"}],
-                vec![
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                    MongoColMetadata::new(
-                        "test_db",
-                        "dn".to_string(),
-                        "fn".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                ],
+                vec![doc! {"x": 1}, doc! {"x": 2}],
+                vec![MongoColMetadata::new(
+                    "",
+                    "".to_string(),
+                    "x".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                )],
             );
 
             // Must call next to set the `current` field.
