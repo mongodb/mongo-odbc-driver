@@ -485,7 +485,7 @@ pub unsafe extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
 pub unsafe extern "C" fn SQLColAttributeW(
     statement_handle: HStmt,
     column_number: USmallInt,
-    field_identifier: Desc,
+    field_identifier: USmallInt,
     character_attribute_ptr: Pointer,
     buffer_length: SmallInt,
     string_length_ptr: *mut SmallInt,
@@ -536,101 +536,101 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     .push(ODBCError::InvalidDescriptorIndex(column_number));
                 SqlReturn::ERROR
             };
-            match field_identifier {
-                Desc::SQL_DESC_AUTO_UNIQUE_VALUE => {
+            match FromPrimitive::from_i32(field_identifier as i32) {
+                Some(Desc::SQL_DESC_AUTO_UNIQUE_VALUE) => {
                     *numeric_attribute_ptr = SqlBool::SQL_FALSE as Len;
                     SqlReturn::SUCCESS
                 }
-                Desc::SQL_DESC_UNNAMED | Desc::SQL_DESC_UPDATABLE => {
+                Some(Desc::SQL_DESC_UNNAMED) | Some(Desc::SQL_DESC_UPDATABLE) => {
                     *numeric_attribute_ptr = 0 as Len;
                     SqlReturn::SUCCESS
                 }
-                Desc::SQL_DESC_COUNT => {
+                Some(Desc::SQL_DESC_COUNT) => {
                     *numeric_attribute_ptr =
                         mongo_stmt.as_ref().unwrap().get_resultset_metadata().len() as Len;
                     SqlReturn::SUCCESS
                 }
-                Desc::SQL_DESC_CASE_SENSITIVE => {
+                Some(Desc::SQL_DESC_CASE_SENSITIVE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.case_sensitive as Len)
                 }
-                Desc::SQL_DESC_BASE_COLUMN_NAME => {
+                Some(Desc::SQL_DESC_BASE_COLUMN_NAME) => {
                     string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref())
                 }
-                Desc::SQL_DESC_BASE_TABLE_NAME => {
+                Some(Desc::SQL_DESC_BASE_TABLE_NAME) => {
                     string_col_attr(&|x: &MongoColMetadata| x.base_table_name.as_ref())
                 }
-                Desc::SQL_DESC_CATALOG_NAME => {
+                Some(Desc::SQL_DESC_CATALOG_NAME) => {
                     string_col_attr(&|x: &MongoColMetadata| x.catalog_name.as_ref())
                 }
-                Desc::SQL_DESC_DISPLAY_SIZE => {
+                Some(Desc::SQL_DESC_DISPLAY_SIZE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.display_size.unwrap_or(0) as Len)
                 }
-                Desc::SQL_DESC_FIXED_PREC_SCALE => {
+                Some(Desc::SQL_DESC_FIXED_PREC_SCALE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.fixed_prec_scale as Len)
                 }
-                Desc::SQL_DESC_LABEL => string_col_attr(&|x: &MongoColMetadata| x.label.as_ref()),
-                Desc::SQL_DESC_LENGTH => {
+                Some(Desc::SQL_DESC_LABEL) => string_col_attr(&|x: &MongoColMetadata| x.label.as_ref()),
+                Some(Desc::SQL_DESC_LENGTH) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len)
                 }
-                Desc::SQL_DESC_LITERAL_PREFIX => {
+                Some(Desc::SQL_DESC_LITERAL_PREFIX) => {
                     string_col_attr(&|x: &MongoColMetadata| x.literal_prefix.unwrap_or(""))
                 }
-                Desc::SQL_DESC_LITERAL_SUFFIX => {
+                Some(Desc::SQL_DESC_LITERAL_SUFFIX) => {
                     string_col_attr(&|x: &MongoColMetadata| x.literal_suffix.unwrap_or(""))
                 }
-                Desc::SQL_DESC_LOCAL_TYPE_NAME | Desc::SQL_DESC_SCHEMA_NAME => {
+                Some(Desc::SQL_DESC_LOCAL_TYPE_NAME) | Some(Desc::SQL_DESC_SCHEMA_NAME) => {
                     string_col_attr(&|_| "")
                 }
-                Desc::SQL_DESC_NAME => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
-                Desc::SQL_DESC_NULLABLE => {
+                Some(Desc::SQL_DESC_NAME) => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
+                Some(Desc::SQL_DESC_NULLABLE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.nullability as Len)
                 }
-                Desc::SQL_DESC_NUM_PREC_RADIX => {
+                Some(Desc::SQL_DESC_NUM_PREC_RADIX) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len)
                 }
-                Desc::SQL_DESC_OCTET_LENGTH => {
+                Some(Desc::SQL_DESC_OCTET_LENGTH) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
                 }
-                Desc::SQL_DESC_PRECISION => {
+                Some(Desc::SQL_DESC_PRECISION) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.precision.unwrap_or(0) as Len)
                 }
-                Desc::SQL_DESC_SCALE => {
+                Some(Desc::SQL_DESC_SCALE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len)
                 }
-                Desc::SQL_DESC_SEARCHABLE => {
+                Some(Desc::SQL_DESC_SEARCHABLE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.searchable as Len)
                 }
-                Desc::SQL_DESC_TABLE_NAME => {
+                Some(Desc::SQL_DESC_TABLE_NAME) => {
                     string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref())
                 }
-                Desc::SQL_DESC_TYPE_NAME => {
+                Some(Desc::SQL_DESC_TYPE_NAME) => {
                     string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref())
                 }
-                Desc::SQL_DESC_TYPE | Desc::SQL_DESC_CONCISE_TYPE => {
+                Some(Desc::SQL_DESC_TYPE) | Some(Desc::SQL_DESC_CONCISE_TYPE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| {
                         handle_sql_type(odbc_version, x.sql_type) as Len
                     })
                 }
-                Desc::SQL_DESC_UNSIGNED => {
+                Some(Desc::SQL_DESC_UNSIGNED) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len)
                 }
-                Desc::SQL_DESC_ALLOC_TYPE => {
+                Some(Desc::SQL_DESC_ALLOC_TYPE) => {
                     numeric_col_attr(&|_| AllocType::SQL_DESC_ALLOC_AUTO as Len)
                 }
-                desc @ (Desc::SQL_DESC_OCTET_LENGTH_PTR
-                | Desc::SQL_DESC_DATETIME_INTERVAL_CODE
-                | Desc::SQL_DESC_INDICATOR_PTR
-                | Desc::SQL_DESC_DATA_PTR
-                | Desc::SQL_DESC_ARRAY_SIZE
-                | Desc::SQL_DESC_ARRAY_STATUS_PTR
-                | Desc::SQL_DESC_BIND_OFFSET_PTR
-                | Desc::SQL_DESC_BIND_TYPE
-                | Desc::SQL_DESC_DATETIME_INTERVAL_PRECISION
-                | Desc::SQL_DESC_MAXIMUM_SCALE
-                | Desc::SQL_DESC_MINIMUM_SCALE
-                | Desc::SQL_DESC_PARAMETER_TYPE
-                | Desc::SQL_DESC_ROWS_PROCESSED_PTR
-                | Desc::SQL_DESC_ROWVER) => {
+                desc @ (Some(Desc::SQL_DESC_OCTET_LENGTH_PTR)
+                | Some(Desc::SQL_DESC_DATETIME_INTERVAL_CODE)
+                | Some(Desc::SQL_DESC_INDICATOR_PTR)
+                | Some(Desc::SQL_DESC_DATA_PTR)
+                | Some(Desc::SQL_DESC_ARRAY_SIZE)
+                | Some(Desc::SQL_DESC_ARRAY_STATUS_PTR)
+                | Some(Desc::SQL_DESC_BIND_OFFSET_PTR)
+                | Some(Desc::SQL_DESC_BIND_TYPE)
+                | Some(Desc::SQL_DESC_DATETIME_INTERVAL_PRECISION)
+                | Some(Desc::SQL_DESC_MAXIMUM_SCALE)
+                | Some(Desc::SQL_DESC_MINIMUM_SCALE)
+                | Some(Desc::SQL_DESC_PARAMETER_TYPE)
+                | Some(Desc::SQL_DESC_ROWS_PROCESSED_PTR)
+                | Some(Desc::SQL_DESC_ROWVER)) => {
                     let mongo_handle = MongoHandleRef::from(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
                     add_diag_info!(
@@ -639,6 +639,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     );
                     SqlReturn::ERROR
                 }
+                None => SqlReturn::ERROR
             }
         },
         statement_handle

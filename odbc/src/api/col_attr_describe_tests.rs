@@ -51,7 +51,7 @@ mod unit {
                     SQLColAttributeW(
                         stmt_handle as *mut _,
                         0,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -122,7 +122,7 @@ mod unit {
                     SQLColAttributeW(
                         stmt_handle as *mut _,
                         0,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -249,7 +249,7 @@ mod unit {
                     SQLColAttributeW(
                         stmt_handle as *mut _,
                         0,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -369,7 +369,7 @@ mod unit {
                         SQLColAttributeW(
                             mongo_handle as *mut _,
                             col_index,
-                            desc,
+                            desc as u16,
                             char_buffer,
                             buffer_length,
                             out_length,
@@ -437,7 +437,7 @@ mod unit {
                     SQLColAttributeW(
                         mongo_handle as *mut _,
                         col_index,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -507,7 +507,7 @@ mod unit {
                     SQLColAttributeW(
                         mongo_handle as *mut _,
                         col_index,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
