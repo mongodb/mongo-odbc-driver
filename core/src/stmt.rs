@@ -3,7 +3,6 @@ use crate::{
     MongoColMetadata, MongoConnection,
 };
 use bson::Bson;
-use definitions::ULen;
 use std::fmt::Debug;
 
 pub trait MongoStatement: Debug {

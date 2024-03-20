@@ -4,7 +4,7 @@ mod unit {
             BoundColInfo, Connection, ConnectionState, Env, EnvState, MongoHandle, Statement,
             StatementState,
         },
-        map, SQLBindCol,
+        map, SQLBindCol, SQLFetch,
     };
     use bson::doc;
     use definitions::{BindType, CDataType, Len, Nullability, SmallInt, SqlReturn, ULen, WChar};
@@ -444,6 +444,218 @@ mod unit {
                     indicator
                 )
             );
+
+            // free buffer
+            let _ = Box::from_raw(buffer as *mut WChar);
+        }
+    }
+    #[test]
+    fn test_binding_arrays_when_rowset_size_evenly_divides_resultset_size() {
+        // Set up MongoHandle
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+
+        unsafe {
+            // Get Statement
+            let s = (*stmt).as_statement().unwrap();
+
+            let indicator: *mut Len = null_mut();
+
+            // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
+            let arr: [i32; 4] = [0; 4];
+            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new(arr)) as *mut _;
+
+            // In this test, we assume that SQLBindCol has already been run and added a column to bind, so
+            // I add column "1" to bound_cols.
+            *s.bound_cols.write().unwrap() = Some(map! {
+                1 => BoundColInfo {
+                    target_type: CDataType::SQL_C_SLONG as SmallInt,
+                    target_buffer: buffer,
+                    buffer_length: 4, // buffer_length is 4 because an i32 is 4 bytes; therefore, each buffer needs to be 4 bytes long.
+                    length_or_indicator: indicator,
+                },
+
+            });
+
+            // set all statement attributes to the correct values.
+            s.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
+            // row_array_size is 4 meaning sqlFetch will fetch and handle the column bindings for 4 rows at a time.
+            s.attributes.write().unwrap().row_array_size = 4;
+            s.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as usize;
+
+            // create a mongo query with data that corresponds to the bound column (i.e., column 1).
+            let mock_query = MongoQuery::new(
+                vec![
+                    doc! {"test": {"num": 10}},
+                    doc! {"test": {"num": 20}},
+                    doc! {"test": {"num": 30}},
+                    doc! {"test": {"num": 40}},
+                    doc! {"test": {"num": 50}},
+                    doc! {"test": {"num": 60}},
+                    doc! {"test": {"num": 70}},
+                    doc! {"test": {"num": 80}},
+                ],
+                vec![MongoColMetadata::new(
+                    "",
+                    "test".to_string(),
+                    "num".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                )],
+            );
+
+            // Set the mongo_statement
+            *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query));
+
+            // assert that SQLFetch is successful. We are fetching the first 4 rows in the result set.
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
+
+            // assert that the first 4 values from the result set were put in the bound buffer array correctly
+            let bound_buffer = s
+                .bound_cols
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get(&1)
+                .unwrap()
+                .target_buffer;
+            assert_eq!(10, *(bound_buffer as *mut i32));
+            assert_eq!(20, *((bound_buffer as ULen + 4) as *mut i32));
+            assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
+            assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
+
+            // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
+
+            // assert that the last 4 values from the result set were put in the bound buffer array correctly
+            let bound_buffer = s
+                .bound_cols
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get(&1)
+                .unwrap()
+                .target_buffer;
+            assert_eq!(50, *(bound_buffer as *mut i32));
+            assert_eq!(60, *((bound_buffer as ULen + 4) as *mut i32));
+            assert_eq!(70, *((bound_buffer as ULen + 8) as *mut i32));
+            assert_eq!(80, *((bound_buffer as ULen + 12) as *mut i32));
+
+            // free buffer
+            let _ = Box::from_raw(buffer as *mut WChar);
+        }
+    }
+
+    #[test]
+    fn test_binding_arrays_when_rowset_size_doesnt_evenly_divide_resultset_size() {
+        // Set up MongoHandle
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+
+        unsafe {
+            // Get Statement
+            let s = (*stmt).as_statement().unwrap();
+
+            let indicator: *mut Len = null_mut();
+
+            // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
+            let arr: [i32; 6] = [0; 6];
+            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new(arr)) as *mut _;
+
+            // In this test, we assume that SQLBindCol has already been run and added a column to bind, so
+            // I add column "1" to bound_cols.
+            *s.bound_cols.write().unwrap() = Some(map! {
+                1 => BoundColInfo {
+                    target_type: CDataType::SQL_C_SLONG as SmallInt,
+                    target_buffer: buffer,
+                    buffer_length: 4, // buffer_length is 4 because an i32 is 4 bytes; therefore, each buffer needs to be 4 bytes long.
+                    length_or_indicator: indicator,
+                },
+
+            });
+
+            // set all statement attributes to the correct values.
+            s.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
+            // row_array_size is 6 meaning sqlFetch will fetch and handle the column bindings for 6 rows at a time.
+            s.attributes.write().unwrap().row_array_size = 6;
+            s.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as usize;
+
+            // create a mongo query with data that corresponds to the bound column (i.e., column 1).
+            let mock_query = MongoQuery::new(
+                vec![
+                    doc! {"test": {"num": 10}},
+                    doc! {"test": {"num": 20}},
+                    doc! {"test": {"num": 30}},
+                    doc! {"test": {"num": 40}},
+                    doc! {"test": {"num": 50}},
+                    doc! {"test": {"num": 60}},
+                    doc! {"test": {"num": 70}},
+                    doc! {"test": {"num": 80}},
+                ],
+                vec![MongoColMetadata::new(
+                    "",
+                    "test".to_string(),
+                    "num".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                )],
+            );
+
+            // Set the mongo_statement
+            *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query));
+
+            // assert that SQLFetch is successful. We are fetching the first 6 rows in the result set.
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
+
+            // assert that the first 6 values from the result set were put in the bound buffer array correctly
+            let bound_buffer = s
+                .bound_cols
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get(&1)
+                .unwrap()
+                .target_buffer;
+            assert_eq!(10, *(bound_buffer as *mut i32));
+            assert_eq!(20, *((bound_buffer as ULen + 4) as *mut i32));
+            assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
+            assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
+            assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
+            assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
+
+            // assert that SQLFetch is successful. We are fetching the next 6 rows in the result set.
+            // However, since only 2 rows are left, only 2 rows will be fetched.
+            assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
+
+            // assert that the values from the last 2 rows of the result set were put in the bound buffer array correctly.
+            // Since we only modify the first 2 buffers in the array, the next 4 buffers remain unmodified and keep their
+            // previous values.
+            let bound_buffer = s
+                .bound_cols
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get(&1)
+                .unwrap()
+                .target_buffer;
+            assert_eq!(70, *(bound_buffer as *mut i32));
+            assert_eq!(80, *((bound_buffer as ULen + 4) as *mut i32));
+            assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
+            assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
+            assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
+            assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
 
             // free buffer
             let _ = Box::from_raw(buffer as *mut WChar);

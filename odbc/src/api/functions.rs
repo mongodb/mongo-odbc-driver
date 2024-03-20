@@ -1696,6 +1696,17 @@ pub unsafe extern "C" fn SQLGetData(
         debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+
+            // Make sure that SQLGetData only runs when dealing with rowsets of size 1.
+            if stmt.attributes.read().unwrap().row_array_size != 1 {
+                let mongo_handle = MongoHandleRef::from(statement_handle);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::Unimplemented("`SQLGetData with rowset size greater than 1`")
+                );
+                return SqlReturn::ERROR;
+            }
 
             match FromPrimitive::from_i16(target_type) {
                 Some(valid_type) => sql_get_data_helper(
