@@ -101,7 +101,7 @@ mod integration {
     ///     - SQLCancel
     #[test]
     fn test_cancel() {
-        let (env_handle, conn_handle, stmt_handle) = setup_connect_and_alloc_stmt();
+        let (_, _, stmt_handle) = setup_connect_and_alloc_stmt();
 
         unsafe {
             let timeout: i32 = 15;

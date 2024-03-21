@@ -265,6 +265,7 @@ pub fn disconnect_and_close_handles(dbc: HDbc, stmt: HStmt) {
     }
 }
 
+#[allow(dead_code)]
 /// Helper function for disconnecting and freeing HDbc and HEnv handles.
 /// Note that this function explicitly does NOT free the statement handle
 /// since it is intended for use with tests that invoke SQLFreeStmt.
@@ -355,6 +356,7 @@ pub fn fetch_and_get_data(
     }
 }
 
+#[allow(dead_code)]
 /// Helper function for checking result set metadata. It optionally takes a list
 /// of attributes to get. If none is provided, the following defaults will be
 /// checked. It also optionally invokes SQLDescribeColW.
@@ -425,6 +427,7 @@ pub fn get_column_attributes(
     }
 }
 
+#[allow(dead_code)]
 /// Helper function for invoking SQLDescribeColW. None of the outputs are tested.
 /// This helper just assures SqlReturn::SUCCESS is returned.
 unsafe fn assert_sql_describe_col(stmt: HStmt, col_num: u16) {
