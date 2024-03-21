@@ -265,6 +265,37 @@ pub fn disconnect_and_close_handles(dbc: HDbc, stmt: HStmt) {
     }
 }
 
+/// Helper function for disconnecting and freeing HDbc and HEnv handles.
+/// Note that this function explicitly does NOT free the statement handle
+/// since it is intended for use with tests that invoke SQLFreeStmt.
+///  - SQLDisconnect(dbc)
+///  - SQLFreeHandle(dbc)
+///  - SQLFreeHandle(env)
+pub fn disconnect_and_free_dbc_and_env_handles(env_handle: HEnv, conn_handle: HDbc) {
+    unsafe {
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLDisconnect(conn_handle),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, conn_handle as Handle)
+        );
+
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(HandleType::SQL_HANDLE_DBC, conn_handle as Handle),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, conn_handle as Handle)
+        );
+
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(HandleType::SQL_HANDLE_ENV, env_handle as Handle),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
+        );
+    }
+}
+
 #[allow(dead_code)]
 ///  Helper function for fetching and getting data
 ///  - Until SQLFetch returns SQL_NO_DATA
