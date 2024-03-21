@@ -1,34 +1,33 @@
 hostProvider: local
 hostRegion: local
 environment: local
-
-showInternalErrors: false
-
-diagnostics:
-  bindAddr: ":8080"
-  metrics:
-    enabled: true
-    endpoint: /metrics
-  pprof:
-    enabled: true
-    endpoint: /debug/pprof
-
 agent:
-  bindAddr: "localhost:8027"
-
+  bindAddr: localhost:8027
+  batchFlushPeriod: 1s
 backend:
-  bindAddr: "localhost:8029"
-
-frontend:
-  bindAddr: ":27017"
-  cursor:
-    metadata:
-      memory: true
-  resultCache:
-    metadata:
-      memory: true
-
+  authTokens: {}
+  bindAddr: localhost:8029
 execution:
+  agentOnly: true
+  maxDocumentSize: 16MiB
+  outToSchemaMemoryLimit: 5MiB
+  computeModeMongod:
+    port: ${COMPUTE_MODE_MONGOD_PORT:=47017}
+    exponentialRetry:
+      maxAttempts: 1
+  remote:
+    branchingDepth: 2
+    branchingFactor: 2
+    maxRequestPendingDuration: 15m
+    maxSerialNum: 1
+    maxSerialSize: 500MiB
+    rpcChunkSize: 10B
+    uris:
+      local: localhost:8027
+      aws:
+        us-east-1: localhost:8027
+        us-west-1: localhost:8027
+        eu-west-1: localhost:8027
   currentOp:
     mongodb:
       uri: mongodb://localhost:28017
@@ -36,26 +35,20 @@ execution:
       collection: queries
   queryHistory:
     memory: true
-  computeModeMongod:
-    port: ${COMPUTE_MODE_MONGOD_PORT:=47017}
-    exponentialRetry:
-      maxAttempts: 1
   mongoClient:
     cache:
       enabled: true
-  remote:
-    uris:
-      local: "localhost:8027"
-    branchingFactor: 2
-    maxSerialNum: 1
-    rpcChunkSize: 10B
-
+diagnostics:
+  bindAddr: :8080
+  logging:
+    level: debug
+  metrics:
+    enabled: true
+    endpoint: /metrics
+  pprof:
+    enabled: true
+    endpoint: /debug/pprof
 dls:
-  frontend:
-    catalog:
-      disabled: true
-    expirationRules:
-      disabled: true
   agent:
     catalog:
       disabled: true
@@ -71,7 +64,39 @@ dls:
         disabled: true
     expirationRules:
       disabled: true
-
+  frontend:
+    catalog:
+      disabled: true
+    expirationRules:
+      disabled: true
+events:
+  memQueueSize: 10000
+  shutdownTimeout: 10m
+frontend:
+  bindAddr: localhost:27017
+  cursor:
+    prunePeriod: 1h
+    heartbeatInterval: 10s
+    maxCursorFileSize: 100MiB
+    maxCursorFiles: 100
+    maxWaitTimeForAvailableSpace: 15s
+    metadata:
+      memory: true
+  defaultHostname: localhost
+  proxyProtocolTimeout: 5s
+  resultCache:
+    metadata:
+      memory: true
+    expireAfter: 720h
+    heartbeatPeriod: 10s
+    heartbeatTimeout: 1m
+    pollPeriod: 1s
+    pruneDelay: 1m
+    prunePeriod: 1h
+  tenants:
+    refreshInterval: 5m
+    updateThreshold: 30s
+  tcpKeepAlivePeriod: 30s
 query:
   killOp:
     server:
@@ -79,28 +104,29 @@ query:
         uri: "mongodb://localhost:28017"
         database: adf
         collection: killop
-
+      refreshInterval: 10s
 tenant:
-  config:
-    server:
-      inline:
-        file: "./testdata/config/inline_local/tenant-config.json"
-  storageconfig:
-    server:
-      inline:
-        file: "./testdata/config/inline_local/tenant-config.json"
   schema:
     server:
       memory:
-        - database: "test"
-          collection: "quux"
-          schemaFile: "./testdata/tenantschema/quux.json"
-        - database: "test"
-          collection: "bar"
-          schemaFile: "./testdata/tenantschema/bar.json"
-        - database: "test2"
-          collection: "cities"
-          schemaFile: "./testdata/tenantschema/cities.json"
+        - database: test
+          collection: quux
+          schemaFile: ./testdata/tenantschema/quux.json
+        - database: test
+          collection: bar
+          schemaFile: ./testdata/tenantschema/bar.json
+        - database: test2
+          collection: cities
+          schemaFile: ./testdata/tenantschema/cities.json
     client:
-      uri: "localhost:8029"
-      token: "frontend-auth-token"
+      uri: localhost:8029
+      token: frontend-auth-token
+  config:
+    server:
+      inline:
+        file: ./testdata/config/inline_local/tenant-config.json
+  storageconfig:
+    server:
+      inline:
+        file: ./testdata/config/inline_local/tenant-config.json
+

@@ -133,6 +133,7 @@ fn get_set_ptr(
 
 mod unit {
     use super::*;
+    use std::ptr::null_mut;
     // test_supported_attributes tests SQLGetStmtAttr and SQLSetStmtAttr with every
     // supported statement attribute value.
     #[test]
@@ -249,9 +250,18 @@ mod unit {
             StatementAttribute::SQL_ATTR_ROW_BIND_TYPE,
             map! {
                 BindType::SQL_BIND_BY_COLUMN as i32 => SqlReturn::SUCCESS,
-                10 => SqlReturn::SUCCESS // Any number besides 0
+                10 => SqlReturn::ERROR // Any number besides 0
             },
             BindType::SQL_BIND_BY_COLUMN as usize,
+        );
+        get_set_stmt_attr(
+            stmt_handle,
+            StatementAttribute::SQL_ATTR_ROW_BIND_OFFSET_PTR,
+            map! {
+                null_mut::<ULen>() as i32 => SqlReturn::SUCCESS,
+                10 => SqlReturn::ERROR // Any number besides 0
+            },
+            null_mut::<ULen>() as usize,
         );
         get_set_stmt_attr(
             stmt_handle,
@@ -279,7 +289,8 @@ mod unit {
             stmt_handle,
             StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE,
             map! {
-                10 => SqlReturn::SUCCESS // Any number
+                1 => SqlReturn::SUCCESS,
+                10 => SqlReturn::ERROR // Any number besides 1
             },
             1,
         );
@@ -384,13 +395,6 @@ mod unit {
         get_set_ptr(
             stmt_handle,
             StatementAttribute::SQL_ATTR_PARAMS_PROCESSED_PTR,
-            true,
-            false,
-            size_of::<*mut ULen>(),
-        );
-        get_set_ptr(
-            stmt_handle,
-            StatementAttribute::SQL_ATTR_ROW_BIND_OFFSET_PTR,
             true,
             false,
             size_of::<*mut ULen>(),
