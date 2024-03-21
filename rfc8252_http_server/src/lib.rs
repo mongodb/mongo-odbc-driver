@@ -3,31 +3,12 @@ use actix_web::{
     Result,
 };
 use askama::Template;
-use lazy_static::lazy_static;
-use serde_json::Value;
 use std::{sync::mpsc, thread, time};
 
 // template page keys are:
 // 'OIDCErrorPage'
 // 'OIDCAcceptedPage'
 // 'OIDCNotFoundPage'
-
-lazy_static! {
-    static ref CURRENT_DIR: String = std::env::current_dir()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_string();
-    static ref RESOURCES_DIR: String = format!("{}/rfc8252_http_server/resources", *CURRENT_DIR);
-    static ref OIDC_SERVER_HTML_TEMPLATE: Value = serde_json::from_str(
-        &std::fs::read_to_string(format!(
-            "{}/oidc_server_html_templates.json",
-            *RESOURCES_DIR
-        ))
-        .unwrap()
-    )
-    .unwrap();
-}
 
 #[derive(Template)]
 #[template(path = "OIDCAcceptedTemplate.html")]
@@ -39,7 +20,24 @@ struct OIDCAcceptedPage<'a> {
     error_description: &'a str,
 }
 
-async fn index(_req: HttpRequest) -> Result<HttpResponse> {
+#[derive(Template)]
+#[template(path = "OIDCErrorTemplate.html")]
+struct OIDCErrorPage<'a> {
+    product_docs_link: &'a str,
+    product_docs_name: &'a str,
+    error: &'a str,
+    error_uri: &'a str,
+    error_description: &'a str,
+}
+
+#[derive(Template)]
+#[template(path = "OIDCNotFoundTemplate.html")]
+struct OIDCNotFoundPage<'a> {
+    product_docs_link: &'a str,
+    product_docs_name: &'a str,
+}
+
+async fn accepted(_req: HttpRequest) -> Result<HttpResponse> {
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body(
@@ -55,6 +53,35 @@ async fn index(_req: HttpRequest) -> Result<HttpResponse> {
         ))
 }
 
+async fn error(_req: HttpRequest) -> Result<HttpResponse> {
+    Ok(HttpResponse::build(http::StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body(
+            OIDCErrorPage {
+                product_docs_link: "https://www.example.com",
+                product_docs_name: "Example",
+                error: "error",
+                error_uri: "error_uri",
+                error_description: "error_description",
+            }
+            .render()
+            .unwrap(),
+        ))
+}
+
+async fn not_found(_req: HttpRequest) -> Result<HttpResponse> {
+    Ok(HttpResponse::build(http::StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body(
+            OIDCNotFoundPage {
+                product_docs_link: "https://www.example.com",
+                product_docs_name: "Example",
+            }
+            .render()
+            .unwrap(),
+        ))
+}
+
 async fn run_app(sender: mpsc::Sender<ServerHandle>) -> std::io::Result<()> {
     println!("starting HTTP server at http://localhost:9080");
 
@@ -63,8 +90,9 @@ async fn run_app(sender: mpsc::Sender<ServerHandle>) -> std::io::Result<()> {
         App::new()
             // enable logger
             .wrap(middleware::Logger::default())
-            .service(web::resource("/index.html").to(|| async { "Hello world!" }))
-            .service(web::resource("/").to(index))
+            .service(web::resource("/accepted").to(accepted))
+            .service(web::resource("/error").to(accepted))
+            .default_service(web::route().to(not_found))
     })
     .bind(("127.0.0.1", 9080))?
     .workers(2)

@@ -2264,8 +2264,6 @@ version = "0.0.0"
 dependencies = [
  "actix-web",
  "askama",
- "lazy_static",
- "serde_json",
  "tokio",
 ]
 
