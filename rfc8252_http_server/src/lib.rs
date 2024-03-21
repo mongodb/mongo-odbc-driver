@@ -91,7 +91,7 @@ async fn run_app(sender: mpsc::Sender<ServerHandle>) -> std::io::Result<()> {
             // enable logger
             .wrap(middleware::Logger::default())
             .service(web::resource("/accepted").to(accepted))
-            .service(web::resource("/error").to(accepted))
+            .service(web::resource("/error").to(error))
             .default_service(web::route().to(not_found))
     })
     .bind(("127.0.0.1", 9080))?
