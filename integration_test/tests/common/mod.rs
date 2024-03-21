@@ -2,9 +2,10 @@ use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use definitions::{
     AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt,
-    Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDisconnect,
-    SQLDriverConnectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLMoreResults,
-    SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
+    Handle, HandleType, Len, Nullability, Pointer, SQLAllocHandle, SQLColAttributeW,
+    SQLDescribeColW, SQLDisconnect, SQLDriverConnectW, SQLFetch, SQLFreeHandle, SQLGetData,
+    SQLGetDiagRecW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlDataType,
+    SqlReturn, USmallInt, SQL_NTS,
 };
 use std::ptr::null_mut;
 use std::{env, slice};
@@ -323,10 +324,12 @@ pub fn fetch_and_get_data(
     }
 }
 
-#[allow(dead_code)]
-///  Helper function for checking resultset metadata
+/// Helper function for checking result set metadata. It optionally takes a list
+/// of attributes to get. If none is provided, the following defaults will be
+/// checked. It also optionally invokes SQLDescribeColW.
 ///  - SQLNumResultCols()
 ///  - For columns 1 to {numCols}
+///      - (Optional) SQLDescribeColW
 ///      - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
 ///      - SQLColAttributeW(SQL_DESC_UNSIGNED)
 ///      - SQLColAttributeW(SQL_COLUMN_NAME)
@@ -334,7 +337,12 @@ pub fn fetch_and_get_data(
 ///      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
 ///      - SQLColAttributeW(SQL_COLUMN_LENGTH)
 ///      - SQLColAttributeW(SQL_COLUMN_SCALE)
-pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
+pub fn get_column_attributes(
+    stmt: Handle,
+    expected_col_count: SmallInt,
+    attrs: Option<Vec<Desc>>,
+    call_describe_col: bool,
+) {
     let str_len_ptr = &mut 0;
     let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
     unsafe {
@@ -348,17 +356,25 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
         assert_eq!(expected_col_count, *column_count_ptr);
 
         let numeric_attribute_ptr = &mut 0;
-        const FIELD_IDS: [Desc; 7] = [
-            Desc::SQL_DESC_CONCISE_TYPE,
-            Desc::SQL_DESC_UNSIGNED,
-            Desc::SQL_DESC_NAME,
-            Desc::SQL_DESC_NULLABLE,
-            Desc::SQL_DESC_TYPE_NAME,
-            Desc::SQL_DESC_LENGTH,
-            Desc::SQL_DESC_SCALE,
-        ];
+        let field_ids = if let Some(attrs) = attrs {
+            attrs
+        } else {
+            const FIELD_IDS: [Desc; 7] = [
+                Desc::SQL_DESC_CONCISE_TYPE,
+                Desc::SQL_DESC_UNSIGNED,
+                Desc::SQL_DESC_NAME,
+                Desc::SQL_DESC_NULLABLE,
+                Desc::SQL_DESC_TYPE_NAME,
+                Desc::SQL_DESC_LENGTH,
+                Desc::SQL_DESC_SCALE,
+            ];
+            FIELD_IDS.into_iter().collect()
+        };
         for col_num in 0..*column_count_ptr {
-            FIELD_IDS.iter().for_each(|field_type| {
+            if call_describe_col {
+                assert_sql_describe_col(stmt as HStmt, (col_num + 1) as u16)
+            }
+            field_ids.iter().for_each(|field_type| {
                 assert_eq!(
                     SqlReturn::SUCCESS,
                     SQLColAttributeW(
@@ -376,4 +392,30 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
             });
         }
     }
+}
+
+/// Helper function for invoking SQLDescribeColW. None of the outputs are tested.
+/// This helper just assures SqlReturn::SUCCESS is returned.
+unsafe fn assert_sql_describe_col(stmt: HStmt, col_num: u16) {
+    let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+    let name_buffer_length: SmallInt = 20;
+    let out_name_length = &mut 10;
+    let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
+    let col_size = &mut 42usize;
+    let decimal_digits = &mut 42i16;
+    let mut nullable = Nullability::SQL_NO_NULLS;
+    assert_eq!(
+        SqlReturn::SUCCESS,
+        SQLDescribeColW(
+            stmt as HStmt,
+            col_num,
+            name_buffer as *mut _,
+            name_buffer_length,
+            out_name_length,
+            &mut data_type,
+            col_size,
+            decimal_digits,
+            &mut nullable
+        )
+    )
 }
