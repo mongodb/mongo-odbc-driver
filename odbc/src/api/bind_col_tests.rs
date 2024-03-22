@@ -16,7 +16,6 @@ mod unit {
         mock_query::MongoQuery,
         MongoColMetadata, MongoStatement, TypeMode,
     };
-    use std::mem::size_of;
     use std::ptr::null_mut;
 
     #[test]

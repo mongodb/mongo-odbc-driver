@@ -489,7 +489,7 @@ impl IntoCData for Bson {
         }
     }
 }
-
+#[allow(clippy::too_many_arguments)]
 pub unsafe fn format_binary(
     mongo_handle: &mut MongoHandle,
     col_num: USmallInt,
@@ -670,7 +670,7 @@ pub unsafe fn format_date(
         }
     }
 }
-
+#[allow(clippy::too_many_arguments)]
 pub unsafe fn format_cached_data(
     mongo_handle: &mut MongoHandle,
     cached_data: CachedData,
@@ -747,7 +747,7 @@ pub unsafe fn format_cached_data(
         }
     }
 }
-
+#[allow(clippy::too_many_arguments)]
 pub unsafe fn format_bson_data(
     mongo_handle: &mut MongoHandle,
     col_num: USmallInt,
