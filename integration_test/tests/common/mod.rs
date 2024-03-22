@@ -93,7 +93,7 @@ pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
     let actual_native_error = &mut 0;
     unsafe {
         let _ = SQLGetDiagRecW(
-            handle_type,
+            handle_type as i16,
             handle as *mut _,
             1,
             actual_sql_state,
@@ -132,7 +132,7 @@ pub fn allocate_env() -> Result<HEnv> {
 
     unsafe {
         match SQLAllocHandle(
-            HandleType::SQL_HANDLE_ENV,
+            HandleType::SQL_HANDLE_ENV as i16,
             null_mut(),
             &mut env as *mut Handle,
         ) {
@@ -141,7 +141,7 @@ pub fn allocate_env() -> Result<HEnv> {
         }
         match SQLSetEnvAttr(
             env as HEnv,
-            EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+            EnvironmentAttribute::SQL_ATTR_ODBC_VERSION as i32,
             AttrOdbcVersion::SQL_OV_ODBC3.into(),
             0,
         ) {
@@ -174,7 +174,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
     let mut dbc: Handle = null_mut();
     unsafe {
         match SQLAllocHandle(
-            HandleType::SQL_HANDLE_DBC,
+            HandleType::SQL_HANDLE_DBC as i16,
             env_handle as *mut _,
             &mut dbc as *mut Handle,
         ) {
@@ -192,7 +192,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             null_mut(),
             0,
             str_len_ptr,
-            DriverConnectOption::SQL_DRIVER_NO_PROMPT,
+            DriverConnectOption::SQL_DRIVER_NO_PROMPT as u16,
         ) {
             // Originally, this would return SUCCESS_WITH_INFO since we pass null_mut() as
             // out_connection_string and 0 as buffer size. Now, this should always return SUCCESS.
@@ -223,7 +223,7 @@ pub fn allocate_statement(dbc: HDbc) -> Result<HStmt> {
     let mut stmt: Handle = null_mut();
     unsafe {
         match SQLAllocHandle(
-            HandleType::SQL_HANDLE_STMT,
+            HandleType::SQL_HANDLE_STMT as i16,
             dbc as *mut _,
             &mut stmt as *mut Handle,
         ) {
@@ -243,7 +243,7 @@ pub fn disconnect_and_close_handles(dbc: HDbc, stmt: HStmt) {
     unsafe {
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLFreeHandle(HandleType::SQL_HANDLE_STMT, stmt as Handle),
+            SQLFreeHandle(HandleType::SQL_HANDLE_STMT as i16, stmt as Handle),
             "{}",
             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
         );
@@ -257,7 +257,7 @@ pub fn disconnect_and_close_handles(dbc: HDbc, stmt: HStmt) {
 
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLFreeHandle(HandleType::SQL_HANDLE_DBC, dbc as Handle),
+            SQLFreeHandle(HandleType::SQL_HANDLE_DBC as i16, dbc as Handle),
             "{}",
             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, dbc as Handle)
         );
@@ -297,7 +297,7 @@ pub fn fetch_and_get_data(
                             SQLGetData(
                                 stmt as HStmt,
                                 (col_num + 1) as USmallInt,
-                                target_types[col_num],
+                                target_types[col_num] as i16,
                                 output_buffer as Pointer,
                                 (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
                                 str_len_ptr

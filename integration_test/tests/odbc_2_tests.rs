@@ -22,7 +22,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::SQL_HANDLE_ENV,
+                    HandleType::SQL_HANDLE_ENV as i16,
                     null_mut(),
                     &mut env as *mut Handle
                 )
@@ -32,7 +32,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetEnvAttr(
                     env as HEnv,
-                    EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+                    EnvironmentAttribute::SQL_ATTR_ODBC_VERSION as i32,
                     2 as *mut _,
                     0,
                 )
@@ -127,7 +127,7 @@ mod integration {
             // check that when requesting all types, both odbc 2 and 3 timestamp types are returned
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_UNKNOWN_TYPE)
+                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_UNKNOWN_TYPE as i16)
             );
             for datatype in EXPECTED_DATATYPES {
                 assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as HStmt));
@@ -136,7 +136,7 @@ mod integration {
                     SQLGetData(
                         stmt_handle as HStmt,
                         2,
-                        CDataType::SQL_C_SLONG,
+                        CDataType::SQL_C_SLONG as i16,
                         output_buffer as Pointer,
                         (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
                         null_mut()
@@ -150,7 +150,7 @@ mod integration {
             // test that SQLGetTypeInfo works properly with odbc 2.x date type
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_TIMESTAMP)
+                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_TIMESTAMP as i16)
             );
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as HStmt));
             assert_eq!(
@@ -158,7 +158,7 @@ mod integration {
                 SQLGetData(
                     stmt_handle as HStmt,
                     2,
-                    CDataType::SQL_C_SLONG,
+                    CDataType::SQL_C_SLONG as i16,
                     output_buffer as Pointer,
                     (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
                     null_mut()
@@ -169,7 +169,7 @@ mod integration {
             // test that SQLGetTypeInfo returns an error for odbc 3.x date type
             assert_eq!(
                 SqlReturn::ERROR,
-                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_TIMESTAMP)
+                SQLGetTypeInfo(stmt_handle as HStmt, SqlDataType::SQL_TIMESTAMP as i16)
             );
             disconnect_and_close_handles(conn_handle, stmt_handle);
         }

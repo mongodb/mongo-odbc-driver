@@ -183,7 +183,7 @@ pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
             SqlReturn::SUCCESS,
             definitions::SQLSetEnvAttr(
                 env,
-                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION as i32,
                 2 as *mut _,
                 0,
             )
@@ -331,7 +331,10 @@ fn run_function_test(
             unsafe {
                 let data_type: definitions::SqlDataType =
                     std::mem::transmute(function[1].as_i64().unwrap() as i16);
-                Ok(definitions::SQLGetTypeInfo(statement as HStmt, data_type))
+                Ok(definitions::SQLGetTypeInfo(
+                    statement as HStmt,
+                    data_type as i16,
+                ))
             }
         }
         "sqltables" => {
@@ -730,7 +733,7 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
             stmt as *mut _,
             // Result set columns start at 1, the column input parameter is 0-indexed
             column + 1,
-            data_type,
+            data_type as i16,
             buffer as *mut _,
             BUFFER_LENGTH as isize,
             out_len_or_ind,

@@ -337,7 +337,7 @@ extern "system" {
         out_connection_string: *mut Char,
         buffer_length: SmallInt,
         string_length_2: *mut SmallInt,
-        DriverCompletion: DriverConnectOption,
+        DriverCompletion: USmallInt,
     ) -> SqlReturn;
 
     /// An alternative to `SQLConnect`. It supports data sources that require more connection

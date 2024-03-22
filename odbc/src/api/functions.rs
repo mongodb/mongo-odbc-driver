@@ -1094,7 +1094,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
     out_connection_string: *mut WideChar,
     buffer_length: SmallInt,
     string_length_2: *mut SmallInt,
-    driver_completion: DriverConnectOption,
+    driver_completion: USmallInt,
 ) -> SqlReturn {
     panic_safe_exec_clear_diagnostics!(
         debug,
@@ -1106,14 +1106,22 @@ pub unsafe extern "C" fn SQLDriverConnectW(
                 format!("Connecting using {DRIVER_NAME} {} ", *DRIVER_ODBC_VERSION),
                 function_name!()
             );
+
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
-            if driver_completion != DriverConnectOption::SQL_DRIVER_NO_PROMPT {
-                add_diag_info!(
-                    conn_handle,
-                    ODBCError::UnsupportedDriverConnectOption(format!("{driver_completion:?}"))
-                );
-                return SqlReturn::ERROR;
+            match FromPrimitive::from_i32(driver_completion as i32) {
+                None
+                | Some(DriverConnectOption::SQL_DRIVER_COMPLETE)
+                | Some(DriverConnectOption::SQL_DRIVER_COMPLETE_REQUIRED)
+                | Some(DriverConnectOption::SQL_DRIVER_PROMPT) => {
+                    add_diag_info!(
+                        conn_handle,
+                        ODBCError::UnsupportedDriverConnectOption(format!("{driver_completion:?}"))
+                    );
+                    return SqlReturn::ERROR;
+                }
+                Some(DriverConnectOption::SQL_DRIVER_NO_PROMPT) => {}
             }
+
             let conn = must_be_valid!((*conn_handle).as_connection());
             let odbc_uri_string =
                 input_text_to_string_w(in_connection_string, string_length_1 as usize);

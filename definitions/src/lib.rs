@@ -124,7 +124,7 @@ pub enum HandleType {
 
 /// Options for `SQLDriverConnect`
 #[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 #[repr(u16)]
 pub enum DriverConnectOption {
     SQL_DRIVER_NO_PROMPT = 0,
