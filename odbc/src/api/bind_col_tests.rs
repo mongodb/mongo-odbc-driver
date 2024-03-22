@@ -487,10 +487,19 @@ mod unit {
             assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
             assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
 
-            assert_eq!(4, *num_indicator);
-            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
+            let indicator = s
+                .bound_cols
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get(&1)
+                .unwrap()
+                .length_or_indicator;
+            assert_eq!(4, *indicator);
+            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
 
             // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
@@ -510,10 +519,19 @@ mod unit {
             assert_eq!(70, *((bound_buffer as ULen + 8) as *mut i32));
             assert_eq!(80, *((bound_buffer as ULen + 12) as *mut i32));
 
-            assert_eq!(4, *num_indicator);
-            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
+            let indicator = s
+                .bound_cols
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get(&1)
+                .unwrap()
+                .length_or_indicator;
+            assert_eq!(4, *indicator);
+            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
 
             // free buffers
             let _ = Box::from_raw(num_buffer as *mut WChar);
@@ -612,16 +630,25 @@ mod unit {
             assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
             assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
 
-            assert_eq!(4, *num_indicator);
-            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 32) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 40) as *mut Len));
+            let indicator = s
+                .bound_cols
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get(&1)
+                .unwrap()
+                .length_or_indicator;
+            assert_eq!(4, *indicator);
+            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 32) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 40) as *mut Len));
 
             // assert that SQLFetch is successful. We are fetching the next 6 rows in the result set.
             // However, since only 2 rows are left, only 2 rows will be fetched.
-            assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
             // assert that the values from the last 2 rows of the result set were put in the bound buffer array correctly.
             // Since we only modify the first 2 buffers in the array, the next 4 buffers remain unmodified and keep their
@@ -642,12 +669,21 @@ mod unit {
             assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
             assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
 
-            assert_eq!(4, *num_indicator);
-            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 32) as *mut Len));
-            assert_eq!(4, *((num_indicator as ULen + 40) as *mut Len));
+            let indicator = s
+                .bound_cols
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get(&1)
+                .unwrap()
+                .length_or_indicator;
+            assert_eq!(4, *indicator);
+            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 32) as *mut Len));
+            assert_eq!(4, *((indicator as ULen + 40) as *mut Len));
 
             // free buffers
             let _ = Box::from_raw(num_buffer as *mut WChar);

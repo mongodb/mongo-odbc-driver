@@ -1278,6 +1278,9 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     let mut success_with_info_encountered = false;
     let mut global_warnings_opt: Vec<Error> = Vec::new();
 
+    // needed for rowsets with size > 1
+    let mut fetched_at_least_one_row = false;
+
     let rowset_size = stmt.attributes.read().unwrap().row_array_size;
 
     let has_rows_fetched_buffer = !stmt.attributes.read().unwrap().rows_fetched_ptr.is_null();
@@ -1301,7 +1304,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
         };
 
         let row_status_buffer: *mut SmallInt =
-            if !stmt.attributes.read().unwrap().rows_fetched_ptr.is_null() {
+            if !stmt.attributes.read().unwrap().row_status_ptr.is_null() {
                 (stmt.attributes.read().unwrap().row_status_ptr as ULen
                     + (index * size_of::<u16>())) as *mut SmallInt
             } else {
@@ -1329,12 +1332,15 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                     }
                 }
 
-                // The contents of the rows fetched buffer are undefined if SQLFetch or SQLFetchScroll does not
-                // return SQL_SUCCESS or SQL_SUCCESS_WITH_INFO, except when SQL_NO_DATA is returned,
-                // in which case the value in the rows fetched buffer is set to 0.
+                if fetched_at_least_one_row {
+                    break;
+                }
 
+                // if there is no data from the get go, rows_fetched_pointer will already be 0, so there is no need to set it here.
                 return SqlReturn::NO_DATA;
             }
+
+            fetched_at_least_one_row = true;
 
             if !row_status_buffer.is_null() {
                 *row_status_buffer = if warnings_opt.is_empty() {
