@@ -16,6 +16,7 @@ mod unit {
         mock_query::MongoQuery,
         MongoColMetadata, MongoStatement, TypeMode,
     };
+    use std::mem::size_of;
     use std::ptr::null_mut;
 
     #[test]
@@ -412,20 +413,18 @@ mod unit {
             // Get Statement
             let s = (*stmt).as_statement().unwrap();
 
-            let indicator: *mut Len = null_mut();
-
             // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
-            let arr: [i32; 4] = [0; 4];
-            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new(arr)) as *mut _;
+            let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0i32; 4])) as *mut _;
+            let num_indicator: *mut Len = Box::into_raw(Box::new([0isize; 4])) as *mut Len;
 
             // In this test, we assume that SQLBindCol has already been run and added a column to bind, so
             // I add column "1" to bound_cols.
             *s.bound_cols.write().unwrap() = Some(map! {
                 1 => BoundColInfo {
                     target_type: CDataType::SQL_C_SLONG as SmallInt,
-                    target_buffer: buffer,
+                    target_buffer: num_buffer,
                     buffer_length: 4, // buffer_length is 4 because an i32 is 4 bytes; therefore, each buffer needs to be 4 bytes long.
-                    length_or_indicator: indicator,
+                    length_or_indicator: num_indicator,
                 },
 
             });
@@ -439,23 +438,33 @@ mod unit {
             // create a mongo query with data that corresponds to the bound column (i.e., column 1).
             let mock_query = MongoQuery::new(
                 vec![
-                    doc! {"test": {"num": 10}},
-                    doc! {"test": {"num": 20}},
-                    doc! {"test": {"num": 30}},
-                    doc! {"test": {"num": 40}},
-                    doc! {"test": {"num": 50}},
-                    doc! {"test": {"num": 60}},
-                    doc! {"test": {"num": 70}},
-                    doc! {"test": {"num": 80}},
+                    doc! {"test": {"num": 10, "word": "aaaa"}},
+                    doc! {"test": {"num": 20, "word": "bbbb"}},
+                    doc! {"test": {"num": 30, "word": "cccc"}},
+                    doc! {"test": {"num": 40, "word": "dddd"}},
+                    doc! {"test": {"num": 50, "word": "eeee"}},
+                    doc! {"test": {"num": 60, "word": "ffff"}},
+                    doc! {"test": {"num": 70, "word": "gggg"}},
+                    doc! {"test": {"num": 80, "word": "hhhh"}},
                 ],
-                vec![MongoColMetadata::new(
-                    "",
-                    "test".to_string(),
-                    "num".to_string(),
-                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::SQL_NO_NULLS,
-                    TypeMode::Simple,
-                )],
+                vec![
+                    MongoColMetadata::new(
+                        "",
+                        "test".to_string(),
+                        "num".to_string(),
+                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                        Nullability::SQL_NO_NULLS,
+                        TypeMode::Simple,
+                    ),
+                    MongoColMetadata::new(
+                        "",
+                        "test".to_string(),
+                        "word".to_string(),
+                        Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+                        Nullability::SQL_NO_NULLS,
+                        TypeMode::Simple,
+                    ),
+                ],
             );
 
             // Set the mongo_statement
@@ -479,6 +488,11 @@ mod unit {
             assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
             assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
 
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
+
             // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
@@ -497,8 +511,14 @@ mod unit {
             assert_eq!(70, *((bound_buffer as ULen + 8) as *mut i32));
             assert_eq!(80, *((bound_buffer as ULen + 12) as *mut i32));
 
-            // free buffer
-            let _ = Box::from_raw(buffer as *mut WChar);
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
+
+            // free buffers
+            let _ = Box::from_raw(num_buffer as *mut WChar);
+            let _ = Box::from_raw(num_indicator as *mut WChar);
         }
     }
 
@@ -515,20 +535,19 @@ mod unit {
             // Get Statement
             let s = (*stmt).as_statement().unwrap();
 
-            let indicator: *mut Len = null_mut();
+            let num_indicator: *mut Len = Box::into_raw(Box::new([0isize; 6])) as *mut Len;
 
             // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
-            let arr: [i32; 6] = [0; 6];
-            let buffer: *mut std::ffi::c_void = Box::into_raw(Box::new(arr)) as *mut _;
+            let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0i32; 6])) as *mut _;
 
             // In this test, we assume that SQLBindCol has already been run and added a column to bind, so
             // I add column "1" to bound_cols.
             *s.bound_cols.write().unwrap() = Some(map! {
                 1 => BoundColInfo {
                     target_type: CDataType::SQL_C_SLONG as SmallInt,
-                    target_buffer: buffer,
+                    target_buffer: num_buffer,
                     buffer_length: 4, // buffer_length is 4 because an i32 is 4 bytes; therefore, each buffer needs to be 4 bytes long.
-                    length_or_indicator: indicator,
+                    length_or_indicator: num_indicator,
                 },
 
             });
@@ -542,23 +561,33 @@ mod unit {
             // create a mongo query with data that corresponds to the bound column (i.e., column 1).
             let mock_query = MongoQuery::new(
                 vec![
-                    doc! {"test": {"num": 10}},
-                    doc! {"test": {"num": 20}},
-                    doc! {"test": {"num": 30}},
-                    doc! {"test": {"num": 40}},
-                    doc! {"test": {"num": 50}},
-                    doc! {"test": {"num": 60}},
-                    doc! {"test": {"num": 70}},
-                    doc! {"test": {"num": 80}},
+                    doc! {"test": {"num": 10, "word": "aaaa"}},
+                    doc! {"test": {"num": 20, "word": "bbbb"}},
+                    doc! {"test": {"num": 30, "word": "cccc"}},
+                    doc! {"test": {"num": 40, "word": "dddd"}},
+                    doc! {"test": {"num": 50, "word": "eeee"}},
+                    doc! {"test": {"num": 60, "word": "ffff"}},
+                    doc! {"test": {"num": 70, "word": "gggg"}},
+                    doc! {"test": {"num": 80, "word": "hhhh"}},
                 ],
-                vec![MongoColMetadata::new(
-                    "",
-                    "test".to_string(),
-                    "num".to_string(),
-                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::SQL_NO_NULLS,
-                    TypeMode::Simple,
-                )],
+                vec![
+                    MongoColMetadata::new(
+                        "",
+                        "test".to_string(),
+                        "num".to_string(),
+                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                        Nullability::SQL_NO_NULLS,
+                        TypeMode::Simple,
+                    ),
+                    MongoColMetadata::new(
+                        "",
+                        "test".to_string(),
+                        "word".to_string(),
+                        Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+                        Nullability::SQL_NO_NULLS,
+                        TypeMode::Simple,
+                    ),
+                ],
             );
 
             // Set the mongo_statement
@@ -584,6 +613,13 @@ mod unit {
             assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
             assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
 
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 32) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 40) as *mut Len));
+
             // assert that SQLFetch is successful. We are fetching the next 6 rows in the result set.
             // However, since only 2 rows are left, only 2 rows will be fetched.
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
@@ -607,8 +643,16 @@ mod unit {
             assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
             assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
 
-            // free buffer
-            let _ = Box::from_raw(buffer as *mut WChar);
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 32) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 40) as *mut Len));
+
+            // free buffers
+            let _ = Box::from_raw(num_buffer as *mut WChar);
+            let _ = Box::from_raw(num_indicator as *mut WChar);
         }
     }
 }

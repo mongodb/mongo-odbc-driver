@@ -393,15 +393,15 @@ pub unsafe extern "C" fn SQLBindCol(
                 return SqlReturn::ERROR;
             }
 
-            if stmt.bound_cols.read().unwrap().is_none() {
-                *stmt.bound_cols.write().unwrap() = Some(HashMap::new());
-            }
-
             // make sure that target_type is valid.
             if <CDataType as FromPrimitive>::from_i16(target_type).is_none() {
                 let mongo_handle = MongoHandleRef::from(hstmt);
                 add_diag_info!(mongo_handle, ODBCError::InvalidTargetType(target_type));
                 return SqlReturn::ERROR;
+            }
+
+            if stmt.bound_cols.read().unwrap().is_none() {
+                *stmt.bound_cols.write().unwrap() = Some(HashMap::new());
             }
 
             // Unbind column if target_value is null
@@ -1280,6 +1280,14 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
     let rowset_size = stmt.attributes.read().unwrap().row_array_size;
 
+    let has_rows_fetched_buffer = !stmt.attributes.read().unwrap().rows_fetched_ptr.is_null();
+
+    if has_rows_fetched_buffer {
+        *stmt.attributes.write().unwrap().rows_fetched_ptr = 0;
+    }
+
+    let mut row_error_count = 0;
+
     // Use index to figure out which buffer in the array of buffers to use.
     for index in 0..rowset_size {
         let move_to_next_result = {
@@ -1292,6 +1300,14 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             }
         };
 
+        let row_status_buffer: *mut SmallInt =
+            if !stmt.attributes.read().unwrap().rows_fetched_ptr.is_null() {
+                (stmt.attributes.read().unwrap().row_status_ptr as ULen
+                    + (index * size_of::<u16>())) as *mut SmallInt
+            } else {
+                null_mut()
+            };
+
         if let Ok((has_next, mut warnings_opt)) = move_to_next_result {
             warnings_opt.iter().for_each(|warning| {
                 add_diag_with_function!(
@@ -1300,9 +1316,36 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                     function_name.to_string()
                 );
             });
+
             if !has_next {
                 // No more rows
+                if !row_status_buffer.is_null() {
+                    for row_status_index in index..rowset_size {
+                        let row_status_buffer = (stmt.attributes.read().unwrap().row_status_ptr
+                            as ULen
+                            + (row_status_index * size_of::<u16>()))
+                            as *mut SmallInt;
+                        *row_status_buffer = definitions::SQL_ROW_NOROW;
+                    }
+                }
+
+                // The contents of the rows fetched buffer are undefined if SQLFetch or SQLFetchScroll does not
+                // return SQL_SUCCESS or SQL_SUCCESS_WITH_INFO, except when SQL_NO_DATA is returned,
+                // in which case the value in the rows fetched buffer is set to 0.
+
                 return SqlReturn::NO_DATA;
+            }
+
+            if !row_status_buffer.is_null() {
+                *row_status_buffer = if warnings_opt.is_empty() {
+                    definitions::SQL_ROW_SUCCESS
+                } else {
+                    definitions::SQL_ROW_SUCCESS_WITH_INFO
+                };
+            }
+
+            if has_rows_fetched_buffer {
+                *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
             }
 
             *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
@@ -1311,11 +1354,16 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             if let Some(bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
                 let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
 
+                let mut error_encountered = false;
                 for (col, bound_col_info) in bound_cols.iter() {
                     // Set target_buffer to the correct buffer in the array of buffers
                     let target_buffer = (bound_col_info.target_buffer as ULen
                         + (index * (bound_col_info.buffer_length as ULen)))
                         as Pointer;
+
+                    let len_ind_buffer = (bound_col_info.length_or_indicator as ULen
+                        + (index * size_of::<isize>()))
+                        as *mut Len;
 
                     let sql_return = sql_get_data_helper(
                         mongo_handle_for_sql_get_data_helper,
@@ -1323,16 +1371,29 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                         FromPrimitive::from_i16(bound_col_info.target_type).unwrap(),
                         target_buffer,
                         bound_col_info.buffer_length,
-                        bound_col_info.length_or_indicator,
+                        len_ind_buffer,
+                        function_name,
                     );
 
                     match sql_return {
-                        SqlReturn::ERROR => return SqlReturn::ERROR,
+                        SqlReturn::ERROR => {
+                            if !row_status_buffer.is_null() {
+                                *row_status_buffer = definitions::SQL_ROW_ERROR;
+                            }
+                            error_encountered = true;
+                        }
                         SqlReturn::SUCCESS_WITH_INFO => {
+                            if !row_status_buffer.is_null() {
+                                *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
+                            }
                             success_with_info_encountered = true;
                         }
                         _ => {}
                     }
+                }
+
+                if error_encountered {
+                    row_error_count += 1;
                 }
             }
             global_warnings_opt.append(&mut warnings_opt);
@@ -1343,13 +1404,26 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 move_to_next_result.as_ref().unwrap_err().clone(),
                 function_name.to_string()
             );
+
             // An error happened
-            return SqlReturn::ERROR;
+            if !row_status_buffer.is_null() {
+                *row_status_buffer = definitions::SQL_ROW_ERROR;
+            }
+
+            if has_rows_fetched_buffer {
+                *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
+            }
+
+            row_error_count += 1;
         }
     }
 
-    if !global_warnings_opt.is_empty() || success_with_info_encountered {
-        // No warnings and there is a next row
+    if row_error_count == rowset_size {
+        SqlReturn::ERROR
+    } else if !global_warnings_opt.is_empty()
+        || success_with_info_encountered
+        || row_error_count > 0
+    {
         SqlReturn::SUCCESS_WITH_INFO
     } else {
         SqlReturn::SUCCESS
@@ -1716,6 +1790,7 @@ pub unsafe extern "C" fn SQLGetData(
                     target_value_ptr,
                     buffer_length,
                     str_len_or_ind_ptr,
+                    "SQLGetData",
                 ),
                 None => {
                     add_diag_info!(mongo_handle, ODBCError::InvalidTargetType(target_type));
@@ -1734,6 +1809,7 @@ unsafe fn sql_get_data_helper(
     target_value_ptr: Pointer,
     buffer_length: Len,
     str_len_or_ind_ptr: *mut Len,
+    function_name: &str,
 ) -> SqlReturn {
     let mut error = None;
     let mut ret = Bson::Null;
@@ -1756,6 +1832,7 @@ unsafe fn sql_get_data_helper(
                 target_value_ptr,
                 buffer_length,
                 str_len_or_ind_ptr,
+                function_name,
             );
         }
         let stmt = (*mongo_handle).as_statement().unwrap();
@@ -1777,7 +1854,7 @@ unsafe fn sql_get_data_helper(
         }
     }
     if let Some(e) = error {
-        add_diag_with_function!(mongo_handle, e, "SQLGetData");
+        add_diag_with_function!(mongo_handle, e, function_name);
         return SqlReturn::ERROR;
     }
     crate::api::data::format_bson_data(
@@ -1788,6 +1865,7 @@ unsafe fn sql_get_data_helper(
         buffer_length,
         str_len_or_ind_ptr,
         ret,
+        function_name,
     )
 }
 
