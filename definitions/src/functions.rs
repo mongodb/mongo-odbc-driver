@@ -606,7 +606,7 @@ extern "system" {
         length_ptr: *mut Len,
         precision_ptr: *mut SmallInt,
         scale_ptr: *mut SmallInt,
-        nullable_ptr: *mut Nullability,
+        nullable_ptr: *mut SmallInt,
     ) -> SqlReturn;
 
     /// Returns a list of columns and associated privileges for the specified table.
@@ -811,7 +811,7 @@ extern "system" {
         data_type: *mut SqlDataType,
         col_size: *mut ULen,
         decimal_digits: *mut SmallInt,
-        nullable: *mut Nullability,
+        nullable: *mut SmallInt,
     ) -> SqlReturn;
 
     /// Returns the result descriptor for one column in the result set — column name, type, column

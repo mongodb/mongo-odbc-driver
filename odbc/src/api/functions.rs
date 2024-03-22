@@ -18,9 +18,9 @@ use definitions::{
     AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType,
     CDataType, Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType,
     Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption,
-    HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer,
-    RetCode, RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
-    USmallInt, UseBookmarks,
+    HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Pointer, RetCode,
+    RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt,
+    UseBookmarks,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -949,7 +949,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
     data_type: *mut SqlDataType,
     col_size: *mut ULen,
     decimal_digits: *mut SmallInt,
-    nullable: *mut Nullability,
+    nullable: *mut SmallInt,
 ) -> SqlReturn {
     panic_safe_exec_clear_diagnostics!(
         debug,
@@ -968,7 +968,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
                     *data_type = handle_sql_type(odbc_version, col_metadata.sql_type);
                     *col_size = col_metadata.display_size.unwrap_or(0) as usize;
                     *decimal_digits = col_metadata.scale.unwrap_or(0) as i16;
-                    *nullable = col_metadata.nullability;
+                    *nullable = col_metadata.nullability as i16;
                     return i16_len::set_output_wstring(
                         &col_metadata.label,
                         col_name,
@@ -1827,7 +1827,7 @@ pub unsafe extern "C" fn SQLGetDescRecW(
     _length_ptr: *mut Len,
     _precision_ptr: *mut SmallInt,
     _scale_ptr: *mut SmallInt,
-    _nullable_ptr: *mut Nullability,
+    _nullable_ptr: *mut SmallInt,
 ) -> SqlReturn {
     unsupported_function!(_descriptor_handle)
 }
@@ -3738,7 +3738,7 @@ pub unsafe extern "C" fn SQLSpecialColumnsW(
     _table_name: *const WideChar,
     _table_name_length: SmallInt,
     _scope: SmallInt,
-    _nullable: Nullability,
+    _nullable: SmallInt,
 ) -> SqlReturn {
     unimpl!(statement_handle);
 }

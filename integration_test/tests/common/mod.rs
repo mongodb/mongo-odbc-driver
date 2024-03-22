@@ -364,7 +364,7 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
                     SQLColAttributeW(
                         stmt as HStmt,
                         (col_num + 1) as u16,
-                        *field_type,
+                        *field_type as u16,
                         output_buffer as Pointer,
                         BUFFER_LENGTH,
                         str_len_ptr,

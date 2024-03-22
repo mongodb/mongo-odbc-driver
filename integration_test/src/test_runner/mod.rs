@@ -694,7 +694,7 @@ fn get_column_attribute(
         match definitions::SQLColAttributeW(
             stmt as *mut _,
             column as USmallInt,
-            field_identifier,
+            field_identifier as u16,
             character_attrib_ptr,
             BUFFER_LENGTH as SmallInt,
             string_length_ptr,
