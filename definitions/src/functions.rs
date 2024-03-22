@@ -502,7 +502,7 @@ extern "system" {
     pub fn SQLColAttributeW(
         statement_handle: HStmt,
         column_number: USmallInt,
-        field_identifier: Desc,
+        field_identifier: USmallInt,
         character_attribute_ptr: Pointer,
         buffer_length: SmallInt,
         string_length_ptr: *mut SmallInt,

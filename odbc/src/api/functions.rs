@@ -668,7 +668,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Some(Desc::SQL_DESC_FIXED_PREC_SCALE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.fixed_prec_scale as Len)
                 }
-                Some(Desc::SQL_DESC_LABEL) => string_col_attr(&|x: &MongoColMetadata| x.label.as_ref()),
+                Some(Desc::SQL_DESC_LABEL) => {
+                    string_col_attr(&|x: &MongoColMetadata| x.label.as_ref())
+                }
                 Some(Desc::SQL_DESC_LENGTH) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len)
                 }
@@ -681,7 +683,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 Some(Desc::SQL_DESC_LOCAL_TYPE_NAME) | Some(Desc::SQL_DESC_SCHEMA_NAME) => {
                     string_col_attr(&|_| "")
                 }
-                Some(Desc::SQL_DESC_NAME) => string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref()),
+                Some(Desc::SQL_DESC_NAME) => {
+                    string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref())
+                }
                 Some(Desc::SQL_DESC_NULLABLE) => {
                     numeric_col_attr(&|x: &MongoColMetadata| x.nullability as Len)
                 }
@@ -739,7 +743,15 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     );
                     SqlReturn::ERROR
                 }
-                None => SqlReturn::ERROR
+                None => {
+                    let mongo_handle = MongoHandleRef::from(statement_handle);
+                    let _ = must_be_valid!((*mongo_handle).as_statement());
+                    add_diag_info!(
+                        mongo_handle,
+                        ODBCError::UnsupportedFieldDescriptor(format!("{field_identifier}"))
+                    );
+                    SqlReturn::ERROR
+                }
             }
         },
         statement_handle

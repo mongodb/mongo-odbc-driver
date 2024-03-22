@@ -1,4 +1,5 @@
 use crate::{
+    errors::ODBCError,
     handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW, SQLDescribeColW,
 };
@@ -526,6 +527,52 @@ mod unit {
         unsafe {
             let _ = Box::from_raw(conn as *mut WChar);
             let _ = Box::from_raw(env as *mut WChar);
+        }
+    }
+
+    // verify that given a column attribute that doesn't match any enum value, we return an informative error
+    #[test]
+    fn test_invalid_col_attribute() {
+        unsafe {
+            let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+                EnvState::ConnectionAllocated,
+            ))));
+            let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+                env as *mut _,
+                ConnectionState::Connected,
+            ))));
+
+            let mut stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+            stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
+            let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
+
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLColAttributeW(
+                    mongo_handle as *mut _,
+                    0,
+                    4, // not a valid field attribute
+                    std::ptr::null_mut(),
+                    0,
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                ),
+            );
+
+            let errors = (*mongo_handle)
+                .as_statement()
+                .unwrap()
+                .errors
+                .read()
+                .unwrap();
+            assert_eq!(errors.len(), 1);
+            let actual_err = errors.first().unwrap();
+            match actual_err {
+                ODBCError::UnsupportedFieldDescriptor(desc) => {
+                    assert_eq!(*desc, 4.to_string())
+                }
+                _ => panic!("unexpected err: {actual_err:?}"),
+            }
         }
     }
 
