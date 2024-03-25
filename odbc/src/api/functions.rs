@@ -636,113 +636,115 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     .push(ODBCError::InvalidDescriptorIndex(column_number));
                 SqlReturn::ERROR
             };
-            match FromPrimitive::from_i32(field_identifier as i32) {
-                Some(Desc::SQL_DESC_AUTO_UNIQUE_VALUE) => {
-                    *numeric_attribute_ptr = SqlBool::SQL_FALSE as Len;
-                    SqlReturn::SUCCESS
-                }
-                Some(Desc::SQL_DESC_UNNAMED) | Some(Desc::SQL_DESC_UPDATABLE) => {
-                    *numeric_attribute_ptr = 0 as Len;
-                    SqlReturn::SUCCESS
-                }
-                Some(Desc::SQL_DESC_COUNT) => {
-                    *numeric_attribute_ptr =
-                        mongo_stmt.as_ref().unwrap().get_resultset_metadata().len() as Len;
-                    SqlReturn::SUCCESS
-                }
-                Some(Desc::SQL_DESC_CASE_SENSITIVE) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.case_sensitive as Len)
-                }
-                Some(Desc::SQL_DESC_BASE_COLUMN_NAME) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref())
-                }
-                Some(Desc::SQL_DESC_BASE_TABLE_NAME) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.base_table_name.as_ref())
-                }
-                Some(Desc::SQL_DESC_CATALOG_NAME) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.catalog_name.as_ref())
-                }
-                Some(Desc::SQL_DESC_DISPLAY_SIZE) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.display_size.unwrap_or(0) as Len)
-                }
-                Some(Desc::SQL_DESC_FIXED_PREC_SCALE) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.fixed_prec_scale as Len)
-                }
-                Some(Desc::SQL_DESC_LABEL) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.label.as_ref())
-                }
-                Some(Desc::SQL_DESC_LENGTH) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len)
-                }
-                Some(Desc::SQL_DESC_LITERAL_PREFIX) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.literal_prefix.unwrap_or(""))
-                }
-                Some(Desc::SQL_DESC_LITERAL_SUFFIX) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.literal_suffix.unwrap_or(""))
-                }
-                Some(Desc::SQL_DESC_LOCAL_TYPE_NAME) | Some(Desc::SQL_DESC_SCHEMA_NAME) => {
-                    string_col_attr(&|_| "")
-                }
-                Some(Desc::SQL_DESC_NAME) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref())
-                }
-                Some(Desc::SQL_DESC_NULLABLE) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.nullability as Len)
-                }
-                Some(Desc::SQL_DESC_NUM_PREC_RADIX) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len)
-                }
-                Some(Desc::SQL_DESC_OCTET_LENGTH) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
-                }
-                Some(Desc::SQL_DESC_PRECISION) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.precision.unwrap_or(0) as Len)
-                }
-                Some(Desc::SQL_DESC_SCALE) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len)
-                }
-                Some(Desc::SQL_DESC_SEARCHABLE) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.searchable as Len)
-                }
-                Some(Desc::SQL_DESC_TABLE_NAME) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref())
-                }
-                Some(Desc::SQL_DESC_TYPE_NAME) => {
-                    string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref())
-                }
-                Some(Desc::SQL_DESC_TYPE) | Some(Desc::SQL_DESC_CONCISE_TYPE) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| {
-                        handle_sql_type(odbc_version, x.sql_type) as Len
-                    })
-                }
-                Some(Desc::SQL_DESC_UNSIGNED) => {
-                    numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len)
-                }
-                Some(Desc::SQL_DESC_ALLOC_TYPE) => {
-                    numeric_col_attr(&|_| AllocType::SQL_DESC_ALLOC_AUTO as Len)
-                }
-                desc @ (Some(Desc::SQL_DESC_OCTET_LENGTH_PTR)
-                | Some(Desc::SQL_DESC_DATETIME_INTERVAL_CODE)
-                | Some(Desc::SQL_DESC_INDICATOR_PTR)
-                | Some(Desc::SQL_DESC_DATA_PTR)
-                | Some(Desc::SQL_DESC_ARRAY_SIZE)
-                | Some(Desc::SQL_DESC_ARRAY_STATUS_PTR)
-                | Some(Desc::SQL_DESC_BIND_OFFSET_PTR)
-                | Some(Desc::SQL_DESC_BIND_TYPE)
-                | Some(Desc::SQL_DESC_DATETIME_INTERVAL_PRECISION)
-                | Some(Desc::SQL_DESC_MAXIMUM_SCALE)
-                | Some(Desc::SQL_DESC_MINIMUM_SCALE)
-                | Some(Desc::SQL_DESC_PARAMETER_TYPE)
-                | Some(Desc::SQL_DESC_ROWS_PROCESSED_PTR)
-                | Some(Desc::SQL_DESC_ROWVER)) => {
-                    let mongo_handle = MongoHandleRef::from(statement_handle);
-                    let _ = must_be_valid!((*mongo_handle).as_statement());
-                    add_diag_info!(
-                        mongo_handle,
-                        ODBCError::UnsupportedFieldDescriptor(format!("{desc:?}"))
-                    );
-                    SqlReturn::ERROR
-                }
+            match FromPrimitive::from_u16(field_identifier) {
+                Some(desc) => match desc {
+                    Desc::SQL_DESC_AUTO_UNIQUE_VALUE => {
+                        *numeric_attribute_ptr = SqlBool::SQL_FALSE as Len;
+                        SqlReturn::SUCCESS
+                    }
+                    Desc::SQL_DESC_UNNAMED | Desc::SQL_DESC_UPDATABLE => {
+                        *numeric_attribute_ptr = 0 as Len;
+                        SqlReturn::SUCCESS
+                    }
+                    Desc::SQL_DESC_COUNT => {
+                        *numeric_attribute_ptr =
+                            mongo_stmt.as_ref().unwrap().get_resultset_metadata().len() as Len;
+                        SqlReturn::SUCCESS
+                    }
+                    Desc::SQL_DESC_CASE_SENSITIVE => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.case_sensitive as Len)
+                    }
+                    Desc::SQL_DESC_BASE_COLUMN_NAME => {
+                        string_col_attr(&|x: &MongoColMetadata| x.base_col_name.as_ref())
+                    }
+                    Desc::SQL_DESC_BASE_TABLE_NAME => {
+                        string_col_attr(&|x: &MongoColMetadata| x.base_table_name.as_ref())
+                    }
+                    Desc::SQL_DESC_CATALOG_NAME => {
+                        string_col_attr(&|x: &MongoColMetadata| x.catalog_name.as_ref())
+                    }
+                    Desc::SQL_DESC_DISPLAY_SIZE => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.display_size.unwrap_or(0) as Len)
+                    }
+                    Desc::SQL_DESC_FIXED_PREC_SCALE => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.fixed_prec_scale as Len)
+                    }
+                    Desc::SQL_DESC_LABEL => {
+                        string_col_attr(&|x: &MongoColMetadata| x.label.as_ref())
+                    }
+                    Desc::SQL_DESC_LENGTH => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len)
+                    }
+                    Desc::SQL_DESC_LITERAL_PREFIX => {
+                        string_col_attr(&|x: &MongoColMetadata| x.literal_prefix.unwrap_or(""))
+                    }
+                    Desc::SQL_DESC_LITERAL_SUFFIX => {
+                        string_col_attr(&|x: &MongoColMetadata| x.literal_suffix.unwrap_or(""))
+                    }
+                    Desc::SQL_DESC_LOCAL_TYPE_NAME | Desc::SQL_DESC_SCHEMA_NAME => {
+                        string_col_attr(&|_| "")
+                    }
+                    Desc::SQL_DESC_NAME => {
+                        string_col_attr(&|x: &MongoColMetadata| x.col_name.as_ref())
+                    }
+                    Desc::SQL_DESC_NULLABLE => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.nullability as Len)
+                    }
+                    Desc::SQL_DESC_NUM_PREC_RADIX => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len)
+                    }
+                    Desc::SQL_DESC_OCTET_LENGTH => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
+                    }
+                    Desc::SQL_DESC_PRECISION => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.precision.unwrap_or(0) as Len)
+                    }
+                    Desc::SQL_DESC_SCALE => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len)
+                    }
+                    Desc::SQL_DESC_SEARCHABLE => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.searchable as Len)
+                    }
+                    Desc::SQL_DESC_TABLE_NAME => {
+                        string_col_attr(&|x: &MongoColMetadata| x.table_name.as_ref())
+                    }
+                    Desc::SQL_DESC_TYPE_NAME => {
+                        string_col_attr(&|x: &MongoColMetadata| x.type_name.as_ref())
+                    }
+                    Desc::SQL_DESC_TYPE | Desc::SQL_DESC_CONCISE_TYPE => {
+                        numeric_col_attr(&|x: &MongoColMetadata| {
+                            handle_sql_type(odbc_version, x.sql_type) as Len
+                        })
+                    }
+                    Desc::SQL_DESC_UNSIGNED => {
+                        numeric_col_attr(&|x: &MongoColMetadata| x.is_unsigned as Len)
+                    }
+                    Desc::SQL_DESC_ALLOC_TYPE => {
+                        numeric_col_attr(&|_| AllocType::SQL_DESC_ALLOC_AUTO as Len)
+                    }
+                    Desc::SQL_DESC_OCTET_LENGTH_PTR
+                    | Desc::SQL_DESC_DATETIME_INTERVAL_CODE
+                    | Desc::SQL_DESC_INDICATOR_PTR
+                    | Desc::SQL_DESC_DATA_PTR
+                    | Desc::SQL_DESC_ARRAY_SIZE
+                    | Desc::SQL_DESC_ARRAY_STATUS_PTR
+                    | Desc::SQL_DESC_BIND_OFFSET_PTR
+                    | Desc::SQL_DESC_BIND_TYPE
+                    | Desc::SQL_DESC_DATETIME_INTERVAL_PRECISION
+                    | Desc::SQL_DESC_MAXIMUM_SCALE
+                    | Desc::SQL_DESC_MINIMUM_SCALE
+                    | Desc::SQL_DESC_PARAMETER_TYPE
+                    | Desc::SQL_DESC_ROWS_PROCESSED_PTR
+                    | Desc::SQL_DESC_ROWVER => {
+                        let mongo_handle = MongoHandleRef::from(statement_handle);
+                        let _ = must_be_valid!((*mongo_handle).as_statement());
+                        add_diag_info!(
+                            mongo_handle,
+                            ODBCError::UnsupportedFieldDescriptor(format!("{desc:?}"))
+                        );
+                        SqlReturn::ERROR
+                    }
+                },
                 None => {
                     let mongo_handle = MongoHandleRef::from(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
@@ -1108,18 +1110,28 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             );
 
             // SQL_NO_PROMPT is the only option supported for DriverCompletion
-            match FromPrimitive::from_i32(driver_completion as i32) {
-                None
-                | Some(DriverConnectOption::SQL_DRIVER_COMPLETE)
-                | Some(DriverConnectOption::SQL_DRIVER_COMPLETE_REQUIRED)
-                | Some(DriverConnectOption::SQL_DRIVER_PROMPT) => {
+            match FromPrimitive::from_u16(driver_completion) {
+                Some(driver_completion) => match driver_completion {
+                    DriverConnectOption::SQL_DRIVER_COMPLETE
+                    | DriverConnectOption::SQL_DRIVER_COMPLETE_REQUIRED
+                    | DriverConnectOption::SQL_DRIVER_PROMPT => {
+                        add_diag_info!(
+                            conn_handle,
+                            ODBCError::UnsupportedDriverConnectOption(format!(
+                                "{driver_completion:?}"
+                            ))
+                        );
+                        return SqlReturn::ERROR;
+                    }
+                    DriverConnectOption::SQL_DRIVER_NO_PROMPT => {}
+                },
+                None => {
                     add_diag_info!(
                         conn_handle,
                         ODBCError::UnsupportedDriverConnectOption(format!("{driver_completion:?}"))
                     );
                     return SqlReturn::ERROR;
                 }
-                Some(DriverConnectOption::SQL_DRIVER_NO_PROMPT) => {}
             }
 
             let conn = must_be_valid!((*conn_handle).as_connection());
