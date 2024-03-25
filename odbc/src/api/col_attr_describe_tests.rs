@@ -573,6 +573,9 @@ mod unit {
                 }
                 _ => panic!("unexpected err: {actual_err:?}"),
             }
+
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
         }
     }
 

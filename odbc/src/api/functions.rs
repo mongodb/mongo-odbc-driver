@@ -690,9 +690,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     Desc::SQL_DESC_NULLABLE => {
                         numeric_col_attr(&|x: &MongoColMetadata| x.nullability as Len)
                     }
-                    Desc::SQL_DESC_NUM_PREC_RADIX => {
-                        numeric_col_attr(&|x: &MongoColMetadata| x.num_prec_radix.unwrap_or(0) as Len)
-                    }
+                    Desc::SQL_DESC_NUM_PREC_RADIX => numeric_col_attr(&|x: &MongoColMetadata| {
+                        x.num_prec_radix.unwrap_or(0) as Len
+                    }),
                     Desc::SQL_DESC_OCTET_LENGTH => {
                         numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
                     }
