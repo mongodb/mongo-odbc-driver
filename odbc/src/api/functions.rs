@@ -1275,7 +1275,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     let mongo_handle = MongoHandleRef::from(statement_handle);
     let stmt = must_be_valid!(mongo_handle.as_statement());
 
-    let mut success_with_info_encountered = false;
+    let mut success_with_info_encountered_during_bind_cols = false;
     let mut global_warnings_opt: Vec<Error> = Vec::new();
 
     // needed for rowsets with size > 1
@@ -1336,7 +1336,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                     break;
                 }
 
-                // if there is no data from the get go, rows_fetched_pointer will already be 0, so there is no need to set it here.
+                // if there is no data from the get go, the rows_fetched_pointer will already be 0, so there is no need to set it here.
                 return SqlReturn::NO_DATA;
             }
 
@@ -1383,16 +1383,10 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
                     match sql_return {
                         SqlReturn::ERROR => {
-                            if !row_status_buffer.is_null() {
-                                *row_status_buffer = definitions::SQL_ROW_ERROR;
-                            }
                             error_encountered = true;
                         }
                         SqlReturn::SUCCESS_WITH_INFO => {
-                            if !row_status_buffer.is_null() {
-                                *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
-                            }
-                            success_with_info_encountered = true;
+                            success_with_info_encountered_during_bind_cols = true;
                         }
                         _ => {}
                     }
@@ -1400,6 +1394,14 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
                 if error_encountered {
                     row_error_count += 1;
+
+                    if !row_status_buffer.is_null() {
+                        *row_status_buffer = definitions::SQL_ROW_ERROR;
+                    }
+                } else if success_with_info_encountered_during_bind_cols
+                    && !row_status_buffer.is_null()
+                {
+                    *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
                 }
             }
             global_warnings_opt.append(&mut warnings_opt);
@@ -1427,7 +1429,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     if row_error_count == rowset_size {
         SqlReturn::ERROR
     } else if !global_warnings_opt.is_empty()
-        || success_with_info_encountered
+        || success_with_info_encountered_during_bind_cols
         || row_error_count > 0
     {
         SqlReturn::SUCCESS_WITH_INFO
