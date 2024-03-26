@@ -364,12 +364,6 @@ if [ $ARG = $START ]; then
         fi
         cd $MONGOHOUSE_DIR
 
-        # SQL-1976: Update ADF config to work with changes to remove defaults
-        ADF_Version=ad72851
-        echo "checking out mongohouse: $ADF_Version"
-        git checkout $ADF_Version
-
-
         export GOPRIVATE=github.com/10gen
         # make sure mod vendor is cleaned up
         $GO mod vendor
