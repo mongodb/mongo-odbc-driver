@@ -51,7 +51,7 @@ mod integration {
             );
 
             // Retrieve result set metadata
-            get_column_attributes(stmt as Handle, 2, None, false);
+            get_column_attributes(stmt as Handle, 2);
 
             disconnect_and_close_handles(dbc, stmt);
         }
@@ -74,7 +74,7 @@ mod integration {
             );
 
             // Retrieve result set metadata
-            get_column_attributes(stmt as Handle, 2, None, false);
+            get_column_attributes(stmt as Handle, 2);
 
             assert_eq!(SqlReturn::ERROR, SQLFetch(stmt as HStmt),);
 
@@ -102,7 +102,7 @@ mod integration {
             );
 
             // Retrieve result set metadata
-            get_column_attributes(stmt as Handle, 2, None, false);
+            get_column_attributes(stmt as Handle, 2);
 
             // Executing the prepared statement.
             // The $sql pipeline is now executed and the result set cursor.

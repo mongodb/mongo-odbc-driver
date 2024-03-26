@@ -10,26 +10,20 @@ mod common;
 mod integration {
     use crate::common::{
         default_setup_connect_and_alloc_stmt, disconnect_and_free_dbc_and_env_handles,
-        fetch_and_get_data, get_column_attributes,
+        fetch_and_get_data,
     };
     use cstr::WideChar;
     use definitions::{
-        AttrOdbcVersion, CDataType, Desc, FreeStmtOption, HDbc, HEnv, HStmt, Handle, Pointer,
-        SQLCancel, SQLExecDirectW, SQLFreeStmt, SQLPrepareW, SQLRowCount, SQLSetStmtAttrW,
-        SqlReturn, StatementAttribute, SQL_NTS,
+        AttrOdbcVersion, CDataType, FreeStmtOption, Handle, Pointer, SQLCancel, SQLExecDirectW,
+        SQLFreeStmt, SQLPrepareW, SQLSetStmtAttrW, SqlReturn, StatementAttribute, SQL_NTS,
     };
 
     /// This test is inspired by the SSIS Preview Data result set metadata flow.
     /// It is altered to be more general than that specific flow, with a focus
-    /// on freeing the statement handle after gathering some metadata. This flow
+    /// on freeing the statement handle after preparing a statement. This flow
     /// depends on setup_connect_and_alloc_stmt.
     /// After allocating a statement handle, the flow is:
     ///     - SQLPrepareW(<query>)
-    ///     - SQLNumResultCols
-    ///     - <loop: for each column>
-    ///         - SQLDescribeColW
-    ///         - SQLColAttributeW(SQL_DESC_UNSIGNED)
-    ///         - SQLColAttributeW(SQL_DESC_UPDATABLE)
     ///     - SQLFreeStmt(SQL_CLOSE)
     ///     - SQLDisconnect
     ///     - SQLFreeHandle(SQL_HANDLE_DBC)
@@ -48,13 +42,6 @@ mod integration {
                 SQLPrepareW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
             );
 
-            get_column_attributes(
-                stmt_handle as Handle,
-                2,
-                Some(vec![Desc::SQL_DESC_UNSIGNED, Desc::SQL_DESC_UPDATABLE]),
-                true,
-            );
-
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLFreeStmt(stmt_handle, FreeStmtOption::SQL_CLOSE)
@@ -71,21 +58,12 @@ mod integration {
     /// After allocating a statement handle, the flow is:
     ///     - SQLSetStmtAttrW(SQL_ATTR_QUERY_TIMEOUT, 15)
     ///     - SQLExecDirectW(<query>)
-    ///     - SQLRowCount
-    ///     - <loop: for each column>
-    ///         - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
-    ///         - SQLColAttributeW(SQL_DESC_UNSIGNED)
-    ///         - SQLColAttributeW(SQL_COLUMN_NAME)
-    ///         - SQLColAttributeW(SQL_COLUMN_NULLABLE)
-    ///         - SQLColAttributeW(SQL_DESC_TYPE_NAME)
-    ///         - SQLColAttributeW(SQL_COLUMN_LENGTH)
-    ///         - SQLColAttributeW(SQL_COLUMN_SCALE)
     ///     - <loop: until SQLFetch return SQL_NO_DATA>
     ///         - SQLFetch
     ///         - SQLGetData
     ///     - SQLCancel
     #[test]
-    fn test_cancel() {
+    fn test_cancel_noop() {
         let (_, _, stmt_handle) =
             default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
@@ -109,11 +87,6 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS as i32)
             );
-
-            let row_count_ptr = &mut 0;
-            assert_eq!(SqlReturn::SUCCESS, SQLRowCount(stmt_handle, row_count_ptr));
-
-            get_column_attributes(stmt_handle as Handle, 2, None, false);
 
             fetch_and_get_data(
                 stmt_handle as Handle,

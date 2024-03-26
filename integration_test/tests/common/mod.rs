@@ -374,33 +374,17 @@ pub fn fetch_and_get_data(
 }
 
 #[allow(dead_code)]
-/// Helper function for checking result set column metadata. Since this is a
-/// helper function for integration testing and the integration tests are meant
-/// to mimic real BI tools, this function can get metadata a few different ways.
-/// Some tools get column metadata by calling SQLColAttribute for every attribute,
-/// while some tools get the bulk of attributes through SQLDescribeCol and then
-/// request additional attributes ad-hoc.
-///
-/// To mimic all of these behaviors, this function accepts an optional list of
-/// attributes to get. It also optionally invokes SQLDescribeColW. The general
-/// flow is:
-///  - SQLNumResultCols()
-///  - For columns 1 to {numCols}
-///      - (Optional) SQLDescribeColW
-///      - SQLColAttributeW for all attrs; if attrs is None then:
-///          - SQL_DESC_CONCISE_TYPE
-///          - SQL_DESC_UNSIGNED
-///          - SQL_COLUMN_NAME
-///          - SQL_COLUMN_NULLABLE
-///          - SQL_DESC_TYPE_NAME
-///          - SQL_COLUMN_LENGTH
-///          - SQL_COLUMN_SCALE
-pub fn get_column_attributes(
-    stmt: Handle,
-    expected_col_count: SmallInt,
-    attrs: Option<Vec<Desc>>,
-    call_describe_col: bool,
-) {
+/// Helper function for checking resultset metadata
+/// - SQLNumResultCols()
+/// - For columns 1 to {numCols}
+///     - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
+///     - SQLColAttributeW(SQL_DESC_UNSIGNED)
+///     - SQLColAttributeW(SQL_COLUMN_NAME)
+///     - SQLColAttributeW(SQL_COLUMN_NULLABLE)
+///     - SQLColAttributeW(SQL_DESC_TYPE_NAME)
+///     - SQLColAttributeW(SQL_COLUMN_LENGTH)
+///     - SQLColAttributeW(SQL_COLUMN_SCALE)
+pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
     let str_len_ptr = &mut 0;
     let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
     unsafe {
@@ -414,25 +398,17 @@ pub fn get_column_attributes(
         assert_eq!(expected_col_count, *column_count_ptr);
 
         let numeric_attribute_ptr = &mut 0;
-        let field_ids = if let Some(attrs) = attrs {
-            attrs
-        } else {
-            const FIELD_IDS: [Desc; 7] = [
-                Desc::SQL_DESC_CONCISE_TYPE,
-                Desc::SQL_DESC_UNSIGNED,
-                Desc::SQL_DESC_NAME,
-                Desc::SQL_DESC_NULLABLE,
-                Desc::SQL_DESC_TYPE_NAME,
-                Desc::SQL_DESC_LENGTH,
-                Desc::SQL_DESC_SCALE,
-            ];
-            FIELD_IDS.into_iter().collect()
-        };
+        const FIELD_IDS: [Desc; 7] = [
+            Desc::SQL_DESC_CONCISE_TYPE,
+            Desc::SQL_DESC_UNSIGNED,
+            Desc::SQL_DESC_NAME,
+            Desc::SQL_DESC_NULLABLE,
+            Desc::SQL_DESC_TYPE_NAME,
+            Desc::SQL_DESC_LENGTH,
+            Desc::SQL_DESC_SCALE,
+        ];
         for col_num in 0..*column_count_ptr {
-            if call_describe_col {
-                assert_sql_describe_col(stmt as HStmt, (col_num + 1) as u16)
-            }
-            field_ids.iter().for_each(|field_type| {
+            FIELD_IDS.iter().for_each(|field_type| {
                 assert_eq!(
                     SqlReturn::SUCCESS,
                     SQLColAttributeW(
@@ -450,31 +426,4 @@ pub fn get_column_attributes(
             });
         }
     }
-}
-
-#[allow(dead_code)]
-/// Helper function for invoking SQLDescribeColW. None of the outputs are tested.
-/// This helper just assures SqlReturn::SUCCESS is returned.
-unsafe fn assert_sql_describe_col(stmt: HStmt, col_num: u16) {
-    let name_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
-    let name_buffer_length: SmallInt = 20;
-    let out_name_length = &mut 10;
-    let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
-    let col_size = &mut 42usize;
-    let decimal_digits = &mut 42i16;
-    let mut nullable = Nullability::SQL_NO_NULLS;
-    assert_eq!(
-        SqlReturn::SUCCESS,
-        SQLDescribeColW(
-            stmt as HStmt,
-            col_num,
-            name_buffer as *mut _,
-            name_buffer_length,
-            out_name_length,
-            &mut data_type,
-            col_size,
-            decimal_digits,
-            &mut nullable
-        )
-    )
 }

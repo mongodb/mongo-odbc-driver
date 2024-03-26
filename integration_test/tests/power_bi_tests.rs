@@ -461,7 +461,7 @@ mod integration {
             //      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
             //      - SQLColAttributeW(SQL_COLUMN_LENGTH)
             //      - SQLColAttributeW(SQL_COLUMN_SCALE)
-            get_column_attributes(stmt, 2, None, false);
+            get_column_attributes(stmt, 2);
 
             //  - Until SQLFetch returns SQL_NO_DATA
             //      - SQLFetch()
@@ -540,7 +540,7 @@ mod integration {
             //      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
             //      - SQLColAttributeW(SQL_COLUMN_LENGTH)
             //      - SQLColAttributeW(SQL_COLUMN_SCALE)
-            get_column_attributes(stmt, 5, None, false);
+            get_column_attributes(stmt, 5);
 
             //  - Until SQLFetch returns SQL_NO_DATA
             //      - SQLFetch()
