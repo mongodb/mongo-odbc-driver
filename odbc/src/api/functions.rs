@@ -1275,7 +1275,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     let mongo_handle = MongoHandleRef::from(statement_handle);
     let stmt = must_be_valid!(mongo_handle.as_statement());
 
-    let mut encountered_success_with_info_during_col_binding = false;
+    let mut encountered_success_with_info = false;
     let mut global_warnings_opt: Vec<Error> = Vec::new();
 
     // needed for rowsets with size > 1 to ensure that NO_DATA does not get returned if the rowset hits the end of the result set.
@@ -1356,6 +1356,9 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 };
             }
 
+            // keep track of all warnings that occur throughout the entire function.
+            global_warnings_opt.append(&mut warnings_opt);
+
             if has_rows_fetched_buffer {
                 *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
             }
@@ -1367,6 +1370,8 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
 
                 let mut encountered_error_during_col_binding = false;
+                let mut encountered_success_with_info_during_col_binding = false;
+
                 for (col, bound_col_info) in bound_cols.iter() {
                     // Set target_buffer to the correct buffer in the array of buffers
                     let target_buffer = (bound_col_info.target_buffer as ULen
@@ -1410,8 +1415,11 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 {
                     *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
                 }
+
+                // keep track if SUCCESS_WITH_INFO is ever encountered throughout the entire function.
+                encountered_success_with_info = encountered_success_with_info_during_col_binding
+                    || encountered_success_with_info;
             }
-            global_warnings_opt.append(&mut warnings_opt);
         } else {
             // An error happened when moving the cursor and fetching the next row
             let mongo_handle = MongoHandleRef::from(statement_handle);
@@ -1437,7 +1445,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     if row_error_count == rowset_size {
         SqlReturn::ERROR
     } else if !global_warnings_opt.is_empty()
-        || encountered_success_with_info_during_col_binding
+        || encountered_success_with_info
         || row_error_count > 0
     {
         SqlReturn::SUCCESS_WITH_INFO
