@@ -704,7 +704,7 @@ mod unit {
             let _ = Box::from_raw(s.attributes.write().unwrap().rows_fetched_ptr as *mut WChar);
         }
     }
-
+    #[test]
     fn test_binding_arrays_when_rowset_size_doesnt_evenly_divide_resultset_size() {
         // Set up MongoHandle
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
@@ -746,7 +746,7 @@ mod unit {
             // set all statement attributes to the correct values.
             s.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
             // row_array_size is 4 meaning sqlFetch will fetch and handle the column bindings for 4 rows at a time.
-            s.attributes.write().unwrap().row_array_size = 4;
+            s.attributes.write().unwrap().row_array_size = 6;
             s.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as usize;
 
             s.attributes.write().unwrap().row_status_ptr =
