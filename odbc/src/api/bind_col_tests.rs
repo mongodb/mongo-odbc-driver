@@ -559,10 +559,10 @@ mod unit {
                 .get(&2)
                 .unwrap()
                 .length_or_indicator;
-            assert_eq!(16, *indicator);
-            assert_eq!(16, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(8, *indicator);
+            assert_eq!(8, *((indicator as ULen + 8) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
 
             assert_eq!(4, *s.attributes.read().unwrap().rows_fetched_ptr);
 
@@ -650,10 +650,10 @@ mod unit {
                 .get(&2)
                 .unwrap()
                 .length_or_indicator;
-            assert_eq!(16, *indicator);
-            assert_eq!(16, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(8, *indicator);
+            assert_eq!(8, *((indicator as ULen + 8) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
 
             assert_eq!(4, *s.attributes.read().unwrap().rows_fetched_ptr);
 
@@ -871,12 +871,12 @@ mod unit {
                 .get(&2)
                 .unwrap()
                 .length_or_indicator;
-            assert_eq!(16, *indicator);
-            assert_eq!(16, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 24) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 32) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 40) as *mut Len));
+            assert_eq!(8, *indicator);
+            assert_eq!(8, *((indicator as ULen + 8) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 32) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 40) as *mut Len));
 
             assert_eq!(6, *s.attributes.read().unwrap().rows_fetched_ptr);
 
@@ -984,12 +984,12 @@ mod unit {
                 .get(&2)
                 .unwrap()
                 .length_or_indicator;
-            assert_eq!(16, *indicator);
-            assert_eq!(16, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 24) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 32) as *mut Len));
-            assert_eq!(16, *((indicator as ULen + 40) as *mut Len));
+            assert_eq!(8, *indicator);
+            assert_eq!(8, *((indicator as ULen + 8) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 32) as *mut Len));
+            assert_eq!(8, *((indicator as ULen + 40) as *mut Len));
 
             assert_eq!(2, *s.attributes.read().unwrap().rows_fetched_ptr);
 
