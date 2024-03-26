@@ -177,7 +177,7 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
 /// the test results should be written to a file for baseline test file
 /// generation, or be asserted for correctness.
 pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
-    let env = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
+    let env = allocate_env(AttrOdbcVersion::SQL_OV_ODBC2);
     unsafe {
         assert_eq!(
             SqlReturn::SUCCESS,
