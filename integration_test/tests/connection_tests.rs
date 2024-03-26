@@ -7,7 +7,7 @@ mod integration {
     };
     use constants::DRIVER_NAME;
     use cstr::{to_char_ptr, to_widechar_ptr, WideChar};
-    use definitions::{SQLExecDirectW, SqlReturn};
+    use definitions::{AttrOdbcVersion, SQLExecDirectW, SqlReturn};
     use lazy_static::lazy_static;
     use logger::Logger;
     use regex::Regex;
@@ -17,7 +17,7 @@ mod integration {
 
     #[test]
     fn test_invalid_connection() {
-        let env_handle = allocate_env().unwrap();
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         // Missing PWD
         let conn_str = "Driver=MongoDB Atlas SQL ODBC Driver;USER=N_A;SERVER=N_A";
         let result = connect_with_conn_string(env_handle, conn_str.to_string());
@@ -31,7 +31,7 @@ mod integration {
 
     #[test]
     fn test_default_connection() {
-        let env_handle = allocate_env().unwrap();
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str = crate::common::generate_default_connection_str();
         let _ = connect_with_conn_string(env_handle, conn_str).unwrap();
         let _ = unsafe { Box::from_raw(env_handle) };
@@ -39,7 +39,7 @@ mod integration {
 
     #[test]
     fn uuid_csharp_legacy() {
-        let env_handle = allocate_env().unwrap();
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str = crate::common::generate_uri_with_default_connection_string(
             "uuidRepresentation=csharpLegacy",
         );
@@ -49,7 +49,7 @@ mod integration {
 
     #[test]
     fn uuid_java_legacy() {
-        let env_handle = allocate_env().unwrap();
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str = crate::common::generate_uri_with_default_connection_string(
             "uuidRepresentation=javaLegacy",
         );
@@ -59,7 +59,7 @@ mod integration {
 
     #[test]
     fn uuid_python_legacy() {
-        let env_handle = allocate_env().unwrap();
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str = crate::common::generate_uri_with_default_connection_string(
             "uuidRepresentation=pythonLegacy",
         );
@@ -72,10 +72,11 @@ mod integration {
      */
     mod test_dsn {
         use crate::common::{allocate_env, connect_with_conn_string};
+        use definitions::AttrOdbcVersion;
 
         #[test]
         fn test_valid_dsn_connection() {
-            let env_handle = allocate_env().unwrap();
+            let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
             let conn_str = "DSN=ADF_Test";
             connect_with_conn_string(env_handle, conn_str.to_string()).unwrap();
             let _ = unsafe { Box::from_raw(env_handle) };
@@ -83,7 +84,7 @@ mod integration {
 
         #[test]
         fn test_uri_opts_override_dsn() {
-            let env_handle = allocate_env().unwrap();
+            let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
             let conn_str = "PWD=wrong;DSN=ADF_Test";
             let result = connect_with_conn_string(env_handle, conn_str.to_string());
             assert!(
@@ -121,7 +122,7 @@ mod integration {
 
         let log_file = log_file_path.as_os_str().to_str().unwrap().to_string();
 
-        let env_handle = allocate_env().unwrap();
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
 
         let mut conn_str = crate::common::generate_default_connection_str();
         let (dbc1, stmt1) = connect_and_allocate_statement(env_handle, Some(conn_str));

@@ -2,8 +2,8 @@ mod test_generator_util;
 
 use cstr::WideChar;
 use definitions::{
-    CDataType, Desc, EnvironmentAttribute, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn,
-    USmallInt,
+    AttrOdbcVersion, CDataType, Desc, EnvironmentAttribute, HDbc, HStmt, Handle, HandleType,
+    SmallInt, SqlReturn, USmallInt,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -141,10 +141,10 @@ pub fn odbc2_resultset_tests() -> Result<()> {
 }
 
 /// Run an integration test. The generate argument indicates whether
-/// the test results should written to a file for baseline test file
+/// the test results should be written to a file for baseline test file
 /// generation, or be asserted for correctness.
 pub fn run_resultset_tests(generate: bool) -> Result<()> {
-    let env = allocate_env().unwrap();
+    let env = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
     for path in paths {
         let yaml = parse_test_file_yaml(&path).unwrap();
@@ -174,10 +174,10 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
 }
 
 /// Runs odbc 2 compatibility integration test. The generate argument indicates whether
-/// the test results should written to a file for baseline test file
+/// the test results should be written to a file for baseline test file
 /// generation, or be asserted for correctness.
 pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
-    let env = allocate_env().unwrap();
+    let env = allocate_env(AttrOdbcVersion::SQL_OV_ODBC2);
     unsafe {
         assert_eq!(
             SqlReturn::SUCCESS,
