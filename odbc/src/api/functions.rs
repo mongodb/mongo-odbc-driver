@@ -1275,23 +1275,25 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     let mongo_handle = MongoHandleRef::from(statement_handle);
     let stmt = must_be_valid!(mongo_handle.as_statement());
 
-    let mut success_with_info_encountered_during_bind_cols = false;
+    let mut encountered_success_with_info_during_col_binding = false;
     let mut global_warnings_opt: Vec<Error> = Vec::new();
 
-    // needed for rowsets with size > 1
-    let mut fetched_at_least_one_row = false;
+    // needed for rowsets with size > 1 to ensure that NO_DATA does not get returned if the rowset hits the end of the result set.
+    let mut has_fetched_at_least_one_row = false;
 
     let rowset_size = stmt.attributes.read().unwrap().row_array_size;
 
+    // if rows_fetched_ptr is null, it was not set by the user and can be ignored.
     let has_rows_fetched_buffer = !stmt.attributes.read().unwrap().rows_fetched_ptr.is_null();
 
     if has_rows_fetched_buffer {
         *stmt.attributes.write().unwrap().rows_fetched_ptr = 0;
     }
 
+    // keeps track of how many rows in the result set cause SqlReturn::ERROR when being handled.
     let mut row_error_count = 0;
 
-    // Use index to figure out which buffer in the array of buffers to use.
+    // Use `index` to figure out which buffer in the array of buffers to use.
     for index in 0..rowset_size {
         let move_to_next_result = {
             let connection = must_be_valid!((*stmt.connection).as_connection());
@@ -1303,6 +1305,8 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             }
         };
 
+        // if row_status_ptr is null, it was not set by the user and can be ignored.
+        // Otherwise, we need to set the row_status_buffer to the address that corresponds with the current row.
         let row_status_buffer: *mut USmallInt =
             if !stmt.attributes.read().unwrap().row_status_ptr.is_null() {
                 (stmt.attributes.read().unwrap().row_status_ptr as ULen
@@ -1321,7 +1325,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             });
 
             if !has_next {
-                // No more rows
+                // There are no more rows, so set the rest of Row Status Array buffers to SQL_ROW_NOROW if the rowset end has not been reached.
                 if !row_status_buffer.is_null() {
                     for row_status_index in index..rowset_size {
                         let row_status_buffer = (stmt.attributes.read().unwrap().row_status_ptr
@@ -1332,15 +1336,17 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                     }
                 }
 
-                if fetched_at_least_one_row {
+                // break here to prevent NO_DATA from being returned if the rowset had at least one row in it.
+                if has_fetched_at_least_one_row {
                     break;
                 }
 
-                // if there is no data from the get go, the rows_fetched_pointer will already be 0, so there is no need to set it here.
+                // if the cursor has already reached the end of the result set when SQLFetch is called, NO_DATA is returned.
+                // Additionally, rows_fetch_ptr is set to 0.
                 return SqlReturn::NO_DATA;
             }
 
-            fetched_at_least_one_row = true;
+            has_fetched_at_least_one_row = true;
 
             if !row_status_buffer.is_null() {
                 *row_status_buffer = if warnings_opt.is_empty() {
@@ -1360,13 +1366,14 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             if let Some(bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
                 let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
 
-                let mut error_encountered = false;
+                let mut encountered_error_during_col_binding = false;
                 for (col, bound_col_info) in bound_cols.iter() {
                     // Set target_buffer to the correct buffer in the array of buffers
                     let target_buffer = (bound_col_info.target_buffer as ULen
                         + (index * (bound_col_info.buffer_length as ULen)))
                         as Pointer;
 
+                    // Set length/indicator buffer to the correct buffer in the array of buffers
                     let len_ind_buffer = (bound_col_info.length_or_indicator as ULen
                         + (index * size_of::<isize>()))
                         as *mut Len;
@@ -1374,7 +1381,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                     let sql_return = sql_get_data_helper(
                         mongo_handle_for_sql_get_data_helper,
                         *col,
-                        FromPrimitive::from_i16(bound_col_info.target_type).unwrap(),
+                        FromPrimitive::from_i16(bound_col_info.target_type).unwrap(), // this conversion is checked in SQLBindCol, so it is guaranteed to work here.
                         target_buffer,
                         bound_col_info.buffer_length,
                         len_ind_buffer,
@@ -1383,22 +1390,22 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
                     match sql_return {
                         SqlReturn::ERROR => {
-                            error_encountered = true;
+                            encountered_error_during_col_binding = true;
                         }
                         SqlReturn::SUCCESS_WITH_INFO => {
-                            success_with_info_encountered_during_bind_cols = true;
+                            encountered_success_with_info_during_col_binding = true;
                         }
                         _ => {}
                     }
                 }
 
-                if error_encountered {
+                if encountered_error_during_col_binding {
                     row_error_count += 1;
 
                     if !row_status_buffer.is_null() {
                         *row_status_buffer = definitions::SQL_ROW_ERROR;
                     }
-                } else if success_with_info_encountered_during_bind_cols
+                } else if encountered_success_with_info_during_col_binding
                     && !row_status_buffer.is_null()
                 {
                     *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
@@ -1406,6 +1413,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             }
             global_warnings_opt.append(&mut warnings_opt);
         } else {
+            // An error happened when moving the cursor and fetching the next row
             let mongo_handle = MongoHandleRef::from(statement_handle);
             add_diag_with_function!(
                 mongo_handle,
@@ -1413,7 +1421,6 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 function_name.to_string()
             );
 
-            // An error happened
             if !row_status_buffer.is_null() {
                 *row_status_buffer = definitions::SQL_ROW_ERROR;
             }
@@ -1426,10 +1433,11 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
         }
     }
 
+    // Only return ERROR if every row causes an error.
     if row_error_count == rowset_size {
         SqlReturn::ERROR
     } else if !global_warnings_opt.is_empty()
-        || success_with_info_encountered_during_bind_cols
+        || encountered_success_with_info_during_col_binding
         || row_error_count > 0
     {
         SqlReturn::SUCCESS_WITH_INFO

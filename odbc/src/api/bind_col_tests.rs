@@ -421,12 +421,11 @@ mod unit {
             let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0i32; 4])) as *mut _;
             let num_indicator: *mut Len = Box::into_raw(Box::new([0isize; 4])) as *mut Len;
 
-            // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
             let word_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u32; 20])) as *mut _;
             let word_indicator: *mut Len = Box::into_raw(Box::new([0isize; 4])) as *mut Len;
 
-            // In this test, we assume that SQLBindCol has already been run and added a column to bind, so
-            // I add column "1" to bound_cols.
+            // In this test, we assume that SQLBindCol has already been run and added columns to bind, so
+            // I add column `1` and `2` to bound_cols.
             *s.bound_cols.write().unwrap() = Some(map! {
                 1 => BoundColInfo {
                     target_type: CDataType::SQL_C_SLONG as SmallInt,
@@ -437,7 +436,7 @@ mod unit {
                 2 => BoundColInfo {
                     target_type: CDataType::SQL_C_WCHAR as SmallInt,
                     target_buffer: word_buffer,
-                    buffer_length: 20, // buffer_length is 20 because each word is 20 bytes long including the null termination character.
+                    buffer_length: 20, // buffer_length is 20 because each word is 20 bytes long including the null termination character (WideChar * 5).
                     length_or_indicator: word_indicator,
                 },
 
@@ -449,12 +448,13 @@ mod unit {
             s.attributes.write().unwrap().row_array_size = 4;
             s.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as usize;
 
+            // row_status_ptr needs 4 slots since the rowset size is 4.
             s.attributes.write().unwrap().row_status_ptr =
                 Box::into_raw(Box::new([0u16; 4])) as *mut USmallInt;
             s.attributes.write().unwrap().rows_fetched_ptr =
                 Box::into_raw(Box::new(0usize)) as *mut ULen;
 
-            // create a mongo query with data that corresponds to the bound column (i.e., column 1).
+            // create a mongo query with data that corresponds to the bound columns.
             let mock_query = MongoQuery::new(
                 vec![
                     doc! {"test": {"num": 10, "word": "aaaa"}},
@@ -492,7 +492,7 @@ mod unit {
             // assert that SQLFetch is successful. We are fetching the first 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
-            // assert that the first 4 values from the result set were put in the bound buffer array correctly
+            // assert that the first 4 values from the result set were put in the bound buffer array correctly for column 1.
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -507,6 +507,7 @@ mod unit {
             assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
             assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
 
+            // assert that the indicator has the correct values for column 1.
             let indicator = s
                 .bound_cols
                 .read()
@@ -521,6 +522,7 @@ mod unit {
             assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
             assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
 
+            // assert that the first 4 values from the result set were put in the bound buffer array correctly for column 2.
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -531,8 +533,8 @@ mod unit {
                 .unwrap()
                 .target_buffer;
 
-            // when usize::MAX casts to isize it becomes -1
-
+            // input_text_to_string_w requires a `usize` value; however, I need a negative value to test that the null termination character was added,
+            // So I input usize::MAX because it casts to -1 in the function.
             assert_eq!(
                 "aaaa",
                 input_text_to_string_w(bound_buffer as *const WideChar, usize::MAX)
@@ -550,6 +552,7 @@ mod unit {
                 input_text_to_string_w((bound_buffer as ULen + 60) as *const WideChar, usize::MAX)
             );
 
+            // assert that the indicator has the correct values for column 2.
             let indicator = s
                 .bound_cols
                 .read()
@@ -564,8 +567,10 @@ mod unit {
             assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
             assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
 
+            // assert that the rows_fetch_ptr has the correct value.
             assert_eq!(4, *s.attributes.read().unwrap().rows_fetched_ptr);
 
+            // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
             assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
@@ -585,7 +590,7 @@ mod unit {
             // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
-            // assert that the last 4 values from the result set were put in the bound buffer array correctly
+            // assert that the last 4 values from the result set were put in the bound buffer array correctly for column 1.
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -600,6 +605,7 @@ mod unit {
             assert_eq!(70, *((bound_buffer as ULen + 8) as *mut i32));
             assert_eq!(80, *((bound_buffer as ULen + 12) as *mut i32));
 
+            // assert that the indicator has the correct values for column 1.
             let indicator = s
                 .bound_cols
                 .read()
@@ -614,6 +620,7 @@ mod unit {
             assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
             assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
 
+            // assert that the last 4 values from the result set were put in the bound buffer array correctly for column 2.
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -641,6 +648,7 @@ mod unit {
                 input_text_to_string_w((bound_buffer as ULen + 60) as *const WideChar, usize::MAX)
             );
 
+            // assert that the indicator has the correct values for column 2.
             let indicator = s
                 .bound_cols
                 .read()
@@ -655,8 +663,10 @@ mod unit {
             assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
             assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
 
+            // assert that the rows_fetch_ptr has the correct value.
             assert_eq!(4, *s.attributes.read().unwrap().rows_fetched_ptr);
 
+            // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
             assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
@@ -673,10 +683,13 @@ mod unit {
                 *((row_status_array as ULen + 6) as *mut USmallInt)
             );
 
+            // assert that another fetch returns NO_DATA
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
 
+            // make sure rows_fetch_ptr is set to 0.
             assert_eq!(0, *s.attributes.read().unwrap().rows_fetched_ptr);
 
+            // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
             assert_eq!(SQL_ROW_NOROW, *row_status_array);
@@ -721,12 +734,11 @@ mod unit {
             let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0i32; 6])) as *mut _;
             let num_indicator: *mut Len = Box::into_raw(Box::new([0isize; 6])) as *mut Len;
 
-            // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
             let word_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u32; 30])) as *mut _;
             let word_indicator: *mut Len = Box::into_raw(Box::new([0isize; 6])) as *mut Len;
 
-            // In this test, we assume that SQLBindCol has already been run and added a column to bind, so
-            // I add column "1" to bound_cols.
+            // In this test, we assume that SQLBindCol has already been run and added columns to bind, so
+            // I add column `1` and `2` to bound_cols.
             *s.bound_cols.write().unwrap() = Some(map! {
                 1 => BoundColInfo {
                     target_type: CDataType::SQL_C_SLONG as SmallInt,
@@ -737,7 +749,7 @@ mod unit {
                 2 => BoundColInfo {
                     target_type: CDataType::SQL_C_WCHAR as SmallInt,
                     target_buffer: word_buffer,
-                    buffer_length: 20, // buffer_length is 20 because each word is 20 bytes long including the null termination character.
+                    buffer_length: 20, // buffer_length is 20 because each word is 20 bytes long including the null termination character (WideChar * 5).
                     length_or_indicator: word_indicator,
                 },
 
@@ -745,16 +757,17 @@ mod unit {
 
             // set all statement attributes to the correct values.
             s.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
-            // row_array_size is 4 meaning sqlFetch will fetch and handle the column bindings for 4 rows at a time.
+            // row_array_size is 6 meaning sqlFetch will fetch and handle the column bindings for 6 rows at a time.
             s.attributes.write().unwrap().row_array_size = 6;
             s.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as usize;
 
+            // row_status_ptr needs 6 slots since the rowset size is 6.
             s.attributes.write().unwrap().row_status_ptr =
                 Box::into_raw(Box::new([0u16; 6])) as *mut USmallInt;
             s.attributes.write().unwrap().rows_fetched_ptr =
                 Box::into_raw(Box::new(0usize)) as *mut ULen;
 
-            // create a mongo query with data that corresponds to the bound column (i.e., column 1).
+            // create a mongo query with data that corresponds to the bound columns.
             let mock_query = MongoQuery::new(
                 vec![
                     doc! {"test": {"num": 10, "word": "aaaa"}},
@@ -789,10 +802,10 @@ mod unit {
             // Set the mongo_statement
             *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query));
 
-            // assert that SQLFetch is successful. We are fetching the first 4 rows in the result set.
+            // assert that SQLFetch is successful. We are fetching the first 6 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
-            // assert that the first 4 values from the result set were put in the bound buffer array correctly
+            // assert that the first 6 values from the result set were put in the bound buffer array correctly for column 1.
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -809,6 +822,7 @@ mod unit {
             assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
             assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
 
+            // assert that the indicator has the correct values for column 1.
             let indicator = s
                 .bound_cols
                 .read()
@@ -825,6 +839,7 @@ mod unit {
             assert_eq!(4, *((indicator as ULen + 32) as *mut Len));
             assert_eq!(4, *((indicator as ULen + 40) as *mut Len));
 
+            // assert that the first 6 values from the result set were put in the bound buffer array correctly for column 2.
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -835,8 +850,8 @@ mod unit {
                 .unwrap()
                 .target_buffer;
 
-            // when usize::MAX casts to isize it becomes -1
-
+            // input_text_to_string_w requires a `usize` value; however, I need a negative value to test that the null termination character was added,
+            // So I input usize::MAX because it casts to -1 in the function.
             assert_eq!(
                 "aaaa",
                 input_text_to_string_w(bound_buffer as *const WideChar, usize::MAX)
@@ -862,6 +877,7 @@ mod unit {
                 input_text_to_string_w((bound_buffer as ULen + 100) as *const WideChar, usize::MAX)
             );
 
+            // assert that the indicator has the correct values for column 2.
             let indicator = s
                 .bound_cols
                 .read()
@@ -878,8 +894,10 @@ mod unit {
             assert_eq!(8, *((indicator as ULen + 32) as *mut Len));
             assert_eq!(8, *((indicator as ULen + 40) as *mut Len));
 
+            // assert that the rows_fetch_ptr has the correct value.
             assert_eq!(6, *s.attributes.read().unwrap().rows_fetched_ptr);
 
+            // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
             assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
@@ -904,10 +922,10 @@ mod unit {
                 *((row_status_array as ULen + 10) as *mut USmallInt)
             );
 
-            // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
+            // assert that SQLFetch is successful. We are fetching the next 2 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
-            // assert that the last 4 values from the result set were put in the bound buffer array correctly
+            // assert that the last 2 values from the result set were put in the bound buffer array correctly for column 1.
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -924,6 +942,7 @@ mod unit {
             assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
             assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
 
+            // assert that the indicator has the correct values for column 1.
             let indicator = s
                 .bound_cols
                 .read()
@@ -940,6 +959,7 @@ mod unit {
             assert_eq!(4, *((indicator as ULen + 32) as *mut Len));
             assert_eq!(4, *((indicator as ULen + 40) as *mut Len));
 
+            // assert that the last 2 values from the result set were put in the bound buffer array correctly for column 2.
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -975,6 +995,7 @@ mod unit {
                 input_text_to_string_w((bound_buffer as ULen + 100) as *const WideChar, usize::MAX)
             );
 
+            // assert that the indicator has the correct values for column 2.
             let indicator = s
                 .bound_cols
                 .read()
@@ -991,8 +1012,10 @@ mod unit {
             assert_eq!(8, *((indicator as ULen + 32) as *mut Len));
             assert_eq!(8, *((indicator as ULen + 40) as *mut Len));
 
+            // assert that the rows_fetch_ptr has the correct value.
             assert_eq!(2, *s.attributes.read().unwrap().rows_fetched_ptr);
 
+            // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
             assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
@@ -1017,10 +1040,13 @@ mod unit {
                 *((row_status_array as ULen + 10) as *mut USmallInt)
             );
 
+            // assert that another fetch returns NO_DATA
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
 
+            // make sure rows_fetch_ptr is set to 0.
             assert_eq!(0, *s.attributes.read().unwrap().rows_fetched_ptr);
 
+            // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
             assert_eq!(SQL_ROW_NOROW, *row_status_array);
@@ -1092,10 +1118,11 @@ mod unit {
             s.attributes.write().unwrap().row_array_size = 4;
             s.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as usize;
 
+            // make both of these attributes null to signify that they have not been set.
             s.attributes.write().unwrap().row_status_ptr = null_mut();
             s.attributes.write().unwrap().rows_fetched_ptr = null_mut();
 
-            // create a mongo query with data that corresponds to the bound column (i.e., column 1).
+            // create a mongo query with data that corresponds to the bound columns.
             let mock_query = MongoQuery::new(
                 vec![
                     doc! {"test": {"num": 10, "word": "aaaa"}},
@@ -1133,7 +1160,7 @@ mod unit {
             // assert that SQLFetch is successful. We are fetching the first 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
-            // assert that the first 4 values from the result set were put in the bound buffer array correctly
+            // assert that the first 4 values from the result set were put in the bound buffer array correctly for column 1
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -1148,6 +1175,7 @@ mod unit {
             assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
             assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
 
+            // assert that the indicator has the correct values for column 1.
             let indicator = s
                 .bound_cols
                 .read()
@@ -1165,7 +1193,7 @@ mod unit {
             // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
-            // assert that the last 4 values from the result set were put in the bound buffer array correctly
+            // assert that the last 4 values from the result set were put in the bound buffer array correctly for column 1
             let bound_buffer = s
                 .bound_cols
                 .read()
@@ -1180,6 +1208,7 @@ mod unit {
             assert_eq!(70, *((bound_buffer as ULen + 8) as *mut i32));
             assert_eq!(80, *((bound_buffer as ULen + 12) as *mut i32));
 
+            // assert that the indicator has the correct values for column 1.
             let indicator = s
                 .bound_cols
                 .read()
@@ -1194,6 +1223,7 @@ mod unit {
             assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
             assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
 
+            // assert that another fetch returns NO_DATA
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
 
             // free buffers
