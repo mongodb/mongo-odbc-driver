@@ -9,31 +9,15 @@ mod common;
 /// These are workflows that could appear in any ODBC use-case, not just SSIS.
 mod integration {
     use crate::common::{
-        allocate_env, connect_and_allocate_statement, disconnect_and_free_dbc_and_env_handles,
+        default_setup_connect_and_alloc_stmt, disconnect_and_free_dbc_and_env_handles,
         fetch_and_get_data, get_column_attributes,
     };
     use cstr::WideChar;
     use definitions::{
-        CDataType, Desc, FreeStmtOption, HDbc, HEnv, HStmt, Handle, Pointer, SQLCancel,
-        SQLExecDirectW, SQLFreeStmt, SQLPrepareW, SQLRowCount, SQLSetStmtAttrW, SqlReturn,
-        StatementAttribute, SQL_NTS,
+        AttrOdbcVersion, CDataType, Desc, FreeStmtOption, HDbc, HEnv, HStmt, Handle, Pointer,
+        SQLCancel, SQLExecDirectW, SQLFreeStmt, SQLPrepareW, SQLRowCount, SQLSetStmtAttrW,
+        SqlReturn, StatementAttribute, SQL_NTS,
     };
-
-    /// Setup flow that connects and allocates a statement. This allocates a
-    /// new environment handle, sets the ODBC_VERSION environment attribute,
-    /// connects using the default URI, and allocates a statement. The flow
-    /// is:
-    ///     - SQLAllocHandle(SQL_HANDLE_ENV)
-    ///     - SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3)
-    ///     - SQLAllocHandle(SQL_HANDLE_DBC)
-    ///     - SQLDriverConnectW
-    ///     - SQLAllocHandle(SQL_HANDLE_STMT)
-    fn setup_connect_and_alloc_stmt() -> (HEnv, HDbc, HStmt) {
-        let env_handle = allocate_env().unwrap();
-        let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
-
-        (env_handle, conn_handle, stmt_handle)
-    }
 
     /// This test is inspired by the SSIS Preview Data result set metadata flow.
     /// It is altered to be more general than that specific flow, with a focus
@@ -52,7 +36,8 @@ mod integration {
     ///     - SQLFreeHandle(SQL_HANDLE_ENV)
     #[test]
     fn test_free_stmt() {
-        let (env_handle, conn_handle, stmt_handle) = setup_connect_and_alloc_stmt();
+        let (env_handle, conn_handle, stmt_handle) =
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
             let mut query: Vec<WideChar> =
@@ -82,7 +67,7 @@ mod integration {
     /// This test is inspired by the SSIS Preview Data data retrieval flow.
     /// It is altered to be more general than that specific flow, with a focus
     /// on canceling the query after getting some data. This flow depends on
-    /// setup_connect_and_alloc_stmt.
+    /// default_setup_connect_and_alloc_stmt.
     /// After allocating a statement handle, the flow is:
     ///     - SQLSetStmtAttrW(SQL_ATTR_QUERY_TIMEOUT, 15)
     ///     - SQLExecDirectW(<query>)
@@ -101,7 +86,8 @@ mod integration {
     ///     - SQLCancel
     #[test]
     fn test_cancel() {
-        let (_, _, stmt_handle) = setup_connect_and_alloc_stmt();
+        let (_, _, stmt_handle) =
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
             let timeout: i32 = 15;

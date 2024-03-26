@@ -2,57 +2,28 @@ mod common;
 
 mod integration {
     use crate::common::{
-        connect_and_allocate_statement, disconnect_and_close_handles, get_sql_diagnostics,
-        BUFFER_LENGTH,
+        allocate_env, default_setup_connect_and_alloc_stmt, disconnect_and_close_handles,
+        get_sql_diagnostics, BUFFER_LENGTH,
     };
     use definitions::{
-        CDataType, EnvironmentAttribute, HEnv, HStmt, Handle, HandleType, Len, Pointer,
-        SQLAllocHandle, SQLFetch, SQLGetData, SQLGetTypeInfo, SQLSetEnvAttr, SQLTablesW, SmallInt,
-        SqlDataType, SqlReturn,
+        AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, Len, Pointer, SQLFetch, SQLGetData,
+        SQLGetTypeInfo, SQLTablesW, SmallInt, SqlDataType, SqlReturn,
     };
 
     use cstr::WideChar;
     use std::ptr::null_mut;
 
-    // set up env handle and set odbc version to 2
-    fn setup() -> definitions::HEnv {
-        let mut env: Handle = null_mut();
-
-        unsafe {
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLAllocHandle(
-                    HandleType::SQL_HANDLE_ENV,
-                    null_mut(),
-                    &mut env as *mut Handle
-                )
-            );
-
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLSetEnvAttr(
-                    env as HEnv,
-                    EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
-                    2 as *mut _,
-                    0,
-                )
-            );
-        }
-
-        env as HEnv
-    }
-
     /// Test Setup flow
     #[test]
     fn test_setup() {
-        setup();
+        allocate_env(AttrOdbcVersion::SQL_OV_ODBC2);
     }
 
     /// Test list_tables, which should yield all tables
     #[test]
     fn test_list_tables() {
-        let env_handle = setup();
-        let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
+        let (env_handle, conn_handle, stmt_handle) =
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC2);
 
         unsafe {
             let mut table_view: Vec<WideChar> = cstr::to_widechar_vec("TABLE");
@@ -118,8 +89,8 @@ mod integration {
     /// we expect back.
     #[test]
     fn test_type_listing() {
-        let env_handle = setup();
-        let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
+        let (env_handle, conn_handle, stmt_handle) =
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC2);
 
         let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
 

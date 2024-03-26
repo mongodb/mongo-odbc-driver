@@ -127,30 +127,50 @@ pub fn sql_return_to_string(return_code: SqlReturn) -> String {
 }
 
 #[allow(dead_code)]
-// Allocates new environment variable
-pub fn allocate_env() -> Result<HEnv> {
+/// Setup flow that connects and allocates a statement. This allocates a new
+/// environment handle, sets the ODBC_VERSION environment attribute, connects
+/// using the provided (or default) URI, and allocates a statement. The flow
+/// is:
+///     - SQLAllocHandle(SQL_HANDLE_ENV)
+///     - SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3)
+///     - SQLAllocHandle(SQL_HANDLE_DBC)
+///     - SQLDriverConnectW
+///     - SQLAllocHandle(SQL_HANDLE_STMT)
+pub fn default_setup_connect_and_alloc_stmt(
+    odbc_version_value: AttrOdbcVersion,
+) -> (HEnv, HDbc, HStmt) {
+    let env_handle = allocate_env(odbc_version_value);
+    let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
+
+    (env_handle, conn_handle, stmt_handle)
+}
+
+#[allow(dead_code)]
+/// Allocates new environment variable and sets the ODBC_VERSION environment
+/// attribute to the provided odbc_version.
+pub fn allocate_env(odbc_version: AttrOdbcVersion) -> HEnv {
     let mut env: Handle = null_mut();
 
     unsafe {
-        match SQLAllocHandle(
-            HandleType::SQL_HANDLE_ENV,
-            null_mut(),
-            &mut env as *mut Handle,
-        ) {
-            SqlReturn::SUCCESS => (),
-            sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
-        }
-        match SQLSetEnvAttr(
-            env as HEnv,
-            EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
-            AttrOdbcVersion::SQL_OV_ODBC3.into(),
-            0,
-        ) {
-            SqlReturn::SUCCESS => (),
-            sql_return => return Err(Error::SetEnvAttr(sql_return_to_string(sql_return))),
-        }
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::SQL_HANDLE_ENV,
+                null_mut(),
+                &mut env as *mut Handle,
+            )
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLSetEnvAttr(
+                env as HEnv,
+                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+                odbc_version.into(),
+                0
+            )
+        );
     }
-    Ok(env as HEnv)
+    env as HEnv
 }
 
 #[allow(dead_code)]
@@ -160,10 +180,7 @@ pub fn connect_and_allocate_statement(
     env_handle: HEnv,
     in_connection_string: Option<String>,
 ) -> (HDbc, HStmt) {
-    let conn_str = match in_connection_string {
-        Some(val) => val,
-        None => crate::common::generate_default_connection_str(),
-    };
+    let conn_str = in_connection_string.unwrap_or_else(|| generate_default_connection_str());
     let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
     (conn_handle, allocate_statement(conn_handle).unwrap())
 }
@@ -357,19 +374,27 @@ pub fn fetch_and_get_data(
 }
 
 #[allow(dead_code)]
-/// Helper function for checking result set metadata. It optionally takes a list
-/// of attributes to get. If none is provided, the following defaults will be
-/// checked. It also optionally invokes SQLDescribeColW.
+/// Helper function for checking result set column metadata. Since this is a
+/// helper function for integration testing and the integration tests are meant
+/// to mimic real BI tools, this function can get metadata a few different ways.
+/// Some tools get column metadata by calling SQLColAttribute for every attribute,
+/// while some tools get the bulk of attributes through SQLDescribeCol and then
+/// request additional attributes ad-hoc.
+///
+/// To mimic all of these behaviors, this function accepts an optional list of
+/// attributes to get. It also optionally invokes SQLDescribeColW. The general
+/// flow is:
 ///  - SQLNumResultCols()
 ///  - For columns 1 to {numCols}
 ///      - (Optional) SQLDescribeColW
-///      - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
-///      - SQLColAttributeW(SQL_DESC_UNSIGNED)
-///      - SQLColAttributeW(SQL_COLUMN_NAME)
-///      - SQLColAttributeW(SQL_COLUMN_NULLABLE)
-///      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
-///      - SQLColAttributeW(SQL_COLUMN_LENGTH)
-///      - SQLColAttributeW(SQL_COLUMN_SCALE)
+///      - SQLColAttributeW for all attrs; if attrs is None then:
+///          - SQL_DESC_CONCISE_TYPE
+///          - SQL_DESC_UNSIGNED
+///          - SQL_COLUMN_NAME
+///          - SQL_COLUMN_NULLABLE
+///          - SQL_DESC_TYPE_NAME
+///          - SQL_COLUMN_LENGTH
+///          - SQL_COLUMN_SCALE
 pub fn get_column_attributes(
     stmt: Handle,
     expected_col_count: SmallInt,
