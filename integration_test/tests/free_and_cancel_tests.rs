@@ -133,7 +133,7 @@ mod integration {
                 stmt_handle as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
-                vec![CDataType::SQL_C_SSHORT, CDataType::SQL_C_SLONG],
+                vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_SBIGINT],
             );
 
             assert_eq!(SqlReturn::SUCCESS, SQLCancel(stmt_handle))
