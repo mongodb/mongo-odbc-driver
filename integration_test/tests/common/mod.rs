@@ -2,10 +2,9 @@ use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use definitions::{
     AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt,
-    Handle, HandleType, Len, Nullability, Pointer, SQLAllocHandle, SQLColAttributeW,
-    SQLDescribeColW, SQLDisconnect, SQLDriverConnectW, SQLFetch, SQLFreeHandle, SQLGetData,
-    SQLGetDiagRecW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlDataType,
-    SqlReturn, USmallInt, SQL_NTS,
+    Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDisconnect,
+    SQLDriverConnectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLMoreResults,
+    SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
 use std::ptr::null_mut;
 use std::{env, slice};
@@ -15,8 +14,6 @@ use thiserror::Error;
 pub enum Error {
     #[error("failed to allocate handle, SqlReturn: {0}")]
     HandleAllocation(String),
-    #[error("failed to set environment attribute, SqlReturn: {0}")]
-    SetEnvAttr(String),
     #[error("failed to connect SqlReturn: {0}, Diagnostics{1}")]
     DriverConnect(String, String),
 }
@@ -65,10 +62,7 @@ pub fn generate_default_connection_str() -> String {
     let host = env::var("ADF_TEST_LOCAL_HOST").expect("ADF_TEST_LOCAL_HOST is not set");
 
     let db = env::var("ADF_TEST_LOCAL_DB");
-    let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
-        Ok(val) => val,
-        Err(_e) => DRIVER_NAME.to_string(), //Default driver name
-    };
+    let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
 
     let mut connection_string =
         format!("Driver={{{driver}}};USER={user_name};PWD={password};SERVER={host};");
@@ -180,7 +174,7 @@ pub fn connect_and_allocate_statement(
     env_handle: HEnv,
     in_connection_string: Option<String>,
 ) -> (HDbc, HStmt) {
-    let conn_str = in_connection_string.unwrap_or_else(|| generate_default_connection_str());
+    let conn_str = in_connection_string.unwrap_or_else(generate_default_connection_str);
     let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
     (conn_handle, allocate_statement(conn_handle).unwrap())
 }

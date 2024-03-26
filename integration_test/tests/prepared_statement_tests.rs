@@ -2,9 +2,8 @@ mod common;
 
 mod integration {
     use crate::common::{
-        allocate_env, connect_and_allocate_statement, default_setup_connect_and_alloc_stmt,
-        disconnect_and_close_handles, fetch_and_get_data, get_column_attributes,
-        get_sql_diagnostics,
+        default_setup_connect_and_alloc_stmt, disconnect_and_close_handles, fetch_and_get_data,
+        get_column_attributes, get_sql_diagnostics,
     };
     use definitions::{
         AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQLExecute, SQLFetch, SQLPrepareW,
@@ -16,7 +15,7 @@ mod integration {
     #[test]
     fn test_error_execute_before_prepare() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3.into());
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
         query.push(0);
@@ -36,7 +35,7 @@ mod integration {
     #[test]
     fn test_prepare_get_resultset_metadata() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3.into());
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -61,7 +60,7 @@ mod integration {
     #[test]
     fn test_error_fetch_before_execute() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3.into());
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -89,7 +88,7 @@ mod integration {
     #[test]
     fn test_prepare_execute_retrieve_data() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3.into());
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -135,7 +134,7 @@ mod integration {
     #[test]
     fn test_prepare_execute_multiple_times() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3.into());
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
