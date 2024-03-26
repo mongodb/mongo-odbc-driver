@@ -1,10 +1,11 @@
 use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use definitions::{
-    AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt,
-    Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDisconnect,
-    SQLDriverConnectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLMoreResults,
-    SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
+    AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, FetchOrientation,
+    HDbc, HEnv, HStmt, Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLBindCol,
+    SQLColAttributeW, SQLDisconnect, SQLDriverConnectW, SQLFetch, SQLFetchScroll, SQLFreeHandle,
+    SQLGetData, SQLGetDiagRecW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt,
+    SqlReturn, USmallInt, SQL_NTS,
 };
 use std::ptr::null_mut;
 use std::{env, slice};
@@ -422,6 +423,38 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
                     get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                 );
             });
+        }
+    }
+}
+
+#[allow(dead_code)]
+/// Helper function for binding columns in a result set.
+/// - loop:
+///    - SQLBindCol for each column (determined by target_types vector)
+///    - SQLFetchScroll until SQL_NO_DATA is returned
+pub fn fetch_and_bind_cols(stmt_handle: HStmt, target_types: Vec<CDataType>) {
+    let binding_buffer = &mut [0u16; 4] as *mut _;
+    unsafe {
+        loop {
+            for (i, target_type) in target_types.iter().enumerate() {
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    SQLBindCol(
+                        stmt_handle,
+                        (i + 1) as u16,
+                        *target_type,
+                        binding_buffer as Pointer,
+                        4,
+                        null_mut(),
+                    )
+                );
+            }
+
+            let result = SQLFetchScroll(stmt_handle, FetchOrientation::SQL_FETCH_NEXT, 0);
+            if result == SqlReturn::NO_DATA {
+                return;
+            }
+            assert_eq!(SqlReturn::SUCCESS, result);
         }
     }
 }
