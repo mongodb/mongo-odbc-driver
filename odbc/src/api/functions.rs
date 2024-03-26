@@ -1303,10 +1303,10 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             }
         };
 
-        let row_status_buffer: *mut SmallInt =
+        let row_status_buffer: *mut USmallInt =
             if !stmt.attributes.read().unwrap().row_status_ptr.is_null() {
                 (stmt.attributes.read().unwrap().row_status_ptr as ULen
-                    + (index * size_of::<u16>())) as *mut SmallInt
+                    + (index * size_of::<u16>())) as *mut USmallInt
             } else {
                 null_mut()
             };
@@ -1327,7 +1327,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                         let row_status_buffer = (stmt.attributes.read().unwrap().row_status_ptr
                             as ULen
                             + (row_status_index * size_of::<u16>()))
-                            as *mut SmallInt;
+                            as *mut USmallInt;
                         *row_status_buffer = definitions::SQL_ROW_NOROW;
                     }
                 }
