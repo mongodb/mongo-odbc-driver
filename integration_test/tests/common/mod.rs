@@ -152,7 +152,9 @@ pub fn allocate_env(odbc_version: AttrOdbcVersion) -> HEnv {
                 HandleType::SQL_HANDLE_ENV,
                 null_mut(),
                 &mut env as *mut Handle,
-            )
+            ),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env as Handle)
         );
         assert_eq!(
             SqlReturn::SUCCESS,
@@ -161,7 +163,9 @@ pub fn allocate_env(odbc_version: AttrOdbcVersion) -> HEnv {
                 EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
                 odbc_version.into(),
                 0
-            )
+            ),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env as Handle)
         );
     }
     env as HEnv

@@ -10,12 +10,13 @@ mod common;
 mod integration {
     use crate::common::{
         default_setup_connect_and_alloc_stmt, disconnect_and_free_dbc_and_env_handles,
-        fetch_and_get_data,
+        fetch_and_get_data, get_sql_diagnostics,
     };
     use cstr::WideChar;
     use definitions::{
-        AttrOdbcVersion, CDataType, FreeStmtOption, Handle, Pointer, SQLCancel, SQLExecDirectW,
-        SQLFreeStmt, SQLPrepareW, SQLSetStmtAttrW, SqlReturn, StatementAttribute, SQL_NTS,
+        AttrOdbcVersion, CDataType, FreeStmtOption, Handle, HandleType, Pointer, SQLCancel,
+        SQLExecDirectW, SQLFreeStmt, SQLPrepareW, SQLSetStmtAttrW, SqlReturn, StatementAttribute,
+        SQL_NTS,
     };
 
     /// This test is inspired by the SSIS Preview Data result set metadata flow.
@@ -40,11 +41,15 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLPrepareW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
 
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLFreeStmt(stmt_handle, FreeStmtOption::SQL_CLOSE)
+                SQLFreeStmt(stmt_handle, FreeStmtOption::SQL_CLOSE),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
 
             disconnect_and_free_dbc_and_env_handles(env_handle, conn_handle);
@@ -77,7 +82,9 @@ mod integration {
                     StatementAttribute::SQL_ATTR_QUERY_TIMEOUT,
                     value,
                     0
-                )
+                ),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
 
             let mut query: Vec<WideChar> =
@@ -85,7 +92,9 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS as i32)
+                SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
 
             fetch_and_get_data(
@@ -95,7 +104,12 @@ mod integration {
                 vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_SBIGINT],
             );
 
-            assert_eq!(SqlReturn::SUCCESS, SQLCancel(stmt_handle))
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLCancel(stmt_handle),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+            )
         }
     }
 }
