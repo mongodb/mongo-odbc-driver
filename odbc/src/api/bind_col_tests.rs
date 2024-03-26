@@ -7,9 +7,10 @@ mod unit {
         map, SQLBindCol, SQLFetch,
     };
     use bson::doc;
-    use cstr::{from_widechar_ref_lossy, input_text_to_string_w, WideChar};
+    use cstr::{input_text_to_string_w, WideChar};
     use definitions::{
         BindType, CDataType, Len, Nullability, SmallInt, SqlReturn, ULen, USmallInt, WChar,
+        SQL_ROW_NOROW, SQL_ROW_SUCCESS,
     };
     use mongo_odbc_core::{
         json_schema::{
@@ -567,10 +568,19 @@ mod unit {
 
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(0, *row_status_array);
-            assert_eq!(0, *((row_status_array as ULen + 2) as *mut USmallInt));
-            assert_eq!(0, *((row_status_array as ULen + 4) as *mut USmallInt));
-            assert_eq!(0, *((row_status_array as ULen + 6) as *mut USmallInt));
+            assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 2) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 4) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 6) as *mut USmallInt)
+            );
 
             // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
@@ -649,10 +659,19 @@ mod unit {
 
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(0, *row_status_array);
-            assert_eq!(0, *((row_status_array as ULen + 2) as *mut USmallInt));
-            assert_eq!(0, *((row_status_array as ULen + 4) as *mut USmallInt));
-            assert_eq!(0, *((row_status_array as ULen + 6) as *mut USmallInt));
+            assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 2) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 4) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 6) as *mut USmallInt)
+            );
 
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
 
@@ -660,10 +679,19 @@ mod unit {
 
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(3, *row_status_array);
-            assert_eq!(3, *((row_status_array as ULen + 2) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 4) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 6) as *mut USmallInt));
+            assert_eq!(SQL_ROW_NOROW, *row_status_array);
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 2) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 4) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 6) as *mut USmallInt)
+            );
 
             // free buffers
             let _ = Box::from_raw(num_buffer as *mut WChar);
@@ -854,12 +882,27 @@ mod unit {
 
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(0, *row_status_array);
-            assert_eq!(0, *((row_status_array as ULen + 2) as *mut USmallInt));
-            assert_eq!(0, *((row_status_array as ULen + 4) as *mut USmallInt));
-            assert_eq!(0, *((row_status_array as ULen + 6) as *mut USmallInt));
-            assert_eq!(0, *((row_status_array as ULen + 8) as *mut USmallInt));
-            assert_eq!(0, *((row_status_array as ULen + 10) as *mut USmallInt));
+            assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 2) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 4) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 6) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 8) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 10) as *mut USmallInt)
+            );
 
             // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
@@ -952,12 +995,27 @@ mod unit {
 
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(0, *row_status_array);
-            assert_eq!(0, *((row_status_array as ULen + 2) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 4) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 6) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 8) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 10) as *mut USmallInt));
+            assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
+            assert_eq!(
+                SQL_ROW_SUCCESS,
+                *((row_status_array as ULen + 2) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 4) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 6) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 8) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 10) as *mut USmallInt)
+            );
 
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
 
@@ -965,12 +1023,27 @@ mod unit {
 
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(3, *row_status_array);
-            assert_eq!(3, *((row_status_array as ULen + 2) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 4) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 6) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 6) as *mut USmallInt));
-            assert_eq!(3, *((row_status_array as ULen + 6) as *mut USmallInt));
+            assert_eq!(SQL_ROW_NOROW, *row_status_array);
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 2) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 4) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 6) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 6) as *mut USmallInt)
+            );
+            assert_eq!(
+                SQL_ROW_NOROW,
+                *((row_status_array as ULen + 6) as *mut USmallInt)
+            );
 
             // free buffers
             let _ = Box::from_raw(num_buffer as *mut WChar);
