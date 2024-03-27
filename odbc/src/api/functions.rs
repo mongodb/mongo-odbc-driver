@@ -1388,7 +1388,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetchScroll(
     statement_handle: HStmt,
-    fetch_orientation: USmallInt,
+    fetch_orientation: SmallInt,
     _fetch_offset: Len,
 ) -> SqlReturn {
     panic_safe_exec_clear_diagnostics!(

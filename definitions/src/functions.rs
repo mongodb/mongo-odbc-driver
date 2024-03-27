@@ -580,7 +580,7 @@ extern "system" {
     pub fn SQLGetDescFieldW(
         descriptor_handle: HDesc,
         record_number: SmallInt,
-        field_identifier: USmallInt,
+        field_identifier: SmallInt,
         value_ptr: Pointer,
         buffer_length: Integer,
         string_length_ptr: *mut Integer,
@@ -740,7 +740,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_STILL_EXECUTING`.
     pub fn SQLFetchScroll(
         statement_handle: HStmt,
-        fetch_orientation: USmallInt,
+        fetch_orientation: SmallInt,
         fetch_offset: Len,
     ) -> SqlReturn;
 
@@ -931,7 +931,7 @@ extern "system" {
     pub fn SQLSetDescField(
         hdesc: HDesc,
         rec_number: SmallInt,
-        field_identifier: USmallInt,
+        field_identifier: SmallInt,
         value: Pointer,
         buffer_length: Integer,
     ) -> SqlReturn;
