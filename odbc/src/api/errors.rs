@@ -132,6 +132,8 @@ pub enum ODBCError {
     RestrictedDataType(&'static str, &'static str),
     #[error("[{}][API] No resultset for statement", VENDOR_IDENTIFIER)]
     NoResultSet,
+    #[error("[{}][API] Driver not capable", VENDOR_IDENTIFIER)]
+    DriverNotCapable,
     #[error("Connection not open")]
     ConnectionNotOpen,
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
@@ -149,7 +151,8 @@ impl ODBCError {
             | ODBCError::UnsupportedFieldSchema()
             | ODBCError::UnsupportedConnectionAttribute(_)
             | ODBCError::UnsupportedStatementAttribute(_)
-            | ODBCError::UnsupportedInfoTypeRetrieval(_) => NOT_IMPLEMENTED,
+            | ODBCError::UnsupportedInfoTypeRetrieval(_)
+            | ODBCError::DriverNotCapable => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
             ODBCError::GeneralWarning(_) => GENERAL_WARNING,
             ODBCError::Core(c) => c.get_sql_state(),
@@ -204,6 +207,7 @@ impl ODBCError {
             | ODBCError::UnsupportedConnectionAttribute(_)
             | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedFieldSchema()
+            | ODBCError::DriverNotCapable
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)
             | ODBCError::InvalidColumnNumber(_)

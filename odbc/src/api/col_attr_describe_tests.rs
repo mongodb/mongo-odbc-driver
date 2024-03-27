@@ -1,5 +1,4 @@
 use crate::{
-    errors::ODBCError,
     handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW, SQLDescribeColW,
 };
@@ -566,13 +565,10 @@ mod unit {
                 .read()
                 .unwrap();
             assert_eq!(errors.len(), 1);
-            let actual_err = errors.first().unwrap();
-            match actual_err {
-                ODBCError::UnsupportedFieldDescriptor(desc) => {
-                    assert_eq!(*desc, 4.to_string())
-                }
-                _ => panic!("unexpected err: {actual_err:?}"),
-            }
+            assert_eq!(
+                "[MongoDB][API] Driver not capable".to_string(),
+                format!("{}", errors.first().unwrap()),
+            );
 
             let _ = Box::from_raw(conn as *mut WChar);
             let _ = Box::from_raw(env as *mut WChar);

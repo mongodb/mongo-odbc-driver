@@ -748,10 +748,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 None => {
                     let mongo_handle = MongoHandleRef::from(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
-                    add_diag_info!(
-                        mongo_handle,
-                        ODBCError::UnsupportedFieldDescriptor(format!("{field_identifier}"))
-                    );
+                    add_diag_info!(mongo_handle, ODBCError::DriverNotCapable);
                     SqlReturn::ERROR
                 }
             }
