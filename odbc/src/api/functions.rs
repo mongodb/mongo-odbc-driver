@@ -1128,7 +1128,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
                 None => {
                     add_diag_info!(
                         conn_handle,
-                        ODBCError::UnsupportedDriverConnectOption(format!("{driver_completion:?}"))
+                        ODBCError::InvalidDriverCompletion(driver_completion)
                     );
                     return SqlReturn::ERROR;
                 }

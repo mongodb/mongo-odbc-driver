@@ -3,9 +3,9 @@ use constants::{
     GENERAL_WARNING, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
     INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE,
     INVALID_COLUMN_NUMBER, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX,
-    INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET,
-    OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE, RIGHT_TRUNCATED,
-    UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    INVALID_DRIVER_COMPLETION, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED,
+    NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE,
+    RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -76,6 +76,8 @@ pub enum ODBCError {
     FetchTypeOutOfRange(u16),
     #[error("[{}][API] Invalid target type {0}", VENDOR_IDENTIFIER)]
     InvalidTargetType(i16),
+    #[error("[{}][API] Invalid driver completion type {0}", VENDOR_IDENTIFIER)]
+    InvalidDriverCompletion(u16),
     #[error(
         "[{}][API] Missing property \"Driver\" or \"DSN\" in connection string",
         VENDOR_IDENTIFIER
@@ -157,6 +159,7 @@ impl ODBCError {
             ODBCError::InvalidCursorState => INVALID_CURSOR_STATE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::InvalidTargetType(_) => PROGRAM_TYPE_OUT_OF_RANGE,
+            ODBCError::InvalidDriverCompletion(_) => INVALID_DRIVER_COMPLETION,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
@@ -215,6 +218,7 @@ impl ODBCError {
             | ODBCError::InvalidSqlType(_)
             | ODBCError::UnsupportedFieldDescriptor(_)
             | ODBCError::InvalidCharacterValue(_)
+            | ODBCError::InvalidDriverCompletion(_)
             | ODBCError::NoResultSet
             | ODBCError::UnsupportedInfoTypeRetrieval(_)
             | ODBCError::ConnectionNotOpen
