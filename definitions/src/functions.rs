@@ -944,7 +944,7 @@ extern "system" {
     pub fn SQLSetDescFieldW(
         hdesc: HDesc,
         rec_number: SmallInt,
-        field_identifier: USmallInt,
+        field_identifier: SmallInt,
         value: Pointer,
         buffer_length: Integer,
     ) -> SqlReturn;
