@@ -3779,7 +3779,6 @@ unsafe fn sql_set_stmt_attrw_helper(
             SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE | StatementAttribute::SQL_ROWSET_SIZE => {
-
             match u32::try_from(value_ptr as ULen){
                 Ok(ras) => {
                     stmt.attributes.write().unwrap().row_array_size = ras as ULen;
@@ -3787,6 +3786,7 @@ unsafe fn sql_set_stmt_attrw_helper(
                 },
                 Err(_) => {
                     stmt.attributes.write().unwrap().row_array_size = u32::MAX as ULen;
+                    add_diag_with_function!(stmt_handle, ODBCError::OptionValueChanged("SQL_ATTR_ROW_ARRAY_SIZE or SQL_ROWSET_SIZE", "4,294,967,295"), "SQLSetStmtAttrW");
                     SqlReturn::SUCCESS_WITH_INFO
                 },
             }
