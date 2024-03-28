@@ -418,10 +418,13 @@ mod unit {
             let s = (*stmt).as_statement().unwrap();
 
             // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
-            let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0i32; 4])) as *mut _;
+            // num_buffer needs to be 16 bytes since since the rowset size is 4, and each column value is an i32 (4 bytes), so (4 rows)*(4 bytes) = 16 bytes.
+            let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 16])) as *mut _;
             let num_indicator: *mut Len = Box::into_raw(Box::new([0isize; 4])) as *mut Len;
 
-            let word_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u32; 20])) as *mut _;
+            // word_buffer needs to be 80 bytes since since the rowset size is 4, and each column value is a string of 5 WideChars (4 bytes)
+            // including the null termination character, so (4 rows)*(5 * 4 bytes) = 80 bytes.
+            let word_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 80])) as *mut _;
             let word_indicator: *mut Len = Box::into_raw(Box::new([0isize; 4])) as *mut Len;
 
             // In this test, we assume that SQLBindCol has already been run and added columns to bind, so
@@ -493,79 +496,42 @@ mod unit {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
             // assert that the first 4 values from the result set were put in the bound buffer array correctly for column 1.
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .target_buffer;
-            assert_eq!(10, *(bound_buffer as *mut i32));
-            assert_eq!(20, *((bound_buffer as ULen + 4) as *mut i32));
-            assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
-            assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
+            assert_eq!(10, *(num_buffer as *mut i32));
+            assert_eq!(20, *((num_buffer as ULen + 4) as *mut i32));
+            assert_eq!(30, *((num_buffer as ULen + 8) as *mut i32));
+            assert_eq!(40, *((num_buffer as ULen + 12) as *mut i32));
 
             // assert that the indicator has the correct values for column 1.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(4, *indicator);
-            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
 
             // assert that the first 4 values from the result set were put in the bound buffer array correctly for column 2.
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&2)
-                .unwrap()
-                .target_buffer;
-
             // input_text_to_string_w requires a `usize` value; however, I need a negative value to test that the null termination character was added,
             // So I input usize::MAX because it casts to -1 in the function.
             assert_eq!(
                 "aaaa",
-                input_text_to_string_w(bound_buffer as *const WideChar, usize::MAX)
+                input_text_to_string_w(word_buffer as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "bbbb",
-                input_text_to_string_w((bound_buffer as ULen + 20) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 20) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "cccc",
-                input_text_to_string_w((bound_buffer as ULen + 40) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 40) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "dddd",
-                input_text_to_string_w((bound_buffer as ULen + 60) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 60) as *const WideChar, usize::MAX)
             );
 
             // assert that the indicator has the correct values for column 2.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&2)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(8, *indicator);
-            assert_eq!(8, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(8, *word_indicator);
+            assert_eq!(8, *((word_indicator as ULen + 8) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 16) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 24) as *mut Len));
 
             // assert that the rows_fetch_ptr has the correct value.
             assert_eq!(4, *s.attributes.read().unwrap().rows_fetched_ptr);
@@ -591,77 +557,40 @@ mod unit {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
             // assert that the last 4 values from the result set were put in the bound buffer array correctly for column 1.
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .target_buffer;
-            assert_eq!(50, *(bound_buffer as *mut i32));
-            assert_eq!(60, *((bound_buffer as ULen + 4) as *mut i32));
-            assert_eq!(70, *((bound_buffer as ULen + 8) as *mut i32));
-            assert_eq!(80, *((bound_buffer as ULen + 12) as *mut i32));
+            assert_eq!(50, *(num_buffer as *mut i32));
+            assert_eq!(60, *((num_buffer as ULen + 4) as *mut i32));
+            assert_eq!(70, *((num_buffer as ULen + 8) as *mut i32));
+            assert_eq!(80, *((num_buffer as ULen + 12) as *mut i32));
 
             // assert that the indicator has the correct values for column 1.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(4, *indicator);
-            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
 
             // assert that the last 4 values from the result set were put in the bound buffer array correctly for column 2.
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&2)
-                .unwrap()
-                .target_buffer;
-
             assert_eq!(
                 "eeee",
-                input_text_to_string_w(bound_buffer as *const WideChar, usize::MAX)
+                input_text_to_string_w(word_buffer as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "ffff",
-                input_text_to_string_w((bound_buffer as ULen + 20) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 20) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "gggg",
-                input_text_to_string_w((bound_buffer as ULen + 40) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 40) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "hhhh",
-                input_text_to_string_w((bound_buffer as ULen + 60) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 60) as *const WideChar, usize::MAX)
             );
 
             // assert that the indicator has the correct values for column 2.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&2)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(8, *indicator);
-            assert_eq!(8, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(8, *word_indicator);
+            assert_eq!(8, *((word_indicator as ULen + 8) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 16) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 24) as *mut Len));
 
             // assert that the rows_fetch_ptr has the correct value.
             assert_eq!(4, *s.attributes.read().unwrap().rows_fetched_ptr);
@@ -731,10 +660,13 @@ mod unit {
             let s = (*stmt).as_statement().unwrap();
 
             // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
-            let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0i32; 6])) as *mut _;
+            // num_buffer needs to be 24 bytes since since the rowset size is 6, and each column value is an i32 (4 bytes), so (6 rows)*(4 bytes) = 24 bytes.
+            let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 24])) as *mut _;
             let num_indicator: *mut Len = Box::into_raw(Box::new([0isize; 6])) as *mut Len;
 
-            let word_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u32; 30])) as *mut _;
+            // word_buffer needs to be 120 bytes since since the rowset size is 6, and each column value is a string of 5 WideChars (4 bytes)
+            // including the null termination character, so (6 rows)*(5 * 4 bytes) = 120 bytes.
+            let word_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 120])) as *mut _;
             let word_indicator: *mut Len = Box::into_raw(Box::new([0isize; 6])) as *mut Len;
 
             // In this test, we assume that SQLBindCol has already been run and added columns to bind, so
@@ -806,93 +738,56 @@ mod unit {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
             // assert that the first 6 values from the result set were put in the bound buffer array correctly for column 1.
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .target_buffer;
-            assert_eq!(10, *(bound_buffer as *mut i32));
-            assert_eq!(20, *((bound_buffer as ULen + 4) as *mut i32));
-            assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
-            assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
-            assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
-            assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
+            assert_eq!(10, *(num_buffer as *mut i32));
+            assert_eq!(20, *((num_buffer as ULen + 4) as *mut i32));
+            assert_eq!(30, *((num_buffer as ULen + 8) as *mut i32));
+            assert_eq!(40, *((num_buffer as ULen + 12) as *mut i32));
+            assert_eq!(50, *((num_buffer as ULen + 16) as *mut i32));
+            assert_eq!(60, *((num_buffer as ULen + 20) as *mut i32));
 
             // assert that the indicator has the correct values for column 1.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(4, *indicator);
-            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 32) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 40) as *mut Len));
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 32) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 40) as *mut Len));
 
             // assert that the first 6 values from the result set were put in the bound buffer array correctly for column 2.
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&2)
-                .unwrap()
-                .target_buffer;
-
             // input_text_to_string_w requires a `usize` value; however, I need a negative value to test that the null termination character was added,
             // So I input usize::MAX because it casts to -1 in the function.
             assert_eq!(
                 "aaaa",
-                input_text_to_string_w(bound_buffer as *const WideChar, usize::MAX)
+                input_text_to_string_w(word_buffer as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "bbbb",
-                input_text_to_string_w((bound_buffer as ULen + 20) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 20) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "cccc",
-                input_text_to_string_w((bound_buffer as ULen + 40) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 40) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "dddd",
-                input_text_to_string_w((bound_buffer as ULen + 60) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 60) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "eeee",
-                input_text_to_string_w((bound_buffer as ULen + 80) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 80) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "ffff",
-                input_text_to_string_w((bound_buffer as ULen + 100) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 100) as *const WideChar, usize::MAX)
             );
 
             // assert that the indicator has the correct values for column 2.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&2)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(8, *indicator);
-            assert_eq!(8, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 32) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 40) as *mut Len));
+            assert_eq!(8, *word_indicator);
+            assert_eq!(8, *((word_indicator as ULen + 8) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 16) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 24) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 32) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 40) as *mut Len));
 
             // assert that the rows_fetch_ptr has the correct value.
             assert_eq!(6, *s.attributes.read().unwrap().rows_fetched_ptr);
@@ -926,91 +821,54 @@ mod unit {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
             // assert that the last 2 values from the result set were put in the bound buffer array correctly for column 1.
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .target_buffer;
-            assert_eq!(70, *(bound_buffer as *mut i32));
-            assert_eq!(80, *((bound_buffer as ULen + 4) as *mut i32));
-            assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
-            assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
-            assert_eq!(50, *((bound_buffer as ULen + 16) as *mut i32));
-            assert_eq!(60, *((bound_buffer as ULen + 20) as *mut i32));
+            assert_eq!(70, *(num_buffer as *mut i32));
+            assert_eq!(80, *((num_buffer as ULen + 4) as *mut i32));
+            assert_eq!(30, *((num_buffer as ULen + 8) as *mut i32));
+            assert_eq!(40, *((num_buffer as ULen + 12) as *mut i32));
+            assert_eq!(50, *((num_buffer as ULen + 16) as *mut i32));
+            assert_eq!(60, *((num_buffer as ULen + 20) as *mut i32));
 
             // assert that the indicator has the correct values for column 1.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(4, *indicator);
-            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 32) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 40) as *mut Len));
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 32) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 40) as *mut Len));
 
             // assert that the last 2 values from the result set were put in the bound buffer array correctly for column 2.
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&2)
-                .unwrap()
-                .target_buffer;
-
             assert_eq!(
                 "gggg",
-                input_text_to_string_w(bound_buffer as *const WideChar, usize::MAX)
+                input_text_to_string_w(word_buffer as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "hhhh",
-                input_text_to_string_w((bound_buffer as ULen + 20) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 20) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "cccc",
-                input_text_to_string_w((bound_buffer as ULen + 40) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 40) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "dddd",
-                input_text_to_string_w((bound_buffer as ULen + 60) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 60) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "eeee",
-                input_text_to_string_w((bound_buffer as ULen + 80) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 80) as *const WideChar, usize::MAX)
             );
             assert_eq!(
                 "ffff",
-                input_text_to_string_w((bound_buffer as ULen + 100) as *const WideChar, usize::MAX)
+                input_text_to_string_w((word_buffer as ULen + 100) as *const WideChar, usize::MAX)
             );
 
             // assert that the indicator has the correct values for column 2.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&2)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(8, *indicator);
-            assert_eq!(8, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 24) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 32) as *mut Len));
-            assert_eq!(8, *((indicator as ULen + 40) as *mut Len));
+            assert_eq!(8, *word_indicator);
+            assert_eq!(8, *((word_indicator as ULen + 8) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 16) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 24) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 32) as *mut Len));
+            assert_eq!(8, *((word_indicator as ULen + 40) as *mut Len));
 
             // assert that the rows_fetch_ptr has the correct value.
             assert_eq!(2, *s.attributes.read().unwrap().rows_fetched_ptr);
@@ -1097,7 +955,8 @@ mod unit {
             let s = (*stmt).as_statement().unwrap();
 
             // set every value in the array to 0, so we know SQLFetch changed the values when we check later.
-            let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0i32; 4])) as *mut _;
+            // num_buffer needs to be 16 bytes since since the rowset size is 4, and each column value is an i32 (4 bytes), so (4 rows)*(4 bytes) = 16 bytes.
+            let num_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 16])) as *mut _;
             let num_indicator: *mut Len = Box::into_raw(Box::new([0isize; 4])) as *mut Len;
 
             // In this test, we assume that SQLBindCol has already been run and added a column to bind, so
@@ -1161,67 +1020,31 @@ mod unit {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
             // assert that the first 4 values from the result set were put in the bound buffer array correctly for column 1
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .target_buffer;
-            assert_eq!(10, *(bound_buffer as *mut i32));
-            assert_eq!(20, *((bound_buffer as ULen + 4) as *mut i32));
-            assert_eq!(30, *((bound_buffer as ULen + 8) as *mut i32));
-            assert_eq!(40, *((bound_buffer as ULen + 12) as *mut i32));
+            assert_eq!(10, *(num_buffer as *mut i32));
+            assert_eq!(20, *((num_buffer as ULen + 4) as *mut i32));
+            assert_eq!(30, *((num_buffer as ULen + 8) as *mut i32));
+            assert_eq!(40, *((num_buffer as ULen + 12) as *mut i32));
 
             // assert that the indicator has the correct values for column 1.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(4, *indicator);
-            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
 
             // assert that SQLFetch is successful. We are fetching the next 4 rows in the result set.
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt as *mut _));
 
             // assert that the last 4 values from the result set were put in the bound buffer array correctly for column 1
-            let bound_buffer = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .target_buffer;
-            assert_eq!(50, *(bound_buffer as *mut i32));
-            assert_eq!(60, *((bound_buffer as ULen + 4) as *mut i32));
-            assert_eq!(70, *((bound_buffer as ULen + 8) as *mut i32));
-            assert_eq!(80, *((bound_buffer as ULen + 12) as *mut i32));
+            assert_eq!(50, *(num_buffer as *mut i32));
+            assert_eq!(60, *((num_buffer as ULen + 4) as *mut i32));
+            assert_eq!(70, *((num_buffer as ULen + 8) as *mut i32));
+            assert_eq!(80, *((num_buffer as ULen + 12) as *mut i32));
 
             // assert that the indicator has the correct values for column 1.
-            let indicator = s
-                .bound_cols
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get(&1)
-                .unwrap()
-                .length_or_indicator;
-            assert_eq!(4, *indicator);
-            assert_eq!(4, *((indicator as ULen + 8) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 16) as *mut Len));
-            assert_eq!(4, *((indicator as ULen + 24) as *mut Len));
+            assert_eq!(4, *num_indicator);
+            assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
+            assert_eq!(4, *((num_indicator as ULen + 24) as *mut Len));
 
             // assert that another fetch returns NO_DATA
             assert_eq!(SqlReturn::NO_DATA, SQLFetch(stmt as *mut _));
