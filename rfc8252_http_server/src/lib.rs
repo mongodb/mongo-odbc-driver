@@ -173,7 +173,7 @@ async fn run_app(
     server.await
 }
 
-pub fn start() {
+pub fn start() -> std::result::Result<OidcResponseParams, std::io::Error> {
     let (sender, receiver) = mpsc::channel();
     let (oidc_params_sender, oidc_params_receiver) = mpsc::channel();
     let (stop_sender, stop_receiver) = mpsc::channel();
@@ -188,15 +188,20 @@ pub fn start() {
 
     loop {
         if let Ok(oidc_params) = oidc_params_receiver.try_recv() {
-            println!("received oidc params: {:?}", oidc_params);
-            break;
+            // Send a stop signal to the server, waiting for it to exit gracefully
+            println!("stopping server");
+            rt::System::new().block_on(server_handle.stop(true));
+            return Ok(oidc_params);
         }
         if let Ok(_) = stop_receiver.try_recv() {
             println!("received stop signal");
-            break;
+            // Send a stop signal to the server, waiting for it to exit gracefully
+            println!("stopping server");
+            rt::System::new().block_on(server_handle.stop(true));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "server was stopped",
+            ));
         }
     }
-    // Send a stop signal to the server, waiting for it to exit gracefully
-    println!("stopping server");
-    rt::System::new().block_on(server_handle.stop(true));
 }
