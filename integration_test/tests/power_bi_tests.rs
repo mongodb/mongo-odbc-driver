@@ -31,7 +31,7 @@ mod integration {
 
             let outcome = SQLGetInfoW(
                 conn_handle as HDbc,
-                info_type,
+                info_type as u16,
                 buffer.output_buffer,
                 info_value_buffer_length,
                 &mut buffer.data_length as &mut _,
@@ -74,7 +74,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::SQL_HANDLE_ENV,
+                    HandleType::SQL_HANDLE_ENV as i16,
                     null_mut(),
                     &mut env as *mut Handle
                 )
@@ -84,7 +84,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetEnvAttr(
                     env as HEnv,
-                    EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+                    EnvironmentAttribute::SQL_ATTR_ODBC_VERSION as i32,
                     AttrOdbcVersion::SQL_OV_ODBC3.into(),
                     0,
                 )
@@ -94,7 +94,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetEnvAttr(
                     env as HEnv,
-                    EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING,
+                    EnvironmentAttribute::SQL_ATTR_CONNECTION_POOLING as i32,
                     AttrConnectionPooling::SQL_CP_ONE_PER_HENV.into(),
                     0,
                 )
@@ -120,7 +120,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::SQL_HANDLE_DBC,
+                    HandleType::SQL_HANDLE_DBC as i16,
                     env_handle as *mut _,
                     &mut dbc as *mut Handle
                 )
@@ -135,7 +135,7 @@ mod integration {
                     SqlReturn::SUCCESS,
                     SQLSetConnectAttrW(
                         dbc as HDbc,
-                        ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT,
+                        ConnectionAttribute::SQL_ATTR_LOGIN_TIMEOUT as i32,
                         login_timeout as Pointer,
                         0,
                     )
@@ -163,7 +163,7 @@ mod integration {
                     out_connection_string_buff,
                     BUFFER_LENGTH,
                     str_len_ptr,
-                    DriverConnectOption::SQL_DRIVER_NO_PROMPT,
+                    DriverConnectOption::SQL_DRIVER_NO_PROMPT as u16,
                 ),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, dbc)
@@ -206,7 +206,7 @@ mod integration {
             // Verify that freeing the handle is working as expected
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLFreeHandle(HandleType::SQL_HANDLE_ENV, env_handle as Handle),
+                SQLFreeHandle(HandleType::SQL_HANDLE_ENV as i16, env_handle as Handle),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
             );
@@ -409,7 +409,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::SQL_HANDLE_STMT,
+                    HandleType::SQL_HANDLE_STMT as i16,
                     conn_handle as *mut _,
                     &mut stmt as *mut Handle
                 )
@@ -425,7 +425,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetConnectAttrW(
                     conn_handle,
-                    ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG,
+                    ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG as i32,
                     current_db.0 as *mut _,
                     current_db.1.len() as i32
                 )
@@ -507,7 +507,7 @@ mod integration {
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLAllocHandle(
-                    HandleType::SQL_HANDLE_STMT,
+                    HandleType::SQL_HANDLE_STMT as i16,
                     conn_handle as *mut _,
                     &mut stmt as *mut Handle
                 )

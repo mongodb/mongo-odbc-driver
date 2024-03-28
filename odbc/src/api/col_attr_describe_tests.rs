@@ -51,7 +51,7 @@ mod unit {
                     SQLColAttributeW(
                         stmt_handle as *mut _,
                         0,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -122,7 +122,7 @@ mod unit {
                     SQLColAttributeW(
                         stmt_handle as *mut _,
                         0,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -170,7 +170,7 @@ mod unit {
             let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
             let col_size = &mut 42usize;
             let decimal_digits = &mut 42i16;
-            let mut nullable = Nullability::SQL_NO_NULLS;
+            let mut nullable = Nullability::SQL_NO_NULLS as i16;
             // test string attributes
             assert_eq!(
                 SqlReturn::ERROR,
@@ -249,7 +249,7 @@ mod unit {
                     SQLColAttributeW(
                         stmt_handle as *mut _,
                         0,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -300,7 +300,7 @@ mod unit {
                 let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
                 let col_size = &mut 42usize;
                 let decimal_digits = &mut 42i16;
-                let mut nullable = Nullability::SQL_NO_NULLS;
+                let mut nullable = Nullability::SQL_NO_NULLS as i16;
                 // test string attributes
                 assert_eq!(
                     SqlReturn::ERROR,
@@ -369,7 +369,7 @@ mod unit {
                         SQLColAttributeW(
                             mongo_handle as *mut _,
                             col_index,
-                            desc,
+                            desc as u16,
                             char_buffer,
                             buffer_length,
                             out_length,
@@ -437,7 +437,7 @@ mod unit {
                     SQLColAttributeW(
                         mongo_handle as *mut _,
                         col_index,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -507,7 +507,7 @@ mod unit {
                     SQLColAttributeW(
                         mongo_handle as *mut _,
                         col_index,
-                        desc,
+                        desc as u16,
                         char_buffer,
                         buffer_length,
                         out_length,
@@ -524,6 +524,52 @@ mod unit {
             }
         }
         unsafe {
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
+    }
+
+    // verify that given a column attribute that doesn't match any enum value, we return an informative error
+    #[test]
+    fn test_invalid_col_attribute() {
+        unsafe {
+            let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+                EnvState::ConnectionAllocated,
+            ))));
+            let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection::with_state(
+                env as *mut _,
+                ConnectionState::Connected,
+            ))));
+
+            let mut stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+            stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
+            let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
+
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLColAttributeW(
+                    mongo_handle as *mut _,
+                    0,
+                    4, // not a valid field attribute
+                    std::ptr::null_mut(),
+                    0,
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                ),
+            );
+
+            let errors = (*mongo_handle)
+                .as_statement()
+                .unwrap()
+                .errors
+                .read()
+                .unwrap();
+            assert_eq!(errors.len(), 1);
+            assert_eq!(
+                "[MongoDB][API] Invalid field descriptor value 4".to_string(),
+                format!("{}", errors.first().unwrap()),
+            );
+
             let _ = Box::from_raw(conn as *mut WChar);
             let _ = Box::from_raw(env as *mut WChar);
         }
@@ -552,7 +598,7 @@ mod unit {
             let mut data_type = SqlDataType::SQL_UNKNOWN_TYPE;
             let col_size = &mut 42usize;
             let decimal_digits = &mut 42i16;
-            let mut nullable = Nullability::SQL_NULLABLE_UNKNOWN;
+            let mut nullable = Nullability::SQL_NULLABLE_UNKNOWN as i16;
             // test string attributes
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -577,7 +623,7 @@ mod unit {
             // decimal_digits should be 0
             assert_eq!(0i16, *decimal_digits);
             // nullable should stay as NO_NULLS
-            assert_eq!(Nullability::SQL_NO_NULLS, nullable);
+            assert_eq!(Nullability::SQL_NO_NULLS as i16, nullable);
             // name_buffer should contain TABLE_NAME
             assert_eq!(
                 "TABLE_NAME".to_string(),
