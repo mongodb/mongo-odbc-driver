@@ -20,6 +20,7 @@ mod unit {
         mock_query::MongoQuery,
         MongoColMetadata, MongoStatement, TypeMode,
     };
+    use std::collections::HashMap;
     use std::ptr::null_mut;
 
     #[test]
@@ -43,17 +44,7 @@ mod unit {
             // Set the mongo_statement to have non-empty cursor initially.
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
-            let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": 1}, doc! {"x": 2}],
-                vec![MongoColMetadata::new(
-                    "",
-                    "".to_string(),
-                    "x".to_string(),
-                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::SQL_NO_NULLS,
-                    TypeMode::Simple,
-                )],
-            );
+            let mock_query = &mut create_mongo_query_for_bind_col_tests();
 
             // Must call next to set the `current` field.
             let _ = mock_query.next(None);
@@ -166,17 +157,7 @@ mod unit {
             // Set the mongo_statement to have non-empty cursor initially.
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
-            let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": 1}, doc! {"x": 2}],
-                vec![MongoColMetadata::new(
-                    "",
-                    "".to_string(),
-                    "x".to_string(),
-                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::SQL_NO_NULLS,
-                    TypeMode::Simple,
-                )],
-            );
+            let mock_query = &mut create_mongo_query_for_bind_col_tests();
 
             // Must call next to set the `current` field.
             let _ = mock_query.next(None);
@@ -233,17 +214,7 @@ mod unit {
             // Set the mongo_statement to have non-empty cursor initially.
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
-            let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": 1}, doc! {"x": 2}],
-                vec![MongoColMetadata::new(
-                    "",
-                    "".to_string(),
-                    "x".to_string(),
-                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::SQL_NO_NULLS,
-                    TypeMode::Simple,
-                )],
-            );
+            let mock_query = &mut create_mongo_query_for_bind_col_tests();
 
             // Must call next to set the `current` field.
             let _ = mock_query.next(None);
@@ -293,17 +264,7 @@ mod unit {
             // Set the mongo_statement to have non-empty cursor initially.
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
-            let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": 1}, doc! {"x": 2}],
-                vec![MongoColMetadata::new(
-                    "",
-                    "".to_string(),
-                    "x".to_string(),
-                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::SQL_NO_NULLS,
-                    TypeMode::Simple,
-                )],
-            );
+            let mock_query = &mut create_mongo_query_for_bind_col_tests();
 
             // Must call next to set the `current` field.
             let _ = mock_query.next(None);
@@ -341,17 +302,7 @@ mod unit {
             // Set the mongo_statement to have non-empty cursor initially.
             // Here, we create a MockQuery with nonsense dummy data since the
             // values themselves do not matter.
-            let mock_query = &mut MongoQuery::new(
-                vec![doc! {"x": 1}, doc! {"x": 2}],
-                vec![MongoColMetadata::new(
-                    "",
-                    "".to_string(),
-                    "x".to_string(),
-                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                    Nullability::SQL_NO_NULLS,
-                    TypeMode::Simple,
-                )],
-            );
+            let mock_query = &mut create_mongo_query_for_bind_col_tests();
 
             // Must call next to set the `current` field.
             let _ = mock_query.next(None);
@@ -429,21 +380,12 @@ mod unit {
 
             // In this test, we assume that SQLBindCol has already been run and added columns to bind, so
             // I add column `1` and `2` to bound_cols.
-            *s.bound_cols.write().unwrap() = Some(map! {
-                1 => BoundColInfo {
-                    target_type: CDataType::SQL_C_SLONG as SmallInt,
-                    target_buffer: num_buffer,
-                    buffer_length: 4, // buffer_length is 4 because an i32 is 4 bytes; therefore, each buffer needs to be 4 bytes long.
-                    length_or_indicator: num_indicator,
-                },
-                2 => BoundColInfo {
-                    target_type: CDataType::SQL_C_WCHAR as SmallInt,
-                    target_buffer: word_buffer,
-                    buffer_length: 20, // buffer_length is 20 because each word is 20 bytes long including the null termination character (WideChar * 5).
-                    length_or_indicator: word_indicator,
-                },
-
-            });
+            *s.bound_cols.write().unwrap() = create_column_bindings_for_num_and_word(
+                num_buffer,
+                num_indicator,
+                word_buffer,
+                word_indicator,
+            );
 
             // set all statement attributes to the correct values.
             s.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
@@ -458,32 +400,7 @@ mod unit {
                 Box::into_raw(Box::new(0usize)) as *mut ULen;
 
             // create a mongo query with data that corresponds to the bound columns.
-            let mock_query = MongoQuery::new(
-                vec![
-                    doc! {"test": {"num": 10, "word": "aaaa"}},
-                    doc! {"test": {"num": 20, "word": "bbbb"}},
-                    doc! {"test": {"num": 30, "word": "cccc"}},
-                    doc! {"test": {"num": 40, "word": "dddd"}},
-                ],
-                vec![
-                    MongoColMetadata::new(
-                        "",
-                        "test".to_string(),
-                        "num".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                    MongoColMetadata::new(
-                        "",
-                        "test".to_string(),
-                        "word".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                ],
-            );
+            let mock_query = create_mongo_query_for_bind_col_fetching_tests();
 
             // Set the mongo_statement
             *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query));
@@ -615,21 +532,12 @@ mod unit {
 
             // In this test, we assume that SQLBindCol has already been run and added columns to bind, so
             // I add column `1` and `2` to bound_cols.
-            *s.bound_cols.write().unwrap() = Some(map! {
-                1 => BoundColInfo {
-                    target_type: CDataType::SQL_C_SLONG as SmallInt,
-                    target_buffer: num_buffer,
-                    buffer_length: 4, // buffer_length is 4 because an i32 is 4 bytes; therefore, each buffer needs to be 4 bytes long.
-                    length_or_indicator: num_indicator,
-                },
-                2 => BoundColInfo {
-                    target_type: CDataType::SQL_C_WCHAR as SmallInt,
-                    target_buffer: word_buffer,
-                    buffer_length: 20, // buffer_length is 20 because each word is 20 bytes long including the null termination character (WideChar * 5).
-                    length_or_indicator: word_indicator,
-                },
-
-            });
+            *s.bound_cols.write().unwrap() = create_column_bindings_for_num_and_word(
+                num_buffer,
+                num_indicator,
+                word_buffer,
+                word_indicator,
+            );
 
             // set all statement attributes to the correct values.
             s.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
@@ -644,32 +552,7 @@ mod unit {
                 Box::into_raw(Box::new(0usize)) as *mut ULen;
 
             // create a mongo query with data that corresponds to the bound columns.
-            let mock_query = MongoQuery::new(
-                vec![
-                    doc! {"test": {"num": 10, "word": "aaaa"}},
-                    doc! {"test": {"num": 20, "word": "bbbb"}},
-                    doc! {"test": {"num": 30, "word": "cccc"}},
-                    doc! {"test": {"num": 40, "word": "dddd"}},
-                ],
-                vec![
-                    MongoColMetadata::new(
-                        "",
-                        "test".to_string(),
-                        "num".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                    MongoColMetadata::new(
-                        "",
-                        "test".to_string(),
-                        "word".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                ],
-            );
+            let mock_query = create_mongo_query_for_bind_col_fetching_tests();
 
             // Set the mongo_statement
             *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query));
@@ -844,32 +727,7 @@ mod unit {
             s.attributes.write().unwrap().rows_fetched_ptr = null_mut();
 
             // create a mongo query with data that corresponds to the bound columns.
-            let mock_query = MongoQuery::new(
-                vec![
-                    doc! {"test": {"num": 10, "word": "aaaa"}},
-                    doc! {"test": {"num": 20, "word": "bbbb"}},
-                    doc! {"test": {"num": 30, "word": "cccc"}},
-                    doc! {"test": {"num": 40, "word": "dddd"}},
-                ],
-                vec![
-                    MongoColMetadata::new(
-                        "",
-                        "test".to_string(),
-                        "num".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                    MongoColMetadata::new(
-                        "",
-                        "test".to_string(),
-                        "word".to_string(),
-                        Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
-                        Nullability::SQL_NO_NULLS,
-                        TypeMode::Simple,
-                    ),
-                ],
-            );
+            let mock_query = create_mongo_query_for_bind_col_fetching_tests();
 
             // Set the mongo_statement
             *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query));
@@ -903,5 +761,71 @@ mod unit {
             let _ = Box::from_raw(num_buffer as *mut WChar);
             let _ = Box::from_raw(num_indicator as *mut WChar);
         }
+    }
+
+    fn create_mongo_query_for_bind_col_fetching_tests() -> MongoQuery {
+        MongoQuery::new(
+            vec![
+                doc! {"test": {"num": 10, "word": "aaaa"}},
+                doc! {"test": {"num": 20, "word": "bbbb"}},
+                doc! {"test": {"num": 30, "word": "cccc"}},
+                doc! {"test": {"num": 40, "word": "dddd"}},
+            ],
+            vec![
+                MongoColMetadata::new(
+                    "",
+                    "test".to_string(),
+                    "num".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                ),
+                MongoColMetadata::new(
+                    "",
+                    "test".to_string(),
+                    "word".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple,
+                ),
+            ],
+        )
+    }
+
+    fn create_mongo_query_for_bind_col_tests() -> MongoQuery {
+        MongoQuery::new(
+            vec![doc! {"x": 1}, doc! {"x": 2}],
+            vec![MongoColMetadata::new(
+                "",
+                "".to_string(),
+                "x".to_string(),
+                Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
+                Nullability::SQL_NO_NULLS,
+                TypeMode::Simple,
+            )],
+        )
+    }
+
+    fn create_column_bindings_for_num_and_word(
+        num_buffer: *mut std::ffi::c_void,
+        num_indicator: *mut Len,
+        word_buffer: *mut std::ffi::c_void,
+        word_indicator: *mut Len,
+    ) -> Option<HashMap<USmallInt, BoundColInfo>> {
+        Some(map! {
+            1 => BoundColInfo {
+                target_type: CDataType::SQL_C_SLONG as SmallInt,
+                target_buffer: num_buffer,
+                buffer_length: 4, // buffer_length is 4 because an i32 is 4 bytes; therefore, each buffer needs to be 4 bytes long.
+                length_or_indicator: num_indicator,
+            },
+            2 => BoundColInfo {
+                target_type: CDataType::SQL_C_WCHAR as SmallInt,
+                target_buffer: word_buffer,
+                buffer_length: 20, // buffer_length is 20 because each word is 20 bytes long including the null termination character (WideChar * 5).
+                length_or_indicator: word_indicator,
+            },
+
+        })
     }
 }
