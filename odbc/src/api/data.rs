@@ -489,7 +489,7 @@ impl IntoCData for Bson {
         }
     }
 }
-
+#[allow(clippy::too_many_arguments)]
 pub unsafe fn format_binary(
     mongo_handle: &mut MongoHandle,
     col_num: USmallInt,
@@ -498,6 +498,7 @@ pub unsafe fn format_binary(
     buffer_len: Len,
     str_len_or_ind_ptr: *mut Len,
     data: Vec<u8>,
+    function_name: &str,
 ) -> SqlReturn {
     let sql_return = {
         let stmt = (*mongo_handle).as_statement().unwrap();
@@ -515,14 +516,14 @@ pub unsafe fn format_binary(
         add_diag_with_function!(
             mongo_handle,
             ODBCError::OutStringTruncated(buffer_len as usize),
-            "SQLGetData"
+            function_name
         );
     }
     sql_return
 }
 
 macro_rules! char_data {
-    ($mongo_handle:expr, $col_num:expr, $index:expr, $target_value_ptr:expr, $buffer_len:expr, $str_len_or_ind_ptr:expr, $data:expr, $func:path) => {{
+    ($mongo_handle:expr, $col_num:expr, $index:expr, $target_value_ptr:expr, $buffer_len:expr, $str_len_or_ind_ptr:expr, $data:expr, $func:path, $function_name:expr) => {{
         // force expressions used more than once.
         let (mongo_handle, buffer_len) = ($mongo_handle, $buffer_len);
         let sql_return = {
@@ -541,7 +542,7 @@ macro_rules! char_data {
             add_diag_with_function!(
                 mongo_handle,
                 ODBCError::OutStringTruncated(buffer_len as usize),
-                "SQLGetData"
+                $function_name
             );
         }
         sql_return
@@ -669,7 +670,7 @@ pub unsafe fn format_date(
         }
     }
 }
-
+#[allow(clippy::too_many_arguments)]
 pub unsafe fn format_cached_data(
     mongo_handle: &mut MongoHandle,
     cached_data: CachedData,
@@ -678,6 +679,7 @@ pub unsafe fn format_cached_data(
     target_value_ptr: Pointer,
     buffer_len: Len,
     str_len_or_ind_ptr: *mut Len,
+    function_name: &str,
 ) -> SqlReturn {
     match cached_data {
         // Fixed cannot be streamed, and this data has already been retrived before.
@@ -702,7 +704,8 @@ pub unsafe fn format_cached_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_string
+                isize_len::set_output_string,
+                function_name
             )
         }
         CachedData::WChar(index, data) => {
@@ -720,7 +723,8 @@ pub unsafe fn format_cached_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_wstring_as_bytes
+                isize_len::set_output_wstring_as_bytes,
+                function_name
             )
         }
         CachedData::Bin(index, data) => {
@@ -738,11 +742,12 @@ pub unsafe fn format_cached_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
+                function_name,
             )
         }
     }
 }
-
+#[allow(clippy::too_many_arguments)]
 pub unsafe fn format_bson_data(
     mongo_handle: &mut MongoHandle,
     col_num: USmallInt,
@@ -751,6 +756,7 @@ pub unsafe fn format_bson_data(
     buffer_len: Len,
     str_len_or_ind_ptr: *mut Len,
     data: Bson,
+    function_name: &str,
 ) -> SqlReturn {
     // If the data is null or undefined we immediately return NULL_DATA indicator.
     match data {
@@ -801,6 +807,7 @@ pub unsafe fn format_bson_data(
                     buffer_len,
                     str_len_or_ind_ptr,
                     data,
+                    function_name,
                 ),
                 Err(e) => {
                     let stmt = (*mongo_handle).as_statement().unwrap();
@@ -820,7 +827,8 @@ pub unsafe fn format_bson_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_string
+                isize_len::set_output_string,
+                function_name
             )
         }
         CDataType::SQL_C_WCHAR => {
@@ -833,7 +841,8 @@ pub unsafe fn format_bson_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_wstring_as_bytes
+                isize_len::set_output_wstring_as_bytes,
+                function_name
             )
         }
         CDataType::SQL_C_BIT => {
@@ -924,7 +933,7 @@ pub unsafe fn format_bson_data(
             add_diag_with_function!(
                 mongo_handle,
                 ODBCError::UnimplementedDataType(format!("{other:?}")),
-                "SQLGetData"
+                function_name
             );
             SqlReturn::ERROR
         }

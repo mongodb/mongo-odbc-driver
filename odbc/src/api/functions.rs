@@ -26,7 +26,7 @@ use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
 use mongo_odbc_core::{
-    odbc_uri::ODBCUri, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
+    odbc_uri::ODBCUri, Error, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
     MongoTypesInfo, TypeMode,
 };
@@ -349,7 +349,7 @@ pub unsafe extern "C" fn SQLBindCol(
             let mongo_handle = MongoHandleRef::from(hstmt);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
 
-            // Currently, we only support column binding of one row at a time.
+            // Currently, we only support column binding with no offsets.
             // Make sure that column-wise binding is being used.
             if stmt.attributes.read().unwrap().row_bind_type != BindType::SQL_BIND_BY_COLUMN as ULen
             {
@@ -377,16 +377,6 @@ pub unsafe extern "C" fn SQLBindCol(
                 return SqlReturn::ERROR;
             }
 
-            // Make sure we are only binding one row at a time (i.e., row_array_size is one).
-            if stmt.attributes.read().unwrap().row_array_size != 1 {
-                let mongo_handle = MongoHandleRef::from(hstmt);
-                add_diag_info!(
-                    mongo_handle,
-                    ODBCError::Unimplemented("`column binding with arrays`")
-                );
-                return SqlReturn::ERROR;
-            }
-
             // Make sure that a query was executed/prepared and the number of columns for the resultset is known.
             let mongo_stmt = stmt.mongo_statement.read().unwrap();
             if mongo_stmt.is_none() {
@@ -403,15 +393,15 @@ pub unsafe extern "C" fn SQLBindCol(
                 return SqlReturn::ERROR;
             }
 
-            if stmt.bound_cols.read().unwrap().is_none() {
-                *stmt.bound_cols.write().unwrap() = Some(HashMap::new());
-            }
-
             // make sure that target_type is valid.
             if <CDataType as FromPrimitive>::from_i16(target_type).is_none() {
                 let mongo_handle = MongoHandleRef::from(hstmt);
                 add_diag_info!(mongo_handle, ODBCError::InvalidTargetType(target_type));
                 return SqlReturn::ERROR;
+            }
+
+            if stmt.bound_cols.read().unwrap().is_none() {
+                *stmt.bound_cols.write().unwrap() = Some(HashMap::new());
             }
 
             // Unbind column if target_value is null
@@ -1245,12 +1235,17 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
     let stmt_id = stmt.statement_id.read().unwrap().clone();
     let mongo_statement = {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
+            let rowset_size = match u32::try_from(stmt.attributes.read().unwrap().row_array_size) {
+                Ok(size) => size,
+                Err(_) => unreachable!(),
+            };
+
             stmt.mongo_statement
                 .write()
                 .unwrap()
                 .as_mut()
                 .unwrap()
-                .execute(mongo_connection, stmt_id)
+                .execute(mongo_connection, stmt_id, rowset_size)
                 .map_err(|e| e.into())
         } else {
             Err(ODBCError::InvalidCursorState)
@@ -1279,72 +1274,183 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlReturn {
     let mongo_handle = MongoHandleRef::from(statement_handle);
     let stmt = must_be_valid!(mongo_handle.as_statement());
-    let move_to_next_result = {
-        let connection = must_be_valid!((*stmt.connection).as_connection());
-        match stmt.mongo_statement.write().unwrap().as_mut() {
-            Some(mongo_stmt) => mongo_stmt
-                .next(connection.mongo_connection.read().unwrap().as_ref())
-                .map_err(|e| e.into()),
-            None => Err(ODBCError::InvalidCursorState),
-        }
-    };
 
-    if let Ok((has_next, warnings_opt)) = move_to_next_result {
-        let mut stmt_attrs = stmt.attributes.write().unwrap();
-        warnings_opt.iter().for_each(|warning| {
+    let mut encountered_success_with_info = false;
+    let mut global_warnings_opt: Vec<Error> = Vec::new();
+
+    // needed for rowsets with size > 1 to ensure that NO_DATA does not get returned if the rowset hits the end of the result set.
+    let mut has_fetched_at_least_one_row = false;
+
+    let rowset_size = stmt.attributes.read().unwrap().row_array_size;
+
+    // if rows_fetched_ptr is null, it was not set by the user and can be ignored.
+    let has_rows_fetched_buffer = !stmt.attributes.read().unwrap().rows_fetched_ptr.is_null();
+
+    if has_rows_fetched_buffer {
+        *stmt.attributes.write().unwrap().rows_fetched_ptr = 0;
+    }
+
+    // keeps track of how many rows in the result set cause SqlReturn::ERROR when being handled.
+    let mut row_error_count = 0;
+
+    // Use `index` to figure out which buffer in the array of buffers to use.
+    for index in 0..rowset_size {
+        let move_to_next_result = {
+            let connection = must_be_valid!((*stmt.connection).as_connection());
+            match stmt.mongo_statement.write().unwrap().as_mut() {
+                Some(mongo_stmt) => mongo_stmt
+                    .next(connection.mongo_connection.read().unwrap().as_ref())
+                    .map_err(|e| e.into()),
+                None => Err(ODBCError::InvalidCursorState),
+            }
+        };
+
+        // if row_status_ptr is null, it was not set by the user and can be ignored.
+        // Otherwise, we need to set the row_status_buffer to the address that corresponds with the current row.
+        let row_status_buffer: *mut USmallInt =
+            if !stmt.attributes.read().unwrap().row_status_ptr.is_null() {
+                (stmt.attributes.read().unwrap().row_status_ptr as ULen
+                    + (index * size_of::<u16>())) as *mut USmallInt
+            } else {
+                null_mut()
+            };
+
+        if let Ok((has_next, mut warnings_opt)) = move_to_next_result {
+            warnings_opt.iter().for_each(|warning| {
+                add_diag_with_function!(
+                    MongoHandleRef::from(statement_handle),
+                    ODBCError::GeneralWarning(warning.to_string()),
+                    function_name.to_string()
+                );
+            });
+
+            if !has_next {
+                // There are no more rows, so set the rest of Row Status Array buffers to SQL_ROW_NOROW if the rowset end has not been reached.
+                if !row_status_buffer.is_null() {
+                    for row_status_index in index..rowset_size {
+                        let row_status_buffer = (stmt.attributes.read().unwrap().row_status_ptr
+                            as ULen
+                            + (row_status_index * size_of::<u16>()))
+                            as *mut USmallInt;
+                        *row_status_buffer = definitions::SQL_ROW_NOROW;
+                    }
+                }
+
+                // break here to prevent NO_DATA from being returned if the rowset had at least one row in it.
+                if has_fetched_at_least_one_row {
+                    break;
+                }
+
+                // if the cursor has already reached the end of the result set when SQLFetch is called, NO_DATA is returned.
+                // Additionally, rows_fetch_ptr is set to 0.
+                return SqlReturn::NO_DATA;
+            }
+
+            has_fetched_at_least_one_row = true;
+
+            if !row_status_buffer.is_null() {
+                *row_status_buffer = if warnings_opt.is_empty() {
+                    definitions::SQL_ROW_SUCCESS
+                } else {
+                    definitions::SQL_ROW_SUCCESS_WITH_INFO
+                };
+            }
+
+            // keep track of all warnings that occur throughout the entire function.
+            global_warnings_opt.append(&mut warnings_opt);
+
+            if has_rows_fetched_buffer {
+                *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
+            }
+
+            *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
+
+            // If there are bound columns, then copy data from the result set into the bound buffers.
+            if let Some(bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
+                let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
+
+                let mut encountered_error_during_col_binding = false;
+                let mut encountered_success_with_info_during_col_binding = false;
+
+                for (col, bound_col_info) in bound_cols.iter() {
+                    // Set target_buffer to the correct buffer in the array of buffers
+                    let target_buffer = (bound_col_info.target_buffer as ULen
+                        + (index * (bound_col_info.buffer_length as ULen)))
+                        as Pointer;
+
+                    // Set length/indicator buffer to the correct buffer in the array of buffers
+                    let len_ind_buffer = (bound_col_info.length_or_indicator as ULen
+                        + (index * size_of::<isize>()))
+                        as *mut Len;
+
+                    let sql_return = sql_get_data_helper(
+                        mongo_handle_for_sql_get_data_helper,
+                        *col,
+                        FromPrimitive::from_i16(bound_col_info.target_type).unwrap(), // this conversion is checked in SQLBindCol, so it is guaranteed to work here.
+                        target_buffer,
+                        bound_col_info.buffer_length,
+                        len_ind_buffer,
+                        function_name,
+                    );
+
+                    match sql_return {
+                        SqlReturn::ERROR => {
+                            encountered_error_during_col_binding = true;
+                        }
+                        SqlReturn::SUCCESS_WITH_INFO => {
+                            encountered_success_with_info_during_col_binding = true;
+                        }
+                        _ => {}
+                    }
+                }
+
+                if encountered_error_during_col_binding {
+                    row_error_count += 1;
+
+                    if !row_status_buffer.is_null() {
+                        *row_status_buffer = definitions::SQL_ROW_ERROR;
+                    }
+                } else if encountered_success_with_info_during_col_binding
+                    && !row_status_buffer.is_null()
+                {
+                    *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
+                }
+
+                // keep track if SUCCESS_WITH_INFO is ever encountered throughout the entire function.
+                encountered_success_with_info = encountered_success_with_info_during_col_binding
+                    || encountered_success_with_info;
+            }
+        } else {
+            // An error happened when moving the cursor and fetching the next row
+            let mongo_handle = MongoHandleRef::from(statement_handle);
             add_diag_with_function!(
-                MongoHandleRef::from(statement_handle),
-                ODBCError::GeneralWarning(warning.to_string()),
+                mongo_handle,
+                move_to_next_result.as_ref().unwrap_err().clone(),
                 function_name.to_string()
             );
-        });
-        if !has_next {
-            stmt_attrs.row_index_is_valid = false;
-            // No more rows
-            return SqlReturn::NO_DATA;
-        }
-        stmt_attrs.row_index_is_valid = true;
 
-        *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
-
-        // If there are bound columns, then copy data from the result set into the bound buffers.
-        let mut success_with_info_encountered = false;
-        if let Some(bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
-            let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
-
-            for (col, bound_col_info) in bound_cols.iter() {
-                let sql_return = sql_get_data_helper(
-                    mongo_handle_for_sql_get_data_helper,
-                    *col,
-                    FromPrimitive::from_i16(bound_col_info.target_type).unwrap(),
-                    bound_col_info.target_buffer,
-                    bound_col_info.buffer_length,
-                    bound_col_info.length_or_indicator,
-                );
-
-                match sql_return {
-                    SqlReturn::ERROR => return SqlReturn::ERROR,
-                    SqlReturn::SUCCESS_WITH_INFO => {
-                        success_with_info_encountered = true;
-                    }
-                    _ => {}
-                }
+            if !row_status_buffer.is_null() {
+                *row_status_buffer = definitions::SQL_ROW_ERROR;
             }
+
+            if has_rows_fetched_buffer {
+                *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
+            }
+
+            row_error_count += 1;
         }
-        if !warnings_opt.is_empty() || success_with_info_encountered {
-            // No warnings and there is a next row
-            SqlReturn::SUCCESS_WITH_INFO
-        } else {
-            SqlReturn::SUCCESS
-        }
-    } else {
-        add_diag_with_function!(
-            mongo_handle,
-            move_to_next_result.as_ref().unwrap_err().clone(),
-            function_name.to_string()
-        );
-        // An error happened
+    }
+
+    // Only return ERROR if every row causes an error.
+    if row_error_count == rowset_size {
         SqlReturn::ERROR
+    } else if !global_warnings_opt.is_empty()
+        || encountered_success_with_info
+        || row_error_count > 0
+    {
+        SqlReturn::SUCCESS_WITH_INFO
+    } else {
+        SqlReturn::SUCCESS
     }
 }
 
@@ -1688,6 +1794,17 @@ pub unsafe extern "C" fn SQLGetData(
         debug,
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
+            let stmt = must_be_valid!((*mongo_handle).as_statement());
+
+            // Make sure that SQLGetData only runs when dealing with rowsets of size 1.
+            if stmt.attributes.read().unwrap().row_array_size != 1 {
+                let mongo_handle = MongoHandleRef::from(statement_handle);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::Unimplemented("`SQLGetData with rowset size greater than 1`")
+                );
+                return SqlReturn::ERROR;
+            }
 
             match FromPrimitive::from_i16(target_type) {
                 Some(valid_type) => sql_get_data_helper(
@@ -1697,6 +1814,7 @@ pub unsafe extern "C" fn SQLGetData(
                     target_value_ptr,
                     buffer_length,
                     str_len_or_ind_ptr,
+                    "SQLGetData",
                 ),
                 None => {
                     add_diag_info!(mongo_handle, ODBCError::InvalidTargetType(target_type));
@@ -1715,6 +1833,7 @@ unsafe fn sql_get_data_helper(
     target_value_ptr: Pointer,
     buffer_length: Len,
     str_len_or_ind_ptr: *mut Len,
+    function_name: &str,
 ) -> SqlReturn {
     let mut error = None;
     let mut ret = Bson::Null;
@@ -1737,6 +1856,7 @@ unsafe fn sql_get_data_helper(
                 target_value_ptr,
                 buffer_length,
                 str_len_or_ind_ptr,
+                function_name,
             );
         }
         let stmt = (*mongo_handle).as_statement().unwrap();
@@ -1758,7 +1878,7 @@ unsafe fn sql_get_data_helper(
         }
     }
     if let Some(e) = error {
-        add_diag_with_function!(mongo_handle, e, "SQLGetData");
+        add_diag_with_function!(mongo_handle, e, function_name);
         return SqlReturn::ERROR;
     }
     crate::api::data::format_bson_data(
@@ -1769,6 +1889,7 @@ unsafe fn sql_get_data_helper(
         buffer_length,
         str_len_or_ind_ptr,
         ret,
+        function_name,
     )
 }
 
@@ -3658,13 +3779,17 @@ unsafe fn sql_set_stmt_attrw_helper(
             SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE | StatementAttribute::SQL_ROWSET_SIZE => {
-            if value_ptr as ULen != 1{
-                add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("`column binding with arrays`"), "SQLSetStmtAttrW");
-                return SqlReturn::ERROR;
+            match u32::try_from(value_ptr as ULen){
+                Ok(ras) => {
+                    stmt.attributes.write().unwrap().row_array_size = ras as ULen;
+                    SqlReturn::SUCCESS
+                },
+                Err(_) => {
+                    stmt.attributes.write().unwrap().row_array_size = u32::MAX as ULen;
+                    add_diag_with_function!(stmt_handle, ODBCError::OptionValueChanged("SQL_ATTR_ROW_ARRAY_SIZE or SQL_ROWSET_SIZE", "4,294,967,295"), "SQLSetStmtAttrW");
+                    SqlReturn::SUCCESS_WITH_INFO
+                },
             }
-
-            stmt.attributes.write().unwrap().row_array_size = 1;
-            SqlReturn::SUCCESS
         }
         StatementAttribute::SQL_ATTR_SIMULATE_CURSOR => {
             add_diag_with_function!(stmt_handle,ODBCError::Unimplemented("SQL_ATTR_SIMULATE_CURSOR"), "SQLSetStmtAttrW");

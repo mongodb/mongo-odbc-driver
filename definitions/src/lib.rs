@@ -11,7 +11,7 @@
 pub use self::{
     attributes::*, bulk_operation::*, c_data_type::*, desc::*, diag_type::*, fetch_orientation::*,
     functions::*, indicator::*, info_type::*, interval::*, nullability::*, param_type::*,
-    sql_data_type::*, sqlreturn::*,
+    row_status::*, sql_data_type::*, sqlreturn::*,
 };
 use cstr::WideChar;
 use num_derive::FromPrimitive;
@@ -29,6 +29,7 @@ mod info_type;
 mod interval;
 mod nullability;
 mod param_type;
+mod row_status;
 mod sql_data_type;
 mod sqlreturn;
 
