@@ -133,25 +133,19 @@ impl MongoStatement for MongoQuery {
         }}];
 
         let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
-        // If the query timeout is 0, it means "no timeout"
-        let options = if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            let opt_with_timeout =
-                opt.max_time(Duration::from_millis(self.query_timeout.unwrap() as u64));
 
-            // 100 is an arbitrary value.
-            if rowset_size > 100 {
-                opt_with_timeout.batch_size(rowset_size).build()
-            } else {
-                opt_with_timeout.build()
-            }
-        } else {
-            // 100 is an arbitrary value
-            if rowset_size > 100 {
-                opt.batch_size(rowset_size).build()
-            } else {
-                opt.build()
-            }
-        };
+        let mut max_time = None;
+        // If the query timeout is 0, it means "no timeout"
+        if self.query_timeout.is_some_and(|timeout| timeout > 0) {
+            max_time = Some(Duration::from_millis(self.query_timeout.unwrap() as u64))
+        }
+
+        let mut batch_size = None;
+        // 100 is an arbitrary value
+        if rowset_size > 100 {
+            batch_size = Some(rowset_size)
+        }
+        let options = opt.max_time(max_time).batch_size(batch_size).build();
 
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
         // denote this to the program, otherwise return a generic query execution error

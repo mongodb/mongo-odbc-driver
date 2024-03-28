@@ -1237,7 +1237,7 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
             let rowset_size = match u32::try_from(stmt.attributes.read().unwrap().row_array_size) {
                 Ok(size) => size,
-                Err(_) => unreachable!(),
+                Err(_) => unreachable!("Err should be impossible since SQLSetStmtAttrW sets row_array_size to u32::MAX if it's outside of the u32 range"),
             };
 
             stmt.mongo_statement
