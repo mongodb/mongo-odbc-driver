@@ -1367,58 +1367,24 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
             // If there are bound columns, then copy data from the result set into the bound buffers.
             if let Some(bound_cols) = stmt.bound_cols.read().unwrap().as_ref() {
-                let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
-
-                let mut encountered_error_during_col_binding = false;
-                let mut encountered_success_with_info_during_col_binding = false;
-
-                for (col, bound_col_info) in bound_cols.iter() {
-                    // Set target_buffer to the correct buffer in the array of buffers
-                    let target_buffer = (bound_col_info.target_buffer as ULen
-                        + (index * (bound_col_info.buffer_length as ULen)))
-                        as Pointer;
-
-                    // Set length/indicator buffer to the correct buffer in the array of buffers
-                    let len_ind_buffer = (bound_col_info.length_or_indicator as ULen
-                        + (index * size_of::<isize>()))
-                        as *mut Len;
-
-                    let sql_return = sql_get_data_helper(
-                        mongo_handle_for_sql_get_data_helper,
-                        *col,
-                        FromPrimitive::from_i16(bound_col_info.target_type).unwrap(), // this conversion is checked in SQLBindCol, so it is guaranteed to work here.
-                        target_buffer,
-                        bound_col_info.buffer_length,
-                        len_ind_buffer,
-                        function_name,
-                    );
-
-                    match sql_return {
-                        SqlReturn::ERROR => {
-                            encountered_error_during_col_binding = true;
-                        }
-                        SqlReturn::SUCCESS_WITH_INFO => {
-                            encountered_success_with_info_during_col_binding = true;
-                        }
-                        _ => {}
-                    }
-                }
+                let (
+                    encountered_error_during_col_binding,
+                    encountered_success_with_info_during_col_binding,
+                ) = sql_fetch_column_binding_helper(
+                    statement_handle,
+                    index,
+                    row_status_buffer,
+                    bound_cols,
+                    function_name,
+                );
 
                 if encountered_error_during_col_binding {
                     row_error_count += 1;
-
-                    if !row_status_buffer.is_null() {
-                        *row_status_buffer = definitions::SQL_ROW_ERROR;
-                    }
-                } else if encountered_success_with_info_during_col_binding
-                    && !row_status_buffer.is_null()
-                {
-                    *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
                 }
-
                 // keep track if SUCCESS_WITH_INFO is ever encountered throughout the entire function.
-                encountered_success_with_info = encountered_success_with_info_during_col_binding
-                    || encountered_success_with_info;
+                else if encountered_success_with_info_during_col_binding {
+                    encountered_success_with_info = true;
+                }
             }
         } else {
             // An error happened when moving the cursor and fetching the next row
@@ -1452,6 +1418,63 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     } else {
         SqlReturn::SUCCESS
     }
+}
+
+unsafe fn sql_fetch_column_binding_helper(
+    statement_handle: HStmt,
+    index: ULen,
+    row_status_buffer: *mut USmallInt,
+    bound_cols: &HashMap<USmallInt, BoundColInfo>,
+    function_name: &str,
+) -> (bool, bool) {
+    let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
+
+    let mut encountered_error_during_col_binding = false;
+    let mut encountered_success_with_info_during_col_binding = false;
+
+    for (col, bound_col_info) in bound_cols.iter() {
+        // Set target_buffer to the correct buffer in the array of buffers
+        let target_buffer = (bound_col_info.target_buffer as ULen
+            + (index * (bound_col_info.buffer_length as ULen)))
+            as Pointer;
+
+        // Set length/indicator buffer to the correct buffer in the array of buffers
+        let len_ind_buffer =
+            (bound_col_info.length_or_indicator as ULen + (index * size_of::<isize>())) as *mut Len;
+
+        let sql_return = sql_get_data_helper(
+            mongo_handle_for_sql_get_data_helper,
+            *col,
+            FromPrimitive::from_i16(bound_col_info.target_type).unwrap(), // this conversion is checked in SQLBindCol, so it is guaranteed to work here.
+            target_buffer,
+            bound_col_info.buffer_length,
+            len_ind_buffer,
+            function_name,
+        );
+
+        match sql_return {
+            SqlReturn::ERROR => {
+                encountered_error_during_col_binding = true;
+            }
+            SqlReturn::SUCCESS_WITH_INFO => {
+                encountered_success_with_info_during_col_binding = true;
+            }
+            _ => {}
+        }
+    }
+
+    if !row_status_buffer.is_null() {
+        if encountered_error_during_col_binding {
+            *row_status_buffer = definitions::SQL_ROW_ERROR;
+        } else if encountered_success_with_info_during_col_binding {
+            *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
+        }
+    }
+
+    return (
+        encountered_error_during_col_binding,
+        encountered_success_with_info_during_col_binding,
+    );
 }
 
 ///
