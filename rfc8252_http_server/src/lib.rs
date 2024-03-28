@@ -56,13 +56,22 @@ async fn callback(
     let query = req.query_string();
     let params_vec: Vec<_> = query.split('&').collect();
     if params_vec.is_empty() || params_vec.get(0).unwrap().is_empty() {
-        return error("unknown error", "response parameters are missing").await;
+        return error(
+            oidc_params_sender,
+            "unknown error",
+            "response parameters are missing",
+        )
+        .await;
     }
     let params = params_vec
         .into_iter()
         .map(|kv| {
             let kv: Vec<_> = kv.split('=').collect();
-            (kv[0], kv[1])
+            match kv.len() {
+                0 => ("", ""),
+                1 => (kv[0], ""),
+                _ => (kv[0], kv[1]),
+            }
         })
         .collect::<HashMap<&str, &str>>();
 
@@ -77,12 +86,13 @@ async fn callback(
         accepted().await
     } else if let Some(e) = params.get("error") {
         if let Some(error_description) = params.get("error_description") {
-            error(e, error_description).await
+            error(oidc_params_sender, e, error_description).await
         } else {
-            error(e, "no error description was provided").await
+            error(oidc_params_sender, e, "no error description was provided").await
         }
     } else {
         error(
+            oidc_params_sender,
             "unknown error",
             "response parameters are missing required information",
         )
@@ -114,7 +124,15 @@ async fn accepted() -> Result<HttpResponse> {
         ))
 }
 
-async fn error(error: &str, error_description: &str) -> Result<HttpResponse> {
+async fn error(
+    oidc_params_sender: mpsc::Sender<OidcResponseParams>,
+    error: &str,
+    error_description: &str,
+) -> Result<HttpResponse> {
+    let _ = oidc_params_sender.send(OidcResponseParams {
+        code: "".to_string(),
+        state: None,
+    });
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body(
