@@ -118,7 +118,7 @@ pub const FUNCTION_SEQUENCE_ERROR: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1010",
     odbc_3_state: "HY010",
 };
-pub const UNSUPPORTED_FIELD_DESCRIPTOR: OdbcState<'static> = OdbcState {
+pub const INVALID_FIELD_DESCRIPTOR: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1091",
     odbc_3_state: "HY091",
 };

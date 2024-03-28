@@ -722,7 +722,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     Desc::SQL_DESC_ALLOC_TYPE => {
                         numeric_col_attr(&|_| AllocType::SQL_DESC_ALLOC_AUTO as Len)
                     }
-                    Desc::SQL_DESC_OCTET_LENGTH_PTR
+                    desc @ (Desc::SQL_DESC_OCTET_LENGTH_PTR
                     | Desc::SQL_DESC_DATETIME_INTERVAL_CODE
                     | Desc::SQL_DESC_INDICATOR_PTR
                     | Desc::SQL_DESC_DATA_PTR
@@ -735,12 +735,12 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     | Desc::SQL_DESC_MINIMUM_SCALE
                     | Desc::SQL_DESC_PARAMETER_TYPE
                     | Desc::SQL_DESC_ROWS_PROCESSED_PTR
-                    | Desc::SQL_DESC_ROWVER => {
+                    | Desc::SQL_DESC_ROWVER) => {
                         let mongo_handle = MongoHandleRef::from(statement_handle);
                         let _ = must_be_valid!((*mongo_handle).as_statement());
                         add_diag_info!(
                             mongo_handle,
-                            ODBCError::UnsupportedFieldDescriptor(format!("{desc:?}"))
+                            ODBCError::UnsupportedFieldDescriptor(desc as u16)
                         );
                         SqlReturn::ERROR
                     }
@@ -748,7 +748,10 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 None => {
                     let mongo_handle = MongoHandleRef::from(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
-                    add_diag_info!(mongo_handle, ODBCError::DriverNotCapable);
+                    add_diag_info!(
+                        mongo_handle,
+                        ODBCError::InvalidFieldDescriptor(field_identifier)
+                    );
                     SqlReturn::ERROR
                 }
             }

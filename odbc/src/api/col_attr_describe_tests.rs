@@ -566,7 +566,7 @@ mod unit {
                 .unwrap();
             assert_eq!(errors.len(), 1);
             assert_eq!(
-                "[MongoDB][API] Driver not capable".to_string(),
+                "[MongoDB][API] Invalid field descriptor value 4".to_string(),
                 format!("{}", errors.first().unwrap()),
             );
 

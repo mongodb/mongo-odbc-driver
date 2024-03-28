@@ -3,9 +3,9 @@ use constants::{
     GENERAL_WARNING, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
     INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE,
     INVALID_COLUMN_NUMBER, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX,
-    INVALID_DRIVER_COMPLETION, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE, NOT_IMPLEMENTED,
-    NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE,
-    RIGHT_TRUNCATED, UNSUPPORTED_FIELD_DESCRIPTOR, VENDOR_IDENTIFIER,
+    INVALID_DRIVER_COMPLETION, INVALID_FIELD_DESCRIPTOR, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE,
+    NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE,
+    RESTRICTED_DATATYPE, RIGHT_TRUNCATED, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -45,7 +45,7 @@ pub enum ODBCError {
         "[{}][API] The field descriptor value {0} is not supported",
         VENDOR_IDENTIFIER
     )]
-    UnsupportedFieldDescriptor(String),
+    UnsupportedFieldDescriptor(u16),
     #[error(
         "[{}][API] Retrieving value for infoType {0} is not implemented yet",
         VENDOR_IDENTIFIER
@@ -120,6 +120,8 @@ pub enum ODBCError {
         VENDOR_IDENTIFIER
     )]
     InvalidCharacterValue(&'static str),
+    #[error("[{}][API] Invalid field descriptor value {0}", VENDOR_IDENTIFIER)]
+    InvalidFieldDescriptor(u16),
     #[error(
         "[{}][API] Invalid value for attribute {0}, changed to {1}",
         VENDOR_IDENTIFIER
@@ -132,8 +134,6 @@ pub enum ODBCError {
     RestrictedDataType(&'static str, &'static str),
     #[error("[{}][API] No resultset for statement", VENDOR_IDENTIFIER)]
     NoResultSet,
-    #[error("[{}][API] Driver not capable", VENDOR_IDENTIFIER)]
-    DriverNotCapable,
     #[error("Connection not open")]
     ConnectionNotOpen,
     #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
@@ -152,7 +152,7 @@ impl ODBCError {
             | ODBCError::UnsupportedConnectionAttribute(_)
             | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedInfoTypeRetrieval(_)
-            | ODBCError::DriverNotCapable => NOT_IMPLEMENTED,
+            | ODBCError::UnsupportedFieldDescriptor(_) => NOT_IMPLEMENTED,
             ODBCError::General(_) | ODBCError::Panic(_) => GENERAL_ERROR,
             ODBCError::GeneralWarning(_) => GENERAL_WARNING,
             ODBCError::Core(c) => c.get_sql_state(),
@@ -166,10 +166,10 @@ impl ODBCError {
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
-            ODBCError::UnsupportedFieldDescriptor(_) => UNSUPPORTED_FIELD_DESCRIPTOR,
             ODBCError::InvalidDescriptorIndex(_) => INVALID_DESCRIPTOR_INDEX,
             ODBCError::InvalidColumnNumber(_) => INVALID_COLUMN_NUMBER,
             ODBCError::InvalidSqlType(_) => INVALID_SQL_TYPE,
+            ODBCError::InvalidFieldDescriptor(_) => INVALID_FIELD_DESCRIPTOR,
             ODBCError::RestrictedDataType(_, _) => RESTRICTED_DATATYPE,
             ODBCError::FractionalTruncation(_) => FRACTIONAL_TRUNCATION,
             ODBCError::FractionalSecondsTruncation(_) => FRACTIONAL_TRUNCATION,
@@ -207,7 +207,7 @@ impl ODBCError {
             | ODBCError::UnsupportedConnectionAttribute(_)
             | ODBCError::UnsupportedStatementAttribute(_)
             | ODBCError::UnsupportedFieldSchema()
-            | ODBCError::DriverNotCapable
+            | ODBCError::InvalidFieldDescriptor(_)
             | ODBCError::OptionValueChanged(_, _)
             | ODBCError::InvalidDescriptorIndex(_)
             | ODBCError::InvalidColumnNumber(_)
