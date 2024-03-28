@@ -82,6 +82,12 @@ async fn not_found(_req: HttpRequest) -> Result<HttpResponse> {
         ))
 }
 
+async fn stop_page() -> Result<HttpResponse> {
+    Ok(HttpResponse::build(http::StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body("<html><body>Server is stopping</body></html>".to_string()))
+}
+
 async fn run_app(
     sender: mpsc::Sender<ServerHandle>,
     stop_sender: mpsc::Sender<bool>,
@@ -99,7 +105,7 @@ async fn run_app(
             .service(web::resource("/stop").to(move || {
                 let stop_sender = stop_sender.clone();
                 stop_sender.send(true).unwrap();
-                async move { HttpResponse::Ok().finish() }
+                async { stop_page().await }
             }))
             .default_service(web::route().to(not_found))
     })
