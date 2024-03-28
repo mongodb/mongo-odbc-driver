@@ -1378,6 +1378,8 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                     function_name,
                 );
 
+                // It's possible that one binding causes SUCCESS_WITH_INFO and another causes ERROR, so we need to check for an error first
+                // and ignore SUCCESS_WITH_INFO if it also occurs.
                 if encountered_error_during_col_binding {
                     row_error_count += 1;
                 }
@@ -1464,6 +1466,8 @@ unsafe fn sql_fetch_column_binding_helper(
     }
 
     if !row_status_buffer.is_null() {
+        // It's possible that one binding causes SUCCESS_WITH_INFO and another causes ERROR, so we need to check for an error first
+        // and ignore SUCCESS_WITH_INFO if it also occurs.
         if encountered_error_during_col_binding {
             *row_status_buffer = definitions::SQL_ROW_ERROR;
         } else if encountered_success_with_info_during_col_binding {
@@ -1471,10 +1475,10 @@ unsafe fn sql_fetch_column_binding_helper(
         }
     }
 
-    return (
+    (
         encountered_error_during_col_binding,
         encountered_success_with_info_during_col_binding,
-    );
+    )
 }
 
 ///
