@@ -131,9 +131,7 @@ pub fn start() {
 
     let server_handle = receiver.recv().unwrap();
 
-    //println!("waiting 10 seconds");
-    //thread::sleep(time::Duration::from_secs(10));
-
+    // wait for the stop page to run
     let _ = stop_receiver.recv().unwrap();
     // Send a stop signal to the server, waiting for it to exit gracefully
     println!("stopping server");
