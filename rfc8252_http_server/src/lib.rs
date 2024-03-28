@@ -3,7 +3,7 @@ use actix_web::{
     Result,
 };
 use askama::Template;
-use std::{sync::mpsc, thread, time};
+use std::{collections::HashMap, sync::mpsc, thread};
 
 // template page keys are:
 // 'OIDCErrorPage'
@@ -37,59 +37,115 @@ struct OIDCNotFoundPage<'a> {
     product_docs_name: &'a str,
 }
 
-async fn accepted(_req: HttpRequest) -> Result<HttpResponse> {
-    Ok(HttpResponse::build(http::StatusCode::OK)
-        .content_type("text/html; charset=utf-8")
-        .body(
-            OIDCAcceptedPage {
-                product_docs_link: "https://www.example.com",
-                product_docs_name: "Example",
-                error: "error",
-                error_uri: "error_uri",
-                error_description: "error_description",
-            }
-            .render()
-            .unwrap(),
-        ))
+#[derive(Debug, Clone)]
+pub struct RFC8252HttpServerOptions {
+    pub redirect_uri: String,
+    pub oidc_state_param: String,
 }
 
-async fn error(_req: HttpRequest) -> Result<HttpResponse> {
-    Ok(HttpResponse::build(http::StatusCode::OK)
-        .content_type("text/html; charset=utf-8")
-        .body(
-            OIDCErrorPage {
-                product_docs_link: "https://www.example.com",
-                product_docs_name: "Example",
-                error: "error",
-                error_uri: "error_uri",
-                error_description: "error_description",
-            }
-            .render()
-            .unwrap(),
-        ))
+#[derive(Debug, Clone)]
+pub struct OidcResponseParams {
+    pub code: String,
+    pub state: Option<String>,
 }
 
-async fn not_found(_req: HttpRequest) -> Result<HttpResponse> {
-    Ok(HttpResponse::build(http::StatusCode::OK)
-        .content_type("text/html; charset=utf-8")
-        .body(
-            OIDCNotFoundPage {
-                product_docs_link: "https://www.example.com",
-                product_docs_name: "Example",
-            }
-            .render()
-            .unwrap(),
-        ))
+async fn callback(
+    oidc_params_sender: mpsc::Sender<OidcResponseParams>,
+    req: HttpRequest,
+) -> Result<HttpResponse> {
+    let query = req.query_string();
+    let params_vec: Vec<_> = query.split('&').collect();
+    if params_vec.is_empty() || params_vec.get(0).unwrap().is_empty() {
+        return error("unknown error", "response parameters are missing").await;
+    }
+    let params = params_vec
+        .into_iter()
+        .map(|kv| {
+            let kv: Vec<_> = kv.split('=').collect();
+            (kv[0], kv[1])
+        })
+        .collect::<HashMap<&str, &str>>();
+
+    let code = params.get("code");
+    if let Some(code) = code {
+        let state = params.get("state").map(|s| s.to_string());
+        let oidc_response_params = OidcResponseParams {
+            code: code.to_string(),
+            state,
+        };
+        let _ = oidc_params_sender.send(oidc_response_params);
+        accepted().await
+    } else if let Some(e) = params.get("error") {
+        if let Some(error_description) = params.get("error_description") {
+            error(e, error_description).await
+        } else {
+            error(e, "no error description was provided").await
+        }
+    } else {
+        error(
+            "unknown error",
+            "response parameters are missing required information",
+        )
+        .await
+    }
 }
 
-async fn stop_page() -> Result<HttpResponse> {
+async fn stop(stop_sender: mpsc::Sender<bool>) -> Result<HttpResponse> {
+    let _ = stop_sender.send(true);
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body("<html><body>Server is stopping</body></html>".to_string()))
 }
 
+async fn accepted() -> Result<HttpResponse> {
+    Ok(HttpResponse::build(http::StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body(
+            OIDCAcceptedPage {
+                product_docs_link:
+                    "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
+                product_docs_name: "Atlas SQL ODBC Driver",
+                error: "error",
+                error_uri: "error_uri",
+                error_description: "error_description",
+            }
+            .render()
+            .unwrap(),
+        ))
+}
+
+async fn error(error: &str, error_description: &str) -> Result<HttpResponse> {
+    Ok(HttpResponse::build(http::StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body(
+            OIDCErrorPage {
+                product_docs_link: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
+                product_docs_name: "Atlas SQL ODBC Driver",
+                error,
+                error_uri: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/bad_oidc_login",
+                error_description,
+            }
+            .render()
+            .unwrap(),
+        ))
+}
+
+async fn not_found() -> Result<HttpResponse> {
+    Ok(HttpResponse::build(http::StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body(
+            OIDCNotFoundPage {
+                product_docs_link: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
+                product_docs_name: "Atlas SQL ODBC Driver",
+            }
+            .render()
+            .unwrap(),
+        ))
+}
+
 async fn run_app(
     sender: mpsc::Sender<ServerHandle>,
+    oidc_params_sender: mpsc::Sender<OidcResponseParams>,
     stop_sender: mpsc::Sender<bool>,
 ) -> std::io::Result<()> {
     println!("starting HTTP server at http://localhost:9080");
@@ -97,16 +153,14 @@ async fn run_app(
     // srv is server controller type, `dev::Server`
     let server = HttpServer::new(move || {
         let stop_sender = stop_sender.clone();
+        let oidc_params_sender = oidc_params_sender.clone();
         App::new()
             // enable logger
             .wrap(middleware::Logger::default())
-            .service(web::resource("/accepted").to(accepted))
-            .service(web::resource("/error").to(error))
-            .service(web::resource("/stop").to(move || {
-                let stop_sender = stop_sender.clone();
-                stop_sender.send(true).unwrap();
-                async { stop_page().await }
-            }))
+            .service(
+                web::resource("/callback").to(move |r| callback(oidc_params_sender.clone(), r)),
+            )
+            .service(web::resource("/stop").to(move || stop(stop_sender.clone())))
             .default_service(web::route().to(not_found))
     })
     .bind(("127.0.0.1", 9080))?
@@ -121,28 +175,28 @@ async fn run_app(
 
 pub fn start() {
     let (sender, receiver) = mpsc::channel();
+    let (oidc_params_sender, oidc_params_receiver) = mpsc::channel();
     let (stop_sender, stop_receiver) = mpsc::channel();
 
     println!("spawning thread for server");
     thread::spawn(move || {
-        let server_future = run_app(sender, stop_sender);
+        let server_future = run_app(sender, oidc_params_sender, stop_sender);
         rt::System::new().block_on(server_future)
     });
 
     let server_handle = receiver.recv().unwrap();
 
-    // wait for the stop page to run
-    let _ = stop_receiver.recv().unwrap();
+    loop {
+        if let Ok(oidc_params) = oidc_params_receiver.try_recv() {
+            println!("received oidc params: {:?}", oidc_params);
+            break;
+        }
+        if let Ok(_) = stop_receiver.try_recv() {
+            println!("received stop signal");
+            break;
+        }
+    }
     // Send a stop signal to the server, waiting for it to exit gracefully
     println!("stopping server");
     rt::System::new().block_on(server_handle.stop(true));
-}
-
-pub struct RFC8252HttpServerOptions {
-    pub redirect_uri: String,
-    pub oidc_state_param: String,
-}
-
-pub struct RFC8252HttpServer {
-    options: RFC8252HttpServerOptions,
 }
