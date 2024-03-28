@@ -82,16 +82,25 @@ async fn not_found(_req: HttpRequest) -> Result<HttpResponse> {
         ))
 }
 
-async fn run_app(sender: mpsc::Sender<ServerHandle>) -> std::io::Result<()> {
+async fn run_app(
+    sender: mpsc::Sender<ServerHandle>,
+    stop_sender: mpsc::Sender<bool>,
+) -> std::io::Result<()> {
     println!("starting HTTP server at http://localhost:9080");
 
     // srv is server controller type, `dev::Server`
-    let server = HttpServer::new(|| {
+    let server = HttpServer::new(move || {
+        let stop_sender = stop_sender.clone();
         App::new()
             // enable logger
             .wrap(middleware::Logger::default())
             .service(web::resource("/accepted").to(accepted))
             .service(web::resource("/error").to(error))
+            .service(web::resource("/stop").to(move || {
+                let stop_sender = stop_sender.clone();
+                stop_sender.send(true).unwrap();
+                async move { HttpResponse::Ok().finish() }
+            }))
             .default_service(web::route().to(not_found))
     })
     .bind(("127.0.0.1", 9080))?
@@ -106,18 +115,20 @@ async fn run_app(sender: mpsc::Sender<ServerHandle>) -> std::io::Result<()> {
 
 pub fn start() {
     let (sender, receiver) = mpsc::channel();
+    let (stop_sender, stop_receiver) = mpsc::channel();
 
     println!("spawning thread for server");
     thread::spawn(move || {
-        let server_future = run_app(sender);
+        let server_future = run_app(sender, stop_sender);
         rt::System::new().block_on(server_future)
     });
 
     let server_handle = receiver.recv().unwrap();
 
-    println!("waiting 10 seconds");
-    thread::sleep(time::Duration::from_secs(10));
+    //println!("waiting 10 seconds");
+    //thread::sleep(time::Duration::from_secs(10));
 
+    let _ = stop_receiver.recv().unwrap();
     // Send a stop signal to the server, waiting for it to exit gracefully
     println!("stopping server");
     rt::System::new().block_on(server_handle.stop(true));
