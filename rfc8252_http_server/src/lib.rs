@@ -3,6 +3,7 @@ use actix_web::{
     Result,
 };
 use askama::Template;
+use std::result::Result as StdResult;
 use std::{collections::HashMap, sync::mpsc, thread};
 use tokio::sync::mpsc as tokio_mpsc;
 
@@ -61,7 +62,7 @@ fn get_params(query: &str) -> HashMap<&str, &str> {
 }
 
 async fn threaded_callback(
-    oidc_params_sender: mpsc::Sender<OidcResponseParams>,
+    oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
     req: HttpRequest,
 ) -> Result<HttpResponse> {
     let query = req.query_string();
@@ -83,7 +84,7 @@ async fn threaded_callback(
             code: code.to_string(),
             state,
         };
-        let _ = oidc_params_sender.send(oidc_response_params);
+        let _ = oidc_params_sender.send(Ok(oidc_response_params));
         accepted().await
     } else if let Some(e) = params.get("error") {
         if let Some(error_description) = params.get("error_description") {
@@ -102,7 +103,7 @@ async fn threaded_callback(
 }
 
 async fn tokio_callback(
-    oidc_params_sender: tokio_mpsc::Sender<OidcResponseParams>,
+    oidc_params_sender: tokio_mpsc::Sender<StdResult<OidcResponseParams, String>>,
     req: HttpRequest,
 ) -> Result<HttpResponse> {
     let query = req.query_string();
@@ -124,7 +125,7 @@ async fn tokio_callback(
             code: code.to_string(),
             state,
         };
-        let _ = oidc_params_sender.send(oidc_response_params).await;
+        let _ = oidc_params_sender.send(Ok(oidc_response_params)).await;
         accepted().await
     } else if let Some(e) = params.get("error") {
         if let Some(error_description) = params.get("error_description") {
@@ -160,14 +161,11 @@ async fn accepted() -> Result<HttpResponse> {
 }
 
 async fn threaded_error(
-    oidc_params_sender: mpsc::Sender<OidcResponseParams>,
+    oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
     error: &str,
     error_description: &str,
 ) -> Result<HttpResponse> {
-    let _ = oidc_params_sender.send(OidcResponseParams {
-        code: "".to_string(),
-        state: None,
-    });
+    let _ = oidc_params_sender.send(Err(format!("{}: {}", error, error_description)));
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body(
@@ -184,15 +182,12 @@ async fn threaded_error(
 }
 
 async fn tokio_error(
-    oidc_params_sender: tokio_mpsc::Sender<OidcResponseParams>,
+    oidc_params_sender: tokio_mpsc::Sender<StdResult<OidcResponseParams, String>>,
     error: &str,
     error_description: &str,
 ) -> Result<HttpResponse> {
     let _ = oidc_params_sender
-        .send(OidcResponseParams {
-            code: "".to_string(),
-            state: None,
-        })
+        .send(Err(format!("{}: {}", error, error_description)))
         .await;
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
@@ -224,10 +219,8 @@ async fn not_found() -> Result<HttpResponse> {
 
 async fn threaded_run_app(
     sender: mpsc::Sender<ServerHandle>,
-    oidc_params_sender: mpsc::Sender<OidcResponseParams>,
+    oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
 ) -> std::io::Result<()> {
-    println!("starting HTTP server at http://localhost:9080");
-
     // srv is server controller type, `dev::Server`
     let server = HttpServer::new(move || {
         let oidc_params_sender = oidc_params_sender.clone();
@@ -252,10 +245,8 @@ async fn threaded_run_app(
 
 async fn tokio_run_app(
     sender: tokio_mpsc::Sender<ServerHandle>,
-    oidc_params_sender: tokio_mpsc::Sender<OidcResponseParams>,
+    oidc_params_sender: tokio_mpsc::Sender<StdResult<OidcResponseParams, String>>,
 ) -> std::io::Result<()> {
-    println!("starting HTTP server at http://localhost:9080");
-
     // srv is server controller type, `dev::Server`
     let server = HttpServer::new(move || {
         let oidc_params_sender = oidc_params_sender.clone();
@@ -272,20 +263,16 @@ async fn tokio_run_app(
     .workers(2)
     .run();
 
-    println!("run");
-
     // Send server handle back to the main thread
     let _ = sender.send(server.handle()).await;
-    println!("send");
 
     server.await
 }
 
-pub fn threaded_start() -> std::result::Result<OidcResponseParams, std::io::Error> {
+pub fn threaded_start() -> StdResult<OidcResponseParams, String> {
     let (sender, receiver) = mpsc::channel();
     let (oidc_params_sender, oidc_params_receiver) = mpsc::channel();
 
-    println!("spawning thread for server");
     thread::spawn(move || {
         let server_future = threaded_run_app(sender, oidc_params_sender);
         rt::System::new().block_on(server_future)
@@ -293,20 +280,18 @@ pub fn threaded_start() -> std::result::Result<OidcResponseParams, std::io::Erro
 
     let server_handle = receiver.recv().unwrap();
 
-    let res = oidc_params_receiver.recv();
+    let res = oidc_params_receiver.recv().unwrap();
 
     // Send a stop signal to the server, waiting for it to exit gracefully
-    println!("stopping server");
     rt::System::new().block_on(server_handle.stop(true));
 
-    res.map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "server was stopped"))
+    res
 }
 
-pub async fn tokio_start() -> std::result::Result<OidcResponseParams, std::io::Error> {
+pub async fn tokio_start() -> StdResult<OidcResponseParams, String> {
     let (sender, mut receiver) = tokio_mpsc::channel(1);
     let (oidc_params_sender, mut oidc_params_receiver) = tokio_mpsc::channel(1);
 
-    println!("spawning tokio task for server");
     tokio::spawn(async move {
         let server_future = tokio_run_app(sender, oidc_params_sender);
         server_future.await
@@ -314,11 +299,10 @@ pub async fn tokio_start() -> std::result::Result<OidcResponseParams, std::io::E
 
     let server_handle = receiver.recv().await.unwrap();
 
-    let res = oidc_params_receiver.recv().await;
+    let res = oidc_params_receiver.recv().await.unwrap();
 
     // Send a stop signal to the server, waiting for it to exit gracefully
-    println!("stopping server");
     server_handle.stop(true).await;
 
-    res.ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "server was stopped"))
+    res
 }
