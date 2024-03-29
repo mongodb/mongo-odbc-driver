@@ -142,20 +142,6 @@ async fn tokio_callback(
     }
 }
 
-async fn threaded_stop(stop_sender: mpsc::Sender<bool>) -> Result<HttpResponse> {
-    let _ = stop_sender.send(true);
-    Ok(HttpResponse::build(http::StatusCode::OK)
-        .content_type("text/html; charset=utf-8")
-        .body("<html><body>Server is stopping</body></html>".to_string()))
-}
-
-async fn tokio_stop(stop_sender: tokio_mpsc::Sender<bool>) -> Result<HttpResponse> {
-    let _ = stop_sender.send(true).await;
-    Ok(HttpResponse::build(http::StatusCode::OK)
-        .content_type("text/html; charset=utf-8")
-        .body("<html><body>Server is stopping</body></html>".to_string()))
-}
-
 async fn accepted() -> Result<HttpResponse> {
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
@@ -239,13 +225,11 @@ async fn not_found() -> Result<HttpResponse> {
 async fn threaded_run_app(
     sender: mpsc::Sender<ServerHandle>,
     oidc_params_sender: mpsc::Sender<OidcResponseParams>,
-    stop_sender: mpsc::Sender<bool>,
 ) -> std::io::Result<()> {
     println!("starting HTTP server at http://localhost:9080");
 
     // srv is server controller type, `dev::Server`
     let server = HttpServer::new(move || {
-        let stop_sender = stop_sender.clone();
         let oidc_params_sender = oidc_params_sender.clone();
         App::new()
             // enable logger
@@ -254,7 +238,6 @@ async fn threaded_run_app(
                 web::resource("/callback")
                     .to(move |r| threaded_callback(oidc_params_sender.clone(), r)),
             )
-            .service(web::resource("/stop").to(move || threaded_stop(stop_sender.clone())))
             .default_service(web::route().to(not_found))
     })
     .bind(("127.0.0.1", 9080))?
@@ -270,13 +253,11 @@ async fn threaded_run_app(
 async fn tokio_run_app(
     sender: tokio_mpsc::Sender<ServerHandle>,
     oidc_params_sender: tokio_mpsc::Sender<OidcResponseParams>,
-    stop_sender: tokio_mpsc::Sender<bool>,
 ) -> std::io::Result<()> {
     println!("starting HTTP server at http://localhost:9080");
 
     // srv is server controller type, `dev::Server`
     let server = HttpServer::new(move || {
-        let stop_sender = stop_sender.clone();
         let oidc_params_sender = oidc_params_sender.clone();
         App::new()
             // enable logger
@@ -285,7 +266,6 @@ async fn tokio_run_app(
                 web::resource("/callback")
                     .to(move |r| tokio_callback(oidc_params_sender.clone(), r)),
             )
-            .service(web::resource("/stop").to(move || tokio_stop(stop_sender.clone())))
             .default_service(web::route().to(not_found))
     })
     .bind(("127.0.0.1", 9080))?
@@ -304,65 +284,41 @@ async fn tokio_run_app(
 pub fn threaded_start() -> std::result::Result<OidcResponseParams, std::io::Error> {
     let (sender, receiver) = mpsc::channel();
     let (oidc_params_sender, oidc_params_receiver) = mpsc::channel();
-    let (stop_sender, stop_receiver) = mpsc::channel();
 
     println!("spawning thread for server");
     thread::spawn(move || {
-        let server_future = threaded_run_app(sender, oidc_params_sender, stop_sender);
+        let server_future = threaded_run_app(sender, oidc_params_sender);
         rt::System::new().block_on(server_future)
     });
 
     let server_handle = receiver.recv().unwrap();
 
-    loop {
-        if let Ok(oidc_params) = oidc_params_receiver.try_recv() {
-            // Send a stop signal to the server, waiting for it to exit gracefully
-            println!("stopping server");
-            rt::System::new().block_on(server_handle.stop(true));
-            return Ok(oidc_params);
-        }
-        if let Ok(_) = stop_receiver.try_recv() {
-            println!("received stop signal");
-            // Send a stop signal to the server, waiting for it to exit gracefully
-            println!("stopping server");
-            rt::System::new().block_on(server_handle.stop(true));
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "server was stopped",
-            ));
-        }
-    }
+    let res = oidc_params_receiver.recv();
+
+    // Send a stop signal to the server, waiting for it to exit gracefully
+    println!("stopping server");
+    rt::System::new().block_on(server_handle.stop(true));
+
+    res.map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "server was stopped"))
 }
 
 pub async fn tokio_start() -> std::result::Result<OidcResponseParams, std::io::Error> {
-    let (sender, mut receiver) = tokio_mpsc::channel(4);
-    let (oidc_params_sender, mut oidc_params_receiver) = tokio_mpsc::channel(4);
-    let (stop_sender, mut stop_receiver) = tokio_mpsc::channel(4);
+    let (sender, mut receiver) = tokio_mpsc::channel(1);
+    let (oidc_params_sender, mut oidc_params_receiver) = tokio_mpsc::channel(1);
 
     println!("spawning tokio task for server");
     tokio::spawn(async move {
-        let server_future = tokio_run_app(sender, oidc_params_sender, stop_sender);
+        let server_future = tokio_run_app(sender, oidc_params_sender);
         server_future.await
     });
 
     let server_handle = receiver.recv().await.unwrap();
 
-    loop {
-        if let Ok(oidc_params) = oidc_params_receiver.try_recv() {
-            // Send a stop signal to the server, waiting for it to exit gracefully
-            println!("stopping server");
-            server_handle.stop(true).await;
-            return Ok(oidc_params);
-        }
-        if let Ok(_) = stop_receiver.try_recv() {
-            println!("received stop signal");
-            // Send a stop signal to the server, waiting for it to exit gracefully
-            println!("stopping server");
-            server_handle.stop(true).await;
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "server was stopped",
-            ));
-        }
-    }
+    let res = oidc_params_receiver.recv().await;
+
+    // Send a stop signal to the server, waiting for it to exit gracefully
+    println!("stopping server");
+    server_handle.stop(true).await;
+
+    res.ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "server was stopped"))
 }
