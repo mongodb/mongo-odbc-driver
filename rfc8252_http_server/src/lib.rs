@@ -45,6 +45,21 @@ pub struct OidcResponseParams {
     pub state: Option<String>,
 }
 
+fn get_params(query: &str) -> HashMap<&str, &str> {
+    let params_vec: Vec<_> = query.split('&').collect();
+    params_vec
+        .into_iter()
+        .map(|kv| {
+            let kv: Vec<_> = kv.split('=').collect();
+            match kv.len() {
+                0 => ("", ""),
+                1 => (kv[0], ""),
+                _ => (kv[0], kv[1]),
+            }
+        })
+        .collect::<HashMap<&str, &str>>()
+}
+
 async fn threaded_callback(
     oidc_params_sender: mpsc::Sender<OidcResponseParams>,
     req: HttpRequest,
@@ -59,17 +74,7 @@ async fn threaded_callback(
         )
         .await;
     }
-    let params = params_vec
-        .into_iter()
-        .map(|kv| {
-            let kv: Vec<_> = kv.split('=').collect();
-            match kv.len() {
-                0 => ("", ""),
-                1 => (kv[0], ""),
-                _ => (kv[0], kv[1]),
-            }
-        })
-        .collect::<HashMap<&str, &str>>();
+    let params = get_params(&query);
 
     let code = params.get("code");
     if let Some(code) = code {
@@ -79,7 +84,7 @@ async fn threaded_callback(
             state,
         };
         let _ = oidc_params_sender.send(oidc_response_params);
-        threaded_accepted().await
+        accepted().await
     } else if let Some(e) = params.get("error") {
         if let Some(error_description) = params.get("error_description") {
             threaded_error(oidc_params_sender, e, error_description).await
@@ -96,6 +101,47 @@ async fn threaded_callback(
     }
 }
 
+async fn tokio_callback(
+    oidc_params_sender: tokio_mpsc::Sender<OidcResponseParams>,
+    req: HttpRequest,
+) -> Result<HttpResponse> {
+    let query = req.query_string();
+    let params_vec: Vec<_> = query.split('&').collect();
+    if params_vec.is_empty() || params_vec.get(0).unwrap().is_empty() {
+        return tokio_error(
+            oidc_params_sender,
+            "unknown error",
+            "response parameters are missing",
+        )
+        .await;
+    }
+    let params = get_params(&query);
+
+    let code = params.get("code");
+    if let Some(code) = code {
+        let state = params.get("state").map(|s| s.to_string());
+        let oidc_response_params = OidcResponseParams {
+            code: code.to_string(),
+            state,
+        };
+        let _ = oidc_params_sender.send(oidc_response_params).await;
+        accepted().await
+    } else if let Some(e) = params.get("error") {
+        if let Some(error_description) = params.get("error_description") {
+            tokio_error(oidc_params_sender, e, error_description).await
+        } else {
+            tokio_error(oidc_params_sender, e, "no error description was provided").await
+        }
+    } else {
+        tokio_error(
+            oidc_params_sender,
+            "unknown error",
+            "response parameters are missing required information",
+        )
+        .await
+    }
+}
+
 async fn threaded_stop(stop_sender: mpsc::Sender<bool>) -> Result<HttpResponse> {
     let _ = stop_sender.send(true);
     Ok(HttpResponse::build(http::StatusCode::OK)
@@ -103,7 +149,14 @@ async fn threaded_stop(stop_sender: mpsc::Sender<bool>) -> Result<HttpResponse> 
         .body("<html><body>Server is stopping</body></html>".to_string()))
 }
 
-async fn threaded_accepted() -> Result<HttpResponse> {
+async fn tokio_stop(stop_sender: tokio_mpsc::Sender<bool>) -> Result<HttpResponse> {
+    let _ = stop_sender.send(true).await;
+    Ok(HttpResponse::build(http::StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body("<html><body>Server is stopping</body></html>".to_string()))
+}
+
+async fn accepted() -> Result<HttpResponse> {
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body(
@@ -129,6 +182,32 @@ async fn threaded_error(
         code: "".to_string(),
         state: None,
     });
+    Ok(HttpResponse::build(http::StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body(
+            OIDCErrorPage {
+                product_docs_link: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
+                product_docs_name: "Atlas SQL ODBC Driver",
+                error,
+                error_uri: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/bad_oidc_login",
+                error_description,
+            }
+            .render()
+            .unwrap(),
+        ))
+}
+
+async fn tokio_error(
+    oidc_params_sender: tokio_mpsc::Sender<OidcResponseParams>,
+    error: &str,
+    error_description: &str,
+) -> Result<HttpResponse> {
+    let _ = oidc_params_sender
+        .send(OidcResponseParams {
+            code: "".to_string(),
+            state: None,
+        })
+        .await;
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body(
@@ -188,6 +267,40 @@ async fn threaded_run_app(
     server.await
 }
 
+async fn tokio_run_app(
+    sender: tokio_mpsc::Sender<ServerHandle>,
+    oidc_params_sender: tokio_mpsc::Sender<OidcResponseParams>,
+    stop_sender: tokio_mpsc::Sender<bool>,
+) -> std::io::Result<()> {
+    println!("starting HTTP server at http://localhost:9080");
+
+    // srv is server controller type, `dev::Server`
+    let server = HttpServer::new(move || {
+        let stop_sender = stop_sender.clone();
+        let oidc_params_sender = oidc_params_sender.clone();
+        App::new()
+            // enable logger
+            .wrap(middleware::Logger::default())
+            .service(
+                web::resource("/callback")
+                    .to(move |r| tokio_callback(oidc_params_sender.clone(), r)),
+            )
+            .service(web::resource("/stop").to(move || tokio_stop(stop_sender.clone())))
+            .default_service(web::route().to(not_found))
+    })
+    .bind(("127.0.0.1", 9080))?
+    .workers(2)
+    .run();
+
+    println!("run");
+
+    // Send server handle back to the main thread
+    let _ = sender.send(server.handle()).await;
+    println!("send");
+
+    server.await
+}
+
 pub fn threaded_start() -> std::result::Result<OidcResponseParams, std::io::Error> {
     let (sender, receiver) = mpsc::channel();
     let (oidc_params_sender, oidc_params_receiver) = mpsc::channel();
@@ -213,6 +326,39 @@ pub fn threaded_start() -> std::result::Result<OidcResponseParams, std::io::Erro
             // Send a stop signal to the server, waiting for it to exit gracefully
             println!("stopping server");
             rt::System::new().block_on(server_handle.stop(true));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "server was stopped",
+            ));
+        }
+    }
+}
+
+pub async fn tokio_start() -> std::result::Result<OidcResponseParams, std::io::Error> {
+    let (sender, mut receiver) = tokio_mpsc::channel(4);
+    let (oidc_params_sender, mut oidc_params_receiver) = tokio_mpsc::channel(4);
+    let (stop_sender, mut stop_receiver) = tokio_mpsc::channel(4);
+
+    println!("spawning tokio task for server");
+    tokio::spawn(async move {
+        let server_future = tokio_run_app(sender, oidc_params_sender, stop_sender);
+        server_future.await
+    });
+
+    let server_handle = receiver.recv().await.unwrap();
+
+    loop {
+        if let Ok(oidc_params) = oidc_params_receiver.try_recv() {
+            // Send a stop signal to the server, waiting for it to exit gracefully
+            println!("stopping server");
+            server_handle.stop(true).await;
+            return Ok(oidc_params);
+        }
+        if let Ok(_) = stop_receiver.try_recv() {
+            println!("received stop signal");
+            // Send a stop signal to the server, waiting for it to exit gracefully
+            println!("stopping server");
+            server_handle.stop(true).await;
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "server was stopped",
