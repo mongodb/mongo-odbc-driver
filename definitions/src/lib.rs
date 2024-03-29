@@ -11,7 +11,7 @@
 pub use self::{
     attributes::*, bulk_operation::*, c_data_type::*, desc::*, diag_type::*, fetch_orientation::*,
     functions::*, indicator::*, info_type::*, interval::*, nullability::*, param_type::*,
-    row_status::*, sql_data_type::*, sqlreturn::*,
+    sql_data_type::*, sqlreturn::*,
 };
 use cstr::WideChar;
 use num_derive::FromPrimitive;
@@ -29,7 +29,6 @@ mod info_type;
 mod interval;
 mod nullability;
 mod param_type;
-mod row_status;
 mod sql_data_type;
 mod sqlreturn;
 
@@ -400,4 +399,14 @@ pub enum SqlCode {
     SQL_CODE_DATE = 1,
     SQL_CODE_TIME = 2,
     SQL_CODE_TIMESTAMP = 3,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(u16)]
+pub enum RowStatus {
+    SQL_ROW_SUCCESS = 0,
+    SQL_ROW_NOROW = 3,
+    SQL_ROW_ERROR = 5,
+    SQL_ROW_SUCCESS_WITH_INFO = 6,
 }

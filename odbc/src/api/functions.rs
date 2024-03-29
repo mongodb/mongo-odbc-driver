@@ -19,8 +19,8 @@ use definitions::{
     CDataType, Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType,
     Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption,
     HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Nullability, Pointer,
-    RetCode, RetrieveData, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
-    USmallInt, UseBookmarks,
+    RetCode, RetrieveData, RowStatus, SmallInt, SqlBool, SqlDataType, SqlReturn,
+    StatementAttribute, ULen, USmallInt, UseBookmarks,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -1332,7 +1332,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                             as ULen
                             + (row_status_index * size_of::<u16>()))
                             as *mut USmallInt;
-                        *row_status_buffer = definitions::SQL_ROW_NOROW;
+                        *row_status_buffer = RowStatus::SQL_ROW_NOROW as USmallInt;
                     }
                 }
 
@@ -1350,9 +1350,9 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
             if !row_status_buffer.is_null() {
                 *row_status_buffer = if warnings_opt.is_empty() {
-                    definitions::SQL_ROW_SUCCESS
+                    RowStatus::SQL_ROW_SUCCESS as USmallInt
                 } else {
-                    definitions::SQL_ROW_SUCCESS_WITH_INFO
+                    RowStatus::SQL_ROW_SUCCESS_WITH_INFO as USmallInt
                 };
             }
 
@@ -1398,7 +1398,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             );
 
             if !row_status_buffer.is_null() {
-                *row_status_buffer = definitions::SQL_ROW_ERROR;
+                *row_status_buffer = RowStatus::SQL_ROW_ERROR as USmallInt;
             }
 
             if has_rows_fetched_buffer {
@@ -1469,9 +1469,9 @@ unsafe fn sql_fetch_column_binding_helper(
         // It's possible that one binding causes SUCCESS_WITH_INFO and another causes ERROR, so we need to check for an error first
         // and ignore SUCCESS_WITH_INFO if it also occurs.
         if encountered_error_during_col_binding {
-            *row_status_buffer = definitions::SQL_ROW_ERROR;
+            *row_status_buffer = RowStatus::SQL_ROW_ERROR as USmallInt;
         } else if encountered_success_with_info_during_col_binding {
-            *row_status_buffer = definitions::SQL_ROW_SUCCESS_WITH_INFO;
+            *row_status_buffer = RowStatus::SQL_ROW_SUCCESS_WITH_INFO as USmallInt;
         }
     }
 

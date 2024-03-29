@@ -9,8 +9,9 @@ mod unit {
     use bson::doc;
     use cstr::{input_text_to_string_w, WideChar};
     use definitions::{
-        BindType, CDataType, Len, Nullability, SmallInt, SqlReturn, ULen, USmallInt, WChar,
-        SQL_ROW_NOROW, SQL_ROW_SUCCESS,
+        BindType, CDataType, Len, Nullability,
+        RowStatus::{SQL_ROW_NOROW, SQL_ROW_SUCCESS},
+        SmallInt, SqlReturn, ULen, USmallInt, WChar,
     };
     use mongo_odbc_core::{
         json_schema::{
@@ -438,9 +439,9 @@ mod unit {
             // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
+            assert_eq!(SQL_ROW_SUCCESS as USmallInt, *row_status_array);
             assert_eq!(
-                SQL_ROW_SUCCESS,
+                SQL_ROW_SUCCESS as USmallInt,
                 *((row_status_array as ULen + 2) as *mut USmallInt)
             );
 
@@ -475,9 +476,9 @@ mod unit {
             // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
+            assert_eq!(SQL_ROW_SUCCESS as USmallInt, *row_status_array);
             assert_eq!(
-                SQL_ROW_SUCCESS,
+                SQL_ROW_SUCCESS as USmallInt,
                 *((row_status_array as ULen + 2) as *mut USmallInt)
             );
 
@@ -490,9 +491,9 @@ mod unit {
             // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(SQL_ROW_NOROW, *row_status_array);
+            assert_eq!(SQL_ROW_NOROW as USmallInt, *row_status_array);
             assert_eq!(
-                SQL_ROW_NOROW,
+                SQL_ROW_NOROW as USmallInt,
                 *((row_status_array as ULen + 2) as *mut USmallInt)
             );
 
@@ -597,13 +598,13 @@ mod unit {
             // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
+            assert_eq!(SQL_ROW_SUCCESS as USmallInt, *row_status_array);
             assert_eq!(
-                SQL_ROW_SUCCESS,
+                SQL_ROW_SUCCESS as USmallInt,
                 *((row_status_array as ULen + 2) as *mut USmallInt)
             );
             assert_eq!(
-                SQL_ROW_SUCCESS,
+                SQL_ROW_SUCCESS as USmallInt,
                 *((row_status_array as ULen + 4) as *mut USmallInt)
             );
 
@@ -645,13 +646,13 @@ mod unit {
             // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(SQL_ROW_SUCCESS, *row_status_array);
+            assert_eq!(SQL_ROW_SUCCESS as USmallInt, *row_status_array);
             assert_eq!(
-                SQL_ROW_NOROW,
+                SQL_ROW_NOROW as USmallInt,
                 *((row_status_array as ULen + 2) as *mut USmallInt)
             );
             assert_eq!(
-                SQL_ROW_NOROW,
+                SQL_ROW_NOROW as USmallInt,
                 *((row_status_array as ULen + 4) as *mut USmallInt)
             );
 
@@ -664,13 +665,13 @@ mod unit {
             // check the row status array
             let row_status_array = s.attributes.read().unwrap().row_status_ptr;
 
-            assert_eq!(SQL_ROW_NOROW, *row_status_array);
+            assert_eq!(SQL_ROW_NOROW as USmallInt, *row_status_array);
             assert_eq!(
-                SQL_ROW_NOROW,
+                SQL_ROW_NOROW as USmallInt,
                 *((row_status_array as ULen + 2) as *mut USmallInt)
             );
             assert_eq!(
-                SQL_ROW_NOROW,
+                SQL_ROW_NOROW as USmallInt,
                 *((row_status_array as ULen + 4) as *mut USmallInt)
             );
 
