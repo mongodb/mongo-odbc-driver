@@ -4,11 +4,7 @@ use actix_web::{
 };
 use askama::Template;
 use std::{collections::HashMap, sync::mpsc, thread};
-
-// template page keys are:
-// 'OIDCErrorPage'
-// 'OIDCAcceptedPage'
-// 'OIDCNotFoundPage'
+use tokio::sync::mpsc as tokio_mpsc;
 
 #[derive(Template)]
 #[template(path = "OIDCAcceptedTemplate.html")]
@@ -49,14 +45,14 @@ pub struct OidcResponseParams {
     pub state: Option<String>,
 }
 
-async fn callback(
+async fn threaded_callback(
     oidc_params_sender: mpsc::Sender<OidcResponseParams>,
     req: HttpRequest,
 ) -> Result<HttpResponse> {
     let query = req.query_string();
     let params_vec: Vec<_> = query.split('&').collect();
     if params_vec.is_empty() || params_vec.get(0).unwrap().is_empty() {
-        return error(
+        return threaded_error(
             oidc_params_sender,
             "unknown error",
             "response parameters are missing",
@@ -83,15 +79,15 @@ async fn callback(
             state,
         };
         let _ = oidc_params_sender.send(oidc_response_params);
-        accepted().await
+        threaded_accepted().await
     } else if let Some(e) = params.get("error") {
         if let Some(error_description) = params.get("error_description") {
-            error(oidc_params_sender, e, error_description).await
+            threaded_error(oidc_params_sender, e, error_description).await
         } else {
-            error(oidc_params_sender, e, "no error description was provided").await
+            threaded_error(oidc_params_sender, e, "no error description was provided").await
         }
     } else {
-        error(
+        threaded_error(
             oidc_params_sender,
             "unknown error",
             "response parameters are missing required information",
@@ -100,14 +96,14 @@ async fn callback(
     }
 }
 
-async fn stop(stop_sender: mpsc::Sender<bool>) -> Result<HttpResponse> {
+async fn threaded_stop(stop_sender: mpsc::Sender<bool>) -> Result<HttpResponse> {
     let _ = stop_sender.send(true);
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body("<html><body>Server is stopping</body></html>".to_string()))
 }
 
-async fn accepted() -> Result<HttpResponse> {
+async fn threaded_accepted() -> Result<HttpResponse> {
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body(
@@ -124,7 +120,7 @@ async fn accepted() -> Result<HttpResponse> {
         ))
 }
 
-async fn error(
+async fn threaded_error(
     oidc_params_sender: mpsc::Sender<OidcResponseParams>,
     error: &str,
     error_description: &str,
@@ -161,7 +157,7 @@ async fn not_found() -> Result<HttpResponse> {
         ))
 }
 
-async fn run_app(
+async fn threaded_run_app(
     sender: mpsc::Sender<ServerHandle>,
     oidc_params_sender: mpsc::Sender<OidcResponseParams>,
     stop_sender: mpsc::Sender<bool>,
@@ -176,9 +172,10 @@ async fn run_app(
             // enable logger
             .wrap(middleware::Logger::default())
             .service(
-                web::resource("/callback").to(move |r| callback(oidc_params_sender.clone(), r)),
+                web::resource("/callback")
+                    .to(move |r| threaded_callback(oidc_params_sender.clone(), r)),
             )
-            .service(web::resource("/stop").to(move || stop(stop_sender.clone())))
+            .service(web::resource("/stop").to(move || threaded_stop(stop_sender.clone())))
             .default_service(web::route().to(not_found))
     })
     .bind(("127.0.0.1", 9080))?
@@ -191,14 +188,14 @@ async fn run_app(
     server.await
 }
 
-pub fn start() -> std::result::Result<OidcResponseParams, std::io::Error> {
+pub fn threaded_start() -> std::result::Result<OidcResponseParams, std::io::Error> {
     let (sender, receiver) = mpsc::channel();
     let (oidc_params_sender, oidc_params_receiver) = mpsc::channel();
     let (stop_sender, stop_receiver) = mpsc::channel();
 
     println!("spawning thread for server");
     thread::spawn(move || {
-        let server_future = run_app(sender, oidc_params_sender, stop_sender);
+        let server_future = threaded_run_app(sender, oidc_params_sender, stop_sender);
         rt::System::new().block_on(server_future)
     });
 
