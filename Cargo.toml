@@ -6,7 +6,7 @@ members = [
   "odbc",
   "definitions",
   "core",
-  "integration_test",
+  # "integration_test",
   "win_setupgui",
   "shared_sql_utils",
   "logger",

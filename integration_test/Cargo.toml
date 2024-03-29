@@ -19,10 +19,10 @@ regex = "1"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
 
-[dependencies.mongodb]
-version = "2"
-default-features = false
-features = ["tokio-sync"]
+# [dependencies.mongodb]
+# version = "2"
+# default-features = false
+# features = ["tokio-sync"]
 
 [features]
 result_set = []

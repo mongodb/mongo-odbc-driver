@@ -6,10 +6,11 @@ use crate::{
     Error, TypeMode,
 };
 use bson::{doc, document::ValueAccessError, Bson, Document};
+use log::warn;
 use mongodb::{
     error::{CommandError, ErrorKind},
     options::AggregateOptions,
-    sync::Cursor,
+    Cursor,
 };
 use std::time::Duration;
 
@@ -38,31 +39,34 @@ impl MongoQuery {
         query: &str,
         type_mode: TypeMode,
     ) -> Result<Self> {
-        let current_db = current_db.ok_or(Error::NoDatabase)?;
-        let db = client.client.database(&current_db);
+        client.runtime.block_on(async {
+            let current_db = current_db.ok_or(Error::NoDatabase)?;
+            let db = client.client.database(&current_db);
 
-        // 1. Run the sqlGetResultSchema command to get the result set
-        // metadata. Column metadata is sorted alphabetically by table
-        // and column name.
-        let get_result_schema_cmd =
-            doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
+            // 1. Run the sqlGetResultSchema command to get the result set
+            // metadata. Column metadata is sorted alphabetically by table
+            // and column name.
+            let get_result_schema_cmd =
+                doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
-        let get_result_schema_response: SqlGetSchemaResponse = bson::from_document(
-            db.run_command(get_result_schema_cmd, None)
-                .map_err(Error::QueryExecutionFailed)?,
-        )
-        .map_err(Error::QueryDeserialization)?;
+            let get_result_schema_response: SqlGetSchemaResponse = bson::from_document(
+                db.run_command(get_result_schema_cmd, None)
+                    .await
+                    .map_err(Error::QueryExecutionFailed)?,
+            )
+            .map_err(Error::QueryDeserialization)?;
 
-        let metadata =
-            get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
+            let metadata =
+                get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
 
-        Ok(Self {
-            resultset_cursor: None,
-            resultset_metadata: metadata,
-            current: None,
-            current_db: Some(current_db),
-            query: query.to_string(),
-            query_timeout,
+            Ok(Self {
+                resultset_cursor: None,
+                resultset_metadata: metadata,
+                current: None,
+                current_db: Some(current_db),
+                query: query.to_string(),
+                query_timeout,
+            })
         })
     }
 }
@@ -71,14 +75,18 @@ impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     // This method deserializes the current row and stores it in self.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
-        let res = self
-            .resultset_cursor
-            .as_mut()
-            .map_or(Err(Error::StatementNotExecuted), |c| {
-                c.advance().map_err(Error::QueryCursorUpdate)
-            });
-
+    fn next(&mut self, connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
+        let res = if let Some(c) = connection {
+            let _guard = c.runtime.enter();
+            let handle = c.runtime.handle();
+            self.resultset_cursor
+                .as_mut()
+                .map_or(Err(Error::StatementNotExecuted), |c| {
+                    handle.block_on(async { c.advance().await.map_err(Error::QueryCursorUpdate) })
+                })
+        } else {
+            Err(Error::QueryCancelled)
+        };
         // Cursor::advance must return Ok(true) before Cursor::deserialize_current can be invoked.
         // Calling Cursor::deserialize_current after Cursor::advance does not return true or without
         // calling Cursor::advance at all may result in a panic
@@ -127,6 +135,8 @@ impl MongoStatement for MongoQuery {
             "statement": &self.query,
         }}];
 
+        log::warn!("Executing query: {}", self.query);
+
         let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
         // If the query timeout is 0, it means "no timeout"
         let options = if self.query_timeout.is_some_and(|timeout| timeout > 0) {
@@ -146,7 +156,15 @@ impl MongoStatement for MongoQuery {
             _ => Error::QueryExecutionFailed(e),
         };
 
-        let cursor: Cursor<Document> = db.aggregate(pipeline, options).map_err(map_query_error)?;
+        log::warn!("taking a tokio guard before executing query");
+
+        let _guard = connection.runtime.enter();
+        let cursor: Cursor<Document> = connection.runtime.block_on(async {
+            db.aggregate(pipeline, options)
+                .await
+                .map_err(map_query_error)
+        })?;
+        warn!("cursor created");
         self.resultset_cursor = Some(cursor);
         Ok(true)
     }

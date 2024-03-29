@@ -138,6 +138,7 @@ macro_rules! panic_safe_exec_keep_diagnostics {
         let (s, r) = mpsc::sync_channel(1);
         let fct_name: &str = function_name!();
         panic::set_hook(Box::new(move |i| {
+            println!("in panic setting a hook with {:?}", i);
             if let Some(location) = i.location() {
                 let info = format!("in file '{}' at line {}", location.file(), location.line());
                 let _ = s.send(info);
@@ -1022,15 +1023,8 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
             let conn = must_be_valid!((*conn_handle).as_connection());
             // set the mongo_connection to None. This will cause the previous mongo_connection
             // to drop and disconnect.
-            conn.mongo_connection
-                .write()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .client
-                .clone()
-                .shutdown();
-            *conn.mongo_connection.write().unwrap() = None;
+            let conn = conn.mongo_connection.write().unwrap().take();
+            let _ = conn.unwrap().shutdown();
             SqlReturn::SUCCESS
         },
         connection_handle
@@ -1038,8 +1032,13 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 }
 
 fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoConnection> {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
+        .enable_all()
+        .build()
+        .unwrap();
     let mut odbc_uri = ODBCUri::new(odbc_uri_string.to_string())?;
-    let client_options = odbc_uri.try_into_client_options()?;
+    let client_options = odbc_uri.try_into_client_options(runtime.handle())?;
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
@@ -1050,11 +1049,12 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         Logger::set_log_level(log_level);
     }
 
-    if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
-        if simple.eq("1") {
-            *conn.type_mode.write().unwrap() = TypeMode::Simple;
-        }
-    }
+    // if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
+    //     if simple.eq("1") {
+    //         *conn.type_mode.write().unwrap() = TypeMode::Simple;
+    //     }
+    // }
+    *conn.type_mode.write().unwrap() = TypeMode::Simple;
 
     let mut conn_attrs = conn.attributes.write().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
@@ -1075,6 +1075,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         connection_timeout,
         login_timeout,
         *conn.type_mode.read().unwrap(),
+        Some(runtime),
     )?)
 }
 

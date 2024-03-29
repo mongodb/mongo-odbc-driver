@@ -9,6 +9,7 @@ use crate::{
 };
 use definitions::{Nullability, SqlCode, SqlDataType};
 use itertools::Itertools;
+use log::warn;
 use serde::{Deserialize, Serialize};
 
 // Metadata information for a column of the result set.
@@ -112,7 +113,10 @@ impl MongoColMetadata {
         nullability: Nullability,
         type_mode: TypeMode,
     ) -> MongoColMetadata {
+        warn!("field schema {:?}", field_schema);
+
         let bson_type_info: BsonTypeInfo = field_schema.into();
+        warn!("bson type info {:?}", bson_type_info);
 
         MongoColMetadata::new_metadata_from_bson_type_info(
             current_db,
@@ -170,8 +174,10 @@ impl SqlGetSchemaResponse {
         current_db: &str,
         type_mode: TypeMode,
     ) -> Result<Vec<MongoColMetadata>> {
+        warn!("schema {:?}", self.schema);
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
+        warn!("simplified schema {:?}", result_set_schema);
         let result_set_object_schema = result_set_schema.assert_object_schema()?;
 
         // create a map from the naming convention used by select order ([datasource name, column name]),
@@ -192,6 +198,7 @@ impl SqlGetSchemaResponse {
                         &datasource_name,
                         type_mode,
                     )?;
+                    warn!("schema after schema to col metadata {:?}", schema);
                     Ok(schema
                         .into_iter()
                         .map(|col| (vec![col.table_name.clone(), col.col_name.clone()], col)))
