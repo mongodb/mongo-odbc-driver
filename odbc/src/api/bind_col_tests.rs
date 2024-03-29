@@ -413,7 +413,8 @@ mod unit {
             assert_eq!(10, *(num_buffer as *mut i32));
             assert_eq!(20, *((num_buffer as ULen + 4) as *mut i32));
 
-            // assert that the indicator has the correct values for column 1.
+            // assert that the indicator has the correct values for column 1. In this case, the indicator stores the length (in bytes) of the data available to return.
+            // since each column value is an i32 (4 bytes), the num_indicator stores 4.
             assert_eq!(4, *num_indicator);
             assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
 
@@ -452,7 +453,8 @@ mod unit {
             assert_eq!(30, *(num_buffer as *mut i32));
             assert_eq!(40, *((num_buffer as ULen + 4) as *mut i32));
 
-            // assert that the indicator has the correct values for column 1.
+            // assert that the indicator has the correct values for column 1. In this case, the indicator stores the length (in bytes) of the data available to return.
+            // since each column value is an i32 (4 bytes), the num_indicator stores 4.
             assert_eq!(4, *num_indicator);
             assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
 
@@ -566,7 +568,8 @@ mod unit {
             assert_eq!(20, *((num_buffer as ULen + 4) as *mut i32));
             assert_eq!(30, *((num_buffer as ULen + 8) as *mut i32));
 
-            // assert that the indicator has the correct values for column 1.
+            // assert that the indicator has the correct values for column 1. In this case, the indicator stores the length (in bytes) of the data available to return.
+            // since each column value is an i32 (4 bytes), the num_indicator stores 4.
             assert_eq!(4, *num_indicator);
             assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
             assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
@@ -616,7 +619,8 @@ mod unit {
             assert_eq!(20, *((num_buffer as ULen + 4) as *mut i32));
             assert_eq!(30, *((num_buffer as ULen + 8) as *mut i32));
 
-            // assert that the indicator has the correct values for column 1.
+            // assert that the indicator has the correct values for column 1. In this case, the indicator stores the length (in bytes) of the data available to return.
+            // since each column value is an i32 (4 bytes), the num_indicator stores 4.
             assert_eq!(4, *num_indicator);
             assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
             assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
@@ -740,7 +744,8 @@ mod unit {
             assert_eq!(10, *(num_buffer as *mut i32));
             assert_eq!(20, *((num_buffer as ULen + 4) as *mut i32));
 
-            // assert that the indicator has the correct values for column 1.
+            // assert that the indicator has the correct values for column 1. In this case, the indicator stores the length (in bytes) of the data available to return.
+            // since each column value is an i32 (4 bytes), the num_indicator stores 4.
             assert_eq!(4, *num_indicator);
             assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
 
@@ -751,7 +756,8 @@ mod unit {
             assert_eq!(30, *(num_buffer as *mut i32));
             assert_eq!(40, *((num_buffer as ULen + 4) as *mut i32));
 
-            // assert that the indicator has the correct values for column 1.
+            // assert that the indicator has the correct values for column 1. In this case, the indicator stores the length (in bytes) of the data available to return.
+            // since each column value is an i32 (4 bytes), the num_indicator stores 4.
             assert_eq!(4, *num_indicator);
             assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
 
