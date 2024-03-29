@@ -1290,6 +1290,11 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
         *stmt.attributes.write().unwrap().rows_fetched_ptr = 0;
     }
 
+    // This variable keeps track of the amount of rows that do not have SQL_ROW_NOROW status.
+    // It's necessary because this function needs to know the amount of fetched rows, and
+    // the rows_fetched_ptr may not be set by the user, so the function can't depend on the rows_fetched_ptr.
+    let mut fetched_rows = 0;
+
     // keeps track of how many rows in the result set cause SqlReturn::ERROR when being handled.
     let mut row_error_count = 0;
 
@@ -1362,6 +1367,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             if has_rows_fetched_buffer {
                 *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
             }
+            fetched_rows += 1;
 
             *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
 
@@ -1404,13 +1410,14 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             if has_rows_fetched_buffer {
                 *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
             }
+            fetched_rows += 1;
 
             row_error_count += 1;
         }
     }
 
-    // Only return ERROR if every row causes an error.
-    if row_error_count == rowset_size {
+    // Only return ERROR if every row that does not have status SQL_ROW_NOROW causes an error.
+    if row_error_count == fetched_rows {
         SqlReturn::ERROR
     } else if !global_warnings_opt.is_empty()
         || encountered_success_with_info
