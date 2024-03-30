@@ -1067,8 +1067,8 @@ functions:
           ${prepare_shell}
           ~/.cargo/bin/rustup default stable
 
-          # we only run ubuntu on the unit tests for now
-          cargo test unit
+          # run the rfc8252_http_server tests
+          cargo test rfc8252_http_server -- --test-threads=1
 
   "run ubuntu integration tests":
     - command: shell.exec
