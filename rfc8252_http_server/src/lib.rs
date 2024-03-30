@@ -40,7 +40,7 @@ pub struct RFC8252HttpServerOptions {
     pub oidc_state_param: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OidcResponseParams {
     pub code: String,
     pub state: Option<String>,
@@ -298,4 +298,76 @@ pub async fn tokio_start() -> (
     let server_handle = receiver.recv().await.unwrap();
 
     (server_handle, oidc_params_receiver)
+}
+
+#[test]
+fn rfc8252_http_server_threaded_accepted() {
+    use reqwest;
+    let (server_handle, oidc_params_receiver) = threaded_start();
+    let _ = reqwest::blocking::get("http://localhost:9080/callback?code=1234&state=foo").unwrap();
+    let oidc_params = oidc_params_receiver.recv().unwrap().unwrap();
+    rt::System::new().block_on(server_handle.stop(true));
+    assert_eq!(oidc_params.code, "1234");
+    assert_eq!(oidc_params.state, Some("foo".to_string()));
+}
+
+#[test]
+fn rfc8252_http_server_threaded_error() {
+    let (server_handle, oidc_params_receiver) = threaded_start();
+    let _ =
+        reqwest::blocking::get("http://localhost:9080/callback?error=1234&error_description=foo")
+            .unwrap();
+    let oidc_params = oidc_params_receiver.recv().unwrap();
+    rt::System::new().block_on(server_handle.stop(true));
+    assert_eq!(oidc_params, Err("1234: foo".to_string()));
+}
+
+#[test]
+fn rfc8252_http_server_threaded_no_params() {
+    let (server_handle, oidc_params_receiver) = threaded_start();
+    let _ = reqwest::blocking::get("http://localhost:9080/callback").unwrap();
+    let oidc_params = oidc_params_receiver.recv().unwrap();
+    rt::System::new().block_on(server_handle.stop(true));
+    assert_eq!(
+        oidc_params,
+        Err("unknown error: response parameters are missing".to_string())
+    );
+}
+
+#[tokio::test]
+async fn rfc8252_http_server_tokio_accepted() {
+    use reqwest;
+    let (server_handle, mut oidc_params_receiver) = tokio_start().await;
+    let _ = reqwest::get("http://localhost:9080/callback?code=1234&state=foo")
+        .await
+        .unwrap();
+    let oidc_params = oidc_params_receiver.recv().await.unwrap().unwrap();
+    server_handle.stop(true).await;
+    assert_eq!(oidc_params.code, "1234");
+    assert_eq!(oidc_params.state, Some("foo".to_string()));
+}
+
+#[tokio::test]
+async fn rfc8252_http_server_tokio_error() {
+    let (server_handle, mut oidc_params_receiver) = tokio_start().await;
+    let _ = reqwest::get("http://localhost:9080/callback?error=1234&error_description=foo")
+        .await
+        .unwrap();
+    let oidc_params = oidc_params_receiver.recv().await.unwrap();
+    server_handle.stop(true).await;
+    assert_eq!(oidc_params, Err("1234: foo".to_string()));
+}
+
+#[tokio::test]
+async fn rfc8252_http_server_tokio_no_params() {
+    let (server_handle, mut oidc_params_receiver) = tokio_start().await;
+    let _ = reqwest::get("http://localhost:9080/callback")
+        .await
+        .unwrap();
+    let oidc_params = oidc_params_receiver.recv().await.unwrap();
+    server_handle.stop(true).await;
+    assert_eq!(
+        oidc_params,
+        Err("unknown error: response parameters are missing".to_string())
+    );
 }
