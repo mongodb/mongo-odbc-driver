@@ -46,9 +46,14 @@ pub struct OidcResponseParams {
     pub state: Option<String>,
 }
 
-fn get_params(query: &str) -> HashMap<&str, &str> {
+async fn get_params(query: &str) -> Result<HashMap<&str, &str>> {
     let params_vec: Vec<_> = query.split('&').collect();
-    params_vec
+    if params_vec.is_empty() || params_vec.first().unwrap().is_empty() {
+        Err(actix_web::error::ErrorBadRequest(
+            "response parameters are missing",
+        ))?;
+    }
+    Ok(params_vec
         .into_iter()
         .map(|kv| {
             let kv: Vec<_> = kv.split('=').collect();
@@ -58,7 +63,7 @@ fn get_params(query: &str) -> HashMap<&str, &str> {
                 _ => (kv[0], kv[1]),
             }
         })
-        .collect::<HashMap<&str, &str>>()
+        .collect::<HashMap<&str, &str>>())
 }
 
 async fn threaded_callback(
@@ -66,16 +71,12 @@ async fn threaded_callback(
     req: HttpRequest,
 ) -> Result<HttpResponse> {
     let query = req.query_string();
-    let params_vec: Vec<_> = query.split('&').collect();
-    if params_vec.is_empty() || params_vec.get(0).unwrap().is_empty() {
-        return threaded_error(
-            oidc_params_sender,
-            "unknown error",
-            "response parameters are missing",
-        )
-        .await;
-    }
-    let params = get_params(&query);
+    let params = match get_params(query).await {
+        Ok(params) => params,
+        Err(e) => {
+            return threaded_error(oidc_params_sender, "unknown error", &format!("{}", e)).await;
+        }
+    };
 
     let code = params.get("code");
     if let Some(code) = code {
@@ -107,16 +108,12 @@ async fn tokio_callback(
     req: HttpRequest,
 ) -> Result<HttpResponse> {
     let query = req.query_string();
-    let params_vec: Vec<_> = query.split('&').collect();
-    if params_vec.is_empty() || params_vec.get(0).unwrap().is_empty() {
-        return tokio_error(
-            oidc_params_sender,
-            "unknown error",
-            "response parameters are missing",
-        )
-        .await;
-    }
-    let params = get_params(&query);
+    let params = match get_params(query).await {
+        Ok(params) => params,
+        Err(e) => {
+            return tokio_error(oidc_params_sender, "unknown error", &format!("{}", e)).await;
+        }
+    };
 
     let code = params.get("code");
     if let Some(code) = code {
