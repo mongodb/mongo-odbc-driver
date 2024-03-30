@@ -2,6 +2,8 @@ use rfc8252_http_server::tokio_start;
 
 #[tokio::main]
 async fn main() {
-    let res = tokio_start().await;
+    let (server, mut oidc_params) = tokio_start().await;
+    let res = oidc_params.recv().await;
+    server.stop(true).await;
     println!("server result: {:?}", res);
 }

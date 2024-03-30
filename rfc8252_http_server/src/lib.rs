@@ -266,7 +266,10 @@ async fn tokio_run_app(
     server.await
 }
 
-pub fn threaded_start() -> StdResult<OidcResponseParams, String> {
+pub fn threaded_start() -> (
+    ServerHandle,
+    mpsc::Receiver<StdResult<OidcResponseParams, String>>,
+) {
     let (sender, receiver) = mpsc::channel();
     let (oidc_params_sender, oidc_params_receiver) = mpsc::channel();
 
@@ -277,17 +280,15 @@ pub fn threaded_start() -> StdResult<OidcResponseParams, String> {
 
     let server_handle = receiver.recv().unwrap();
 
-    let res = oidc_params_receiver.recv().unwrap();
-
-    // Send a stop signal to the server, waiting for it to exit gracefully
-    rt::System::new().block_on(server_handle.stop(true));
-
-    res
+    (server_handle, oidc_params_receiver)
 }
 
-pub async fn tokio_start() -> StdResult<OidcResponseParams, String> {
+pub async fn tokio_start() -> (
+    ServerHandle,
+    tokio_mpsc::Receiver<StdResult<OidcResponseParams, String>>,
+) {
     let (sender, mut receiver) = tokio_mpsc::channel(1);
-    let (oidc_params_sender, mut oidc_params_receiver) = tokio_mpsc::channel(1);
+    let (oidc_params_sender, oidc_params_receiver) = tokio_mpsc::channel(1);
 
     tokio::spawn(async move {
         let server_future = tokio_run_app(sender, oidc_params_sender);
@@ -296,10 +297,5 @@ pub async fn tokio_start() -> StdResult<OidcResponseParams, String> {
 
     let server_handle = receiver.recv().await.unwrap();
 
-    let res = oidc_params_receiver.recv().await.unwrap();
-
-    // Send a stop signal to the server, waiting for it to exit gracefully
-    server_handle.stop(true).await;
-
-    res
+    (server_handle, oidc_params_receiver)
 }
