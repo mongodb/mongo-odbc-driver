@@ -26,6 +26,14 @@ cstr = { path = "../cstr" }
 fancy-regex = "0.11.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
 log = "0.4.14"
+openidconnect = "3"
+open = "5"
+reqwest = { version = "0", features = ["blocking"] }
+rfc8252_http_server = { path = "../rfc8252_http_server" }
+actix-web = "4"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
 
 [dependencies.mongodb]
 version = "2"
