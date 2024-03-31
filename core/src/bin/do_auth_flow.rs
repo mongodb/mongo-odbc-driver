@@ -4,7 +4,7 @@ use mongo_odbc_core::oidc_auth::*;
 async fn main() {
     let c = CallbackContext {
         idp_info: Some(IdpServerInfo {
-            issuer: "https://dev-bzkxrnbykc6fb01i.us.auth0.com".to_string(),
+            issuer: "https://dev-bzkxrnbykc6fb01i.us.auth0.com/".to_string(),
             client_id: "WDce4jZOZHqxPgduCtn9WJjiwDOfeRfL".to_string(),
             request_scopes: Some(vec!["openid".to_string(), "profile".to_string()]),
         }),
