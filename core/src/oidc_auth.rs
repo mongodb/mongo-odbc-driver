@@ -46,17 +46,20 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     let idp_info = params.idp_info.ok_or(Error::NoIdpServerInfo)?;
     let client_id = idp_info.client_id;
     let issuer_uri = IssuerUrl::new(idp_info.issuer).map_err(|e| Error::Other(e.to_string()))?;
-    if issuer_uri.url().scheme() != "http" {
+    if issuer_uri.url().scheme() != "https" {
         return Err(Error::IssuerUriMustBeHttps);
     }
     let scopes = idp_info.request_scopes.unwrap_or_else(|| vec![]);
 
+    dbg!();
     let (server, oidc_params_channel) = threaded_start();
 
+    dbg!(&issuer_uri);
     // Use OpenID Connect Discovery to fetch the provider metadata.
     let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, async_http_client)
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
+    dbg!();
 
     // Create an OpenID Connect client by specifying the client ID, client secret,
     // authorization URL and token URL.
@@ -70,18 +73,22 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         RedirectUrl::new("http://localhost:9080/callback".to_string())
             .map_err(|e| Error::Other(e.to_string()))?,
     );
+    dbg!();
 
     // Generate a PKCE challenge.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+    dbg!();
 
     let mut auth_url = client.authorize_url(
         CoreAuthenticationFlow::AuthorizationCode,
         CsrfToken::new_random,
         Nonce::new_random,
     );
+    dbg!();
 
     let empty_vec = Vec::new();
 
+    dbg!();
     // Define the desired scopes based on the scopes passed in and the scopes available
     // on the server
     let scopes_supported: HashSet<String, RandomState> = HashSet::from_iter(
@@ -91,22 +98,28 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
             .into_iter()
             .map(|s| s.to_string()),
     );
+    dbg!();
     let desired_scopes = HashSet::from_iter(scopes.into_iter());
+    dbg!();
     // Set the desired scopes.
     for scope in desired_scopes.intersection(&scopes_supported) {
         // There does not seem to be a way to do intersection without cloning the scope
         auth_url = auth_url.add_scope(Scope::new(scope.clone()));
     }
+    dbg!();
     // Generate the full authorization URL.
+    dbg!();
     let (auth_url, csrf_token, _nonce) = auth_url
         // Set the PKCE code challenge.
         .set_pkce_challenge(pkce_challenge)
         .url();
 
+    dbg!();
     open::that(auth_url.to_string()).map_err(|e| Error::Other(e.to_string()))?;
     // awaiting on the listener waits for an actual response
     // the poc used a out-of-process proxy server that forwarded the code via GET,
     // but this in process server allows us to just await on the auth_code, and response_csrf.
+    dbg!();
     let OidcResponseParams { code, state } = oidc_params_channel
         .recv()
         .unwrap()
@@ -115,12 +128,14 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the
     // `response_csrf` (`state`) parameter returned by the server matches `csrf_token`.
+    dbg!();
     if let Some(state) = state {
         if state != *csrf_token.secret() {
             return Err(Error::CsrfMismatch);
         }
     }
 
+    dbg!();
     // Now you can exchange it for an access token and ID token.
     // implementation must implement RFC9207
     let token_response = client
