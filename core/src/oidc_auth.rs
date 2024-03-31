@@ -34,6 +34,7 @@ pub struct IdpServerResponse {
 }
 // END termporaries
 
+#[derive(Debug)]
 pub enum Error {
     IssuerUriMustBeHttps,
     NoIdpServerInfo,
