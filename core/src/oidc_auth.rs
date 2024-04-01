@@ -164,9 +164,9 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
 
     server.stop(true).await;
 
-    dbg!(Ok(IdpServerResponse {
+    Ok(IdpServerResponse {
         access_token,
         expires: expires.map(|e| Instant::now() + e),
         refresh_token,
-    }))
+    })
 }
