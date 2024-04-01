@@ -12,5 +12,5 @@ async fn main() {
         timeout_seconds: None,
         version: 1,
     };
-    println!("{:?}" do_auth_flow(c).await.unwrap());
+    println!("{:?}", do_auth_flow(c).await.unwrap());
 }
