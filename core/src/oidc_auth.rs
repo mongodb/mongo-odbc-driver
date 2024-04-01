@@ -8,7 +8,7 @@ use openidconnect::{
 use rfc8252_http_server::{threaded_start, OidcResponseParams};
 use std::{collections::HashSet, hash::RandomState, time::Instant};
 
-const DEFAULT_REDIRECT_URI: &str="http://localhost:27097/redirect";
+const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
 
 // temporary until rust driver OIDC support is released
 // TODO Remove Me.
@@ -50,7 +50,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     if issuer_uri.url().scheme() != "https" {
         return Err(Error::IssuerUriMustBeHttps);
     }
-    let scopes = idp_info.request_scopes.unwrap_or_else(|| vec![]);
+    let scopes = idp_info.request_scopes.unwrap_or_else(Vec::new);
 
     let (server, oidc_params_channel) = threaded_start();
 
@@ -89,7 +89,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         provider_metadata
             .scopes_supported()
             .unwrap_or(&empty_vec)
-            .into_iter()
+            .iter()
             .map(|s| s.to_string()),
     );
     let desired_scopes = HashSet::from_iter(scopes.into_iter());
@@ -163,15 +163,10 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     let expires = token_response.expires_in();
 
     server.stop(true).await;
-    
 
     dbg!(Ok(IdpServerResponse {
         access_token,
-        expires: if let Some(expires) = expires {
-            Some(Instant::now() + expires)
-        } else {
-            None
-        },
+        expires: expires.map(|e| Instant::now() + e),
         refresh_token,
     }))
 }
