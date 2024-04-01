@@ -4,7 +4,7 @@ use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
     reqwest::async_http_client,
     AuthorizationCode, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse,
-    PkceCodeChallenge, RedirectUrl, Scope,
+    PkceCodeChallenge, RedirectUrl, RequestTokenError, Scope,
 };
 use rfc8252_http_server::{threaded_start, OidcResponseParams};
 use std::{collections::HashSet, hash::RandomState, time::Instant};
@@ -95,6 +95,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     // Set the desired scopes.
     for scope in desired_scopes.intersection(&scopes_supported) {
         // There does not seem to be a way to do intersection without cloning the scope
+        dbg!(&scope);
         auth_url = auth_url.add_scope(Scope::new(scope.clone()));
     }
     // Generate the full authorization URL.
@@ -124,13 +125,38 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     dbg!();
     // Now you can exchange it for an access token and ID token.
     // implementation must implement RFC9207
-    let token_response = client
+    let token_request = client
         .exchange_code(AuthorizationCode::new(code))
         // Set the PKCE code verifier.
-        .set_pkce_verifier(pkce_verifier)
+        .set_pkce_verifier(pkce_verifier);
+
+    dbg!(&token_request);
+
+    let token_response = token_request
         .request_async(async_http_client)
         .await
-        .map_err(|e| Error::Other(e.to_string()))?;
+        .map_err(|e| {
+            let msg = match e {
+                RequestTokenError::ServerResponse(provider_err) => {
+                    format!("Server returned error response: {:?}", provider_err)
+                }
+                RequestTokenError::Request(req) => {
+                    format!("Request failed: {:?}", req)
+                }
+                RequestTokenError::Parse(parse_err, res) => {
+                    let body = match std::str::from_utf8(&res) {
+                        Ok(text) => text.to_string(),
+                        Err(_) => format!("{:?}", &res),
+                    };
+                    format!(
+                        "Failed to parse server response: {} [response={:?}]",
+                        parse_err, body
+                    )
+                }
+                RequestTokenError::Other(msg) => msg,
+            };
+            Error::Other(format!("OpenID Connect: code exchange failed: {}", msg))
+        })?;
 
     dbg!(&token_response);
 
