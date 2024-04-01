@@ -2091,7 +2091,6 @@ dependencies = [
 name = "mongo-odbc-core"
 version = "0.0.0"
 dependencies = [
- "actix-web",
  "bson",
  "chrono",
  "constants",

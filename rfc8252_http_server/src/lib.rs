@@ -7,6 +7,10 @@ use std::result::Result as StdResult;
 use std::{collections::HashMap, sync::mpsc, thread};
 use tokio::sync::mpsc as tokio_mpsc;
 
+const DEFAULT_REDIRECT_PORT: u16 = 27097;
+#[cfg(test)]
+const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
+
 #[derive(Template)]
 #[template(path = "OIDCAcceptedTemplate.html")]
 struct OIDCAcceptedPage<'a> {
@@ -220,17 +224,22 @@ async fn threaded_run_app(
 ) -> std::io::Result<()> {
     // srv is server controller type, `dev::Server`
     let server = HttpServer::new(move || {
-        let oidc_params_sender = oidc_params_sender.clone();
+        let oidc_params_sender1 = oidc_params_sender.clone();
+        let oidc_params_sender2 = oidc_params_sender.clone();
         App::new()
             // enable logger
             .wrap(middleware::Logger::default())
             .service(
                 web::resource("/callback")
-                    .to(move |r| threaded_callback(oidc_params_sender.clone(), r)),
+                    .to(move |r| threaded_callback(oidc_params_sender1.clone(), r)),
+            )
+            .service(
+                web::resource("/redirect")
+                    .to(move |r| threaded_callback(oidc_params_sender2.clone(), r)),
             )
             .default_service(web::route().to(not_found))
     })
-    .bind(("127.0.0.1", 9080))?
+    .bind(("localhost", DEFAULT_REDIRECT_PORT))?
     .workers(2)
     .run();
 
@@ -246,17 +255,22 @@ async fn tokio_run_app(
 ) -> std::io::Result<()> {
     // srv is server controller type, `dev::Server`
     let server = HttpServer::new(move || {
-        let oidc_params_sender = oidc_params_sender.clone();
+        let oidc_params_sender1 = oidc_params_sender.clone();
+        let oidc_params_sender2 = oidc_params_sender.clone();
         App::new()
             // enable logger
             .wrap(middleware::Logger::default())
             .service(
                 web::resource("/callback")
-                    .to(move |r| tokio_callback(oidc_params_sender.clone(), r)),
+                    .to(move |r| tokio_callback(oidc_params_sender1.clone(), r)),
+            )
+            .service(
+                web::resource("/redirect")
+                    .to(move |r| tokio_callback(oidc_params_sender2.clone(), r)),
             )
             .default_service(web::route().to(not_found))
     })
-    .bind(("127.0.0.1", 9080))?
+    .bind(("localhost", DEFAULT_REDIRECT_PORT))?
     .workers(2)
     .run();
 
@@ -304,7 +318,7 @@ pub async fn tokio_start() -> (
 fn rfc8252_http_server_threaded_accepted() {
     use reqwest;
     let (server_handle, oidc_params_receiver) = threaded_start();
-    let _ = reqwest::blocking::get("http://localhost:9080/callback?code=1234&state=foo").unwrap();
+    let _ = reqwest::blocking::get(format!("{}{}", DEFAULT_REDIRECT_URI, "/callback?code=1234&state=foo")).unwrap();
     let oidc_params = oidc_params_receiver.recv().unwrap().unwrap();
     rt::System::new().block_on(server_handle.stop(true));
     assert_eq!(oidc_params.code, "1234");
@@ -325,7 +339,7 @@ fn rfc8252_http_server_threaded_error() {
 #[test]
 fn rfc8252_http_server_threaded_no_params() {
     let (server_handle, oidc_params_receiver) = threaded_start();
-    let _ = reqwest::blocking::get("http://localhost:9080/callback").unwrap();
+    let _ = reqwest::blocking::get(DEFAULT_REDIRECT_URI).unwrap();
     let oidc_params = oidc_params_receiver.recv().unwrap();
     rt::System::new().block_on(server_handle.stop(true));
     assert_eq!(
@@ -338,7 +352,7 @@ fn rfc8252_http_server_threaded_no_params() {
 async fn rfc8252_http_server_tokio_accepted() {
     use reqwest;
     let (server_handle, mut oidc_params_receiver) = tokio_start().await;
-    let _ = reqwest::get("http://localhost:9080/callback?code=1234&state=foo")
+    let _ = reqwest::get(format!("{}{}", DEFAULT_REDIRECT_URI, "?code=1234&state=foo"))
         .await
         .unwrap();
     let oidc_params = oidc_params_receiver.recv().await.unwrap().unwrap();
@@ -350,7 +364,7 @@ async fn rfc8252_http_server_tokio_accepted() {
 #[tokio::test]
 async fn rfc8252_http_server_tokio_error() {
     let (server_handle, mut oidc_params_receiver) = tokio_start().await;
-    let _ = reqwest::get("http://localhost:9080/callback?error=1234&error_description=foo")
+    let _ = reqwest::get(format!("{}{}", DEFAULT_REDIRECT_URI, "?error=1234&error_description=foo"))
         .await
         .unwrap();
     let oidc_params = oidc_params_receiver.recv().await.unwrap();
@@ -361,7 +375,7 @@ async fn rfc8252_http_server_tokio_error() {
 #[tokio::test]
 async fn rfc8252_http_server_tokio_no_params() {
     let (server_handle, mut oidc_params_receiver) = tokio_start().await;
-    let _ = reqwest::get("http://localhost:9080/callback")
+    let _ = reqwest::get(DEFAULT_REDIRECT_URI)
         .await
         .unwrap();
     let oidc_params = oidc_params_receiver.recv().await.unwrap();

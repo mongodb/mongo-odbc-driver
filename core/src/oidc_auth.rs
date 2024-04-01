@@ -1,4 +1,3 @@
-use actix_web::rt;
 use open;
 use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
@@ -8,6 +7,8 @@ use openidconnect::{
 };
 use rfc8252_http_server::{threaded_start, OidcResponseParams};
 use std::{collections::HashSet, hash::RandomState, time::Instant};
+
+const DEFAULT_REDIRECT_URI: &str="http://localhost:27097/redirect";
 
 // temporary until rust driver OIDC support is released
 // TODO Remove Me.
@@ -67,7 +68,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     )
     // Set the URL the user will be redirected to after the authorization process.
     .set_redirect_uri(
-        RedirectUrl::new("http://localhost:9080/callback".to_string())
+        RedirectUrl::new(DEFAULT_REDIRECT_URI.to_string())
             .map_err(|e| Error::Other(e.to_string()))?,
     );
 
@@ -95,7 +96,6 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     // Set the desired scopes.
     for scope in desired_scopes.intersection(&scopes_supported) {
         // There does not seem to be a way to do intersection without cloning the scope
-        dbg!(&scope);
         auth_url = auth_url.add_scope(Scope::new(scope.clone()));
     }
     // Generate the full authorization URL.
@@ -122,15 +122,12 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         }
     }
 
-    dbg!();
     // Now you can exchange it for an access token and ID token.
     // implementation must implement RFC9207
     let token_request = client
         .exchange_code(AuthorizationCode::new(code))
         // Set the PKCE code verifier.
         .set_pkce_verifier(pkce_verifier);
-
-    dbg!(&token_request);
 
     let token_response = token_request
         .request_async(async_http_client)
@@ -158,8 +155,6 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
             Error::Other(format!("OpenID Connect: code exchange failed: {}", msg))
         })?;
 
-    dbg!(&token_response);
-
     // Extract the auth and refresh tokens, and the expiration duration in seconds
     let access_token = token_response.access_token().secret().to_string();
     let refresh_token = token_response
@@ -167,8 +162,10 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         .map(|t| t.secret().to_string());
     let expires = token_response.expires_in();
 
-    rt::System::new().block_on(server.stop(true));
-    Ok(IdpServerResponse {
+    server.stop(true).await;
+    
+
+    dbg!(Ok(IdpServerResponse {
         access_token,
         expires: if let Some(expires) = expires {
             Some(Instant::now() + expires)
@@ -176,5 +173,5 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
             None
         },
         refresh_token,
-    })
+    }))
 }
