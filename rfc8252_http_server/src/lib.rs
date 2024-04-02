@@ -206,7 +206,7 @@ async fn tokio_error(
 }
 
 async fn not_found() -> Result<HttpResponse> {
-    Ok(HttpResponse::build(http::StatusCode::OK)
+    Ok(HttpResponse::build(http::StatusCode::NOT_FOUND)
         .content_type("text/html; charset=utf-8")
         .body(
             OIDCNotFoundPage {
