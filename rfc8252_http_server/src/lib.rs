@@ -190,7 +190,7 @@ async fn tokio_error(
     let _ = oidc_params_sender
         .send(Err(format!("{}: {}", error, error_description)))
         .await;
-    Ok(HttpResponse::build(http::StatusCode::OK)
+    Ok(HttpResponse::build(http::StatusCode::BAD_REQUEST)
         .content_type("text/html; charset=utf-8")
         .body(
             OIDCErrorPage {
