@@ -92,7 +92,11 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
             .iter()
             .map(|s| s.to_string()),
     );
-    let desired_scopes = HashSet::from_iter(scopes.into_iter());
+    let mut desired_scopes = HashSet::from_iter(scopes.into_iter());
+    // mongodb is not configured to ask for offline_access by default. We prefer always getting a
+    // refresh token when the server allows it.
+    desired_scopes.insert("offline_access".to_string());
+
     // Set the desired scopes.
     for scope in desired_scopes.intersection(&scopes_supported) {
         // There does not seem to be a way to do intersection without cloning the scope
