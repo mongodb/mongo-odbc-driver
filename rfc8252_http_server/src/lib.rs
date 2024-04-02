@@ -167,7 +167,7 @@ async fn threaded_error(
     error_description: &str,
 ) -> Result<HttpResponse> {
     let _ = oidc_params_sender.send(Err(format!("{}: {}", error, error_description)));
-    Ok(HttpResponse::build(http::StatusCode::OK)
+    Ok(HttpResponse::build(http::StatusCode::BAD_REQUEST)
         .content_type("text/html; charset=utf-8")
         .body(
             OIDCErrorPage {
@@ -206,7 +206,7 @@ async fn tokio_error(
 }
 
 async fn not_found() -> Result<HttpResponse> {
-    Ok(HttpResponse::build(http::StatusCode::OK)
+    Ok(HttpResponse::build(http::StatusCode::NOT_FOUND)
         .content_type("text/html; charset=utf-8")
         .body(
             OIDCNotFoundPage {
@@ -318,7 +318,13 @@ pub async fn tokio_start() -> (
 fn rfc8252_http_server_threaded_accepted() {
     use reqwest;
     let (server_handle, oidc_params_receiver) = threaded_start();
-    let _ = reqwest::blocking::get(format!("{}{}", DEFAULT_REDIRECT_URI, "/callback?code=1234&state=foo")).unwrap();
+
+    let _ = reqwest::blocking::get(format!(
+        "{}{}",
+        DEFAULT_REDIRECT_URI, "/callback?code=1234&state=foo"
+    ))
+    .unwrap();
+
     let oidc_params = oidc_params_receiver.recv().unwrap().unwrap();
     rt::System::new().block_on(server_handle.stop(true));
     assert_eq!(oidc_params.code, "1234");
@@ -352,9 +358,12 @@ fn rfc8252_http_server_threaded_no_params() {
 async fn rfc8252_http_server_tokio_accepted() {
     use reqwest;
     let (server_handle, mut oidc_params_receiver) = tokio_start().await;
-    let _ = reqwest::get(format!("{}{}", DEFAULT_REDIRECT_URI, "?code=1234&state=foo"))
-        .await
-        .unwrap();
+    let _ = reqwest::get(format!(
+        "{}{}",
+        DEFAULT_REDIRECT_URI, "?code=1234&state=foo"
+    ))
+    .await
+    .unwrap();
     let oidc_params = oidc_params_receiver.recv().await.unwrap().unwrap();
     server_handle.stop(true).await;
     assert_eq!(oidc_params.code, "1234");
@@ -364,9 +373,13 @@ async fn rfc8252_http_server_tokio_accepted() {
 #[tokio::test]
 async fn rfc8252_http_server_tokio_error() {
     let (server_handle, mut oidc_params_receiver) = tokio_start().await;
-    let _ = reqwest::get(format!("{}{}", DEFAULT_REDIRECT_URI, "?error=1234&error_description=foo"))
-        .await
-        .unwrap();
+
+    let _ = reqwest::get(format!(
+        "{}{}",
+        DEFAULT_REDIRECT_URI, "?error=1234&error_description=foo"
+    ))
+    .await
+    .unwrap();
     let oidc_params = oidc_params_receiver.recv().await.unwrap();
     server_handle.stop(true).await;
     assert_eq!(oidc_params, Err("1234: foo".to_string()));
@@ -375,9 +388,9 @@ async fn rfc8252_http_server_tokio_error() {
 #[tokio::test]
 async fn rfc8252_http_server_tokio_no_params() {
     let (server_handle, mut oidc_params_receiver) = tokio_start().await;
-    let _ = reqwest::get(DEFAULT_REDIRECT_URI)
-        .await
-        .unwrap();
+
+    let _ = reqwest::get(DEFAULT_REDIRECT_URI).await.unwrap();
+
     let oidc_params = oidc_params_receiver.recv().await.unwrap();
     server_handle.stop(true).await;
     assert_eq!(
