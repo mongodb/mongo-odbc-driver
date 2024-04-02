@@ -5,7 +5,7 @@ use openidconnect::{
     AuthorizationCode, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse,
     PkceCodeChallenge, RedirectUrl, RequestTokenError, Scope,
 };
-use rfc8252_http_server::{threaded_start, OidcResponseParams};
+use rfc8252_http_server::{tokio_start, OidcResponseParams};
 use std::{collections::HashSet, hash::RandomState, time::Instant};
 
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
@@ -52,7 +52,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     }
     let scopes = idp_info.request_scopes.unwrap_or_else(Vec::new);
 
-    let (server, oidc_params_channel) = threaded_start();
+    let (server, mut oidc_params_channel) = tokio_start().await;
 
     // Use OpenID Connect Discovery to fetch the provider metadata.
     let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, async_http_client)
@@ -110,7 +110,8 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     // but this in process server allows us to just await on the auth_code, and response_csrf.
     let OidcResponseParams { code, state } = oidc_params_channel
         .recv()
-        .unwrap()
+        .await
+        .ok_or_else(|| Error::Other("No response from OIDC server".to_string()))?
         .map_err(|e| Error::Other(e.to_string()))?;
 
     // Once the user has been redirected to the redirect URL, you'll have access to the
