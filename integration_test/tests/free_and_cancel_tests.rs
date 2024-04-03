@@ -47,7 +47,7 @@ mod integration {
 
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLFreeStmt(stmt_handle, FreeStmtOption::SQL_CLOSE),
+                SQLFreeStmt(stmt_handle, FreeStmtOption::SQL_CLOSE as i16),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
@@ -79,7 +79,7 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLSetStmtAttrW(
                     stmt_handle,
-                    StatementAttribute::SQL_ATTR_QUERY_TIMEOUT,
+                    StatementAttribute::SQL_ATTR_QUERY_TIMEOUT as i32,
                     value,
                     0
                 ),

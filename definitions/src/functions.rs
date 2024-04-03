@@ -1,8 +1,6 @@
 use crate::{
-    BulkOperation, CDataType, Char, CompletionType, ConnectionAttribute, Desc, DriverConnectOption,
-    EnvironmentAttribute, FetchOrientation, FreeStmtOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Integer, Len, Nullability, ParamType, Pointer, RetCode, SmallInt,
-    SqlDataType, SqlReturn, StatementAttribute, ULen, USmallInt, WChar,
+    Char, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, Integer, Len, Pointer, RetCode, SmallInt,
+    SqlReturn, ULen, USmallInt, WChar,
 };
 
 pub static mut NUM_ENVIRONMENT: u32 = 0;
@@ -31,7 +29,7 @@ extern "system" {
     /// # Returns
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`
     pub fn SQLAllocHandle(
-        handle_type: HandleType,
+        handle_type: SmallInt,
         input_handle: Handle,
         output_handle: *mut Handle,
     ) -> SqlReturn;
@@ -42,7 +40,7 @@ extern "system" {
     /// If `SQL_ERRQR` is returned the handle is still valid.
     /// # Returns
     /// `SUCCESS`, `ERROR`, or `INVALID_HANDLE`
-    pub fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn;
+    pub fn SQLFreeHandle(handle_type: SmallInt, handle: Handle) -> SqlReturn;
 
     /// Gets attributes that govern aspects of environments
     ///
@@ -50,7 +48,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`
     pub fn SQLGetEnvAttr(
         environment_handle: HEnv,
-        attribute: EnvironmentAttribute,
+        attribute: Integer,
         value_ptr: Pointer,
         buffer_length: Integer,
         string_length: *mut Integer,
@@ -62,7 +60,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`
     pub fn SQLSetEnvAttr(
         environment_handle: HEnv,
-        attribute: EnvironmentAttribute,
+        attribute: Integer,
         value: Pointer,
         string_length: Integer,
     ) -> SqlReturn;
@@ -80,7 +78,7 @@ extern "system" {
     ///
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`
     pub fn SQLGetDiagRec(
-        handle_type: HandleType,
+        handle_type: SmallInt,
         handle: Handle,
         RecNumber: SmallInt,
         state: *mut Char,
@@ -97,7 +95,7 @@ extern "system" {
     ///
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`
     pub fn SQLGetDiagRecW(
-        handle_type: HandleType,
+        handle_type: SmallInt,
         handle: Handle,
         record_rumber: SmallInt,
         state: *mut WChar,
@@ -114,7 +112,7 @@ extern "system" {
     /// # Returns
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_NO_DATA`.
     pub fn SQLGetDiagFieldW(
-        handle_type: HandleType,
+        handle_type: SmallInt,
         handle: Handle,
         record_rumber: SmallInt,
         diag_identifier: SmallInt,
@@ -174,7 +172,7 @@ extern "system" {
     pub fn SQLGetData(
         statement_handle: HStmt,
         col_or_param_num: USmallInt,
-        target_type: CDataType,
+        target_type: SmallInt,
         target_value_ptr: Pointer,
         buffer_length: Len,
         str_len_or_ind_ptr: *mut Len,
@@ -186,7 +184,7 @@ extern "system" {
     ///
     /// # Returns
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `SQL_STILL_EXECUTING`, `ERROR`, or `INVALID_HANDLE`.
-    pub fn SQLGetTypeInfo(statement_handle: HStmt, data_type: SqlDataType) -> SqlReturn;
+    pub fn SQLGetTypeInfo(statement_handle: HStmt, data_type: SmallInt) -> SqlReturn;
 
     /// SQLFetch fetches the next rowset of data from the result set and returns data for all bound
     /// columns.
@@ -202,7 +200,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`
     pub fn SQLGetInfo(
         connection_handle: HDbc,
-        info_type: InfoType,
+        info_type: USmallInt,
         info_value_ptr: Pointer,
         buffer_length: SmallInt,
         string_length_ptr: *mut SmallInt,
@@ -214,7 +212,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`
     pub fn SQLGetInfoW(
         connection_handle: HDbc,
-        info_type: InfoType,
+        info_type: USmallInt,
         info_value_ptr: Pointer,
         buffer_length: SmallInt,
         string_length_ptr: *mut SmallInt,
@@ -297,7 +295,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_NO_DATA`
     pub fn SQLDataSources(
         environment_handle: HEnv,
-        direction: FetchOrientation,
+        direction: USmallInt,
         server_name: *mut Char,
         buffer_length_1: SmallInt,
         name_length_1: *mut SmallInt,
@@ -313,7 +311,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_NO_DATA`
     pub fn SQLDataSourcesW(
         environment_handle: HEnv,
-        direction: FetchOrientation,
+        direction: USmallInt,
         server_name: *mut WChar,
         buffer_length_1: SmallInt,
         name_length_1: *mut SmallInt,
@@ -337,7 +335,7 @@ extern "system" {
         out_connection_string: *mut Char,
         buffer_length: SmallInt,
         string_length_2: *mut SmallInt,
-        DriverCompletion: DriverConnectOption,
+        DriverCompletion: USmallInt,
     ) -> SqlReturn;
 
     /// An alternative to `SQLConnect`. It supports data sources that require more connection
@@ -355,7 +353,7 @@ extern "system" {
         out_connection_string: *mut WChar,
         buffer_length: SmallInt,
         string_length_2: *mut SmallInt,
-        driver_completion: DriverConnectOption,
+        driver_completion: USmallInt,
     ) -> SqlReturn;
 
     /// Lists driver descriptions and driver attribute keywords. This function is implemented only
@@ -365,7 +363,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_NO_DATA`
     pub fn SQLDrivers(
         henv: HEnv,
-        direction: FetchOrientation,
+        direction: USmallInt,
         driver_desc: *mut Char,
         driver_desc_max: SmallInt,
         out_driver_desc: *mut SmallInt,
@@ -381,7 +379,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_NO_DATA`
     pub fn SQLDriversW(
         henv: HEnv,
-        direction: FetchOrientation,
+        direction: USmallInt,
         driver_desc: *mut WChar,
         driver_desc_max: SmallInt,
         out_driver_desc: *mut SmallInt,
@@ -403,9 +401,9 @@ extern "system" {
     pub fn SQLBindParameter(
         hstmt: HStmt,
         parameter_number: USmallInt,
-        input_output_type: ParamType,
-        value_type: CDataType,
-        parmeter_type: SqlDataType,
+        input_output_type: SmallInt,
+        value_type: SmallInt,
+        parmeter_type: SmallInt,
         column_size: ULen,
         decimal_digits: SmallInt,
         parameter_value_ptr: Pointer,
@@ -417,7 +415,7 @@ extern "system" {
     ///
     /// # Returns
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `SQL_NEED_DATA`, `SQL_STILL_EXECUTING`, `ERROR`, or `INVALID_HANDLE`.
-    pub fn SQLBulkOperations(statement_handle: HStmt, operation: BulkOperation) -> SqlReturn;
+    pub fn SQLBulkOperations(statement_handle: HStmt, operation: USmallInt) -> SqlReturn;
 
     /// Cancels the processing on a statement.
     ///
@@ -429,7 +427,7 @@ extern "system" {
     ///
     /// # Returns
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR` or `INVALID_HANDLE`
-    pub fn SQLCancelHandle(handle_type: HandleType, handle: Handle) -> SqlReturn;
+    pub fn SQLCancelHandle(handle_type: SmallInt, handle: Handle) -> SqlReturn;
 
     /// Compiles the statement and generates an access plan.
     ///
@@ -464,7 +462,7 @@ extern "system" {
     ///
     /// # Returns
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`.
-    pub fn SQLFreeStmt(hstmt: HStmt, option: FreeStmtOption) -> SqlReturn;
+    pub fn SQLFreeStmt(hstmt: HStmt, option: SmallInt) -> SqlReturn;
 
     /// Binds application data bufferst to columns in the result set.
     ///
@@ -473,7 +471,7 @@ extern "system" {
     pub fn SQLBindCol(
         hstmt: HStmt,
         col_number: USmallInt,
-        target_type: CDataType,
+        target_type: SmallInt,
         target_value: Pointer,
         buffer_length: Len,
         length_or_indicatior: *mut Len,
@@ -502,7 +500,7 @@ extern "system" {
     pub fn SQLColAttributeW(
         statement_handle: HStmt,
         column_number: USmallInt,
-        field_identifier: Desc,
+        field_identifier: USmallInt,
         character_attribute_ptr: Pointer,
         buffer_length: SmallInt,
         string_length_ptr: *mut SmallInt,
@@ -517,7 +515,7 @@ extern "system" {
     pub fn SQLColAttribute(
         statement_handle: HStmt,
         column_number: USmallInt,
-        field_identifier: Desc,
+        field_identifier: USmallInt,
         character_attribute_ptr: Pointer,
         buffer_length: SmallInt,
         string_length_ptr: *mut SmallInt,
@@ -540,7 +538,7 @@ extern "system" {
     /// `SUCCESS`, `ERROR`, `SQL_NO_DATA`, or `INVALID_HANDLE`.
     pub fn SQLGetConnectAttr(
         connection_handle: HDbc,
-        attribute: ConnectionAttribute,
+        attribute: Integer,
         value_ptr: Pointer,
         buffer_length: Integer,
         string_length_ptr: *mut Integer,
@@ -556,7 +554,7 @@ extern "system" {
     /// `SUCCESS`, `ERROR`, `SQL_NO_DATA`, or `INVALID_HANDLE`.
     pub fn SQLGetConnectAttrW(
         connection_handle: HDbc,
-        attribute: ConnectionAttribute,
+        attribute: Integer,
         value_ptr: Pointer,
         buffer_length: Integer,
         string_length_ptr: *mut Integer,
@@ -582,7 +580,7 @@ extern "system" {
     pub fn SQLGetDescFieldW(
         descriptor_handle: HDesc,
         record_number: SmallInt,
-        field_identifier: Desc,
+        field_identifier: SmallInt,
         value_ptr: Pointer,
         buffer_length: Integer,
         string_length_ptr: *mut Integer,
@@ -606,7 +604,7 @@ extern "system" {
         length_ptr: *mut Len,
         precision_ptr: *mut SmallInt,
         scale_ptr: *mut SmallInt,
-        nullable_ptr: *mut Nullability,
+        nullable_ptr: *mut SmallInt,
     ) -> SqlReturn;
 
     /// Returns a list of columns and associated privileges for the specified table.
@@ -666,7 +664,7 @@ extern "system" {
     /// `SUCCESS`, `ERROR`, `SQL_NO_DATA`, or `INVALID_HANDLE`.
     #[cfg(feature = "odbc_version_3_80")]
     pub fn SQLCompleteAsync(
-        handle_type: HandleType,
+        handle_type: SmallInt,
         handle: Handle,
         async_ret_code_ptr: *mut RetCode,
     ) -> SqlReturn;
@@ -697,7 +695,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`.
     pub fn SQLGetStmtAttr(
         hstmt: HStmt,
-        attribute: StatementAttribute,
+        attribute: Integer,
         value: Pointer,
         buffer_length: Integer,
         string_length: *mut Integer,
@@ -729,7 +727,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`.
     pub fn SQLGetStmtAttrW(
         handle: HStmt,
-        attribute: StatementAttribute,
+        attribute: Integer,
         value_ptr: Pointer,
         buffer_length: Integer,
         string_length_ptr: *mut Integer,
@@ -742,7 +740,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_STILL_EXECUTING`.
     pub fn SQLFetchScroll(
         statement_handle: HStmt,
-        fetch_orientation: FetchOrientation,
+        fetch_orientation: SmallInt,
         fetch_offset: Len,
     ) -> SqlReturn;
 
@@ -808,10 +806,10 @@ extern "system" {
         col_name: *mut Char,
         buffer_length: SmallInt,
         name_length: *mut SmallInt,
-        data_type: *mut SqlDataType,
+        data_type: *mut SmallInt,
         col_size: *mut ULen,
         decimal_digits: *mut SmallInt,
-        nullable: *mut Nullability,
+        nullable: *mut SmallInt,
     ) -> SqlReturn;
 
     /// Returns the result descriptor for one column in the result set — column name, type, column
@@ -828,10 +826,10 @@ extern "system" {
         col_name: *mut WChar,
         buffer_length: SmallInt,
         name_length: *mut SmallInt,
-        data_type: *mut SqlDataType,
+        data_type: *mut SmallInt,
         col_size: *mut ULen,
         decimal_digits: *mut SmallInt,
-        nullable: *mut Nullability,
+        nullable: *mut SmallInt,
     ) -> SqlReturn;
 
     /// Returns the description of a parameter marker associated with a prepared SQL statement.
@@ -844,10 +842,10 @@ extern "system" {
     pub fn SQLDescribeParam(
         statement_handle: HStmt,
         parameter_number: USmallInt,
-        data_type_ptr: *mut SqlDataType,
+        data_type_ptr: *mut SmallInt,
         parameter_size_ptr: *mut ULen,
         decimal_digits_ptr: *mut SmallInt,
-        nullable_ptr: *mut Nullability,
+        nullable_ptr: *mut SmallInt,
     ) -> SqlReturn;
 
     /// Sets attributes related to a statement.
@@ -856,7 +854,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`.
     pub fn SQLSetStmtAttr(
         hstmt: HStmt,
-        attr: StatementAttribute,
+        attr: Integer,
         value: Pointer,
         str_length: Integer,
     ) -> SqlReturn;
@@ -867,7 +865,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, or `INVALID_HANDLE`.
     pub fn SQLSetStmtAttrW(
         hstmt: HStmt,
-        attr: StatementAttribute,
+        attr: Integer,
         value: Pointer,
         str_length: Integer,
     ) -> SqlReturn;
@@ -878,7 +876,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_STILL_EXECUTING`.
     pub fn SQLSetConnectAttr(
         hdbc: HDbc,
-        attr: ConnectionAttribute,
+        attr: Integer,
         value: Pointer,
         str_length: Integer,
     ) -> SqlReturn;
@@ -890,7 +888,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_STILL_EXECUTING`.
     pub fn SQLSetConnectAttrW(
         hdbc: HDbc,
-        attr: ConnectionAttribute,
+        attr: Integer,
         value: Pointer,
         str_length: Integer,
     ) -> SqlReturn;
@@ -901,9 +899,9 @@ extern "system" {
     ///
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or `SQL_STILL_EXECUTING`.
     pub fn SQLEndTran(
-        handle_type: HandleType,
+        handle_type: SmallInt,
         handle: Handle,
-        completion_type: CompletionType,
+        completion_type: SmallInt,
     ) -> SqlReturn;
 
     /// Returns the number of rows affected by an UPDATE, INSERT, or DELETE statement; an `SQL_ADD`,
@@ -933,7 +931,7 @@ extern "system" {
     pub fn SQLSetDescField(
         hdesc: HDesc,
         rec_number: SmallInt,
-        field_identifier: Desc,
+        field_identifier: SmallInt,
         value: Pointer,
         buffer_length: Integer,
     ) -> SqlReturn;
@@ -946,7 +944,7 @@ extern "system" {
     pub fn SQLSetDescFieldW(
         hdesc: HDesc,
         rec_number: SmallInt,
-        field_identifier: Desc,
+        field_identifier: SmallInt,
         value: Pointer,
         buffer_length: Integer,
     ) -> SqlReturn;
