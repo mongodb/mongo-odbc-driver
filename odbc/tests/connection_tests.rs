@@ -49,7 +49,7 @@ macro_rules! test_connection_diagnostics {
                     out_connection_string,
                     buffer_length,
                     string_length_2,
-                    driver_completion,
+                    driver_completion as u16,
                 );
                 assert_eq!(expected_sql_return, actual_return_val);
 

@@ -2,8 +2,8 @@ mod test_generator_util;
 
 use cstr::WideChar;
 use definitions::{
-    CDataType, Desc, EnvironmentAttribute, HDbc, HStmt, Handle, HandleType, SmallInt, SqlReturn,
-    USmallInt,
+    AttrOdbcVersion, CDataType, Desc, EnvironmentAttribute, HDbc, HStmt, Handle, HandleType,
+    SmallInt, SqlReturn, USmallInt,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -141,10 +141,10 @@ pub fn odbc2_resultset_tests() -> Result<()> {
 }
 
 /// Run an integration test. The generate argument indicates whether
-/// the test results should written to a file for baseline test file
+/// the test results should be written to a file for baseline test file
 /// generation, or be asserted for correctness.
 pub fn run_resultset_tests(generate: bool) -> Result<()> {
-    let env = allocate_env().unwrap();
+    let env = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
     let paths = load_file_paths(PathBuf::from(TEST_FILE_DIR)).unwrap();
     for path in paths {
         let yaml = parse_test_file_yaml(&path).unwrap();
@@ -174,16 +174,16 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
 }
 
 /// Runs odbc 2 compatibility integration test. The generate argument indicates whether
-/// the test results should written to a file for baseline test file
+/// the test results should be written to a file for baseline test file
 /// generation, or be asserted for correctness.
 pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
-    let env = allocate_env().unwrap();
+    let env = allocate_env(AttrOdbcVersion::SQL_OV_ODBC2);
     unsafe {
         assert_eq!(
             SqlReturn::SUCCESS,
             definitions::SQLSetEnvAttr(
                 env,
-                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
+                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION as i32,
                 2 as *mut _,
                 0,
             )
@@ -331,7 +331,10 @@ fn run_function_test(
             unsafe {
                 let data_type: definitions::SqlDataType =
                     std::mem::transmute(function[1].as_i64().unwrap() as i16);
-                Ok(definitions::SQLGetTypeInfo(statement as HStmt, data_type))
+                Ok(definitions::SQLGetTypeInfo(
+                    statement as HStmt,
+                    data_type as i16,
+                ))
             }
         }
         "sqltables" => {
@@ -694,7 +697,7 @@ fn get_column_attribute(
         match definitions::SQLColAttributeW(
             stmt as *mut _,
             column as USmallInt,
-            field_identifier,
+            field_identifier as u16,
             character_attrib_ptr,
             BUFFER_LENGTH as SmallInt,
             string_length_ptr,
@@ -730,7 +733,7 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
             stmt as *mut _,
             // Result set columns start at 1, the column input parameter is 0-indexed
             column + 1,
-            data_type,
+            data_type as i16,
             buffer as *mut _,
             BUFFER_LENGTH as isize,
             out_len_or_ind,
