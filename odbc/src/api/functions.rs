@@ -1319,6 +1319,9 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     // if rows_fetched_ptr is null, it was not set by the user and can be ignored.
     let has_rows_fetched_buffer = !stmt.attributes.read().unwrap().rows_fetched_ptr.is_null();
 
+    // if row_status_ptr is null, it was not set by the user and can be ignored.
+    let has_row_status_array = !stmt.attributes.read().unwrap().row_status_ptr.is_null();
+
     if has_rows_fetched_buffer {
         *stmt.attributes.write().unwrap().rows_fetched_ptr = 0;
     }
@@ -1343,15 +1346,16 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             }
         };
 
-        // if row_status_ptr is null, it was not set by the user and can be ignored.
-        // Otherwise, we need to set the row_status_buffer to the address that corresponds with the current row.
-        let row_status_buffer: *mut USmallInt =
-            if !stmt.attributes.read().unwrap().row_status_ptr.is_null() {
-                (stmt.attributes.read().unwrap().row_status_ptr as ULen
-                    + (index * size_of::<u16>())) as *mut USmallInt
-            } else {
-                null_mut()
-            };
+        // Set row_status_buffer to the address that corresponds with the current row if the user has set the row_status_ptr.
+        // NOTE: The user is responsible for creating a buffer big enough to hold the status for every row in the rowset.
+        // If the user does not create a big enough buffer, we will end up overwriting whatever is next in memory,
+        // causing undefined behavior.
+        let row_status_buffer: *mut USmallInt = if has_row_status_array {
+            (stmt.attributes.read().unwrap().row_status_ptr as ULen + (index * size_of::<u16>()))
+                as *mut USmallInt
+        } else {
+            null_mut()
+        };
 
         if let Ok((has_next, mut row_warnings_opt)) = move_to_next_result {
             row_warnings_opt.iter().for_each(|warning| {
@@ -1364,7 +1368,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
             if !has_next {
                 // There are no more rows, so set the rest of Row Status Array buffers to SQL_ROW_NOROW if the rowset end has not been reached.
-                if !row_status_buffer.is_null() {
+                if has_row_status_array {
                     for row_status_index in index..rowset_size {
                         let row_status_buffer = (stmt.attributes.read().unwrap().row_status_ptr
                             as ULen
@@ -1386,7 +1390,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
             has_fetched_at_least_one_row = true;
 
-            if !row_status_buffer.is_null() {
+            if has_row_status_array {
                 *row_status_buffer = if row_warnings_opt.is_empty() {
                     RowStatus::SQL_ROW_SUCCESS as USmallInt
                 } else {
@@ -1406,7 +1410,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 let (
                     encountered_error_during_col_binding,
                     encountered_success_with_info_during_col_binding,
-                ) = sql_fetch_column_binding_helper(
+                ) = sql_fetch_bound_buffers(
                     statement_handle,
                     index,
                     row_status_buffer,
@@ -1433,12 +1437,11 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 function_name.to_string()
             );
 
-            if !row_status_buffer.is_null() {
+            if has_row_status_array {
                 *row_status_buffer = RowStatus::SQL_ROW_ERROR as USmallInt;
             }
 
             fetched_rows += 1;
-
             row_error_count += 1;
         }
     }
@@ -1460,7 +1463,12 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     }
 }
 
-unsafe fn sql_fetch_column_binding_helper(
+/// This is a helper function for SQLFetch that copies data from the current rowset into all the bound buffers.
+/// Additionally, it keeps track of any errors that occur during this process and returns two boolean values
+/// indicating if SqlReturn::ERROR or SqlReturn::SUCCESS_WITH_INFO were encountered when putting data in the
+/// bound buffers. Lastly, if SqlReturn::ERROR or SqlReturn::SUCCESS_WITH_INFO are encountered, this function
+/// updates the row status array to reflect that.
+unsafe fn sql_fetch_bound_buffers(
     statement_handle: HStmt,
     index: ULen,
     row_status_buffer: *mut USmallInt,
