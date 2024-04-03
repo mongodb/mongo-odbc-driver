@@ -62,12 +62,10 @@ Wait for the evergreen version to finish, and ensure that the release task compl
 Check that the released files, library and symbols, are available at the following URLs:
 - Windows
   - Release build
-    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.dll`  
-    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.pdb`
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/atsql.dll`
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/atsqls.dll`
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/atsql.pdb`
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.msi`
-  - Debug build with logging capabilities
-    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/debug/mongoodbc.dll`
-    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/debug/mongoodbc.pdb`
 - Ubuntu 2204
   - Release build
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so`  

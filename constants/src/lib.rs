@@ -61,6 +61,10 @@ pub const INVALID_INFO_TYPE_VALUE: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1096",
     odbc_3_state: "HY096",
 };
+pub const INVALID_DRIVER_COMPLETION: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1110",
+    odbc_3_state: "HY110",
+};
 pub const NO_DSN_OR_DRIVER: OdbcState<'static> = OdbcState {
     odbc_2_state: "IM007",
     odbc_3_state: "IM007",
@@ -114,7 +118,7 @@ pub const FUNCTION_SEQUENCE_ERROR: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1010",
     odbc_3_state: "HY010",
 };
-pub const UNSUPPORTED_FIELD_DESCRIPTOR: OdbcState<'static> = OdbcState {
+pub const INVALID_FIELD_DESCRIPTOR: OdbcState<'static> = OdbcState {
     odbc_2_state: "S1091",
     odbc_3_state: "HY091",
 };

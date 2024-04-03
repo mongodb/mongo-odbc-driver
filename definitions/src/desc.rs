@@ -1,7 +1,9 @@
+use num_derive::FromPrimitive;
+
 /// Used in `SQLColAttributeW`.
 #[allow(non_camel_case_types)]
 #[repr(u16)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive)]
 pub enum Desc {
     /// `SQL_DESC_COUNT`. Returned in `NumericAttributePtr`. The number of columns available in the
     /// result set. This returns 0 if there are no columns in the result set. The value in the
