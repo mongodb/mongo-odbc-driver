@@ -1309,7 +1309,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
     let stmt = must_be_valid!(mongo_handle.as_statement());
 
     let mut encountered_success_with_info = false;
-    let mut global_warnings_opt: Vec<Error> = Vec::new();
+    let mut global_fetch_warnings_opt: Vec<Error> = Vec::new();
 
     // needed for rowsets with size > 1 to ensure that NO_DATA does not get returned if the rowset hits the end of the result set.
     let mut has_fetched_at_least_one_row = false;
@@ -1353,8 +1353,8 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 null_mut()
             };
 
-        if let Ok((has_next, mut warnings_opt)) = move_to_next_result {
-            warnings_opt.iter().for_each(|warning| {
+        if let Ok((has_next, mut row_warnings_opt)) = move_to_next_result {
+            row_warnings_opt.iter().for_each(|warning| {
                 add_diag_with_function!(
                     MongoHandleRef::from(statement_handle),
                     ODBCError::GeneralWarning(warning.to_string()),
@@ -1387,7 +1387,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             has_fetched_at_least_one_row = true;
 
             if !row_status_buffer.is_null() {
-                *row_status_buffer = if warnings_opt.is_empty() {
+                *row_status_buffer = if row_warnings_opt.is_empty() {
                     RowStatus::SQL_ROW_SUCCESS as USmallInt
                 } else {
                     RowStatus::SQL_ROW_SUCCESS_WITH_INFO as USmallInt
@@ -1395,11 +1395,8 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             }
 
             // keep track of all warnings that occur throughout the entire function.
-            global_warnings_opt.append(&mut warnings_opt);
+            global_fetch_warnings_opt.append(&mut row_warnings_opt);
 
-            if has_rows_fetched_buffer {
-                *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
-            }
             fetched_rows += 1;
 
             *stmt.var_data_cache.write().unwrap() = Some(HashMap::new());
@@ -1440,19 +1437,20 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 *row_status_buffer = RowStatus::SQL_ROW_ERROR as USmallInt;
             }
 
-            if has_rows_fetched_buffer {
-                *stmt.attributes.write().unwrap().rows_fetched_ptr += 1;
-            }
             fetched_rows += 1;
 
             row_error_count += 1;
         }
     }
 
+    if has_rows_fetched_buffer {
+        *stmt.attributes.write().unwrap().rows_fetched_ptr = fetched_rows;
+    }
+
     // Only return ERROR if every row that does not have status SQL_ROW_NOROW causes an error.
     if row_error_count == fetched_rows {
         SqlReturn::ERROR
-    } else if !global_warnings_opt.is_empty()
+    } else if !global_fetch_warnings_opt.is_empty()
         || encountered_success_with_info
         || row_error_count > 0
     {
@@ -1471,8 +1469,8 @@ unsafe fn sql_fetch_column_binding_helper(
 ) -> (bool, bool) {
     let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
 
-    let mut encountered_error_during_col_binding = false;
-    let mut encountered_success_with_info_during_col_binding = false;
+    let mut encountered_error_getting_data = false;
+    let mut encountered_success_with_info_getting_data = false;
 
     for (col, bound_col_info) in bound_cols.iter() {
         // Set target_buffer to the correct buffer in the array of buffers
@@ -1496,10 +1494,10 @@ unsafe fn sql_fetch_column_binding_helper(
 
         match sql_return {
             SqlReturn::ERROR => {
-                encountered_error_during_col_binding = true;
+                encountered_error_getting_data = true;
             }
             SqlReturn::SUCCESS_WITH_INFO => {
-                encountered_success_with_info_during_col_binding = true;
+                encountered_success_with_info_getting_data = true;
             }
             _ => {}
         }
@@ -1508,16 +1506,16 @@ unsafe fn sql_fetch_column_binding_helper(
     if !row_status_buffer.is_null() {
         // It's possible that one binding causes SUCCESS_WITH_INFO and another causes ERROR, so we need to check for an error first
         // and ignore SUCCESS_WITH_INFO if it also occurs.
-        if encountered_error_during_col_binding {
+        if encountered_error_getting_data {
             *row_status_buffer = RowStatus::SQL_ROW_ERROR as USmallInt;
-        } else if encountered_success_with_info_during_col_binding {
+        } else if encountered_success_with_info_getting_data {
             *row_status_buffer = RowStatus::SQL_ROW_SUCCESS_WITH_INFO as USmallInt;
         }
     }
 
     (
-        encountered_error_during_col_binding,
-        encountered_success_with_info_during_col_binding,
+        encountered_error_getting_data,
+        encountered_success_with_info_getting_data,
     )
 }
 
