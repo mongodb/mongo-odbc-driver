@@ -78,7 +78,7 @@ async fn threaded_callback(
     let params = match get_params(query).await {
         Ok(params) => params,
         Err(e) => {
-            return threaded_error(oidc_params_sender, "unknown error", &format!("{}", e)).await;
+            return threaded_error(oidc_params_sender, "unexpected error", &format!("{}", e)).await;
         }
     };
 
