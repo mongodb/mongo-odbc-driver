@@ -1,11 +1,11 @@
 use actix_web::{
-    self, dev::ServerHandle, http, middleware, rt, web, App, HttpRequest, HttpResponse, HttpServer,
+    self, dev::ServerHandle, http, middleware, web, App, HttpRequest, HttpResponse, HttpServer,
     Result,
 };
 use askama::Template;
+use std::collections::HashMap;
 use std::result::Result as StdResult;
-use std::{collections::HashMap, sync::mpsc, thread};
-use tokio::sync::mpsc as tokio_mpsc;
+use tokio::sync::mpsc;
 
 const DEFAULT_REDIRECT_PORT: u16 = 27097;
 #[cfg(test)]
@@ -70,7 +70,7 @@ async fn get_params(query: &str) -> Result<HashMap<&str, &str>> {
         .collect::<HashMap<&str, &str>>())
 }
 
-async fn threaded_callback(
+async fn callback(
     oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
     req: HttpRequest,
 ) -> Result<HttpResponse> {
@@ -78,44 +78,7 @@ async fn threaded_callback(
     let params = match get_params(query).await {
         Ok(params) => params,
         Err(e) => {
-            return threaded_error(oidc_params_sender, "unexpected error", &format!("{}", e)).await;
-        }
-    };
-
-    let code = params.get("code");
-    if let Some(code) = code {
-        let state = params.get("state").map(|s| s.to_string());
-        let oidc_response_params = OidcResponseParams {
-            code: code.to_string(),
-            state,
-        };
-        let _ = oidc_params_sender.send(Ok(oidc_response_params));
-        accepted().await
-    } else if let Some(e) = params.get("error") {
-        if let Some(error_description) = params.get("error_description") {
-            threaded_error(oidc_params_sender, e, error_description).await
-        } else {
-            threaded_error(oidc_params_sender, e, "no error description was provided").await
-        }
-    } else {
-        threaded_error(
-            oidc_params_sender,
-            "unknown error",
-            "response parameters are missing required information",
-        )
-        .await
-    }
-}
-
-async fn tokio_callback(
-    oidc_params_sender: tokio_mpsc::Sender<StdResult<OidcResponseParams, String>>,
-    req: HttpRequest,
-) -> Result<HttpResponse> {
-    let query = req.query_string();
-    let params = match get_params(query).await {
-        Ok(params) => params,
-        Err(e) => {
-            return tokio_error(oidc_params_sender, "unknown error", &format!("{}", e)).await;
+            return error(oidc_params_sender, "unknown error", &format!("{}", e)).await;
         }
     };
 
@@ -130,12 +93,12 @@ async fn tokio_callback(
         accepted().await
     } else if let Some(e) = params.get("error") {
         if let Some(error_description) = params.get("error_description") {
-            tokio_error(oidc_params_sender, e, error_description).await
+            error(oidc_params_sender, e, error_description).await
         } else {
-            tokio_error(oidc_params_sender, e, "no error description was provided").await
+            error(oidc_params_sender, e, "no error description was provided").await
         }
     } else {
-        tokio_error(
+        error(
             oidc_params_sender,
             "unknown error",
             "response parameters are missing required information",
@@ -161,8 +124,8 @@ async fn accepted() -> Result<HttpResponse> {
         ))
 }
 
-async fn tokio_error(
-    oidc_params_sender: tokio_mpsc::Sender<StdResult<OidcResponseParams, String>>,
+async fn error(
+    oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
     error: &str,
     error_description: &str,
 ) -> Result<HttpResponse> {
@@ -197,9 +160,9 @@ async fn not_found() -> Result<HttpResponse> {
         ))
 }
 
-async fn tokio_run_app(
-    sender: tokio_mpsc::Sender<ServerHandle>,
-    oidc_params_sender: tokio_mpsc::Sender<StdResult<OidcResponseParams, String>>,
+async fn run_app(
+    sender: mpsc::Sender<ServerHandle>,
+    oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
 ) -> std::io::Result<()> {
     // srv is server controller type, `dev::Server`
     let server = HttpServer::new(move || {
@@ -209,12 +172,10 @@ async fn tokio_run_app(
             // enable logger
             .wrap(middleware::Logger::default())
             .service(
-                web::resource("/callback")
-                    .to(move |r| tokio_callback(oidc_params_sender1.clone(), r)),
+                web::resource("/callback").to(move |r| callback(oidc_params_sender1.clone(), r)),
             )
             .service(
-                web::resource("/redirect")
-                    .to(move |r| tokio_callback(oidc_params_sender2.clone(), r)),
+                web::resource("/redirect").to(move |r| callback(oidc_params_sender2.clone(), r)),
             )
             .default_service(web::route().to(not_found))
     })
@@ -228,15 +189,15 @@ async fn tokio_run_app(
     server.await
 }
 
-pub async fn tokio_start() -> (
+pub async fn start() -> (
     ServerHandle,
-    tokio_mpsc::Receiver<StdResult<OidcResponseParams, String>>,
+    mpsc::Receiver<StdResult<OidcResponseParams, String>>,
 ) {
-    let (sender, mut receiver) = tokio_mpsc::channel(1);
-    let (oidc_params_sender, oidc_params_receiver) = tokio_mpsc::channel(1);
+    let (sender, mut receiver) = mpsc::channel(1);
+    let (oidc_params_sender, oidc_params_receiver) = mpsc::channel(1);
 
     tokio::spawn(async move {
-        let server_future = tokio_run_app(sender, oidc_params_sender);
+        let server_future = run_app(sender, oidc_params_sender);
         server_future.await
     });
 
@@ -246,9 +207,9 @@ pub async fn tokio_start() -> (
 }
 
 #[tokio::test]
-async fn rfc8252_http_server_tokio_accepted() {
+async fn rfc8252_http_server_accepted() {
     use reqwest;
-    let (server_handle, mut oidc_params_receiver) = tokio_start().await;
+    let (server_handle, mut oidc_params_receiver) = start().await;
     let _ = reqwest::get(format!(
         "{}{}",
         DEFAULT_REDIRECT_URI, "?code=1234&state=foo"
@@ -262,8 +223,8 @@ async fn rfc8252_http_server_tokio_accepted() {
 }
 
 #[tokio::test]
-async fn rfc8252_http_server_tokio_error() {
-    let (server_handle, mut oidc_params_receiver) = tokio_start().await;
+async fn rfc8252_http_server_error() {
+    let (server_handle, mut oidc_params_receiver) = start().await;
     let _ = reqwest::get(format!(
         "{}{}",
         DEFAULT_REDIRECT_URI, "?error=1234&error_description=foo"
@@ -276,8 +237,8 @@ async fn rfc8252_http_server_tokio_error() {
 }
 
 #[tokio::test]
-async fn rfc8252_http_server_tokio_no_params() {
-    let (server_handle, mut oidc_params_receiver) = tokio_start().await;
+async fn rfc8252_http_server_no_params() {
+    let (server_handle, mut oidc_params_receiver) = start().await;
     let _ = reqwest::get(DEFAULT_REDIRECT_URI).await.unwrap();
     let oidc_params = oidc_params_receiver.recv().await.unwrap();
     server_handle.stop(true).await;
