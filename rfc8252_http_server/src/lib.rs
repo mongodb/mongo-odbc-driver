@@ -1,4 +1,3 @@
-use actix_web::Responder;
 use actix_web::{
     self, dev::ServerHandle, http, web, App, HttpRequest, HttpResponse, HttpServer, Result,
 };
@@ -10,6 +9,17 @@ use tokio::sync::mpsc;
 const DEFAULT_REDIRECT_PORT: u16 = 27097;
 #[cfg(test)]
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
+
+const CODE: &str = "code";
+const STATE: &str = "state";
+const ERROR: &str = "error";
+const ERROR_DESCRIPTION: &str = "error_description";
+const PRODUCT_DOCS_LINK: &str =
+    "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect";
+const PRODUCT_DOCS_NAME: &str = "Atlas SQL ODBC Driver";
+// TODO SQL-2008: make sure this page exists and possibly update the link if the
+// docs team has a preference
+const ERROR_URI: &str = "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/oidc_login_error";
 
 #[derive(Template)]
 #[template(path = "OIDCAcceptedTemplate.html")]
@@ -80,24 +90,25 @@ async fn callback(
     let params = match get_params(query).await {
         Ok(params) => params,
         Err(e) => {
-            return error(oidc_params_sender, "unknown error", &format!("{}", e)).await;
+            return error(oidc_params_sender, "parameters error", &format!("{}", e)).await;
         }
     };
 
-    let code = params.get("code");
+    let code = params.get(CODE);
     if let Some(code) = code {
-        let state = params.get("state").map(|s| s.to_string());
+        let state = params.get(STATE).map(|s| s.to_string());
         let oidc_response_params = OidcResponseParams {
             code: code.to_string(),
             state,
         };
         let _ = oidc_params_sender.send(Ok(oidc_response_params)).await;
-        // This will hide the code and state from the URL bar
+        // This will hide the code and state from the URL bar by doring a redirect
+        // to the /accepted page rather than rendering the accepted page directly
         Ok(HttpResponse::Found()
             .append_header((http::header::LOCATION, "/accepted"))
             .finish())
-    } else if let Some(e) = params.get("error") {
-        if let Some(error_description) = params.get("error_description") {
+    } else if let Some(e) = params.get(ERROR) {
+        if let Some(error_description) = params.get(ERROR_DESCRIPTION) {
             error(oidc_params_sender, e, error_description).await
         } else {
             error(oidc_params_sender, e, "no error description was provided").await
@@ -118,12 +129,11 @@ async fn accepted() -> Result<HttpResponse> {
         .content_type("text/html; charset=utf-8")
         .body(
             OIDCAcceptedPage {
-                product_docs_link:
-                    "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
-                product_docs_name: "Atlas SQL ODBC Driver",
-                error: "error",
-                error_uri: "error_uri",
-                error_description: "error_description",
+                product_docs_link: PRODUCT_DOCS_LINK,
+                product_docs_name: PRODUCT_DOCS_NAME,
+                error: "",
+                error_uri: "",
+                error_description: "",
             }
             .render()
             .unwrap(),
@@ -143,12 +153,10 @@ async fn error(
         .content_type("text/html; charset=utf-8")
         .body(
             OIDCErrorPage {
-                product_docs_link: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
-                product_docs_name: "Atlas SQL ODBC Driver",
+                product_docs_link: PRODUCT_DOCS_LINK,
+                product_docs_name: PRODUCT_DOCS_NAME,
                 error,
-                // TODO SQL-2008: make sure this page exists and possibly update the link if the
-                // docs team has a preference
-                error_uri: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/oidc_login_error",
+                error_uri: ERROR_URI,
                 error_description,
             }
             .render()
@@ -162,8 +170,8 @@ async fn not_found() -> Result<HttpResponse> {
         .content_type("text/html; charset=utf-8")
         .body(
             OIDCNotFoundPage {
-                product_docs_link: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
-                product_docs_name: "Atlas SQL ODBC Driver",
+                product_docs_link: PRODUCT_DOCS_LINK,
+                product_docs_name: PRODUCT_DOCS_NAME,
             }
             .render()
             .unwrap(),
@@ -256,6 +264,6 @@ async fn rfc8252_http_server_no_params() {
     server_handle.stop(true).await;
     assert_eq!(
         oidc_params,
-        Err("unknown error: response parameters are missing".to_string())
+        Err("parameters error: response parameters are missing".to_string())
     );
 }
