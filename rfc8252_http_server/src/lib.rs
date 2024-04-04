@@ -161,27 +161,6 @@ async fn accepted() -> Result<HttpResponse> {
         ))
 }
 
-async fn threaded_error(
-    oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
-    error: &str,
-    error_description: &str,
-) -> Result<HttpResponse> {
-    let _ = oidc_params_sender.send(Err(format!("{}: {}", error, error_description)));
-    Ok(HttpResponse::build(http::StatusCode::BAD_REQUEST)
-        .content_type("text/html; charset=utf-8")
-        .body(
-            OIDCErrorPage {
-                product_docs_link: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
-                product_docs_name: "Atlas SQL ODBC Driver",
-                error,
-                error_uri: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/bad_oidc_login",
-                error_description,
-            }
-            .render()
-            .unwrap(),
-        ))
-}
-
 async fn tokio_error(
     oidc_params_sender: tokio_mpsc::Sender<StdResult<OidcResponseParams, String>>,
     error: &str,
@@ -218,37 +197,6 @@ async fn not_found() -> Result<HttpResponse> {
         ))
 }
 
-async fn threaded_run_app(
-    sender: mpsc::Sender<ServerHandle>,
-    oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
-) -> std::io::Result<()> {
-    // srv is server controller type, `dev::Server`
-    let server = HttpServer::new(move || {
-        let oidc_params_sender1 = oidc_params_sender.clone();
-        let oidc_params_sender2 = oidc_params_sender.clone();
-        App::new()
-            // enable logger
-            .wrap(middleware::Logger::default())
-            .service(
-                web::resource("/callback")
-                    .to(move |r| threaded_callback(oidc_params_sender1.clone(), r)),
-            )
-            .service(
-                web::resource("/redirect")
-                    .to(move |r| threaded_callback(oidc_params_sender2.clone(), r)),
-            )
-            .default_service(web::route().to(not_found))
-    })
-    .bind(("localhost", DEFAULT_REDIRECT_PORT))?
-    .workers(2)
-    .run();
-
-    // Send server handle back to the main thread
-    let _ = sender.send(server.handle());
-
-    server.await
-}
-
 async fn tokio_run_app(
     sender: tokio_mpsc::Sender<ServerHandle>,
     oidc_params_sender: tokio_mpsc::Sender<StdResult<OidcResponseParams, String>>,
@@ -280,23 +228,6 @@ async fn tokio_run_app(
     server.await
 }
 
-pub fn threaded_start() -> (
-    ServerHandle,
-    mpsc::Receiver<StdResult<OidcResponseParams, String>>,
-) {
-    let (sender, receiver) = mpsc::channel();
-    let (oidc_params_sender, oidc_params_receiver) = mpsc::channel();
-
-    thread::spawn(move || {
-        let server_future = threaded_run_app(sender, oidc_params_sender);
-        rt::System::new().block_on(server_future)
-    });
-
-    let server_handle = receiver.recv().unwrap();
-
-    (server_handle, oidc_params_receiver)
-}
-
 pub async fn tokio_start() -> (
     ServerHandle,
     tokio_mpsc::Receiver<StdResult<OidcResponseParams, String>>,
@@ -312,44 +243,6 @@ pub async fn tokio_start() -> (
     let server_handle = receiver.recv().await.unwrap();
 
     (server_handle, oidc_params_receiver)
-}
-
-#[test]
-fn rfc8252_http_server_threaded_accepted() {
-    use reqwest;
-    let (server_handle, oidc_params_receiver) = threaded_start();
-    let _ = reqwest::blocking::get(format!(
-        "{}{}",
-        DEFAULT_REDIRECT_URI, "/callback?code=1234&state=foo"
-    ))
-    .unwrap();
-    let oidc_params = oidc_params_receiver.recv().unwrap().unwrap();
-    rt::System::new().block_on(server_handle.stop(true));
-    assert_eq!(oidc_params.code, "1234");
-    assert_eq!(oidc_params.state, Some("foo".to_string()));
-}
-
-#[test]
-fn rfc8252_http_server_threaded_error() {
-    let (server_handle, oidc_params_receiver) = threaded_start();
-    let _ =
-        reqwest::blocking::get("http://localhost:9080/callback?error=1234&error_description=foo")
-            .unwrap();
-    let oidc_params = oidc_params_receiver.recv().unwrap();
-    rt::System::new().block_on(server_handle.stop(true));
-    assert_eq!(oidc_params, Err("1234: foo".to_string()));
-}
-
-#[test]
-fn rfc8252_http_server_threaded_no_params() {
-    let (server_handle, oidc_params_receiver) = threaded_start();
-    let _ = reqwest::blocking::get(DEFAULT_REDIRECT_URI).unwrap();
-    let oidc_params = oidc_params_receiver.recv().unwrap();
-    rt::System::new().block_on(server_handle.stop(true));
-    assert_eq!(
-        oidc_params,
-        Err("unknown error: response parameters are missing".to_string())
-    );
 }
 
 #[tokio::test]
