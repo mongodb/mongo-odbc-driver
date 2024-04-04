@@ -1437,6 +1437,17 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
                 function_name.to_string()
             );
 
+            let error = move_to_next_result.unwrap_err();
+
+            // Checks if there is an error that applies to the entire function instead of just one row.
+            // If there is, early exit with SqlReturn::Error.
+            if matches!(
+                error,
+                ODBCError::InvalidCursorState | ODBCError::Core(Error::QueryCancelled)
+            ) {
+                return SqlReturn::ERROR;
+            }
+
             if has_row_status_array {
                 *row_status_buffer = RowStatus::SQL_ROW_ERROR as USmallInt;
             }
