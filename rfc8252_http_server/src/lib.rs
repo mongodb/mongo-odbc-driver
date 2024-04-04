@@ -1,3 +1,4 @@
+use actix_web::Responder;
 use actix_web::{
     self, dev::ServerHandle, http, web, App, HttpRequest, HttpResponse, HttpServer, Result,
 };
@@ -91,7 +92,10 @@ async fn callback(
             state,
         };
         let _ = oidc_params_sender.send(Ok(oidc_response_params)).await;
-        accepted().await
+        // This will hide the code and state from the URL bar
+        Ok(HttpResponse::Found()
+            .append_header((http::header::LOCATION, "/accepted"))
+            .finish())
     } else if let Some(e) = params.get("error") {
         if let Some(error_description) = params.get("error_description") {
             error(oidc_params_sender, e, error_description).await
@@ -182,6 +186,7 @@ async fn run_app(
             .service(
                 web::resource("/redirect").to(move |r| callback(oidc_params_sender2.clone(), r)),
             )
+            .service(web::resource("/accepted").to(accepted))
             .default_service(web::route().to(not_found))
     })
     .bind(("localhost", DEFAULT_REDIRECT_PORT))?
