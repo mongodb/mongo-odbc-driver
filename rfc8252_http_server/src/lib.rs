@@ -1,6 +1,5 @@
 use actix_web::{
-    self, dev::ServerHandle, http, middleware, web, App, HttpRequest, HttpResponse, HttpServer,
-    Result,
+    self, dev::ServerHandle, http, web, App, HttpRequest, HttpResponse, HttpServer, Result,
 };
 use askama::Template;
 use std::collections::HashMap;
@@ -50,6 +49,7 @@ pub struct OidcResponseParams {
     pub state: Option<String>,
 }
 
+// get the parameters from the query string as a HashMap
 async fn get_params(query: &str) -> Result<HashMap<&str, &str>> {
     let params_vec: Vec<_> = query.split('&').collect();
     if params_vec.is_empty() || params_vec.first().unwrap().is_empty() {
@@ -70,6 +70,7 @@ async fn get_params(query: &str) -> Result<HashMap<&str, &str>> {
         .collect::<HashMap<&str, &str>>())
 }
 
+// Implement the callback url action
 async fn callback(
     oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
     req: HttpRequest,
@@ -107,6 +108,7 @@ async fn callback(
     }
 }
 
+// Implement the accepted page
 async fn accepted() -> Result<HttpResponse> {
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
@@ -124,6 +126,7 @@ async fn accepted() -> Result<HttpResponse> {
         ))
 }
 
+// Implement the error page and send the error on OIDC params channel
 async fn error(
     oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
     error: &str,
@@ -139,7 +142,9 @@ async fn error(
                 product_docs_link: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect",
                 product_docs_name: "Atlas SQL ODBC Driver",
                 error,
-                error_uri: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/bad_oidc_login",
+                // TODO SQL-2008: make sure this page exists and possibly update the link if the
+                // docs team has a preference
+                error_uri: "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/oidc_login_error",
                 error_description,
             }
             .render()
@@ -147,6 +152,7 @@ async fn error(
         ))
 }
 
+// Implement the not found page (404)
 async fn not_found() -> Result<HttpResponse> {
     Ok(HttpResponse::build(http::StatusCode::NOT_FOUND)
         .content_type("text/html; charset=utf-8")
@@ -160,6 +166,7 @@ async fn not_found() -> Result<HttpResponse> {
         ))
 }
 
+// The main runner for the server
 async fn run_app(
     sender: mpsc::Sender<ServerHandle>,
     oidc_params_sender: mpsc::Sender<StdResult<OidcResponseParams, String>>,
@@ -169,8 +176,6 @@ async fn run_app(
         let oidc_params_sender1 = oidc_params_sender.clone();
         let oidc_params_sender2 = oidc_params_sender.clone();
         App::new()
-            // enable logger
-            .wrap(middleware::Logger::default())
             .service(
                 web::resource("/callback").to(move |r| callback(oidc_params_sender1.clone(), r)),
             )
@@ -180,7 +185,7 @@ async fn run_app(
             .default_service(web::route().to(not_found))
     })
     .bind(("localhost", DEFAULT_REDIRECT_PORT))?
-    .workers(2)
+    .workers(1)
     .run();
 
     // Send server handle back to the main thread
@@ -189,6 +194,8 @@ async fn run_app(
     server.await
 }
 
+// The start function runs the main server runner in a tokio task and returns the server handle and
+// a receiver channel for the OIDC response parameters/errors
 pub async fn start() -> (
     ServerHandle,
     mpsc::Receiver<StdResult<OidcResponseParams, String>>,
