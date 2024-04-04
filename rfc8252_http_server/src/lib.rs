@@ -26,9 +26,6 @@ const ERROR_URI: &str = "https://www.mongodb.com/docs/atlas/data-federation/quer
 struct OIDCAcceptedPage<'a> {
     product_docs_link: &'a str,
     product_docs_name: &'a str,
-    error: &'a str,
-    error_uri: &'a str,
-    error_description: &'a str,
 }
 
 #[derive(Template)]
@@ -131,9 +128,6 @@ async fn accepted() -> Result<HttpResponse> {
             OIDCAcceptedPage {
                 product_docs_link: PRODUCT_DOCS_LINK,
                 product_docs_name: PRODUCT_DOCS_NAME,
-                error: "",
-                error_uri: "",
-                error_description: "",
             }
             .render()
             .unwrap(),
