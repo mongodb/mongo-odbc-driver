@@ -11,7 +11,7 @@ use std::{collections::HashSet, hash::RandomState, time::Instant};
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
 
 // temporary until rust driver OIDC support is released
-// TODO Remove Me.
+// TODO SQL-1937: Remove Me.
 #[derive(Clone, Debug)]
 pub struct IdpServerInfo {
     pub issuer: String,
@@ -165,13 +165,13 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     let refresh_token = token_response
         .refresh_token()
         .map(|t| t.secret().to_string());
-    let expires = token_response.expires_in();
+    let expires_in = token_response.expires_in();
 
     server.stop(true).await;
 
     Ok(IdpServerResponse {
         access_token,
-        expires: expires.map(|e| Instant::now() + e),
+        expires: expires_in.map(|e| Instant::now() + e),
         refresh_token,
     })
 }
