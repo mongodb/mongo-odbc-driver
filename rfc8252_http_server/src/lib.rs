@@ -6,20 +6,29 @@ use std::collections::HashMap;
 use std::result::Result as StdResult;
 use tokio::sync::mpsc;
 
+// server constants
 const DEFAULT_REDIRECT_PORT: u16 = 27097;
 #[cfg(test)]
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
 
+// server endpoints
+const ACCEPTED_ENDPOINT: &str = "/accepted";
+const CALLBACK_ENDPOINT: &str = "/callback";
+const REDIRECT_ENDPOINT: &str = "/redirect";
+
+// OIDC response parameters
 const CODE: &str = "code";
-const STATE: &str = "state";
 const ERROR: &str = "error";
 const ERROR_DESCRIPTION: &str = "error_description";
-const PRODUCT_DOCS_LINK: &str =
-    "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect";
-const PRODUCT_DOCS_NAME: &str = "Atlas SQL ODBC Driver";
+const STATE: &str = "state";
+
+// html template constants
 // TODO SQL-2008: make sure this page exists and possibly update the link if the
 // docs team has a preference
 const ERROR_URI: &str = "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/oidc_login_error";
+const PRODUCT_DOCS_LINK: &str =
+    "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect";
+const PRODUCT_DOCS_NAME: &str = "Atlas SQL ODBC Driver";
 
 #[derive(Template)]
 #[template(path = "OIDCAcceptedTemplate.html")]
@@ -102,7 +111,7 @@ async fn callback(
         // This will hide the code and state from the URL bar by doring a redirect
         // to the /accepted page rather than rendering the accepted page directly
         Ok(HttpResponse::Found()
-            .append_header((http::header::LOCATION, "/accepted"))
+            .append_header((http::header::LOCATION, ACCEPTED_ENDPOINT))
             .finish())
     } else if let Some(e) = params.get(ERROR) {
         if let Some(error_description) = params.get(ERROR_DESCRIPTION) {
@@ -183,12 +192,14 @@ async fn run_app(
         let oidc_params_sender2 = oidc_params_sender.clone();
         App::new()
             .service(
-                web::resource("/callback").to(move |r| callback(oidc_params_sender1.clone(), r)),
+                web::resource(CALLBACK_ENDPOINT)
+                    .to(move |r| callback(oidc_params_sender1.clone(), r)),
             )
             .service(
-                web::resource("/redirect").to(move |r| callback(oidc_params_sender2.clone(), r)),
+                web::resource(REDIRECT_ENDPOINT)
+                    .to(move |r| callback(oidc_params_sender2.clone(), r)),
             )
-            .service(web::resource("/accepted").to(accepted))
+            .service(web::resource(ACCEPTED_ENDPOINT).to(accepted))
             .default_service(web::route().to(not_found))
     })
     .bind(("localhost", DEFAULT_REDIRECT_PORT))?
