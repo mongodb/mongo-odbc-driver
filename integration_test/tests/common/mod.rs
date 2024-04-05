@@ -14,8 +14,6 @@ use thiserror::Error;
 pub enum Error {
     #[error("failed to allocate handle, SqlReturn: {0}")]
     HandleAllocation(String),
-    #[error("failed to set environment attribute, SqlReturn: {0}")]
-    SetEnvAttr(String),
     #[error("failed to connect SqlReturn: {0}, Diagnostics{1}")]
     DriverConnect(String, String),
 }
@@ -64,10 +62,7 @@ pub fn generate_default_connection_str() -> String {
     let host = env::var("ADF_TEST_LOCAL_HOST").expect("ADF_TEST_LOCAL_HOST is not set");
 
     let db = env::var("ADF_TEST_LOCAL_DB");
-    let driver = match env::var("ADF_TEST_LOCAL_DRIVER") {
-        Ok(val) => val,
-        Err(_e) => DRIVER_NAME.to_string(), //Default driver name
-    };
+    let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
 
     let mut connection_string =
         format!("Driver={{{driver}}};USER={user_name};PWD={password};SERVER={host};");
@@ -93,7 +88,7 @@ pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
     let actual_native_error = &mut 0;
     unsafe {
         let _ = SQLGetDiagRecW(
-            handle_type,
+            handle_type as i16,
             handle as *mut _,
             1,
             actual_sql_state,
@@ -126,30 +121,54 @@ pub fn sql_return_to_string(return_code: SqlReturn) -> String {
 }
 
 #[allow(dead_code)]
-// Allocates new environment variable
-pub fn allocate_env() -> Result<HEnv> {
+/// Setup flow that connects and allocates a statement. This allocates a new
+/// environment handle, sets the ODBC_VERSION environment attribute, connects
+/// using the provided (or default) URI, and allocates a statement. The flow
+/// is:
+///     - SQLAllocHandle(SQL_HANDLE_ENV)
+///     - SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3)
+///     - SQLAllocHandle(SQL_HANDLE_DBC)
+///     - SQLDriverConnectW
+///     - SQLAllocHandle(SQL_HANDLE_STMT)
+pub fn default_setup_connect_and_alloc_stmt(
+    odbc_version_value: AttrOdbcVersion,
+) -> (HEnv, HDbc, HStmt) {
+    let env_handle = allocate_env(odbc_version_value);
+    let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
+
+    (env_handle, conn_handle, stmt_handle)
+}
+
+#[allow(dead_code)]
+/// Allocates new environment variable and sets the ODBC_VERSION environment
+/// attribute to the provided odbc_version.
+pub fn allocate_env(odbc_version: AttrOdbcVersion) -> HEnv {
     let mut env: Handle = null_mut();
 
     unsafe {
-        match SQLAllocHandle(
-            HandleType::SQL_HANDLE_ENV,
-            null_mut(),
-            &mut env as *mut Handle,
-        ) {
-            SqlReturn::SUCCESS => (),
-            sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
-        }
-        match SQLSetEnvAttr(
-            env as HEnv,
-            EnvironmentAttribute::SQL_ATTR_ODBC_VERSION,
-            AttrOdbcVersion::SQL_OV_ODBC3.into(),
-            0,
-        ) {
-            SqlReturn::SUCCESS => (),
-            sql_return => return Err(Error::SetEnvAttr(sql_return_to_string(sql_return))),
-        }
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLAllocHandle(
+                HandleType::SQL_HANDLE_ENV as i16,
+                null_mut(),
+                &mut env as *mut Handle,
+            ),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env as Handle)
+        );
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLSetEnvAttr(
+                env as HEnv,
+                EnvironmentAttribute::SQL_ATTR_ODBC_VERSION as i32,
+                odbc_version.into(),
+                0
+            ),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env as Handle)
+        );
     }
-    Ok(env as HEnv)
+    env as HEnv
 }
 
 #[allow(dead_code)]
@@ -159,10 +178,7 @@ pub fn connect_and_allocate_statement(
     env_handle: HEnv,
     in_connection_string: Option<String>,
 ) -> (HDbc, HStmt) {
-    let conn_str = match in_connection_string {
-        Some(val) => val,
-        None => crate::common::generate_default_connection_str(),
-    };
+    let conn_str = in_connection_string.unwrap_or_else(generate_default_connection_str);
     let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
     (conn_handle, allocate_statement(conn_handle).unwrap())
 }
@@ -174,7 +190,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
     let mut dbc: Handle = null_mut();
     unsafe {
         match SQLAllocHandle(
-            HandleType::SQL_HANDLE_DBC,
+            HandleType::SQL_HANDLE_DBC as i16,
             env_handle as *mut _,
             &mut dbc as *mut Handle,
         ) {
@@ -192,7 +208,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             null_mut(),
             0,
             str_len_ptr,
-            DriverConnectOption::SQL_DRIVER_NO_PROMPT,
+            DriverConnectOption::SQL_DRIVER_NO_PROMPT as u16,
         ) {
             // Originally, this would return SUCCESS_WITH_INFO since we pass null_mut() as
             // out_connection_string and 0 as buffer size. Now, this should always return SUCCESS.
@@ -223,7 +239,7 @@ pub fn allocate_statement(dbc: HDbc) -> Result<HStmt> {
     let mut stmt: Handle = null_mut();
     unsafe {
         match SQLAllocHandle(
-            HandleType::SQL_HANDLE_STMT,
+            HandleType::SQL_HANDLE_STMT as i16,
             dbc as *mut _,
             &mut stmt as *mut Handle,
         ) {
@@ -243,7 +259,7 @@ pub fn disconnect_and_close_handles(dbc: HDbc, stmt: HStmt) {
     unsafe {
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLFreeHandle(HandleType::SQL_HANDLE_STMT, stmt as Handle),
+            SQLFreeHandle(HandleType::SQL_HANDLE_STMT as i16, stmt as Handle),
             "{}",
             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
         );
@@ -257,9 +273,41 @@ pub fn disconnect_and_close_handles(dbc: HDbc, stmt: HStmt) {
 
         assert_eq!(
             SqlReturn::SUCCESS,
-            SQLFreeHandle(HandleType::SQL_HANDLE_DBC, dbc as Handle),
+            SQLFreeHandle(HandleType::SQL_HANDLE_DBC as i16, dbc as Handle),
             "{}",
             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, dbc as Handle)
+        );
+    }
+}
+
+#[allow(dead_code)]
+/// Helper function for disconnecting and freeing HDbc and HEnv handles.
+/// Note that this function explicitly does NOT free the statement handle
+/// since it is intended for use with tests that invoke SQLFreeStmt.
+///  - SQLDisconnect(dbc)
+///  - SQLFreeHandle(dbc)
+///  - SQLFreeHandle(env)
+pub fn disconnect_and_free_dbc_and_env_handles(env_handle: HEnv, conn_handle: HDbc) {
+    unsafe {
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLDisconnect(conn_handle),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, conn_handle as Handle)
+        );
+
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(HandleType::SQL_HANDLE_DBC as i16, conn_handle as Handle),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_DBC, conn_handle as Handle)
+        );
+
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLFreeHandle(HandleType::SQL_HANDLE_ENV as i16, env_handle as Handle),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
         );
     }
 }
@@ -297,7 +345,7 @@ pub fn fetch_and_get_data(
                             SQLGetData(
                                 stmt as HStmt,
                                 (col_num + 1) as USmallInt,
-                                target_types[col_num],
+                                target_types[col_num] as i16,
                                 output_buffer as Pointer,
                                 (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
                                 str_len_ptr
@@ -324,16 +372,16 @@ pub fn fetch_and_get_data(
 }
 
 #[allow(dead_code)]
-///  Helper function for checking resultset metadata
-///  - SQLNumResultCols()
-///  - For columns 1 to {numCols}
-///      - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
-///      - SQLColAttributeW(SQL_DESC_UNSIGNED)
-///      - SQLColAttributeW(SQL_COLUMN_NAME)
-///      - SQLColAttributeW(SQL_COLUMN_NULLABLE)
-///      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
-///      - SQLColAttributeW(SQL_COLUMN_LENGTH)
-///      - SQLColAttributeW(SQL_COLUMN_SCALE)
+/// Helper function for checking resultset metadata
+/// - SQLNumResultCols()
+/// - For columns 1 to {numCols}
+///     - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
+///     - SQLColAttributeW(SQL_DESC_UNSIGNED)
+///     - SQLColAttributeW(SQL_COLUMN_NAME)
+///     - SQLColAttributeW(SQL_COLUMN_NULLABLE)
+///     - SQLColAttributeW(SQL_DESC_TYPE_NAME)
+///     - SQLColAttributeW(SQL_COLUMN_LENGTH)
+///     - SQLColAttributeW(SQL_COLUMN_SCALE)
 pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
     let str_len_ptr = &mut 0;
     let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
@@ -364,7 +412,7 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
                     SQLColAttributeW(
                         stmt as HStmt,
                         (col_num + 1) as u16,
-                        *field_type,
+                        *field_type as u16,
                         output_buffer as Pointer,
                         BUFFER_LENGTH,
                         str_len_ptr,
