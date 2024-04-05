@@ -220,7 +220,7 @@ pub async fn start() -> (
     (server_handle, oidc_params_receiver)
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn rfc8252_http_server_accepted() {
     use reqwest;
     let (server_handle, mut oidc_params_receiver) = start().await;
@@ -236,7 +236,7 @@ async fn rfc8252_http_server_accepted() {
     assert_eq!(oidc_params.state, Some("foo".to_string()));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn rfc8252_http_server_error() {
     let (server_handle, mut oidc_params_receiver) = start().await;
     let _ = reqwest::get(format!(
@@ -250,7 +250,7 @@ async fn rfc8252_http_server_error() {
     assert_eq!(oidc_params, Err("1234: foo".to_string()));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn rfc8252_http_server_no_params() {
     let (server_handle, mut oidc_params_receiver) = start().await;
     let _ = reqwest::get(DEFAULT_REDIRECT_URI).await.unwrap();
