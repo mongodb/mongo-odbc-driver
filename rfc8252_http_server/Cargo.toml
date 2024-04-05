@@ -1,0 +1,15 @@
+[package]
+name = "rfc8252_http_server"
+version = "0.0.0"
+authors = [
+    "Patrick Meredith <pmeredit@protonmail.com>",
+]
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+tokio = { version = "1", features = ["full"] }
+askama = "0"
+
+[dev-dependencies]
+reqwest = { version = "0", features = ["blocking"] }

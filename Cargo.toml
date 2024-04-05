@@ -11,6 +11,7 @@ members = [
   "shared_sql_utils",
   "logger",
   "macos_postinstall",
+  "rfc8252_http_server",
 ]
 
 [profile.release]
