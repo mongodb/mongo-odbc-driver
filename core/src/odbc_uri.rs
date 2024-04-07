@@ -234,13 +234,10 @@ impl ODBCUri {
 
     // try_into_client_options converts this ODBCUri to a mongo_uri String. It will
     // remove all the attributes necessary to make a mongo_uri. This is destructive!
-    pub fn try_into_client_options(
-        &mut self,
-        handle: &tokio::runtime::Handle,
-    ) -> Result<UserOptions> {
+    pub async fn try_into_client_options(&mut self) -> Result<UserOptions> {
         let uri = self.remove(URI_KWS);
         if let Some(uri) = uri {
-            return self.handle_uri(&uri, handle);
+            return self.handle_uri(&uri).await;
         }
         self.handle_no_uri()
     }
@@ -286,12 +283,11 @@ impl ODBCUri {
         Ok(())
     }
 
-    fn handle_uri(&mut self, uri: &str, handle: &tokio::runtime::Handle) -> Result<UserOptions> {
+    async fn handle_uri(&mut self, uri: &str) -> Result<UserOptions> {
         let server = self.remove(SERVER_KWS);
         let source = AUTH_SOURCE_REGEX
             .captures(uri)
             .and_then(|cap| cap.name("source").map(|s| s.as_str()));
-        let guard = handle.enter();
         // trust-dns-resolver has a performance issue on windows, so we'll use cloudflare's resolver
         // instead of the system resolver
         // https://github.com/mongodb/mongo-rust-driver?tab=readme-ov-file#windows-dns-note
@@ -302,10 +298,7 @@ impl ODBCUri {
                 ClientOptions::parse(uri).await
             }
         };
-        let mut client_options = handle
-            .block_on(async { parse_func().await })
-            .map_err(Error::InvalidClientOptions)?;
-        drop(guard);
+        let mut client_options = parse_func().await.map_err(Error::InvalidClientOptions)?;
 
         if client_options.credential.is_some() {
             // user name set as attribute should supercede mongo uri

@@ -1032,13 +1032,12 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 }
 
 fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoConnection> {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(1)
+    let mut odbc_uri = ODBCUri::new(odbc_uri_string.to_string())?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
-    let mut odbc_uri = ODBCUri::new(odbc_uri_string.to_string())?;
-    let client_options = odbc_uri.try_into_client_options(runtime.handle())?;
+    let client_options = runtime.block_on(async { odbc_uri.try_into_client_options().await })?;
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
