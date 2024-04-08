@@ -3,15 +3,15 @@ use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
     reqwest::async_http_client,
     AuthorizationCode, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse,
-    PkceCodeChallenge, RedirectUrl, RequestTokenError, Scope,
+    PkceCodeChallenge, RedirectUrl, RefreshToken, RequestTokenError, Scope,
 };
-use rfc8252_http_server::{start, OidcResponseParams};
+use rfc8252_http_server::{tokio_start, OidcResponseParams};
 use std::{collections::HashSet, hash::RandomState, time::Instant};
 
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
 
 // temporary until rust driver OIDC support is released
-// TODO SQL-1937: Remove Me.
+// TODO Remove Me.
 #[derive(Clone, Debug)]
 pub struct IdpServerInfo {
     pub issuer: String,
@@ -19,7 +19,7 @@ pub struct IdpServerInfo {
     pub request_scopes: Option<Vec<String>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallbackContext {
     pub timeout_seconds: Option<Instant>,
     pub version: u32,
@@ -52,7 +52,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     }
     let scopes = idp_info.request_scopes.unwrap_or_else(Vec::new);
 
-    let (server, mut oidc_params_channel) = start().await;
+    let (server, mut oidc_params_channel) = tokio_start().await;
 
     // Use OpenID Connect Discovery to fetch the provider metadata.
     let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, async_http_client)
@@ -165,13 +165,76 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     let refresh_token = token_response
         .refresh_token()
         .map(|t| t.secret().to_string());
-    let expires_in = token_response.expires_in();
+    let expires = token_response.expires_in();
 
     server.stop(true).await;
 
     Ok(IdpServerResponse {
         access_token,
-        expires: expires_in.map(|e| Instant::now() + e),
+        expires: expires.map(|e| Instant::now() + e),
+        refresh_token,
+    })
+}
+
+pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Error> {
+    let idp_info = params.idp_info.ok_or(Error::NoIdpServerInfo)?;
+    let client_id = idp_info.client_id;
+    let issuer_uri = IssuerUrl::new(idp_info.issuer).map_err(|e| Error::Other(e.to_string()))?;
+    if issuer_uri.url().scheme() != "https" {
+        return Err(Error::IssuerUriMustBeHttps);
+    }
+
+    // Use OpenID Connect Discovery to fetch the provider metadata.
+    let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, async_http_client)
+        .await
+        .map_err(|e| Error::Other(e.to_string()))?;
+
+    // Create an OpenID Connect client by specifying the client ID, client secret,
+    // authorization URL and token URL.
+    let client = CoreClient::from_provider_metadata(
+        provider_metadata.clone(),
+        ClientId::new(client_id),
+        None,
+    );
+
+    // This must never be called without a refresh token (to be checked in the driver function)
+    let token_response = client
+        .exchange_refresh_token(&RefreshToken::new(params.refresh_token.unwrap()))
+        .request_async(async_http_client)
+        .await
+        .map_err(|e| {
+            let msg = match e {
+                RequestTokenError::ServerResponse(provider_err) => {
+                    format!("Server returned error response: {:?}", provider_err)
+                }
+                RequestTokenError::Request(req) => {
+                    format!("Request failed: {:?}", req)
+                }
+                RequestTokenError::Parse(parse_err, res) => {
+                    let body = match std::str::from_utf8(&res) {
+                        Ok(text) => text.to_string(),
+                        Err(_) => format!("{:?}", &res),
+                    };
+                    format!(
+                        "Failed to parse server response: {} [response={:?}]",
+                        parse_err, body
+                    )
+                }
+                RequestTokenError::Other(msg) => msg,
+            };
+            Error::Other(format!("OpenID Connect: code exchange failed: {}", msg))
+        })?;
+
+    // Extract the auth and refresh tokens, and the expiration duration in seconds
+    let access_token = token_response.access_token().secret().to_string();
+    let refresh_token = token_response
+        .refresh_token()
+        .map(|t| t.secret().to_string());
+    let expires = token_response.expires_in();
+
+    Ok(IdpServerResponse {
+        access_token,
+        expires: expires.map(|e| Instant::now() + e),
         refresh_token,
     })
 }
