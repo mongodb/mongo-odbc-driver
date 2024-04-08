@@ -24,6 +24,8 @@ mod unit {
     use std::collections::HashMap;
     use std::ptr::null_mut;
 
+    // TODO: SQL-2010: Create test coverage for error handling when column binding with rowsets
+
     #[test]
     fn test_binding_and_rebinding_column() {
         // Set up MongoHandle

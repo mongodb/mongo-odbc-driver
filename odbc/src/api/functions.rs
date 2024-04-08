@@ -1336,6 +1336,8 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
     // Use `index` to figure out which buffer in the array of buffers to use.
     for index in 0..rowset_size {
+        // TODO: SQL-2014: Update SQLCancel and SQLFetch so SQLFetch can be cancelled correctly
+        // The main idea behind SQL-2014 is to check before each call to next and stop the execution if the statement is cancelled.
         let move_to_next_result = {
             let connection = must_be_valid!((*stmt.connection).as_connection());
             match stmt.mongo_statement.write().unwrap().as_mut() {

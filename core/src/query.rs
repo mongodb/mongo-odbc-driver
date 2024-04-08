@@ -13,6 +13,8 @@ use mongodb::{
 };
 use std::time::Duration;
 
+const BATCH_SIZE_REPLACEMENT_THRESHOLD: u32 = 100;
+
 #[derive(Debug)]
 pub struct MongoQuery {
     // The cursor on the result set.
@@ -141,8 +143,8 @@ impl MongoStatement for MongoQuery {
         }
 
         let mut batch_size = None;
-        // 100 is an arbitrary value
-        if rowset_size > 100 {
+        // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
+        if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
             batch_size = Some(rowset_size)
         }
         let options = opt.max_time(max_time).batch_size(batch_size).build();
