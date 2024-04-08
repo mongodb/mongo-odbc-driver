@@ -197,7 +197,8 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
         None,
     );
 
-    // This must never be called without a refresh token (to be checked in the driver function)
+    // This function will never be called without a refresh token (to be checked in the driver function),
+    // but we return an error to be explicit about the fact that we expect a refresh token.
     let token_response = client
         .exchange_refresh_token(&RefreshToken::new(params.refresh_token.unwrap()))
         .request_async(async_http_client)
