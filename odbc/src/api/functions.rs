@@ -1443,10 +1443,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
 
             // Checks if there is an error that applies to the entire function instead of just one row.
             // If there is, early exit with SqlReturn::Error.
-            if matches!(
-                error,
-                ODBCError::InvalidCursorState | ODBCError::Core(Error::QueryCancelled)
-            ) {
+            if matches!(error, ODBCError::InvalidCursorState) {
                 return SqlReturn::ERROR;
             }
 
