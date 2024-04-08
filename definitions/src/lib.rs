@@ -400,3 +400,13 @@ pub enum SqlCode {
     SQL_CODE_TIME = 2,
     SQL_CODE_TIMESTAMP = 3,
 }
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(u16)]
+pub enum RowStatus {
+    SQL_ROW_SUCCESS = 0,
+    SQL_ROW_NOROW = 3,
+    SQL_ROW_ERROR = 5,
+    SQL_ROW_SUCCESS_WITH_INFO = 6,
+}
