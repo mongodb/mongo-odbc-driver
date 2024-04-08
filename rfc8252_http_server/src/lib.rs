@@ -25,7 +25,7 @@ const STATE: &str = "state";
 // html template constants
 // TODO SQL-2008: make sure this page exists and possibly update the link if the
 // docs team has a preference
-const ERROR_URI: &str = "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/oidc_login_error";
+const ERROR_URI: &str = "https://www.mongodb.com/docs/atlas/security-oidc/";
 const PRODUCT_DOCS_LINK: &str =
     "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect";
 const PRODUCT_DOCS_NAME: &str = "Atlas SQL ODBC Driver";
