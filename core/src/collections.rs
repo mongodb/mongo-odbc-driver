@@ -104,7 +104,7 @@ impl MongoCollections {
         table_type: &str,
         accept_search_patterns: bool,
     ) -> Self {
-        let databases = mongo_connection.runtime.handle().block_on(async {
+        let databases = mongo_connection.runtime.block_on(async {
             future::join_all(
                 mongo_connection
                     .client

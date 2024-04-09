@@ -6,7 +6,6 @@ use crate::{
     Error, TypeMode,
 };
 use bson::{doc, document::ValueAccessError, Bson, Document};
-use log::warn;
 use mongodb::{
     error::{CommandError, ErrorKind},
     options::AggregateOptions,
@@ -142,8 +141,6 @@ impl MongoStatement for MongoQuery {
             "statement": &self.query,
         }}];
 
-        log::warn!("Executing query: {}", self.query);
-
         let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
 
         let mut max_time = None;
@@ -169,15 +166,12 @@ impl MongoStatement for MongoQuery {
             _ => Error::QueryExecutionFailed(e),
         };
 
-        log::warn!("taking a tokio guard before executing query");
-
         let _guard = connection.runtime.enter();
         let cursor: Cursor<Document> = connection.runtime.block_on(async {
             db.aggregate(pipeline, options)
                 .await
                 .map_err(map_query_error)
         })?;
-        warn!("cursor created");
         self.resultset_cursor = Some(cursor);
         Ok(true)
     }
