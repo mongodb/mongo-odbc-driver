@@ -132,6 +132,10 @@ impl Logger {
     /// Get the logging directory path.
     /// This is useful to check the content of the log files.
     pub fn get_log_dir(driver_path: String) -> PathBuf {
+        // for tests we'll always use the temp directory
+        if cfg!(test) {
+            return std::env::temp_dir();
+        }
         if driver_path.is_empty() {
             std::env::temp_dir()
         } else if let Some(user_dir) = UserDirs::new() {

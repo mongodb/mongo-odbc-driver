@@ -48,138 +48,138 @@ lazy_static! {
     ];
 }
 
-// mod unit {
-//     #[test]
-//     fn metadata_size() {
-//         use crate::{databases::MongoDatabases, stmt::MongoStatement};
-//         assert_eq!(5, MongoDatabases::empty().get_resultset_metadata().len());
-//     }
+mod unit {
+    #[test]
+    fn metadata_size() {
+        use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        assert_eq!(5, MongoDatabases::empty().get_resultset_metadata().len());
+    }
 
-//     #[test]
-//     fn metadata_column_names() {
-//         use crate::{databases::MongoDatabases, stmt::MongoStatement};
-//         // This gives us assurance that the column names are all correct.
-//         assert_eq!(
-//             "TABLE_CAT",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(1)
-//                 .unwrap()
-//                 .col_name
-//         );
-//         assert_eq!(
-//             "TABLE_SCHEM",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(2)
-//                 .unwrap()
-//                 .col_name
-//         );
-//         assert_eq!(
-//             "TABLE_NAME",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(3)
-//                 .unwrap()
-//                 .col_name
-//         );
-//         assert_eq!(
-//             "TABLE_TYPE",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(4)
-//                 .unwrap()
-//                 .col_name
-//         );
-//         assert_eq!(
-//             "REMARKS",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(5)
-//                 .unwrap()
-//                 .col_name
-//         );
-//     }
+    #[test]
+    fn metadata_column_names() {
+        use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        // This gives us assurance that the column names are all correct.
+        assert_eq!(
+            "TABLE_CAT",
+            MongoDatabases::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_SCHEM",
+            MongoDatabases::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_NAME",
+            MongoDatabases::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "TABLE_TYPE",
+            MongoDatabases::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .col_name
+        );
+        assert_eq!(
+            "REMARKS",
+            MongoDatabases::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .col_name
+        );
+    }
 
-//     #[test]
-//     fn metadata_column_types() {
-//         use crate::{databases::MongoDatabases, stmt::MongoStatement};
-//         assert_eq!(
-//             "string",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(1)
-//                 .unwrap()
-//                 .type_name
-//         );
-//         assert_eq!(
-//             "string",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(2)
-//                 .unwrap()
-//                 .type_name
-//         );
-//         assert_eq!(
-//             "string",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(3)
-//                 .unwrap()
-//                 .type_name
-//         );
-//         assert_eq!(
-//             "string",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(4)
-//                 .unwrap()
-//                 .type_name
-//         );
-//         assert_eq!(
-//             "string",
-//             MongoDatabases::empty()
-//                 .get_col_metadata(5)
-//                 .unwrap()
-//                 .type_name
-//         );
-//     }
+    #[test]
+    fn metadata_column_types() {
+        use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .type_name
+        );
+        assert_eq!(
+            "string",
+            MongoDatabases::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .type_name
+        );
+    }
 
-//     #[test]
-//     fn metadata_column_nullability() {
-//         use crate::{databases::MongoDatabases, stmt::MongoStatement};
-//         use definitions::Nullability;
-//         assert_eq!(
-//             Nullability::SQL_NO_NULLS,
-//             MongoDatabases::empty()
-//                 .get_col_metadata(1)
-//                 .unwrap()
-//                 .nullability
-//         );
-//         assert_eq!(
-//             Nullability::SQL_NULLABLE,
-//             MongoDatabases::empty()
-//                 .get_col_metadata(2)
-//                 .unwrap()
-//                 .nullability
-//         );
-//         // Docs do not say NO_NULLS, but there is no way the tale name can be null.
-//         assert_eq!(
-//             Nullability::SQL_NULLABLE,
-//             MongoDatabases::empty()
-//                 .get_col_metadata(3)
-//                 .unwrap()
-//                 .nullability
-//         );
-//         // The docs also do not say NO_NULLS, but they enumerate every possible value and
-//         // NULL is not one of them.
-//         assert_eq!(
-//             Nullability::SQL_NULLABLE,
-//             MongoDatabases::empty()
-//                 .get_col_metadata(4)
-//                 .unwrap()
-//                 .nullability
-//         );
-//         assert_eq!(
-//             Nullability::SQL_NULLABLE,
-//             MongoDatabases::empty()
-//                 .get_col_metadata(5)
-//                 .unwrap()
-//                 .nullability
-//         );
-//     }
-// }
+    #[test]
+    fn metadata_column_nullability() {
+        use crate::{databases::MongoDatabases, stmt::MongoStatement};
+        use definitions::Nullability;
+        assert_eq!(
+            Nullability::SQL_NO_NULLS,
+            MongoDatabases::empty()
+                .get_col_metadata(1)
+                .unwrap()
+                .nullability
+        );
+        assert_eq!(
+            Nullability::SQL_NULLABLE,
+            MongoDatabases::empty()
+                .get_col_metadata(2)
+                .unwrap()
+                .nullability
+        );
+        // Docs do not say NO_NULLS, but there is no way the tale name can be null.
+        assert_eq!(
+            Nullability::SQL_NULLABLE,
+            MongoDatabases::empty()
+                .get_col_metadata(3)
+                .unwrap()
+                .nullability
+        );
+        // The docs also do not say NO_NULLS, but they enumerate every possible value and
+        // NULL is not one of them.
+        assert_eq!(
+            Nullability::SQL_NULLABLE,
+            MongoDatabases::empty()
+                .get_col_metadata(4)
+                .unwrap()
+                .nullability
+        );
+        assert_eq!(
+            Nullability::SQL_NULLABLE,
+            MongoDatabases::empty()
+                .get_col_metadata(5)
+                .unwrap()
+                .nullability
+        );
+    }
+}
 
 #[derive(Debug)]
 pub struct MongoDatabases {

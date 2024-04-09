@@ -138,7 +138,6 @@ macro_rules! panic_safe_exec_keep_diagnostics {
         let (s, r) = mpsc::sync_channel(1);
         let fct_name: &str = function_name!();
         panic::set_hook(Box::new(move |i| {
-            println!("in panic setting a hook with {:?}", i);
             if let Some(location) = i.location() {
                 let info = format!("in file '{}' at line {}", location.file(), location.line());
                 let _ = s.send(info);

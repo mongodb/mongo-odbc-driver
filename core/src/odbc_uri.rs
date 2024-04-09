@@ -2,11 +2,8 @@ use crate::err::{Error, Result};
 use bson::UuidRepresentation;
 use constants::{DEFAULT_APP_NAME, DRIVER_SHORT_NAME};
 use lazy_static::lazy_static;
-use mongodb::{
-    options::{
-        ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig, ServerAddress,
-    },
-    Client,
+use mongodb::options::{
+    ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig, ServerAddress,
 };
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use shared_sql_utils::Dsn;
@@ -568,488 +565,521 @@ mod unit {
         }
     }
 
-    // mod new {
-    //     #[test]
-    //     fn empty_uri_is_err() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert!(ODBCUri::new("".to_string()).is_err());
-    //     }
+    mod new {
+        #[test]
+        fn empty_uri_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert!(ODBCUri::new("".to_string()).is_err());
+        }
 
-    //     #[test]
-    //     fn string_foo_is_err() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert!(ODBCUri::new("Foo".to_string()).is_err());
-    //     }
+        #[test]
+        fn string_foo_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert!(ODBCUri::new("Foo".to_string()).is_err());
+        }
 
-    //     #[test]
-    //     fn missing_equals_is_err() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert!(ODBCUri::new("driver=Foo;Bar".to_string()).is_err());
-    //     }
+        #[test]
+        fn missing_equals_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert!(ODBCUri::new("driver=Foo;Bar".to_string()).is_err());
+        }
 
-    //     #[test]
-    //     fn one_attribute_works() {
-    //         use crate::map;
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected = ODBCUri(map! {"driver".to_string() => "Foo".to_string()});
-    //         assert_eq!(expected, ODBCUri::new("Driver=Foo".to_string()).unwrap());
-    //     }
+        #[test]
+        fn one_attribute_works() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(map! {"driver".to_string() => "Foo".to_string()});
+            assert_eq!(expected, ODBCUri::new("Driver=Foo".to_string()).unwrap());
+        }
 
-    //     #[test]
-    //     fn two_attributes_works() {
-    //         use crate::map;
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected = ODBCUri(
-    //             map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
-    //         );
-    //         assert_eq!(
-    //             expected,
-    //             ODBCUri::new("Driver=Foo;SERVER=bAr".to_string()).unwrap()
-    //         );
-    //     }
+        #[test]
+        fn two_attributes_works() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;SERVER=bAr".to_string()).unwrap()
+            );
+        }
 
-    //     #[test]
-    //     fn simple_types_only_test() {
-    //         use crate::map;
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected = ODBCUri(
-    //             map! {"driver".to_string() => "Foo".to_string(), "simple_types_only".to_string() => "1".to_string()},
-    //         );
-    //         assert_eq!(
-    //             expected,
-    //             ODBCUri::new("Driver=Foo;simple_types_only=1".to_string()).unwrap()
-    //         );
-    //     }
+        #[test]
+        fn simple_types_only_test() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "simple_types_only".to_string() => "1".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;simple_types_only=1".to_string()).unwrap()
+            );
+        }
 
-    //     #[test]
-    //     fn repeated_attribute_selects_first() {
-    //         use crate::map;
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected = ODBCUri(
-    //             map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
-    //         );
-    //         assert_eq!(
-    //             expected,
-    //             ODBCUri::new("Driver=Foo;SERVER=bAr;Driver=F".to_string()).unwrap()
-    //         );
-    //     }
+        #[test]
+        fn repeated_attribute_selects_first() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;SERVER=bAr;Driver=F".to_string()).unwrap()
+            );
+        }
 
-    //     #[test]
-    //     fn two_attributes_with_trailing_semi_works() {
-    //         use crate::map;
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected = ODBCUri(
-    //             map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
-    //         );
-    //         assert_eq!(
-    //             expected,
-    //             ODBCUri::new("Driver=Foo;SERVER=bAr;".to_string()).unwrap()
-    //         );
-    //     }
+        #[test]
+        fn two_attributes_with_trailing_semi_works() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;SERVER=bAr;".to_string()).unwrap()
+            );
+        }
 
-    //     #[test]
-    //     fn two_attributes_with_triple_trailing_semis_works() {
-    //         use crate::map;
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected = ODBCUri(
-    //             map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
-    //         );
-    //         assert_eq!(
-    //             expected,
-    //             ODBCUri::new("Driver=Foo;;;SERVER=bAr;;;".to_string()).unwrap()
-    //         );
-    //     }
+        #[test]
+        fn two_attributes_with_triple_trailing_semis_works() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;;;SERVER=bAr;;;".to_string()).unwrap()
+            );
+        }
 
-    //     #[test]
-    //     fn log_level() {
-    //         use crate::map;
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected = ODBCUri(
-    //             map! {"driver".to_string() => "foo".to_string(), "server".to_string() => "bAr".to_string(), "loglevel".to_string() => "debug".to_string()},
-    //         );
-    //         assert_eq!(
-    //             expected,
-    //             ODBCUri::new("Driver=foo;SERVER=bAr;LOGLEVEL=debug".to_string()).unwrap()
-    //         );
-    //     }
-    // }
+        #[test]
+        fn log_level() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "foo".to_string(), "server".to_string() => "bAr".to_string(), "loglevel".to_string() => "debug".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=foo;SERVER=bAr;LOGLEVEL=debug".to_string()).unwrap()
+            );
+        }
+    }
 
-    // #[cfg(test)]
-    // mod try_into_client_options {
-    //     use mongodb::options::ClientOptions;
+    #[cfg(test)]
+    mod try_into_client_options {
+        use mongodb::options::ClientOptions;
 
-    //     #[test]
-    //     fn missing_server_is_err() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert_eq!(
-    //             "Invalid Uri: server is required for a valid Mongo ODBC Uri",
-    //             format!(
-    //                 "{}",
-    //                 ODBCUri::new("USER=foo;PWD=bar".to_string())
-    //                     .unwrap()
-    //                     .try_into_client_options()
-    //                     .unwrap_err()
-    //             )
-    //         );
-    //     }
-    //     #[test]
-    //     fn missing_pwd_is_err() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert_eq!(
-    //         "Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri",
-    //         format!(
-    //             "{}",
-    //             ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017".to_string())
-    //                 .unwrap()
-    //                 .try_into_client_options()
-    //                 .unwrap_err()
-    //         )
-    //     );
-    //     }
-    //     #[test]
-    //     fn missing_user_is_err() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert_eq!(
-    //             "Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri",
-    //             format!(
-    //                 "{}",
-    //                 ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017".to_string())
-    //                     .unwrap()
-    //                     .try_into_client_options()
-    //                     .unwrap_err()
-    //             )
-    //         );
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn missing_server_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "Invalid Uri: server is required for a valid Mongo ODBC Uri",
+                format!(
+                    "{}",
+                    ODBCUri::new("USER=foo;PWD=bar".to_string())
+                        .unwrap()
+                        .try_into_client_options()
+                        .await
+                        .unwrap_err()
+                )
+            );
+        }
+        #[tokio::test(flavor = "current_thread")]
+        async fn missing_pwd_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+            "Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri",
+            format!(
+                "{}",
+                ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017".to_string())
+                    .unwrap()
+                    .try_into_client_options().await
+                    .unwrap_err()
+            )
+        );
+        }
+        #[tokio::test(flavor = "current_thread")]
+        async fn missing_user_is_err() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri",
+                format!(
+                    "{}",
+                    ODBCUri::new("PWD=bar;SERVER=127.0.0.1:27017".to_string())
+                        .unwrap()
+                        .try_into_client_options()
+                        .await
+                        .unwrap_err()
+                )
+            );
+        }
 
-    //     #[test]
-    //     fn use_pwd_server_works() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert_eq!(
-    //             ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
-    //                 .unwrap()
-    //                 .credential
-    //                 .unwrap()
-    //                 .password,
-    //             ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017".to_string())
-    //                 .unwrap()
-    //                 .try_into_client_options()
-    //                 .unwrap()
-    //                 .client_options
-    //                 .credential
-    //                 .unwrap()
-    //                 .password
-    //         );
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn use_pwd_server_works() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
+                    .await
+                    .unwrap()
+                    .credential
+                    .unwrap()
+                    .password,
+                ODBCUri::new("USER=foo;PWD=bar;SERVER=127.0.0.1:27017".to_string())
+                    .unwrap()
+                    .try_into_client_options()
+                    .await
+                    .unwrap()
+                    .client_options
+                    .credential
+                    .unwrap()
+                    .password
+            );
+        }
 
-    //     #[test]
-    //     fn uid_instead_of_user_works() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert_eq!(
-    //             ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
-    //                 .unwrap()
-    //                 .credential
-    //                 .unwrap()
-    //                 .username,
-    //             ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017".to_string())
-    //                 .unwrap()
-    //                 .try_into_client_options()
-    //                 .unwrap()
-    //                 .client_options
-    //                 .credential
-    //                 .unwrap()
-    //                 .username
-    //         );
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn uid_instead_of_user_works() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
+                    .await
+                    .unwrap()
+                    .credential
+                    .unwrap()
+                    .username,
+                ODBCUri::new("UID=foo;PWD=bar;SERVER=127.0.0.1:27017".to_string())
+                    .unwrap()
+                    .try_into_client_options()
+                    .await
+                    .unwrap()
+                    .client_options
+                    .credential
+                    .unwrap()
+                    .username
+            );
+        }
 
-    //     #[test]
-    //     fn password_instead_of_pwd_works() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert_eq!(
-    //             ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
-    //                 .unwrap()
-    //                 .credential
-    //                 .unwrap()
-    //                 .password,
-    //             ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017".to_string())
-    //                 .unwrap()
-    //                 .try_into_client_options()
-    //                 .unwrap()
-    //                 .client_options
-    //                 .credential
-    //                 .unwrap()
-    //                 .password
-    //         );
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn password_instead_of_pwd_works() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
+                    .await
+                    .unwrap()
+                    .credential
+                    .unwrap()
+                    .password,
+                ODBCUri::new("UID=foo;PassworD=bar;SERVER=127.0.0.1:27017".to_string())
+                    .unwrap()
+                    .try_into_client_options()
+                    .await
+                    .unwrap()
+                    .client_options
+                    .credential
+                    .unwrap()
+                    .password
+            );
+        }
 
-    //     #[test]
-    //     fn uri_with_embedded_user_and_password_works() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
-    //         let expected_cred = expected_opts.credential.unwrap();
-    //         let opts = ODBCUri::new("URI=mongodb://foo:bar@127.0.0.1:27017".to_string())
-    //             .unwrap()
-    //             .try_into_client_options()
-    //             .unwrap()
-    //             .client_options;
-    //         let cred = opts.credential.unwrap();
-    //         assert_eq!(expected_cred.username, cred.username);
-    //         assert_eq!(expected_cred.password, cred.password);
-    //         assert_eq!(expected_opts.hosts, opts.hosts);
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn uri_with_embedded_user_and_password_works() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
+                .await
+                .unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("URI=mongodb://foo:bar@127.0.0.1:27017".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap()
+                .client_options;
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+            assert_eq!(expected_opts.hosts, opts.hosts);
+        }
 
-    //     #[test]
-    //     fn uri_seperate_user_and_password_replace_embedded() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected_opts =
-    //             ClientOptions::parse("mongodb://foo2:bar2@127.0.0.1:27017").unwrap();
-    //         let expected_cred = expected_opts.credential.unwrap();
-    //         let opts = ODBCUri::new(
-    //             "USER=foo2;PWD=bar2;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
-    //         )
-    //         .unwrap()
-    //         .try_into_client_options()
-    //         .unwrap()
-    //         .client_options;
-    //         let cred = opts.credential.unwrap();
-    //         assert_eq!(expected_cred.username, cred.username);
-    //         assert_eq!(expected_cred.password, cred.password);
-    //         assert_eq!(expected_opts.hosts, opts.hosts);
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn uri_seperate_user_and_password_replace_embedded() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse("mongodb://foo2:bar2@127.0.0.1:27017")
+                .await
+                .unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new(
+                "USER=foo2;PWD=bar2;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap()
+            .client_options;
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+            assert_eq!(expected_opts.hosts, opts.hosts);
+        }
 
-    //     #[test]
-    //     fn uri_with_separate_user_and_password_works() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
-    //         let expected_cred = expected_opts.credential.unwrap();
-    //         let opts = ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://127.0.0.1:27017".to_string())
-    //             .unwrap()
-    //             .try_into_client_options()
-    //             .unwrap()
-    //             .client_options;
-    //         let cred = opts.credential.unwrap();
-    //         assert_eq!(expected_cred.username, cred.username);
-    //         assert_eq!(expected_cred.password, cred.password);
-    //         assert_eq!(expected_opts.hosts, opts.hosts);
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn uri_with_separate_user_and_password_works() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
+                .await
+                .unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://127.0.0.1:27017".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap()
+                .client_options;
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+            assert_eq!(expected_opts.hosts, opts.hosts);
+        }
 
-    //     #[test]
-    //     fn uri_with_separate_password_works() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017").unwrap();
-    //         let expected_cred = expected_opts.credential.unwrap();
-    //         let opts = ODBCUri::new("PWD=bar;URI=mongodb://foo@127.0.0.1:27017".to_string())
-    //             .unwrap()
-    //             .try_into_client_options()
-    //             .unwrap()
-    //             .client_options;
-    //         let cred = opts.credential.unwrap();
-    //         assert_eq!(expected_cred.username, cred.username);
-    //         assert_eq!(expected_cred.password, cred.password);
-    //         assert_eq!(expected_opts.hosts, opts.hosts);
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn uri_with_separate_password_works() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
+                .await
+                .unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("PWD=bar;URI=mongodb://foo@127.0.0.1:27017".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap()
+                .client_options;
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+            assert_eq!(expected_opts.hosts, opts.hosts);
+        }
 
-    //     #[test]
-    //     fn credless_uri_without_user_and_password_is_error() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert_eq!(
-    //             "Err(InvalidUriFormat(\"One of [\\\"uid\\\", \\\"user\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
-    //             format!(
-    //                 "{:?}",
-    //                 ODBCUri::new("URI=mongodb://127.0.0.1:27017".to_string())
-    //                     .unwrap()
-    //                     .try_into_client_options()
-    //             )
-    //         );
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn credless_uri_without_user_and_password_is_error() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "Err(InvalidUriFormat(\"One of [\\\"uid\\\", \\\"user\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
+                format!(
+                    "{:?}",
+                    ODBCUri::new("URI=mongodb://127.0.0.1:27017".to_string())
+                        .unwrap()
+                        .try_into_client_options()
+                        .await
+                )
+            );
+        }
 
-    //     #[test]
-    //     fn credless_uri_with_user_and_no_password_is_error() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         assert_eq!(
-    //             "Err(InvalidUriFormat(\"One of [\\\"password\\\", \\\"pwd\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
-    //             format!(
-    //                 "{:?}",
-    //                 ODBCUri::new("URI=mongodb://foo@127.0.0.1:27017".to_string())
-    //                     .unwrap()
-    //                     .try_into_client_options()
-    //             )
-    //         );
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn credless_uri_with_user_and_no_password_is_error() {
+            use crate::odbc_uri::ODBCUri;
+            assert_eq!(
+                "Err(InvalidUriFormat(\"One of [\\\"password\\\", \\\"pwd\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
+                format!(
+                    "{:?}",
+                    ODBCUri::new("URI=mongodb://foo@127.0.0.1:27017".to_string())
+                        .unwrap()
+                        .try_into_client_options()
+                        .await
+                )
+            );
+        }
 
-    //     #[test]
-    //     fn auth_source_correctness() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         for (source, uri) in [
-    //             (Some("authDB".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar"),
-    //             (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
-    //             (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B;UID=foo;PWD=bar"),
-    //             (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B&appName=tgg#fed;UID=foo;PWD=bar"),
-    //             (Some("$external".to_string()), "URI=mongodb://uid:pwd@localhost/?authSource=$external&appName=tgg#fed;UID=foo;PWD=bar"),
-    //             (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?appName=test&auTHSource=aut:hD@B;UID=foo;PWD=bar"),
-    //             (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
-    //         ] {
-    //         assert_eq!(
-    //             source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().unwrap().client_options.credential.unwrap().source);
-    //         }
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn auth_source_correctness() {
+            use crate::odbc_uri::ODBCUri;
+            for (source, uri) in [
+                (Some("authDB".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar"),
+                (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
+                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B;UID=foo;PWD=bar"),
+                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B&appName=tgg#fed;UID=foo;PWD=bar"),
+                (Some("$external".to_string()), "URI=mongodb://uid:pwd@localhost/?authSource=$external&appName=tgg#fed;UID=foo;PWD=bar"),
+                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?appName=test&auTHSource=aut:hD@B;UID=foo;PWD=bar"),
+                (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
+            ] {
+            assert_eq!(
+                source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().await.unwrap().client_options.credential.unwrap().source);
+            }
+        }
 
-    //     #[test]
-    //     fn uri_seperate_server_replaces_embedded() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected_opts =
-    //             ClientOptions::parse("mongodb://foo2:bar2@127.0.0.2:27017").unwrap();
-    //         let opts = ODBCUri::new(
-    //             "SERVER=127.0.0.2:27017;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
-    //         )
-    //         .unwrap()
-    //         .try_into_client_options()
-    //         .unwrap()
-    //         .client_options;
-    //         assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn uri_seperate_server_replaces_embedded() {
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse("mongodb://foo2:bar2@127.0.0.2:27017")
+                .await
+                .unwrap();
+            let opts = ODBCUri::new(
+                "SERVER=127.0.0.2:27017;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap()
+            .client_options;
+            assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
+        }
 
-    //     #[test]
-    //     fn supplied_args_override_dsn_args() {
-    //         // we leave dsn out of the uri so that it doesn't try to query the registry in the test
-    //         use crate::odbc_uri::ODBCUri;
-    //         let expected_opts = ClientOptions::parse(
-    //             "mongodb://foo:bar@www.atlas.net:27017/?authSource=authDB&ssl=true",
-    //         )
-    //         .unwrap();
-    //         let expected_cred = expected_opts.credential.unwrap();
-    //         let opts = ODBCUri::new("UID=foo;PWD=bar;SERVER=www.atlas.net:27017;User=foo2;Password=bar2;uri=mongodb://localhost:29000/?authSource=authDB&ssl=true".to_string())
-    //             .unwrap()
-    //             .try_into_client_options()
-    //             .unwrap().client_options;
-    //         let cred = opts.credential.unwrap();
-    //         assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
-    //         assert_eq!(expected_cred.username, cred.username);
-    //         assert_eq!(expected_cred.password, cred.password);
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn supplied_args_override_dsn_args() {
+            // we leave dsn out of the uri so that it doesn't try to query the registry in the test
+            use crate::odbc_uri::ODBCUri;
+            let expected_opts = ClientOptions::parse(
+                "mongodb://foo:bar@www.atlas.net:27017/?authSource=authDB&ssl=true",
+            )
+            .await
+            .unwrap();
+            let expected_cred = expected_opts.credential.unwrap();
+            let opts = ODBCUri::new("UID=foo;PWD=bar;SERVER=www.atlas.net:27017;User=foo2;Password=bar2;uri=mongodb://localhost:29000/?authSource=authDB&ssl=true".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap().client_options;
+            let cred = opts.credential.unwrap();
+            assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
+            assert_eq!(expected_cred.username, cred.username);
+            assert_eq!(expected_cred.password, cred.password);
+        }
 
-    //     #[test]
-    //     fn no_app_name_in_odbc_uri_or_mongodb_uri_still_shows_odbc_driver_version() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         use constants::DEFAULT_APP_NAME;
-    //         let uri_opts =
-    //             ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://localhost:27017/".to_string())
-    //                 .unwrap()
-    //                 .try_into_client_options()
-    //                 .unwrap();
-    //         assert_eq!(*DEFAULT_APP_NAME, uri_opts.client_options.app_name.unwrap());
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn no_app_name_in_odbc_uri_or_mongodb_uri_still_shows_odbc_driver_version() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DEFAULT_APP_NAME;
+            let uri_opts =
+                ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://localhost:27017/".to_string())
+                    .unwrap()
+                    .try_into_client_options()
+                    .await
+                    .unwrap();
+            assert_eq!(*DEFAULT_APP_NAME, uri_opts.client_options.app_name.unwrap());
+        }
 
-    //     #[test]
-    //     fn app_name_in_odbc_uri_and_no_mongodb_uri() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         use constants::DEFAULT_APP_NAME;
-    //         let uri_opts = ODBCUri::new(
-    //             "USER=foo;PWD=bar;SERVER=localhost:27017;APPNAME=powerbi-connector+1.0.0"
-    //                 .to_string(),
-    //         )
-    //         .unwrap()
-    //         .try_into_client_options()
-    //         .unwrap();
-    //         assert_eq!(
-    //             format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
-    //             uri_opts.client_options.app_name.unwrap()
-    //         );
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn app_name_in_odbc_uri_and_no_mongodb_uri() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DEFAULT_APP_NAME;
+            let uri_opts = ODBCUri::new(
+                "USER=foo;PWD=bar;SERVER=localhost:27017;APPNAME=powerbi-connector+1.0.0"
+                    .to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap();
+            assert_eq!(
+                format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
+                uri_opts.client_options.app_name.unwrap()
+            );
+        }
 
-    //     #[test]
-    //     fn no_app_name_in_odbc_uri_and_no_mongodb_uri() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         use constants::DEFAULT_APP_NAME;
-    //         let uri_opts = ODBCUri::new("USER=foo;PWD=bar;SERVER=localhost:27017;".to_string())
-    //             .unwrap()
-    //             .try_into_client_options()
-    //             .unwrap();
-    //         assert_eq!(*DEFAULT_APP_NAME, uri_opts.client_options.app_name.unwrap());
-    //     }
+        #[tokio::test(flavor = "current_thread")]
+        async fn no_app_name_in_odbc_uri_and_no_mongodb_uri() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DEFAULT_APP_NAME;
+            let uri_opts = ODBCUri::new("USER=foo;PWD=bar;SERVER=localhost:27017;".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
+            assert_eq!(*DEFAULT_APP_NAME, uri_opts.client_options.app_name.unwrap());
+        }
 
-    //     #[test]
-    //     fn app_name_in_odbc_uri_shows_with_odbc_driver_version_added() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         use constants::DEFAULT_APP_NAME;
-    //         let uri_opts = ODBCUri::new(
-    //             "USER=foo;PWD=bar;URI=mongodb://localhost:27017/;APPNAME=powerbi-connector+1.0.0"
-    //                 .to_string(),
-    //         )
-    //         .unwrap()
-    //         .try_into_client_options()
-    //         .unwrap();
+        #[tokio::test(flavor = "current_thread")]
+        async fn app_name_in_odbc_uri_shows_with_odbc_driver_version_added() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DEFAULT_APP_NAME;
+            let uri_opts = ODBCUri::new(
+                "USER=foo;PWD=bar;URI=mongodb://localhost:27017/;APPNAME=powerbi-connector+1.0.0"
+                    .to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap();
 
-    //         assert_eq!(
-    //             format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
-    //             uri_opts.client_options.app_name.unwrap()
-    //         );
-    //     }
-    //     #[test]
-    //     fn app_name_in_odbc_uri_and_mongodb_uri_chains_and_adds_odbc_driver_version() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         use constants::DEFAULT_APP_NAME;
-    //         let uri_opts = ODBCUri::new(
-    //             "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;APPNAME=powerbi-connector+1.0.0"
-    //                 .to_string(),
-    //         )
-    //         .unwrap()
-    //         .try_into_client_options()
-    //         .unwrap();
+            assert_eq!(
+                format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
+                uri_opts.client_options.app_name.unwrap()
+            );
+        }
+        #[tokio::test(flavor = "current_thread")]
+        async fn app_name_in_odbc_uri_and_mongodb_uri_chains_and_adds_odbc_driver_version() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DEFAULT_APP_NAME;
+            let uri_opts = ODBCUri::new(
+                "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;APPNAME=powerbi-connector+1.0.0"
+                    .to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap();
 
-    //         assert_eq!(
-    //             format!("{}|powerbi-connector+1.0.0|foo", *DEFAULT_APP_NAME),
-    //             uri_opts.client_options.app_name.unwrap()
-    //         );
-    //     }
+            assert_eq!(
+                format!("{}|powerbi-connector+1.0.0|foo", *DEFAULT_APP_NAME),
+                uri_opts.client_options.app_name.unwrap()
+            );
+        }
 
-    //     #[test]
-    //     fn driver_info_with_powerbi_provided() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         use constants::DRIVER_SHORT_NAME;
-    //         let uri_opts = ODBCUri::new(
-    //             "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;APPNAME=powerbi-connector+1.0.0"
-    //                 .to_string(),
-    //         )
-    //         .unwrap()
-    //         .try_into_client_options()
-    //         .unwrap();
+        #[tokio::test(flavor = "current_thread")]
+        async fn driver_info_with_powerbi_provided() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DRIVER_SHORT_NAME;
+            let uri_opts = ODBCUri::new(
+                "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;APPNAME=powerbi-connector+1.0.0"
+                    .to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap();
 
-    //         assert_eq!(
-    //             format!("{DRIVER_SHORT_NAME}|powerbi-connector",),
-    //             uri_opts.client_options.driver_info.unwrap().name
-    //         );
-    //     }
+            assert_eq!(
+                format!("{DRIVER_SHORT_NAME}|powerbi-connector",),
+                uri_opts.client_options.driver_info.unwrap().name
+            );
+        }
 
-    //     #[test]
-    //     fn driver_info_with_no_powerbi_provided() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         use constants::DRIVER_SHORT_NAME;
-    //         let uri_opts = ODBCUri::new(
-    //             "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;".to_string(),
-    //         )
-    //         .unwrap()
-    //         .try_into_client_options()
-    //         .unwrap();
+        #[tokio::test(flavor = "current_thread")]
+        async fn driver_info_with_no_powerbi_provided() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DRIVER_SHORT_NAME;
+            let uri_opts = ODBCUri::new(
+                "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;".to_string(),
+            )
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap();
 
-    //         assert_eq!(
-    //             DRIVER_SHORT_NAME,
-    //             uri_opts.client_options.driver_info.unwrap().name
-    //         );
-    //     }
+            assert_eq!(
+                DRIVER_SHORT_NAME,
+                uri_opts.client_options.driver_info.unwrap().name
+            );
+        }
 
-    //     #[test]
-    //     fn driver_info_with_no_mongodb_uri_and_no_odbc_uri_appname() {
-    //         use crate::odbc_uri::ODBCUri;
-    //         use constants::DRIVER_SHORT_NAME;
-    //         let uri_opts = ODBCUri::new("USER=foo;PWD=bar;SERVER=localhost:27017".to_string())
-    //             .unwrap()
-    //             .try_into_client_options()
-    //             .unwrap();
+        #[tokio::test(flavor = "current_thread")]
+        async fn driver_info_with_no_mongodb_uri_and_no_odbc_uri_appname() {
+            use crate::odbc_uri::ODBCUri;
+            use constants::DRIVER_SHORT_NAME;
+            let uri_opts = ODBCUri::new("USER=foo;PWD=bar;SERVER=localhost:27017".to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
 
-    //         assert_eq!(
-    //             DRIVER_SHORT_NAME,
-    //             uri_opts.client_options.driver_info.unwrap().name
-    //         );
-    //     }
-    // }
+            assert_eq!(
+                DRIVER_SHORT_NAME,
+                uri_opts.client_options.driver_info.unwrap().name
+            );
+        }
+    }
 }

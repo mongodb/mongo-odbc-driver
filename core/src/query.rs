@@ -76,13 +76,13 @@ impl MongoStatement for MongoQuery {
     // Return true if moving was successful, false otherwise.
     // This method deserializes the current row and stores it in self.
     fn next(&mut self, connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
-        let res = if let Some(c) = connection {
-            let _guard = c.runtime.enter();
-            let handle = c.runtime.handle();
+        let res = if let Some(conn) = connection {
+            let _guard = conn.runtime.enter();
             self.resultset_cursor
                 .as_mut()
                 .map_or(Err(Error::StatementNotExecuted), |c| {
-                    handle.block_on(async { c.advance().await.map_err(Error::QueryCursorUpdate) })
+                    conn.runtime
+                        .block_on(async { c.advance().await.map_err(Error::QueryCursorUpdate) })
                 })
         } else {
             Err(Error::QueryCancelled)

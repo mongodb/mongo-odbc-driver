@@ -95,7 +95,7 @@ impl MongoConnection {
     /// cancels all queries for a given statement id
     pub fn cancel_queries_for_statement(&self, statement_id: Bson) -> Result<bool> {
         let _guard = self.runtime.enter();
-        self.runtime.handle().block_on(async {
+        self.runtime.block_on(async {
             // use $currentOp and match the comment field to identify any queries issued by the current statement
             let current_ops_pipeline = vec![
                 doc! {"$currentOp": {}},

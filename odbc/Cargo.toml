@@ -27,6 +27,9 @@ definitions = { path = "../definitions" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 logger = { path = "../logger" }
 log = "0.4.17"
+# Do NOT change these features without consulting with other team members. 
+# The features are used to control the behavior of tokio. Tokio is unsafe to use
+# across ABI boundaries in any other runtime but current_thread
 tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
 mongodb = "2.8.2"
 
