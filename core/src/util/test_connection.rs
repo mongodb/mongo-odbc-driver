@@ -14,9 +14,7 @@ use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
 /// # Safety
 /// Because this function is called from C, it is unsafe.
 ///
-pub fn foo() {
-    println!("foo");
-}
+
 #[no_mangle]
 pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const WideChar,
@@ -72,7 +70,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
     }
 }
 
-// // Tests require a local adf to be running.
+// Tests require a local adf to be running.
 #[cfg(test)]
 mod test {
     use super::atlas_sql_test_connection;
