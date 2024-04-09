@@ -32,6 +32,10 @@ mongodb = "2.8.2"
 # across ABI boundaries in any other runtime but current_thread
 tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
 futures = "0.3"
+openidconnect = "3"
+open = "5"
+reqwest = { version = "0", features = ["blocking"] }
+rfc8252_http_server = { path = "../rfc8252_http_server" }
 
 
 [target.'cfg(windows)'.dependencies]

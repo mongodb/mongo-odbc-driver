@@ -290,14 +290,6 @@ impl MongoStatement for MongoCollections {
 }
 
 mod unit {
-    use lazy_static::lazy_static;
-
-    lazy_static! {
-        pub static ref RUNTIME: tokio::runtime::Runtime =
-            tokio::runtime::Builder::new_current_thread()
-                .build()
-                .unwrap();
-    }
 
     #[test]
     fn metadata_size() {
@@ -319,28 +311,28 @@ mod unit {
         assert_eq!(
             "TABLE_SCHEM",
             MongoCollections::empty()
-                .get_col_metadata(2,)
+                .get_col_metadata(2)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "TABLE_NAME",
             MongoCollections::empty()
-                .get_col_metadata(3,)
+                .get_col_metadata(3)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "TABLE_TYPE",
             MongoCollections::empty()
-                .get_col_metadata(4,)
+                .get_col_metadata(4)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "REMARKS",
             MongoCollections::empty()
-                .get_col_metadata(5,)
+                .get_col_metadata(5)
                 .unwrap()
                 .col_name
         );
@@ -352,35 +344,35 @@ mod unit {
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(1,)
+                .get_col_metadata(1)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(2,)
+                .get_col_metadata(2)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(3,)
+                .get_col_metadata(3)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(4,)
+                .get_col_metadata(4)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(5,)
+                .get_col_metadata(5)
                 .unwrap()
                 .type_name
         );
@@ -393,14 +385,14 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
-                .get_col_metadata(1,)
+                .get_col_metadata(1)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoCollections::empty()
-                .get_col_metadata(2,)
+                .get_col_metadata(2)
                 .unwrap()
                 .nullability
         );
@@ -408,7 +400,7 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
-                .get_col_metadata(3,)
+                .get_col_metadata(3)
                 .unwrap()
                 .nullability
         );
@@ -417,14 +409,14 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
-                .get_col_metadata(4,)
+                .get_col_metadata(4)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoCollections::empty()
-                .get_col_metadata(5,)
+                .get_col_metadata(5)
                 .unwrap()
                 .nullability
         );

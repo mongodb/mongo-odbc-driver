@@ -2,7 +2,6 @@ use actix_web::{
     self, dev::ServerHandle, http, web, App, HttpRequest, HttpResponse, HttpServer, Result,
 };
 use askama::Template;
-use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::result::Result as StdResult;
 use tokio::sync::mpsc;
@@ -26,7 +25,7 @@ const STATE: &str = "state";
 // html template constants
 // TODO SQL-2008: make sure this page exists and possibly update the link if the
 // docs team has a preference
-const ERROR_URI: &str = "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect/oidc_login_error";
+const ERROR_URI: &str = "https://www.mongodb.com/docs/atlas/security-oidc/";
 const PRODUCT_DOCS_LINK: &str =
     "https://www.mongodb.com/docs/atlas/data-federation/query/sql/drivers/odbc/connect";
 const PRODUCT_DOCS_NAME: &str = "Atlas SQL ODBC Driver";
@@ -235,6 +234,7 @@ pub async fn start() -> (
 #[cfg(test)]
 mod unit {
     use super::*;
+    use once_cell::sync::Lazy;
     // This is only to synchronize the tests so that they don't run concurrently
     // This essentially forces what `cargo test -- --test-threads=1` does
     static TEST_SYNC: Lazy<tokio::sync::Mutex<Executor>> =
