@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 mod common;
 
-static TEST_SYNC: Mutex<Executor> = Mutex::new(Executor);
+static TEST_SEQUENTIAL: Mutex<Executor> = Mutex::new(Executor);
 #[derive(Clone, Copy)]
 struct Executor;
 
@@ -42,7 +42,7 @@ macro_rules! test_connection_diagnostics {
             let mut in_connection_string_encoded = cstr::to_widechar_vec(in_connection_string);
             in_connection_string_encoded.push(0);
 
-            crate::TEST_SYNC.lock().unwrap().run_test(|| {
+            crate::TEST_SEQUENTIAL.lock().unwrap().run_test(|| {
                 unsafe {
                     let _ = SQLAllocHandle(
                         HandleType::SQL_HANDLE_ENV,

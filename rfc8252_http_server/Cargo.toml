@@ -1,7 +1,10 @@
 [package]
 name = "rfc8252_http_server"
 version = "0.0.0"
-authors = ["Patrick Meredith <pmeredit@protonmail.com>"]
+authors = [
+    "Patrick Meredith <pmeredit@protonmail.com>",
+    "Nathan Leniz <nathan.leniz@gmail.com>",
+]
 edition = "2021"
 
 [dependencies]

@@ -237,13 +237,13 @@ mod unit {
     use once_cell::sync::Lazy;
     // This is only to synchronize the tests so that they don't run concurrently
     // This essentially forces what `cargo test -- --test-threads=1` does
-    static TEST_SYNC: Lazy<tokio::sync::Mutex<Executor>> =
+    static TEST_SEQUENTIAL: Lazy<tokio::sync::Mutex<Executor>> =
         Lazy::new(|| tokio::sync::Mutex::new(Executor));
     struct Executor;
 
     #[tokio::test(flavor = "current_thread")]
     async fn rfc8252_http_server_accepted() {
-        let _lock = TEST_SYNC.lock().await;
+        let _lock = TEST_SEQUENTIAL.lock().await;
         let (server_handle, mut oidc_params_receiver) = start().await;
         let _ = reqwest::get(format!(
             "{}{}",
@@ -259,7 +259,7 @@ mod unit {
 
     #[tokio::test(flavor = "current_thread")]
     async fn rfc8252_http_server_error() {
-        let _lock = TEST_SYNC.lock().await;
+        let _lock = TEST_SEQUENTIAL.lock().await;
         let (server_handle, mut oidc_params_receiver) = start().await;
         let _ = reqwest::get(format!(
             "{}{}",
@@ -274,7 +274,7 @@ mod unit {
 
     #[tokio::test(flavor = "current_thread")]
     async fn rfc8252_http_server_no_params() {
-        let _lock = TEST_SYNC.lock().await;
+        let _lock = TEST_SEQUENTIAL.lock().await;
         let (server_handle, mut oidc_params_receiver) = start().await;
         let _ = reqwest::get(DEFAULT_REDIRECT_URI).await.unwrap();
         let oidc_params = oidc_params_receiver.recv().await.unwrap();
