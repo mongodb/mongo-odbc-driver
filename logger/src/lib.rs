@@ -133,7 +133,8 @@ impl Logger {
     /// This is useful to check the content of the log files.
     pub fn get_log_dir(driver_path: String) -> PathBuf {
         // for tests we'll always use the temp directory
-        if cfg!(test) {
+        // integration tests use the test feature, so will use the temp directory
+        if cfg!(test) || cfg!(feature = "test") {
             return std::env::temp_dir();
         }
         if driver_path.is_empty() {

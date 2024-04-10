@@ -31,7 +31,7 @@ log = "0.4.17"
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread
 tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
-mongodb = "2.8.2"
+mongodb = { version = "2.8.2", features = ["aws-auth"] }
 
 [dependencies.bson]
 version = "2.0.1"
