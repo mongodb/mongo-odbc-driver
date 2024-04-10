@@ -1,3 +1,6 @@
+use core::time;
+use std::str::FromStr;
+
 use crate::{
     api::functions::{SQLFetch, SQLMoreResults},
     handles::definitions::{
@@ -43,6 +46,7 @@ const UNICODE_COL: u16 = 18;
 const NEGATIVE_COL: u16 = 19;
 const UNIT_STR_COL: u16 = 20;
 const GUID_COL: u16 = 21;
+const NUMBER_DECIMAL_COL: u16 = 22;
 
 const ARRAY_STR_VAL: (u16, &str) = (ARRAY_COL, "[1,2,3]");
 const BIN_STR_VAL: (u16, &str) = (
@@ -51,6 +55,7 @@ const BIN_STR_VAL: (u16, &str) = (
 );
 const BOOL_STR_VAL: (u16, &str) = (BOOL_COL, "true");
 const DATETIME_STR_VAL: (u16, &str) = (DATETIME_COL, "{\"$date\":\"2014-11-28T12:00:09Z\"}");
+const NUMBER_DECIMAL_STR_VAL: (u16, &str) = (NUMBER_DECIMAL_COL, "{\"$numberDecimal\":\"1.3\"}");
 const DOC_STR_VAL: (u16, &str) = (DOC_COL, "{\"x\":42,\"y\":42}");
 const DOUBLE_STR_VAL: (u16, &str) = (DOUBLE_COL, "1.3");
 const I32_STR_VAL: (u16, &str) = (I32_COL, "1");
@@ -86,7 +91,6 @@ lazy_static! {
                 "bool": true,
                 "datetime": Bson::DateTime(DateTime::from_chrono(*CHRONO_TIME)),
                 // no good way to easily test dbpointer.
-                // TODO: SQL-1068: Add Decimal128 value.
                 "doc": {"x": 42i32, "y": 42i32},
                 "f64": 1.3,
                 "i3232": Bson::Int32(1i32),
@@ -115,6 +119,7 @@ lazy_static! {
                     subtype: BinarySubtype::Uuid,
                     bytes: vec![0xd5, 0xe3, 0xac, 0x31, 0xfd, 0x29, 0x49, 0xe3, 0x87, 0x59, 0x08, 0xd1, 0x16, 0xe9, 0x8b, 0x29],
                 }),
+                "numberDecimal": Bson::Decimal128(bson::Decimal128::from_str("1.3").unwrap())
             }}],
             vec![
                 MongoColMetadata::new(
@@ -291,6 +296,14 @@ lazy_static! {
                     "test".to_string(),
                     "guid".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Standard
+                ),
+                MongoColMetadata::new(
+                    "",
+                    "test".to_string(),
+                    "numberDecimal".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Decimal)),
                     Nullability::SQL_NO_NULLS,
                     TypeMode::Standard
                 ),
@@ -307,7 +320,6 @@ lazy_static! {
                 "bool": true,
                 "datetime": Bson::DateTime(DateTime::from_chrono(*CHRONO_TIME)),
                 // no good way to easily test dbpointer.
-                // TODO: SQL-1068: Add Decimal128 value.
                 "doc": {"x": 42i32, "y": 42i32},
                 "f64": 1.3,
                 "i3232": Bson::Int32(1i32),
@@ -336,6 +348,7 @@ lazy_static! {
                     subtype: BinarySubtype::Uuid,
                     bytes: vec![0xd5, 0xe3, 0xac, 0x31, 0xfd, 0x29, 0x49, 0xe3, 0x87, 0x59, 0x08, 0xd1, 0x16, 0xe9, 0x8b, 0x29],
                 }),
+                "numberDecimal": Bson::Decimal128(bson::Decimal128::from_str("1.3").unwrap())
             }}],
             vec![
                 MongoColMetadata::new(
@@ -512,6 +525,14 @@ lazy_static! {
                     "test".to_string(),
                     "guid".to_string(),
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::BinData)),
+                    Nullability::SQL_NO_NULLS,
+                    TypeMode::Simple
+                ),
+                MongoColMetadata::new(
+                    "",
+                    "test".to_string(),
+                    "numberDecimal".to_string(),
+                    Schema::Atomic(Atomic::Scalar(BsonTypeName::Decimal)),
                     Nullability::SQL_NO_NULLS,
                     TypeMode::Simple
                 ),
@@ -544,6 +565,7 @@ fn sql_fetch_and_more_results_basic_functionality(type_mode: TypeMode) {
         )],
     )));
     let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
+
     unsafe {
         assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
         assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
@@ -640,7 +662,8 @@ fn sql_get_wstring_data(mq: MongoQuery) {
                 );
                 assert_eq!(
                     (std::mem::size_of::<WideChar>() * expected.len()) as isize,
-                    *out_len_or_ind
+                    *out_len_or_ind,
+                    "{col} {expected}"
                 );
                 assert_eq!(
                     expected.to_string(),
@@ -660,6 +683,7 @@ fn sql_get_wstring_data(mq: MongoQuery) {
             str_val_test(JS_W_S_STR_VAL.0, JS_W_S_STR_VAL.1);
             str_val_test(MAXKEY_STR_VAL.0, MAXKEY_STR_VAL.1);
             str_val_test(MINKEY_STR_VAL.0, MINKEY_STR_VAL.1);
+            str_val_test(NUMBER_DECIMAL_STR_VAL.0, NUMBER_DECIMAL_STR_VAL.1);
             str_val_test(OID_STR_VAL.0, OID_STR_VAL.1);
             str_val_test(REGEX_STR_VAL.0, REGEX_STR_VAL.1);
             str_val_test(STRING_STR_VAL.0, STRING_STR_VAL.1);
@@ -984,6 +1008,10 @@ fn sql_get_binary_data(mq: MongoQuery) {
             bin_val_test(STRING_STR_VAL.0, STRING_STR_VAL.1.as_bytes());
             bin_val_test(UNIT_STR_STR_VAL.0, UNIT_STR_STR_VAL.1.as_bytes());
             bin_val_test(GUID_STR_VAL.0, GUID_STR_VAL.1.as_bytes());
+            bin_val_test(
+                NUMBER_DECIMAL_STR_VAL.0,
+                NUMBER_DECIMAL_STR_VAL.1.as_bytes(),
+            );
         }
 
         {
@@ -1162,6 +1190,7 @@ fn sql_get_string_data(mq: MongoQuery) {
             str_val_test(REGEX_STR_VAL.0, REGEX_STR_VAL.1);
             str_val_test(STRING_STR_VAL.0, STRING_STR_VAL.1);
             str_val_test(UNIT_STR_STR_VAL.0, UNIT_STR_STR_VAL.1);
+            str_val_test(NUMBER_DECIMAL_STR_VAL.0, NUMBER_DECIMAL_STR_VAL.1);
         }
 
         {
@@ -1362,6 +1391,12 @@ fn sql_get_bit_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] invalid character value for cast to type: Bit",
             );
+            bool_val_test(
+                NUMBER_DECIMAL_COL,
+                true,
+                SqlReturn::SUCCESS_WITH_INFO,
+                "[MongoDB][API] floating point data \"1.3\" was truncated to fixed point",
+            )
         }
 
         {
@@ -1554,6 +1589,12 @@ fn sql_get_i64_data(mq: MongoQuery) {
                 0,
                 SqlReturn::ERROR,
                 "[MongoDB][API] invalid character value for cast to type: Int64",
+            );
+            i64_val_test(
+                NUMBER_DECIMAL_COL,
+                1,
+                SqlReturn::SUCCESS_WITH_INFO,
+                "[MongoDB][API] floating point data \"1.3\" was truncated to fixed point",
             );
         }
 
@@ -1754,6 +1795,12 @@ fn sql_get_u64_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] integral data \"-1\" was truncated due to overflow",
             );
+            u64_val_test(
+                NUMBER_DECIMAL_COL,
+                1,
+                SqlReturn::SUCCESS_WITH_INFO,
+                "[MongoDB][API] floating point data \"1.3\" was truncated to fixed point",
+            );
         }
 
         {
@@ -1946,6 +1993,12 @@ fn sql_get_i32_data(mq: MongoQuery) {
                 0,
                 SqlReturn::ERROR,
                 "[MongoDB][API] invalid character value for cast to type: Int32",
+            );
+            i32_val_test(
+                NUMBER_DECIMAL_COL,
+                1,
+                SqlReturn::SUCCESS_WITH_INFO,
+                "[MongoDB][API] floating point data \"1.3\" was truncated to fixed point",
             );
         }
 
@@ -2146,6 +2199,12 @@ fn sql_get_u32_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] integral data \"-1\" was truncated due to overflow",
             );
+            u32_val_test(
+                NUMBER_DECIMAL_COL,
+                1,
+                SqlReturn::SUCCESS_WITH_INFO,
+                "[MongoDB][API] floating point data \"1.3\" was truncated to fixed point",
+            );
         }
 
         {
@@ -2332,6 +2391,7 @@ fn sql_get_f64_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] invalid character value for cast to type: Double",
             );
+            f64_val_test(NUMBER_DECIMAL_COL, 1.3, SqlReturn::SUCCESS, "");
         }
 
         {
@@ -2518,6 +2578,7 @@ fn sql_get_f32_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] invalid character value for cast to type: Double",
             );
+            f32_val_test(NUMBER_DECIMAL_COL, 1.3, SqlReturn::SUCCESS, "");
         }
 
         {
@@ -2729,6 +2790,12 @@ fn sql_get_datetime_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] invalid datetime format",
             );
+            datetime_val_test(
+                NUMBER_DECIMAL_COL,
+                empty,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type decimal cannot be converted to ODBC type DateTime",
+            );
         }
 
         {
@@ -2933,6 +3000,12 @@ fn sql_get_date_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] invalid datetime format",
             );
+            date_val_test(
+                NUMBER_DECIMAL_COL,
+                empty,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type decimal cannot be converted to ODBC type DateTime",
+            );
         }
 
         {
@@ -3135,6 +3208,12 @@ fn sql_get_time_data(mq: MongoQuery) {
                 empty,
                 SqlReturn::ERROR,
                 "[MongoDB][API] invalid datetime format",
+            );
+            time_val_test(
+                NUMBER_DECIMAL_COL,
+                empty,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type decimal cannot be converted to ODBC type DateTime",
             );
         }
 
