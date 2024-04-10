@@ -77,8 +77,8 @@ impl MongoConnection {
 
     /// Gets the ADF version the client is connected to.
     pub fn get_adf_version(&self) -> Result<String> {
-        let guard = self.runtime.enter();
-        let res = self.runtime.block_on(async {
+        let _guard = self.runtime.enter();
+        self.runtime.block_on(async {
             let db = self.client.database("admin");
             let cmd_res = db
                 .run_command(doc! {"buildInfo": 1}, None)
@@ -87,14 +87,13 @@ impl MongoConnection {
             let build_info: BuildInfoResult =
                 bson::from_document(cmd_res).map_err(Error::DatabaseVersionDeserialization)?;
             Ok(build_info.data_lake.version)
-        });
-        drop(guard);
-        res
+        })
     }
 
     /// cancels all queries for a given statement id
     pub fn cancel_queries_for_statement(&self, statement_id: Bson) -> Result<bool> {
         let _guard = self.runtime.enter();
+        // because there are so many awaits in this function, the bulk of the function is wrapped in a block_on
         self.runtime.block_on(async {
             // use $currentOp and match the comment field to identify any queries issued by the current statement
             let current_ops_pipeline = vec![

@@ -40,34 +40,35 @@ impl MongoQuery {
         query: &str,
         type_mode: TypeMode,
     ) -> Result<Self> {
-        client.runtime.block_on(async {
-            let current_db = current_db.ok_or(Error::NoDatabase)?;
-            let db = client.client.database(&current_db);
+        let current_db = current_db.ok_or(Error::NoDatabase)?;
+        let db = client.client.database(&current_db);
 
-            // 1. Run the sqlGetResultSchema command to get the result set
-            // metadata. Column metadata is sorted alphabetically by table
-            // and column name.
-            let get_result_schema_cmd =
-                doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
+        // 1. Run the sqlGetResultSchema command to get the result set
+        // metadata. Column metadata is sorted alphabetically by table
+        // and column name.
+        let get_result_schema_cmd =
+            doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
-            let get_result_schema_response: SqlGetSchemaResponse = bson::from_document(
-                db.run_command(get_result_schema_cmd, None)
-                    .await
-                    .map_err(Error::QueryExecutionFailed)?,
-            )
-            .map_err(Error::QueryDeserialization)?;
+        let guard = client.runtime.enter();
+        let schema_response = client.runtime.block_on(async {
+            db.run_command(get_result_schema_cmd, None)
+                .await
+                .map_err(Error::QueryExecutionFailed)
+        })?;
+        drop(guard);
+        let get_result_schema_response: SqlGetSchemaResponse =
+            bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
 
-            let metadata =
-                get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
+        let metadata =
+            get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
 
-            Ok(Self {
-                resultset_cursor: None,
-                resultset_metadata: metadata,
-                current: None,
-                current_db: Some(current_db),
-                query: query.to_string(),
-                query_timeout,
-            })
+        Ok(Self {
+            resultset_cursor: None,
+            resultset_metadata: metadata,
+            current: None,
+            current_db: Some(current_db),
+            query: query.to_string(),
+            query_timeout,
         })
     }
 }
@@ -77,21 +78,21 @@ impl MongoStatement for MongoQuery {
     // Return true if moving was successful, false otherwise.
     // This method deserializes the current row and stores it in self.
     fn next(&mut self, connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
-        let res = if let Some(conn) = connection {
-            let _guard = conn.runtime.enter();
-            self.resultset_cursor
-                .as_mut()
-                .map_or(Err(Error::StatementNotExecuted), |c| {
-                    conn.runtime
-                        .block_on(async { c.advance().await.map_err(Error::QueryCursorUpdate) })
-                })
-        } else {
-            Err(Error::QueryCancelled)
-        };
+        let guard = connection.unwrap().runtime.enter();
+        let res = self
+            .resultset_cursor
+            .as_mut()
+            .map_or(Err(Error::StatementNotExecuted), |c| {
+                connection
+                    .unwrap()
+                    .runtime
+                    .block_on(async { c.advance().await.map_err(Error::QueryCursorUpdate) })
+            })?;
+        drop(guard);
         // Cursor::advance must return Ok(true) before Cursor::deserialize_current can be invoked.
         // Calling Cursor::deserialize_current after Cursor::advance does not return true or without
         // calling Cursor::advance at all may result in a panic
-        if let Ok(true) = res {
+        if res {
             self.current = Some(
                 self.resultset_cursor
                     .as_ref()
@@ -103,7 +104,7 @@ impl MongoStatement for MongoQuery {
             self.current = None;
         }
 
-        Ok((res?, vec![]))
+        Ok((res, vec![]))
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.

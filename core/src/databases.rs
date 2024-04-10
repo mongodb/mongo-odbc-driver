@@ -201,27 +201,29 @@ impl MongoDatabases {
         _query_timeout: Option<i32>,
     ) -> Self {
         let _guard = mongo_connection.runtime.enter();
-        mongo_connection.runtime.block_on(async {
-            let database_names: Vec<String> = mongo_connection
-                .client
-                .list_database_names(
-                    None,
-                    ListDatabasesOptions::builder()
-                        .authorized_databases(true)
-                        .build(),
-                )
-                .await
-                .unwrap()
-                // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
-                .iter()
-                .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
-                .map(|s| s.to_string())
-                .collect();
-            MongoDatabases {
-                database_names,
-                current_db_index: 0,
-            }
-        })
+        let database_names: Vec<String> = mongo_connection
+            .runtime
+            .block_on(async {
+                mongo_connection
+                    .client
+                    .list_database_names(
+                        None,
+                        ListDatabasesOptions::builder()
+                            .authorized_databases(true)
+                            .build(),
+                    )
+                    .await
+            })
+            .unwrap()
+            .iter()
+            .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
+            .map(|s| s.to_string())
+            .collect();
+
+        MongoDatabases {
+            database_names,
+            current_db_index: 0,
+        }
     }
 
     pub fn empty() -> MongoDatabases {
