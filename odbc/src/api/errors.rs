@@ -10,6 +10,7 @@ use constants::{
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
+#[repr(C)]
 pub enum ODBCError {
     #[error("[{}][API] {0}", VENDOR_IDENTIFIER)]
     General(&'static str),

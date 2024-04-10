@@ -15,6 +15,7 @@ use std::{
 };
 
 #[derive(Debug)]
+#[repr(C)]
 pub enum MongoHandle {
     Env(Env),
     Connection(Connection),
@@ -208,6 +209,7 @@ impl From<HDesc> for MongoHandleRef {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct Env {
     // attributes for this Env. We box the attributes so that the MongoHandle type
     // remains fairly small regardless of underlying handle type.
@@ -230,6 +232,7 @@ impl Env {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct EnvAttributes {
     pub odbc_ver: AttrOdbcVersion,
     pub output_nts: SqlBool,
@@ -251,12 +254,14 @@ impl Default for EnvAttributes {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[repr(C)]
 pub enum EnvState {
     Allocated,
     ConnectionAllocated,
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct Connection {
     // type of this handle for runtime checking purposes.
     // Pointer to the Env from which
@@ -280,6 +285,7 @@ pub struct Connection {
 }
 
 #[derive(Debug, Default)]
+#[repr(C)]
 pub struct ConnectionAttributes {
     // SQL_ATTR_CURRENT_CATALOG: the current catalog/database
     // for this Connection.
@@ -294,6 +300,7 @@ pub struct ConnectionAttributes {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[repr(C)]
 pub enum ConnectionState {
     Allocated,
     _ConnectionFunctionNeedsDataEnv,
@@ -326,6 +333,7 @@ impl Drop for Connection {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub enum CachedData {
     // we do not need an index into fixed data. Attempting to stream fixed data always fails.
     Fixed,
@@ -335,6 +343,7 @@ pub enum CachedData {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct Statement {
     pub connection: *mut MongoHandle,
     pub mongo_statement: RwLock<Option<Box<dyn mongo_odbc_core::MongoStatement>>>,
@@ -348,6 +357,7 @@ pub struct Statement {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(C)]
 pub struct BoundColInfo {
     pub target_type: SmallInt,
     pub target_buffer: Pointer,
@@ -356,6 +366,7 @@ pub struct BoundColInfo {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct StatementAttributes {
     pub app_row_desc: *mut MongoHandle,
     pub app_param_desc: *mut MongoHandle,
@@ -404,6 +415,7 @@ impl Drop for StatementAttributes {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[repr(C)]
 pub enum StatementState {
     Allocated,
     _Prepared,
@@ -499,6 +511,7 @@ impl Statement {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct Descriptor {
     pub connection: *mut MongoHandle,
     pub attributes: RwLock<DescriptorAttributes>,
@@ -509,12 +522,14 @@ pub struct Descriptor {
 /// See https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/descriptor-transitions for
 /// states and transitions
 #[derive(Debug, PartialEq, Eq)]
+#[repr(C)]
 pub enum DescriptorState {
     ImplicitlyAllocated, // D1i
     ExplicitlyAllocated, // D1e
 }
 
 #[derive(Debug, Default)]
+#[repr(C)]
 pub struct DescriptorAttributes {}
 
 impl Descriptor {

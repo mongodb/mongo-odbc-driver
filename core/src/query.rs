@@ -16,6 +16,7 @@ use std::time::Duration;
 const BATCH_SIZE_REPLACEMENT_THRESHOLD: u32 = 100;
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct MongoQuery {
     // The cursor on the result set.
     resultset_cursor: Option<Cursor<Document>>,

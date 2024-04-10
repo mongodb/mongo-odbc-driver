@@ -196,6 +196,7 @@ lazy_static! {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct MongoTypesInfo {
     current_type_index: usize,
     sql_data_type: SqlDataType,

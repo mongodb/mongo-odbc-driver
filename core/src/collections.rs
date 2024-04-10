@@ -77,6 +77,7 @@ struct CollectionsForDb {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct MongoCollections {
     // The current collection specification.
     current_collection: Option<MongoODBCCollectionSpecification>,

@@ -449,6 +449,7 @@ mod unit {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct MongoFields {
     dbs: VecDeque<String>,
     current_db_name: String,
