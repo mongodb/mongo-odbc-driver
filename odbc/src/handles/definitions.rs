@@ -316,6 +316,15 @@ impl Connection {
     }
 }
 
+impl Drop for Connection {
+    fn drop(&mut self) {
+        let conn = self.mongo_connection.write().unwrap().take();
+        if let Some(conn) = conn {
+            let _ = conn.shutdown();
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum CachedData {
     // we do not need an index into fixed data. Attempting to stream fixed data always fails.
