@@ -975,8 +975,7 @@ functions:
           export RUST_BACKTRACE=1
           ./resources/run_adf.sh start &&
           cargo run --bin data_loader &&
-          cargo test integration -- --skip test_driver_log_level --nocapture &&
-          cargo test --test connection_tests integration::test_driver_log_level -- --nocapture &&
+          cargo test integration --features logger/test -- --nocapture &&
           cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
           EXITCODE=$?
           echo "****** ls -l ./target/debug/deps *******"
@@ -1092,8 +1091,7 @@ functions:
           ./resources/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with ubuntu
-          cargo test integration -- --skip test_driver_log_level --nocapture &&
-          cargo test --test connection_tests integration::test_driver_log_level -- --nocapture &&
+          cargo test integration --features logger/test -- --nocapture &&
           cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
 
           EXITCODE=$?
