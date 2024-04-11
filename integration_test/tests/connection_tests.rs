@@ -110,8 +110,11 @@ mod integration {
     // If you are having problems running this test, ensure you are running as an administrator.
     #[test]
     fn test_driver_log_level() {
-        let log_dir = Logger::get_log_dir();
-        let log_file_path = log_dir.join(logger::LOG_FILE_NAME);
+        let driver_settings: DriverSettings =
+            DriverSettings::from_private_profile_string().unwrap_or_default();
+
+        let log_dir = Logger::get_log_dir(driver_settings.driver.to_string());
+        let log_file_path = log_dir.join("mongo_odbc.log");
 
         // Ensure we remove the log file if it exists. We don't care if it errors since
         // that means it doesn't exist (most likely), or we don't have permissions to touch

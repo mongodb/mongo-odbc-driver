@@ -18,12 +18,6 @@ use std::path::{Path, PathBuf};
 
 const LOG_FILE_SIZE: u64 = 1024 * 500;
 
-#[cfg(any(test, feature = "test"))]
-pub const LOG_FILE_NAME: &str = "mongo_odbc_test.log";
-
-#[cfg(not(any(test, feature = "test")))]
-pub const LOG_FILE_NAME: &str = "mongo_odbc.log";
-
 // The logger is global to the application.
 // The first initialization will create a logger a provide a handle back.
 // The logger configuration can then be updated through the handle.
@@ -40,7 +34,7 @@ lazy_static! {
             DriverSettings::from_private_profile_string().unwrap_or_default();
 
         let logging_body = || {
-            let log_dir = Logger::get_log_dir();
+            let log_dir = Logger::get_log_dir(driver_settings.driver);
             if let Some(log_dir_str) = log_dir.to_str() {
                 if let Ok(appender) = Logger::file_appender(log_dir_str) {
                     let level_filter = Logger::level_filter_from_string(driver_settings.log_level);
@@ -109,13 +103,13 @@ impl Logger {
     /// Create the file appender configuration to pass to the logger.
     fn file_appender(log_dir: &str) -> Result<RollingFileAppender, std::io::Error> {
         let file_path = Path::new(log_dir)
-            .join(LOG_FILE_NAME)
+            .join("mongo_odbc.log")
             .as_os_str()
             .to_str()
             .unwrap()
             .to_string();
         let roller_pattern = Path::new(log_dir)
-            .join(format!("{}.{{}}", LOG_FILE_NAME))
+            .join("mongo_odbc.log.{}")
             .as_os_str()
             .to_str()
             .unwrap()
@@ -137,8 +131,10 @@ impl Logger {
 
     /// Get the logging directory path.
     /// This is useful to check the content of the log files.
-    pub fn get_log_dir() -> PathBuf {
-        if let Some(user_dir) = UserDirs::new() {
+    pub fn get_log_dir(driver_path: String) -> PathBuf {
+        if driver_path.is_empty() {
+            std::env::temp_dir()
+        } else if let Some(user_dir) = UserDirs::new() {
             let log_dir = user_dir
                 .document_dir()
                 .map(|p| {
@@ -186,8 +182,8 @@ mod driver {
 
     #[test]
     fn logger() {
-        let log_dir = Logger::get_log_dir();
-        let tmp_log = log_dir.join(LOG_FILE_NAME);
+        let log_dir = Logger::get_log_dir("".to_string());
+        let tmp_log = log_dir.join("mongo_odbc.log");
         // ensure we remove the log file if it exists. We don't care if it errors since
         // that means it doesn't exist (most likely), or we don't have permissions to touch
         // it, which will make this test very hard to run anyway!
