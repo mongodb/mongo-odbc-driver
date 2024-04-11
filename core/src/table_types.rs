@@ -7,7 +7,6 @@ use bson::Bson;
 const TABLE_TYPES: [&str; 2] = ["TABLE", "VIEW"];
 
 #[derive(Debug)]
-#[repr(C)]
 pub struct MongoTableTypes {
     // The list of all the table types
     table_type: Vec<&'static str>,

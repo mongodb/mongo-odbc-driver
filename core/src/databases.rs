@@ -182,7 +182,6 @@ mod unit {
 }
 
 #[derive(Debug)]
-#[repr(C)]
 pub struct MongoDatabases {
     // The list of all the databases
     database_names: Vec<String>,
