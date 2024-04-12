@@ -1,7 +1,6 @@
 use mongodb::{
     bson::{doc, Bson, Document},
-    sync::{Client, Database},
-    IndexModel,
+    Client, Database, IndexModel,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, env, fs, io};
@@ -81,7 +80,9 @@ pub enum DataLoaderError {
 // mongo-odbc-driver/resources/integration_test/testdata directory, following the
 // format described above by the TestData and TestDataEntry types. See those types
 // for more details.
-fn main() -> Result<()> {
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
     // Step 0: Read environment variables and create Mongo URIs
     let mdb_url = format!(
         "mongodb://localhost:{}",
@@ -97,18 +98,18 @@ fn main() -> Result<()> {
     let test_data = read_data_files(TEST_DATA_DIRECTORY)?;
 
     // Step 2: Delete existing data based on namespaces in data files
-    let mongod_client = Client::with_uri_str(mdb_url)?;
-    drop_collections(mongod_client.clone(), test_data.clone())?;
+    let mongod_client = Client::with_uri_str(mdb_url).await?;
+    drop_collections(mongod_client.clone(), test_data.clone()).await?;
 
     // Step 3: Load data into mongod. Drop everything if an error occurs.
-    if let Err(e) = load_test_data(mongod_client.clone(), test_data.clone()) {
-        drop_collections(mongod_client, test_data)?;
+    if let Err(e) = load_test_data(mongod_client.clone(), test_data.clone()).await {
+        drop_collections(mongod_client, test_data).await?;
         return Err(e);
     }
 
     // Step 4: Set schemas in ADF
-    let adf_client = Client::with_uri_str(adf_url)?;
-    set_test_data_schemas(adf_client, test_data)
+    let adf_client = Client::with_uri_str(adf_url).await?;
+    set_test_data_schemas(adf_client, test_data).await
 }
 
 fn read_data_files(dir_path: &str) -> Result<Vec<TestData>> {
@@ -152,7 +153,7 @@ fn read_data_files(dir_path: &str) -> Result<Vec<TestData>> {
         .collect()
 }
 
-fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
+async fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
     let namespaces_to_drop = datasets
         .into_iter()
         .flat_map(|td| {
@@ -168,14 +169,14 @@ fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()> {
 
     for (db, c) in namespaces_to_drop {
         let database = client.database(db.as_str());
-        database.collection::<Bson>(c.as_str()).drop(None)?;
+        database.collection::<Bson>(c.as_str()).drop(None).await?;
         println!("Dropped {db}.{c}")
     }
 
     Ok(())
 }
 
-fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
+async fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
     for td in test_data {
         for entry in td.dataset {
             let db = client.database(entry.db.as_str());
@@ -184,7 +185,7 @@ fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
                 let collection = db.collection::<Bson>(c.as_str());
 
                 if let Some(docs) = entry.docs {
-                    let res = collection.insert_many(docs, None)?;
+                    let res = collection.insert_many(docs, None).await?;
                     println!(
                         "Inserted {} documents into {}.{}",
                         res.inserted_ids.len(),
@@ -194,7 +195,7 @@ fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
                 }
 
                 if let Some(indexes) = entry.indexes {
-                    let res = collection.create_indexes(indexes, None)?;
+                    let res = collection.create_indexes(indexes, None).await?;
                     println!(
                         "Created indexes {:?} for {}.{}",
                         res.index_names, entry.db, c
@@ -207,7 +208,7 @@ fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> {
     Ok(())
 }
 
-fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()> {
+async fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()> {
     for td in test_data {
         for entry in td.dataset {
             let datasource = match (entry.collection, entry.view) {
@@ -230,7 +231,7 @@ fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Result<()>
                 command_name = "sqlGenerateSchema";
             }
 
-            let res = db.run_command(command_doc, None)?;
+            let res = db.run_command(command_doc, None).await?;
             println!(
                 "Set schema for {}.{} via {}; result: {:?}",
                 entry.db, datasource, command_name, res

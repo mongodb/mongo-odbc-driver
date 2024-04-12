@@ -9,7 +9,7 @@ use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{
     error::{CommandError, ErrorKind},
     options::AggregateOptions,
-    sync::Cursor,
+    Cursor,
 };
 use std::time::Duration;
 
@@ -49,11 +49,15 @@ impl MongoQuery {
         let get_result_schema_cmd =
             doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
-        let get_result_schema_response: SqlGetSchemaResponse = bson::from_document(
+        let guard = client.runtime.enter();
+        let schema_response = client.runtime.block_on(async {
             db.run_command(get_result_schema_cmd, None)
-                .map_err(Error::QueryExecutionFailed)?,
-        )
-        .map_err(Error::QueryDeserialization)?;
+                .await
+                .map_err(Error::QueryExecutionFailed)
+        })?;
+        drop(guard);
+        let get_result_schema_response: SqlGetSchemaResponse =
+            bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
 
         let metadata =
             get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
@@ -73,18 +77,22 @@ impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     // This method deserializes the current row and stores it in self.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
+    fn next(&mut self, connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
+        let guard = connection.unwrap().runtime.enter();
         let res = self
             .resultset_cursor
             .as_mut()
             .map_or(Err(Error::StatementNotExecuted), |c| {
-                c.advance().map_err(Error::QueryCursorUpdate)
-            });
-
+                connection
+                    .unwrap()
+                    .runtime
+                    .block_on(async { c.advance().await.map_err(Error::QueryCursorUpdate) })
+            })?;
+        drop(guard);
         // Cursor::advance must return Ok(true) before Cursor::deserialize_current can be invoked.
         // Calling Cursor::deserialize_current after Cursor::advance does not return true or without
         // calling Cursor::advance at all may result in a panic
-        if let Ok(true) = res {
+        if res {
             self.current = Some(
                 self.resultset_cursor
                     .as_ref()
@@ -96,7 +104,7 @@ impl MongoStatement for MongoQuery {
             self.current = None;
         }
 
-        Ok((res?, vec![]))
+        Ok((res, vec![]))
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
@@ -159,7 +167,12 @@ impl MongoStatement for MongoQuery {
             _ => Error::QueryExecutionFailed(e),
         };
 
-        let cursor: Cursor<Document> = db.aggregate(pipeline, options).map_err(map_query_error)?;
+        let _guard = connection.runtime.enter();
+        let cursor: Cursor<Document> = connection.runtime.block_on(async {
+            db.aggregate(pipeline, options)
+                .await
+                .map_err(map_query_error)
+        })?;
         self.resultset_cursor = Some(cursor);
         Ok(true)
     }

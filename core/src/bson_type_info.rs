@@ -3,6 +3,7 @@ use definitions::{SqlCode, SqlDataType};
 pub const MAX_STRING_SIZE: u16 = u16::MAX;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
+#[repr(C)]
 pub enum TypeMode {
     Standard,
     Simple,

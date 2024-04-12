@@ -1012,15 +1012,9 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
             let conn = must_be_valid!((*conn_handle).as_connection());
             // set the mongo_connection to None. This will cause the previous mongo_connection
             // to drop and disconnect.
-            conn.mongo_connection
-                .write()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .client
-                .clone()
-                .shutdown();
-            *conn.mongo_connection.write().unwrap() = None;
+            if let Some(conn) = conn.mongo_connection.write().unwrap().take() {
+                let _ = conn.shutdown();
+            }
             SqlReturn::SUCCESS
         },
         connection_handle
@@ -1029,7 +1023,11 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
 
 fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoConnection> {
     let mut odbc_uri = ODBCUri::new(odbc_uri_string.to_string())?;
-    let client_options = odbc_uri.try_into_client_options()?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let client_options = runtime.block_on(async { odbc_uri.try_into_client_options().await })?;
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
@@ -1065,6 +1063,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         connection_timeout,
         login_timeout,
         *conn.type_mode.read().unwrap(),
+        Some(runtime),
     )?)
 }
 
