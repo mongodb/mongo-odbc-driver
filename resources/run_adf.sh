@@ -24,7 +24,7 @@ if [[ -z $ARG ]]; then
   exit 0
 fi
 
-GO_VERSION="go1.20"
+GO_VERSION="go1.22"
 if [ -d "/opt/golang/$GO_VERSION" ]; then
   GOROOT="/opt/golang/$GO_VERSION"
   GOBINDIR="$GOROOT"/bin
@@ -363,12 +363,6 @@ if [ $ARG = $START ]; then
             git clone $MONGOHOUSE_URI $MONGOHOUSE_DIR
         fi
         cd $MONGOHOUSE_DIR
-
-        # SQL-1976: Update ADF config to work with changes to remove defaults
-        ADF_Version=ad72851
-        echo "checking out mongohouse: $ADF_Version"
-        git checkout $ADF_Version
-
 
         export GOPRIVATE=github.com/10gen
         # make sure mod vendor is cleaned up

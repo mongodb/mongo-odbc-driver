@@ -386,6 +386,76 @@ mod unit {
         }
 
         #[test]
+        fn null_columns_are_sql_unknown_without_simple_types() {
+            let input = SqlGetSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                        properties: Some(map! {
+                            "foo".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                properties: Some(map! {
+                                    "null".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Null)),
+                                        ..Default::default()
+                                    },
+                                }),
+                                ..Default::default()
+                            },
+                        }),
+                        ..Default::default()
+                    },
+                },
+                select_order: None,
+            };
+
+            let schema = input
+                .process_result_metadata("test_db", TypeMode::Standard)
+                .unwrap();
+            assert_eq!(
+                schema.first().unwrap().sql_type,
+                definitions::SqlDataType::SQL_UNKNOWN_TYPE
+            );
+        }
+
+        #[test]
+        fn null_columns_are_sql_wvarchar_with_simple_types() {
+            let input = SqlGetSchemaResponse {
+                ok: 1,
+                schema: VersionedJsonSchema {
+                    version: 1,
+                    json_schema: Schema {
+                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                        properties: Some(map! {
+                            "foo".to_string() => Schema {
+                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                                properties: Some(map! {
+                                    "null".to_string() => Schema {
+                                        bson_type: Some(BsonType::Single(BsonTypeName::Null)),
+                                        ..Default::default()
+                                    },
+                                }),
+                                ..Default::default()
+                            },
+                        }),
+                        ..Default::default()
+                    },
+                },
+                select_order: None,
+            };
+
+            let schema = input
+                .process_result_metadata("test_db", TypeMode::Simple)
+                .unwrap();
+            assert_eq!(
+                schema.first().unwrap().sql_type,
+                definitions::SqlDataType::SQL_WVARCHAR
+            );
+        }
+
+        #[test]
         fn property_schema_not_object() {
             let input = SqlGetSchemaResponse {
                 ok: 1,

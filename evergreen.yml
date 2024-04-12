@@ -1057,6 +1057,19 @@ functions:
           # we only run ubuntu on the unit tests for now
           cargo test unit
 
+  "run ubuntu rfc8252_http_server tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          ~/.cargo/bin/rustup default stable
+
+          # run the rfc8252_http_server tests
+          cargo test rfc8252_http_server -- --test-threads=1
+
   "run ubuntu integration tests":
     - command: shell.exec
       type: test
@@ -1454,6 +1467,8 @@ tasks:
       - func: "run windows unit tests"
         variants: [windows-64]
       - func: "run ubuntu unit tests"
+        variants: [ubuntu2204]
+      - func: "run ubuntu rfc8252_http_server tests"
         variants: [ubuntu2204]
       - func: "run macos unit tests"
         variants: [macos, macos-arm]

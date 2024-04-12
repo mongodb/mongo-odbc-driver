@@ -13,6 +13,8 @@ use mongodb::{
 };
 use std::time::Duration;
 
+const BATCH_SIZE_REPLACEMENT_THRESHOLD: u32 = 100;
+
 #[derive(Debug)]
 pub struct MongoQuery {
     // The cursor on the result set.
@@ -118,7 +120,12 @@ impl MongoStatement for MongoQuery {
     // Execute the $sql aggregation for the query and initialize the result set
     // cursor. If there is a timeout, the query must finish before the timeout
     // or an error is returned.
-    fn execute(&mut self, connection: &MongoConnection, stmt_id: Bson) -> Result<bool> {
+    fn execute(
+        &mut self,
+        connection: &MongoConnection,
+        stmt_id: Bson,
+        rowset_size: u32,
+    ) -> Result<bool> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = connection.client.database(current_db);
 
@@ -128,13 +135,19 @@ impl MongoStatement for MongoQuery {
         }}];
 
         let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
+
+        let mut max_time = None;
         // If the query timeout is 0, it means "no timeout"
-        let options = if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            opt.max_time(Duration::from_millis(self.query_timeout.unwrap() as u64))
-                .build()
-        } else {
-            opt.build()
-        };
+        if self.query_timeout.is_some_and(|timeout| timeout > 0) {
+            max_time = Some(Duration::from_millis(self.query_timeout.unwrap() as u64))
+        }
+
+        let mut batch_size = None;
+        // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
+        if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
+            batch_size = Some(rowset_size)
+        }
+        let options = opt.max_time(max_time).batch_size(batch_size).build();
 
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
         // denote this to the program, otherwise return a generic query execution error
