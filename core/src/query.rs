@@ -9,9 +9,11 @@ use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{
     error::{CommandError, ErrorKind},
     options::AggregateOptions,
-    sync::Cursor,
+    Cursor,
 };
 use std::time::Duration;
+
+const BATCH_SIZE_REPLACEMENT_THRESHOLD: u32 = 100;
 
 #[derive(Debug)]
 pub struct MongoQuery {
@@ -47,11 +49,15 @@ impl MongoQuery {
         let get_result_schema_cmd =
             doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
-        let get_result_schema_response: SqlGetSchemaResponse = bson::from_document(
+        let guard = client.runtime.enter();
+        let schema_response = client.runtime.block_on(async {
             db.run_command(get_result_schema_cmd, None)
-                .map_err(Error::QueryExecutionFailed)?,
-        )
-        .map_err(Error::QueryDeserialization)?;
+                .await
+                .map_err(Error::QueryExecutionFailed)
+        })?;
+        drop(guard);
+        let get_result_schema_response: SqlGetSchemaResponse =
+            bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
 
         let metadata =
             get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
@@ -71,18 +77,22 @@ impl MongoStatement for MongoQuery {
     // Move the cursor to the next document and update the current row.
     // Return true if moving was successful, false otherwise.
     // This method deserializes the current row and stores it in self.
-    fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
+    fn next(&mut self, connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
+        let guard = connection.unwrap().runtime.enter();
         let res = self
             .resultset_cursor
             .as_mut()
             .map_or(Err(Error::StatementNotExecuted), |c| {
-                c.advance().map_err(Error::QueryCursorUpdate)
-            });
-
+                connection
+                    .unwrap()
+                    .runtime
+                    .block_on(async { c.advance().await.map_err(Error::QueryCursorUpdate) })
+            })?;
+        drop(guard);
         // Cursor::advance must return Ok(true) before Cursor::deserialize_current can be invoked.
         // Calling Cursor::deserialize_current after Cursor::advance does not return true or without
         // calling Cursor::advance at all may result in a panic
-        if let Ok(true) = res {
+        if res {
             self.current = Some(
                 self.resultset_cursor
                     .as_ref()
@@ -94,7 +104,7 @@ impl MongoStatement for MongoQuery {
             self.current = None;
         }
 
-        Ok((res?, vec![]))
+        Ok((res, vec![]))
     }
 
     // Get the BSON value for the cell at the given colIndex on the current row.
@@ -118,7 +128,12 @@ impl MongoStatement for MongoQuery {
     // Execute the $sql aggregation for the query and initialize the result set
     // cursor. If there is a timeout, the query must finish before the timeout
     // or an error is returned.
-    fn execute(&mut self, connection: &MongoConnection, stmt_id: Bson) -> Result<bool> {
+    fn execute(
+        &mut self,
+        connection: &MongoConnection,
+        stmt_id: Bson,
+        rowset_size: u32,
+    ) -> Result<bool> {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = connection.client.database(current_db);
 
@@ -128,13 +143,19 @@ impl MongoStatement for MongoQuery {
         }}];
 
         let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
+
+        let mut max_time = None;
         // If the query timeout is 0, it means "no timeout"
-        let options = if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            opt.max_time(Duration::from_millis(self.query_timeout.unwrap() as u64))
-                .build()
-        } else {
-            opt.build()
-        };
+        if self.query_timeout.is_some_and(|timeout| timeout > 0) {
+            max_time = Some(Duration::from_millis(self.query_timeout.unwrap() as u64))
+        }
+
+        let mut batch_size = None;
+        // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
+        if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
+            batch_size = Some(rowset_size)
+        }
+        let options = opt.max_time(max_time).batch_size(batch_size).build();
 
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
         // denote this to the program, otherwise return a generic query execution error
@@ -146,7 +167,12 @@ impl MongoStatement for MongoQuery {
             _ => Error::QueryExecutionFailed(e),
         };
 
-        let cursor: Cursor<Document> = db.aggregate(pipeline, options).map_err(map_query_error)?;
+        let _guard = connection.runtime.enter();
+        let cursor: Cursor<Document> = connection.runtime.block_on(async {
+            db.aggregate(pipeline, options)
+                .await
+                .map_err(map_query_error)
+        })?;
         self.resultset_cursor = Some(cursor);
         Ok(true)
     }

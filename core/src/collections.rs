@@ -10,6 +10,7 @@ use crate::{
 };
 use bson::{doc, Bson};
 use definitions::Nullability;
+use futures::future;
 use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
 use regex::Regex;
@@ -103,26 +104,29 @@ impl MongoCollections {
         table_type: &str,
         accept_search_patterns: bool,
     ) -> Self {
-        let databases = mongo_connection
-            .client
-            .list_database_names(
-                None,
-                ListDatabasesOptions::builder()
-                    .authorized_databases(true)
-                    .build(),
-            )
-            .unwrap()
-            .iter()
-            // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
-            .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
-            .filter(|&db_name| is_match(db_name, db_name_filter, accept_search_patterns))
-            .map(|val| {
-                CollectionsForDb {
+        let databases = mongo_connection.runtime.block_on(async {
+            future::join_all(
+                mongo_connection
+                    .client
+                    .list_database_names(
+                        None,
+                        ListDatabasesOptions::builder()
+                            .authorized_databases(true)
+                            .build(),
+                    )
+                    .await
+                    .unwrap()
+                    .iter()
+                    // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
+                    .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
+                    .filter(|&db_name| is_match(db_name, db_name_filter, accept_search_patterns))
+                    .map(|val| async move {
+                        CollectionsForDb {
                 database_name: val.to_string(),
                 collection_list: mongo_connection.client.database(val.as_str()).run_command(
                     doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
                     None,
-                ).unwrap().get_document("cursor").map(|doc| {
+                ).await.unwrap().get_document("cursor").map(|doc| {
                     doc.get_array("firstBatch").unwrap().iter().map(|val| {
                         let doc = val.as_document().unwrap();
                         let name = doc.get_str("name").unwrap().to_string();
@@ -138,8 +142,10 @@ impl MongoCollections {
                     vec![]
                 }),
             }
-            })
-            .collect();
+                    }),
+            )
+            .await
+        });
 
         MongoCollections {
             current_collection: None,
@@ -284,6 +290,7 @@ impl MongoStatement for MongoCollections {
 }
 
 mod unit {
+
     #[test]
     fn metadata_size() {
         use crate::{collections::MongoCollections, stmt::MongoStatement};

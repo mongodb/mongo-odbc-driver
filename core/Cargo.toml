@@ -26,11 +26,17 @@ cstr = { path = "../cstr" }
 fancy-regex = "0.11.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
 log = "0.4.14"
+mongodb = { version = "2.8.2", features = ["aws-auth"] }
+# Do NOT change these features without consulting with other team members. 
+# The features are used to control the behavior of tokio. Tokio is unsafe to use
+# across ABI boundaries in any other runtime but current_thread
+tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
+futures = "0.3"
+openidconnect = "3"
+open = "5"
+reqwest = { version = "0", features = ["blocking"] }
+rfc8252_http_server = { path = "../rfc8252_http_server" }
 
-[dependencies.mongodb]
-version = "2"
-default-features = false
-features = ["tokio-sync"]
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.44.0", features = [
@@ -40,3 +46,7 @@ windows = { version = "0.44.0", features = [
 
 [features]
 bad_host = []
+
+[lib]
+name = "mongo_odbc_core"
+crate-type = ["cdylib", "lib"]

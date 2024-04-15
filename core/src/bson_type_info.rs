@@ -3,6 +3,7 @@ use definitions::{SqlCode, SqlDataType};
 pub const MAX_STRING_SIZE: u16 = u16::MAX;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
+#[repr(C)]
 pub enum TypeMode {
     Standard,
     Simple,
@@ -303,7 +304,7 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
-        simple_type_info: None,
+        simple_type_info: SimpleTypeInfo::new(4, 4, 4),
     };
     pub const REGEX: BsonTypeInfo = BsonTypeInfo {
         type_name: "regex",

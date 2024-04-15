@@ -1,4 +1,16 @@
+use std::sync::Mutex;
+
 mod common;
+
+static TEST_SEQUENTIAL: Mutex<Executor> = Mutex::new(Executor);
+#[derive(Clone, Copy)]
+struct Executor;
+
+impl Executor {
+    fn run_test(self, f: impl FnOnce()) {
+        f()
+    }
+}
 
 macro_rules! test_connection_diagnostics {
     ($func_name:ident,
@@ -30,47 +42,50 @@ macro_rules! test_connection_diagnostics {
             let mut in_connection_string_encoded = cstr::to_widechar_vec(in_connection_string);
             in_connection_string_encoded.push(0);
 
-            unsafe {
-                let _ = SQLAllocHandle(
-                    HandleType::SQL_HANDLE_ENV,
-                    std::ptr::null_mut(),
-                    &mut env_handl as *mut Handle,
-                );
-                let _ = SQLAllocHandle(
-                    HandleType::SQL_HANDLE_DBC,
-                    env_handl,
-                    &mut conn_handl as *mut Handle,
-                );
-                let actual_return_val = SQLDriverConnectW(
-                    conn_handl as *mut _,
-                    std::ptr::null_mut(),
-                    in_connection_string_encoded.as_ptr(),
-                    in_connection_string.len().try_into().unwrap(),
-                    out_connection_string,
-                    buffer_length,
-                    string_length_2,
-                    driver_completion as u16,
-                );
-                assert_eq!(expected_sql_return, actual_return_val);
+            crate::TEST_SEQUENTIAL.lock().unwrap().run_test(|| {
+                unsafe {
+                    let _ = SQLAllocHandle(
+                        HandleType::SQL_HANDLE_ENV,
+                        std::ptr::null_mut(),
+                        &mut env_handl as *mut Handle,
+                    );
+                    let _ = SQLAllocHandle(
+                        HandleType::SQL_HANDLE_DBC,
+                        env_handl,
+                        &mut conn_handl as *mut Handle,
+                    );
+                    let actual_return_val = SQLDriverConnectW(
+                        conn_handl as *mut _,
+                        std::ptr::null_mut(),
+                        in_connection_string_encoded.as_ptr(),
+                        in_connection_string.len().try_into().unwrap(),
+                        out_connection_string,
+                        buffer_length,
+                        string_length_2,
+                        driver_completion as u16,
+                    );
+                    assert_eq!(expected_sql_return, actual_return_val);
 
-                verify_sql_diagnostics(
-                    HandleType::SQL_HANDLE_DBC,
-                    conn_handl as *mut _,
-                    1,
-                    expected_sql_state.odbc_3_state,
-                    expected_error_message,
-                    0,
-                );
-                let _ = SQLFreeHandle(HandleType::SQL_HANDLE_DBC, conn_handl);
-                let _ = SQLFreeHandle(HandleType::SQL_HANDLE_ENV, env_handl);
-            };
+                    verify_sql_diagnostics(
+                        HandleType::SQL_HANDLE_DBC,
+                        conn_handl as *mut _,
+                        1,
+                        expected_sql_state.odbc_3_state,
+                        expected_error_message,
+                        0,
+                    );
+                    let _ = SQLDisconnect(conn_handl as *mut _);
+                    let _ = SQLFreeHandle(HandleType::SQL_HANDLE_DBC, conn_handl);
+                    let _ = SQLFreeHandle(HandleType::SQL_HANDLE_ENV, env_handl);
+                };
+            });
         }
     };
 }
 
 mod integration {
     use crate::common::verify_sql_diagnostics;
-    use atsql::{SQLAllocHandle, SQLDriverConnectW, SQLFreeHandle};
+    use atsql::{SQLAllocHandle, SQLDisconnect, SQLDriverConnectW, SQLFreeHandle};
     use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
     use definitions::{DriverConnectOption, Handle, HandleType, SqlReturn};
     use std::ptr::null_mut;
