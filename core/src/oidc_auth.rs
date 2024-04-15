@@ -15,7 +15,7 @@ const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
 #[derive(Clone, Debug)]
 pub struct IdpServerInfo {
     pub issuer: String,
-    pub client_id: String,
+    pub client_id: Option<String>,
     pub request_scopes: Option<Vec<String>>,
 }
 
@@ -40,12 +40,13 @@ pub enum Error {
     IssuerUriMustBeHttps,
     NoIdpServerInfo,
     CsrfMismatch,
+    HumanFlowUnsupported,
     Other(String),
 }
 
 pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, Error> {
     let idp_info = params.idp_info.ok_or(Error::NoIdpServerInfo)?;
-    let client_id = idp_info.client_id;
+    let client_id = idp_info.client_id.ok_or(Error::HumanFlowUnsupported)?;
     let issuer_uri = IssuerUrl::new(idp_info.issuer).map_err(|e| Error::Other(e.to_string()))?;
     if issuer_uri.url().scheme() != "https" {
         return Err(Error::IssuerUriMustBeHttps);
@@ -178,7 +179,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
 
 pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Error> {
     let idp_info = params.idp_info.ok_or(Error::NoIdpServerInfo)?;
-    let client_id = idp_info.client_id;
+    let client_id = idp_info.client_id.ok_or(Error::HumanFlowUnsupported)?;
     let issuer_uri = IssuerUrl::new(idp_info.issuer).map_err(|e| Error::Other(e.to_string()))?;
     if issuer_uri.url().scheme() != "https" {
         return Err(Error::IssuerUriMustBeHttps);
