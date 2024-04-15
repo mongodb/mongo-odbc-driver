@@ -20,9 +20,15 @@ pub struct MongoColMetadata {
     pub base_table_name: String,
     pub case_sensitive: bool,
     pub catalog_name: String,
-    // more info for column size can be found here:
-    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/column-size?view=sql-server-ver16
+    // More info for column size can be found here:
+    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/column-size
+    pub column_size: u16,
+    // more info for dislay size can be found here:
+    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/display-size
     pub display_size: Option<u16>,
+    // More info for column size can be found here:
+    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/decimal-digits
+    pub decimal_digits: Option<u16>,
     pub fixed_prec_scale: bool,
     pub label: String,
     pub length: Option<u16>,
@@ -64,10 +70,41 @@ impl MongoColMetadata {
             base_table_name: "".to_string(),
             case_sensitive: bson_type_info.is_case_sensitive,
             catalog_name: "".to_string(),
-            display_size: bson_type_info.fixed_bytes_length(type_mode),
+            // The column (or parameter) size of numeric data types is defined as the maximum number
+            // of digits used by the data type of the column or parameter, or the precision of the
+            // data. For character types, this is the length in characters of the data; for binary
+            // data types, column size is defined as the length in bytes of the data. For the time,
+            // timestamp, and all interval data types, this is the number of characters in the
+            // character representation of this data
+            column_size: match bson_type_info.sql_type(type_mode) {
+                SqlDataType::SQL_NUMERIC
+                | SqlDataType::SQL_DECIMAL
+                | SqlDataType::SQL_INTEGER
+                | SqlDataType::SQL_SMALLINT
+                | SqlDataType::SQL_FLOAT
+                | SqlDataType::SQL_REAL
+                | SqlDataType::SQL_DOUBLE
+                | SqlDataType::SQL_BIGINT
+                | SqlDataType::SQL_TINYINT
+                | SqlDataType::SQL_BIT => bson_type_info.precision(type_mode).unwrap_or(0),
+                _ => bson_type_info.length(type_mode).unwrap_or(0),
+            },
+            display_size: bson_type_info.display_size(type_mode),
+            // The decimal digits of decimal and numeric data types is defined as the maximum number
+            // of digits to the right of the decimal point, or the scale of the data. For approximate
+            // floating-point number columns or parameters, the scale is undefined because the number
+            // of digits to the right of the decimal point is not fixed. For datetime or interval
+            // data that contains a seconds component, the decimal digits is defined as the number
+            // of digits to the right of the decimal point in the seconds component of the data.
+            decimal_digits: match bson_type_info.sql_type {
+                SqlDataType::SQL_TIMESTAMP | SqlDataType::SQL_TYPE_TIMESTAMP => {
+                    bson_type_info.scale
+                }
+                _ => bson_type_info.precision,
+            },
             fixed_prec_scale: bson_type_info.fixed_prec_scale,
             label: field_name.clone(),
-            length: bson_type_info.fixed_bytes_length(type_mode),
+            length: bson_type_info.length(type_mode),
             literal_prefix: bson_type_info.literal_prefix,
             literal_suffix: bson_type_info.literal_suffix,
             col_name: field_name,

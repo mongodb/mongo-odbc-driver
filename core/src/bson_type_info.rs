@@ -29,13 +29,19 @@ pub struct BsonTypeInfo {
     // Scale for a datatype. If the datatype does not have fixed scale, this represents the largest
     // possible scale.
     pub scale: Option<u16>,
-    // Precision for the data type. For char-data, this represents the largest possible character length, for numerical
-    // data, this represents the maximum number of decimal places.
+    // The maximum or actual character length of a character string or binary data type. It is the
+    // maximum character length for a fixed-length data type, or the actual character length for a
+    // variable-length data type. Its value always excludes the null-termination byte that ends the
+    // character string.
+    pub length: Option<u16>,
+    // For a numeric data type denotes the applicable precision. For data types SQL_TYPE_TIME,
+    // SQL_TYPE_TIMESTAMP, and all the interval data types that represent a time interval, its value
+    // is the applicable precision of the fractional seconds component.
     pub precision: Option<u16>,
     // Maximum number of bytes (octets) for a given data type
-    pub octet_length: Option<u16>,
-    // Number of bytes in a type that has fixed length, such as INT or DOUBLE
-    pub fixed_bytes_length: Option<u16>,
+    pub transfer_octet_length: Option<u16>,
+    // The maximum number of characters needed to display data in character form
+    pub display_size: Option<u16>,
     // Prefix used for a literal of this type, such as ' for a char-type
     pub literal_prefix: Option<&'static str>,
     // Suffix used for a literal of this type, such as ' for a char-type
@@ -61,19 +67,19 @@ pub struct BsonTypeInfo {
 pub struct SimpleTypeInfo {
     pub sql_type: SqlDataType,
     pub non_concise_type: SqlDataType,
-    pub precision: Option<u16>,
-    pub octet_length: Option<u16>,
-    pub fixed_bytes_length: Option<u16>,
+    pub length: Option<u16>,
+    pub transfer_octet_length: Option<u16>,
+    pub display_size: Option<u16>,
 }
 
 impl SimpleTypeInfo {
-    const fn new(precision: u16, octet_length: u16, fixed_bytes_length: u16) -> Option<Self> {
+    const fn new(length: u16, transfer_octet_length: u16, display_size: u16) -> Option<Self> {
         Some(Self {
             sql_type: SqlDataType::SQL_WVARCHAR,
             non_concise_type: SqlDataType::SQL_WVARCHAR,
-            precision: Some(precision),
-            octet_length: Some(octet_length),
-            fixed_bytes_length: Some(fixed_bytes_length),
+            length: Some(length),
+            transfer_octet_length: Some(transfer_octet_length),
+            display_size: Some(display_size),
         })
     }
 
@@ -81,9 +87,9 @@ impl SimpleTypeInfo {
         Some(Self {
             sql_type: SqlDataType::SQL_WVARCHAR,
             non_concise_type: SqlDataType::SQL_WVARCHAR,
-            precision: None,
-            octet_length: None,
-            fixed_bytes_length: None,
+            length: None,
+            transfer_octet_length: None,
+            display_size: None,
         })
     }
 }
@@ -100,10 +106,11 @@ impl BsonTypeInfo {
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
-        scale: Some(15),
+        scale: None,
+        length: None,
         precision: Some(15),
-        octet_length: Some(8),
-        fixed_bytes_length: Some(8),
+        transfer_octet_length: Some(8),
+        display_size: Some(24),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -120,9 +127,10 @@ impl BsonTypeInfo {
         is_case_sensitive: true,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
         sql_code: None,
@@ -142,9 +150,10 @@ impl BsonTypeInfo {
         is_case_sensitive: true,
         fixed_prec_scale: false,
         scale: None,
-        precision: Some(MAX_STRING_SIZE),
-        octet_length: None,
-        fixed_bytes_length: None,
+        length: Some(MAX_STRING_SIZE),
+        precision: None,
+        transfer_octet_length: None,
+        display_size: Some(MAX_STRING_SIZE),
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
         sql_code: None,
@@ -161,9 +170,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -180,9 +190,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -199,9 +210,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -218,9 +230,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -237,16 +250,17 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: Some(24),
-        octet_length: Some(24),
-        fixed_bytes_length: Some(24),
+        transfer_octet_length: Some(24 * 4),
+        display_size: Some(24),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
         is_auto_unique_value: Some(true),
         is_unsigned: None,
         num_prec_radix: None,
-        simple_type_info: SimpleTypeInfo::new(34, 34, 34),
+        simple_type_info: SimpleTypeInfo::new(34, 34 * 4, 34),
     };
     pub const BOOL: BsonTypeInfo = BsonTypeInfo {
         type_name: "bool",
@@ -256,9 +270,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: Some(1),
-        octet_length: Some(1),
-        fixed_bytes_length: Some(1),
+        transfer_octet_length: Some(1),
+        display_size: Some(1),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -275,9 +290,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: true,
         scale: Some(3),
+        length: None,
         precision: Some(23),
-        octet_length: Some(16),
-        fixed_bytes_length: Some(16),
+        transfer_octet_length: Some(16),
+        display_size: Some(23),
         literal_prefix: Some("'"),
         literal_suffix: Some("'"),
         sql_code: Some(SqlCode::SQL_CODE_TIMESTAMP),
@@ -294,9 +310,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -313,9 +330,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -332,9 +350,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -351,9 +370,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -370,9 +390,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -389,9 +410,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -408,9 +430,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: true,
         scale: Some(0),
+        length: None,
         precision: Some(10),
-        octet_length: Some(4),
-        fixed_bytes_length: Some(4),
+        transfer_octet_length: Some(4),
+        display_size: Some(11),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -427,9 +450,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -446,9 +470,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: true,
         scale: Some(0),
-        precision: Some(19),
-        octet_length: Some(8),
-        fixed_bytes_length: Some(8),
+        length: None,
+        precision: Some(20),
+        transfer_octet_length: Some(8),
+        display_size: Some(20),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -465,9 +490,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -484,9 +510,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -503,9 +530,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -522,9 +550,10 @@ impl BsonTypeInfo {
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
+        length: None,
         precision: None,
-        octet_length: None,
-        fixed_bytes_length: None,
+        transfer_octet_length: None,
+        display_size: None,
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -552,25 +581,33 @@ impl BsonTypeInfo {
 
     pub fn precision(&self, type_mode: TypeMode) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
-            self.simple_type_info.clone().unwrap().precision
+            None
         } else {
             self.precision
         }
     }
 
-    pub fn octet_length(&self, type_mode: TypeMode) -> Option<u16> {
+    pub fn length(&self, type_mode: TypeMode) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
-            self.simple_type_info.clone().unwrap().octet_length
+            self.simple_type_info.clone().unwrap().length
         } else {
-            self.octet_length
+            None
         }
     }
 
-    pub fn fixed_bytes_length(&self, type_mode: TypeMode) -> Option<u16> {
+    pub fn octet_length(&self, type_mode: TypeMode) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
-            self.simple_type_info.clone().unwrap().fixed_bytes_length
+            self.simple_type_info.clone().unwrap().transfer_octet_length
         } else {
-            self.fixed_bytes_length
+            self.transfer_octet_length
+        }
+    }
+
+    pub fn display_size(&self, type_mode: TypeMode) -> Option<u16> {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            self.simple_type_info.clone().unwrap().display_size
+        } else {
+            self.display_size
         }
     }
 }

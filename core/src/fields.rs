@@ -702,15 +702,20 @@ impl MongoStatement for MongoFields {
                 get_meta_data()?.sql_type,
             ) as i32),
             6 => Bson::String(get_meta_data()?.type_name.clone()),
-            7 => Bson::Int32(get_meta_data()?.precision.unwrap_or(0) as i32),
+            // Column size
+            7 => Bson::Int32(get_meta_data()?.column_size as i32),
             8 => Bson::Int32({
-                let l = get_meta_data()?.octet_length;
+                let l = get_meta_data()?.octet_length.clone();
                 match l {
                     None => definitions::SQL_NO_TOTAL as i32,
                     Some(l) => l as i32,
                 }
             }),
-            9 => Bson::Int32(get_meta_data()?.scale.unwrap_or(0) as i32),
+            // Decimal digit
+            9 => match get_meta_data()?.decimal_digits {
+                None => Bson::Null,
+                Some(dec_dg) => Bson::Int32(dec_dg as i32),
+            },
             10 => match get_meta_data()?.sql_type {
                 SqlDataType::SQL_INTEGER | SqlDataType::SQL_DOUBLE | SqlDataType::SQL_DECIMAL => {
                     Bson::Int32(10)
