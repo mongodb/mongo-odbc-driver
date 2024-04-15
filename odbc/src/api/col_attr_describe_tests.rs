@@ -566,7 +566,8 @@ mod unit {
                 .unwrap();
             assert_eq!(errors.len(), 1);
             assert_eq!(
-                "[MongoDB][API] Invalid field descriptor value ".to_owned() + &field_identifier.to_string(),
+                "[MongoDB][API] Invalid field descriptor value ".to_owned()
+                    + &field_identifier.to_string(),
                 format!("{}", errors.first().unwrap()),
             );
 

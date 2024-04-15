@@ -705,7 +705,7 @@ impl MongoStatement for MongoFields {
             // Column size
             7 => Bson::Int32(get_meta_data()?.column_size as i32),
             8 => Bson::Int32({
-                let l = get_meta_data()?.octet_length.clone();
+                let l = get_meta_data()?.octet_length;
                 match l {
                     None => definitions::SQL_NO_TOTAL as i32,
                     Some(l) => l as i32,
