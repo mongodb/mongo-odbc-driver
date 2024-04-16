@@ -18,11 +18,12 @@ log = "0.4"
 regex = "1"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
+mongodb = "2.8.2"
+# Do NOT change these features without consulting with other team members. 
+# The features are used to control the behavior of tokio. Tokio is unsafe to use
+# across ABI boundaries in any other runtime but current_thread
+tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
 
-[dependencies.mongodb]
-version = "2"
-default-features = false
-features = ["tokio-sync"]
 
 [features]
 result_set = []

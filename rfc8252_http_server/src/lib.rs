@@ -231,44 +231,57 @@ pub async fn start() -> (
     (server_handle, oidc_params_receiver)
 }
 
-#[tokio::test(flavor = "current_thread")]
-async fn rfc8252_http_server_accepted() {
-    use reqwest;
-    let (server_handle, mut oidc_params_receiver) = start().await;
-    let _ = reqwest::get(format!(
-        "{}{}",
-        DEFAULT_REDIRECT_URI, "?code=1234&state=foo"
-    ))
-    .await
-    .unwrap();
-    let oidc_params = oidc_params_receiver.recv().await.unwrap().unwrap();
-    server_handle.stop(true).await;
-    assert_eq!(oidc_params.code, "1234");
-    assert_eq!(oidc_params.state, Some("foo".to_string()));
-}
+#[cfg(test)]
+mod unit {
+    use super::*;
+    use once_cell::sync::Lazy;
+    // This is only to synchronize the tests so that they don't run concurrently
+    // This essentially forces what `cargo test -- --test-threads=1` does
+    static TEST_SEQUENTIAL: Lazy<tokio::sync::Mutex<Executor>> =
+        Lazy::new(|| tokio::sync::Mutex::new(Executor));
+    struct Executor;
 
-#[tokio::test(flavor = "current_thread")]
-async fn rfc8252_http_server_error() {
-    let (server_handle, mut oidc_params_receiver) = start().await;
-    let _ = reqwest::get(format!(
-        "{}{}",
-        DEFAULT_REDIRECT_URI, "?error=1234&error_description=foo"
-    ))
-    .await
-    .unwrap();
-    let oidc_params = oidc_params_receiver.recv().await.unwrap();
-    server_handle.stop(true).await;
-    assert_eq!(oidc_params, Err("1234: foo".to_string()));
-}
+    #[tokio::test(flavor = "current_thread")]
+    async fn rfc8252_http_server_accepted() {
+        let _lock = TEST_SEQUENTIAL.lock().await;
+        let (server_handle, mut oidc_params_receiver) = start().await;
+        let _ = reqwest::get(format!(
+            "{}{}",
+            DEFAULT_REDIRECT_URI, "?code=1234&state=foo"
+        ))
+        .await
+        .unwrap();
+        let oidc_params = oidc_params_receiver.recv().await.unwrap().unwrap();
+        server_handle.stop(true).await;
+        assert_eq!(oidc_params.code, "1234");
+        assert_eq!(oidc_params.state, Some("foo".to_string()));
+    }
 
-#[tokio::test(flavor = "current_thread")]
-async fn rfc8252_http_server_no_params() {
-    let (server_handle, mut oidc_params_receiver) = start().await;
-    let _ = reqwest::get(DEFAULT_REDIRECT_URI).await.unwrap();
-    let oidc_params = oidc_params_receiver.recv().await.unwrap();
-    server_handle.stop(true).await;
-    assert_eq!(
-        oidc_params,
-        Err("parameters error: response parameters are missing".to_string())
-    );
+    #[tokio::test(flavor = "current_thread")]
+    async fn rfc8252_http_server_error() {
+        let _lock = TEST_SEQUENTIAL.lock().await;
+        let (server_handle, mut oidc_params_receiver) = start().await;
+        let _ = reqwest::get(format!(
+            "{}{}",
+            DEFAULT_REDIRECT_URI, "?error=1234&error_description=foo"
+        ))
+        .await
+        .unwrap();
+        let oidc_params = oidc_params_receiver.recv().await.unwrap();
+        server_handle.stop(true).await;
+        assert_eq!(oidc_params, Err("1234: foo".to_string()));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn rfc8252_http_server_no_params() {
+        let _lock = TEST_SEQUENTIAL.lock().await;
+        let (server_handle, mut oidc_params_receiver) = start().await;
+        let _ = reqwest::get(DEFAULT_REDIRECT_URI).await.unwrap();
+        let oidc_params = oidc_params_receiver.recv().await.unwrap();
+        server_handle.stop(true).await;
+        assert_eq!(
+            oidc_params,
+            Err("parameters error: response parameters are missing".to_string())
+        );
+    }
 }

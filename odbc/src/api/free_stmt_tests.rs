@@ -18,25 +18,24 @@ mod unit {
     };
     use std::ptr::null_mut;
 
-    fn create_stmt_handle() -> *mut MongoHandle {
+    #[test]
+    fn test_free_stmt_invalid() {
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let conn =
             &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
         let stmt: *mut _ =
             &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
 
-        stmt
-    }
-
-    #[test]
-    fn test_free_stmt_invalid() {
-        let stmt = create_stmt_handle();
         unsafe { assert_eq!(SqlReturn::ERROR, SQLFreeStmt(stmt as *mut _, 1)) }
     }
 
     #[test]
     fn test_free_stmt_reset_params() {
-        let stmt = create_stmt_handle();
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
         unsafe {
             assert_eq!(
                 SqlReturn::SUCCESS,

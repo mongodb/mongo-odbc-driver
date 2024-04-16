@@ -1,7 +1,7 @@
 use crate::{handles::definitions::*, SQLCancel};
 use definitions::SqlReturn;
 use mongo_odbc_core::MongoConnection;
-use mongodb::sync::Client;
+use mongodb::Client;
 use std::env;
 
 mod integration {
@@ -121,14 +121,25 @@ mod integration {
 
     // checks that cancel gracefully handles the case where a query was executing when cancel is called,
     // but is no longer executing when killop is ultimately issued
+    // This test cannot use the tokio decorator because it isn't possible to create a runtime within a runtime
     #[test]
     fn test_cancel_running_query_not_executing() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let client = runtime.block_on(async {
+            Client::with_uri_str(generate_connection_uri())
+                .await
+                .unwrap()
+        });
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let conn_handle = Connection::with_state(env, ConnectionState::Allocated);
         let mongo_connection = MongoConnection {
-            client: Client::with_uri_str(generate_connection_uri()).unwrap(),
+            client,
             operation_timeout: None,
             uuid_repr: None,
+            runtime,
         };
         *conn_handle.mongo_connection.write().unwrap() = Some(mongo_connection);
         let conn = &mut MongoHandle::Connection(conn_handle);

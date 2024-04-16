@@ -14,6 +14,7 @@ use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
 /// # Safety
 /// Because this function is called from C, it is unsafe.
 ///
+
 #[no_mangle]
 pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const WideChar,
@@ -24,7 +25,12 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
     let marker = -1i8;
     let conn_str = unsafe { input_text_to_string_w(connection_string, marker as usize) };
     if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
-        match odbc_uri.try_into_client_options() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let client_options = runtime.block_on(async { odbc_uri.try_into_client_options().await });
+        match client_options {
             Ok(client_options) => {
                 match MongoConnection::connect(
                     client_options,
@@ -32,6 +38,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                     None,
                     Some(30),
                     TypeMode::Standard,
+                    Some(runtime),
                 ) {
                     Ok(_) => true,
                     Err(e) => {

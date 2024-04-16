@@ -490,14 +490,20 @@ impl MongoFields {
     ) -> Self {
         let dbs = db_name.map_or_else(
             || {
+                let _guard = mongo_connection.runtime.enter();
                 mongo_connection
-                    .client
-                    .list_database_names(
-                        None,
-                        ListDatabasesOptions::builder()
-                            .authorized_databases(true)
-                            .build(),
-                    )
+                    .runtime
+                    .block_on(async {
+                        mongo_connection
+                            .client
+                            .list_database_names(
+                                None,
+                                ListDatabasesOptions::builder()
+                                    .authorized_databases(true)
+                                    .build(),
+                            )
+                            .await
+                    })
                     .unwrap()
                     // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
                     .iter()
@@ -538,68 +544,73 @@ impl MongoFields {
         &mut self,
         mongo_connection: &MongoConnection,
     ) -> Result<(bool, Vec<Error>)> {
-        let mut warnings: Vec<Error> = vec![];
-        loop {
-            if self.collections_for_db.is_some() {
-                if let Some(current_collection) =
-                    self.collections_for_db.as_mut().unwrap().pop_front()
-                {
-                    let collection_name = current_collection.name.clone();
-                    if self.collection_name_filter.is_some()
-                        && !self
-                            .collection_name_filter
-                            .as_ref()
-                            .unwrap()
-                            .is_match(&collection_name)
+        let _guard = mongo_connection.runtime.enter();
+        mongo_connection.runtime.block_on(async {
+            let mut warnings: Vec<Error> = vec![];
+            loop {
+                if self.collections_for_db.is_some() {
+                    if let Some(current_collection) =
+                        self.collections_for_db.as_mut().unwrap().pop_front()
                     {
-                        // The collection does not match the filter, moving to the next one
-                        continue;
-                    }
-                    let get_schema_cmd = doc! {"sqlGetSchema": collection_name.clone()};
-
-                    let db = mongo_connection.client.database(&self.current_db_name);
-                    let current_col_metadata_response: Result<SqlGetSchemaResponse> =
-                        bson::from_document(db.run_command(get_schema_cmd, None).unwrap()).map_err(
-                            |e| Error::CollectionDeserialization(collection_name.clone(), e),
-                        );
-                    if let Err(error) = current_col_metadata_response {
-                        // If there is an Error while deserializing the schema, we won't show any columns for it
-                        warnings.push(error);
-                        continue;
-                    }
-                    let current_col_metadata_response = current_col_metadata_response.unwrap();
-                    match current_col_metadata_response.process_collection_metadata(
-                        &self.current_db_name,
-                        collection_name.as_str(),
-                        self.type_mode,
-                    ) {
-                        Ok(current_col_metadata) => {
-                            if !current_col_metadata.is_empty() {
-                                self.current_col_metadata = current_col_metadata;
-                                self.current_field_for_collection = 0;
-                                return Ok((true, warnings));
-                            }
-                        }
-                        // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
-                        Err(e) => {
-                            log::error!("Error while processing collection metadata: {}", e);
+                        let collection_name = current_collection.name.clone();
+                        if self.collection_name_filter.is_some()
+                            && !self
+                                .collection_name_filter
+                                .as_ref()
+                                .unwrap()
+                                .is_match(&collection_name)
+                        {
+                            // The collection does not match the filter, moving to the next one
                             continue;
+                        }
+                        let get_schema_cmd = doc! {"sqlGetSchema": collection_name.clone()};
+
+                        let db = mongo_connection.client.database(&self.current_db_name);
+                        let current_col_metadata_response: Result<SqlGetSchemaResponse> =
+                            bson::from_document(
+                                db.run_command(get_schema_cmd, None).await.unwrap(),
+                            )
+                            .map_err(|e| {
+                                Error::CollectionDeserialization(collection_name.clone(), e)
+                            });
+                        if let Err(error) = current_col_metadata_response {
+                            // If there is an Error while deserializing the schema, we won't show any columns for it
+                            warnings.push(error);
+                            continue;
+                        }
+                        let current_col_metadata_response = current_col_metadata_response.unwrap();
+                        match current_col_metadata_response.process_collection_metadata(
+                            &self.current_db_name,
+                            collection_name.as_str(),
+                            self.type_mode,
+                        ) {
+                            Ok(current_col_metadata) => {
+                                if !current_col_metadata.is_empty() {
+                                    self.current_col_metadata = current_col_metadata;
+                                    self.current_field_for_collection = 0;
+                                    return Ok((true, warnings));
+                                }
+                            }
+                            // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
+                            Err(e) => {
+                                log::error!("Error while processing collection metadata: {}", e);
+                                continue;
+                            }
                         }
                     }
                 }
-            }
-            if self.dbs.is_empty() {
-                return Ok((false, warnings));
-            }
-            let db_name = self.dbs.pop_front().unwrap();
-            self.collections_for_db = Some(
+                if self.dbs.is_empty() {
+                    return Ok((false, warnings));
+                }
+                let db_name = self.dbs.pop_front().unwrap();
+                self.collections_for_db = Some(
                 mongo_connection
                     .client
                     .database(&db_name)
                     .run_command(
                     doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
                     None,
-                ).unwrap().get_document("cursor").map(|doc| {
+                ).await.unwrap().get_document("cursor").map(|doc| {
                     doc.get_array("firstBatch").unwrap().iter().map(|val| {
                         let doc = val.as_document().unwrap();
                         let name = doc.get_str("name").unwrap().to_string();
@@ -615,8 +626,9 @@ impl MongoFields {
                     VecDeque::new()
                 }),
             );
-            self.current_db_name = db_name;
-        }
+                self.current_db_name = db_name;
+            }
+        })
     }
 }
 
