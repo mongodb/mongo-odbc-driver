@@ -1,3 +1,4 @@
+use std::any::type_name_of_val;
 use std::collections::HashMap;
 
 use crate::{
@@ -22,7 +23,7 @@ pub struct MongoColMetadata {
     pub catalog_name: String,
     // More info for column size can be found here:
     // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/column-size
-    pub column_size: u16,
+    pub column_size: Option<u16>,
     // more info for dislay size can be found here:
     // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/display-size
     pub display_size: Option<u16>,
@@ -37,7 +38,8 @@ pub struct MongoColMetadata {
     pub col_name: String,
     pub nullability: Nullability,
     pub num_prec_radix: Option<u16>,
-    pub octet_length: Option<u16>,
+    pub transfer_octet_length: Option<u16>,
+    pub char_octet_length: Option<u16>,
     pub precision: Option<u16>,
     pub scale: Option<u16>,
     pub searchable: i32,
@@ -75,20 +77,8 @@ impl MongoColMetadata {
             // data. For character types, this is the length in characters of the data; for binary
             // data types, column size is defined as the length in bytes of the data. For the time,
             // timestamp, and all interval data types, this is the number of characters in the
-            // character representation of this data
-            column_size: match bson_type_info.sql_type(type_mode) {
-                SqlDataType::SQL_NUMERIC
-                | SqlDataType::SQL_DECIMAL
-                | SqlDataType::SQL_INTEGER
-                | SqlDataType::SQL_SMALLINT
-                | SqlDataType::SQL_FLOAT
-                | SqlDataType::SQL_REAL
-                | SqlDataType::SQL_DOUBLE
-                | SqlDataType::SQL_BIGINT
-                | SqlDataType::SQL_TINYINT
-                | SqlDataType::SQL_BIT => bson_type_info.precision(type_mode).unwrap_or(0),
-                _ => bson_type_info.length(type_mode).unwrap_or(0),
-            },
+            // character representation of this data.
+            column_size: bson_type_info.column_size(type_mode),
             display_size: bson_type_info.display_size(type_mode),
             // The decimal digits of decimal and numeric data types is defined as the maximum number
             // of digits to the right of the decimal point, or the scale of the data. For approximate
@@ -96,12 +86,7 @@ impl MongoColMetadata {
             // of digits to the right of the decimal point is not fixed. For datetime or interval
             // data that contains a seconds component, the decimal digits is defined as the number
             // of digits to the right of the decimal point in the seconds component of the data.
-            decimal_digits: match bson_type_info.sql_type {
-                SqlDataType::SQL_TIMESTAMP | SqlDataType::SQL_TYPE_TIMESTAMP => {
-                    bson_type_info.scale
-                }
-                _ => bson_type_info.precision,
-            },
+            decimal_digits: bson_type_info.decimal_digit(type_mode),
             fixed_prec_scale: bson_type_info.fixed_prec_scale,
             label: field_name.clone(),
             length: bson_type_info.length(type_mode),
@@ -110,7 +95,8 @@ impl MongoColMetadata {
             col_name: field_name,
             nullability,
             num_prec_radix: bson_type_info.num_prec_radix,
-            octet_length: bson_type_info.octet_length(type_mode),
+            transfer_octet_length: bson_type_info.transfer_octet_length,
+            char_octet_length: bson_type_info.char_octet_length(type_mode),
             precision: bson_type_info.precision(type_mode),
             scale: bson_type_info.scale,
             searchable: bson_type_info.searchable,

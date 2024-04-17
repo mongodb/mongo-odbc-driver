@@ -16,9 +16,10 @@ const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
     searchable: SQL_PRED_BASIC,
     is_case_sensitive: false,
     fixed_prec_scale: true,
-    scale: Some(3),
-    length: None,
-    precision: Some(23),
+    scale: None,
+    length: Some(23),
+    precision: Some(3),
+    char_octet_length: None,
     transfer_octet_length: Some(16),
     display_size: Some(23),
     literal_prefix: Some("'"),
@@ -27,6 +28,8 @@ const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
     is_auto_unique_value: None,
     is_unsigned: None,
     num_prec_radix: None,
+    decimal_digit: Some(3),
+    column_size: Some(23),
     simple_type_info: None,
 };
 
@@ -260,8 +263,9 @@ impl MongoStatement for MongoTypesInfo {
             Some(type_info) => Ok(Some(match col_index {
                 1 | 13 => Bson::String(type_info.type_name.to_string()),
                 2 | 16 => Bson::Int32(type_info.sql_type(self.type_mode) as i32),
-                3 => match type_info.precision(self.type_mode) {
-                    Some(precision) => Bson::Int32(precision as i32),
+                3 => match type_info.column_size(self.type_mode) {
+                    Some(column_size) => Bson::Int32(column_size as i32),
+                    // NULL is returned for data types where column size is not applicable
                     None => Bson::Null,
                 },
                 4 => match type_info.literal_prefix {
@@ -287,6 +291,7 @@ impl MongoStatement for MongoTypesInfo {
                 },
                 14 | 15 => match type_info.scale {
                     Some(scale) => Bson::Int32(scale as i32),
+                    // NULL is returned where scale is not applicable.
                     None => Bson::Null,
                 },
                 17 => match type_info.sql_code {

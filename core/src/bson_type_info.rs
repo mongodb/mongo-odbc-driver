@@ -25,7 +25,7 @@ pub struct BsonTypeInfo {
     // A boolean value reporting if a type is case_sensitive. True for Char-types, false for others
     pub is_case_sensitive: bool,
     // A boolean dictating if the data type has predefined fixed precision and scale (which are data source-specific),
-    // such as a money data type. Note true for DOUBLE, where scale can differ
+    // such as a money data type. Note true for DOUBLE, where scale can differ.
     pub fixed_prec_scale: bool,
     // Scale for a datatype. If the datatype does not have fixed scale, this represents the largest
     // possible scale.
@@ -39,7 +39,10 @@ pub struct BsonTypeInfo {
     // SQL_TYPE_TIMESTAMP, and all the interval data types that represent a time interval, its value
     // is the applicable precision of the fractional seconds component.
     pub precision: Option<u16>,
-    // Maximum number of bytes (octets) for a given data type
+    // The length, in bytes, of a character string or binary data type.
+    pub char_octet_length: Option<u16>,
+    // The transfer octet length of a column is the maximum number of bytes returned to the
+    // application when data is transferred to its default C data type.
     pub transfer_octet_length: Option<u16>,
     // The maximum number of characters needed to display data in character form
     pub display_size: Option<u16>,
@@ -58,6 +61,27 @@ pub struct BsonTypeInfo {
     // the value Some(10) to indicate that COLUMN_SIZE specifies a number of decimal digits.
     // Otherwise, this is None.
     pub num_prec_radix: Option<u16>,
+    // The decimal digits of decimal and numeric data types is defined as the maximum number of
+    // digits to the right of the decimal point, or the scale of the data.
+    // For approximate floating-point number columns or parameters, the scale is undefined because
+    // the number of digits to the right of the decimal point is not fixed.
+    // For datetime or interval data that contains a seconds component, the decimal digits is
+    // defined as the number of digits to the right of the decimal point in the seconds component of
+    // the data.
+    // Descriptor field corresponding to decimal digits:
+    //      - All exact numeric types: SQL_DESC_SCALE
+    //      - All datetime types and interval types : SQL_DESC_PRECISION
+    //      - All other types : Not applicable
+    pub decimal_digit: Option<u16>,
+    // The column (or parameter) size of numeric data types is defined as the maximum number of
+    // digits used by the data type of the column or parameter, or the precision of the data. For
+    // character types, this is the length in characters of the data; for binary data types, column
+    // size is defined as the length in bytes of the data. For the time, timestamp, and all interval
+    // data types, this is the number of characters in the character representation of this data.
+    // Descriptor field corresponding to decimal digits:
+    //      - All numeric types except SQL_BIT: SQL_DESC_PRECISION
+    //      - All other types: SQL_DESC_LENGTH
+    pub column_size: Option<u16>,
     // This is the type info we use when simple_type_mode is true. This is a convenience mode for
     // BI tools where BSON types not directly representable as SQL data are rendered as extended
     // json strings.
@@ -107,9 +131,10 @@ impl BsonTypeInfo {
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
-        scale: None,
+        scale: Some(0),
         length: None,
         precision: Some(15),
+        char_octet_length: None,
         transfer_octet_length: Some(8),
         display_size: Some(24),
         literal_prefix: None,
@@ -118,6 +143,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: Some(2),
+        decimal_digit: Some(0),
+        column_size: Some(15),
         simple_type_info: None,
     };
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
@@ -130,6 +157,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: Some("'"),
@@ -138,6 +166,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: None,
     };
     // This is essentially here just to support Direct Query casting
@@ -153,6 +183,7 @@ impl BsonTypeInfo {
         scale: None,
         length: Some(MAX_STRING_SIZE),
         precision: None,
+        char_octet_length: Some(MAX_STRING_SIZE),
         transfer_octet_length: None,
         display_size: Some(MAX_STRING_SIZE),
         literal_prefix: Some("'"),
@@ -161,6 +192,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: Some(MAX_STRING_SIZE),
         simple_type_info: None,
     };
     pub const OBJECT: BsonTypeInfo = BsonTypeInfo {
@@ -173,6 +206,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -181,6 +215,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const ARRAY: BsonTypeInfo = BsonTypeInfo {
@@ -193,6 +229,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -201,6 +238,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const BINDATA: BsonTypeInfo = BsonTypeInfo {
@@ -213,6 +252,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -221,6 +261,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const UNDEFINED: BsonTypeInfo = BsonTypeInfo {
@@ -233,6 +275,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -241,7 +284,9 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
-        simple_type_info: SimpleTypeInfo::new(20, 20, 20),
+        decimal_digit: None,
+        column_size: None,
+        simple_type_info: SimpleTypeInfo::new(20, 20 * 4, 20),
     };
     pub const OBJECTID: BsonTypeInfo = BsonTypeInfo {
         type_name: "objectId",
@@ -252,8 +297,9 @@ impl BsonTypeInfo {
         fixed_prec_scale: false,
         scale: None,
         length: None,
-        precision: Some(24),
-        transfer_octet_length: Some(24 * 4),
+        precision: None,
+        char_octet_length: None,
+        transfer_octet_length: Some(24),
         display_size: Some(24),
         literal_prefix: None,
         literal_suffix: None,
@@ -261,6 +307,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(true),
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: Some(24),
         simple_type_info: SimpleTypeInfo::new(34, 34 * 4, 34),
     };
     pub const BOOL: BsonTypeInfo = BsonTypeInfo {
@@ -270,9 +318,10 @@ impl BsonTypeInfo {
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: false,
-        scale: None,
-        length: None,
+        scale: Some(0),
+        length: Some(1),
         precision: Some(1),
+        char_octet_length: None,
         transfer_octet_length: Some(1),
         display_size: Some(1),
         literal_prefix: None,
@@ -281,6 +330,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: Some(0),
+        column_size: Some(1),
         simple_type_info: None,
     };
     pub const DATE: BsonTypeInfo = BsonTypeInfo {
@@ -290,9 +341,10 @@ impl BsonTypeInfo {
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
         fixed_prec_scale: true,
-        scale: Some(3),
-        length: None,
-        precision: Some(23),
+        scale: None,
+        length: Some(23),
+        precision: Some(3),
+        char_octet_length: None,
         transfer_octet_length: Some(16),
         display_size: Some(23),
         literal_prefix: Some("'"),
@@ -301,6 +353,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: Some(3),
+        column_size: Some(23),
         simple_type_info: None,
     };
     pub const NULL: BsonTypeInfo = BsonTypeInfo {
@@ -313,6 +367,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -321,7 +376,9 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
-        simple_type_info: SimpleTypeInfo::new(4, 4, 4),
+        decimal_digit: None,
+        column_size: None,
+        simple_type_info: SimpleTypeInfo::new(4, 4 * 4, 4),
     };
     pub const REGEX: BsonTypeInfo = BsonTypeInfo {
         type_name: "regex",
@@ -333,6 +390,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -341,6 +399,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const DBPOINTER: BsonTypeInfo = BsonTypeInfo {
@@ -353,6 +413,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -361,6 +422,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const JAVASCRIPT: BsonTypeInfo = BsonTypeInfo {
@@ -373,6 +436,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -381,6 +445,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const SYMBOL: BsonTypeInfo = BsonTypeInfo {
@@ -393,6 +459,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -401,6 +468,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const JAVASCRIPTWITHSCOPE: BsonTypeInfo = BsonTypeInfo {
@@ -413,6 +482,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -421,6 +491,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const INT: BsonTypeInfo = BsonTypeInfo {
@@ -433,6 +505,7 @@ impl BsonTypeInfo {
         scale: Some(0),
         length: None,
         precision: Some(10),
+        char_octet_length: None,
         transfer_octet_length: Some(4),
         display_size: Some(11),
         literal_prefix: None,
@@ -441,6 +514,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: Some(10),
+        decimal_digit: Some(0),
+        column_size: Some(10),
         simple_type_info: None,
     };
     pub const TIMESTAMP: BsonTypeInfo = BsonTypeInfo {
@@ -453,6 +528,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -461,7 +537,9 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
-        simple_type_info: SimpleTypeInfo::new(68, 68, 68),
+        decimal_digit: None,
+        column_size: None,
+        simple_type_info: SimpleTypeInfo::new(68, 68 * 4, 68),
     };
     pub const LONG: BsonTypeInfo = BsonTypeInfo {
         type_name: "long",
@@ -473,6 +551,7 @@ impl BsonTypeInfo {
         scale: Some(0),
         length: None,
         precision: Some(20),
+        char_octet_length: None,
         transfer_octet_length: Some(8),
         display_size: Some(20),
         literal_prefix: None,
@@ -481,6 +560,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: Some(10),
+        decimal_digit: Some(0),
+        column_size: Some(20),
         simple_type_info: None,
     };
     pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
@@ -493,6 +574,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -501,6 +583,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: Some(false),
         is_unsigned: Some(false),
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
     pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
@@ -513,6 +597,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -521,7 +606,9 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
-        simple_type_info: SimpleTypeInfo::new(14, 14, 14),
+        decimal_digit: None,
+        column_size: None,
+        simple_type_info: SimpleTypeInfo::new(14, 14 * 4, 14),
     };
     pub const MAXKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "maxKey",
@@ -533,6 +620,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -541,7 +629,9 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
-        simple_type_info: SimpleTypeInfo::new(14, 14, 14),
+        decimal_digit: None,
+        column_size: None,
+        simple_type_info: SimpleTypeInfo::new(14, 14 * 4, 14),
     };
     pub const BSON: BsonTypeInfo = BsonTypeInfo {
         type_name: "bson",
@@ -553,6 +643,7 @@ impl BsonTypeInfo {
         scale: None,
         length: None,
         precision: None,
+        char_octet_length: None,
         transfer_octet_length: None,
         display_size: None,
         literal_prefix: None,
@@ -561,6 +652,8 @@ impl BsonTypeInfo {
         is_auto_unique_value: None,
         is_unsigned: None,
         num_prec_radix: None,
+        decimal_digit: None,
+        column_size: None,
         simple_type_info: SimpleTypeInfo::default(),
     };
 
@@ -596,11 +689,11 @@ impl BsonTypeInfo {
         }
     }
 
-    pub fn octet_length(&self, type_mode: TypeMode) -> Option<u16> {
+    pub fn char_octet_length(&self, type_mode: TypeMode) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
-            self.simple_type_info.clone().unwrap().transfer_octet_length
+            self.simple_type_info.clone().unwrap().length
         } else {
-            self.transfer_octet_length
+            self.char_octet_length
         }
     }
 
@@ -609,6 +702,22 @@ impl BsonTypeInfo {
             self.simple_type_info.clone().unwrap().display_size
         } else {
             self.display_size
+        }
+    }
+
+    pub fn decimal_digit(&self, type_mode: TypeMode) -> Option<u16> {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            None
+        } else {
+            self.decimal_digit
+        }
+    }
+
+    pub fn column_size(&self, type_mode: TypeMode) -> Option<u16> {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            self.simple_type_info.clone().unwrap().length
+        } else {
+            self.column_size
         }
     }
 }

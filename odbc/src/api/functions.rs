@@ -681,7 +681,9 @@ pub unsafe extern "C" fn SQLColAttributeW(
                         x.num_prec_radix.unwrap_or(0) as Len
                     }),
                     Desc::SQL_DESC_OCTET_LENGTH | Desc::SQL_COLUMN_LENGTH => {
-                        numeric_col_attr(&|x: &MongoColMetadata| x.octet_length.unwrap_or(0) as Len)
+                        numeric_col_attr(&|x: &MongoColMetadata| {
+                            x.transfer_octet_length.unwrap_or(0) as Len
+                        })
                     }
                     Desc::SQL_DESC_LENGTH => {
                         numeric_col_attr(&|x: &MongoColMetadata| x.length.unwrap_or(0) as Len)
@@ -691,7 +693,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     }
                     // Column size
                     Desc::SQL_COLUMN_PRECISION => {
-                        numeric_col_attr(&|x: &MongoColMetadata| x.column_size as Len)
+                        numeric_col_attr(&|x: &MongoColMetadata| x.column_size.unwrap_or(0) as Len)
                     }
                     // Decimal digit
                     Desc::SQL_COLUMN_SCALE => numeric_col_attr(&|x: &MongoColMetadata| {
@@ -700,7 +702,6 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     Desc::SQL_DESC_SCALE => {
                         numeric_col_attr(&|x: &MongoColMetadata| x.scale.unwrap_or(0) as Len)
                     }
-
                     Desc::SQL_DESC_SEARCHABLE => {
                         numeric_col_attr(&|x: &MongoColMetadata| x.searchable as Len)
                     }
@@ -959,7 +960,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
             let odbc_version = stmt_handle.get_odbc_version();
             {
                 let stmt = must_be_valid!(stmt_handle.as_statement());
-                let mongo_stmt = stmt.mongo_statement.write().unwrap();
+                let mongo_stmt = stmt.mongo_statement.read().unwrap();
                 if mongo_stmt.is_none() {
                     stmt.errors.write().unwrap().push(ODBCError::NoResultSet);
                     return SqlReturn::ERROR;
@@ -967,7 +968,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
                 let col_metadata = mongo_stmt.as_ref().unwrap().get_col_metadata(col_number);
                 if let Ok(col_metadata) = col_metadata {
                     *data_type = handle_sql_type(odbc_version, col_metadata.sql_type);
-                    *col_size = col_metadata.column_size as usize;
+                    *col_size = col_metadata.column_size.unwrap_or(0) as usize;
                     *decimal_digits = col_metadata.decimal_digits.unwrap_or(0) as i16;
                     *nullable = col_metadata.nullability as i16;
                     return i16_len::set_output_wstring(

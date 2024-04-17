@@ -721,10 +721,17 @@ impl MongoStatement for MongoFields {
             // TYPE_NAME
             6 => Bson::String(get_meta_data()?.type_name.clone()),
             // COLUMN_SIZE
-            7 => Bson::Int32(get_meta_data()?.column_size as i32),
-            // BUFFER_LENGTH
+            7 => Bson::Int32({
+                match get_meta_data()?.column_size {
+                    // If the driver cannot determine the column for a variable type, it returns
+                    // SQL_NO_TOTAL.
+                    None => definitions::SQL_NO_TOTAL as i32,
+                    Some(col_size) => col_size as i32,
+                }
+            }),
+            // BUFFER_LENGTH = Transfer octet length
             8 => Bson::Int32({
-                let l = get_meta_data()?.octet_length;
+                let l = get_meta_data()?.transfer_octet_length;
                 match l {
                     None => definitions::SQL_NO_TOTAL as i32,
                     Some(l) => l as i32,
@@ -760,13 +767,20 @@ impl MongoStatement for MongoFields {
                 Some(x) => Bson::Int32(x as i32),
             },
             // CHAR_OCTET_LENGTH
-            16 => Bson::Int32({
-                let l = get_meta_data()?.octet_length;
-                match l {
-                    None => definitions::SQL_NO_TOTAL as i32,
-                    Some(_) => 0i32,
-                }
-            }),
+            // The maximum length in bytes of a character or binary data type column.
+            // For all other data types, this column returns a NULL.
+            16 => match get_meta_data()?.sql_type {
+                // For numeric data types. 10 means that the values in COLUMN_SIZE and DECIMAL_DIGITS
+                // give the maximum number of digits and maximum number of digits to the right of the
+                // decimal point allowed for the column respectively.
+                SqlDataType::SQL_VARCHAR
+                | SqlDataType::SQL_WVARCHAR
+                | SqlDataType::SQL_VARBINARY => match get_meta_data()?.char_octet_length {
+                    None => Bson::Int32(definitions::SQL_NO_TOTAL as i32),
+                    Some(char_octet_length) => Bson::Int32(char_octet_length as i32),
+                },
+                _ => Bson::Null,
+            },
             // ORDINAL_POSITION
             17 => Bson::Int32(1 + self.current_field_for_collection as i32),
             // IS_NULLABLE

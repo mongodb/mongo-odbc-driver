@@ -26,6 +26,7 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
     let mut expected_column_name: Vec<Value> = vec![];
     let mut expected_display_size: Vec<Value> = vec![];
     let mut expected_length: Vec<Value> = vec![];
+    let mut expected_octet_length: Vec<Value> = vec![];
     let mut expected_is_searchable: Vec<Value> = vec![];
     let mut expected_is_unsigned: Vec<Value> = vec![];
     let mut expected_sql_type: Vec<Value> = vec![];
@@ -50,6 +51,9 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
 
         let length = get_column_attribute(stmt, i, Desc::SQL_DESC_LENGTH, &NUMBER_VAL)?;
         expected_length.push(length);
+
+        let octet_length = get_column_attribute(stmt, i, Desc::SQL_DESC_OCTET_LENGTH, &NUMBER_VAL)?;
+        expected_octet_length.push(octet_length);
 
         let is_searchable = get_column_attribute(stmt, i, Desc::SQL_DESC_SEARCHABLE, &NUMBER_VAL)?;
         expected_is_searchable.push(is_searchable);

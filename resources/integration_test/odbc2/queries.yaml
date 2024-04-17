@@ -13,12 +13,13 @@ tests:
     expected_catalog_name: ["", "", "", "", ""]
     expected_column_label: ["_id", "enrolled", "name", "startdate", "studentid"]
     expected_display_size: [11, 1, 0, 23, 11]
-    expected_length: [4, 1, 0, 23, 4]
+    expected_length: [0, 0, 0, 0, 0]
+    expected_octet_length: [4, 1, 0, 16, 4]
     expected_is_searchable: [2, 2, 3, 2, 2]
     expected_is_unsigned: [0, 1, 1, 1, 0]
     expected_sql_type: [4, -7, -9, 11, 4]
-    expected_precision: [10, 1, 0, 23, 10]
-    expected_scale: [0, 0, 0, 3, 0]
+    expected_precision: [10, 1, 0, 3, 10]
+    expected_scale: [0, 0, 0, 0, 0]
     expected_is_nullable: [1, 1, 1, 1, 1]
 
   - description: select_star_unordered_using_simple_types_only_mode
@@ -26,6 +27,7 @@ tests:
     is_simple_type: true
     db: integration_test
     expected_display_size: [11, 1, 0, 23, 11]
-    expected_length: [4, 1, 0, 23, 4]
+    expected_length: [0, 0, 0, 0, 0]
+    expected_octet_length: [4, 1, 0, 16, 4]
     expected_sql_type: [4, -7, -9, 11, 4]
-    expected_precision: [10, 1, 0, 23, 10]
+    expected_precision: [10, 1, 0, 3, 10]
