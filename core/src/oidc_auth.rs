@@ -9,7 +9,7 @@ use std::{collections::HashSet, hash::RandomState, time::Instant};
 use tokio::time::{self, Duration};
 
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
-const DEFAULT_SLEEP_DURATION: Duration = Duration::from_secs(5 * 60); // from_mins is unstable
+const DEFAULT_SLEEP_DURATION: Duration = Duration::from_secs(5 * 60); // from_mins is unstable, so we use from_secs with a multiplication. The multiplication is performed at compile time, anyway
 
 // temporary until rust driver OIDC support is released
 // TODO Remove Me.
