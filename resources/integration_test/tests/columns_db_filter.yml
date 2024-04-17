@@ -3,5 +3,5 @@ tests:
     test_definition: [ "sqlcolumnsw", "integration_test_2", 18, "", 0, "", 0, "", 0 ]
     db: integration_test
     expected_result:
-      - ["integration_test_2", null, "example_2", "_id", 8, "double", 15, 8, 0, 10, 1, "", null, 8 , null , 0, 1, "YES"]
-      - ["integration_test_2", null, "example_2", "b", -9, "string", 0, -4, null, null, 1, "", null, -9, null, -4, 2, "YES"]
+      - ["integration_test_2", null, "example_2", "_id", 8, "double", 15, 8, 0, 10, 1, "", null, 8 , null , null, 1, "YES"]
+      - ["integration_test_2", null, "example_2", "b", -9, "string", -4, -4, null, null, 1, "", null, -9, null, -4, 2, "YES"]

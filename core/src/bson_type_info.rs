@@ -689,6 +689,14 @@ impl BsonTypeInfo {
         }
     }
 
+    pub fn transfer_octet_length(&self, type_mode: TypeMode) -> Option<u16> {
+        if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
+            self.simple_type_info.clone().unwrap().transfer_octet_length
+        } else {
+            self.transfer_octet_length
+        }
+    }
+
     pub fn char_octet_length(&self, type_mode: TypeMode) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
             self.simple_type_info.clone().unwrap().length

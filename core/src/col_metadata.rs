@@ -1,4 +1,3 @@
-use std::any::type_name_of_val;
 use std::collections::HashMap;
 
 use crate::{
@@ -95,7 +94,7 @@ impl MongoColMetadata {
             col_name: field_name,
             nullability,
             num_prec_radix: bson_type_info.num_prec_radix,
-            transfer_octet_length: bson_type_info.transfer_octet_length,
+            transfer_octet_length: bson_type_info.transfer_octet_length(type_mode),
             char_octet_length: bson_type_info.char_octet_length(type_mode),
             precision: bson_type_info.precision(type_mode),
             scale: bson_type_info.scale,

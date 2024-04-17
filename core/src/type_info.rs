@@ -289,7 +289,7 @@ impl MongoStatement for MongoTypesInfo {
                     Some(is_auto_unique_value) => Bson::Int32(is_auto_unique_value as i32),
                     _ => Bson::Null,
                 },
-                14 | 15 => match type_info.scale {
+                14 | 15 => match type_info.decimal_digit {
                     Some(scale) => Bson::Int32(scale as i32),
                     // NULL is returned where scale is not applicable.
                     None => Bson::Null,
