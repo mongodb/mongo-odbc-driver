@@ -1,6 +1,6 @@
 use mongo_odbc_core::oidc_auth::*;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let c = CallbackContext {
         idp_info: Some(IdpServerInfo {
