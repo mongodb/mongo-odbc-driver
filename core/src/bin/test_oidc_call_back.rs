@@ -15,11 +15,14 @@ async fn main() {
     };
     let mut refresh_c = c.clone();
     let IdpServerResponse {
-        access_token,
+        access_token: _,
         expires: _,
         refresh_token,
     } = oidc_call_back(c).await.unwrap();
-    println!("initial access token: {:access_token?}");
+    println!("initial refresh token: {refresh_token:?}");
     refresh_c.refresh_token = refresh_token;
-    println!("second response: {:?}", oidc_call_back(refresh_c).await.unwrap());
+    println!(
+        "second response: {:?}",
+        oidc_call_back(refresh_c).await.unwrap()
+    );
 }
