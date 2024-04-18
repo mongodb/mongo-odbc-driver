@@ -606,7 +606,7 @@ mod unit {
         }
 
         #[test]
-        fn simple_types_only_test() {
+        fn standard_types_test() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
