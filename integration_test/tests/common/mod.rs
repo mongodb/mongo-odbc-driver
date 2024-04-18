@@ -428,8 +428,13 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
 
 #[allow(dead_code)]
 /// Helper function to bind columns.
-pub unsafe fn bind_cols(stmt_handle: HStmt, target_types: Vec<(CDataType, Pointer, Len)>) {
-    for (i, (target_type, binding_buffer, buffer_length)) in target_types.iter().enumerate() {
+pub unsafe fn bind_cols(
+    stmt_handle: HStmt,
+    target_types: Vec<(CDataType, Pointer, Len, *mut Len)>,
+) {
+    for (i, (target_type, binding_buffer, buffer_length, indicator)) in
+        target_types.iter().enumerate()
+    {
         assert_eq!(
             SqlReturn::SUCCESS,
             SQLBindCol(
@@ -438,7 +443,7 @@ pub unsafe fn bind_cols(stmt_handle: HStmt, target_types: Vec<(CDataType, Pointe
                 *target_type as SmallInt,
                 *binding_buffer,
                 *buffer_length,
-                null_mut(),
+                *indicator,
             )
         )
     }

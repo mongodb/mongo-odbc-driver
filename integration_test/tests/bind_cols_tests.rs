@@ -7,7 +7,7 @@ mod integration {
     };
     use definitions::{
         AttrOdbcVersion, CDataType, FetchOrientation, FreeStmtOption, Handle, HandleType, Integer,
-        Pointer, SQLFetchScroll, SQLFreeStmt, SQLSetStmtAttrW, SmallInt, SqlReturn,
+        Len, Pointer, SQLFetchScroll, SQLFreeStmt, SQLSetStmtAttrW, SmallInt, SqlReturn,
         StatementAttribute, ULen,
     };
 
@@ -29,12 +29,24 @@ mod integration {
             exec_direct_default_query(stmt_handle);
 
             let id_buffer = &mut [0u8; 4] as *mut _;
+            let id_indicator = &mut [0isize; 2] as *mut Len;
             let a_buffer = &mut [0u8; 8] as *mut _;
+            let a_indicator = &mut [0isize; 2] as *mut Len;
             bind_cols(
                 stmt_handle,
                 vec![
-                    (CDataType::SQL_C_SLONG, id_buffer as Pointer, 4),
-                    (CDataType::SQL_C_SBIGINT, a_buffer as Pointer, 8),
+                    (
+                        CDataType::SQL_C_SLONG,
+                        id_buffer as Pointer,
+                        4,
+                        id_indicator,
+                    ),
+                    (
+                        CDataType::SQL_C_SBIGINT,
+                        a_buffer as Pointer,
+                        8,
+                        a_indicator,
+                    ),
                 ],
             );
 
@@ -88,12 +100,24 @@ mod integration {
 
             // Since ROW_ARRAY_SIZE is set to 2, we double the buffer lengths.
             let id_buffer = &mut [0u8; 8] as *mut _;
+            let id_indicator = &mut [0isize; 2] as *mut Len;
             let a_buffer = &mut [0u8; 16] as *mut _;
+            let a_indicator = &mut [0isize; 2] as *mut Len;
             bind_cols(
                 stmt_handle,
                 vec![
-                    (CDataType::SQL_C_SLONG, id_buffer as Pointer, 8),
-                    (CDataType::SQL_C_SBIGINT, a_buffer as Pointer, 16),
+                    (
+                        CDataType::SQL_C_SLONG,
+                        id_buffer as Pointer,
+                        4,
+                        id_indicator,
+                    ),
+                    (
+                        CDataType::SQL_C_SBIGINT,
+                        a_buffer as Pointer,
+                        8,
+                        a_indicator,
+                    ),
                 ],
             );
 
@@ -119,10 +143,12 @@ mod integration {
                 let (id1, id2) = expected_id_data[i];
                 assert_eq!(id1, *(id_buffer as *mut i32));
                 assert_eq!(id2, *((id_buffer as ULen + 4) as *mut i32));
+                assert_eq!(4, *id_indicator);
 
                 let (a1, a2) = expected_a_data[i];
                 assert_eq!(a1, *(a_buffer as *mut i64));
                 assert_eq!(a2, *((a_buffer as ULen + 8) as *mut i64));
+                assert_eq!(8, *id_indicator);
 
                 i += 1;
             }
