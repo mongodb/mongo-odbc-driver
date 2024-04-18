@@ -780,7 +780,7 @@ impl MongoStatement for MongoFields {
                     Bson::Int32(
                         meta_data
                             .char_octet_length
-                            .unwrap_or(definitions::SQL_NO_TOTAL) as i32,
+                            .unwrap_or(definitions::SQL_NO_TOTAL as u16) as i32,
                     )
                 } else {
                     Bson::Null
