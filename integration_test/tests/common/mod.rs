@@ -3,9 +3,9 @@ use cstr::{self, WideChar};
 use definitions::{
     AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, FetchOrientation,
     HDbc, HEnv, HStmt, Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLBindCol,
-    SQLColAttributeW, SQLDisconnect, SQLDriverConnectW, SQLFetch, SQLFetchScroll, SQLFreeHandle,
-    SQLGetData, SQLGetDiagRecW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt,
-    SqlReturn, USmallInt, SQL_NTS,
+    SQLColAttributeW, SQLDisconnect, SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFetchScroll,
+    SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr,
+    SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
 use std::ptr::null_mut;
 use std::{env, slice};
@@ -457,4 +457,15 @@ pub fn fetch_and_bind_cols(stmt_handle: HStmt, target_types: Vec<CDataType>) {
             assert_eq!(SqlReturn::SUCCESS, result);
         }
     }
+}
+
+pub unsafe fn exec_direct_default_query(stmt_handle: HStmt) {
+    let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT * FROM integration_test.foo");
+    query.push(0);
+    assert_eq!(
+        SqlReturn::SUCCESS,
+        SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
+        "{}",
+        get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+    );
 }
