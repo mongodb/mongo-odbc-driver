@@ -1,6 +1,7 @@
 tests:
   - description: select_star_unordered
     test_definition: SELECT * FROM class
+    is_simple_type: false
     db: integration_test
     expected_result:
       - [0, true, John, 2000-01-01, 10329]
@@ -23,7 +24,6 @@ tests:
 
   - description: select_star_unordered_using_simple_types_only_mode
     test_definition: SELECT * FROM class
-    is_simple_type: true
     db: integration_test
     expected_display_size: [4, 1, 0, 16, 4]
     expected_length: [4, 1, 0, 16, 4]

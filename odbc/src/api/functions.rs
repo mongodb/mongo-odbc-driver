@@ -1039,8 +1039,8 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     }
 
     if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
-        if simple.eq("1") {
-            *conn.type_mode.write().unwrap() = TypeMode::Simple;
+        if simple.eq("0") {
+            *conn.type_mode.write().unwrap() = TypeMode::Standard;
         }
     }
 

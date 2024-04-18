@@ -1,6 +1,7 @@
 tests:
   - description: SQLColumnsW column filter
     test_definition: [ "sqlcolumnsw", "", 0, "", 0, "", 0, "%id%", 3 ]
+    is_simple_type: false
     db: integration_test
     expected_result:
       - ["integration_test", null, "a_non_lexicographic_field_order", "_id", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , 0, 4, "NO"]

@@ -2,6 +2,7 @@ tests:
   - description: SQLForeignKeysW function get all the foreign keys (there are none)
     test_definition: [ "sqlforeignkeysw", "", 0, "", 0, "", 0, "", 0, "", 0, "", 0 ]
     db: integration_test
+    is_simple_type: false
     expected_result: []
     expected_bson_type: ["string", "string", "string", "string", "string", "string", "string", "string", "int", "int", "int", "string", "string", "int" ]
     expected_case_sensitive: [ "", "", "", "", "", "", "", "", "", "", "", "", "", "" ]
@@ -18,6 +19,7 @@ tests:
   - description: SQLGetTypeInfo function with zero types returned
     test_definition: [ "sqlgettypeinfo", 111 ]
     db: integration_test
+    is_simple_type: false
     expected_result: []
     expected_bson_type: [ "string", "int", "int", "string", "string", "string", "int", "int", "int", "int", "int", "int", "string", "int", "int", "int", "int", "int", "int" ]
     expected_case_sensitive: [ "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" ]
@@ -34,6 +36,7 @@ tests:
   - description: SQLGetTypeInfo function with one type returned
     test_definition: [ "sqlgettypeinfo", 4 ]
     db: integration_test
+    is_simple_type: false
     expected_result: 
     - [ "int", 4, 10, null, null, null, 1, 0, 2, 0, 1, 0, "int", 0, 0, 4, null, 10, null ]
     expected_bson_type: [ "string", "int", "int", "string", "string", "string", "int", "int", "int", "int", "int", "int", "string", "int", "int", "int", "int", "int", "int" ]
@@ -51,6 +54,7 @@ tests:
   - description: SQLGetTypeInfo function get all types
     test_definition: [ "sqlgettypeinfo", 0 ]
     db: integration_test
+    is_simple_type: false
     expected_result:
     - [ "string", -9, null, "'", "'", null, 1, 1, 3, null, 0, null, "string", null, null, -9, null, null, null ]
     - [ "bool", -7, 1, null, null, null, 1, 0, 2, null, 0, null, "bool", null, null, -7, null, null, null ]
@@ -78,7 +82,6 @@ tests:
   - description: SQLGetTypeInfo function get all types in simple_types_only mode
     test_definition: [ "sqlgettypeinfo", 0 ]
     db: integration_test
-    is_simple_type: true
     expected_result:
       - [ "string", -9, null, "'", "'", null, 1, 1, 3, null, 0, null, "string", null, null, -9, null, null, null ]
       - [ "bool", -7, 1, null, null, null, 1, 0, 2, null, 0, null, "bool", null, null, -7, null, null, null ]
