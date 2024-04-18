@@ -29,9 +29,9 @@ mod integration {
             exec_direct_default_query(stmt_handle);
 
             let id_buffer = &mut [0u8; 4] as *mut _;
-            let id_indicator = &mut [0isize; 2] as *mut Len;
+            let id_indicator = &mut [0isize; 1] as *mut Len;
             let a_buffer = &mut [0u8; 8] as *mut _;
-            let a_indicator = &mut [0isize; 2] as *mut Len;
+            let a_indicator = &mut [0isize; 1] as *mut Len;
             bind_cols(
                 stmt_handle,
                 vec![
