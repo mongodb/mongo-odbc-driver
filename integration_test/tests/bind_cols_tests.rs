@@ -148,7 +148,7 @@ mod integration {
                 let (a1, a2) = expected_a_data[i];
                 assert_eq!(a1, *(a_buffer as *mut i64));
                 assert_eq!(a2, *((a_buffer as ULen + 8) as *mut i64));
-                assert_eq!(8, *id_indicator);
+                assert_eq!(8, *a_indicator);
 
                 i += 1;
             }
