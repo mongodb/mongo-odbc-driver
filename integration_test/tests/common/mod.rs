@@ -1,11 +1,10 @@
 use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use definitions::{
-    AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, FetchOrientation,
-    HDbc, HEnv, HStmt, Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLBindCol,
-    SQLColAttributeW, SQLDisconnect, SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFetchScroll,
-    SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr,
-    SmallInt, SqlReturn, USmallInt, SQL_NTS,
+    AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt,
+    Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLBindCol, SQLColAttributeW, SQLDisconnect,
+    SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW,
+    SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
 use std::ptr::null_mut;
 use std::{env, slice};
@@ -428,37 +427,27 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
 }
 
 #[allow(dead_code)]
-/// Helper function for binding columns in a result set.
-/// - loop:
-///    - SQLBindCol for each column (determined by target_types vector)
-///    - SQLFetchScroll until SQL_NO_DATA is returned
-pub fn fetch_and_bind_cols(stmt_handle: HStmt, target_types: Vec<CDataType>) {
-    let binding_buffer = &mut [0u16; 4] as *mut _;
-    unsafe {
-        loop {
-            for (i, target_type) in target_types.iter().enumerate() {
-                assert_eq!(
-                    SqlReturn::SUCCESS,
-                    SQLBindCol(
-                        stmt_handle,
-                        (i + 1) as u16,
-                        *target_type,
-                        binding_buffer as Pointer,
-                        4,
-                        null_mut(),
-                    )
-                );
-            }
-
-            let result = SQLFetchScroll(stmt_handle, FetchOrientation::SQL_FETCH_NEXT, 0);
-            if result == SqlReturn::NO_DATA {
-                return;
-            }
-            assert_eq!(SqlReturn::SUCCESS, result);
-        }
+/// Helper function to bind columns.
+pub unsafe fn bind_cols(stmt_handle: HStmt, target_types: Vec<(CDataType, Pointer, Len)>) {
+    for (i, (target_type, binding_buffer, buffer_length)) in target_types.iter().enumerate() {
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLBindCol(
+                stmt_handle,
+                (i + 1) as USmallInt,
+                *target_type as SmallInt,
+                *binding_buffer,
+                *buffer_length,
+                null_mut(),
+            )
+        )
     }
 }
 
+#[allow(dead_code)]
+/// Helper function to execute the default query
+///    SELECT * FROM integration_test.foo
+/// via SQLExecDirectW.
 pub unsafe fn exec_direct_default_query(stmt_handle: HStmt) {
     let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT * FROM integration_test.foo");
     query.push(0);
