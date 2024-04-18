@@ -2,8 +2,9 @@ mod common;
 
 mod integration {
     use crate::common::{
-        allocate_env, default_setup_connect_and_alloc_stmt, disconnect_and_close_handles,
-        get_sql_diagnostics, BUFFER_LENGTH,
+        allocate_env, connect_and_allocate_statement, default_setup_connect_and_alloc_stmt,
+        disconnect_and_close_handles, generate_default_connection_str, get_sql_diagnostics,
+        BUFFER_LENGTH,
     };
     use definitions::{
         AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, Len, Pointer, SQLFetch, SQLGetData,
@@ -89,8 +90,10 @@ mod integration {
     /// we expect back.
     #[test]
     fn test_type_listing() {
-        let (env_handle, conn_handle, stmt_handle) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC2);
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC2);
+        let mut conn_str = generate_default_connection_str();
+        conn_str.push_str("SIMPLE_TYPES_ONLY=0;");
+        let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, Some(conn_str));
 
         let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
 

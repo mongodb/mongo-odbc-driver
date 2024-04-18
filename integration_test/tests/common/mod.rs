@@ -178,8 +178,7 @@ pub fn connect_and_allocate_statement(
     env_handle: HEnv,
     in_connection_string: Option<String>,
 ) -> (HDbc, HStmt) {
-    let mut conn_str = in_connection_string.unwrap_or_else(generate_default_connection_str);
-    conn_str.push_str("SIMPLE_TYPES_ONLY=0;");
+    let conn_str = in_connection_string.unwrap_or_else(generate_default_connection_str);
     let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
     (conn_handle, allocate_statement(conn_handle).unwrap())
 }
