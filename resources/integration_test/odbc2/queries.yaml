@@ -1,7 +1,7 @@
 tests:
   - description: select_star_unordered
     test_definition: SELECT * FROM class
-    is_simple_type: false
+    is_standard_type: true
     db: integration_test
     expected_result:
       - [0, true, John, 2000-01-01, 10329]

@@ -65,7 +65,7 @@ pub fn generate_default_connection_str() -> String {
     let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
 
     let mut connection_string =
-        format!("Driver={{{driver}}};USER={user_name};PWD={password};SERVER={host};SIMPLE_TYPES_ONLY=0;");
+        format!("Driver={{{driver}}};USER={user_name};PWD={password};SERVER={host};");
 
     // If a db is specified add it to the connection string
     match db {
@@ -178,7 +178,8 @@ pub fn connect_and_allocate_statement(
     env_handle: HEnv,
     in_connection_string: Option<String>,
 ) -> (HDbc, HStmt) {
-    let conn_str = in_connection_string.unwrap_or_else(generate_default_connection_str);
+    let mut conn_str = in_connection_string.unwrap_or_else(generate_default_connection_str);
+    conn_str.push_str("SIMPLE_TYPES_ONLY=0;");
     let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
     (conn_handle, allocate_statement(conn_handle).unwrap())
 }
