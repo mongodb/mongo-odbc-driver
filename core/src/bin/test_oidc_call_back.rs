@@ -1,5 +1,7 @@
 use mongo_odbc_core::oidc_auth::*;
 
+// This shows that the oidc_call_back function works. The second call will use the refresh token,
+// which will be obvious in that the webbrower only opens once.
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let c = CallbackContext {

@@ -58,19 +58,12 @@ pub async fn oidc_call_back(params: CallbackContext) -> mongodb::error::Result<I
         // turn the supplied timeout Instant into a Duration from now
         .map(|x| x - Instant::now())
         .unwrap_or(DEFAULT_SLEEP_DURATION);
-    let timeout = time::sleep(sleep_duration);
-    tokio::pin!(timeout);
 
+    // If there is a refresh token, we refresh, otherwise we do not
     if params.refresh_token.is_some() {
-        tokio::select! {
-            ret = do_refresh(params) => Ok(ret?),
-            _ = &mut timeout => Err(Error::Timedout.into())
-        }
+        Ok(time::timeout(sleep_duration, do_refresh(params)).await.map_err(|_| Error::Timedout)??)
     } else {
-        tokio::select! {
-            ret = do_auth_flow(params) => Ok(ret?),
-            _ = &mut timeout => Err(Error::Timedout.into())
-        }
+        Ok(time::timeout(sleep_duration, do_auth_flow(params)).await.map_err(|_| Error::Timedout)??)
     }
 }
 
