@@ -769,18 +769,23 @@ impl MongoStatement for MongoFields {
             // CHAR_OCTET_LENGTH
             // The maximum length in bytes of a character or binary data type column.
             // For all other data types, this column returns a NULL.
-            16 => match get_meta_data()?.sql_type {
-                // For numeric data types. 10 means that the values in COLUMN_SIZE and DECIMAL_DIGITS
-                // give the maximum number of digits and maximum number of digits to the right of the
-                // decimal point allowed for the column respectively.
-                SqlDataType::SQL_VARCHAR
-                | SqlDataType::SQL_WVARCHAR
-                | SqlDataType::SQL_VARBINARY => match get_meta_data()?.char_octet_length {
-                    None => Bson::Int32(definitions::SQL_NO_TOTAL as i32),
-                    Some(char_octet_length) => Bson::Int32(char_octet_length as i32),
-                },
-                _ => Bson::Null,
-            },
+            16 => {
+                let meta_data = get_meta_data()?;
+                if matches!(
+                    meta_data.sql_type,
+                    SqlDataType::SQL_VARCHAR
+                        | SqlDataType::SQL_WVARCHAR
+                        | SqlDataType::SQL_VARBINARY
+                ) {
+                    Bson::Int32(
+                        meta_data
+                            .char_octet_length
+                            .unwrap_or(definitions::SQL_NO_TOTAL) as i32,
+                    )
+                } else {
+                    Bson::Null
+                }
+            }
             // ORDINAL_POSITION
             17 => Bson::Int32(1 + self.current_field_for_collection as i32),
             // IS_NULLABLE
