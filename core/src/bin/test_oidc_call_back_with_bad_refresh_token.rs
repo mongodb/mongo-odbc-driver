@@ -14,5 +14,8 @@ async fn main() {
         timeout_seconds: Some(std::time::Instant::now() + std::time::Duration::from_secs(2)),
         version: 1,
     };
-    println!("This will result in an error: {:?}", oidc_call_back(c).await.unwrap_err().get_custom::<Error>());
+    println!(
+        "This will result in an error: {:?}",
+        oidc_call_back(c).await.unwrap_err().get_custom::<Error>()
+    );
 }

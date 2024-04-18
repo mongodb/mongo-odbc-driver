@@ -61,9 +61,13 @@ pub async fn oidc_call_back(params: CallbackContext) -> mongodb::error::Result<I
 
     // If there is a refresh token, we refresh, otherwise we do not
     if params.refresh_token.is_some() {
-        Ok(time::timeout(sleep_duration, do_refresh(params)).await.map_err(|_| Error::Timedout)??)
+        Ok(time::timeout(sleep_duration, do_refresh(params))
+            .await
+            .map_err(|_| Error::Timedout)??)
     } else {
-        Ok(time::timeout(sleep_duration, do_auth_flow(params)).await.map_err(|_| Error::Timedout)??)
+        Ok(time::timeout(sleep_duration, do_auth_flow(params))
+            .await
+            .map_err(|_| Error::Timedout)??)
     }
 }
 
