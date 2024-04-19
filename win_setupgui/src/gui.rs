@@ -145,6 +145,8 @@ impl ConfigGui {
             user: self.user_input.text().as_str(),
             server: "",
             driver_name: self.driver_name.text().as_str(),
+            // TODO: SQL-2050 expose simple_types_only checkbox in ui (on by default)
+            simple_types_only: "1",
         }) {
             Err(e) => {
                 nwg::modal_error_message(&self.window, "Error", &e.to_string());

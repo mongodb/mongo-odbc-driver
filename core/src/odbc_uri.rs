@@ -606,15 +606,15 @@ mod unit {
         }
 
         #[test]
-        fn simple_types_only_test() {
+        fn standard_types_test() {
             use crate::map;
             use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
-                map! {"driver".to_string() => "Foo".to_string(), "simple_types_only".to_string() => "1".to_string()},
+                map! {"driver".to_string() => "Foo".to_string(), "simple_types_only".to_string() => "0".to_string()},
             );
             assert_eq!(
                 expected,
-                ODBCUri::new("Driver=Foo;simple_types_only=1".to_string()).unwrap()
+                ODBCUri::new("Driver=Foo;simple_types_only=0".to_string()).unwrap()
             );
         }
 

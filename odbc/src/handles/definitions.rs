@@ -318,7 +318,7 @@ impl Connection {
             state: RwLock::new(state),
             statements: RwLock::new(HashSet::new()),
             errors: RwLock::new(vec![]),
-            type_mode: RwLock::new(TypeMode::Standard),
+            type_mode: RwLock::new(TypeMode::Simple),
         }
     }
 }

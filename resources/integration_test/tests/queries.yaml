@@ -2,6 +2,7 @@ tests:
   - description: simple query test
     test_definition: "select * from example"
     db: integration_test
+    is_standard_type: true
     expected_result:
       - ["0", "a"]
       - [1, "b"]
@@ -22,6 +23,7 @@ tests:
   - description: select_star_ordered
     test_definition: SELECT * FROM grades ORDER BY _id
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [0, 84.5, 303, 3]
       - [1, 97.4, 10329, 3]
@@ -48,6 +50,7 @@ tests:
   - description: select_star_unordered
     test_definition: SELECT * FROM class
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [ 0, true, John, 2000-01-01, 10329 ]
       - [ 1, false, Jane, 2000-02-01, 342 ]
@@ -69,7 +72,6 @@ tests:
 
   - description: select_star_unordered_using_simple_types_only_mode
     test_definition: SELECT * FROM class
-    is_simple_type: true
     db: integration_test
     expected_display_size: [ 11, 1, 0, 23, 11 ]
     expected_octet_length: [ 4, 1, 0, 16, 4 ]
@@ -79,6 +81,7 @@ tests:
   - description: select_as_confirm_column_label
     test_definition: SELECT enrolled AS e, studentid AS s, name AS n FROM class
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [ true, 10329, John ]
       - [ false, 342, Jane  ]
@@ -102,6 +105,7 @@ tests:
     test_definition: "SELECT class.name, grades.testid, grades.score FROM grades INNER JOIN class ON grades.studentid\
       = class.studentid"
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [Mike, 3, 84.5]
       - [John, 3, 97.4]
@@ -127,6 +131,7 @@ tests:
   - description: driver_does_not_alter_result_set_row_order
     test_definition: SELECT grades.score AS score FROM grades ORDER BY score DESC
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [97.4]
       - [91.9]
@@ -153,6 +158,7 @@ tests:
   - description: select_star_from_anyof
     test_definition: SELECT * FROM anyof_collection
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [ 0, "3" ]
       - [ 1, "3000000000" ]
@@ -173,6 +179,7 @@ tests:
   - description: select_polymorphic_field
     test_definition: SELECT b from any_collection
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [ "3" ]
       - [ "b" ]
@@ -193,6 +200,7 @@ tests:
   - description: lexicographical_column_ordering
     test_definition: select * from b_non_lexicographic_field_order inner join a_non_lexicographic_field_order
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [1, 2, 3, 4, 5, 6, 7, 8, 9]
     expected_bson_type: ["int", "int", "int", "int", "int", "int", "int", "int", "int"]
@@ -210,6 +218,7 @@ tests:
 
   - description: select_star_from_any
     db: integration_test
+    is_standard_type: true
     test_definition: SELECT * from any_collection
     expected_result:
       - [0]
@@ -219,6 +228,7 @@ tests:
   - description: query_types_other
     test_definition: SELECT * FROM types_other
     db: integration_test
+    is_standard_type: true
     expected_sql_type: [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     expected_precision: [10, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0]
     expected_display_size: [11, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0]
@@ -243,7 +253,6 @@ tests:
   - description: query_types_other_using_simple_types_only_mode
     test_definition: SELECT * FROM types_other
     db: integration_test
-    is_simple_type: true
     expected_sql_type: [4, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9]
     expected_precision: [10, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0]
     expected_display_size: [11, 0, 0, 0, 0, 14, 14, 0, 34, 0, 0, 68]
@@ -259,6 +268,7 @@ tests:
   - description: select_null_and_missing_field
     test_definition: SELECT a FROM null_and_missing
     db: integration_test
+    is_standard_type: true
     expected_result:
       - [ "1" ]
       - [ null ]
