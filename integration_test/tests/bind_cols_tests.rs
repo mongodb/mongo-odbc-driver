@@ -28,7 +28,7 @@ mod integration {
     ///     - SQLFreeStmt(SQL_UNBIND)
     #[test]
     fn test_unbind_cols() {
-        let (env_handle, conn_handle, stmt_handle) =
+        let (_, _, stmt_handle) =
             default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
@@ -70,9 +70,6 @@ mod integration {
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
-
-            // clean up
-            disconnect_and_free_dbc_and_env_handles(env_handle, conn_handle);
         }
     }
 
@@ -88,7 +85,7 @@ mod integration {
     ///         - SQLFetchScroll
     #[test]
     fn test_bind_cols_and_fetch_next_rowset() {
-        let (env_handle, conn_handle, stmt_handle) =
+        let (_, _, stmt_handle) =
             default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
@@ -177,9 +174,6 @@ mod integration {
 
                 i += 1;
             }
-
-            // cleanup
-            disconnect_and_free_dbc_and_env_handles(env_handle, conn_handle);
         }
     }
 }
