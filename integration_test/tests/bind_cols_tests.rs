@@ -11,6 +11,12 @@ mod integration {
         StatementAttribute, ULen,
     };
 
+    // The `_id` field is an int that is used across multiple tests.
+    const ID_TRANSFER_OCTET_LEN: usize = 4;
+
+    // The `a` field is a long that is used across multiple tests.
+    const A_TRANSFER_OCTET_LEN: usize = 8;
+
     /// This test is inspired by the SSIS Query flow. It is altered to be
     /// more general than that specific flow, with a focus on freeing the
     /// bound columns after calling SQLBindCol. This flow depends on
@@ -28,23 +34,24 @@ mod integration {
         unsafe {
             exec_direct_default_query(stmt_handle);
 
-            let id_buffer = &mut [0u8; 4] as *mut _;
+            let id_buffer = &mut [0u8; ID_TRANSFER_OCTET_LEN];
             let id_indicator = &mut [0isize; 1] as *mut Len;
-            let a_buffer = &mut [0u8; 8] as *mut _;
+            let a_buffer = &mut [0u8; A_TRANSFER_OCTET_LEN];
             let a_indicator = &mut [0isize; 1] as *mut Len;
+
             bind_cols(
                 stmt_handle,
                 vec![
                     (
                         CDataType::SQL_C_SLONG,
-                        id_buffer as Pointer,
-                        4,
+                        id_buffer as *mut u8 as Pointer,
+                        ID_TRANSFER_OCTET_LEN as Len,
                         id_indicator,
                     ),
                     (
                         CDataType::SQL_C_SBIGINT,
-                        a_buffer as Pointer,
-                        8,
+                        a_buffer as *mut u8 as Pointer,
+                        A_TRANSFER_OCTET_LEN as Len,
                         a_indicator,
                     ),
                 ],
@@ -52,7 +59,9 @@ mod integration {
 
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLFetchScroll(stmt_handle, FetchOrientation::SQL_FETCH_NEXT as SmallInt, 0,)
+                SQLFetchScroll(stmt_handle, FetchOrientation::SQL_FETCH_NEXT as SmallInt, 0,),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
 
             assert_eq!(
@@ -83,13 +92,13 @@ mod integration {
             default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
 
         unsafe {
-            let row_array_size = 2;
+            const ROW_ARRAY_SIZE: usize = 2;
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLSetStmtAttrW(
                     stmt_handle,
                     StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE as Integer,
-                    row_array_size as Pointer,
+                    ROW_ARRAY_SIZE as Pointer,
                     0
                 ),
                 "{}",
@@ -98,25 +107,31 @@ mod integration {
 
             exec_direct_default_query(stmt_handle);
 
-            // Since ROW_ARRAY_SIZE is set to 2, we double the buffer lengths.
-            let id_buffer = &mut [0u8; 8] as *mut _;
-            let id_indicator = &mut [0isize; 2] as *mut Len;
-            let a_buffer = &mut [0u8; 16] as *mut _;
-            let a_indicator = &mut [0isize; 2] as *mut Len;
+            // _id is an int
+            const ID_BUFFER_LEN: usize = ROW_ARRAY_SIZE * ID_TRANSFER_OCTET_LEN;
+            let id_buffer = &mut [0u8; ID_BUFFER_LEN] as *mut _;
+            let id_indicator = &mut [0isize; ROW_ARRAY_SIZE];
+
+            // a is a long
+            const A_TRANSFER_OCTET_LEN: usize = 8;
+            const A_BUFFER_LEN: usize = ROW_ARRAY_SIZE * A_TRANSFER_OCTET_LEN;
+            let a_buffer = &mut [0u8; A_BUFFER_LEN] as *mut _;
+            let a_indicator = &mut [0isize; ROW_ARRAY_SIZE];
+
             bind_cols(
                 stmt_handle,
                 vec![
                     (
                         CDataType::SQL_C_SLONG,
                         id_buffer as Pointer,
-                        4,
-                        id_indicator,
+                        ID_TRANSFER_OCTET_LEN as Len,
+                        id_indicator as *mut Len,
                     ),
                     (
                         CDataType::SQL_C_SBIGINT,
                         a_buffer as Pointer,
-                        8,
-                        a_indicator,
+                        A_TRANSFER_OCTET_LEN as Len,
+                        a_indicator as *mut Len,
                     ),
                 ],
             );
@@ -134,7 +149,12 @@ mod integration {
                 if result == SqlReturn::NO_DATA {
                     break;
                 }
-                assert_eq!(SqlReturn::SUCCESS, result);
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    result,
+                    "{}",
+                    get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+                );
 
                 // After fetching the data, check that the buffers contain the
                 // expected values. As shown above, the data only has 3 rows.
@@ -142,13 +162,18 @@ mod integration {
 
                 let (id1, id2) = expected_id_data[i];
                 assert_eq!(id1, *(id_buffer as *mut i32));
-                assert_eq!(id2, *((id_buffer as ULen + 4) as *mut i32));
-                assert_eq!(4, *id_indicator);
+                assert_eq!(
+                    id2,
+                    *((id_buffer as ULen + ID_TRANSFER_OCTET_LEN) as *mut i32)
+                );
+                assert_eq!(ID_TRANSFER_OCTET_LEN as isize, id_indicator[0]);
+                assert_eq!(ID_TRANSFER_OCTET_LEN as isize, id_indicator[1]);
 
                 let (a1, a2) = expected_a_data[i];
                 assert_eq!(a1, *(a_buffer as *mut i64));
-                assert_eq!(a2, *((a_buffer as ULen + 8) as *mut i64));
-                assert_eq!(8, *a_indicator);
+                assert_eq!(a2, *((a_buffer as ULen + A_TRANSFER_OCTET_LEN) as *mut i64));
+                assert_eq!(A_TRANSFER_OCTET_LEN as isize, a_indicator[0]);
+                assert_eq!(A_TRANSFER_OCTET_LEN as isize, a_indicator[1]);
 
                 i += 1;
             }

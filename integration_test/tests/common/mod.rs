@@ -444,7 +444,9 @@ pub unsafe fn bind_cols(
                 *binding_buffer,
                 *buffer_length,
                 *indicator,
-            )
+            ),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
         )
     }
 }
