@@ -25,7 +25,7 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
     let mut expected_case_sensitive: Vec<Value> = vec![];
     let mut expected_column_name: Vec<Value> = vec![];
     let mut expected_display_size: Vec<Value> = vec![];
-    let mut expected_length: Vec<Value> = vec![];
+    let mut expected_octet_length: Vec<Value> = vec![];
     let mut expected_is_searchable: Vec<Value> = vec![];
     let mut expected_is_unsigned: Vec<Value> = vec![];
     let mut expected_sql_type: Vec<Value> = vec![];
@@ -48,8 +48,8 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
         let display_size = get_column_attribute(stmt, i, Desc::SQL_DESC_DISPLAY_SIZE, &NUMBER_VAL)?;
         expected_display_size.push(display_size);
 
-        let length = get_column_attribute(stmt, i, Desc::SQL_DESC_LENGTH, &NUMBER_VAL)?;
-        expected_length.push(length);
+        let length = get_column_attribute(stmt, i, Desc::SQL_DESC_OCTET_LENGTH, &NUMBER_VAL)?;
+        expected_octet_length.push(length);
 
         let is_searchable = get_column_attribute(stmt, i, Desc::SQL_DESC_SEARCHABLE, &NUMBER_VAL)?;
         expected_is_searchable.push(is_searchable);
@@ -99,7 +99,7 @@ pub fn generate_baseline_test_file(entry: &TestEntry, stmt: HStmt) -> Result<()>
         expected_case_sensitive: Some(expected_case_sensitive),
         expected_column_name: Some(expected_column_name),
         expected_display_size: Some(expected_display_size),
-        expected_length: Some(expected_length),
+        expected_octet_length: Some(expected_octet_length),
         expected_is_searchable: Some(expected_is_searchable),
         expected_is_unsigned: Some(expected_is_unsigned),
         expected_sql_type: Some(expected_sql_type),
