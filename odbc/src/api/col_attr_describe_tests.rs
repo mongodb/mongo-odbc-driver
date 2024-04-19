@@ -544,13 +544,13 @@ mod unit {
             let mut stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
             stmt.mongo_statement = RwLock::new(Some(Box::new(MongoFields::empty())));
             let mongo_handle: *mut _ = &mut MongoHandle::Statement(stmt);
-
+            let invalid_field_identifier = 1;
             assert_eq!(
                 SqlReturn::ERROR,
                 SQLColAttributeW(
                     mongo_handle as *mut _,
                     0,
-                    4, // not a valid field attribute
+                    invalid_field_identifier, // not a valid field attribute
                     std::ptr::null_mut(),
                     0,
                     std::ptr::null_mut(),
@@ -566,7 +566,8 @@ mod unit {
                 .unwrap();
             assert_eq!(errors.len(), 1);
             assert_eq!(
-                "[MongoDB][API] Invalid field descriptor value 4".to_string(),
+                "[MongoDB][API] Invalid field descriptor value ".to_owned()
+                    + &invalid_field_identifier.to_string(),
                 format!("{}", errors.first().unwrap()),
             );
 
