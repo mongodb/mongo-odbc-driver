@@ -29,8 +29,8 @@ pub enum Desc {
     /// value is the applicable precision of the fractional seconds component.
     SQL_DESC_PRECISION = 1005,
     /// `SQL_DESC_SCALE`. Returned in `NumericAttributePtr`. A numeric value that is the applicable
-    /// scale for a numeric data type. For DECIMAL and NUMERIC data types, this is the defined
-    /// scale. It is undefined for all other data types.
+    /// scale for a numeric data type. For DECIMAL and NUMERIC data types, this is the defined scale.
+    /// It is undefined for all other data types.
     SQL_DESC_SCALE = 1006,
     /// `SQL_DESC_DATETIME_INTERVAL_CODE`.
     SQL_DESC_DATETIME_INTERVAL_CODE = 1007,
@@ -190,6 +190,38 @@ pub enum Desc {
     SQL_DESC_UPDATABLE = 10,
     #[cfg(feature = "odbc_version_4")]
     SQL_DESC_MIME_TYPE = 36,
+
+    /// -----------------------------------------------------------------------------------------
+    /// ODBC 2.x field identifiers which must be supported by an ODBC 3.x driver
+    /// ODBC 2.0 specification can be found here for more details: https://download.oracle.com/otn_hosted_doc/timesten/703/TimesTen-Documentation/ms.odbc.pdf
+
+    /// ODBC 2.x field identifier for the Transfer Octet.
+    /// The length of a column is the maximum number of bytes returned to the application when data
+    /// is transferred to its default C data type. For character data, the length does not include
+    /// the null termination byte. Note that the length of a column may be different than the number
+    /// of bytes required to store the data on the data source.
+    ///
+    /// Maps to SQL_DESC_OCTET_LENGTH in ODBC 3.x, except for SQL_BIGINT which maps to SQL_DESC_LENGTH
+    SQL_COLUMN_LENGTH = 3,
+    /// ODBC 2.x field identifier for Scale.
+    /// The maximum number of digits to the right of the decimal point.
+    /// For approximate floating point number columns or parameters, the scale is undefined,
+    /// since the number of digits to the right of the decimal point is not fixed.
+    /// For the SQL_DECIMAL and SQL_NUMERIC data types, the maximum scale is generally the same as
+    /// the maximum precision.
+    ///
+    /// Maps to SQL_DESC_SCALE for numeric types and to SQL_DESC_PRECISION for date time types in
+    /// ODBC 3.x.
+    SQL_COLUMN_SCALE = 5,
+    /// ODBC 2.x field identifier for Decimal Digit.
+    /// The precision of a numeric column or parameter refers to the maximum number of digits
+    /// used by the data type of the column or parameter. The precision of a non-numeric column
+    /// or parameter generally refers to either the maximum length or the defined length of the
+    /// column or parameter.
+    ///
+    /// Maps to SQL_DESC_PRECISION for all numeric types and to SQL_DESC_LENGTH for all character,
+    /// binary, datetime and interval types and for SQL_BIT.
+    SQL_COLUMN_PRECISION = 4,
 }
 
 /// Used in `SQLColAttributeW`.

@@ -20,9 +20,15 @@ pub struct MongoColMetadata {
     pub base_table_name: String,
     pub case_sensitive: bool,
     pub catalog_name: String,
-    // more info for column size can be found here:
-    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/column-size?view=sql-server-ver16
+    // More info for column size can be found here:
+    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/column-size
+    pub column_size: Option<u16>,
+    // more info for dislay size can be found here:
+    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/display-size
     pub display_size: Option<u16>,
+    // More info for column size can be found here:
+    // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/decimal-digits
+    pub decimal_digits: Option<u16>,
     pub fixed_prec_scale: bool,
     pub label: String,
     pub length: Option<u16>,
@@ -31,7 +37,8 @@ pub struct MongoColMetadata {
     pub col_name: String,
     pub nullability: Nullability,
     pub num_prec_radix: Option<u16>,
-    pub octet_length: Option<u16>,
+    pub transfer_octet_length: Option<u16>,
+    pub char_octet_length: Option<u16>,
     pub precision: Option<u16>,
     pub scale: Option<u16>,
     pub searchable: i32,
@@ -64,16 +71,31 @@ impl MongoColMetadata {
             base_table_name: "".to_string(),
             case_sensitive: bson_type_info.is_case_sensitive,
             catalog_name: "".to_string(),
-            display_size: bson_type_info.fixed_bytes_length(type_mode),
+            // The column (or parameter) size of numeric data types is defined as the maximum number
+            // of digits used by the data type of the column or parameter, or the precision of the
+            // data. For character types, this is the length in characters of the data; for binary
+            // data types, column size is defined as the length in bytes of the data. For the time,
+            // timestamp, and all interval data types, this is the number of characters in the
+            // character representation of this data.
+            column_size: bson_type_info.column_size(type_mode),
+            display_size: bson_type_info.display_size(type_mode),
+            // The decimal digits of decimal and numeric data types is defined as the maximum number
+            // of digits to the right of the decimal point, or the scale of the data. For approximate
+            // floating-point number columns or parameters, the scale is undefined because the number
+            // of digits to the right of the decimal point is not fixed. For datetime or interval
+            // data that contains a seconds component, the decimal digits is defined as the number
+            // of digits to the right of the decimal point in the seconds component of the data.
+            decimal_digits: bson_type_info.decimal_digit(type_mode),
             fixed_prec_scale: bson_type_info.fixed_prec_scale,
             label: field_name.clone(),
-            length: bson_type_info.fixed_bytes_length(type_mode),
+            length: bson_type_info.length(type_mode),
             literal_prefix: bson_type_info.literal_prefix,
             literal_suffix: bson_type_info.literal_suffix,
             col_name: field_name,
             nullability,
             num_prec_radix: bson_type_info.num_prec_radix,
-            octet_length: bson_type_info.octet_length(type_mode),
+            transfer_octet_length: bson_type_info.transfer_octet_length(type_mode),
+            char_octet_length: bson_type_info.char_octet_length(type_mode),
             precision: bson_type_info.precision(type_mode),
             scale: bson_type_info.scale,
             searchable: bson_type_info.searchable,

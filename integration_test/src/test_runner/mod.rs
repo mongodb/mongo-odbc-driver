@@ -103,7 +103,7 @@ pub struct TestEntry {
     pub expected_case_sensitive: Option<Vec<Value>>,
     pub expected_column_name: Option<Vec<Value>>,
     pub expected_display_size: Option<Vec<Value>>,
-    pub expected_length: Option<Vec<Value>>,
+    pub expected_octet_length: Option<Vec<Value>>,
     pub expected_is_searchable: Option<Vec<Value>>,
     pub expected_is_unsigned: Option<Vec<Value>>,
     pub expected_sql_type: Option<Vec<Value>>,
@@ -621,8 +621,8 @@ fn validate_result_set_metadata(entry: &TestEntry, column_count: usize, stmt: HS
         stmt,
         column_count,
         entry.description.clone(),
-        Desc::SQL_DESC_LENGTH,
-        &entry.expected_length,
+        Desc::SQL_DESC_OCTET_LENGTH,
+        &entry.expected_octet_length,
     )?;
     validate_result_set_metadata_helper(
         stmt,

@@ -705,46 +705,82 @@ impl MongoStatement for MongoFields {
                 .ok_or(Error::InvalidCursorState)
         };
         Ok(Some(match col_index {
+            // TABLE_CAT
             1 => Bson::String(self.current_db_name.clone()),
+            // TABLE_SCHEM
             2 => Bson::Null,
+            // TABLE_NAME
             3 => Bson::String(get_meta_data()?.table_name.clone()),
+            // COLUMN_NAME
             4 => Bson::String(get_meta_data()?.col_name.clone()),
+            // DATA_TYPE
             5 => Bson::Int32(MongoFields::map_type_for_odbc_version(
                 !self.odbc_3_types,
                 get_meta_data()?.sql_type,
             ) as i32),
+            // TYPE_NAME
             6 => Bson::String(get_meta_data()?.type_name.clone()),
-            7 => Bson::Int32(get_meta_data()?.precision.unwrap_or(0) as i32),
+            // COLUMN_SIZE
+            7 => Bson::Int32({
+                match get_meta_data()?.column_size {
+                    // If the driver cannot determine the column for a variable type, it returns
+                    // SQL_NO_TOTAL.
+                    None => definitions::SQL_NO_TOTAL as i32,
+                    Some(col_size) => col_size as i32,
+                }
+            }),
+            // BUFFER_LENGTH = Transfer octet length
             8 => Bson::Int32({
-                let l = get_meta_data()?.octet_length;
+                let l = get_meta_data()?.transfer_octet_length;
                 match l {
                     None => definitions::SQL_NO_TOTAL as i32,
                     Some(l) => l as i32,
                 }
             }),
-            9 => Bson::Int32(get_meta_data()?.scale.unwrap_or(0) as i32),
+            // DECIMAL_DIGITS
+            9 => match get_meta_data()?.decimal_digits {
+                // NULL is returned for data types where DECIMAL_DIGITS is not applicable.
+                None => Bson::Null,
+                Some(dec_dg) => Bson::Int32(dec_dg as i32),
+            },
+            // NUM_PREC_RADIX
             10 => match get_meta_data()?.sql_type {
+                // For numeric data types. 10 means that the values in COLUMN_SIZE and DECIMAL_DIGITS
+                // give the maximum number of digits and maximum number of digits to the right of the
+                // decimal point allowed for the column respectively.
                 SqlDataType::SQL_INTEGER | SqlDataType::SQL_DOUBLE | SqlDataType::SQL_DECIMAL => {
                     Bson::Int32(10)
                 }
                 _ => Bson::Null,
             },
+            // NULLABLE
             11 => Bson::Int32(get_meta_data()?.nullability as i32),
+            // REMARKS
             12 => Bson::String("".to_string()),
+            // COLUMN_DEF
             13 => Bson::Null,
+            // SQL_DATA_TYPE
             14 => Bson::Int32(get_meta_data()?.non_concise_type as i32),
+            // SQL_DATETIME_SUB
             15 => match get_meta_data()?.sql_code {
                 None => Bson::Null,
                 Some(x) => Bson::Int32(x as i32),
             },
-            16 => Bson::Int32({
-                let l = get_meta_data()?.octet_length;
-                match l {
-                    None => definitions::SQL_NO_TOTAL as i32,
-                    Some(_) => 0i32,
-                }
-            }),
+            // CHAR_OCTET_LENGTH
+            // The maximum length in bytes of a character or binary data type column.
+            // For all other data types, this column returns a NULL.
+            16 => match get_meta_data()?.sql_type {
+                SqlDataType::SQL_VARCHAR
+                | SqlDataType::SQL_WVARCHAR
+                | SqlDataType::SQL_VARBINARY => match get_meta_data()?.char_octet_length {
+                    None => Bson::Int32(definitions::SQL_NO_TOTAL as i32),
+                    Some(char_octet_length) => Bson::Int32(char_octet_length as i32),
+                },
+                _ => Bson::Null,
+            },
+            // ORDINAL_POSITION
             17 => Bson::Int32(1 + self.current_field_for_collection as i32),
+            // IS_NULLABLE
             18 => Bson::String(
                 // odbc_sys should use an enum instead of constants...
                 match get_meta_data()?.nullability {
