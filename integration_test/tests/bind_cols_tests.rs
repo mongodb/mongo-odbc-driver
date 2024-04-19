@@ -2,8 +2,8 @@ mod common;
 
 mod integration {
     use crate::common::{
-        bind_cols, default_setup_connect_and_alloc_stmt, disconnect_and_free_dbc_and_env_handles,
-        exec_direct_default_query, get_sql_diagnostics,
+        bind_cols, default_setup_connect_and_alloc_stmt, exec_direct_default_query,
+        get_sql_diagnostics,
     };
     use definitions::{
         AttrOdbcVersion, CDataType, FetchOrientation, FreeStmtOption, Handle, HandleType, Integer,
