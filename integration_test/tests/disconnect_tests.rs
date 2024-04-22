@@ -155,8 +155,6 @@ mod integration {
             // Free the handle for statement 3
             assert_eq!(
                 SqlReturn::SUCCESS,
-                // Rust does not like the *stmt_3.cast::<Handle>() syntax, so we have to use
-                // as *mut _
                 SQLFreeHandle(
                     HandleType::SQL_HANDLE_STMT as i16,
                     *ptr::addr_of!(stmt_3).cast::<Handle>()
