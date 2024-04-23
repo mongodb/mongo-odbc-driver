@@ -1017,40 +1017,25 @@ pub unsafe extern "C" fn SQLDescribeParam(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
-    let conn_handle = MongoHandleRef::from(connection_handle);
-    let conn = must_be_valid!((*conn_handle).as_connection());
-
-    if let Ok(mut stmts) = conn.statements.write() {
-        // close any open cursors on statements that haven't been dropped
-        stmts.iter().for_each(|stmt| {
-            (*stmt).as_ref().map(|stmt| {
-                stmt.as_statement().map(|stmt| {
-                    sql_stmt_close_cursor_helper(stmt);
-                })
-            });
-        });
-        // drop all statements
-        stmts.clear();
-    }
     panic_safe_exec_clear_diagnostics!(
         info,
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
             let conn = must_be_valid!((*conn_handle).as_connection());
 
-            // close open cursors on any statements that haven't been closed
-            if let Ok(stmts) = conn.statements.write() {
+            if let Ok(mut stmts) = conn.statements.write() {
+                // close any open cursors on statements that haven't been dropped
                 stmts.iter().for_each(|stmt| {
-                    (*stmt).as_ref().map(|stmt| {
-                        stmt.as_statement().map(|stmt| {
-                            stmt.mongo_statement.write().map(|mut stmt| {
-                                stmt.as_mut().map(|stmt| {
-                                    stmt.close_cursor();
-                                })
-                            })
-                        })
-                    });
+                    if let Some(stmt) = (*stmt).as_ref() {
+                        if let Some(stmt) = stmt.as_statement() {
+                            sql_stmt_close_cursor_helper(stmt);
+                        }
+                    }
+                    // We also deallocate the memory for the statement handles here. We do not share this with SQLFreeHandle
+                    // as it would special case the way handles are... handled in that function in a generic way.
+                    let _ = Box::from_raw(*stmt);
                 });
+                stmts.clear();
             }
 
             // set the mongo_connection to None. This will cause the previous mongo_connection
