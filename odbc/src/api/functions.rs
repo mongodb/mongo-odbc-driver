@@ -23,7 +23,7 @@ use definitions::{
     USmallInt, UseBookmarks,
 };
 use function_name::named;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use logger::Logger;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, Error, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
