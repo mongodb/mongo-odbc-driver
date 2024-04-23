@@ -1023,8 +1023,8 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
             let conn_handle = MongoHandleRef::from(connection_handle);
             let conn = must_be_valid!((*conn_handle).as_connection());
 
+            // Close any open cursors on statements and drop all statements
             if let Ok(mut stmts) = conn.statements.write() {
-                // close any open cursors on statements that haven't been dropped
                 stmts.iter().for_each(|stmt| {
                     if let Some(stmt) = (*stmt).as_ref() {
                         if let Some(stmt) = stmt.as_statement() {

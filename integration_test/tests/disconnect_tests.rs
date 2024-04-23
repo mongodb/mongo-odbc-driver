@@ -8,8 +8,8 @@ mod integration {
         disconnect_and_free_dbc_and_env_handles, get_sql_diagnostics,
     };
     use definitions::{
-        AttrOdbcVersion, FreeStmtOption, Handle, HandleType, SQLDisconnect, SQLExecDirectW,
-        SQLFreeHandle, SQLFreeStmt, SqlReturn, SQL_NTS,
+        AttrOdbcVersion, FreeStmtOption, Handle, HandleType, SQLExecDirectW, SQLFreeHandle,
+        SQLFreeStmt, SqlReturn, SQL_NTS,
     };
 
     #[test]
