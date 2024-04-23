@@ -14,7 +14,7 @@ mod integration {
     };
 
     #[test]
-    fn sql_disconnect_closes_statement_implicitly() {
+    fn sql_disconnect_frees_statement_implicitly() {
         let (env, dbc, stmt) = default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
         let query = b"SELECT * FROM integration_test.foo\0".map(|b| b as u16);
         unsafe {
@@ -99,7 +99,7 @@ mod integration {
         let stmt_1 = allocate_statement(dbc).expect("Failed to allocate statement 1");
         // will be unbound
         let stmt_2 = allocate_statement(dbc).expect("Failed to allocate statement 2");
-        // will be closed and have its handle deallocated
+        // will have its handle deallocated
         let stmt_3 = allocate_statement(dbc).expect("Failed to allocate statement 3");
         // will have no operations performed on it
         let stmt_4 = allocate_statement(dbc).expect("Failed to allocate statement 4");
@@ -138,17 +138,6 @@ mod integration {
                 get_sql_diagnostics(
                     HandleType::SQL_HANDLE_STMT,
                     *ptr::addr_of!(stmt_2).cast::<Handle>()
-                ),
-            );
-
-            // Close statement 3
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLFreeStmt(stmt_3, FreeStmtOption::SQL_CLOSE as i16),
-                "{}",
-                get_sql_diagnostics(
-                    HandleType::SQL_HANDLE_STMT,
-                    *ptr::addr_of!(stmt_3).cast::<Handle>()
                 ),
             );
 

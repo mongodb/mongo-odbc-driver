@@ -1009,12 +1009,29 @@ pub unsafe extern "C" fn SQLDescribeParam(
 ///
 /// [`SQLDisconnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDisconnect-function
 ///
+/// This function is used to disconnect from the data source. It will also free any statements that have not been freed.
+///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
+    let conn_handle = MongoHandleRef::from(connection_handle);
+    let conn = must_be_valid!((*conn_handle).as_connection());
+
+    if let Ok(mut stmts) = conn.statements.write() {
+        // close any open cursors on statements that haven't been dropped
+        stmts.iter().for_each(|stmt| {
+            (*stmt).as_ref().map(|stmt| {
+                stmt.as_statement().map(|stmt| {
+                    sql_stmt_close_cursor_helper(stmt);
+                })
+            });
+        });
+        // drop all statements
+        stmts.clear();
+    }
     panic_safe_exec_clear_diagnostics!(
         info,
         || {
@@ -1695,6 +1712,8 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                     .as_statement()
                     .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_STMT_ERROR))?
             };
+            // Ensure the cursor is closed on the statement before dropping it.
+            sql_stmt_close_cursor_helper(stmt);
             // Actually reading this value would make ASAN fail, but this
             // is what the ODBC standard expects.
             let conn = unsafe {
@@ -3983,6 +4002,18 @@ pub unsafe extern "C" fn SQLStatisticsW(
     _reserved: SmallInt,
 ) -> SqlReturn {
     unsupported_function!(statement_handle)
+}
+
+///
+/// sql_stmt_close_cursor_helper is a helper function to ensure statements are disconnected
+/// properly when a connection is disconnected or a statement is freed.
+///
+fn sql_stmt_close_cursor_helper(stmt: &Statement) {
+    let _ = stmt.mongo_statement.write().map(|mut stmt| {
+        stmt.as_mut().map(|stmt| {
+            stmt.close_cursor();
+        })
+    });
 }
 
 ///
