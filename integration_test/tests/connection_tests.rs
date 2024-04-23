@@ -1,28 +1,19 @@
 mod common;
 
 mod integration {
-
-    #[cfg(feature = "evergreen_tests")]
-    use {
-        crate::common::{connect_and_allocate_statement, disconnect_and_close_handles},
-        constants::DRIVER_NAME,
-        cstr::WideChar,
-        cstr::{to_char_ptr, to_widechar_ptr},
-        definitions::{SQLExecDirectW, SqlReturn},
-        logger::Logger,
-        shared_sql_utils::driver_settings::DriverSettings,
-        shared_sql_utils::driver_settings::{LOGLEVEL, ODBCINSTINI},
-        shared_sql_utils::odbcinst::{SQLWritePrivateProfileString, SQLWritePrivateProfileStringW},
-        std::str,
-        std::{fs, thread, time},
+    use crate::common::{
+        allocate_env, connect_and_allocate_statement, connect_with_conn_string,
+        disconnect_and_close_handles,
     };
-
-    use definitions::AttrOdbcVersion;
+    use constants::DRIVER_NAME;
+    use cstr::{to_char_ptr, to_widechar_ptr, WideChar};
+    use definitions::{AttrOdbcVersion, SQLExecDirectW, SqlReturn};
     use lazy_static::lazy_static;
-
-    use crate::common::{allocate_env, connect_with_conn_string};
-
+    use logger::Logger;
     use regex::Regex;
+    use shared_sql_utils::driver_settings::{DriverSettings, LOGLEVEL, ODBCINSTINI};
+    use shared_sql_utils::odbcinst::{SQLWritePrivateProfileString, SQLWritePrivateProfileStringW};
+    use std::{fs, str, thread, time};
 
     #[test]
     fn test_invalid_connection() {
@@ -118,7 +109,7 @@ mod integration {
     // the logger log level is updated to the connection log level.
     // If you are having problems running this test, ensure you are running as an administrator.
     #[test]
-    #[cfg(feature = "evergreen_tests")]
+    #[cfg_attr(not(feature = "evergreen_tests"), ignore)]
     fn test_driver_log_level() {
         let driver_settings: DriverSettings =
             DriverSettings::from_private_profile_string().unwrap_or_default();
@@ -211,7 +202,6 @@ mod integration {
         write_driver_log_level(empty_log_level);
     }
 
-    #[cfg(feature = "evergreen_tests")]
     // Update the driver configuration and set the log level to the provided log level by either
     // writing to the odbinst ini file or to the registry.
     fn write_driver_log_level(log_level: &str) -> bool {
