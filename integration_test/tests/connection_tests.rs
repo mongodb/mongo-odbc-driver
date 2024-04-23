@@ -109,6 +109,7 @@ mod integration {
     // the logger log level is updated to the connection log level.
     // If you are having problems running this test, ensure you are running as an administrator.
     #[test]
+    #[cfg_attr(not(feature = "evergreen_tests"), ignore)]
     fn test_driver_log_level() {
         let driver_settings: DriverSettings =
             DriverSettings::from_private_profile_string().unwrap_or_default();
