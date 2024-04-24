@@ -1009,6 +1009,8 @@ pub unsafe extern "C" fn SQLDescribeParam(
 ///
 /// [`SQLDisconnect`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDisconnect-function
 ///
+/// This function is used to disconnect from the data source. It will also free any statements that have not been freed.
+///
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
@@ -1020,6 +1022,22 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
         || {
             let conn_handle = MongoHandleRef::from(connection_handle);
             let conn = must_be_valid!((*conn_handle).as_connection());
+
+            // Close any open cursors on statements and drop all statements
+            if let Ok(mut stmts) = conn.statements.write() {
+                stmts.iter().for_each(|stmt| {
+                    if let Some(stmt) = (*stmt).as_ref() {
+                        if let Some(stmt) = stmt.as_statement() {
+                            sql_stmt_close_cursor_helper(stmt);
+                        }
+                    }
+                    // We also deallocate the memory for the statement handles here. We do not share this with SQLFreeHandle
+                    // as it would special case the way handles are... handled in that function in a generic way.
+                    let _ = Box::from_raw(*stmt);
+                });
+                stmts.clear();
+            }
+
             // set the mongo_connection to None. This will cause the previous mongo_connection
             // to drop and disconnect.
             if let Some(conn) = conn.mongo_connection.write().unwrap().take() {
@@ -1679,6 +1697,8 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
                     .as_statement()
                     .ok_or(ODBCError::InvalidHandleType(HANDLE_MUST_BE_STMT_ERROR))?
             };
+            // Ensure the cursor is closed on the statement before dropping it.
+            sql_stmt_close_cursor_helper(stmt);
             // Actually reading this value would make ASAN fail, but this
             // is what the ODBC standard expects.
             let conn = unsafe {
@@ -3967,6 +3987,18 @@ pub unsafe extern "C" fn SQLStatisticsW(
     _reserved: SmallInt,
 ) -> SqlReturn {
     unsupported_function!(statement_handle)
+}
+
+///
+/// sql_stmt_close_cursor_helper is a helper function to ensure statements are disconnected
+/// properly when a connection is disconnected or a statement is freed.
+///
+fn sql_stmt_close_cursor_helper(stmt: &Statement) {
+    let _ = stmt.mongo_statement.write().map(|mut stmt| {
+        stmt.as_mut().map(|stmt| {
+            stmt.close_cursor();
+        })
+    });
 }
 
 ///

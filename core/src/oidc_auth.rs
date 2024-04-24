@@ -1,4 +1,3 @@
-use open;
 use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
     reqwest::async_http_client,
@@ -7,8 +6,10 @@ use openidconnect::{
 };
 use rfc8252_http_server::{start, OidcResponseParams};
 use std::{collections::HashSet, hash::RandomState, time::Instant};
+use tokio::time::{self, Duration};
 
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
+const DEFAULT_SLEEP_DURATION: Duration = Duration::from_secs(5 * 60); // from_mins is unstable, so we use from_secs with a multiplication. The multiplication is performed at compile time, anyway
 
 // temporary until rust driver OIDC support is released
 // TODO Remove Me.
@@ -41,7 +42,33 @@ pub enum Error {
     NoIdpServerInfo,
     CsrfMismatch,
     HumanFlowUnsupported,
+    Timedout,
     Other(String),
+}
+
+impl From<Error> for mongodb::error::Error {
+    fn from(e: Error) -> Self {
+        mongodb::error::Error::custom(e)
+    }
+}
+
+pub async fn oidc_call_back(params: CallbackContext) -> mongodb::error::Result<IdpServerResponse> {
+    let sleep_duration = params
+        .timeout_seconds
+        // turn the supplied timeout Instant into a Duration from now
+        .map(|x| x - Instant::now())
+        .unwrap_or(DEFAULT_SLEEP_DURATION);
+
+    // If there is a refresh token, we refresh, otherwise we do not
+    if params.refresh_token.is_some() {
+        Ok(time::timeout(sleep_duration, do_refresh(params))
+            .await
+            .map_err(|_| Error::Timedout)??)
+    } else {
+        Ok(time::timeout(sleep_duration, do_auth_flow(params))
+            .await
+            .map_err(|_| Error::Timedout)??)
+    }
 }
 
 pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, Error> {
