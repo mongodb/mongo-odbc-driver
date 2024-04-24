@@ -14,7 +14,6 @@ use cstr::{
 use definitions::{
     CDataType, Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
-use log::warn;
 use regex::Regex;
 use serde_json::{json, Value};
 use std::{mem::size_of, str::FromStr};
@@ -819,8 +818,6 @@ pub unsafe fn format_bson_data(
             }
         }
         CDataType::SQL_C_CHAR => {
-            warn!("returning widechar as bytes");
-            warn!("data: {:?}", data.clone().to_json(uuid_repr));
             let data = data.to_json(uuid_repr).bytes().collect::<Vec<u8>>();
             char_data!(
                 mongo_handle,
@@ -835,8 +832,6 @@ pub unsafe fn format_bson_data(
             )
         }
         CDataType::SQL_C_WCHAR => {
-            warn!("returning widechar as bytes");
-            warn!("data: {:?}", data.clone().to_json(uuid_repr));
             let data = cstr::to_widechar_vec(&data.to_json(uuid_repr));
             char_data!(
                 mongo_handle,

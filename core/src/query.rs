@@ -150,12 +150,12 @@ impl MongoStatement for MongoQuery {
             max_time = Some(Duration::from_millis(self.query_timeout.unwrap() as u64))
         }
 
-        // let mut batch_size = None;
-        // // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
-        // if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
-        //     batch_size = Some(rowset_size)
-        // }
-        let options = opt.max_time(max_time).build();
+        let mut batch_size = None;
+        // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
+        if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
+            batch_size = Some(rowset_size)
+        }
+        let options = opt.max_time(max_time).batch_size(batch_size).build();
 
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
         // denote this to the program, otherwise return a generic query execution error
