@@ -97,7 +97,6 @@ mod integration {
     }
     #[test]
     fn get_data_with_various_buffer_sizes() {
-        // We test different size buffers to ensure we can handle various buffer sizes.
         let buffer_sizes = [
             u8::MAX as usize,
             u16::MAX as usize,
