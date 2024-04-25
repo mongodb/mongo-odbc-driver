@@ -962,7 +962,7 @@ unsafe fn set_output_wstring_helper(
     // two bytes, such as emojis because it's assuming every character is 2 bytes.
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
-    let num_chars_written = write_wstring_slice_to_buffer(message, buffer_len, output_ptr) as usize;
+    let num_chars_written = write_wstring_slice_to_buffer(message, buffer_len, output_ptr);
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars_written <= message.len() {
@@ -991,7 +991,7 @@ unsafe fn set_output_string_helper(
         return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
 
-    let num_chars_written = write_string_slice_to_buffer(message, buffer_len, output_ptr) as usize;
+    let num_chars_written = write_string_slice_to_buffer(message, buffer_len, output_ptr);
 
     // return the number of characters in the message string, excluding the
     // null terminator
@@ -1021,7 +1021,7 @@ unsafe fn set_output_binary_helper(
         return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
 
-    let num_bytes_written = write_binary_slice_to_buffer(data, buffer_len, output_ptr) as usize;
+    let num_bytes_written = write_binary_slice_to_buffer(data, buffer_len, output_ptr);
 
     // return the number of characters in the binary
     if num_bytes_written < data.len() {

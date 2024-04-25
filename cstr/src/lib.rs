@@ -317,8 +317,8 @@ mod test {
     }
 
     #[test]
-    fn test_huge_buffer() {
-        let threshold = u16::MAX as usize + 1;
+    fn test_16_mb_buffer_write() {
+        let threshold = 1024 * 1024 * 8;
         let mut expected = "t".repeat(threshold);
         let input = &to_widechar_vec(&expected)[..];
         expected.push('\0');

@@ -108,7 +108,7 @@ mod test {
         };
         assert!(!result);
         assert!(unsafe {
-            input_text_to_string_w(buffer.as_ptr(), buffer_len as usize)
+            input_text_to_string_w(buffer.as_ptr(), buffer_len)
                 .to_lowercase()
                 .contains("authentication failed")
         });

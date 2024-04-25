@@ -64,20 +64,5 @@
       }
     ],
     "views" : null
-  },
-  {
-    "name" : "bigData",
-    "collections" : [
-      {
-        "name": "*",
-        "dataSources" : [
-          {
-            "storeName" : "localmongo",
-            "database" : "bigData"
-          }
-        ]
-      }
-    ],
-    "views" : null
   }
 ]
