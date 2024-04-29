@@ -326,7 +326,6 @@ mod test {
         let len = unsafe {
             write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr() as *mut WideChar)
         };
-        let out = from_widechar_ref_lossy(&buffer);
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
