@@ -977,7 +977,8 @@ functions:
           cargo run --bin data_loader &&
           cargo test integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
-          # the test is feature gated and will only run on evergreen
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have run in exclusion because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
           cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
           EXITCODE=$?
@@ -1095,6 +1096,9 @@ functions:
 
           # Run integration tests with ubuntu
           cargo test integration -- --nocapture &&
+          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have run in exclusion because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
           cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
 
@@ -1168,6 +1172,9 @@ functions:
 
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --nocapture &&
+          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have run in exclusion because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests,definitions/iodbc,cstr/utf32 -- --nocapture &&
           cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features definitions/iodbc,cstr/utf32,bad_host -- --exact --nocapture
           EXITCODE=$?
@@ -1247,6 +1254,9 @@ functions:
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --nocapture &&
+          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have run in exclusion because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
           cargo test --target x86_64-unknown-linux-gnu --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
           EXITCODE=$?
