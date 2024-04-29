@@ -20,7 +20,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const WideChar,
     buffer: *const WideChar,
     buffer_in_len: usize,
-    buffer_out_len: *mut u16,
+    buffer_out_len: *mut usize,
 ) -> bool {
     let marker = -1i8;
     let conn_str = unsafe { input_text_to_string_w(connection_string, marker as usize) };
@@ -108,7 +108,7 @@ mod test {
         };
         assert!(!result);
         assert!(unsafe {
-            input_text_to_string_w(buffer.as_ptr(), buffer_len as usize)
+            input_text_to_string_w(buffer.as_ptr(), buffer_len)
                 .to_lowercase()
                 .contains("authentication failed")
         });

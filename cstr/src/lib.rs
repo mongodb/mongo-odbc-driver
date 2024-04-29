@@ -171,14 +171,18 @@ pub fn to_char_ptr(s: &str) -> (*mut Char, Vec<u8>) {
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
-pub unsafe fn write_string_to_buffer(message: &str, len: usize, output_ptr: *mut WideChar) -> u16 {
+pub unsafe fn write_string_to_buffer(
+    message: &str,
+    len: usize,
+    output_ptr: *mut WideChar,
+) -> usize {
     let len = std::cmp::min(message.len(), len - 1);
     let mut v = to_widechar_vec(&message[..len]);
     v.push(0);
     unsafe {
         copy_nonoverlapping(v.as_ptr(), output_ptr, len);
     }
-    v.len() as u16
+    v.len()
 }
 
 ///
@@ -190,7 +194,7 @@ pub unsafe fn write_wstring_slice_to_buffer(
     message: &[WideChar],
     len: usize,
     output_ptr: *mut WideChar,
-) -> u16 {
+) -> usize {
     let len = std::cmp::min(message.len(), len - 1);
 
     unsafe {
@@ -198,7 +202,7 @@ pub unsafe fn write_wstring_slice_to_buffer(
         *output_ptr.add(len) = 0;
     }
 
-    (len + 1) as u16
+    len + 1
 }
 
 ///
@@ -210,7 +214,7 @@ pub unsafe fn write_string_slice_to_buffer(
     message: &[Char],
     len: usize,
     output_ptr: *mut Char,
-) -> u16 {
+) -> usize {
     let len = std::cmp::min(message.len(), len - 1);
 
     unsafe {
@@ -218,7 +222,7 @@ pub unsafe fn write_string_slice_to_buffer(
         *output_ptr.add(len) = 0;
     }
 
-    (len + 1) as u16
+    len + 1
 }
 
 ///
@@ -230,14 +234,14 @@ pub unsafe fn write_binary_slice_to_buffer(
     message: &[Char],
     len: usize,
     output_ptr: *mut Char,
-) -> u16 {
+) -> usize {
     let len = std::cmp::min(message.len(), len);
 
     unsafe {
         copy_nonoverlapping(message[..len].as_ptr(), output_ptr, len);
     }
 
-    len as u16
+    len
 }
 
 ///
@@ -278,7 +282,7 @@ mod test {
         let mut buffer = [0; 9];
         let len = unsafe { write_string_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -288,7 +292,7 @@ mod test {
         let mut buffer: [WideChar; 3] = [0; 3];
         let len = unsafe { write_string_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -298,7 +302,7 @@ mod test {
         let mut buffer: [WideChar; 4] = [0; 4];
         let len = unsafe { write_string_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -309,7 +313,21 @@ mod test {
         let len =
             unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+    }
+
+    #[test]
+    fn test_16_mb_buffer_write() {
+        let threshold = 1024 * 1024 * 16;
+        let mut expected = "t".repeat(threshold);
+        let input = &to_widechar_vec(&expected)[..];
+        expected.push('\0');
+        let mut buffer = vec![0; threshold + 1];
+        let len = unsafe {
+            write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr() as *mut WideChar)
+        };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -320,7 +338,7 @@ mod test {
         let len =
             unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -331,7 +349,7 @@ mod test {
         let len =
             unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -341,7 +359,7 @@ mod test {
         let mut buffer = [0; 5];
         let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -351,7 +369,7 @@ mod test {
         let mut buffer = [0; 3];
         let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -361,7 +379,7 @@ mod test {
         let mut buffer = [0; 4];
         let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
 
     #[test]
@@ -371,7 +389,7 @@ mod test {
         let mut buffer = [0; 5];
         let len = unsafe { write_binary_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len(), buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len(), buffer.len()));
     }
 
     #[test]
@@ -381,7 +399,7 @@ mod test {
         let mut buffer = [0; 3];
         let len = unsafe { write_binary_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len(), buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len(), buffer.len()));
     }
 
     #[test]
@@ -391,7 +409,7 @@ mod test {
         let mut buffer = [0; 4];
         let len = unsafe { write_binary_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len(), buffer.len()) as u16);
+        assert_eq!(len, std::cmp::min(input.len(), buffer.len()));
     }
 
     #[test]
