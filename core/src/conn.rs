@@ -18,12 +18,15 @@ use std::{
 struct ClientMap(Vec<(UserOptions, Weak<Client>)>);
 
 impl ClientMap {
+    // get returns the client associated with the given user options if it exists.
     fn get(&mut self, user_options: &UserOptions) -> Option<Arc<Client>> {
         let mut remover = None;
         for (i, (options, weak_client)) in self.0.iter().enumerate() {
             if options == user_options {
                 if let Some(client) = weak_client.upgrade() {
                     return Some(client);
+                // if somehow the client cannot be upgraded, we want to remove this entry in the
+                // ClientMap.
                 } else {
                     remover = Some(i);
                 }
@@ -37,11 +40,19 @@ impl ClientMap {
         None
     }
 
+    // gc is garbage collection of any clients that are no longer in use.
+    fn gc(&mut self) {
+        self.0
+            .retain(|(_, weak_client)| std::sync::Weak::strong_count(weak_client) == 0);
+    }
+
+    // insert inserts a new client into the client map keyed on the user options.
     fn insert(&mut self, user_options: UserOptions, client: &Arc<Client>) {
         let client = std::sync::Arc::downgrade(client);
         self.0.push((user_options, client));
     }
 
+    // new creates a new ClientMap.
     fn new() -> Self {
         ClientMap(Vec::new())
     }
@@ -127,10 +138,16 @@ impl MongoConnection {
     }
 
     pub fn shutdown(self) -> Result<()> {
-        // TODO: what should we do here? If we just shutdown is the strong_count is 1, that's a
-        // race.
-        //self.runtime
-        //    .block_on(async { self.client.shutdown().await });
+        // we need to lock the CLIENT_MAP to potentially remove the client from the map.
+        // This prevents races on the strong_count or with gc().
+        let mut client_map = CLIENT_MAP.lock().unwrap();
+        if let Some(client) = std::sync::Arc::into_inner(self.client) {
+            self.runtime.block_on(async { client.shutdown().await });
+        }
+        // garbage collect any clients that are no longer in use. It's possible there could be
+        // other clients that are no longer in use because shutdown was not properly called before,
+        // so we gc them all.
+        client_map.gc();
         drop(self.runtime);
         Ok(())
     }
