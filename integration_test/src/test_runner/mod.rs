@@ -479,8 +479,6 @@ fn run_function_test(
         _ => Err(Error::UnsupportedFunction(function_name.clone())),
     };
 
-    disconnect_and_close_handles(conn, statement);
-
     let sql_return_val = sql_return.unwrap();
     if sql_return_val != SqlReturn::SUCCESS {
         return Err(Error::OdbcFunctionFailed(
@@ -489,11 +487,13 @@ fn run_function_test(
             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, statement as *mut _),
         ));
     }
-    if generate {
+    let ret = if generate {
         generate_baseline_test_file(entry, statement)
     } else {
         validate_result_set(entry, statement)
-    }
+    };
+    disconnect_and_close_handles(conn, statement);
+    ret
 }
 
 fn validate_result_set(entry: &TestEntry, stmt: HStmt) -> Result<()> {

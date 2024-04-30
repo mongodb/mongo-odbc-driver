@@ -43,12 +43,12 @@ impl ClientMap {
     // gc is garbage collection of any clients that are no longer in use.
     fn gc(&mut self) {
         self.0
-            .retain(|(_, weak_client)| std::sync::Weak::strong_count(weak_client) == 0);
+            .retain(|(_, weak_client)| Weak::strong_count(weak_client) == 0);
     }
 
     // insert inserts a new client into the client map keyed on the user options.
     fn insert(&mut self, user_options: UserOptions, client: &Arc<Client>) {
-        let client = std::sync::Arc::downgrade(client);
+        let client = Arc::downgrade(client);
         self.0.push((user_options, client));
     }
 
@@ -59,7 +59,8 @@ impl ClientMap {
 }
 
 lazy_static! {
-    static ref CLIENT_MAP: std::sync::Mutex<ClientMap> = std::sync::Mutex::new(ClientMap::new());
+    static ref CLIENT_MAP: tokio::sync::Mutex<ClientMap> =
+        tokio::sync::Mutex::new(ClientMap::new());
 }
 
 #[derive(Debug)]
@@ -107,7 +108,7 @@ impl MongoConnection {
         user_options.client_options.connect_timeout =
             login_timeout.map(|to| Duration::new(to as u64, 0));
         let guard = runtime.enter();
-        let mut client_map = CLIENT_MAP.lock().unwrap();
+        let mut client_map = runtime.block_on(async { CLIENT_MAP.lock().await });
         let client = if let Some(client) = client_map.get(&user_options) {
             dbg!("reusing client");
             client
@@ -118,7 +119,7 @@ impl MongoConnection {
                     .map_err(Error::InvalidClientOptions)
             })?;
             let client = Arc::new(client);
-            client_map.insert(key_user_options, &client);
+            //client_map.insert(key_user_options, &client);
             client
         };
         // keep in mind, mutexes should always be dropped in reverse order of acquisition to avoid
@@ -141,16 +142,20 @@ impl MongoConnection {
     pub fn shutdown(self) -> Result<()> {
         dbg!("shutdown");
         let guard = self.runtime.enter();
+        dbg!("took guard");
         // we need to lock the CLIENT_MAP to potentially remove the client from the map.
         // This prevents races on the strong_count or with gc().
-        let mut client_map = CLIENT_MAP.lock().unwrap();
-        if let Some(client) = std::sync::Arc::into_inner(self.client) {
+        let mut client_map = self.runtime.block_on(async { CLIENT_MAP.lock().await });
+        if let Some(client) = Arc::into_inner(self.client) {
+            dbg!("blocking");
             self.runtime.block_on(async { client.shutdown().await });
         }
+        dbg!("finished block");
         // garbage collect any clients that are no longer in use. It's possible there could be
         // other clients that are no longer in use because shutdown was not properly called before,
         // so we gc them all.
         client_map.gc();
+        dbg!("finished gc");
         drop(client_map);
         drop(guard);
         Ok(())
