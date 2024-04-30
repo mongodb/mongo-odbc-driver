@@ -109,6 +109,7 @@ impl MongoConnection {
         let guard = runtime.enter();
         let mut client_map = CLIENT_MAP.lock().unwrap();
         let client = if let Some(client) = client_map.get(&user_options) {
+            dbg!("reusing client");
             client
         } else {
             let key_user_options = user_options.clone();

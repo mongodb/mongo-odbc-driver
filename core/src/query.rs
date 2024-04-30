@@ -49,11 +49,14 @@ impl MongoQuery {
             doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
         let guard = client.runtime.enter();
+        dbg!();
         let schema_response = client.runtime.block_on(async {
+            dbg!("sending");
             db.run_command(get_result_schema_cmd)
                 .await
                 .map_err(Error::QueryExecutionFailed)
         })?;
+        dbg!("responded");
         drop(guard);
         let get_result_schema_response: SqlGetSchemaResponse =
             mongodb::bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
