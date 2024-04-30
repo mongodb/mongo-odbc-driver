@@ -237,6 +237,7 @@ pub unsafe extern "C" fn SQLAllocHandle(
     input_handle: Handle,
     output_handle: *mut Handle,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_keep_diagnostics!(
         info,
         || {
@@ -343,6 +344,7 @@ pub unsafe extern "C" fn SQLBindCol(
     buffer_length: Len,
     length_or_indicator: *mut Len,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_keep_diagnostics!(
         debug,
         || {
@@ -456,6 +458,7 @@ pub unsafe extern "C" fn SQLBindParameter(
     _buffer_length: Len,
     _str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(hstmt)
 }
 
@@ -477,6 +480,7 @@ pub unsafe extern "C" fn SQLBrowseConnectW(
     _buffer_length: SmallInt,
     _out_buffer_length: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(connection_handle);
 }
 
@@ -492,6 +496,7 @@ pub unsafe extern "C" fn SQLBulkOperations(
     statement_handle: HStmt,
     _operation: USmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(statement_handle)
 }
 
@@ -504,6 +509,7 @@ pub unsafe extern "C" fn SQLBulkOperations(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
+    dbg!();
     panic_safe_exec_keep_diagnostics!(
         debug,
         || {
@@ -547,6 +553,7 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, handle: Handle) -> SqlReturn {
+    dbg!();
     unimpl!(handle);
 }
 
@@ -558,6 +565,7 @@ pub unsafe extern "C" fn SQLCancelHandle(_handle_type: HandleType, handle: Handl
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLCloseCursor(_statement_handle: HStmt) -> SqlReturn {
+    dbg!();
     // We never need to do anything to close a cusor, so this is safe.
     SqlReturn::SUCCESS
 }
@@ -581,6 +589,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
     string_length_ptr: *mut SmallInt,
     numeric_attribute_ptr: *mut Len,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -781,6 +790,7 @@ pub unsafe extern "C" fn SQLColumnPrivilegesW(
     _column_name: *const WideChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(statement_handle);
 }
 
@@ -805,6 +815,7 @@ pub unsafe extern "C" fn SQLColumnsW(
     column_name: *const WideChar,
     column_name_length: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -867,6 +878,7 @@ pub unsafe extern "C" fn SQLCompleteAsync(
     handle: Handle,
     _async_ret_code_ptr: *mut RetCode,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(handle)
 }
 
@@ -889,6 +901,7 @@ pub unsafe extern "C" fn SQLConnectW(
     _authentication: *const WideChar,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(connection_handle)
 }
 
@@ -904,6 +917,7 @@ pub unsafe extern "C" fn SQLCopyDesc(
     _source_desc_handle: HDesc,
     _target_desc_handle: HDesc,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(_source_desc_handle)
 }
 
@@ -928,6 +942,7 @@ pub unsafe extern "C" fn SQLDataSourcesW(
     _buffer_length_2: SmallInt,
     _name_length_2: *mut SmallInt,
 ) -> SqlReturn {
+dbg!();
     unsupported_function!(environment_handle)
 }
 */
@@ -953,6 +968,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
     decimal_digits: *mut SmallInt,
     nullable: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1003,6 +1019,7 @@ pub unsafe extern "C" fn SQLDescribeParam(
     _decimal_digits_ptr: *mut SmallInt,
     _nullable_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(statement_handle)
 }
 
@@ -1017,6 +1034,7 @@ pub unsafe extern "C" fn SQLDescribeParam(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         info,
         || {
@@ -1115,6 +1133,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
     string_length_2: *mut SmallInt,
     driver_completion: USmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1203,6 +1222,7 @@ pub unsafe extern "C" fn SQLDriversW(
     _drvr_attr_max: SmallInt,
     _out_drvr_attr: *mut SmallInt,
 ) -> SqlReturn {
+dbg!();
     unsupported_function!(henv)
 }
 **/
@@ -1220,6 +1240,7 @@ pub unsafe extern "C" fn SQLEndTran(
     handle: Handle,
     _completion_type: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(handle);
 }
 
@@ -1238,6 +1259,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
     statement_text: *const WideChar,
     text_length: Integer,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1274,6 +1296,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
 #[no_mangle]
 #[named]
 pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1324,6 +1347,7 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || { sql_fetch_helper(statement_handle, "SQLFetch") },
@@ -1332,6 +1356,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 }
 
 unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlReturn {
+    dbg!();
     let mongo_handle = MongoHandleRef::from(statement_handle);
     let stmt = must_be_valid!(mongo_handle.as_statement());
 
@@ -1577,6 +1602,7 @@ pub unsafe extern "C" fn SQLFetchScroll(
     fetch_orientation: SmallInt,
     _fetch_offset: Len,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1623,6 +1649,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
     _fk_table_name: *const WideChar,
     _fk_table_name_length: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1645,6 +1672,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeHandle(handle_type: HandleType, handle: Handle) -> SqlReturn {
+    dbg!();
     trace_odbc!(
         info,
         *(handle as *mut MongoHandle),
@@ -1735,6 +1763,7 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1783,6 +1812,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
     buffer_length: Integer,
     string_length_ptr: *mut Integer,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1813,6 +1843,7 @@ unsafe fn sql_get_connect_attrw_helper(
     buffer_length: Integer,
     string_length_ptr: *mut Integer,
 ) -> SqlReturn {
+    dbg!();
     let mut err = None;
 
     // This scope is introduced to make the RWLock Guard expire before we write
@@ -1882,6 +1913,7 @@ pub unsafe extern "C" fn SQLGetCursorNameW(
     _buffer_length: SmallInt,
     _name_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(statement_handle);
 }
 
@@ -1901,6 +1933,7 @@ pub unsafe extern "C" fn SQLGetData(
     buffer_length: Len,
     str_len_or_ind_ptr: *mut Len,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -1946,6 +1979,7 @@ unsafe fn sql_get_data_helper(
     str_len_or_ind_ptr: *mut Len,
     function_name: &str,
 ) -> SqlReturn {
+    dbg!();
     let mut error = None;
     let mut ret = Bson::Null;
     {
@@ -2022,6 +2056,7 @@ pub unsafe extern "C" fn SQLGetDescFieldW(
     _buffer_length: Integer,
     _string_length_ptr: *mut Integer,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(_descriptor_handle)
 }
 
@@ -2048,6 +2083,7 @@ pub unsafe extern "C" fn SQLGetDescRecW(
     _scale_ptr: *mut SmallInt,
     _nullable_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(_descriptor_handle)
 }
 
@@ -2070,12 +2106,14 @@ pub unsafe extern "C" fn SQLGetDiagFieldW(
     buffer_length: SmallInt,
     string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_keep_diagnostics!(
         debug,
         || {
             let mongo_handle = handle as *mut MongoHandle;
             let odbc_version = (*mongo_handle).get_odbc_version();
             let get_error = |errors: &Vec<ODBCError>, diag_identifier: DiagType| -> SqlReturn {
+                dbg!();
                 get_diag_fieldw(
                     errors,
                     diag_identifier,
@@ -2145,6 +2183,7 @@ macro_rules! sql_get_diag_rec_impl {
                 let rec_number = ($rec_number - 1) as usize;
 
                 let get_error = |errors: &Vec<ODBCError>| -> SqlReturn {
+                    dbg!();
                     match errors.get(rec_number) {
                         Some(odbc_err) => $error_output_func(
                             odbc_err,
@@ -2203,6 +2242,7 @@ pub unsafe extern "C" fn SQLGetDiagRecW(
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     sql_get_diag_rec_impl!(
         handle_type,
         handle,
@@ -2231,6 +2271,7 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
     _buffer_length: Integer,
     string_length: *mut Integer,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         info,
         || {
@@ -2256,6 +2297,7 @@ unsafe fn sql_get_env_attrw_helper(
     value_ptr: Pointer,
     string_length: *mut Integer,
 ) -> SqlReturn {
+    dbg!();
     let env = must_be_valid!(env_handle.as_env());
     if value_ptr.is_null() {
         ptr_safe_write(string_length, 0);
@@ -2861,6 +2903,7 @@ pub unsafe extern "C" fn SQLGetInfoW(
     buffer_length: SmallInt,
     string_length_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || sql_get_info_helper!(
@@ -2891,6 +2934,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
     _buffer_length: Integer,
     string_length_ptr: *mut Integer,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -2919,6 +2963,7 @@ unsafe fn sql_get_stmt_attrw_helper(
     value_ptr: Pointer,
     string_length_ptr: *mut Integer,
 ) -> SqlReturn {
+    dbg!();
     // Most attributes have type SQLULEN, so default to the size of that
     // type.
     ptr_safe_write(string_length_ptr, size_of::<ULen>() as Integer);
@@ -3115,6 +3160,7 @@ unsafe fn sql_get_stmt_attrw_helper(
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -3155,6 +3201,7 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
 ///
 #[no_mangle]
 pub unsafe extern "C" fn SQLMoreResults(_handle: HStmt) -> SqlReturn {
+    dbg!();
     // For now, we never allow more than one result from a query (i.e., we only support one query
     // at a time).
     SqlReturn::NO_DATA
@@ -3178,6 +3225,7 @@ pub unsafe extern "C" fn SQLNativeSqlW(
     _buffer_len: Integer,
     _out_statement_len: *mut Integer,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(connection_handle);
 }
 
@@ -3193,6 +3241,7 @@ pub unsafe extern "C" fn SQLNumParams(
     statement_handle: HStmt,
     _param_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(statement_handle)
 }
 
@@ -3208,6 +3257,7 @@ pub unsafe extern "C" fn SQLNumResultCols(
     statement_handle: HStmt,
     column_count_ptr: *mut SmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -3240,6 +3290,7 @@ pub unsafe extern "C" fn SQLNumResultCols(
 #[no_mangle]
 #[named]
 pub unsafe extern "C" fn SQLParamData(hstmt: HStmt, _value_ptr_ptr: *mut Pointer) -> SqlReturn {
+    dbg!();
     unsupported_function!(hstmt)
 }
 
@@ -3258,6 +3309,7 @@ pub unsafe extern "C" fn SQLPrepareW(
     statement_text: *const WideChar,
     text_length: Integer,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -3317,6 +3369,7 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
     _table_name: *const WideChar,
     _table_name_length: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -3351,6 +3404,7 @@ pub unsafe extern "C" fn SQLProcedureColumnsW(
     _column_name: *const WideChar,
     _column_name_length: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(statement_handle)
 }
 
@@ -3373,6 +3427,7 @@ pub unsafe extern "C" fn SQLProceduresW(
     _proc_name: *const WideChar,
     _proc_name_length: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(statement_handle)
 }
 
@@ -3389,6 +3444,7 @@ pub unsafe extern "C" fn SQLPutData(
     _data_ptr: Pointer,
     _str_len_or_ind_ptr: Len,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(statement_handle)
 }
 
@@ -3404,6 +3460,7 @@ pub unsafe extern "C" fn SQLRowCount(
     statement_handle: HStmt,
     row_count_ptr: *mut Len,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -3434,6 +3491,7 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
     value_ptr: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -3456,6 +3514,7 @@ unsafe fn set_connect_attrw_helper(
     attribute: ConnectionAttribute,
     value_ptr: Pointer,
 ) -> SqlReturn {
+    dbg!();
     let mut err = None;
 
     // This scope is introduced to make the RWLock Guard expire before we write
@@ -3515,6 +3574,7 @@ pub unsafe extern "C" fn SQLSetCursorNameW(
     _cursor_name: *const WideChar,
     _name_length: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(statement_handle);
 }
 
@@ -3533,6 +3593,7 @@ pub unsafe extern "C" fn SQLSetDescFieldW(
     _value_ptr: Pointer,
     _buffer_length: Integer,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(_desc_handle)
 }
 
@@ -3556,6 +3617,7 @@ pub unsafe extern "C" fn SQLSetDescRec(
     _string_length_ptr: *const Len,
     _indicator_ptr: *const Len,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(desc_handle)
 }
 
@@ -3573,6 +3635,7 @@ pub unsafe extern "C" fn SQLSetPos(
     _operation: USmallInt,
     _lock_type: USmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(statement_handle)
 }
 
@@ -3592,6 +3655,7 @@ pub unsafe extern "C" fn SQLSetEnvAttr(
     value: Pointer,
     _string_length: Integer,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         info,
         || {
@@ -3614,6 +3678,7 @@ unsafe fn sql_set_env_attrw_helper(
     attribute: EnvironmentAttribute,
     value_ptr: Pointer,
 ) -> SqlReturn {
+    dbg!();
     let env = must_be_valid!(env_handle.as_env());
     match attribute {
         EnvironmentAttribute::SQL_ATTR_ODBC_VERSION => {
@@ -3701,6 +3766,7 @@ pub unsafe extern "C" fn SQLSetStmtAttrW(
     value: Pointer,
     _str_length: Integer,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
@@ -3723,6 +3789,7 @@ unsafe fn sql_set_stmt_attrw_helper(
     attribute: StatementAttribute,
     value_ptr: Pointer,
 ) -> SqlReturn {
+    dbg!();
     let stmt = must_be_valid!(stmt_handle.as_statement());
     match attribute {
         StatementAttribute::SQL_ATTR_APP_ROW_DESC => {
@@ -3963,6 +4030,7 @@ pub unsafe extern "C" fn SQLSpecialColumnsW(
     _scope: SmallInt,
     _nullable: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(statement_handle);
 }
 
@@ -3985,6 +4053,7 @@ pub unsafe extern "C" fn SQLStatisticsW(
     _unique: SmallInt,
     _reserved: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unsupported_function!(statement_handle)
 }
 
@@ -4019,6 +4088,7 @@ pub unsafe extern "C" fn SQLTablePrivilegesW(
     _table_name: *const WideChar,
     _name_length_3: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     unimpl!(statement_handle);
 }
 
@@ -4070,6 +4140,7 @@ pub unsafe extern "C" fn SQLTablesW(
     table_type: *const WideChar,
     name_length_4: SmallInt,
 ) -> SqlReturn {
+    dbg!();
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {

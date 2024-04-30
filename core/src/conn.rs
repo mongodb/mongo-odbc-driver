@@ -139,17 +139,20 @@ impl MongoConnection {
     }
 
     pub fn shutdown(self) -> Result<()> {
-        //        // we need to lock the CLIENT_MAP to potentially remove the client from the map.
-        //        // This prevents races on the strong_count or with gc().
-        //        let mut client_map = CLIENT_MAP.lock().unwrap();
-        //        if let Some(client) = std::sync::Arc::into_inner(self.client) {
-        //            self.runtime.block_on(async { client.shutdown().await });
-        //        }
-        //        // garbage collect any clients that are no longer in use. It's possible there could be
-        //        // other clients that are no longer in use because shutdown was not properly called before,
-        //        // so we gc them all.
-        //        client_map.gc();
-        //        drop(self.runtime);
+        dbg!("shutdown");
+        let guard = self.runtime.enter();
+        // we need to lock the CLIENT_MAP to potentially remove the client from the map.
+        // This prevents races on the strong_count or with gc().
+        let mut client_map = CLIENT_MAP.lock().unwrap();
+        if let Some(client) = std::sync::Arc::into_inner(self.client) {
+            self.runtime.block_on(async { client.shutdown().await });
+        }
+        // garbage collect any clients that are no longer in use. It's possible there could be
+        // other clients that are no longer in use because shutdown was not properly called before,
+        // so we gc them all.
+        client_map.gc();
+        drop(client_map);
+        drop(guard);
         Ok(())
     }
 
