@@ -64,7 +64,7 @@ lazy_static! {
         .unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UserOptions {
     pub client_options: ClientOptions,
     pub uuid_representation: Option<UuidRepresentation>,

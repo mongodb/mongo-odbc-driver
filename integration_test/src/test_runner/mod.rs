@@ -11,7 +11,7 @@ use serde_json::value::Value;
 use std::ptr::null_mut;
 use std::{fmt, fs, path::PathBuf};
 
-use crate::common::{allocate_env, connect_with_conn_string};
+use crate::common::{allocate_env, connect_with_conn_string, disconnect_and_close_handles};
 use crate::{
     common::{allocate_statement, get_sql_diagnostics, sql_return_to_string},
     test_runner::test_generator_util::generate_baseline_test_file,
@@ -296,7 +296,11 @@ fn run_query_test(query: &str, entry: &TestEntry, conn: HDbc, generate: bool) ->
     unsafe {
         let stmt: HStmt = allocate_statement(conn).unwrap();
 
-        match definitions::SQLExecDirectW(stmt as HStmt, to_wstr_ptr(query).0, query.len() as i32) {
+        let ret = match definitions::SQLExecDirectW(
+            stmt as HStmt,
+            to_wstr_ptr(query).0,
+            query.len() as i32,
+        ) {
             SqlReturn::SUCCESS => {
                 if generate {
                     generate_baseline_test_file(entry, stmt)
@@ -309,7 +313,9 @@ fn run_query_test(query: &str, entry: &TestEntry, conn: HDbc, generate: bool) ->
                 sql_return_to_string(sql_return),
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle),
             )),
-        }
+        };
+        disconnect_and_close_handles(conn, stmt);
+        ret
     }
 }
 
@@ -481,11 +487,13 @@ fn run_function_test(
             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, statement as *mut _),
         ));
     }
-    if generate {
+    let ret = if generate {
         generate_baseline_test_file(entry, statement)
     } else {
         validate_result_set(entry, statement)
-    }
+    };
+    disconnect_and_close_handles(conn, statement);
+    ret
 }
 
 fn validate_result_set(entry: &TestEntry, stmt: HStmt) -> Result<()> {

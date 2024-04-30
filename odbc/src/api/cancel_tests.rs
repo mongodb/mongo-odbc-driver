@@ -136,10 +136,10 @@ mod integration {
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
         let conn_handle = Connection::with_state(env, ConnectionState::Allocated);
         let mongo_connection = MongoConnection {
-            client,
+            client: client.into(),
             operation_timeout: None,
             uuid_repr: None,
-            runtime,
+            runtime: runtime.into(),
         };
         *conn_handle.mongo_connection.write().unwrap() = Some(mongo_connection);
         let conn = &mut MongoHandle::Connection(conn_handle);
