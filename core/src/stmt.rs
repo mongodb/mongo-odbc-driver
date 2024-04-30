@@ -2,7 +2,7 @@ use crate::{
     err::{Error, Result},
     MongoColMetadata, MongoConnection,
 };
-use bson::Bson;
+use mongodb::bson::Bson;
 use std::fmt::Debug;
 
 pub trait MongoStatement: Debug {

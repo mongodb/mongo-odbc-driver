@@ -3,7 +3,6 @@ use crate::{
     errors::ODBCError,
     handles::definitions::{CachedData, MongoHandle, Statement},
 };
-use bson::{spec::BinarySubtype, Bson, UuidRepresentation};
 use chrono::{
     offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike,
 };
@@ -14,6 +13,7 @@ use cstr::{
 use definitions::{
     CDataType, Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
+use mongodb::bson::{spec::BinarySubtype, Bson, UuidRepresentation};
 use regex::Regex;
 use serde_json::{json, Value};
 use std::{mem::size_of, str::FromStr};

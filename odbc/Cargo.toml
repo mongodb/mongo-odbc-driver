@@ -27,14 +27,15 @@ definitions = { path = "../definitions" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 logger = { path = "../logger" }
 log = "0.4.17"
-# Do NOT change these features without consulting with other team members. 
+# Do NOT change these features without consulting with other team members.
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread
 tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
-mongodb = { version = "2.8.2", features = ["aws-auth"] }
+mongodb = { git = "https://github.com/mongodb/mongo-rust-driver.git", branch = "main", features = ["aws-auth", "dns-resolver"] }
 
 [dependencies.bson]
-version = "2.0.1"
+git = "https://github.com/mongodb/bson-rust.git"
+branch = "main"
 features = ["chrono-0_4"]
 
 [dependencies.windows]

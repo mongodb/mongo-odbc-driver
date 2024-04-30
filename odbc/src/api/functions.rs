@@ -9,8 +9,8 @@ use crate::{
     handles::definitions::*,
     has_odbc_3_behavior, trace_odbc,
 };
-use bson::{doc, Bson};
 use constants::*;
+use mongodb::bson::{doc, Bson};
 
 use cstr::{input_text_to_string_w, Charset, WideChar};
 

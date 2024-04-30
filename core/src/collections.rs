@@ -8,11 +8,13 @@ use crate::{
     util::{COLLECTION, TABLE, TIMESERIES},
     BsonTypeInfo, Error,
 };
-use bson::{doc, Bson};
 use definitions::Nullability;
 use futures::future;
 use lazy_static::lazy_static;
-use mongodb::{options::ListDatabasesOptions, results::CollectionType};
+use mongodb::{
+    bson::{doc, Bson},
+    results::CollectionType,
+};
 use regex::Regex;
 
 lazy_static! {
@@ -108,12 +110,8 @@ impl MongoCollections {
             future::join_all(
                 mongo_connection
                     .client
-                    .list_database_names(
-                        None,
-                        ListDatabasesOptions::builder()
-                            .authorized_databases(true)
-                            .build(),
-                    )
+                    .list_database_names()
+                    .authorized_databases(true)
                     .await
                     .unwrap()
                     .iter()
@@ -125,7 +123,6 @@ impl MongoCollections {
                 database_name: val.to_string(),
                 collection_list: mongo_connection.client.database(val.as_str()).run_command(
                     doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
-                    None,
                 ).await.unwrap().get_document("cursor").map(|doc| {
                     doc.get_array("firstBatch").unwrap().iter().map(|val| {
                         let doc = val.as_document().unwrap();

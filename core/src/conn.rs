@@ -1,8 +1,10 @@
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
-use bson::{doc, Bson, UuidRepresentation};
-use mongodb::Client;
+use mongodb::{
+    bson::{doc, Bson, UuidRepresentation},
+    Client,
+};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -81,11 +83,11 @@ impl MongoConnection {
         self.runtime.block_on(async {
             let db = self.client.database("admin");
             let cmd_res = db
-                .run_command(doc! {"buildInfo": 1}, None)
+                .run_command(doc! {"buildInfo": 1})
                 .await
                 .map_err(Error::DatabaseVersionRetreival)?;
-            let build_info: BuildInfoResult =
-                bson::from_document(cmd_res).map_err(Error::DatabaseVersionDeserialization)?;
+            let build_info: BuildInfoResult = mongodb::bson::from_document(cmd_res)
+                .map_err(Error::DatabaseVersionDeserialization)?;
             Ok(build_info.data_lake.version)
         })
     }
@@ -102,7 +104,7 @@ impl MongoConnection {
             ];
             let admin_db = self.client.database("admin");
             let mut cursor = admin_db
-                .aggregate(current_ops_pipeline, None)
+                .aggregate(current_ops_pipeline)
                 .await
                 .map_err(Error::QueryExecutionFailed)?;
 
@@ -114,7 +116,7 @@ impl MongoConnection {
                 if let Some(operation_id) = operation.get("opid") {
                     let killop_doc = doc! { "killOp": 1, "op": operation_id};
                     admin_db
-                        .run_command(killop_doc, None)
+                        .run_command(killop_doc)
                         .await
                         .map_err(Error::QueryExecutionFailed)?;
                 }

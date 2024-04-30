@@ -15,11 +15,11 @@ pub enum Error {
     #[error("Trying to access collection metadata failed with: {0}")]
     CollectionCursorUpdate(mongodb::error::Error),
     #[error("Getting metadata for collection '{0}' failed with error: {1}")]
-    CollectionDeserialization(String, bson::de::Error),
+    CollectionDeserialization(String, mongodb::bson::de::Error),
     #[error("Retrieving information for database failed with error: {0}")]
     DatabaseVersionRetreival(mongodb::error::Error),
     #[error("Getting database metadata failed with error: {0}")]
-    DatabaseVersionDeserialization(bson::de::Error),
+    DatabaseVersionDeserialization(mongodb::bson::de::Error),
     #[error("Setting connection options failed with error: {0}")]
     InvalidClientOptions(mongodb::error::Error),
     #[error("Invalid cursor state: cursor not advanced")]
@@ -39,13 +39,13 @@ pub enum Error {
     #[error("Getting query result failed with error: {0}")]
     QueryCursorUpdate(mongodb::error::Error),
     #[error("Getting metadata for query failed with error: {0}")]
-    QueryDeserialization(bson::de::Error),
+    QueryDeserialization(mongodb::bson::de::Error),
     #[error("Trying to execute query failed with error: {0}")]
     QueryExecutionFailed(mongodb::error::Error),
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
     #[error("Error retrieving data for field {0}: {1}")]
-    ValueAccess(String, bson::document::ValueAccessError),
+    ValueAccess(String, mongodb::bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
     #[error("Unsupported operation {0}")]

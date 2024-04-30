@@ -7,10 +7,12 @@ use crate::{
     util::to_name_regex,
     BsonTypeInfo, TypeMode,
 };
-use bson::{doc, Bson};
 use definitions::{Nullability, SqlDataType};
 use lazy_static::lazy_static;
-use mongodb::{options::ListDatabasesOptions, results::CollectionType};
+use mongodb::{
+    bson::{doc, Bson},
+    results::CollectionType,
+};
 use regex::Regex;
 use std::collections::VecDeque;
 
@@ -496,12 +498,8 @@ impl MongoFields {
                     .block_on(async {
                         mongo_connection
                             .client
-                            .list_database_names(
-                                None,
-                                ListDatabasesOptions::builder()
-                                    .authorized_databases(true)
-                                    .build(),
-                            )
+                            .list_database_names()
+                            .authorized_databases(true)
                             .await
                     })
                     .unwrap()
@@ -567,8 +565,8 @@ impl MongoFields {
 
                         let db = mongo_connection.client.database(&self.current_db_name);
                         let current_col_metadata_response: Result<SqlGetSchemaResponse> =
-                            bson::from_document(
-                                db.run_command(get_schema_cmd, None).await.unwrap(),
+                            mongodb::bson::from_document(
+                                db.run_command(get_schema_cmd).await.unwrap(),
                             )
                             .map_err(|e| {
                                 Error::CollectionDeserialization(collection_name.clone(), e)
@@ -609,7 +607,6 @@ impl MongoFields {
                     .database(&db_name)
                     .run_command(
                     doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
-                    None,
                 ).await.unwrap().get_document("cursor").map(|doc| {
                     doc.get_array("firstBatch").unwrap().iter().map(|val| {
                         let doc = val.as_document().unwrap();

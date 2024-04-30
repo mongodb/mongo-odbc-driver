@@ -1,9 +1,11 @@
 use crate::err::{Error, Result};
-use bson::UuidRepresentation;
 use constants::{DEFAULT_APP_NAME, DRIVER_SHORT_NAME};
 use lazy_static::lazy_static;
-use mongodb::options::{
-    ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig, ServerAddress,
+use mongodb::{
+    bson::UuidRepresentation,
+    options::{
+        ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig, ServerAddress,
+    },
 };
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use shared_sql_utils::Dsn;
@@ -290,7 +292,9 @@ impl ODBCUri {
         // https://github.com/mongodb/mongo-rust-driver?tab=readme-ov-file#windows-dns-note
         let parse_func = || async {
             if cfg!(target_os = "windows") {
-                ClientOptions::parse_with_resolver_config(uri, ResolverConfig::cloudflare()).await
+                ClientOptions::parse(uri)
+                    .resolver_config(ResolverConfig::cloudflare())
+                    .await
             } else {
                 ClientOptions::parse(uri).await
             }
