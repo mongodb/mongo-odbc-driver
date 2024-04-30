@@ -1,18 +1,61 @@
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
+use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
     Client,
 };
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{
+    sync::{Arc, Weak},
+    time::Duration,
+};
+
+// we make from UserOptions to Weak<Client> so that we do not hold around
+// clients that are no longer in use. In most cases it won't matter, but for drivers that live in
+// memory for a long time, this could be a problem.
+struct ClientMap(Vec<(UserOptions, Weak<Client>)>);
+
+impl ClientMap {
+    fn get(&mut self, user_options: &UserOptions) -> Option<Arc<Client>> {
+        let mut remover = None;
+        for (i, (options, weak_client)) in self.0.iter().enumerate() {
+            if options == user_options {
+                if let Some(client) = weak_client.upgrade() {
+                    return Some(client);
+                } else {
+                    remover = Some(i);
+                }
+            }
+        }
+        // We have to do this this way due to the borrow checker, it would be nice if we could just
+        // remove in the else above, but we cannot.
+        if let Some(i) = remover {
+            self.0.remove(i);
+        }
+        None
+    }
+
+    fn insert(&mut self, user_options: UserOptions, client: &Arc<Client>) {
+        let client = std::sync::Arc::downgrade(client);
+        self.0.push((user_options, client));
+    }
+
+    fn new() -> Self {
+        ClientMap(Vec::new())
+    }
+}
+
+lazy_static! {
+    static ref CLIENT_MAP: std::sync::Mutex<ClientMap> = std::sync::Mutex::new(ClientMap::new());
+}
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct MongoConnection {
     /// The mongo DB client
-    pub client: Client,
+    pub client: Arc<Client>,
     /// Number of seconds to wait for any request on the connection to complete before returning to
     /// the application.
     /// Comes from SQL_ATTR_CONNECTION_TIMEOUT if set. Used any time there is a time out in a
@@ -53,9 +96,22 @@ impl MongoConnection {
         user_options.client_options.connect_timeout =
             login_timeout.map(|to| Duration::new(to as u64, 0));
         let guard = runtime.enter();
-        let client = runtime.block_on(async {
-            Client::with_options(user_options.client_options).map_err(Error::InvalidClientOptions)
-        })?;
+        let mut client_map = CLIENT_MAP.lock().unwrap();
+        let client = if let Some(client) = client_map.get(&user_options) {
+            client
+        } else {
+            let key_user_options = user_options.clone();
+            let client = runtime.block_on(async {
+                Client::with_options(user_options.client_options)
+                    .map_err(Error::InvalidClientOptions)
+            })?;
+            let client = Arc::new(client);
+            client_map.insert(key_user_options, &client);
+            client
+        };
+        // keep in mind, mutexes should always be dropped in reverse order of acquisition to avoid
+        // possible deadlocks
+        drop(client_map);
         drop(guard);
         let uuid_repr = user_options.uuid_representation;
         let connection = MongoConnection {
@@ -71,8 +127,10 @@ impl MongoConnection {
     }
 
     pub fn shutdown(self) -> Result<()> {
-        self.runtime
-            .block_on(async { self.client.shutdown().await });
+        // TODO: what should we do here? If we just shutdown is the strong_count is 1, that's a
+        // race.
+        //self.runtime
+        //    .block_on(async { self.client.shutdown().await });
         drop(self.runtime);
         Ok(())
     }
