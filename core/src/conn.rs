@@ -111,16 +111,21 @@ impl MongoConnection {
         }));
         user_options.client_options.connect_timeout =
             login_timeout.map(|to| Duration::new(to as u64, 0));
-        //let guard = runtime.enter();
         let mut client_map = runtime.block_on(async { CLIENT_MAP.lock().await });
         let (client, runtime) = if let Some(cv) = client_map.get(&user_options) {
             cv
         } else {
             let key_user_options = user_options.clone();
+            let guard = runtime.enter();
+            // the Client Topology uses tokio::spawn, so we need a guard here.
             let client = runtime.block_on(async {
                 Client::with_options(user_options.client_options)
                     .map_err(Error::InvalidClientOptions)
             })?;
+            // we need to drop the guard before we return the runtime to kill the borrow
+            // on the runtime. We drop it before the insert to hold the lock for as little time as
+            // possible.
+            drop(guard);
             client_map.insert(key_user_options, &client, &runtime);
             (client, runtime)
         };
@@ -160,7 +165,6 @@ impl MongoConnection {
 
     /// Gets the ADF version the client is connected to.
     pub fn get_adf_version(&self) -> Result<String> {
-        let _guard = self.runtime.enter();
         self.runtime.block_on(async {
             let db = self.client.database("admin");
             let cmd_res = db
@@ -175,7 +179,6 @@ impl MongoConnection {
 
     /// cancels all queries for a given statement id
     pub fn cancel_queries_for_statement(&self, statement_id: Bson) -> Result<bool> {
-        let _guard = self.runtime.enter();
         // because there are so many awaits in this function, the bulk of the function is wrapped in a block_on
         self.runtime.block_on(async {
             // use $currentOp and match the comment field to identify any queries issued by the current statement
