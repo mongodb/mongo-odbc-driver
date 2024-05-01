@@ -4,7 +4,8 @@ use lazy_static::lazy_static;
 use mongodb::{
     bson::UuidRepresentation,
     options::{
-        ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig, ServerAddress,
+        AuthMechanism, ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig,
+        ServerAddress,
     },
 };
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
@@ -331,6 +332,20 @@ impl ODBCUri {
         let uuid_representation = ConnectionString::parse(uri)
             .map_err(Error::InvalidClientOptions)?
             .uuid_representation;
+
+        if let Some(AuthMechanism::MongoDbOidc) = client_options
+            .credential
+            .as_ref()
+            .unwrap()
+            .mechanism
+            .as_ref()
+        {
+            use futures::future::FutureExt;
+            client_options.credential.as_mut().unwrap().oidc_callback =
+                mongodb::options::oidc::Callback::human(move |c| {
+                    async move { crate::oidc_auth::oidc_call_back(c).await }.boxed()
+                });
+        }
         Ok(UserOptions {
             client_options,
             uuid_representation,

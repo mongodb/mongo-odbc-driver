@@ -1,3 +1,4 @@
+use mongodb::options::oidc::{CallbackContext, IdpServerResponse};
 use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
     reqwest::async_http_client,
@@ -10,31 +11,6 @@ use tokio::time::{self, Duration};
 
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
 const DEFAULT_SLEEP_DURATION: Duration = Duration::from_secs(5 * 60); // from_mins is unstable, so we use from_secs with a multiplication. The multiplication is performed at compile time, anyway
-
-// temporary until rust driver OIDC support is released
-// TODO Remove Me.
-#[derive(Clone, Debug)]
-pub struct IdpServerInfo {
-    pub issuer: String,
-    pub client_id: Option<String>,
-    pub request_scopes: Option<Vec<String>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct CallbackContext {
-    pub timeout_seconds: Option<Instant>,
-    pub version: u32,
-    pub refresh_token: Option<String>,
-    pub idp_info: Option<IdpServerInfo>,
-}
-
-#[derive(Debug)]
-pub struct IdpServerResponse {
-    pub access_token: String,
-    pub expires: Option<Instant>,
-    pub refresh_token: Option<String>,
-}
-// END termporaries
 
 #[derive(Debug)]
 pub enum Error {
@@ -54,7 +30,7 @@ impl From<Error> for mongodb::error::Error {
 
 pub async fn oidc_call_back(params: CallbackContext) -> mongodb::error::Result<IdpServerResponse> {
     let sleep_duration = params
-        .timeout_seconds
+        .timeout
         // turn the supplied timeout Instant into a Duration from now
         .map(|x| x - Instant::now())
         .unwrap_or(DEFAULT_SLEEP_DURATION);
@@ -197,11 +173,11 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
 
     server.stop(true).await;
 
-    Ok(IdpServerResponse {
-        access_token,
-        expires: expires.map(|e| Instant::now() + e),
-        refresh_token,
-    })
+    Ok(IdpServerResponse::builder()
+        .access_token(access_token)
+        .expires(expires.map(|e| Instant::now() + e))
+        .refresh_token(refresh_token)
+        .build())
 }
 
 pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Error> {
@@ -261,9 +237,9 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
         .map(|t| t.secret().to_string());
     let expires = token_response.expires_in();
 
-    Ok(IdpServerResponse {
-        access_token,
-        expires: expires.map(|e| Instant::now() + e),
-        refresh_token,
-    })
+    Ok(IdpServerResponse::builder()
+        .access_token(access_token)
+        .expires(expires.map(|e| Instant::now() + e))
+        .refresh_token(refresh_token)
+        .build())
 }

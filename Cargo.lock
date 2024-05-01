@@ -5,6 +5,15 @@ version = 3
 [[package]]
 name = "action_macro"
 version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.60",
+]
+
+[[package]]
+name = "action_macro"
+version = "0.1.0"
 source = "git+https://github.com/mongodb/mongo-rust-driver.git?branch=main#a28225810b02f3c4461fce6489e95b6c84805ff2"
 dependencies = [
  "proc-macro2",
@@ -1889,7 +1898,7 @@ dependencies = [
  "lazy_static",
  "log",
  "logger",
- "mongodb",
+ "mongodb 2.8.0 (git+https://github.com/mongodb/mongo-rust-driver.git?branch=main)",
  "num-derive",
  "num-traits",
  "regex",
@@ -2251,7 +2260,7 @@ dependencies = [
  "lazy_static",
  "likely_stable",
  "log",
- "mongodb",
+ "mongodb 2.8.0",
  "num-derive",
  "num-traits",
  "open",
@@ -2281,7 +2290,7 @@ dependencies = [
  "log",
  "logger",
  "mongo-odbc-core",
- "mongodb",
+ "mongodb 2.8.0 (git+https://github.com/mongodb/mongo-rust-driver.git?branch=main)",
  "num-derive",
  "num-traits",
  "regex",
@@ -2298,9 +2307,56 @@ dependencies = [
 [[package]]
 name = "mongodb"
 version = "2.8.0"
+dependencies = [
+ "action_macro 0.1.0",
+ "async-trait",
+ "base64 0.13.1",
+ "bitflags 1.3.2",
+ "bson 2.10.0 (git+https://github.com/mongodb/bson-rust.git?branch=main)",
+ "chrono",
+ "derivative",
+ "derive_more",
+ "futures-core",
+ "futures-executor",
+ "futures-io",
+ "futures-util",
+ "hex",
+ "hmac",
+ "md-5",
+ "once_cell",
+ "pbkdf2",
+ "percent-encoding",
+ "rand",
+ "reqwest 0.11.27",
+ "rustc_version_runtime",
+ "rustls",
+ "rustls-pemfile 1.0.4",
+ "serde",
+ "serde_bytes",
+ "serde_with 1.14.0",
+ "sha-1",
+ "sha2",
+ "socket2 0.5.7",
+ "stringprep",
+ "strsim",
+ "take_mut",
+ "thiserror",
+ "tokio",
+ "tokio-rustls",
+ "tokio-util",
+ "trust-dns-proto",
+ "trust-dns-resolver",
+ "typed-builder",
+ "uuid",
+ "webpki-roots",
+]
+
+[[package]]
+name = "mongodb"
+version = "2.8.0"
 source = "git+https://github.com/mongodb/mongo-rust-driver.git?branch=main#a28225810b02f3c4461fce6489e95b6c84805ff2"
 dependencies = [
- "action_macro",
+ "action_macro 0.1.0 (git+https://github.com/mongodb/mongo-rust-driver.git?branch=main)",
  "async-trait",
  "base64 0.13.1",
  "bitflags 1.3.2",
