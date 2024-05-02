@@ -1791,7 +1791,6 @@ fn sql_free_handle(handle_type: HandleType, handle: *mut MongoHandle) -> Result<
 #[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) -> SqlReturn {
-    // unimpl!(statement_handle);
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
