@@ -257,7 +257,7 @@ impl MongoStatement for MongoCollections {
 
     // Get the BSON value for the given colIndex on the current CollectionSpecification.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, col_index: u16, _: Option<u16>) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> current_collection_list.database_name
         // 2-> Schema name; NULL as it is not applicable

@@ -113,10 +113,10 @@ impl MongoStatement for MongoQuery {
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, col_index: u16, max_string_length: Option<u16>) -> Result<Option<Bson>> {
         let current = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
         let md = self
-            .get_col_metadata(col_index, None)
+            .get_col_metadata(col_index, max_string_length)
             .map_err(|_| Error::ColIndexOutOfBounds(col_index))?;
         let datasource = current
             .get_document(&md.table_name)

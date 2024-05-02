@@ -661,7 +661,7 @@ impl MongoStatement for MongoFields {
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, col_index: u16, _: Option<u16>) -> Result<Option<Bson>> {
         // use self.current_col_metadata[current_field_for_collection]
         // 1 -> TABLE_CAT
         // 2 -> TABLE_SCHEM  (NULL)

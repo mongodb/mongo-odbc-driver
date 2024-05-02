@@ -36,7 +36,7 @@ impl MongoStatement for MongoTableTypes {
     }
 
     // Get the BSON value for the value at the given colIndex on the current row.
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, col_index: u16, _: Option<u16>) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1..3 | 5-> Null
         // 4 -> table_type[current_table_type_index-1]

@@ -117,7 +117,7 @@ mod unit {
                 .unwrap()
                 .as_ref()
                 .unwrap()
-                .get_value(1)
+                .get_value(1, None)
             {
                 // we expect this error since there is no `current` set after SQLFreeStmt
                 Err(Error::InvalidCursorState) => {}

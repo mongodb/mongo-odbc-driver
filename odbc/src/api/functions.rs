@@ -2029,10 +2029,16 @@ unsafe fn sql_get_data_helper(
         }
         let stmt = (*mongo_handle).as_statement().unwrap();
         let mut mongo_stmt = stmt.mongo_statement.write().unwrap();
+        let max_string_length = *(*stmt.connection)
+            .as_connection()
+            .unwrap()
+            .max_string_length
+            .read()
+            .unwrap();
         let bson = match mongo_stmt.as_mut() {
             None => Err(ODBCError::InvalidCursorState),
             Some(mongo_stmt) => mongo_stmt
-                .get_value(col_or_param_num)
+                .get_value(col_or_param_num, max_string_length)
                 .map_err(ODBCError::Core),
         };
         match bson {
@@ -3181,17 +3187,13 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
                 Some(sql_data_type) => {
                     let sql_data_type = handle_sql_type(odbc_version, sql_data_type);
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let (type_mode, max_string_length) = if stmt.connection.is_null() {
-                        (TypeMode::Standard, None)
+                    let type_mode = if stmt.connection.is_null() {
+                        TypeMode::Standard
                     } else {
                         let connection = must_be_valid!((*stmt.connection).as_connection());
-                        (
-                            *connection.type_mode.read().unwrap(),
-                            *connection.max_string_length.read().unwrap(),
-                        )
+                        *connection.type_mode.read().unwrap()
                     };
-                    let types_info =
-                        MongoTypesInfo::new(sql_data_type, type_mode, max_string_length);
+                    let types_info = MongoTypesInfo::new(sql_data_type, type_mode);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
                 }
