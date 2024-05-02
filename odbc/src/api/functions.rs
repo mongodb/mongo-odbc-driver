@@ -1072,6 +1072,12 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         }
     }
 
+    if let Some(enable_max_string_length) = odbc_uri.remove(&["enable_max_string_length"]) {
+        if enable_max_string_length.eq("1") {
+            *conn.max_string_length.write().unwrap() = Some(constants::DEFAULT_MAX_STRING_LENGTH);
+        }
+    }
+
     let mut conn_attrs = conn.attributes.write().unwrap();
     let database = if conn_attrs.current_catalog.is_some() {
         conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
