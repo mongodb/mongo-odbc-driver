@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 use crate::{handles::definitions::*, SQLFetch, SQLGetDiagFieldW, SQLGetTypeInfoW};
 use bson::Bson;
 use definitions::{AttrOdbcVersion, DiagType, HandleType::SQL_HANDLE_STMT, SqlDataType, SqlReturn};

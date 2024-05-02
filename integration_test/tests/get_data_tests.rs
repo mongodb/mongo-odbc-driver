@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 /// This module contains tests for SQLGetData, ensuring we can handle large buffer sizes

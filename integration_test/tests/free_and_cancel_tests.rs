@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 /// The tests in this module are based on the Preview Data workflow using SSIS.

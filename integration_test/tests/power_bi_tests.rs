@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 mod integration {
@@ -434,7 +440,11 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS as SmallInt as i32),
+                SQLExecDirectW(
+                    stmt as HStmt,
+                    query.as_ptr(),
+                    i32::from(SQL_NTS as SmallInt)
+                ),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );

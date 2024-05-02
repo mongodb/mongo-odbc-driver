@@ -1,3 +1,8 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use definitions::{

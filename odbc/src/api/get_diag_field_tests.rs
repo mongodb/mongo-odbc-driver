@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 use crate::{api::errors::ODBCError, handles::definitions::*, SQLGetDiagFieldW};
 use definitions::{HandleType, SqlReturn};
 

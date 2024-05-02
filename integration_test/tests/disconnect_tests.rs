@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 mod integration {
@@ -28,7 +34,7 @@ mod integration {
         let stmt_4 = allocate_statement(dbc).expect("Failed to allocate statement 4");
         let statements = [stmt_1, stmt_2, stmt_3, stmt_4];
 
-        let query = b"SELECT * FROM integration_test.foo\0".map(|b| b as u16);
+        let query = b"SELECT * FROM integration_test.foo\0".map(u16::from);
         // issue a query on each statement, resulting in an open cursor on each
         statements.iter().for_each(|stmt| unsafe {
             assert_eq!(
