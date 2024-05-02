@@ -302,6 +302,7 @@ impl IntoCData for Bson {
             // We should update this when the bson crate supports Decimal128 entirely.
             Bson::Decimal128(_) => {
                 let (out, _) = self.to_f64()?;
+                #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
                 if out > u64::MAX as f64 || out < u64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
