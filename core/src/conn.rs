@@ -11,12 +11,17 @@ use std::{
     sync::{Arc, Weak},
     time::Duration,
 };
+#[cfg(feature="garbage_collect")]
+use std::sync::Weak;
 use tokio::runtime::Runtime;
 
 // we make from UserOptions to Client and Weak<Runtime> so that we do not hold around
 // Clients and Runtimes that are no longer in use. In most cases it won't matter, but for drivers that live in
 // memory for a long time, this could be a problem.
+#[cfg(feature="garbage_collect")]
 struct ClientMap(Vec<(UserOptions, Client, Weak<Runtime>)>);
+#[cfg(not(feature="garbage_collect"))]
+struct ClientMap(Vec<(UserOptions, Client, Arc<Runtime>)>);
 
 impl ClientMap {
     // new creates a new ClientMap.
@@ -25,6 +30,7 @@ impl ClientMap {
     }
 
     // get returns the client associated with the given user options if it exists.
+    #[cfg(feature="garbage_collect")]
     fn get(&mut self, user_options: &UserOptions) -> Option<(Client, Arc<Runtime>)> {
         let mut to_remove = Vec::new();
         for (i, (options, client, weak_rt)) in self.0.iter().enumerate() {
@@ -46,18 +52,37 @@ impl ClientMap {
         }
         None
     }
+    
+    // get returns the client associated with the given user options if it exists.
+    #[cfg(not(feature="garbage_collect"))]
+    fn get(&mut self, user_options: &UserOptions) -> Option<(Client, Arc<Runtime>)> {
+        for (i, (options, client, rt)) in self.0.iter().enumerate() {
+            if options == user_options {
+                return Some((client.clone(), rt.clone()));
+            }
+        }
+        None
+    }
 
     // gc is garbage collection of any clients that are no longer in use.
     fn gc(&mut self) {
+        #[cfg(feature="garbage_collect")]
         self.0
             .retain(|(_, _, weak_client)| Weak::strong_count(weak_client) != 0);
     }
 
     // insert inserts a new client into the client map keyed on the user options. Note this will
     // insert duplicates and it is on the user to check if an entry already exists.
+    #[cfg(feature="garbage_collect")]
     fn insert(&mut self, user_options: UserOptions, client: &Client, rt: &Arc<Runtime>) {
         self.0
             .push((user_options, client.clone(), Arc::downgrade(rt)));
+    }
+
+    #[cfg(not(feature="garbage_collect"))]
+    fn insert(&mut self, user_options: UserOptions, client: &Client, rt: &Arc<Runtime>) {
+        self.0
+            .push((user_options, client.clone(), rt.clone()));
     }
 }
 
@@ -112,9 +137,11 @@ impl MongoConnection {
             login_timeout.map(|to| Duration::new(to as u64, 0));
         let mut client_map = runtime.block_on(async { CLIENT_MAP.lock().await });
         let (client, runtime) = if let Some(cv) = client_map.get(&user_options) {
+            log::info!("reusing Client");
             cv
         } else {
             let key_user_options = user_options.clone();
+            log::info!("creating new Client {:?}, CLIENT_MAP_SIZE: {}", key_user_options, client_map.0.len());
             let guard = runtime.enter();
             // the Client Topology uses tokio::spawn, so we need a guard here.
             let client = runtime.block_on(async {
@@ -146,19 +173,19 @@ impl MongoConnection {
     pub fn shutdown(self) -> Result<()> {
         // we need to lock the CLIENT_MAP to potentially remove the client from the map.
         // This prevents races on the strong_count or with gc().
-        let mut client_map = self.runtime.block_on(async { CLIENT_MAP.lock().await });
+        //let mut client_map = self.runtime.block_on(async { CLIENT_MAP.lock().await });
         // If this is the last reference to the Runtime, we need to shutdown the Client.
-        if Arc::strong_count(&self.runtime) == 1 {
-            self.runtime
-                .block_on(async { self.client.shutdown().await });
-        }
+        //if Arc::strong_count(&self.runtime) == 1 {
+        //    self.runtime
+        //        .block_on(async { self.client.shutdown().await });
+        //}
         // We need to drop the Runtime before we gc, otherwise this will not be collected.
-        drop(self.runtime);
+        //drop(self.runtime);
         // garbage collect any Clients and Runtimes that are no longer in use, which is denoted by
         // the strong_count for the Runtime being 0. It's possible there could be
         // other clients that are no longer in use because shutdown was not properly called before,
         // so we gc them all.
-        client_map.gc();
+        //client_map.gc();
         Ok(())
     }
 
