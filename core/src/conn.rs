@@ -2,6 +2,7 @@ use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
 use lazy_static::lazy_static;
+use mongodb::options::AuthMechanism;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
     Client,
@@ -105,6 +106,51 @@ pub struct MongoConnection {
 }
 
 impl MongoConnection {
+    fn get_client_and_runtime(
+        user_options: UserOptions,
+        runtime: Arc<Runtime>,
+    ) -> Result<(Client, Arc<Runtime>)> {
+        // If we are not authenticating via OIDC, we do not pool the Client, simply
+        // create a new one and return it.
+        if user_options
+            .client_options
+            .credential
+            .as_ref()
+            .unwrap()
+            .mechanism
+            .as_ref()
+            != Some(&AuthMechanism::MongoDbOidc)
+        {
+            let _guard = runtime.enter();
+            // the Client Topology uses tokio::spawn, so we need a guard here.
+            let client = runtime.block_on(async {
+                Client::with_options(user_options.client_options)
+                    .map_err(Error::InvalidClientOptions)
+            })?;
+            return Ok((client, runtime));
+        }
+        let mut client_map = runtime.block_on(async { CLIENT_MAP.lock().await });
+        if let Some(cv) = client_map.get(&user_options) {
+            log::info!("reusing Client");
+            Ok(cv)
+        } else {
+            let key_user_options = user_options.clone();
+            log::info!("creating new Client",);
+            let guard = runtime.enter();
+            // the Client Topology uses tokio::spawn, so we need a guard here.
+            let client = runtime.block_on(async {
+                Client::with_options(user_options.client_options)
+                    .map_err(Error::InvalidClientOptions)
+            })?;
+            // we need to drop the guard before we return the runtime to kill the borrow
+            // on the runtime. We drop it before the insert to hold the lock for as little time as
+            // possible.
+            drop(guard);
+            client_map.insert(key_user_options, &client, &runtime);
+            Ok((client, runtime))
+        }
+    }
+
     /// Creates a new MongoConnection with the given settings and runs a command to make
     /// sure that the MongoConnection is valid.
     ///
@@ -131,29 +177,9 @@ impl MongoConnection {
         }));
         user_options.client_options.connect_timeout =
             login_timeout.map(|to| Duration::new(to as u64, 0));
-        let mut client_map = runtime.block_on(async { CLIENT_MAP.lock().await });
-        let (client, runtime) = if let Some(cv) = client_map.get(&user_options) {
-            log::info!("reusing Client");
-            cv
-        } else {
-            let key_user_options = user_options.clone();
-            log::info!("creating new Client",);
-            let guard = runtime.enter();
-            // the Client Topology uses tokio::spawn, so we need a guard here.
-            let client = runtime.block_on(async {
-                Client::with_options(user_options.client_options)
-                    .map_err(Error::InvalidClientOptions)
-            })?;
-            // we need to drop the guard before we return the runtime to kill the borrow
-            // on the runtime. We drop it before the insert to hold the lock for as little time as
-            // possible.
-            drop(guard);
-            client_map.insert(key_user_options, &client, &runtime);
-            (client, runtime)
-        };
-        // drop the Mutex as soon as possible
-        drop(client_map);
         let uuid_repr = user_options.uuid_representation;
+        let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
+        // drop the Mutex as soon as possible
         let connection = MongoConnection {
             client,
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
