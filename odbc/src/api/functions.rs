@@ -604,9 +604,18 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 stmt.errors.write().unwrap().push(ODBCError::NoResultSet);
                 return SqlReturn::ERROR;
             }
+            let max_string_length = *(*stmt.connection)
+                .as_connection()
+                .unwrap()
+                .max_string_length
+                .read()
+                .unwrap();
             let string_col_attr = |f: &dyn Fn(&MongoColMetadata) -> &str| {
                 let mongo_handle = MongoHandleRef::from(statement_handle);
-                let col_metadata = mongo_stmt.as_ref().unwrap().get_col_metadata(column_number);
+                let col_metadata = mongo_stmt
+                    .as_ref()
+                    .unwrap()
+                    .get_col_metadata(column_number, max_string_length);
                 if let Ok(col_metadata) = col_metadata {
                     return i16_len::set_output_wstring_as_bytes(
                         (*f)(col_metadata),
@@ -624,7 +633,10 @@ pub unsafe extern "C" fn SQLColAttributeW(
             };
             let numeric_col_attr = |f: &dyn Fn(&MongoColMetadata) -> Len| {
                 {
-                    let col_metadata = mongo_stmt.as_ref().unwrap().get_col_metadata(column_number);
+                    let col_metadata = mongo_stmt
+                        .as_ref()
+                        .unwrap()
+                        .get_col_metadata(column_number, max_string_length);
                     if let Ok(col_metadata) = col_metadata {
                         *numeric_attribute_ptr = (*f)(col_metadata);
                         return SqlReturn::SUCCESS;
@@ -987,7 +999,16 @@ pub unsafe extern "C" fn SQLDescribeColW(
                     stmt.errors.write().unwrap().push(ODBCError::NoResultSet);
                     return SqlReturn::ERROR;
                 }
-                let col_metadata = mongo_stmt.as_ref().unwrap().get_col_metadata(col_number);
+                let max_string_length = *(*stmt.connection)
+                    .as_connection()
+                    .unwrap()
+                    .max_string_length
+                    .read()
+                    .unwrap();
+                let col_metadata = mongo_stmt
+                    .as_ref()
+                    .unwrap()
+                    .get_col_metadata(col_number, max_string_length);
                 if let Ok(col_metadata) = col_metadata {
                     *data_type = handle_sql_type(odbc_version, col_metadata.sql_type);
                     *col_size = col_metadata.column_size.unwrap_or(0) as usize;

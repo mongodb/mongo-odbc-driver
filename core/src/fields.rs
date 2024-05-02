@@ -29,75 +29,129 @@ mod unit {
         // This gives us assurance that the column names are all correct.
         assert_eq!(
             "TABLE_CAT",
-            MongoFields::empty().get_col_metadata(1).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(1, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "TABLE_SCHEM",
-            MongoFields::empty().get_col_metadata(2).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(2, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "TABLE_NAME",
-            MongoFields::empty().get_col_metadata(3).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(3, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "COLUMN_NAME",
-            MongoFields::empty().get_col_metadata(4).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(4, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "DATA_TYPE",
-            MongoFields::empty().get_col_metadata(5).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(5, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "TYPE_NAME",
-            MongoFields::empty().get_col_metadata(6).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(6, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "COLUMN_SIZE",
-            MongoFields::empty().get_col_metadata(7).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(7, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "BUFFER_LENGTH",
-            MongoFields::empty().get_col_metadata(8).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(8, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "DECIMAL_DIGITS",
-            MongoFields::empty().get_col_metadata(9).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(9, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "NUM_PREC_RADIX",
-            MongoFields::empty().get_col_metadata(10).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(10, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "NULLABLE",
-            MongoFields::empty().get_col_metadata(11).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(11, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "REMARKS",
-            MongoFields::empty().get_col_metadata(12).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(12, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "COLUMN_DEF",
-            MongoFields::empty().get_col_metadata(13).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(13, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "SQL_DATA_TYPE",
-            MongoFields::empty().get_col_metadata(14).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(14, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "SQL_DATETIME_SUB",
-            MongoFields::empty().get_col_metadata(15).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(15, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "CHAR_OCTET_LENGTH",
-            MongoFields::empty().get_col_metadata(16).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(16, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "ORDINAL_POSITION",
-            MongoFields::empty().get_col_metadata(17).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(17, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "IS_NULLABLE",
-            MongoFields::empty().get_col_metadata(18).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(18, None)
+                .unwrap()
+                .col_name
         );
     }
 
@@ -108,75 +162,129 @@ mod unit {
         // that we do not have smallint, so we use int, however).
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(1).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(1, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(2).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(2, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(3).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(3, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(4).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(4, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(5).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(5, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(6).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(6, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(7).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(7, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(8).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(8, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(9).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(9, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(10).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(10, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(11).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(11, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(12).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(12, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(13).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(13, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(14).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(14, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(15).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(15, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(16).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(16, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(17).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(17, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(18).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(18, None)
+                .unwrap()
+                .type_name
         );
     }
 
@@ -189,119 +297,119 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(1)
+                .get_col_metadata(1, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(2)
+                .get_col_metadata(2, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(3)
+                .get_col_metadata(3, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(4)
+                .get_col_metadata(4, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(5)
+                .get_col_metadata(5, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(6)
+                .get_col_metadata(6, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(7)
+                .get_col_metadata(7, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(8)
+                .get_col_metadata(8, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(9)
+                .get_col_metadata(9, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(10)
+                .get_col_metadata(10, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(11)
+                .get_col_metadata(11, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(12)
+                .get_col_metadata(12, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(13)
+                .get_col_metadata(13, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(14)
+                .get_col_metadata(14, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(15)
+                .get_col_metadata(15, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(16)
+                .get_col_metadata(16, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(17)
+                .get_col_metadata(17, None)
                 .unwrap()
                 .nullability
         );
@@ -309,7 +417,7 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(18)
+                .get_col_metadata(18, None)
                 .unwrap()
                 .nullability
         );

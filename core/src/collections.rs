@@ -315,35 +315,35 @@ mod unit {
         assert_eq!(
             "TABLE_CAT",
             MongoCollections::empty()
-                .get_col_metadata(1)
+                .get_col_metadata(1, None)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "TABLE_SCHEM",
             MongoCollections::empty()
-                .get_col_metadata(2)
+                .get_col_metadata(2, None)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "TABLE_NAME",
             MongoCollections::empty()
-                .get_col_metadata(3)
+                .get_col_metadata(3, None)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "TABLE_TYPE",
             MongoCollections::empty()
-                .get_col_metadata(4)
+                .get_col_metadata(4, None)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "REMARKS",
             MongoCollections::empty()
-                .get_col_metadata(5)
+                .get_col_metadata(5, None)
                 .unwrap()
                 .col_name
         );
@@ -355,35 +355,35 @@ mod unit {
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(1)
+                .get_col_metadata(1, None)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(2)
+                .get_col_metadata(2, None)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(3)
+                .get_col_metadata(3, None)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(4)
+                .get_col_metadata(4, None)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoCollections::empty()
-                .get_col_metadata(5)
+                .get_col_metadata(5, None)
                 .unwrap()
                 .type_name
         );
@@ -396,14 +396,14 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
-                .get_col_metadata(1)
+                .get_col_metadata(1, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoCollections::empty()
-                .get_col_metadata(2)
+                .get_col_metadata(2, None)
                 .unwrap()
                 .nullability
         );
@@ -411,7 +411,7 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
-                .get_col_metadata(3)
+                .get_col_metadata(3, None)
                 .unwrap()
                 .nullability
         );
@@ -420,14 +420,14 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoCollections::empty()
-                .get_col_metadata(4)
+                .get_col_metadata(4, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoCollections::empty()
-                .get_col_metadata(5)
+                .get_col_metadata(5, None)
                 .unwrap()
                 .nullability
         );

@@ -15,11 +15,15 @@ pub trait MongoStatement: Debug {
     // Return a reference to the ResultSetMetadata for this Statement.
     fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata>;
     // get_col_metadata gets the metadata for a given column, 1-indexed as per the ODBC spec.
-    fn get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
+    fn get_col_metadata(
+        &self,
+        col_index: u16,
+        max_string_length: Option<u16>,
+    ) -> Result<&MongoColMetadata> {
         if col_index == 0 {
             return Err(Error::ColIndexOutOfBounds(0));
         }
-        self.get_resultset_metadata(None)
+        self.get_resultset_metadata(max_string_length)
             .get((col_index - 1) as usize)
             .ok_or(Error::ColIndexOutOfBounds(col_index))
     }
@@ -91,7 +95,7 @@ mod unit {
 
         assert_eq!(
             "TABLE_CAT",
-            test_empty.get_col_metadata(1).unwrap().col_name
+            test_empty.get_col_metadata(1, None).unwrap().col_name
         );
         assert!(!test_empty.next(None).unwrap().0);
         assert!(test_empty.get_value(1).is_err());

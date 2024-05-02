@@ -116,7 +116,7 @@ impl MongoStatement for MongoQuery {
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
         let current = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
         let md = self
-            .get_col_metadata(col_index)
+            .get_col_metadata(col_index, None)
             .map_err(|_| Error::ColIndexOutOfBounds(col_index))?;
         let datasource = current
             .get_document(&md.table_name)
