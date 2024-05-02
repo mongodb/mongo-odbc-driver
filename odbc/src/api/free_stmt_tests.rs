@@ -94,6 +94,7 @@ mod unit {
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
                     Nullability::SQL_NO_NULLS,
                     TypeMode::Simple,
+                    None,
                 )],
             );
 

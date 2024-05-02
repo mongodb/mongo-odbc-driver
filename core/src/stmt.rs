@@ -13,13 +13,13 @@ pub trait MongoStatement: Debug {
     // Fails if the first row has not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16) -> Result<Option<Bson>>;
     // Return a reference to the ResultSetMetadata for this Statement.
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata>;
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata>;
     // get_col_metadata gets the metadata for a given column, 1-indexed as per the ODBC spec.
     fn get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
         if col_index == 0 {
             return Err(Error::ColIndexOutOfBounds(0));
         }
-        self.get_resultset_metadata()
+        self.get_resultset_metadata(None)
             .get((col_index - 1) as usize)
             .ok_or(Error::ColIndexOutOfBounds(col_index))
     }
@@ -52,7 +52,7 @@ impl MongoStatement for EmptyStatement {
         Err(Error::InvalidCursorState)
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+    fn get_resultset_metadata(&self, _: Option<u16>) -> &Vec<MongoColMetadata> {
         self.resultset_metadata
     }
 }

@@ -125,7 +125,7 @@ impl MongoStatement for MongoQuery {
         Ok(column.cloned())
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+    fn get_resultset_metadata(&self, _: Option<u16>) -> &Vec<MongoColMetadata> {
         &self.resultset_metadata
     }
 

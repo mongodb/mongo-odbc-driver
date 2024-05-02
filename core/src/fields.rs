@@ -9,150 +9,18 @@ use crate::{
 };
 use bson::{doc, Bson};
 use definitions::{Nullability, SqlDataType};
-use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
+use once_cell::sync::OnceCell;
 use regex::Regex;
 use std::collections::VecDeque;
 
-lazy_static! {
-    static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "TABLE_CAT".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "TABLE_SCHEM".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "TABLE_NAME".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "COLUMN_NAME".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "DATA_TYPE".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "TYPE_NAME".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "COLUMN_SIZE".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "BUFFER_LENGTH".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "DECIMAL_DIGITS".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "NUM_PREC_RADIX".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "NULLABLE".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "REMARKS".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "COLUMN_DEF".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "SQL_DATA_TYPE".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "SQL_DATETIME_SUB".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "CHAR_OCTET_LENGTH".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "ORDINAL_POSITION".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "IS_NULLABLE".to_string(),
-            BsonTypeInfo::STRING,
-            // the docs do not say 'not NULL', but they also say the only possible values for
-            // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
-            // the empty varchar... so NO_NULLS seems correct to me.
-            Nullability::SQL_NO_NULLS
-        ),
-    ];
-}
+static FIELDS_METADATA: OnceCell<Vec<MongoColMetadata>> = OnceCell::new();
 
 mod unit {
     #[test]
     fn metadata_size() {
         use crate::{fields::MongoFields, stmt::MongoStatement};
-        assert_eq!(18, MongoFields::empty().get_resultset_metadata().len());
+        assert_eq!(18, MongoFields::empty().get_resultset_metadata(None).len());
     }
 
     #[test]
@@ -480,6 +348,7 @@ impl MongoFields {
     // (tables) names filters.
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
     // timeout, the query must finish before the timeout or an error is returned.
+    #[allow(clippy::too_many_arguments)]
     pub fn list_columns(
         mongo_connection: &MongoConnection,
         _query_timeout: Option<i32>,
@@ -798,7 +667,157 @@ impl MongoStatement for MongoFields {
         }))
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<crate::MongoColMetadata> {
-        &FIELDS_METADATA
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata> {
+        FIELDS_METADATA.get_or_init(|| {
+            vec![
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "TABLE_CAT".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "TABLE_SCHEM".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "TABLE_NAME".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "COLUMN_NAME".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "DATA_TYPE".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "TYPE_NAME".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "COLUMN_SIZE".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "BUFFER_LENGTH".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "DECIMAL_DIGITS".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "NUM_PREC_RADIX".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "NULLABLE".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "REMARKS".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "COLUMN_DEF".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "SQL_DATA_TYPE".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "SQL_DATETIME_SUB".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "CHAR_OCTET_LENGTH".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "ORDINAL_POSITION".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "IS_NULLABLE".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    // the docs do not say 'not NULL', but they also say the only possible values for
+                    // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
+                    // the empty varchar... so NO_NULLS seems correct to me.
+                    Nullability::SQL_NO_NULLS,
+                ),
+            ]
+        })
     }
 }

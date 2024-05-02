@@ -1,6 +1,6 @@
 use crate::{
-    databases::DATABASES_METADATA, err::Result, Error, MongoColMetadata, MongoConnection,
-    MongoStatement,
+    databases::init_databases_metadata, databases::DATABASES_METADATA, err::Result, Error,
+    MongoColMetadata, MongoConnection, MongoStatement,
 };
 use bson::Bson;
 
@@ -52,7 +52,7 @@ impl MongoStatement for MongoTableTypes {
         }
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &DATABASES_METADATA
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata> {
+        DATABASES_METADATA.get_or_init(|| init_databases_metadata(max_string_length))
     }
 }

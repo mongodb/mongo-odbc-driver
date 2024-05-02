@@ -6,53 +6,63 @@ use bson::Bson;
 use definitions::Nullability;
 use mongodb::options::ListDatabasesOptions;
 
-use lazy_static::lazy_static;
+use once_cell::sync::OnceCell;
 
-lazy_static! {
-    pub static ref DATABASES_METADATA: Vec<MongoColMetadata> = vec![
+pub(crate) static DATABASES_METADATA: OnceCell<Vec<MongoColMetadata>> = OnceCell::new();
+
+pub(crate) fn init_databases_metadata(max_string_length: Option<u16>) -> Vec<MongoColMetadata> {
+    vec![
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
+            max_string_length,
+            Nullability::SQL_NO_NULLS,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
-    ];
+    ]
 }
 
 mod unit {
     #[test]
     fn metadata_size() {
         use crate::{databases::MongoDatabases, stmt::MongoStatement};
-        assert_eq!(5, MongoDatabases::empty().get_resultset_metadata().len());
+        assert_eq!(
+            5,
+            MongoDatabases::empty().get_resultset_metadata(None).len()
+        );
     }
 
     #[test]
@@ -260,7 +270,7 @@ impl MongoStatement for MongoDatabases {
         }
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &DATABASES_METADATA
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata> {
+        DATABASES_METADATA.get_or_init(|| init_databases_metadata(max_string_length))
     }
 }

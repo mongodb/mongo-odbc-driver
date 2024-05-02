@@ -11,48 +11,55 @@ use crate::{
 use bson::{doc, Bson};
 use definitions::Nullability;
 use futures::future;
-use lazy_static::lazy_static;
 use mongodb::{options::ListDatabasesOptions, results::CollectionType};
+use once_cell::sync::OnceCell;
 use regex::Regex;
 
-lazy_static! {
-    static ref COLLECTIONS_METADATA: Vec<MongoColMetadata> = vec![
+static COLLECTIONS_METADATA: OnceCell<Vec<MongoColMetadata>> = OnceCell::new();
+
+fn init_collections_metadata(max_string_length: Option<u16>) -> Vec<MongoColMetadata> {
+    vec![
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
+            max_string_length,
+            Nullability::SQL_NO_NULLS,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
+            max_string_length,
+            Nullability::SQL_NO_NULLS,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
+            max_string_length,
+            Nullability::SQL_NO_NULLS,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
-    ];
+    ]
 }
 
 #[derive(Debug, Clone)]
@@ -158,9 +165,10 @@ impl MongoCollections {
     }
 
     // Statement for SQLTables("", SQL_ALL_SCHEMAS,"").
-    pub fn all_schemas() -> EmptyStatement {
+    pub fn all_schemas(max_string_length: Option<u16>) -> EmptyStatement {
         EmptyStatement {
-            resultset_metadata: &COLLECTIONS_METADATA,
+            resultset_metadata: COLLECTIONS_METADATA
+                .get_or_init(|| init_collections_metadata(max_string_length)),
         }
     }
 
@@ -284,8 +292,8 @@ impl MongoStatement for MongoCollections {
         Ok(Some(return_val))
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &COLLECTIONS_METADATA
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata> {
+        COLLECTIONS_METADATA.get_or_init(|| init_collections_metadata(max_string_length))
     }
 }
 
@@ -294,7 +302,10 @@ mod unit {
     #[test]
     fn metadata_size() {
         use crate::{collections::MongoCollections, stmt::MongoStatement};
-        assert_eq!(5, MongoCollections::empty().get_resultset_metadata().len());
+        assert_eq!(
+            5,
+            MongoCollections::empty().get_resultset_metadata(None).len()
+        );
     }
 
     #[test]
