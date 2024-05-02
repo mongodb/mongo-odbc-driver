@@ -78,7 +78,8 @@ mod unit {
             "TABLE_CAT".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
             Nullability::SQL_NO_NULLS,
-            TypeMode::Standard
+            TypeMode::Standard,
+            None,
         )];
     }
 

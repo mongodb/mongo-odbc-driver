@@ -39,6 +39,7 @@ impl MongoQuery {
         query_timeout: Option<u32>,
         query: &str,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
     ) -> Result<Self> {
         let current_db = current_db.ok_or(Error::NoDatabase)?;
         let db = client.client.database(&current_db);
@@ -59,8 +60,11 @@ impl MongoQuery {
         let get_result_schema_response: SqlGetSchemaResponse =
             bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
 
-        let metadata =
-            get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
+        let metadata = get_result_schema_response.process_result_metadata(
+            &current_db,
+            type_mode,
+            max_string_length,
+        )?;
 
         Ok(Self {
             resultset_cursor: None,

@@ -458,6 +458,7 @@ pub struct MongoFields {
     collection_name_filter: Option<Regex>,
     field_name_filter: Option<Regex>,
     type_mode: TypeMode,
+    max_string_length: Option<u16>,
     /// Whether this mongofield should map to odbc 3 types or not
     odbc_3_types: bool,
 }
@@ -486,6 +487,7 @@ impl MongoFields {
         collection_name_filter: Option<&str>,
         field_name_filter: Option<&str>,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
         odbc_3_types: bool,
     ) -> Self {
         let dbs = db_name.map_or_else(
@@ -522,6 +524,7 @@ impl MongoFields {
             collection_name_filter: collection_name_filter.and_then(to_name_regex),
             field_name_filter: field_name_filter.and_then(to_name_regex),
             type_mode,
+            max_string_length,
             odbc_3_types,
         }
     }
@@ -536,6 +539,7 @@ impl MongoFields {
             collection_name_filter: None,
             field_name_filter: None,
             type_mode: TypeMode::Standard,
+            max_string_length: None,
             odbc_3_types: true,
         }
     }
@@ -583,6 +587,7 @@ impl MongoFields {
                             &self.current_db_name,
                             collection_name.as_str(),
                             self.type_mode,
+                            self.max_string_length,
                         ) {
                             Ok(current_col_metadata) => {
                                 if !current_col_metadata.is_empty() {

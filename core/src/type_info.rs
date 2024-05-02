@@ -204,14 +204,20 @@ pub struct MongoTypesInfo {
     current_type_index: usize,
     sql_data_type: SqlDataType,
     type_mode: TypeMode,
+    max_string_length: Option<u16>,
 }
 
 impl MongoTypesInfo {
-    pub fn new(sql_data_type: SqlDataType, type_mode: TypeMode) -> MongoTypesInfo {
+    pub fn new(
+        sql_data_type: SqlDataType,
+        type_mode: TypeMode,
+        max_string_length: Option<u16>,
+    ) -> MongoTypesInfo {
         MongoTypesInfo {
             current_type_index: 0,
             sql_data_type,
             type_mode,
+            max_string_length,
         }
     }
 }
@@ -263,7 +269,7 @@ impl MongoStatement for MongoTypesInfo {
             Some(type_info) => Ok(Some(match col_index {
                 1 | 13 => Bson::String(type_info.type_name.to_string()),
                 2 | 16 => Bson::Int32(type_info.sql_type(self.type_mode) as i32),
-                3 => match type_info.column_size(self.type_mode) {
+                3 => match type_info.column_size(self.type_mode, self.max_string_length) {
                     Some(column_size) => Bson::Int32(column_size as i32),
                     // NULL is returned for data types where column size is not applicable
                     None => Bson::Null,

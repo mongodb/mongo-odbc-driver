@@ -40,6 +40,7 @@ impl MongoConnection {
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
         mut runtime: Option<tokio::runtime::Runtime>,
     ) -> Result<Self> {
         let runtime = runtime.take().unwrap_or_else(|| {
@@ -64,7 +65,14 @@ impl MongoConnection {
         };
         // Verify that the connection is working and the user has access to the default DB
         // ADF is supposed to check permissions on this
-        MongoQuery::prepare(&connection, current_db, None, "select 1", type_mode)?;
+        MongoQuery::prepare(
+            &connection,
+            current_db,
+            None,
+            "select 1",
+            type_mode,
+            max_string_length,
+        )?;
         Ok(connection)
     }
 

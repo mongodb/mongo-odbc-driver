@@ -833,6 +833,7 @@ pub unsafe extern "C" fn SQLColumnsW(
             };
             let connection = must_be_valid!((*stmt.connection).as_connection());
             let type_mode = *connection.type_mode.read().unwrap();
+            let max_string_length = *connection.max_string_length.read().unwrap();
             let mongo_statement = Box::new(MongoFields::list_columns(
                 connection
                     .mongo_connection
@@ -845,6 +846,7 @@ pub unsafe extern "C" fn SQLColumnsW(
                 table,
                 column,
                 type_mode,
+                max_string_length,
                 odbc_3_data_types,
             ));
             *stmt.mongo_statement.write().unwrap() = Some(mongo_statement);
@@ -1097,6 +1099,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         connection_timeout,
         login_timeout,
         *conn.type_mode.read().unwrap(),
+        *conn.max_string_length.read().unwrap(),
         Some(runtime),
     )?)
 }
@@ -3131,13 +3134,17 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
                 Some(sql_data_type) => {
                     let sql_data_type = handle_sql_type(odbc_version, sql_data_type);
                     let stmt = must_be_valid!((*mongo_handle).as_statement());
-                    let type_mode = if stmt.connection.is_null() {
-                        TypeMode::Standard
+                    let (type_mode, max_string_length) = if stmt.connection.is_null() {
+                        (TypeMode::Standard, None)
                     } else {
                         let connection = must_be_valid!((*stmt.connection).as_connection());
-                        *connection.type_mode.read().unwrap()
+                        (
+                            *connection.type_mode.read().unwrap(),
+                            *connection.max_string_length.read().unwarp(),
+                        )
                     };
-                    let types_info = MongoTypesInfo::new(sql_data_type, type_mode);
+                    let types_info =
+                        MongoTypesInfo::new(sql_data_type, type_mode, max_string_length);
                     *stmt.mongo_statement.write().unwrap() = Some(Box::new(types_info));
                     SqlReturn::SUCCESS
                 }
@@ -3292,12 +3299,20 @@ fn sql_prepare(
     query = query.strip_suffix(';').unwrap_or(&query).to_string();
     let mongo_statement = {
         let type_mode = *connection.type_mode.read().unwrap();
+        let max_string_length = *connection.max_string_length.read().unwrap();
         let attributes = connection.attributes.read().unwrap();
         let timeout = attributes.connection_timeout;
         let current_db = attributes.current_catalog.as_ref().cloned();
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
-            MongoQuery::prepare(mongo_connection, current_db, timeout, &query, type_mode)
-                .map_err(|e| e.into())
+            MongoQuery::prepare(
+                mongo_connection,
+                current_db,
+                timeout,
+                &query,
+                type_mode,
+                max_string_length,
+            )
+            .map_err(|e| e.into())
         } else {
             Err(ODBCError::InvalidCursorState)
         }
