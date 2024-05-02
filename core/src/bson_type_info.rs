@@ -113,29 +113,30 @@ pub struct BsonTypeInfo {
 pub struct SimpleTypeInfo {
     pub sql_type: SqlDataType,
     pub non_concise_type: SqlDataType,
-    pub length: Option<u16>,
+    pub length: fn(Option<u16>) -> Option<u16>,
     pub transfer_octet_length: Option<u16>,
-    pub display_size: Option<u16>,
+    pub display_size: fn(Option<u16>) -> Option<u16>,
 }
 
-impl SimpleTypeInfo {
-    const fn new(length: u16, transfer_octet_length: u16, display_size: u16) -> Option<Self> {
-        Some(Self {
+macro_rules! new_simple_type_info {
+    ($length:expr, $transfer_octet_length:expr, $display_size:expr) => {
+        Some(SimpleTypeInfo {
             sql_type: SqlDataType::SQL_WVARCHAR,
             non_concise_type: SqlDataType::SQL_WVARCHAR,
-            length: Some(length),
-            transfer_octet_length: Some(transfer_octet_length),
-            display_size: Some(display_size),
+            length: make_default_attr_func!(Some($length)),
+            transfer_octet_length: Some($transfer_octet_length),
+            display_size: make_default_attr_func!(Some($display_size)),
         })
-    }
-
+    };
+}
+impl SimpleTypeInfo {
     const fn default() -> Option<Self> {
         Some(Self {
             sql_type: SqlDataType::SQL_WVARCHAR,
             non_concise_type: SqlDataType::SQL_WVARCHAR,
-            length: None,
+            length: |max_string_length| max_string_length,
             transfer_octet_length: None,
-            display_size: None,
+            display_size: |max_string_length| max_string_length,
         })
     }
 }
@@ -307,7 +308,7 @@ impl BsonTypeInfo {
         num_prec_radix: None,
         decimal_digit: None,
         column_size: make_default_attr_func!(None),
-        simple_type_info: SimpleTypeInfo::new(20, 20 * 4, 20),
+        simple_type_info: new_simple_type_info!(20, 20 * 4, 20),
     };
     pub const OBJECTID: BsonTypeInfo = BsonTypeInfo {
         type_name: "objectId",
@@ -330,7 +331,7 @@ impl BsonTypeInfo {
         num_prec_radix: None,
         decimal_digit: None,
         column_size: make_default_attr_func!(Some(24)),
-        simple_type_info: SimpleTypeInfo::new(34, 34 * 4, 34),
+        simple_type_info: new_simple_type_info!(34, 34 * 4, 34),
     };
     pub const BOOL: BsonTypeInfo = BsonTypeInfo {
         type_name: "bool",
@@ -399,7 +400,7 @@ impl BsonTypeInfo {
         num_prec_radix: None,
         decimal_digit: None,
         column_size: make_default_attr_func!(None),
-        simple_type_info: SimpleTypeInfo::new(4, 4 * 4, 4),
+        simple_type_info: new_simple_type_info!(4, 4 * 4, 4),
     };
     pub const REGEX: BsonTypeInfo = BsonTypeInfo {
         type_name: "regex",
@@ -560,7 +561,7 @@ impl BsonTypeInfo {
         num_prec_radix: None,
         decimal_digit: None,
         column_size: make_default_attr_func!(None),
-        simple_type_info: SimpleTypeInfo::new(68, 68 * 4, 68),
+        simple_type_info: new_simple_type_info!(68, 68 * 4, 68),
     };
     pub const LONG: BsonTypeInfo = BsonTypeInfo {
         type_name: "long",
@@ -629,7 +630,7 @@ impl BsonTypeInfo {
         num_prec_radix: None,
         decimal_digit: None,
         column_size: make_default_attr_func!(None),
-        simple_type_info: SimpleTypeInfo::new(14, 14 * 4, 14),
+        simple_type_info: new_simple_type_info!(14, 14 * 4, 14),
     };
     pub const MAXKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "maxKey",
@@ -652,7 +653,7 @@ impl BsonTypeInfo {
         num_prec_radix: None,
         decimal_digit: None,
         column_size: make_default_attr_func!(None),
-        simple_type_info: SimpleTypeInfo::new(14, 14 * 4, 14),
+        simple_type_info: new_simple_type_info!(14, 14 * 4, 14),
     };
     pub const BSON: BsonTypeInfo = BsonTypeInfo {
         type_name: "bson",
@@ -704,7 +705,7 @@ impl BsonTypeInfo {
 
     pub fn length(&self, type_mode: TypeMode, max_string_length: Option<u16>) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
-            self.simple_type_info.clone().unwrap().length
+            (self.simple_type_info.clone().unwrap().length)(max_string_length)
         } else {
             // TODO: is there a reason this was None instead of self.length?
             (self.length)(max_string_length)
@@ -725,7 +726,7 @@ impl BsonTypeInfo {
         max_string_length: Option<u16>,
     ) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
-            self.simple_type_info.clone().unwrap().length
+            (self.simple_type_info.clone().unwrap().length)(max_string_length)
         } else {
             (self.char_octet_length)(max_string_length)
         }
@@ -733,7 +734,7 @@ impl BsonTypeInfo {
 
     pub fn display_size(&self, type_mode: TypeMode, max_string_length: Option<u16>) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
-            self.simple_type_info.clone().unwrap().display_size
+            (self.simple_type_info.clone().unwrap().display_size)(max_string_length)
         } else {
             (self.display_size)(max_string_length)
         }
@@ -749,7 +750,7 @@ impl BsonTypeInfo {
 
     pub fn column_size(&self, type_mode: TypeMode, max_string_length: Option<u16>) -> Option<u16> {
         if type_mode == TypeMode::Simple && self.simple_type_info.is_some() {
-            self.simple_type_info.clone().unwrap().length
+            (self.simple_type_info.clone().unwrap().length)(max_string_length)
         } else {
             (self.column_size)(max_string_length)
         }
