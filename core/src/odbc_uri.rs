@@ -197,6 +197,8 @@ impl ODBCUri {
     // are synonyms.
     pub fn remove(&mut self, names: &[&str]) -> Option<String> {
         for name in names.iter() {
+            // false positive
+            #[allow(clippy::unnecessary_to_owned)]
             let ret = self.0.remove(&name.to_string());
             if ret.is_some() {
                 return ret;

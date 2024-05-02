@@ -1407,6 +1407,7 @@ mod unit {
                 }
             };
         }
+
         macro_rules! test_conversion_err {
             (input = $input:expr, method = $method:tt, expected = $expected:expr, info = $info:expr) => {
                 let actual = $input.$method();
@@ -1435,6 +1436,11 @@ mod unit {
 
         macro_rules! test_it {
             ($bson:expr,$v:expr) => {
+                #[allow(
+                    clippy::cast_lossless,
+                    clippy::cast_possible_truncation,
+                    clippy::cast_precision_loss
+                )]
                 $v.iter().for_each(
                     |(method, expected, test, info)| match (method, test, info) {
                         (&"i64", Ok(()), info) => {
