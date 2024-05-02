@@ -17,11 +17,11 @@ const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
     is_case_sensitive: false,
     fixed_prec_scale: true,
     scale: None,
-    length: Some(23),
+    length: |_| Some(23),
     precision: Some(3),
-    char_octet_length: None,
+    char_octet_length: |_| None,
     transfer_octet_length: Some(16),
-    display_size: Some(23),
+    display_size: |_| Some(23),
     literal_prefix: Some("'"),
     literal_suffix: Some("'"),
     sql_code: Some(SqlCode::SQL_CODE_TIMESTAMP),
@@ -29,7 +29,7 @@ const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
     is_unsigned: None,
     num_prec_radix: None,
     decimal_digit: Some(3),
-    column_size: Some(23),
+    column_size: |_| Some(23),
     simple_type_info: None,
 };
 
