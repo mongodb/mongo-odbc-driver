@@ -29,3 +29,6 @@ tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
 [features]
 result_set = []
 evergreen_tests = []
+
+[lints]
+workspace = true

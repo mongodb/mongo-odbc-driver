@@ -49,7 +49,7 @@ impl MongoConnection {
                 .unwrap()
         });
         user_options.client_options.connect_timeout =
-            login_timeout.map(|to| Duration::new(to as u64, 0));
+            login_timeout.map(|to| Duration::new(u64::from(to), 0));
         let guard = runtime.enter();
         let client = runtime.block_on(async {
             Client::with_options(user_options.client_options).map_err(Error::InvalidClientOptions)
@@ -58,7 +58,7 @@ impl MongoConnection {
         let uuid_repr = user_options.uuid_representation;
         let connection = MongoConnection {
             client,
-            operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
+            operation_timeout: operation_timeout.map(|to| Duration::new(u64::from(to), 0)),
             uuid_repr,
             runtime,
         };

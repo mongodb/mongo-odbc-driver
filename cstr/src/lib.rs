@@ -60,7 +60,7 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 ///
 #[allow(clippy::uninit_vec)]
 pub unsafe fn input_text_to_string_a(text: *const Char, len: usize) -> String {
-    if (len as isize) < 0 {
+    if isize::try_from(len).is_err() {
         let mut dst = Vec::new();
         let mut itr = text;
         {
@@ -87,7 +87,7 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: usize) -> String {
 ///
 #[allow(clippy::uninit_vec)]
 pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> String {
-    if (len as isize) < 0 {
+    if isize::try_from(len).is_err() {
         let mut dst = Vec::new();
         let mut itr = text;
         {
@@ -250,7 +250,7 @@ pub unsafe fn write_binary_slice_to_buffer(
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
 pub unsafe fn write_fixed_data<T: core::fmt::Debug>(data: &T, output_ptr: *mut c_void) {
-    copy_nonoverlapping(data as *const _, output_ptr as *mut _, 1);
+    copy_nonoverlapping(data as *const _, output_ptr.cast::<T>(), 1);
 }
 
 #[cfg(test)]
@@ -323,9 +323,8 @@ mod test {
         let input = &to_widechar_vec(&expected)[..];
         expected.push('\0');
         let mut buffer = vec![0; threshold + 1];
-        let len = unsafe {
-            write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr() as *mut WideChar)
-        };
+        let len =
+            unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
     }
@@ -416,10 +415,10 @@ mod test {
     fn test_write_fixed_data() {
         let expected = 42i32;
         let input = &42i32;
-        let output_ptr: *mut c_void = Box::into_raw(Box::new([0i32; 1])) as *mut _;
+        let output_ptr = Box::into_raw(Box::new([0i32; 1])).cast();
         unsafe { write_fixed_data(input, output_ptr) };
         unsafe {
-            assert_eq!(expected, *(output_ptr as *mut i32));
+            assert_eq!(expected, *(output_ptr.cast::<i32>()));
         }
     }
 }

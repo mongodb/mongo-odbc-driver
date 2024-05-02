@@ -50,3 +50,6 @@ bad_host = []
 [lib]
 name = "mongo_odbc_core"
 crate-type = ["cdylib", "lib"]
+
+[lints]
+workspace = true

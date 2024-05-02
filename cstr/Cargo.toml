@@ -16,3 +16,6 @@ num-derive = "0.3.3"
 
 [features]
 utf32 = []
+
+[lints]
+workspace = true
