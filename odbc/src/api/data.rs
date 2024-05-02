@@ -260,7 +260,8 @@ impl IntoCData for Bson {
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)> {
         match self {
             Bson::Double(f) => {
-                if *f < 0f64 {
+                #[allow(clippy::cast_precision_loss)]
+                if *f < 0f64 || *f > u64::MAX as f64 {
                     Err(ODBCError::IntegralTruncation(f.to_string()))
                 } else {
                     // This is checked in the if statement above. The upper bound isn't checked because f64::MAX is < u64::MAX
@@ -301,19 +302,18 @@ impl IntoCData for Bson {
             // We should update this when the bson crate supports Decimal128 entirely.
             Bson::Decimal128(_) => {
                 let (out, _) = self.to_f64()?;
-                Bson::Double(out).to_u64()
-                // if out > u64::MAX as f64 || out < u64::MIN as f64 {
-                //     Err(ODBCError::IntegralTruncation(out.to_string()))
-                // } else {
-                //     Ok((
-                //         out as u64,
-                //         if out.floor() != out {
-                //             Some(ODBCError::FractionalTruncation(out.to_string()))
-                //         } else {
-                //             None
-                //         },
-                //     ))
-                // }
+                if out > u64::MAX as f64 || out < u64::MIN as f64 {
+                    Err(ODBCError::IntegralTruncation(out.to_string()))
+                } else {
+                    Ok((
+                        out as u64,
+                        if out.floor() != out {
+                            Some(ODBCError::FractionalTruncation(out.to_string()))
+                        } else {
+                            None
+                        },
+                    ))
+                }
             }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), UINT64)),
         }
