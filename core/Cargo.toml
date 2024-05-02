@@ -45,6 +45,7 @@ windows = { version = "0.44.0", features = [
 
 [features]
 bad_host = []
+garbage_collect = []
 
 [lib]
 name = "mongo_odbc_core"
