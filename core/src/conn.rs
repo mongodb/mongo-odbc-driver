@@ -13,10 +13,9 @@ use std::{
 };
 use tokio::runtime::Runtime;
 
-// we make from UserOptions to Weak<Client> so that we do not hold around
-// clients that are no longer in use. In most cases it won't matter, but for drivers that live in
+// we make from UserOptions to Client and Weak<Runtime> so that we do not hold around
+// Clients and Runtimes that are no longer in use. In most cases it won't matter, but for drivers that live in
 // memory for a long time, this could be a problem.
-//struct ClientMap(Vec<(UserOptions, Weak<Client>)>);
 struct ClientMap(Vec<(UserOptions, Client, Weak<Runtime>)>);
 
 impl ClientMap {
@@ -27,7 +26,7 @@ impl ClientMap {
 
     // get returns the client associated with the given user options if it exists.
     fn get(&mut self, user_options: &UserOptions) -> Option<(Client, Arc<Runtime>)> {
-        let mut remover = None;
+        let mut to_remove = Vec::new();
         for (i, (options, client, weak_rt)) in self.0.iter().enumerate() {
             if options == user_options {
                 if let Some(rt) = weak_rt.upgrade() {
@@ -36,13 +35,13 @@ impl ClientMap {
                 // ClientMap, because the Runtime associated with the Client has been dropped,
                 // which will make the Topology hang forever.
                 } else {
-                    remover = Some(i);
+                    to_remove.push(i);
                 }
             }
         }
         // We have to do this this way due to the borrow checker, it would be nice if we could just
         // remove in the else above, but we cannot.
-        if let Some(i) = remover {
+        for i in to_remove.into_iter().rev() {
             self.0.remove(i);
         }
         None
