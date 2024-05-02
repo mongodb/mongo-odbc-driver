@@ -341,16 +341,17 @@ impl ODBCUri {
             .as_ref()
         {
             use futures::future::FutureExt;
-            let mut cred = client_options.credential.as_mut().unwrap();
+            let cred = client_options.credential.as_mut().unwrap();
             cred.oidc_callback = mongodb::options::oidc::Callback::human(move |c| {
                 async move { crate::oidc_auth::oidc_call_back(c).await }.boxed()
             });
             // unset passsword, and username if empty string to make up for bad tools like power bi
-            // which require adding empty username and password
+            // which require adding empty username and password. OIDC never uses a password.
             cred.password = None;
-            cred.username = cred
-                .username
-                .and_then(|x| if x == "" { None } else { Some(x) });
+            cred.username =
+                cred.username
+                    .as_ref()
+                    .and_then(|x| if x == "" { None } else { Some(x.clone()) });
         }
         Ok(UserOptions {
             client_options,
