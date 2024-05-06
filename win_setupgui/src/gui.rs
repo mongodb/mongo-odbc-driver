@@ -290,7 +290,7 @@ pub fn config_dsn(dsn_opts: Dsn, dsn_op: u32) -> bool {
             app.user_input.set_text(&dsn_opts.user);
             app.password_input.set_text(&dsn_opts.password);
             app.enable_max_string_length_input.set_check_state(
-                match &dsn_opts.enable_max_string_length {
+                match dsn_opts.enable_max_string_length.as_str() {
                     "1" => nwg::CheckBoxState::Checked,
                     _ => nwg::CheckBoxState::Unchecked,
                 },
