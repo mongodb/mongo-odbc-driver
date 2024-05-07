@@ -3335,7 +3335,7 @@ mod unit_tests {
     }
 
     #[test]
-    fn sql_get_data_longer_than_limit() {
+    fn sql_get_string_data_max_string_length_set() {
         use crate::{api::functions::SQLGetData, handles::definitions::ConnectionAttributes};
         use cstr::input_text_to_string_w;
         use definitions::CDataType;
@@ -3352,7 +3352,7 @@ mod unit_tests {
             statements: RwLock::new(HashSet::new()),
             errors: RwLock::new(vec![]),
             type_mode: RwLock::new(TypeMode::Simple),
-            max_string_length: RwLock::new(Some(5)),
+            max_string_length: RwLock::new(Some(6)),
         })));
 
         let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
@@ -3362,7 +3362,7 @@ mod unit_tests {
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 5 * size_of::<WideChar>() as isize;
+            let buffer_length: isize = 20 * size_of::<WideChar>() as isize;
             let out_len_or_ind = &mut 0;
             assert_eq!(
                 SqlReturn::SUCCESS_WITH_INFO,
@@ -3388,11 +3388,11 @@ mod unit_tests {
                 ),
             );
             assert_eq!(
-                std::mem::size_of::<WideChar>() as isize * 5,
+                std::mem::size_of::<WideChar>() as isize * 12,
                 *out_len_or_ind
             );
             assert_eq!(
-                "Hello".to_string(),
+                "hello".to_string(),
                 input_text_to_string_w(char_buffer as *const _, 5)
             );
             let _ = Box::from_raw(char_buffer as *mut WChar);
