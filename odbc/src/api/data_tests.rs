@@ -3335,6 +3335,73 @@ mod unit_tests {
     }
 
     #[test]
+    fn sql_get_data_longer_than_limit() {
+        use crate::{api::functions::SQLGetData, handles::definitions::ConnectionAttributes};
+        use cstr::input_text_to_string_w;
+        use definitions::CDataType;
+        use std::{collections::HashSet, mem::size_of, sync::RwLock};
+
+        let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
+            EnvState::ConnectionAllocated,
+        ))));
+        let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection {
+            env: env as *mut _,
+            mongo_connection: RwLock::new(None),
+            attributes: RwLock::new(ConnectionAttributes::default()),
+            state: RwLock::new(ConnectionState::Connected),
+            statements: RwLock::new(HashSet::new()),
+            errors: RwLock::new(vec![]),
+            type_mode: RwLock::new(TypeMode::Simple),
+            max_string_length: RwLock::new(Some(5)),
+        })));
+
+        let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new(STANDARD_BSON_TYPE_MQ.clone()));
+
+        let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
+        unsafe {
+            assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
+            let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
+            let buffer_length: isize = 5 * size_of::<WideChar>() as isize;
+            let out_len_or_ind = &mut 0;
+            assert_eq!(
+                SqlReturn::SUCCESS_WITH_INFO,
+                SQLGetData(
+                    stmt_handle as *mut _,
+                    STRING_COL,
+                    CDataType::SQL_C_WCHAR as i16,
+                    char_buffer,
+                    buffer_length,
+                    out_len_or_ind,
+                )
+            );
+            assert_eq!(
+                format!("[MongoDB][API] Buffer size \"{buffer_length}\" not large enough for data"),
+                format!(
+                    "{}",
+                    (*stmt_handle)
+                        .as_statement()
+                        .unwrap()
+                        .errors
+                        .read()
+                        .unwrap()[0],
+                ),
+            );
+            assert_eq!(
+                std::mem::size_of::<WideChar>() as isize * 5,
+                *out_len_or_ind
+            );
+            assert_eq!(
+                "Hello".to_string(),
+                input_text_to_string_w(char_buffer as *const _, 5)
+            );
+            let _ = Box::from_raw(char_buffer as *mut WChar);
+            let _ = Box::from_raw(conn as *mut WChar);
+            let _ = Box::from_raw(env as *mut WChar);
+        }
+    }
+
+    #[test]
     fn sql_fetch_and_more_results_basic_functionality_test() {
         sql_fetch_and_more_results_basic_functionality(TypeMode::Standard);
         sql_fetch_and_more_results_basic_functionality(TypeMode::Simple);
