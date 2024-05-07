@@ -725,7 +725,7 @@ impl MongoStatement for MongoFields {
                 match get_meta_data()?.column_size {
                     // If the driver cannot determine the column for a variable type, it returns
                     // SQL_NO_TOTAL.
-                    None => i32::try_from(definitions::SQL_NO_TOTAL).expect("Cannot convert i32"),
+                    None => definitions::SQL_NO_TOTAL,
                     Some(col_size) => i32::from(col_size),
                 }
             }),
@@ -733,7 +733,7 @@ impl MongoStatement for MongoFields {
             8 => Bson::Int32({
                 let l = get_meta_data()?.transfer_octet_length;
                 match l {
-                    None => i32::try_from(definitions::SQL_NO_TOTAL).expect("Cannot convert i32"),
+                    None => definitions::SQL_NO_TOTAL,
                     Some(l) => i32::from(l),
                 }
             }),
@@ -773,9 +773,7 @@ impl MongoStatement for MongoFields {
                 SqlDataType::SQL_VARCHAR
                 | SqlDataType::SQL_WVARCHAR
                 | SqlDataType::SQL_VARBINARY => match get_meta_data()?.char_octet_length {
-                    None => Bson::Int32(
-                        i32::try_from(definitions::SQL_NO_TOTAL).expect("Could not convert to i32"),
-                    ),
+                    None => Bson::Int32(definitions::SQL_NO_TOTAL),
                     Some(char_octet_length) => Bson::Int32(i32::from(char_octet_length)),
                 },
                 _ => Bson::Null,

@@ -22,6 +22,7 @@ cast_possible_truncation = "deny"
 cast_possible_wrap = "deny"
 cast_precision_loss = "deny"
 ptr_as_ptr = "deny"
+useless_conversion = "deny"
 
 
 [profile.release]

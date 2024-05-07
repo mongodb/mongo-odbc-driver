@@ -469,7 +469,7 @@ pub unsafe fn exec_direct_default_query(stmt_handle: HStmt) {
     query.push(0);
     assert_eq!(
         SqlReturn::SUCCESS,
-        SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
+        SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS),
         "{}",
         get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
     );

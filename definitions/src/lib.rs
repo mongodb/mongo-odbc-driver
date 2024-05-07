@@ -78,8 +78,8 @@ pub type RetCode = i16;
 pub const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
 
 // flags for null-terminated string
-pub const SQL_NTS: isize = -3;
-pub const SQL_NTSL: isize = -3;
+pub const SQL_NTS: Integer = -3;
+pub const SQL_NTSL: Integer = -3;
 
 /// Maximum message length
 pub const SQL_MAX_MESSAGE_LENGTH: SmallInt = 512;

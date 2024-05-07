@@ -39,7 +39,7 @@ mod integration {
         statements.iter().for_each(|stmt| unsafe {
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(*stmt, query.as_ptr(), SQL_NTS as i32,),
+                SQLExecDirectW(*stmt, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(
                     HandleType::SQL_HANDLE_STMT,
