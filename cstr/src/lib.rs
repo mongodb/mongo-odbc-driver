@@ -59,8 +59,8 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_text_to_string_a(text: *const Char, len: usize) -> String {
-    if isize::try_from(len).is_err() {
+pub unsafe fn input_text_to_string_a(text: *const Char, len: i32) -> String {
+    if len <= 0 {
         let mut dst = Vec::new();
         let mut itr = text;
         {
@@ -69,13 +69,15 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: usize) -> String {
                 itr = itr.offset(1);
             }
         }
-        return String::from_utf8_unchecked(dst);
+        String::from_utf8_unchecked(dst)
+    } else {
+        // len must be non-negative in this branch
+        let len = len as usize;
+        let mut dst = Vec::with_capacity(len);
+        dst.set_len(len);
+        copy_nonoverlapping(text, dst.as_mut_ptr(), len);
+        String::from_utf8_unchecked(dst)
     }
-
-    let mut dst = Vec::with_capacity(len);
-    dst.set_len(len);
-    copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-    String::from_utf8_unchecked(dst)
 }
 
 ///
@@ -86,8 +88,8 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: usize) -> String {
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> String {
-    if isize::try_from(len).is_err() {
+pub unsafe fn input_text_to_string_w(text: *const WideChar, len: i32) -> String {
+    if len <= 0 {
         let mut dst = Vec::new();
         let mut itr = text;
         {
@@ -96,13 +98,15 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: usize) -> Strin
                 itr = itr.offset(1);
             }
         }
-        return from_widechar_vec_lossy(dst);
+        from_widechar_vec_lossy(dst)
+    } else {
+        // len must be non-negative in this branch
+        let len = len as usize;
+        let mut dst = Vec::with_capacity(len);
+        dst.set_len(len);
+        copy_nonoverlapping(text, dst.as_mut_ptr(), len);
+        from_widechar_vec_lossy(dst)
     }
-
-    let mut dst = Vec::with_capacity(len);
-    dst.set_len(len);
-    copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-    from_widechar_vec_lossy(dst)
 }
 ///
 /// parse_attribute_string_w converts a null-separated doubly null terminated *Widechar string to a Rust
@@ -171,18 +175,15 @@ pub fn to_char_ptr(s: &str) -> (*mut Char, Vec<u8>) {
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
-pub unsafe fn write_string_to_buffer(
-    message: &str,
-    len: usize,
-    output_ptr: *mut WideChar,
-) -> usize {
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+pub unsafe fn write_string_to_buffer(message: &str, len: usize, output_ptr: *mut WideChar) -> i32 {
     let len = std::cmp::min(message.len(), len - 1);
     let mut v = to_widechar_vec(&message[..len]);
     v.push(0);
     unsafe {
         copy_nonoverlapping(v.as_ptr(), output_ptr, len);
     }
-    v.len()
+    v.len() as i32
 }
 
 ///
@@ -190,11 +191,12 @@ pub unsafe fn write_string_to_buffer(
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub unsafe fn write_wstring_slice_to_buffer(
     message: &[WideChar],
     len: usize,
     output_ptr: *mut WideChar,
-) -> usize {
+) -> i32 {
     let len = std::cmp::min(message.len(), len - 1);
 
     unsafe {
@@ -202,7 +204,7 @@ pub unsafe fn write_wstring_slice_to_buffer(
         *output_ptr.add(len) = 0;
     }
 
-    len + 1
+    (len + 1) as i32
 }
 
 ///
@@ -210,11 +212,12 @@ pub unsafe fn write_wstring_slice_to_buffer(
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub unsafe fn write_string_slice_to_buffer(
     message: &[Char],
     len: usize,
     output_ptr: *mut Char,
-) -> usize {
+) -> i32 {
     let len = std::cmp::min(message.len(), len - 1);
 
     unsafe {
@@ -222,7 +225,7 @@ pub unsafe fn write_string_slice_to_buffer(
         *output_ptr.add(len) = 0;
     }
 
-    len + 1
+    (len + 1) as i32
 }
 
 ///
@@ -253,6 +256,7 @@ pub unsafe fn write_fixed_data<T: core::fmt::Debug>(data: &T, output_ptr: *mut c
     copy_nonoverlapping(data as *const _, output_ptr.cast::<T>(), 1);
 }
 
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 #[cfg(test)]
 mod test {
     use super::*;
@@ -262,7 +266,7 @@ mod test {
         let expected = "test";
         let test = "test\0".as_bytes();
         let test = test.as_ptr();
-        let test = unsafe { input_text_to_string_a(test, expected.len()) };
+        let test = unsafe { input_text_to_string_a(test, expected.len() as i32) };
         assert_eq!(expected, test);
     }
 
@@ -271,7 +275,7 @@ mod test {
         let expected = "test";
         let test = to_widechar_vec(expected);
         let test = test.as_ptr();
-        let test = unsafe { input_text_to_string_w(test, expected.len()) };
+        let test = unsafe { input_text_to_string_w(test, expected.len() as i32) };
         assert_eq!(expected, test);
     }
 
@@ -282,7 +286,7 @@ mod test {
         let mut buffer = [0; 9];
         let len = unsafe { write_string_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -292,7 +296,7 @@ mod test {
         let mut buffer: [WideChar; 3] = [0; 3];
         let len = unsafe { write_string_to_buffer("testing", buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -302,7 +306,7 @@ mod test {
         let mut buffer: [WideChar; 4] = [0; 4];
         let len = unsafe { write_string_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -313,7 +317,7 @@ mod test {
         let len =
             unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -326,7 +330,7 @@ mod test {
         let len =
             unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -337,7 +341,7 @@ mod test {
         let len =
             unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -348,7 +352,7 @@ mod test {
         let len =
             unsafe { write_wstring_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -358,7 +362,7 @@ mod test {
         let mut buffer = [0; 5];
         let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -368,7 +372,7 @@ mod test {
         let mut buffer = [0; 3];
         let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]
@@ -378,7 +382,7 @@ mod test {
         let mut buffer = [0; 4];
         let len = unsafe { write_string_slice_to_buffer(input, buffer.len(), buffer.as_mut_ptr()) };
         assert_eq!(expected, String::from_utf8_lossy(&buffer));
-        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as i32);
     }
 
     #[test]

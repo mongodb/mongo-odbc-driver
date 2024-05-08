@@ -180,7 +180,7 @@ impl ConfigGui {
                     &format!(
                         "Could not connect with supplied information: {e}",
                         e = unsafe {
-                            input_text_to_string_w(buffer.as_mut_ptr(), buffer_length as usize)
+                            input_text_to_string_w(buffer.as_mut_ptr(), buffer_length.into())
                         }
                     ),
                 );

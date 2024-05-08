@@ -672,7 +672,7 @@ fn sql_get_wstring_data(mq: MongoQuery) {
                 );
                 assert_eq!(
                     expected.to_string(),
-                    input_text_to_string_w(char_buffer as *const _, expected.len())
+                    input_text_to_string_w(char_buffer as *const _, expected.len() as i32)
                 );
             };
 
@@ -758,6 +758,7 @@ fn sql_get_wstring_data_by_pieces(mq: MongoQuery) {
                                     expected_out_len: isize,
                                     expected: &str,
                                     code: SqlReturn| {
+                char_buffer.write_bytes(0, 200);
                 assert_eq!(
                     code,
                     SQLGetData(
@@ -791,7 +792,10 @@ fn sql_get_wstring_data_by_pieces(mq: MongoQuery) {
                 );
                 assert_eq!(
                     expected.to_string(),
-                    input_text_to_string_w(char_buffer as *const _, expected.chars().count())
+                    input_text_to_string_w(
+                        char_buffer as *const _,
+                        expected.chars().count() as i32
+                    )
                 );
             };
 
@@ -921,6 +925,7 @@ fn sql_get_string_data_by_pieces(mq: MongoQuery) {
         {
             let mut str_val_test =
                 |col: u16, expected_out_len: isize, expected: &str, code: SqlReturn| {
+                    char_buffer.write_bytes(0, 200);
                     assert_eq!(
                         code,
                         SQLGetData(
@@ -935,7 +940,10 @@ fn sql_get_string_data_by_pieces(mq: MongoQuery) {
                     assert_eq!(expected_out_len, *out_len_or_ind);
                     assert_eq!(
                         expected.to_string(),
-                        input_text_to_string_a(char_buffer as *const _, expected.chars().count())
+                        input_text_to_string_a(
+                            char_buffer as *const _,
+                            expected.chars().count() as i32
+                        )
                     );
                 };
 
@@ -1174,7 +1182,7 @@ fn sql_get_string_data(mq: MongoQuery) {
                 );
                 assert_eq!(
                     expected.to_string(),
-                    input_text_to_string_a(char_buffer as *const _, expected.len()),
+                    input_text_to_string_a(char_buffer as *const _, expected.len() as i32),
                     "Expected column type {col}",
                 );
             };

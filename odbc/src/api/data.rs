@@ -132,13 +132,13 @@ impl IntoCData for Bson {
             Bson::Boolean(b) => Ok((if *b { 1.0 } else { 0.0 }, None)),
             Bson::Int32(i) => Ok((f64::from(*i), None)),
             #[allow(clippy::cast_precision_loss)]
+            // there is no try_from implementation for i64 to f64
             Bson::Int64(i) => Ok((*i as f64, None)),
             Bson::Decimal128(d) => Bson::Double(from_string(&d.to_string(), DOUBLE)?).to_f64(),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
         }
     }
 
-    #[allow(clippy::cast_precision_loss)]
     fn to_f32(&self) -> Result<(f32, Option<ODBCError>)> {
         match self {
             Bson::Double(f) => {
@@ -146,6 +146,7 @@ impl IntoCData for Bson {
                     Err(ODBCError::IntegralTruncation(f.to_string()))
                 } else {
                     // This is safe because we've already checked that the value is within the range of f32
+                    // there is no try_from implementation for f64 to f32
                     #[allow(clippy::cast_possible_truncation)]
                     Ok((*f as f32, None))
                 }
@@ -153,16 +154,21 @@ impl IntoCData for Bson {
             Bson::String(s) => Bson::Double(from_string(s, DOUBLE)?).to_f32(),
 
             Bson::Boolean(b) => Ok((if *b { 1.0 } else { 0.0 }, None)),
+            // there is no try_from implementation for i32 to f32
+            #[allow(clippy::cast_precision_loss)]
             Bson::Int32(i) => Ok((*i as f32, None)),
+            // there is no try_from implementation for i64 to f32
+            #[allow(clippy::cast_precision_loss)]
             Bson::Int64(i) => Ok((*i as f32, None)),
             Bson::Decimal128(d) => Bson::Double(from_string(&d.to_string(), DOUBLE)?).to_f32(),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
         }
     }
 
-    #[allow(clippy::cast_precision_loss)]
     fn to_i64(&self) -> Result<(i64, Option<ODBCError>)> {
         match self {
+            // there is no try_from implementation for f64 to i64
+            #[allow(clippy::cast_precision_loss)]
             Bson::Double(f) => {
                 if *f > i64::MAX as f64 || *f < i64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(f.to_string()))
@@ -190,6 +196,8 @@ impl IntoCData for Bson {
             // We should update this when the bson crate supports Decimal128 entirely.
             Bson::Decimal128(_) => {
                 let (out, _) = self.to_f64()?;
+                // there is no try_from implementation for f64 to i64
+                #[allow(clippy::cast_precision_loss)]
                 if out > i64::MAX as f64 || out < i64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
@@ -223,6 +231,7 @@ impl IntoCData for Bson {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
                     // This is safe because we've already checked that the value is within the range of i32
+                    // there is no try_from implementation for f64 to i32
                     #[allow(clippy::cast_possible_truncation)]
                     Ok((
                         out as i32,
@@ -260,6 +269,7 @@ impl IntoCData for Bson {
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)> {
         match self {
             Bson::Double(f) => {
+                // there is no try_from for f64 to u64
                 #[allow(clippy::cast_precision_loss)]
                 if *f < 0f64 || *f > u64::MAX as f64 {
                     Err(ODBCError::IntegralTruncation(f.to_string()))
@@ -302,6 +312,7 @@ impl IntoCData for Bson {
             // We should update this when the bson crate supports Decimal128 entirely.
             Bson::Decimal128(_) => {
                 let (out, _) = self.to_f64()?;
+                // there is no try_from implementation for f64 to u64
                 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
                 if out > u64::MAX as f64 || out < u64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
@@ -334,10 +345,11 @@ impl IntoCData for Bson {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
                     // This is safe because we've already checked that the value is within the range of u32
+                    // there is no try_from implementation for f64 to u32
                     #[allow(clippy::cast_possible_truncation)]
                     Ok((
                         out as u32,
-                        if out.floor() != out {
+                        if out.trunc() != out {
                             Some(ODBCError::FractionalTruncation(out.to_string()))
                         } else {
                             None
@@ -350,7 +362,6 @@ impl IntoCData for Bson {
                 f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(UINT32))?,
             )
             .to_u32(),
-            #[allow(clippy::cast_possible_truncation)]
             _ => self.to_i64().map_or_else(
                 |e| {
                     Err(match e {
@@ -363,7 +374,10 @@ impl IntoCData for Bson {
                         _ => e,
                     })
                 },
-                |(u, w)| Ok((u as u32, w)),
+                |(u, w)| match u32::try_from(u) {
+                    Ok(u) => Ok((u, w)),
+                    Err(_) => Err(ODBCError::IntegralTruncation(u.to_string())),
+                },
             ),
         }
     }
@@ -987,8 +1001,11 @@ unsafe fn set_output_wstring_helper(
     let num_chars_written = write_wstring_slice_to_buffer(message, buffer_len, output_ptr);
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars_written <= message.len() {
-        (num_chars_written - 1, SqlReturn::SUCCESS_WITH_INFO)
+    if num_chars_written <= message.len().try_into().unwrap() {
+        (
+            (num_chars_written - 1) as usize,
+            SqlReturn::SUCCESS_WITH_INFO,
+        )
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
@@ -1017,8 +1034,11 @@ unsafe fn set_output_string_helper(
 
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars_written <= message.len() {
-        (num_chars_written - 1, SqlReturn::SUCCESS_WITH_INFO)
+    if num_chars_written <= message.len().try_into().unwrap() {
+        (
+            (num_chars_written - 1) as usize,
+            SqlReturn::SUCCESS_WITH_INFO,
+        )
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }

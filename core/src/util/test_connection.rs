@@ -1,5 +1,6 @@
 use crate::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
 use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
+use definitions::{Integer, SQL_NTS};
 
 /// atlas_sql_test_connection returns true if a connection can be established
 /// with the provided connection string.
@@ -20,9 +21,9 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const WideChar,
     buffer: *const WideChar,
     buffer_in_len: usize,
-    buffer_out_len: *mut usize,
+    buffer_out_len: *mut Integer,
 ) -> bool {
-    let conn_str = unsafe { input_text_to_string_w(connection_string, usize::MAX) };
+    let conn_str = unsafe { input_text_to_string_w(connection_string, SQL_NTS) };
     if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()

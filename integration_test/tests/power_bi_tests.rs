@@ -512,6 +512,7 @@ mod integration {
         let env_handle: HEnv = setup();
         let (conn_handle, _, _, _) = power_bi_connect(env_handle);
         let mut stmt: Handle = null_mut();
+        let empty_string = WideChar::default();
 
         unsafe {
             assert_eq!(
@@ -528,11 +529,11 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLTablesW(
                     stmt as HStmt,
-                    null_mut(),
+                    std::ptr::addr_of!(empty_string),
                     0,
-                    null_mut(),
+                    std::ptr::addr_of!(empty_string),
                     0,
-                    null_mut(),
+                    std::ptr::addr_of!(empty_string),
                     0,
                     table_view.as_ptr(),
                     table_view.len() as SmallInt - 1

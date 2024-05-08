@@ -186,7 +186,7 @@ impl Dsn {
                     return;
                 }
 
-                let value = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
+                let value = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len) };
                 dsn_opts.set_field(key, &value);
             });
         // Somehow the registry value was too long. This should never happen unless Microsoft changes registry value rules.

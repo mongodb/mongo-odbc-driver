@@ -20,7 +20,7 @@ use definitions::{
     Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption,
     HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Pointer, RetCode,
     RetrieveData, RowStatus, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
-    USmallInt, UseBookmarks,
+    USmallInt, UseBookmarks, SQL_NTS,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -827,21 +827,20 @@ pub unsafe extern "C" fn SQLColumnsW(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let odbc_3_data_types = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog_string = input_text_to_string_w(catalog_name, catalog_name_length as usize);
+            let catalog_string = input_text_to_string_w(catalog_name, catalog_name_length.into());
             let catalog = if catalog_name.is_null() || catalog_string.is_empty() {
                 None
             } else {
                 Some(catalog_string.as_str())
             };
             // ignore schema
-            let table_string = input_text_to_string_w(table_name, table_name_length as usize);
+            let table_string = input_text_to_string_w(table_name, table_name_length.into());
             let table = if table_name.is_null() {
                 None
             } else {
                 Some(table_string.as_str())
             };
-            let column_name_string =
-                input_text_to_string_w(column_name, column_name_length as usize);
+            let column_name_string = input_text_to_string_w(column_name, column_name_length.into());
             let column = if column_name.is_null() {
                 None
             } else {
@@ -1180,7 +1179,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
 
             let conn = must_be_valid!((*conn_handle).as_connection());
             let odbc_uri_string =
-                input_text_to_string_w(in_connection_string, string_length_1 as usize);
+                input_text_to_string_w(in_connection_string, string_length_1.into());
             let mongo_connection =
                 odbc_unwrap!(sql_driver_connect(conn, &odbc_uri_string), conn_handle);
             *conn.mongo_connection.write().unwrap() = Some(mongo_connection);
@@ -3317,7 +3316,7 @@ fn sql_prepare(
     text_length: Integer,
     connection: &Connection,
 ) -> Result<MongoQuery> {
-    let mut query = unsafe { input_text_to_string_w(statement_text, text_length as usize) };
+    let mut query = unsafe { input_text_to_string_w(statement_text, text_length) };
     query = query.strip_suffix(';').unwrap_or(&query).to_string();
     let mongo_statement = {
         let type_mode = *connection.type_mode.read().unwrap();
@@ -3507,7 +3506,7 @@ unsafe fn set_connect_attrw_helper(
             }
             ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => SqlReturn::SUCCESS,
             ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
-                let current_db = input_text_to_string_w(value_ptr as *const _, usize::MAX);
+                let current_db = input_text_to_string_w(value_ptr as *const _, SQL_NTS);
                 conn.attributes.write().unwrap().current_catalog = Some(current_db);
                 SqlReturn::SUCCESS
             }
@@ -4112,10 +4111,10 @@ pub unsafe extern "C" fn SQLTablesW(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let odbc_behavior = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog = input_text_to_string_w(catalog_name, name_length_1 as usize);
-            let schema = input_text_to_string_w(schema_name, name_length_2 as usize);
-            let table = input_text_to_string_w(table_name, name_length_3 as usize);
-            let table_t = input_text_to_string_w(table_type, name_length_4 as usize);
+            let catalog = input_text_to_string_w(catalog_name, name_length_1.into());
+            let schema = input_text_to_string_w(schema_name, name_length_2.into());
+            let table = input_text_to_string_w(table_name, name_length_3.into());
+            let table_t = input_text_to_string_w(table_type, name_length_4.into());
             let connection = stmt.connection;
             let mongo_statement = sql_tables(
                 (*connection)
