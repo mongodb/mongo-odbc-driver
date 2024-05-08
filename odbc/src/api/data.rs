@@ -1193,20 +1193,31 @@ pub mod isize_len {
             ptr_safe_write(text_length_ptr, 0);
             return SqlReturn::NO_DATA;
         }
-        let max_string_length = *(stmt.connection.read().as_connection().unwrap())
+        let max_string_length = *stmt
+            .connection
+            .as_ref()
+            .unwrap()
+            .as_connection()
+            .unwrap()
             .max_string_length
             .read()
             .unwrap();
+        // let max_string_length = Some(4000);
         let (len, ret) = set_output_wstring_helper(
             message.get(index..).unwrap(),
             output_ptr,
             buffer_len / size_of::<WideChar>(),
             max_string_length,
         );
-        // the returned length should always be the total length of the data.
+        // if we have a max string length and the total length of the data is greater, return the max string length,
+        // functionally truncating the data. In all other cases, the returned length should be the total length of the data.
+        let text_length = match max_string_length {
+            Some(s) => std::cmp::min(s as usize, message.len() - index),
+            None => message.len() - index,
+        };
         ptr_safe_write(
             text_length_ptr,
-            (size_of::<WideChar>() * (message.len() - index)) as Len,
+            (size_of::<WideChar>() * text_length) as Len,
         );
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret
