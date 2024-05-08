@@ -3344,6 +3344,8 @@ mod unit_tests {
         let env = Box::into_raw(Box::new(MongoHandle::Env(Env::with_state(
             EnvState::ConnectionAllocated,
         ))));
+
+        // set max string length to 6 to test truncation with string columns
         let conn = Box::into_raw(Box::new(MongoHandle::Connection(Connection {
             env: env as *mut _,
             mongo_connection: RwLock::new(None),
@@ -3355,46 +3357,62 @@ mod unit_tests {
             max_string_length: RwLock::new(Some(6)),
         })));
 
+        // use simple type mode to test string columns for complex types
         let stmt = Statement::with_state(conn as *mut _, StatementState::Allocated);
-        *stmt.mongo_statement.write().unwrap() = Some(Box::new(STANDARD_BSON_TYPE_MQ.clone()));
+        *stmt.mongo_statement.write().unwrap() = Some(Box::new(SIMPLE_BSON_TYPE_MQ.clone()));
 
         let stmt_handle: *mut _ = &mut MongoHandle::Statement(stmt);
         unsafe {
             assert_eq!(SqlReturn::SUCCESS, SQLFetch(stmt_handle as *mut _,));
             let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
-            let buffer_length: isize = 20 * size_of::<WideChar>() as isize;
+            let buffer_length: isize = 6 * size_of::<WideChar>() as isize;
             let out_len_or_ind = &mut 0;
-            assert_eq!(
-                SqlReturn::SUCCESS_WITH_INFO,
-                SQLGetData(
-                    stmt_handle as *mut _,
-                    STRING_COL,
-                    CDataType::SQL_C_WCHAR as i16,
-                    char_buffer,
-                    buffer_length,
-                    out_len_or_ind,
-                )
-            );
-            assert_eq!(
-                format!("[MongoDB][API] Buffer size \"{buffer_length}\" not large enough for data"),
-                format!(
-                    "{}",
-                    (*stmt_handle)
-                        .as_statement()
-                        .unwrap()
-                        .errors
-                        .read()
-                        .unwrap()[0],
-                ),
-            );
-            assert_eq!(
-                std::mem::size_of::<WideChar>() as isize * 12,
-                *out_len_or_ind
-            );
-            assert_eq!(
-                "hello".to_string(),
-                input_text_to_string_w(char_buffer as *const _, 5)
-            );
+            let mut str_val_test = |col: u16, expected_out_len: isize, expected: &str| {
+                assert_eq!(
+                    SqlReturn::SUCCESS_WITH_INFO,
+                    SQLGetData(
+                        stmt_handle as *mut _,
+                        col,
+                        CDataType::SQL_C_WCHAR as i16,
+                        char_buffer,
+                        buffer_length,
+                        out_len_or_ind,
+                    )
+                );
+                assert_eq!(
+                    format!(
+                        "[MongoDB][API] Buffer size \"{buffer_length}\" not large enough for data"
+                    ),
+                    format!(
+                        "{}",
+                        (*stmt_handle)
+                            .as_statement()
+                            .unwrap()
+                            .errors
+                            .read()
+                            .unwrap()[0],
+                    ),
+                );
+                assert_eq!(
+                    std::mem::size_of::<WideChar>() as isize * expected_out_len,
+                    *out_len_or_ind
+                );
+                assert_eq!(
+                    expected.to_string(),
+                    input_text_to_string_w(char_buffer as *const _, 5)
+                );
+            };
+
+            str_val_test(STRING_COL, 6, "hello");
+            str_val_test(ARRAY_COL, 6, "[1,2,");
+            str_val_test(JS_COL, 6, "{\"$co");
+            str_val_test(JS_W_S_COL, 6, "{\"$co");
+            str_val_test(MINKEY_COL, 6, "{\"$mi");
+            str_val_test(MAXKEY_COL, 6, "{\"$ma");
+            str_val_test(DOC_COL, 6, "{\"x\":");
+            str_val_test(OID_COL, 6, "{\"$oi");
+            str_val_test(REGEX_COL, 6, "{\"$re");
+
             let _ = Box::from_raw(char_buffer as *mut WChar);
             let _ = Box::from_raw(conn as *mut WChar);
             let _ = Box::from_raw(env as *mut WChar);
