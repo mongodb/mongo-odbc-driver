@@ -619,7 +619,6 @@ pub unsafe fn format_datetime(
     match dt {
         Ok((dt, warning)) => {
             let data = Timestamp {
-                // should year be i16?
                 year: dt.year().try_into().expect("year exceeded i16 space"),
                 month: dt.month().try_into().expect("month exceeded u16 space"),
                 day: dt.day().try_into().expect("day exceeded u16 space"),
