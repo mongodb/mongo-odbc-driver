@@ -581,8 +581,6 @@ mod unit {
             assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
 
             // assert that the first 3 values from the result set were put in the bound buffer array correctly for column 2.
-            // input_text_to_string_w requires a `usize` value; however, I need a negative value to test that the null termination character was added,
-            // So I input usize::MAX because it casts to -1 in the function.
             assert_eq!(
                 "aaaa",
                 input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS)

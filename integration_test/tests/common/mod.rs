@@ -206,7 +206,6 @@ pub fn connect_with_conn_string(
         }
         let in_connection_string =
             in_connection_string.unwrap_or_else(generate_default_connection_str);
-        dbg!(&in_connection_string);
         let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
         in_connection_string_encoded.push(0);
         let str_len_ptr = &mut 0;
