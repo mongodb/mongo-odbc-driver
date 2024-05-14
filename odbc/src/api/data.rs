@@ -1202,7 +1202,6 @@ pub mod isize_len {
             .max_string_length
             .read()
             .unwrap();
-        // let max_string_length = Some(4000);
         let (len, ret) = set_output_wstring_helper(
             message.get(index..).unwrap(),
             output_ptr,
