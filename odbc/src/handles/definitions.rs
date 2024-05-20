@@ -503,6 +503,20 @@ impl Statement {
         }
     }
 
+    pub(crate) fn get_max_string_length(&self) -> Option<u16> {
+        unsafe {
+            *self
+                .connection
+                .as_ref()
+                .unwrap()
+                .as_connection()
+                .unwrap()
+                .max_string_length
+                .read()
+                .unwrap()
+        }
+    }
+
     pub(crate) fn insert_var_data_cache(&self, col: u16, data: CachedData) {
         self.var_data_cache
             .write()

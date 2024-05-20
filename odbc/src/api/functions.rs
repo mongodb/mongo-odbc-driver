@@ -384,12 +384,7 @@ pub unsafe extern "C" fn SQLBindCol(
                 return SqlReturn::ERROR;
             }
 
-            let max_string_length = *(*stmt.connection)
-                .as_connection()
-                .unwrap()
-                .max_string_length
-                .read()
-                .unwrap();
+            let max_string_length = stmt.get_max_string_length();
 
             let max_col_index = mongo_stmt
                 .as_ref()
@@ -604,12 +599,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                 stmt.errors.write().unwrap().push(ODBCError::NoResultSet);
                 return SqlReturn::ERROR;
             }
-            let max_string_length = *(*stmt.connection)
-                .as_connection()
-                .unwrap()
-                .max_string_length
-                .read()
-                .unwrap();
+            let max_string_length = stmt.get_max_string_length();
             let string_col_attr = |f: &dyn Fn(&MongoColMetadata) -> &str| {
                 let mongo_handle = MongoHandleRef::from(statement_handle);
                 let col_metadata = mongo_stmt
@@ -660,12 +650,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                         SqlReturn::SUCCESS
                     }
                     Desc::SQL_DESC_COUNT => {
-                        let max_string_length = *(*stmt.connection)
-                            .as_connection()
-                            .unwrap()
-                            .max_string_length
-                            .read()
-                            .unwrap();
+                        let max_string_length = stmt.get_max_string_length();
                         *numeric_attribute_ptr = mongo_stmt
                             .as_ref()
                             .unwrap()
@@ -999,12 +984,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
                     stmt.errors.write().unwrap().push(ODBCError::NoResultSet);
                     return SqlReturn::ERROR;
                 }
-                let max_string_length = *(*stmt.connection)
-                    .as_connection()
-                    .unwrap()
-                    .max_string_length
-                    .read()
-                    .unwrap();
+                let max_string_length = stmt.get_max_string_length();
                 let col_metadata = mongo_stmt
                     .as_ref()
                     .unwrap()
@@ -1678,12 +1658,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let max_string_length = *(*stmt.connection)
-                .as_connection()
-                .unwrap()
-                .max_string_length
-                .read()
-                .unwrap();
+            let max_string_length = stmt.get_max_string_length();
             let mongo_statement = MongoForeignKeys::empty(max_string_length);
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
@@ -2028,12 +2003,7 @@ unsafe fn sql_get_data_helper(
         }
         let stmt = (*mongo_handle).as_statement().unwrap();
         let mut mongo_stmt = stmt.mongo_statement.write().unwrap();
-        let max_string_length = *(*stmt.connection)
-            .as_connection()
-            .unwrap()
-            .max_string_length
-            .read()
-            .unwrap();
+        let max_string_length = stmt.get_max_string_length();
         let bson = match mongo_stmt.as_mut() {
             None => Err(ODBCError::InvalidCursorState),
             Some(mongo_stmt) => mongo_stmt
@@ -3276,12 +3246,7 @@ pub unsafe extern "C" fn SQLNumResultCols(
             let mongo_handle = MongoHandleRef::from(statement_handle);
 
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let max_string_length = *(*stmt.connection)
-                .as_connection()
-                .unwrap()
-                .max_string_length
-                .read()
-                .unwrap();
+            let max_string_length = stmt.get_max_string_length();
 
             let mongo_statement = stmt.mongo_statement.read().unwrap();
             if mongo_statement.is_none() {
@@ -3398,12 +3363,7 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
         || {
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let max_string_length = *(*stmt.connection)
-                .as_connection()
-                .unwrap()
-                .max_string_length
-                .read()
-                .unwrap();
+            let max_string_length = stmt.get_max_string_length();
             let mongo_statement = MongoPrimaryKeys::empty(max_string_length);
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
             SqlReturn::SUCCESS
