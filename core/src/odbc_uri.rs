@@ -197,7 +197,7 @@ impl ODBCUri {
     // are synonyms.
     pub fn remove(&mut self, names: &[&str]) -> Option<String> {
         for name in names.iter() {
-            let ret = self.0.remove(&name.to_string());
+            let ret = self.0.remove(*name);
             if ret.is_some() {
                 return ret;
             }
