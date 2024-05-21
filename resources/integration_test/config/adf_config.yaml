@@ -119,7 +119,6 @@ tenant:
           schemaFile: ./testdata/tenantschema/cities.json
     client:
       uri: localhost:8029
-      token: frontend-auth-token
   config:
     server:
       inline:

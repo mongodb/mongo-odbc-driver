@@ -952,6 +952,7 @@ unsafe fn set_output_wstring_helper(
     message: &[WideChar],
     output_ptr: *mut WideChar,
     buffer_len: usize,
+    max_string_length: Option<u16>,
 ) -> (usize, SqlReturn) {
     // If the output_ptr is null or no buffer space has been allocated, we need
     // to return SUCCESS_WITH_INFO.
@@ -962,7 +963,11 @@ unsafe fn set_output_wstring_helper(
     // two bytes, such as emojis because it's assuming every character is 2 bytes.
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
-    let num_chars_written = write_wstring_slice_to_buffer(message, buffer_len, output_ptr);
+    let num_chars_to_write = match max_string_length {
+        Some(s) => std::cmp::min((s as usize) * size_of::<WideChar>(), buffer_len),
+        None => buffer_len,
+    };
+    let num_chars_written = write_wstring_slice_to_buffer(message, num_chars_to_write, output_ptr);
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars_written <= message.len() {
@@ -1053,6 +1058,7 @@ pub mod i16_len {
             &message,
             output_ptr as *mut WideChar,
             buffer_len / size_of::<WideChar>(),
+            None,
         );
         // Only copy the length if the pointer is not null
         ptr_safe_write(text_length_ptr, (size_of::<WideChar>() * len) as SmallInt);
@@ -1075,7 +1081,7 @@ pub mod i16_len {
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
         let message = cstr::to_widechar_vec(message);
-        let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len);
+        let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len, None);
         // Only copy the length if the pointer is not null
         ptr_safe_write(text_length_ptr, len as SmallInt);
         ret
@@ -1126,6 +1132,7 @@ pub mod i32_len {
             &cstr::to_widechar_vec(message),
             output_ptr as *mut WideChar,
             buffer_len / size_of::<WideChar>(),
+            None,
         );
 
         ptr_safe_write(text_length_ptr, (size_of::<WideChar>() * len) as Integer);
@@ -1186,15 +1193,30 @@ pub mod isize_len {
             ptr_safe_write(text_length_ptr, 0);
             return SqlReturn::NO_DATA;
         }
+        let max_string_length = *stmt
+            .connection
+            .as_ref()
+            .unwrap()
+            .as_connection()
+            .unwrap()
+            .max_string_length
+            .read()
+            .unwrap();
         let (len, ret) = set_output_wstring_helper(
             message.get(index..).unwrap(),
             output_ptr,
             buffer_len / size_of::<WideChar>(),
+            max_string_length,
         );
-        // the returned length should always be the total length of the data.
+        // if we have a max string length and the total length of the data is greater, return the max string length,
+        // functionally truncating the data. In all other cases, the returned length should be the total length of the data.
+        let text_length = match max_string_length {
+            Some(s) => std::cmp::min(s as usize, message.len() - index),
+            None => message.len() - index,
+        };
         ptr_safe_write(
             text_length_ptr,
-            (size_of::<WideChar>() * (message.len() - index)) as Len,
+            (size_of::<WideChar>() * text_length) as Len,
         );
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret

@@ -11,15 +11,19 @@ pub trait MongoStatement: Debug {
     fn next(&mut self, mongo_connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)>;
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row has not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>>;
+    fn get_value(&self, col_index: u16, max_string_length: Option<u16>) -> Result<Option<Bson>>;
     // Return a reference to the ResultSetMetadata for this Statement.
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata>;
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata>;
     // get_col_metadata gets the metadata for a given column, 1-indexed as per the ODBC spec.
-    fn get_col_metadata(&self, col_index: u16) -> Result<&MongoColMetadata> {
+    fn get_col_metadata(
+        &self,
+        col_index: u16,
+        max_string_length: Option<u16>,
+    ) -> Result<&MongoColMetadata> {
         if col_index == 0 {
             return Err(Error::ColIndexOutOfBounds(0));
         }
-        self.get_resultset_metadata()
+        self.get_resultset_metadata(max_string_length)
             .get((col_index - 1) as usize)
             .ok_or(Error::ColIndexOutOfBounds(col_index))
     }
@@ -48,11 +52,11 @@ impl MongoStatement for EmptyStatement {
         Ok((false, vec![]))
     }
 
-    fn get_value(&self, _col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, _: u16, _: Option<u16>) -> Result<Option<Bson>> {
         Err(Error::InvalidCursorState)
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+    fn get_resultset_metadata(&self, _: Option<u16>) -> &Vec<MongoColMetadata> {
         self.resultset_metadata
     }
 }
@@ -78,7 +82,8 @@ mod unit {
             "TABLE_CAT".to_string(),
             Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
             Nullability::SQL_NO_NULLS,
-            TypeMode::Standard
+            TypeMode::Standard,
+            None,
         )];
     }
 
@@ -90,9 +95,9 @@ mod unit {
 
         assert_eq!(
             "TABLE_CAT",
-            test_empty.get_col_metadata(1).unwrap().col_name
+            test_empty.get_col_metadata(1, None).unwrap().col_name
         );
         assert!(!test_empty.next(None).unwrap().0);
-        assert!(test_empty.get_value(1).is_err());
+        assert!(test_empty.get_value(1, None).is_err());
     }
 }

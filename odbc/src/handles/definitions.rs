@@ -282,6 +282,8 @@ pub struct Connection {
     // type_mode indicates if BsonTypeInfo.simple_type_info will be
     // utilized in place of standard BsonTypeInfo fields
     pub type_mode: RwLock<TypeMode>,
+    // max_string_length is the maximum character length of string data.
+    pub max_string_length: RwLock<Option<u16>>,
 }
 
 #[derive(Debug, Default)]
@@ -319,6 +321,7 @@ impl Connection {
             statements: RwLock::new(HashSet::new()),
             errors: RwLock::new(vec![]),
             type_mode: RwLock::new(TypeMode::Simple),
+            max_string_length: RwLock::new(None),
         }
     }
 }
@@ -497,6 +500,20 @@ impl Statement {
             errors: RwLock::new(vec![]),
             mongo_statement: RwLock::new(None),
             bound_cols: RwLock::new(None),
+        }
+    }
+
+    pub(crate) fn get_max_string_length(&self) -> Option<u16> {
+        unsafe {
+            *self
+                .connection
+                .as_ref()
+                .unwrap()
+                .as_connection()
+                .unwrap()
+                .max_string_length
+                .read()
+                .unwrap()
         }
     }
 

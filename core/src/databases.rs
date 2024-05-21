@@ -6,53 +6,63 @@ use bson::Bson;
 use definitions::Nullability;
 use mongodb::options::ListDatabasesOptions;
 
-use lazy_static::lazy_static;
+use once_cell::sync::OnceCell;
 
-lazy_static! {
-    pub static ref DATABASES_METADATA: Vec<MongoColMetadata> = vec![
+pub(crate) static DATABASES_METADATA: OnceCell<Vec<MongoColMetadata>> = OnceCell::new();
+
+pub(crate) fn init_databases_metadata(max_string_length: Option<u16>) -> Vec<MongoColMetadata> {
+    vec![
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_CAT".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
+            max_string_length,
+            Nullability::SQL_NO_NULLS,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_SCHEM".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_NAME".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "TABLE_TYPE".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
         MongoColMetadata::new_metadata_from_bson_type_info_default(
             "",
             "".to_string(),
             "REMARKS".to_string(),
             BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
+            max_string_length,
+            Nullability::SQL_NULLABLE,
         ),
-    ];
+    ]
 }
 
 mod unit {
     #[test]
     fn metadata_size() {
         use crate::{databases::MongoDatabases, stmt::MongoStatement};
-        assert_eq!(5, MongoDatabases::empty().get_resultset_metadata().len());
+        assert_eq!(
+            5,
+            MongoDatabases::empty().get_resultset_metadata(None).len()
+        );
     }
 
     #[test]
@@ -62,35 +72,35 @@ mod unit {
         assert_eq!(
             "TABLE_CAT",
             MongoDatabases::empty()
-                .get_col_metadata(1)
+                .get_col_metadata(1, None)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "TABLE_SCHEM",
             MongoDatabases::empty()
-                .get_col_metadata(2)
+                .get_col_metadata(2, None)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "TABLE_NAME",
             MongoDatabases::empty()
-                .get_col_metadata(3)
+                .get_col_metadata(3, None)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "TABLE_TYPE",
             MongoDatabases::empty()
-                .get_col_metadata(4)
+                .get_col_metadata(4, None)
                 .unwrap()
                 .col_name
         );
         assert_eq!(
             "REMARKS",
             MongoDatabases::empty()
-                .get_col_metadata(5)
+                .get_col_metadata(5, None)
                 .unwrap()
                 .col_name
         );
@@ -102,35 +112,35 @@ mod unit {
         assert_eq!(
             "string",
             MongoDatabases::empty()
-                .get_col_metadata(1)
+                .get_col_metadata(1, None)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoDatabases::empty()
-                .get_col_metadata(2)
+                .get_col_metadata(2, None)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoDatabases::empty()
-                .get_col_metadata(3)
+                .get_col_metadata(3, None)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoDatabases::empty()
-                .get_col_metadata(4)
+                .get_col_metadata(4, None)
                 .unwrap()
                 .type_name
         );
         assert_eq!(
             "string",
             MongoDatabases::empty()
-                .get_col_metadata(5)
+                .get_col_metadata(5, None)
                 .unwrap()
                 .type_name
         );
@@ -143,14 +153,14 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoDatabases::empty()
-                .get_col_metadata(1)
+                .get_col_metadata(1, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoDatabases::empty()
-                .get_col_metadata(2)
+                .get_col_metadata(2, None)
                 .unwrap()
                 .nullability
         );
@@ -158,7 +168,7 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoDatabases::empty()
-                .get_col_metadata(3)
+                .get_col_metadata(3, None)
                 .unwrap()
                 .nullability
         );
@@ -167,14 +177,14 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoDatabases::empty()
-                .get_col_metadata(4)
+                .get_col_metadata(4, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoDatabases::empty()
-                .get_col_metadata(5)
+                .get_col_metadata(5, None)
                 .unwrap()
                 .nullability
         );
@@ -243,7 +253,7 @@ impl MongoStatement for MongoDatabases {
     }
 
     // Get the BSON value for the value at the given colIndex on the current row.
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, col_index: u16, _: Option<u16>) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1-> databases_names[current_row_index]
         // 2..=4 -> Null
@@ -260,7 +270,7 @@ impl MongoStatement for MongoDatabases {
         }
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &DATABASES_METADATA
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata> {
+        DATABASES_METADATA.get_or_init(|| init_databases_metadata(max_string_length))
     }
 }
