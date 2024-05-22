@@ -256,7 +256,7 @@ tests:
     expected_sql_type: [4, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9]
     expected_precision: [10, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0]
     expected_display_size: [11, 0, 0, 0, 0, 14, 14, 0, 35, 0, 0, 68]
-    expected_octet_length: [4, 0, 0, 0, 0, 56, 56, 0, 136, 0, 0, 272]
+    expected_octet_length: [4, 0, 0, 0, 0, 56, 56, 0, 140, 0, 0, 272]
 
   - description: query_array_and_document_as_string
     test_definition: SELECT `array`, `object` FROM types_other
