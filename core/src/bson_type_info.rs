@@ -331,7 +331,7 @@ impl BsonTypeInfo {
         num_prec_radix: None,
         decimal_digit: None,
         column_size: make_default_attr_func!(Some(24)),
-        simple_type_info: new_simple_type_info!(34, 34 * 4, 34),
+        simple_type_info: new_simple_type_info!(35, 35 * 4, 35),
     };
     pub const BOOL: BsonTypeInfo = BsonTypeInfo {
         type_name: "bool",
