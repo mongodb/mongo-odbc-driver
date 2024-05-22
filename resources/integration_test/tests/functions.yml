@@ -97,7 +97,7 @@ tests:
       - [ "minKey", -9, 14, null, null, null, 1, 0, 2, null, 0, null, "minKey", null, null, -9, null, null, null ]
       - [ "null", -9, 4, null, null, null, 1, 0, 0, null, 0, null, "null", null, null, -9, null, null, null ]
       - [ "object", -9, null, null, null, null, 1, 0, 0, null, 0, null, "object", null, null, -9, null, null, null ]
-      - [ "objectId", -9, 34, null, null, null, 1, 0, 2, null, 0, 1, "objectId", null, null, -9, null, null, null ]
+      - [ "objectId", -9, 35, null, null, null, 1, 0, 2, null, 0, 1, "objectId", null, null, -9, null, null, null ]
       - [ "symbol", -9, null, null, null, null, 1, 0, 2, null, 0, null, "symbol", null, null, -9, null, null, null ]
       - [ "timestamp", -9, 68, null, null, null, 1, 0, 2, null, 0, null, "timestamp", null, null, -9, null, null, null ]
       - [ "undefined", -9, 20, null, null, null, 1, 0, 0, null, 0, null, "undefined", null, null, -9, null, null, null ]
