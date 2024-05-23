@@ -619,7 +619,7 @@ pub unsafe fn format_datetime(
     match dt {
         Ok((dt, warning)) => {
             let data = Timestamp {
-                year: dt.year().try_into().expect("year exceeded i16 space"),
+                year: dt.year().try_into().expect("year exceeded i16 maximum"),
                 month: dt.month().try_into().expect("month exceeded u16 space"),
                 day: dt.day().try_into().expect("day exceeded u16 space"),
                 hour: dt.hour().try_into().expect("hour exceeded u16 space"),
@@ -997,7 +997,11 @@ unsafe fn set_output_wstring_helper(
     // two bytes, such as emojis because it's assuming every character is 2 bytes.
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
-    let num_chars_written = write_wstring_slice_to_buffer(message, buffer_len, output_ptr);
+    let num_chars_written = write_wstring_slice_to_buffer(
+        message,
+        buffer_len.try_into().unwrap_or(isize::MAX),
+        output_ptr,
+    );
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars_written <= message.len().try_into().unwrap() {
@@ -1029,7 +1033,11 @@ unsafe fn set_output_string_helper(
         return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
 
-    let num_chars_written = write_string_slice_to_buffer(message, buffer_len, output_ptr);
+    let num_chars_written = write_string_slice_to_buffer(
+        message,
+        buffer_len.try_into().unwrap_or(isize::MAX),
+        output_ptr,
+    );
 
     // return the number of characters in the message string, excluding the
     // null terminator
@@ -1098,7 +1106,12 @@ pub mod i16_len {
         // size_of::<WideChar>() will always be 2, so this cast is safe
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         // Only copy the length if the pointer is not null
-        ptr_safe_write(text_length_ptr, (size_of::<WideChar>() * len) as SmallInt);
+        ptr_safe_write(
+            text_length_ptr,
+            (size_of::<WideChar>() * len)
+                .try_into()
+                .unwrap_or(SmallInt::MAX),
+        );
         ret
     }
 
@@ -1176,7 +1189,7 @@ pub mod i32_len {
             text_length_ptr,
             (size_of::<WideChar>() * len)
                 .try_into()
-                .unwrap_or(Integer::MAX),
+                .expect("Data too large to fit in the buffer on this platform"),
         );
         ret
     }

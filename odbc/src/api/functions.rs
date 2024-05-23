@@ -640,7 +640,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                         *numeric_attribute_ptr = isize::try_from(
                             mongo_stmt.as_ref().unwrap().get_resultset_metadata().len(),
                         )
-                        .expect("metadata length exceeds isize::MAX");
+                        .expect("SQL_DESC_COUNT value exceeds isize on this platform");
                         SqlReturn::SUCCESS
                     }
                     Desc::SQL_DESC_CASE_SENSITIVE => {
@@ -3316,7 +3316,14 @@ fn sql_prepare(
     text_length: Integer,
     connection: &Connection,
 ) -> Result<MongoQuery> {
-    let mut query = unsafe { input_text_to_string_w(statement_text, text_length) };
+    let mut query = unsafe {
+        input_text_to_string_w(
+            statement_text,
+            text_length
+                .try_into()
+                .expect("i32 exceeded max isize on this platform"),
+        )
+    };
     query = query.strip_suffix(';').unwrap_or(&query).to_string();
     let mongo_statement = {
         let type_mode = *connection.type_mode.read().unwrap();
@@ -3506,7 +3513,12 @@ unsafe fn set_connect_attrw_helper(
             }
             ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => SqlReturn::SUCCESS,
             ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
-                let current_db = input_text_to_string_w(value_ptr as *const _, SQL_NTS);
+                let current_db = input_text_to_string_w(
+                    value_ptr as *const _,
+                    SQL_NTS
+                        .try_into()
+                        .expect("i32 exceeded max isize on this platform"),
+                );
                 conn.attributes.write().unwrap().current_catalog = Some(current_db);
                 SqlReturn::SUCCESS
             }
@@ -4130,7 +4142,7 @@ pub unsafe extern "C" fn SQLTablesW(
                     .unwrap()
                     .query_timeout
                     .try_into()
-                    .expect("timeout exceeds i32"),
+                    .expect("Query timeout exceeds {i32::MAX}"),
                 &catalog,
                 &schema,
                 &table,

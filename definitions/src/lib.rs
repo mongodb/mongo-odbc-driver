@@ -81,6 +81,8 @@ pub const SQL_ROW_NUMBER_UNKNOWN: isize = -2;
 pub const SQL_NTS: Integer = -3;
 pub const SQL_NTSL: Integer = -3;
 
+pub const SQL_NTS_ISIZE: Len = -3;
+
 /// Maximum message length
 pub const SQL_MAX_MESSAGE_LENGTH: SmallInt = 512;
 pub const SQL_SQLSTATE_SIZE: usize = 5;

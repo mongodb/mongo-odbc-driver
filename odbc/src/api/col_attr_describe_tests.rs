@@ -456,7 +456,7 @@ mod unit {
                 );
                 assert_eq!(
                     expected,
-                    cstr::input_text_to_string_w(char_buffer as *const _, expected.len() as i32,)
+                    cstr::input_text_to_string_w(char_buffer as *const _, expected.len() as isize,)
                 );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
@@ -634,7 +634,10 @@ mod unit {
             // name_buffer should contain TABLE_NAME
             assert_eq!(
                 "TABLE_NAME".to_string(),
-                cstr::input_text_to_string_w(name_buffer as *const _, i32::from(*out_name_length))
+                cstr::input_text_to_string_w(
+                    name_buffer as *const _,
+                    isize::from(*out_name_length)
+                )
             );
             let _ = Box::from_raw(name_buffer as *mut WChar);
             let _ = Box::from_raw(conn as *mut WChar);

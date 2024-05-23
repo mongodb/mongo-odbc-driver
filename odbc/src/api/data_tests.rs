@@ -672,7 +672,7 @@ fn sql_get_wstring_data(mq: MongoQuery) {
                 );
                 assert_eq!(
                     expected.to_string(),
-                    input_text_to_string_w(char_buffer as *const _, expected.len() as i32)
+                    input_text_to_string_w(char_buffer as *const _, expected.len() as isize)
                 );
             };
 
@@ -794,7 +794,7 @@ fn sql_get_wstring_data_by_pieces(mq: MongoQuery) {
                     expected.to_string(),
                     input_text_to_string_w(
                         char_buffer as *const _,
-                        expected.chars().count() as i32
+                        expected.chars().count() as isize
                     )
                 );
             };
@@ -942,7 +942,7 @@ fn sql_get_string_data_by_pieces(mq: MongoQuery) {
                         expected.to_string(),
                         input_text_to_string_a(
                             char_buffer as *const _,
-                            expected.chars().count() as i32
+                            expected.chars().count() as isize
                         )
                     );
                 };
@@ -1182,7 +1182,7 @@ fn sql_get_string_data(mq: MongoQuery) {
                 );
                 assert_eq!(
                     expected.to_string(),
-                    input_text_to_string_a(char_buffer as *const _, expected.len() as i32),
+                    input_text_to_string_a(char_buffer as *const _, expected.len() as isize),
                     "Expected column type {col}",
                 );
             };

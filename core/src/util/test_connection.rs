@@ -23,7 +23,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
     buffer_in_len: usize,
     buffer_out_len: *mut Integer,
 ) -> bool {
-    let conn_str = unsafe { input_text_to_string_w(connection_string, SQL_NTS) };
+    let conn_str = unsafe { input_text_to_string_w(connection_string, SQL_NTS as isize) };
     if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -44,28 +44,31 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                     Err(e) => {
                         let len = write_string_to_buffer(
                             &e.to_string(),
-                            buffer_in_len,
+                            buffer_in_len as isize,
                             buffer as *mut WideChar,
                         );
-                        *buffer_out_len = len;
+                        *buffer_out_len = len as Integer;
                         false
                     }
                 }
             }
             Err(e) => {
-                let len =
-                    write_string_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut WideChar);
-                *buffer_out_len = len;
+                let len = write_string_to_buffer(
+                    &e.to_string(),
+                    buffer_in_len as isize,
+                    buffer as *mut WideChar,
+                );
+                *buffer_out_len = len as Integer;
                 false
             }
         }
     } else {
         let len = write_string_to_buffer(
             "Invalid connection string.",
-            buffer_in_len,
+            buffer_in_len as isize,
             buffer as *mut WideChar,
         );
-        *buffer_out_len = len;
+        *buffer_out_len = len as Integer;
         false
     }
 }
@@ -108,7 +111,7 @@ mod test {
         };
         assert!(!result);
         assert!(unsafe {
-            input_text_to_string_w(buffer.as_ptr(), buffer_len)
+            input_text_to_string_w(buffer.as_ptr(), buffer_len as isize)
                 .to_lowercase()
                 .contains("authentication failed")
         });

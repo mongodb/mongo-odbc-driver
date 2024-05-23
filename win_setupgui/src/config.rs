@@ -33,7 +33,7 @@ unsafe extern "C" fn ConfigDSNW(
         // If it matches an existing name and hwndParent is not null, ConfigDSN prompts the user to overwrite the existing name.
 
         dsn_opts.driver_name =
-            unsafe { input_text_to_string_w(driver, constants::DRIVER_NAME.len() as i32) };
+            unsafe { input_text_to_string_w(driver, i32::from(constants::DRIVER_NAME.len())) };
 
         match request {
             ODBC_ADD_DSN => {
