@@ -61,6 +61,7 @@ impl MongoColMetadata {
         field_name: String,
         bson_type_info: BsonTypeInfo,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
         nullability: Nullability,
     ) -> MongoColMetadata {
         MongoColMetadata {
@@ -77,8 +78,8 @@ impl MongoColMetadata {
             // data types, column size is defined as the length in bytes of the data. For the time,
             // timestamp, and all interval data types, this is the number of characters in the
             // character representation of this data.
-            column_size: bson_type_info.column_size(type_mode),
-            display_size: bson_type_info.display_size(type_mode),
+            column_size: bson_type_info.column_size(type_mode, max_string_length),
+            display_size: bson_type_info.display_size(type_mode, max_string_length),
             // The decimal digits of decimal and numeric data types is defined as the maximum number
             // of digits to the right of the decimal point, or the scale of the data. For approximate
             // floating-point number columns or parameters, the scale is undefined because the number
@@ -88,14 +89,14 @@ impl MongoColMetadata {
             decimal_digits: bson_type_info.decimal_digit(type_mode),
             fixed_prec_scale: bson_type_info.fixed_prec_scale,
             label: field_name.clone(),
-            length: bson_type_info.length(type_mode),
+            length: bson_type_info.length(type_mode, max_string_length),
             literal_prefix: bson_type_info.literal_prefix,
             literal_suffix: bson_type_info.literal_suffix,
             col_name: field_name,
             nullability,
             num_prec_radix: bson_type_info.num_prec_radix,
             transfer_octet_length: bson_type_info.transfer_octet_length(type_mode),
-            char_octet_length: bson_type_info.char_octet_length(type_mode),
+            char_octet_length: bson_type_info.char_octet_length(type_mode, max_string_length),
             precision: bson_type_info.precision(type_mode),
             scale: bson_type_info.scale,
             searchable: bson_type_info.searchable,
@@ -114,6 +115,7 @@ impl MongoColMetadata {
         datasource_name: String,
         field_name: String,
         bson_type_info: BsonTypeInfo,
+        max_string_length: Option<u16>,
         nullability: Nullability,
     ) -> MongoColMetadata {
         Self::new_metadata_from_bson_type_info(
@@ -122,6 +124,7 @@ impl MongoColMetadata {
             field_name,
             bson_type_info,
             TypeMode::Standard,
+            max_string_length,
             nullability,
         )
     }
@@ -133,6 +136,7 @@ impl MongoColMetadata {
         field_schema: Schema,
         nullability: Nullability,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
     ) -> MongoColMetadata {
         let bson_type_info: BsonTypeInfo = field_schema.into();
 
@@ -142,6 +146,7 @@ impl MongoColMetadata {
             field_name,
             bson_type_info,
             type_mode,
+            max_string_length,
             nullability,
         )
     }
@@ -191,6 +196,7 @@ impl SqlGetSchemaResponse {
         &self,
         current_db: &str,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
@@ -213,6 +219,7 @@ impl SqlGetSchemaResponse {
                         current_db,
                         &datasource_name,
                         type_mode,
+                        max_string_length,
                     )?;
                     Ok(schema
                         .into_iter()
@@ -265,6 +272,7 @@ impl SqlGetSchemaResponse {
         current_db: &str,
         current_collection: &str,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
     ) -> Result<Vec<MongoColMetadata>> {
         let collection_schema: crate::json_schema::simplified::Schema =
             self.schema.json_schema.clone().try_into()?;
@@ -273,10 +281,11 @@ impl SqlGetSchemaResponse {
             current_db,
             current_collection,
             type_mode,
+            max_string_length,
         )
     }
 
-    // Helper function that asserts the the passed object_schema is actually an ObjectSchema
+    // Helper function that asserts the passed object_schema is actually an ObjectSchema
     // (required), and then converts all the propety schemata of the properties into a
     // Result<Vec<MongoColMetadata>>, one MongoColMetadata per property schema in lexicographical
     // order.
@@ -285,6 +294,7 @@ impl SqlGetSchemaResponse {
         current_db: &str,
         current_collection: &str,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
     ) -> Result<Vec<MongoColMetadata>> {
         let object_schema = object_schema.assert_object_schema()?;
 
@@ -307,6 +317,7 @@ impl SqlGetSchemaResponse {
                     schema,
                     field_nullability,
                     type_mode,
+                    max_string_length,
                 ))
             })
             .collect::<Result<Vec<_>>>()
@@ -398,7 +409,7 @@ mod unit {
                 select_order: Some(vec![]),
             };
 
-            let actual = input.process_result_metadata("test_db", TypeMode::Standard);
+            let actual = input.process_result_metadata("test_db", TypeMode::Standard, None);
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema(_)) => (),
@@ -434,7 +445,7 @@ mod unit {
             };
 
             let schema = input
-                .process_result_metadata("test_db", TypeMode::Standard)
+                .process_result_metadata("test_db", TypeMode::Standard, None)
                 .unwrap();
             assert_eq!(
                 schema.first().unwrap().sql_type,
@@ -469,7 +480,7 @@ mod unit {
             };
 
             let schema = input
-                .process_result_metadata("test_db", TypeMode::Simple)
+                .process_result_metadata("test_db", TypeMode::Simple, None)
                 .unwrap();
             assert_eq!(
                 schema.first().unwrap().sql_type,
@@ -497,7 +508,7 @@ mod unit {
                 select_order: Some(vec![]),
             };
 
-            let actual = input.process_result_metadata("test_db", TypeMode::Standard);
+            let actual = input.process_result_metadata("test_db", TypeMode::Standard, None);
 
             match actual {
                 Err(Error::InvalidResultSetJsonSchema(_)) => (),
@@ -546,7 +557,7 @@ mod unit {
                 select_order: None,
             };
 
-            let res = input.process_result_metadata("test_db", TypeMode::Standard);
+            let res = input.process_result_metadata("test_db", TypeMode::Standard, None);
 
             match res {
                 Err(e) => panic!("unexpected error: {e:?}"),
@@ -611,7 +622,7 @@ mod unit {
                 ]),
             };
 
-            let res = input.process_result_metadata("test_db", TypeMode::Standard);
+            let res = input.process_result_metadata("test_db", TypeMode::Standard, None);
 
             match res {
                 Err(e) => panic!("unexpected error: {e:?}"),

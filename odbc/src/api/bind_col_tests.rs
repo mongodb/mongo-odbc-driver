@@ -808,6 +808,7 @@ mod unit {
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
                     Nullability::SQL_NO_NULLS,
                     TypeMode::Simple,
+                    None,
                 ),
                 MongoColMetadata::new(
                     "",
@@ -816,6 +817,7 @@ mod unit {
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
                     Nullability::SQL_NO_NULLS,
                     TypeMode::Simple,
+                    None,
                 ),
             ],
         )
@@ -831,6 +833,7 @@ mod unit {
                 Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
                 Nullability::SQL_NO_NULLS,
                 TypeMode::Simple,
+                None,
             )],
         )
     }

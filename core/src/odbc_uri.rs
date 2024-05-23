@@ -25,6 +25,7 @@ pub const URI: &str = "uri";
 pub const APPNAME: &str = "appname";
 pub const LOGLEVEL: &str = "loglevel";
 pub const SIMPLE_TYPES_ONLY: &str = "simple_types_only";
+pub const ENABLE_MAX_STRING_LENGTH: &str = "enable_max_string_length";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
@@ -47,7 +48,8 @@ lazy_static! {
             URI,
             APPNAME,
             LOGLEVEL,
-            SIMPLE_TYPES_ONLY
+            SIMPLE_TYPES_ONLY,
+            ENABLE_MAX_STRING_LENGTH,
         ]
         .into_iter()
         .map(|x| "^".to_string() + x + "$")
@@ -197,9 +199,7 @@ impl ODBCUri {
     // are synonyms.
     pub fn remove(&mut self, names: &[&str]) -> Option<String> {
         for name in names.iter() {
-            // false positive
-            #[allow(clippy::unnecessary_to_owned)]
-            let ret = self.0.remove(&name.to_string());
+            let ret = self.0.remove(*name);
             if ret.is_some() {
                 return ret;
             }
@@ -617,6 +617,19 @@ mod unit {
             assert_eq!(
                 expected,
                 ODBCUri::new("Driver=Foo;simple_types_only=0".to_string()).unwrap()
+            );
+        }
+
+        #[test]
+        fn enable_max_string_length_test() {
+            use crate::map;
+            use crate::odbc_uri::ODBCUri;
+            let expected = ODBCUri(
+                map! {"driver".to_string() => "Foo".to_string(), "enable_max_string_length".to_string() => "1".to_string()},
+            );
+            assert_eq!(
+                expected,
+                ODBCUri::new("Driver=Foo;enable_max_string_length=1".to_string()).unwrap()
             );
         }
 

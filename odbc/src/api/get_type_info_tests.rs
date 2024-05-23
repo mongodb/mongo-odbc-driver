@@ -66,7 +66,7 @@ mod unit {
                 .unwrap()
                 .as_ref()
                 .unwrap()
-                .get_value(1);
+                .get_value(1, None);
             assert!(value.is_err());
         }
     }
@@ -93,7 +93,7 @@ mod unit {
                 .unwrap()
                 .as_ref()
                 .unwrap()
-                .get_value(2)
+                .get_value(2, None)
                 .unwrap();
 
             // EXT_TIMESTAMP is a code that was remapped in ODBC 3, but also stands for SQL_TIMESTAMP, the ODBC 2 type
@@ -127,7 +127,7 @@ mod unit {
                 .unwrap()
                 .as_ref()
                 .unwrap()
-                .get_value(2)
+                .get_value(2, None)
                 .unwrap();
 
             // check the proper ODBC 3 sql type, SQL_TYPE_TIMESTAMP, is returned
