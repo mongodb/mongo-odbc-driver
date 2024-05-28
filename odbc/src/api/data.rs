@@ -998,16 +998,18 @@ unsafe fn set_output_wstring_helper(
     // two bytes, such as emojis because it's assuming every character is 2 bytes.
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
-    let num_chars_written = write_wstring_slice_to_buffer(
-        message,
-        buffer_len.try_into().unwrap_or(isize::MAX),
-        output_ptr,
-    );
+
     let num_chars_to_write = match max_string_length {
         Some(s) => std::cmp::min((s as usize) * size_of::<WideChar>(), buffer_len),
         None => buffer_len,
     };
-    let num_chars_written = write_wstring_slice_to_buffer(message, num_chars_to_write, output_ptr);
+    let num_chars_written = write_wstring_slice_to_buffer(
+        message,
+        num_chars_to_write
+            .try_into()
+            .expect("buffer written exceeds {isize::MAX} on this platform"),
+        output_ptr,
+    );
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars_written <= message.len().try_into().unwrap() {
@@ -1282,7 +1284,7 @@ pub mod isize_len {
             text_length_ptr,
             (size_of::<WideChar>() * text_length)
                 .try_into()
-                .except("Data too large for buffer"),
+                .expect("Data too large for buffer"),
         );
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret
