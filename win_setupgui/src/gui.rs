@@ -192,7 +192,12 @@ impl ConfigGui {
                     &format!(
                         "Could not connect with supplied information: {e}",
                         e = unsafe {
-                            input_text_to_string_w(buffer.as_mut_ptr(), buffer_length.into())
+                            input_text_to_string_w(
+                                buffer.as_mut_ptr(),
+                                buffer_length
+                                    .try_into()
+                                    .expect("buffer length exceeded {isize::MAX} on this platform"),
+                            )
                         }
                     ),
                 );

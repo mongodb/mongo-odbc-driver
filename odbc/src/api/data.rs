@@ -1013,10 +1013,15 @@ unsafe fn set_output_wstring_helper(
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars_written <= message.len().try_into().unwrap() {
-        (
-            (num_chars_written - 1) as usize,
-            SqlReturn::SUCCESS_WITH_INFO,
-        )
+        // if the num_chars_written is 0, we didn't even write a null terminator
+        if num_chars_written == 0 {
+            (0, SqlReturn::SUCCESS)
+        } else {
+            (
+                (num_chars_written - 1) as usize,
+                SqlReturn::SUCCESS_WITH_INFO,
+            )
+        }
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
@@ -1050,10 +1055,15 @@ unsafe fn set_output_string_helper(
     // return the number of characters in the message string, excluding the
     // null terminator
     if num_chars_written <= message.len().try_into().unwrap() {
-        (
-            (num_chars_written - 1) as usize,
-            SqlReturn::SUCCESS_WITH_INFO,
-        )
+        // if the num_chars_written is 0, we didn't even write a null terminator
+        if num_chars_written == 0 {
+            (0, SqlReturn::SUCCESS)
+        } else {
+            (
+                (num_chars_written - 1) as usize,
+                SqlReturn::SUCCESS_WITH_INFO,
+            )
+        }
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }

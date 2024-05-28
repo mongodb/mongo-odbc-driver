@@ -32,8 +32,13 @@ unsafe extern "C" fn ConfigDSNW(
         // data source name matches an existing data source name and hwndParent is null, ConfigDSN overwrites the existing name.
         // If it matches an existing name and hwndParent is not null, ConfigDSN prompts the user to overwrite the existing name.
 
-        dsn_opts.driver_name =
-            unsafe { input_text_to_string_w(driver, i32::from(constants::DRIVER_NAME.len())) };
+        dsn_opts.driver_name = unsafe {
+            input_text_to_string_w(
+                driver,
+                isize::try_from(constants::DRIVER_NAME.len())
+                    .expect("Driver name exceeds isize on this platform"),
+            )
+        };
 
         match request {
             ODBC_ADD_DSN => {
