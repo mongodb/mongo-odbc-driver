@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 use crate::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
 use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
 use definitions::{Integer, SQL_NTS};

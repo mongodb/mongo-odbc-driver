@@ -72,7 +72,7 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: isize) -> String {
             }
             String::from_utf8_unchecked(dst)
         }
-        x if x == 0 => String::new(),
+        0 => String::new(),
         x if x > 0 => {
             let len = len as usize;
             let mut dst = Vec::with_capacity(len);
@@ -105,7 +105,7 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> Strin
             }
             from_widechar_vec_lossy(dst)
         }
-        x if x == 0 => String::new(),
+        0 => String::new(),
         x if x > 0 => {
             let len = len as usize;
             let mut dst = Vec::with_capacity(len);
@@ -190,7 +190,7 @@ pub unsafe fn write_string_to_buffer(
     output_ptr: *mut WideChar,
 ) -> isize {
     let len = std::cmp::min(message.len(), (len - 1) as usize);
-    if len <= 0 {
+    if len == 0 {
         0
     } else {
         let mut v = to_widechar_vec(&message[..len]);
@@ -215,7 +215,7 @@ pub unsafe fn write_wstring_slice_to_buffer(
 ) -> isize {
     let len = std::cmp::min(message.len(), (len - 1) as usize);
 
-    if len <= 0 {
+    if len == 0 {
         0
     } else {
         unsafe {
@@ -240,7 +240,7 @@ pub unsafe fn write_string_slice_to_buffer(
 ) -> isize {
     let len = std::cmp::min(message.len(), (len - 1) as usize);
 
-    if len <= 0 {
+    if len == 0 {
         0
     } else {
         unsafe {

@@ -131,7 +131,7 @@ impl MongoStatement for MongoTypesInfo {
                     "SqlDataType should be convertible to i32, as it is a valid enum variant",
                 )),
                 3 => match type_info.column_size(self.type_mode, max_string_length) {
-                    Some(column_size) => Bson::Int32(column_size as i32),
+                    Some(column_size) => Bson::Int32(i32::from(column_size)),
                     // NULL is returned for data types where column size is not applicable
                     None => Bson::Null,
                 },
