@@ -138,9 +138,13 @@ mod test {
         };
         assert!(!result);
         assert!(unsafe {
-            input_text_to_string_w(buffer.as_mut_ptr(), buffer_len)
-                .to_lowercase()
-                .contains("server selection timeout")
+            input_text_to_string_w(
+                buffer.as_mut_ptr(),
+                isize::try_from(buffer_len)
+                    .expect("buffer length is too large for {isize::MAX} on this platform"),
+            )
+            .to_lowercase()
+            .contains("server selection timeout")
         });
     }
 
