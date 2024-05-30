@@ -213,7 +213,7 @@ pub fn connect_with_conn_string(
             dbc as HDbc,
             null_mut(),
             in_connection_string_encoded.as_ptr(),
-            SQL_NTS as SmallInt,
+            SQL_NTS.try_into().unwrap(),
             null_mut(),
             0,
             str_len_ptr,

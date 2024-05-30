@@ -13,7 +13,7 @@ mod integration {
     };
     use definitions::{
         AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQLExecute, SQLFetch, SQLPrepareW,
-        SmallInt, SqlReturn, SQL_NTS,
+        SqlReturn, SQL_NTS,
     };
 
     use cstr::WideChar;
@@ -50,11 +50,7 @@ mod integration {
             // Only the result set metadata are retrieved and stored
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(
-                    stmt as HStmt,
-                    query.as_ptr(),
-                    i32::from(SQL_NTS as SmallInt)
-                ),
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
@@ -77,11 +73,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(
-                    stmt as HStmt,
-                    query.as_ptr(),
-                    i32::from(SQL_NTS as SmallInt)
-                ),
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
@@ -109,11 +101,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(
-                    stmt as HStmt,
-                    query.as_ptr(),
-                    i32::from(SQL_NTS as SmallInt)
-                ),
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
@@ -159,11 +147,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(
-                    stmt as HStmt,
-                    query.as_ptr(),
-                    i32::from(SQL_NTS as SmallInt)
-                ),
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );

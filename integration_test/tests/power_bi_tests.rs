@@ -165,7 +165,7 @@ mod integration {
                     dbc as HDbc,
                     null_mut(),
                     in_connection_string_encoded.as_ptr(),
-                    SQL_NTS as SmallInt,
+                    SQL_NTS.try_into().unwrap(),
                     out_connection_string_buff,
                     BUFFER_LENGTH,
                     str_len_ptr,
@@ -440,11 +440,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(
-                    stmt as HStmt,
-                    query.as_ptr(),
-                    i32::from(SQL_NTS as SmallInt)
-                ),
+                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );

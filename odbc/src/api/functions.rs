@@ -3291,7 +3291,7 @@ pub unsafe extern "C" fn SQLNumResultCols(
                 .get_resultset_metadata(max_string_length)
                 .len()
                 .try_into()
-                .expect("metadata len exceeds SmallInt");
+                .expect("column count exceeded {i16::MAX}");
 
             SqlReturn::SUCCESS
         },

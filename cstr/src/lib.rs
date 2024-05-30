@@ -60,8 +60,8 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 ///
 #[allow(clippy::uninit_vec)]
 pub unsafe fn input_text_to_string_a(text: *const Char, len: isize) -> String {
-    match len {
-        x if x < 0 => {
+    match len.signum() {
+        -1 => {
             let mut dst = Vec::new();
             let mut itr = text;
             {
@@ -73,7 +73,7 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: isize) -> String {
             String::from_utf8_unchecked(dst)
         }
         0 => String::new(),
-        x if x > 0 => {
+        1 => {
             let len = len as usize;
             let mut dst = Vec::with_capacity(len);
             dst.set_len(len);
@@ -93,8 +93,8 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: isize) -> String {
 ///
 #[allow(clippy::uninit_vec)]
 pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> String {
-    match len {
-        x if x < 0 => {
+    match len.signum() {
+        -1 => {
             let mut dst = Vec::new();
             let mut itr = text;
             {
@@ -106,7 +106,7 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> Strin
             from_widechar_vec_lossy(dst)
         }
         0 => String::new(),
-        x if x > 0 => {
+        1 => {
             let len = len as usize;
             let mut dst = Vec::with_capacity(len);
             dst.set_len(len);
@@ -198,7 +198,9 @@ pub unsafe fn write_string_to_buffer(
         unsafe {
             copy_nonoverlapping(v.as_ptr(), output_ptr, len);
         }
-        v.len() as isize
+        v.len()
+            .try_into()
+            .expect("Unable to write to buffer: length exceeds {isize::MAX} on this platform.")
     }
 }
 

@@ -17,7 +17,7 @@ mod unit {
     use definitions::{
         BindType, CDataType, Len, Nullability,
         RowStatus::{SQL_ROW_NOROW, SQL_ROW_SUCCESS},
-        SmallInt, SqlReturn, ULen, USmallInt, WChar, SQL_NTS, SQL_NTS_ISIZE,
+        SmallInt, SqlReturn, ULen, USmallInt, WChar, SQL_NTS_ISIZE,
     };
     use mongo_odbc_core::{
         json_schema::{
@@ -429,13 +429,13 @@ mod unit {
             // assert that the first 2 values from the result set were put in the bound buffer array correctly for column 2.
             assert_eq!(
                 "aaaa",
-                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS as isize)
+                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS_ISIZE)
             );
             assert_eq!(
                 "bbbb",
                 input_text_to_string_w(
                     (word_buffer as ULen + 20) as *const WideChar,
-                    SQL_NTS as isize
+                    SQL_NTS_ISIZE
                 )
             );
 
@@ -470,13 +470,13 @@ mod unit {
             // assert that the last 2 values from the result set were put in the bound buffer array correctly for column 2.
             assert_eq!(
                 "cccc",
-                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS as isize)
+                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS_ISIZE)
             );
             assert_eq!(
                 "dddd",
                 input_text_to_string_w(
                     (word_buffer as ULen + 20) as *const WideChar,
-                    SQL_NTS as isize
+                    SQL_NTS_ISIZE
                 )
             );
 
@@ -589,20 +589,20 @@ mod unit {
             // assert that the first 3 values from the result set were put in the bound buffer array correctly for column 2.
             assert_eq!(
                 "aaaa",
-                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS as isize)
+                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS_ISIZE)
             );
             assert_eq!(
                 "bbbb",
                 input_text_to_string_w(
                     (word_buffer as ULen + 20) as *const WideChar,
-                    SQL_NTS as isize
+                    SQL_NTS_ISIZE
                 )
             );
             assert_eq!(
                 "cccc",
                 input_text_to_string_w(
                     (word_buffer as ULen + 40) as *const WideChar,
-                    SQL_NTS as isize
+                    SQL_NTS_ISIZE
                 )
             );
 

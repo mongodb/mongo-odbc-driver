@@ -620,11 +620,11 @@ pub unsafe fn format_datetime(
         Ok((dt, warning)) => {
             let data = Timestamp {
                 year: dt.year().try_into().expect("year exceeded i16 maximum"),
-                month: dt.month().try_into().expect("month exceeded u16 space"),
-                day: dt.day().try_into().expect("day exceeded u16 space"),
-                hour: dt.hour().try_into().expect("hour exceeded u16 space"),
-                minute: dt.minute().try_into().expect("minute exceeded u16 space"),
-                second: dt.second().try_into().expect("second exceeded u16 space"),
+                month: dt.month().try_into().expect("month exceeded u16 maximum"),
+                day: dt.day().try_into().expect("day exceeded u16 maximum"),
+                hour: dt.hour().try_into().expect("hour exceeded u16 maximum"),
+                minute: dt.minute().try_into().expect("minute exceeded u16 maximum"),
+                second: dt.second().try_into().expect("second exceeded u16 maximum"),
                 fraction: dt.nanosecond(),
             };
             let sqlreturn =
@@ -998,7 +998,6 @@ unsafe fn set_output_wstring_helper(
     // two bytes, such as emojis because it's assuming every character is 2 bytes.
     // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
     // reassemble parts.
-
     let num_chars_to_write = match max_string_length {
         Some(s) => std::cmp::min((s as usize) * size_of::<WideChar>(), buffer_len),
         None => buffer_len,
@@ -1007,21 +1006,16 @@ unsafe fn set_output_wstring_helper(
         message,
         num_chars_to_write
             .try_into()
-            .expect("buffer written exceeds {isize::MAX} on this platform"),
+            .expect("message exceeds {isize::MAX} on this platform"),
         output_ptr,
     );
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars_written <= message.len().try_into().unwrap() {
-        // if the num_chars_written is 0, we didn't even write a null terminator
-        if num_chars_written == 0 {
-            (0, SqlReturn::SUCCESS)
-        } else {
-            (
-                (num_chars_written - 1) as usize,
-                SqlReturn::SUCCESS_WITH_INFO,
-            )
-        }
+    if num_chars_written != 0 && num_chars_written <= message.len().try_into().unwrap() {
+        (
+            (num_chars_written - 1) as usize,
+            SqlReturn::SUCCESS_WITH_INFO,
+        )
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
@@ -1048,22 +1042,20 @@ unsafe fn set_output_string_helper(
 
     let num_chars_written = write_string_slice_to_buffer(
         message,
-        buffer_len.try_into().unwrap_or(isize::MAX),
+        buffer_len
+            .try_into()
+            .expect("the buffer is too large and exceeds isize::MAX on this platform"),
         output_ptr,
     );
 
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars_written <= message.len().try_into().unwrap() {
+    if num_chars_written != 0 && num_chars_written <= message.len().try_into().unwrap() {
         // if the num_chars_written is 0, we didn't even write a null terminator
-        if num_chars_written == 0 {
-            (0, SqlReturn::SUCCESS)
-        } else {
-            (
-                (num_chars_written - 1) as usize,
-                SqlReturn::SUCCESS_WITH_INFO,
-            )
-        }
+        (
+            (num_chars_written - 1) as usize,
+            SqlReturn::SUCCESS_WITH_INFO,
+        )
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
@@ -1129,7 +1121,7 @@ pub mod i16_len {
             text_length_ptr,
             (size_of::<WideChar>() * len)
                 .try_into()
-                .unwrap_or(SmallInt::MAX),
+                .expect("The data written is too large to describe the length on this platform."),
         );
         ret
     }
@@ -1152,7 +1144,11 @@ pub mod i16_len {
         let message = cstr::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len, None);
         // Only copy the length if the pointer is not null
-        ptr_safe_write(text_length_ptr, len.try_into().unwrap_or(SmallInt::MAX));
+        ptr_safe_write(
+            text_length_ptr,
+            len.try_into()
+                .expect("The data is too large to fit in the buffer on this platform."),
+        );
         ret
     }
 
@@ -1209,7 +1205,7 @@ pub mod i32_len {
             text_length_ptr,
             (size_of::<WideChar>() * len)
                 .try_into()
-                .expect("Data too large to fit in the buffer on this platform"),
+                .expect("Data too large to fit"),
         );
         ret
     }
@@ -1294,7 +1290,7 @@ pub mod isize_len {
             text_length_ptr,
             (size_of::<WideChar>() * text_length)
                 .try_into()
-                .expect("Data too large for buffer"),
+                .expect("Data too large to fit"),
         );
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret
