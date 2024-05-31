@@ -189,18 +189,23 @@ pub unsafe fn write_string_to_buffer(
     len: isize,
     output_ptr: *mut WideChar,
 ) -> isize {
-    let len = std::cmp::min(message.len(), (len - 1) as usize);
-    if len == 0 {
-        0
-    } else {
-        let mut v = to_widechar_vec(&message[..len]);
-        v.push(0);
-        unsafe {
-            copy_nonoverlapping(v.as_ptr(), output_ptr, len);
+    match len.signum() {
+        // we've really gotten into a bad state if this happens
+        -1 => panic!("write_string_to_buffer: invalid state - len was negative."),
+        0 => 0,
+        1 => {
+            let len = len as usize;
+            let len = std::cmp::min(message.len(), len - 1);
+            let mut v = to_widechar_vec(&message[..len]);
+            v.push(0);
+            unsafe {
+                copy_nonoverlapping(v.as_ptr(), output_ptr, len);
+            }
+            v.len()
+                .try_into()
+                .expect("Unable to write to buffer: length exceeds {isize::MAX} on this platform.")
         }
-        v.len()
-            .try_into()
-            .expect("Unable to write to buffer: length exceeds {isize::MAX} on this platform.")
+        _ => unreachable!("write_string_to_buffer: len was neither negative, zero, nor positive."),
     }
 }
 
@@ -324,6 +329,17 @@ mod test {
         let len = unsafe {
             write_string_to_buffer("testing", buffer.len() as isize, buffer.as_mut_ptr())
         };
+        assert_eq!(expected, from_widechar_ref_lossy(&buffer));
+        assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as isize);
+    }
+
+    #[test]
+    fn test_write_empty_string_to_buffer() {
+        let expected = "\0";
+        let input = "";
+        let mut buffer = [0; 1];
+        let len =
+            unsafe { write_string_to_buffer(input, buffer.len() as isize, buffer.as_mut_ptr()) };
         assert_eq!(expected, from_widechar_ref_lossy(&buffer));
         assert_eq!(len, std::cmp::min(input.len() + 1, buffer.len()) as isize);
     }

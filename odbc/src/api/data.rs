@@ -1121,7 +1121,7 @@ pub mod i16_len {
             text_length_ptr,
             (size_of::<WideChar>() * len)
                 .try_into()
-                .expect("The data written is too large to describe the length on this platform."),
+                .expect("Required buffer size exceeds {i16::MAX} on this platform"),
         );
         ret
     }
