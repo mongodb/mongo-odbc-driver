@@ -851,7 +851,7 @@ dependencies = [
 name = "cstr"
 version = "0.0.0"
 dependencies = [
- "num-derive",
+ "num-derive 0.4.2",
  "num-traits",
  "widestring",
 ]
@@ -965,7 +965,7 @@ name = "definitions"
 version = "0.0.0"
 dependencies = [
  "cstr",
- "num-derive",
+ "num-derive 0.4.2",
  "num-traits",
 ]
 
@@ -1862,7 +1862,7 @@ dependencies = [
  "log",
  "logger",
  "mongodb",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "regex",
  "serde",
@@ -2224,7 +2224,7 @@ dependencies = [
  "likely_stable",
  "log",
  "mongodb",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "once_cell",
  "open",
@@ -2255,7 +2255,7 @@ dependencies = [
  "logger",
  "mongo-odbc-core",
  "mongodb",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "regex",
  "serde",
@@ -2413,6 +2413,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "num-derive"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.65",
 ]
 
 [[package]]

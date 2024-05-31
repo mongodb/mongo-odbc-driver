@@ -151,7 +151,9 @@ impl MongoStatement for MongoQuery {
         let mut max_time = None;
         // If the query timeout is 0, it means "no timeout"
         if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            max_time = Some(Duration::from_millis(self.query_timeout.unwrap() as u64))
+            max_time = Some(Duration::from_millis(u64::from(
+                self.query_timeout.unwrap(),
+            )))
         }
 
         let mut batch_size = None;

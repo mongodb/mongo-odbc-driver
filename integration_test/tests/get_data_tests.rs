@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 /// This module contains tests for SQLGetData, ensuring we can handle large buffer sizes
@@ -112,22 +118,14 @@ mod integration {
                 let query = b"SELECT * FROM integration_test.class\0".map(|c| c.into());
                 assert_eq!(
                     SqlReturn::SUCCESS,
-                    SQLPrepareW(
-                        stmt_handle,
-                        query.as_ptr(),
-                        i32::try_from(SQL_NTS).expect("SQL_NTS is too large to convert to i32")
-                    ),
+                    SQLPrepareW(stmt_handle, query.as_ptr(), SQL_NTS),
                     "{}",
                     get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
                 );
 
                 assert_eq!(
                     SqlReturn::SUCCESS,
-                    SQLExecDirectW(
-                        stmt_handle,
-                        query.as_ptr(),
-                        i32::try_from(SQL_NTS).expect("SQL_NTS is too large to convert to i32")
-                    ),
+                    SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS),
                     "{}",
                     get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
                 );

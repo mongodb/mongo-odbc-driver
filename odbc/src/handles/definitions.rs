@@ -180,31 +180,31 @@ pub type MongoHandleRef = &'static mut MongoHandle;
 
 impl From<Handle> for MongoHandleRef {
     fn from(handle: Handle) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
     }
 }
 
 impl From<HEnv> for MongoHandleRef {
     fn from(handle: HEnv) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
     }
 }
 
 impl From<HStmt> for MongoHandleRef {
     fn from(handle: HStmt) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*(handle.cast::<MongoHandle>())).borrow_mut() }
     }
 }
 
 impl From<HDbc> for MongoHandleRef {
     fn from(handle: HDbc) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
     }
 }
 
 impl From<HDesc> for MongoHandleRef {
     fn from(handle: HDesc) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
     }
 }
 

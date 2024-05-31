@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 mod integration {
@@ -12,7 +18,6 @@ mod integration {
     };
 
     use cstr::WideChar;
-    use std::ptr::null_mut;
 
     /// Test Setup flow
     #[test]
@@ -30,16 +35,18 @@ mod integration {
             let mut table_view: Vec<WideChar> = cstr::to_widechar_vec("TABLE");
             table_view.push(0);
 
+            let no_data = WideChar::default();
+
             // list tables with null pointers for the table strings
             assert_eq!(
                 SqlReturn::SUCCESS,
                 SQLTablesW(
                     stmt_handle as HStmt,
-                    null_mut(),
+                    std::ptr::addr_of!(no_data),
                     0,
-                    null_mut(),
+                    std::ptr::addr_of!(no_data),
                     0,
-                    null_mut(),
+                    std::ptr::addr_of!(no_data),
                     0,
                     table_view.as_ptr(),
                     table_view.len() as SmallInt - 1
@@ -95,7 +102,8 @@ mod integration {
         conn_str.push_str("SIMPLE_TYPES_ONLY=0;");
         let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, Some(conn_str));
 
-        let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+        let output_buffer = Box::into_raw(Box::new([0u16; BUFFER_LENGTH as usize - 1]));
+        let mut text_len_or_ind = 0;
 
         unsafe {
             // check that when requesting all types, both odbc 2 and 3 timestamp types are returned
@@ -113,7 +121,7 @@ mod integration {
                         CDataType::SQL_C_SLONG as i16,
                         output_buffer as Pointer,
                         (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
-                        null_mut()
+                        std::ptr::addr_of_mut!(text_len_or_ind)
                     )
                 );
                 assert_eq!(*(output_buffer as *mut i16), datatype as i16);
@@ -135,7 +143,7 @@ mod integration {
                     CDataType::SQL_C_SLONG as i16,
                     output_buffer as Pointer,
                     (BUFFER_LENGTH * std::mem::size_of::<u16>() as i16) as Len,
-                    null_mut()
+                    std::ptr::addr_of_mut!(text_len_or_ind)
                 )
             );
             assert_eq!(*(output_buffer as *mut i16), 11);

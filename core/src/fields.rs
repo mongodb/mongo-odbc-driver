@@ -707,23 +707,23 @@ impl MongoStatement for MongoFields {
                 match get_meta_data()?.column_size {
                     // If the driver cannot determine the column for a variable type, it returns
                     // SQL_NO_TOTAL.
-                    None => definitions::SQL_NO_TOTAL as i32,
-                    Some(col_size) => col_size as i32,
+                    None => definitions::SQL_NO_TOTAL,
+                    Some(col_size) => i32::from(col_size),
                 }
             }),
             // BUFFER_LENGTH = Transfer octet length
             8 => Bson::Int32({
                 let l = get_meta_data()?.transfer_octet_length;
                 match l {
-                    None => definitions::SQL_NO_TOTAL as i32,
-                    Some(l) => l as i32,
+                    None => definitions::SQL_NO_TOTAL,
+                    Some(l) => i32::from(l),
                 }
             }),
             // DECIMAL_DIGITS
             9 => match get_meta_data()?.decimal_digits {
                 // NULL is returned for data types where DECIMAL_DIGITS is not applicable.
                 None => Bson::Null,
-                Some(dec_dg) => Bson::Int32(dec_dg as i32),
+                Some(dec_dg) => Bson::Int32(i32::from(dec_dg)),
             },
             // NUM_PREC_RADIX
             10 => match get_meta_data()?.sql_type {
@@ -755,13 +755,16 @@ impl MongoStatement for MongoFields {
                 SqlDataType::SQL_VARCHAR
                 | SqlDataType::SQL_WVARCHAR
                 | SqlDataType::SQL_VARBINARY => match get_meta_data()?.char_octet_length {
-                    None => Bson::Int32(definitions::SQL_NO_TOTAL as i32),
-                    Some(char_octet_length) => Bson::Int32(char_octet_length as i32),
+                    None => Bson::Int32(definitions::SQL_NO_TOTAL),
+                    Some(char_octet_length) => Bson::Int32(i32::from(char_octet_length)),
                 },
                 _ => Bson::Null,
             },
             // ORDINAL_POSITION
-            17 => Bson::Int32(1 + self.current_field_for_collection as i32),
+            17 => Bson::Int32(
+                1 + i32::try_from(self.current_field_for_collection)
+                    .expect("collection has more fields than i32::MAX"),
+            ),
             // IS_NULLABLE
             18 => Bson::String(
                 // odbc_sys should use an enum instead of constants...

@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 cstr = { path = "../cstr" }
 num-traits = "0.2.14"
-num-derive = "0.3.3"
+num-derive = "0.4.2"
 
 [features]
 default = ["odbc_version_3_80"]
@@ -17,4 +17,3 @@ iodbc = []
 odbc_version_3_50 = []
 odbc_version_3_80 = ["odbc_version_3_50"]
 odbc_version_4 = ["odbc_version_3_80"]
-

@@ -130,7 +130,9 @@ impl IntoCData for Bson {
             Bson::Double(f) => Ok((*f, None)),
             Bson::String(s) => Bson::Double(from_string(s, DOUBLE)?).to_f64(),
             Bson::Boolean(b) => Ok((if *b { 1.0 } else { 0.0 }, None)),
-            Bson::Int32(i) => Ok((*i as f64, None)),
+            Bson::Int32(i) => Ok((f64::from(*i), None)),
+            #[allow(clippy::cast_precision_loss)]
+            // there is no try_from implementation for i64 to f64
             Bson::Int64(i) => Ok((*i as f64, None)),
             Bson::Decimal128(d) => Bson::Double(from_string(&d.to_string(), DOUBLE)?).to_f64(),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
@@ -140,16 +142,23 @@ impl IntoCData for Bson {
     fn to_f32(&self) -> Result<(f32, Option<ODBCError>)> {
         match self {
             Bson::Double(f) => {
-                if *f > f32::MAX as f64 || *f < f32::MIN as f64 {
+                if *f > f64::from(f32::MAX) || *f < f64::from(f32::MIN) {
                     Err(ODBCError::IntegralTruncation(f.to_string()))
                 } else {
+                    // This is safe because we've already checked that the value is within the range of f32
+                    // there is no try_from implementation for f64 to f32
+                    #[allow(clippy::cast_possible_truncation)]
                     Ok((*f as f32, None))
                 }
             }
             Bson::String(s) => Bson::Double(from_string(s, DOUBLE)?).to_f32(),
 
             Bson::Boolean(b) => Ok((if *b { 1.0 } else { 0.0 }, None)),
+            // there is no try_from implementation for i32 to f32
+            #[allow(clippy::cast_precision_loss)]
             Bson::Int32(i) => Ok((*i as f32, None)),
+            // there is no try_from implementation for i64 to f32
+            #[allow(clippy::cast_precision_loss)]
             Bson::Int64(i) => Ok((*i as f32, None)),
             Bson::Decimal128(d) => Bson::Double(from_string(&d.to_string(), DOUBLE)?).to_f32(),
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), DOUBLE)),
@@ -158,6 +167,8 @@ impl IntoCData for Bson {
 
     fn to_i64(&self) -> Result<(i64, Option<ODBCError>)> {
         match self {
+            // there is no try_from implementation for f64 to i64
+            #[allow(clippy::cast_precision_loss)]
             Bson::Double(f) => {
                 if *f > i64::MAX as f64 || *f < i64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(f.to_string()))
@@ -167,6 +178,8 @@ impl IntoCData for Bson {
                     } else {
                         None
                     };
+                    // This is safe because we've already checked that the value is within the range of i64
+                    #[allow(clippy::cast_possible_truncation)]
                     Ok((*f as i64, info))
                 }
             }
@@ -175,7 +188,7 @@ impl IntoCData for Bson {
                     .to_i64()
             }
             Bson::Boolean(b) => Ok((i64::from(*b), None)),
-            Bson::Int32(i) => Ok((*i as i64, None)),
+            Bson::Int32(i) => Ok((i64::from(*i), None)),
             Bson::Int64(i) => Ok((*i, None)),
             // Note that this isn't perfect because there are some 64bit integer values that are
             // not representable as doubles. There *could* be a specific value where we will get a
@@ -183,9 +196,13 @@ impl IntoCData for Bson {
             // We should update this when the bson crate supports Decimal128 entirely.
             Bson::Decimal128(_) => {
                 let (out, _) = self.to_f64()?;
+                // there is no try_from implementation for f64 to i64
+                #[allow(clippy::cast_precision_loss)]
                 if out > i64::MAX as f64 || out < i64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
+                    // This is safe because we've already checked that the value is within the range of i64
+                    #[allow(clippy::cast_possible_truncation)]
                     Ok((
                         out as i64,
                         if out.floor() != out {
@@ -202,17 +219,20 @@ impl IntoCData for Bson {
 
     fn to_i32(&self) -> Result<(i32, Option<ODBCError>)> {
         match self {
-            Bson::Double(f) if *f > i32::MAX as f64 || *f < i32::MIN as f64 => {
+            Bson::Double(f) if *f > f64::from(i32::MAX) || *f < f64::from(i32::MIN) => {
                 Err(ODBCError::IntegralTruncation(f.to_string()))
             }
-            Bson::Int64(i) if *i > i32::MAX as i64 || *i < i32::MIN as i64 => {
+            Bson::Int64(i) if *i > i64::from(i32::MAX) || *i < i64::from(i32::MIN) => {
                 Err(ODBCError::IntegralTruncation(i.to_string()))
             }
             Bson::Decimal128(_) => {
                 let (out, _) = self.to_f64()?;
-                if out > i32::MAX as f64 || out < i32::MIN as f64 {
+                if out > f64::from(i32::MAX) || out < f64::from(i32::MIN) {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
+                    // This is safe because we've already checked that the value is within the range of i32
+                    // there is no try_from implementation for f64 to i32
+                    #[allow(clippy::cast_possible_truncation)]
                     Ok((
                         out as i32,
                         if out.floor() != out {
@@ -227,6 +247,8 @@ impl IntoCData for Bson {
                 Bson::Double(f64::from_str(s).map_err(|_| ODBCError::InvalidCharacterValue(INT32))?)
                     .to_i32()
             }
+            // This is safe because we've already checked that the value is within the range of i32
+            #[allow(clippy::cast_possible_truncation)]
             _ => self.to_i64().map_or_else(
                 |e| {
                     Err(match e {
@@ -247,9 +269,14 @@ impl IntoCData for Bson {
     fn to_u64(&self) -> Result<(u64, Option<ODBCError>)> {
         match self {
             Bson::Double(f) => {
+                // there is no try_from for f64 to u64
+                #[allow(clippy::cast_precision_loss)]
                 if *f < 0f64 || *f > u64::MAX as f64 {
                     Err(ODBCError::IntegralTruncation(f.to_string()))
                 } else {
+                    // This is checked in the if statement above. The upper bound isn't checked because f64::MAX is < u64::MAX
+                    // and fractional truncation is checked below
+                    #[allow(clippy::cast_possible_truncation)]
                     Ok((
                         *f as u64,
                         if f.fract() != 0f64 {
@@ -285,6 +312,8 @@ impl IntoCData for Bson {
             // We should update this when the bson crate supports Decimal128 entirely.
             Bson::Decimal128(_) => {
                 let (out, _) = self.to_f64()?;
+                // there is no try_from implementation for f64 to u64
+                #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
                 if out > u64::MAX as f64 || out < u64::MIN as f64 {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
@@ -304,20 +333,23 @@ impl IntoCData for Bson {
 
     fn to_u32(&self) -> Result<(u32, Option<ODBCError>)> {
         match self {
-            Bson::Double(f) if *f > u32::MAX as f64 || *f < 0f64 => {
+            Bson::Double(f) if *f > f64::from(u32::MAX) || *f < 0f64 => {
                 Err(ODBCError::IntegralTruncation(f.to_string()))
             }
-            Bson::Int64(i) if *i > u32::MAX as i64 || *i < 0i64 => {
+            Bson::Int64(i) if *i > i64::from(u32::MAX) || *i < 0i64 => {
                 Err(ODBCError::IntegralTruncation(i.to_string()))
             }
             Bson::Decimal128(_) => {
                 let (out, _) = self.to_f64()?;
-                if out > u32::MAX as f64 || out < u32::MIN as f64 {
+                if out > f64::from(u32::MAX) || out < f64::from(u32::MIN) {
                     Err(ODBCError::IntegralTruncation(out.to_string()))
                 } else {
+                    // This is safe because we've already checked that the value is within the range of u32
+                    // there is no try_from implementation for f64 to u32
+                    #[allow(clippy::cast_possible_truncation)]
                     Ok((
                         out as u32,
-                        if out.floor() != out {
+                        if out.trunc() != out {
                             Some(ODBCError::FractionalTruncation(out.to_string()))
                         } else {
                             None
@@ -342,7 +374,10 @@ impl IntoCData for Bson {
                         _ => e,
                     })
                 },
-                |(u, w)| Ok((u as u32, w)),
+                |(u, w)| match u32::try_from(u) {
+                    Ok(u) => Ok((u, w)),
+                    Err(_) => Err(ODBCError::IntegralTruncation(u.to_string())),
+                },
             ),
         }
     }
@@ -355,7 +390,7 @@ impl IntoCData for Bson {
                     .to_bit()
             }
             Bson::Boolean(b) => Ok((u8::from(*b), None)),
-            Bson::Int32(i) => i64_to_bit(*i as i64),
+            Bson::Int32(i) => i64_to_bit(i64::from(*i)),
             Bson::Int64(i) => i64_to_bit(*i),
             Bson::Decimal128(_) => {
                 let (f, _) = self.to_f64()?;
@@ -507,7 +542,7 @@ pub unsafe fn format_binary(
             data,
             col_num,
             index,
-            target_value_ptr as *mut _,
+            target_value_ptr.cast(),
             buffer_len as usize,
             str_len_or_ind_ptr,
         )
@@ -533,7 +568,7 @@ macro_rules! char_data {
                 $data,
                 $col_num,
                 $index,
-                $target_value_ptr as *mut _,
+                $target_value_ptr.cast(),
                 $buffer_len as usize,
                 $str_len_or_ind_ptr,
             )
@@ -584,12 +619,12 @@ pub unsafe fn format_datetime(
     match dt {
         Ok((dt, warning)) => {
             let data = Timestamp {
-                year: dt.year() as i16,
-                month: dt.month() as u16,
-                day: dt.day() as u16,
-                hour: dt.hour() as u16,
-                minute: dt.minute() as u16,
-                second: dt.second() as u16,
+                year: dt.year().try_into().expect("year exceeded i16 maximum"),
+                month: dt.month().try_into().expect("month exceeded u16 maximum"),
+                day: dt.day().try_into().expect("day exceeded u16 maximum"),
+                hour: dt.hour().try_into().expect("hour exceeded u16 maximum"),
+                minute: dt.minute().try_into().expect("minute exceeded u16 maximum"),
+                second: dt.second().try_into().expect("second exceeded u16 maximum"),
                 fraction: dt.nanosecond(),
             };
             let sqlreturn =
@@ -620,9 +655,9 @@ pub unsafe fn format_time(
     match time {
         Ok((time, warning)) => {
             let data = Time {
-                hour: time.hour() as u16,
-                minute: time.minute() as u16,
-                second: time.second() as u16,
+                hour: time.hour().try_into().expect("hour exceeded u16 space"),
+                minute: time.minute().try_into().expect("minute exceeded u16 space"),
+                second: time.second().try_into().expect("second exceeded u16 space"),
             };
             let sqlreturn =
                 isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
@@ -652,9 +687,9 @@ pub unsafe fn format_date(
     match dt {
         Ok((dt, warning)) => {
             let data = Date {
-                year: dt.year() as i16,
-                month: dt.month() as u16,
-                day: dt.day() as u16,
+                year: dt.year().try_into().expect("year exceeded u16 space"),
+                month: dt.month().try_into().expect("month exceeded u16 space"),
+                day: dt.day().try_into().expect("day exceeded u16 space"),
             };
             let sqlreturn =
                 isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
@@ -967,11 +1002,20 @@ unsafe fn set_output_wstring_helper(
         Some(s) => std::cmp::min((s as usize) * size_of::<WideChar>(), buffer_len),
         None => buffer_len,
     };
-    let num_chars_written = write_wstring_slice_to_buffer(message, num_chars_to_write, output_ptr);
+    let num_chars_written = write_wstring_slice_to_buffer(
+        message,
+        num_chars_to_write
+            .try_into()
+            .expect("message exceeds {isize::MAX} on this platform"),
+        output_ptr,
+    );
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars_written <= message.len() {
-        (num_chars_written - 1, SqlReturn::SUCCESS_WITH_INFO)
+    if num_chars_written != 0 && num_chars_written <= message.len().try_into().unwrap() {
+        (
+            (num_chars_written - 1) as usize,
+            SqlReturn::SUCCESS_WITH_INFO,
+        )
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
@@ -996,12 +1040,22 @@ unsafe fn set_output_string_helper(
         return (0usize, SqlReturn::SUCCESS_WITH_INFO);
     }
 
-    let num_chars_written = write_string_slice_to_buffer(message, buffer_len, output_ptr);
+    let num_chars_written = write_string_slice_to_buffer(
+        message,
+        buffer_len
+            .try_into()
+            .expect("the buffer is too large and exceeds isize::MAX on this platform"),
+        output_ptr,
+    );
 
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars_written <= message.len() {
-        (num_chars_written - 1, SqlReturn::SUCCESS_WITH_INFO)
+    if num_chars_written != 0 && num_chars_written <= message.len().try_into().unwrap() {
+        // if the num_chars_written is 0, we didn't even write a null terminator
+        (
+            (num_chars_written - 1) as usize,
+            SqlReturn::SUCCESS_WITH_INFO,
+        )
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
@@ -1056,12 +1110,19 @@ pub mod i16_len {
         let message = cstr::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(
             &message,
-            output_ptr as *mut WideChar,
+            output_ptr.cast::<WideChar>(),
             buffer_len / size_of::<WideChar>(),
             None,
         );
+        // size_of::<WideChar>() will always be 2, so this cast is safe
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         // Only copy the length if the pointer is not null
-        ptr_safe_write(text_length_ptr, (size_of::<WideChar>() * len) as SmallInt);
+        ptr_safe_write(
+            text_length_ptr,
+            (size_of::<WideChar>() * len)
+                .try_into()
+                .expect("Required buffer size exceeds {i16::MAX} on this platform"),
+        );
         ret
     }
 
@@ -1083,7 +1144,11 @@ pub mod i16_len {
         let message = cstr::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len, None);
         // Only copy the length if the pointer is not null
-        ptr_safe_write(text_length_ptr, len as SmallInt);
+        ptr_safe_write(
+            text_length_ptr,
+            len.try_into()
+                .expect("The data is too large to fit in the buffer on this platform."),
+        );
         ret
     }
 
@@ -1100,6 +1165,7 @@ pub mod i16_len {
         output_ptr: Pointer,
         data_len_ptr: *mut SmallInt,
     ) -> SqlReturn {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         // If the output_ptr is NULL, we should still return the length of the message.
         ptr_safe_write(data_len_ptr, size_of::<T>() as i16);
 
@@ -1130,12 +1196,17 @@ pub mod i32_len {
     ) -> SqlReturn {
         let (len, ret) = set_output_wstring_helper(
             &cstr::to_widechar_vec(message),
-            output_ptr as *mut WideChar,
+            output_ptr.cast::<WideChar>(),
             buffer_len / size_of::<WideChar>(),
             None,
         );
 
-        ptr_safe_write(text_length_ptr, (size_of::<WideChar>() * len) as Integer);
+        ptr_safe_write(
+            text_length_ptr,
+            (size_of::<WideChar>() * len)
+                .try_into()
+                .expect("Data too large to fit"),
+        );
         ret
     }
 
@@ -1152,6 +1223,7 @@ pub mod i32_len {
         output_ptr: Pointer,
         data_len_ptr: *mut Integer,
     ) -> SqlReturn {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         // If the output_ptr is NULL, we should still return the length of the message.
         ptr_safe_write(data_len_ptr, size_of::<T>() as i32);
 
@@ -1216,7 +1288,9 @@ pub mod isize_len {
         };
         ptr_safe_write(
             text_length_ptr,
-            (size_of::<WideChar>() * text_length) as Len,
+            (size_of::<WideChar>() * text_length)
+                .try_into()
+                .expect("Data too large to fit"),
         );
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret
@@ -1253,7 +1327,12 @@ pub mod isize_len {
         let (len, ret) =
             set_output_string_helper(message.get(index..).unwrap(), output_ptr, buffer_len);
         // the returned length should always be the total length of the data.
-        ptr_safe_write(text_length_ptr, (message.len() - index) as Len);
+        ptr_safe_write(
+            text_length_ptr,
+            (message.len() - index)
+                .try_into()
+                .expect("Data too large for buffer"),
+        );
         // The length parameter does not matter because character data uses 8bit words and
         // we can obtain it from message.chars().count() above.
         stmt.insert_var_data_cache(col_num, CachedData::Char(len + index, message));
@@ -1290,7 +1369,12 @@ pub mod isize_len {
         }
         let (len, ret) =
             set_output_binary_helper(data.get(index..).unwrap(), output_ptr, buffer_len);
-        ptr_safe_write(text_length_ptr, (data.len() - index) as Len);
+        ptr_safe_write(
+            text_length_ptr,
+            (data.len() - index)
+                .try_into()
+                .expect("Data too large for buffer"),
+        );
         stmt.insert_var_data_cache(col_num, CachedData::Bin(len + index, data));
         ret
     }
@@ -1313,6 +1397,7 @@ pub mod isize_len {
             return SqlReturn::ERROR;
         }
 
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         // If the output_ptr is NULL, we should still return the length of the message.
         ptr_safe_write(data_len_ptr, size_of::<T>() as isize);
 
@@ -1385,6 +1470,7 @@ mod unit {
                 }
             };
         }
+
         macro_rules! test_conversion_err {
             (input = $input:expr, method = $method:tt, expected = $expected:expr, info = $info:expr) => {
                 let actual = $input.$method();
@@ -1413,6 +1499,11 @@ mod unit {
 
         macro_rules! test_it {
             ($bson:expr,$v:expr) => {
+                #[allow(
+                    clippy::cast_lossless,
+                    clippy::cast_possible_truncation,
+                    clippy::cast_precision_loss
+                )]
                 $v.iter().for_each(
                     |(method, expected, test, info)| match (method, test, info) {
                         (&"i64", Ok(()), info) => {
@@ -1618,11 +1709,11 @@ mod unit {
                     ("u64", i64::MAX, Ok(()), None),
                     ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION))
                 ],
-                i32::MAX as i64 => vec![
-                    ("i64", i32::MAX as i64, Ok(()), None),
-                    ("i32", i32::MAX as i64, Ok(()), None),
-                    ("u64", i32::MAX as i64, Ok(()), None),
-                    ("u32", i32::MAX as i64, Ok(()), None)
+                i64::from(i32::MAX) => vec![
+                    ("i64", i64::from(i32::MAX), Ok(()), None),
+                    ("i32", i64::from(i32::MAX), Ok(()), None),
+                    ("u64", i64::from(i32::MAX), Ok(()), None),
+                    ("u32", i64::from(i32::MAX), Ok(()), None)
                 ],
                 i64::MIN => vec![
                     ("i64", i64::MIN, Ok(()), None),
@@ -1630,9 +1721,9 @@ mod unit {
                     ("u64", 0i64, Err(()), Some(INTEGRAL_TRUNCATION)),
                     ("u32", 0i64, Err(()), Some(INTEGRAL_TRUNCATION))
                 ],
-                i32::MIN as i64 => vec![
-                    ("i64", i32::MIN as i64, Ok(()), None),
-                    ("i32", i32::MIN as i64, Ok(()), None),
+                i64::from(i32::MIN) => vec![
+                    ("i64", i64::from(i32::MIN), Ok(()), None),
+                    ("i32", i64::from(i32::MIN), Ok(()), None),
                     ("u64", 0, Err(()), Some(INTEGRAL_TRUNCATION)),
                     ("u32", 0, Err(()), Some(INTEGRAL_TRUNCATION))
                 ],

@@ -5,6 +5,7 @@ use crate::{
 use bson::Bson;
 use definitions::{Nullability, SqlCode, SqlDataType};
 
+use num_traits::ToPrimitive;
 use once_cell::sync::OnceCell;
 
 // this type is needed for backwards compatibility when the application sets odbc version to 2.
@@ -126,9 +127,11 @@ impl MongoStatement for MongoTypesInfo {
         match DATA_TYPES.get(self.current_type_index - 1) {
             Some(type_info) => Ok(Some(match col_index {
                 1 | 13 => Bson::String(type_info.type_name.to_string()),
-                2 | 16 => Bson::Int32(type_info.sql_type(self.type_mode) as i32),
+                2 | 16 => Bson::Int32(type_info.sql_type(self.type_mode).to_i32().expect(
+                    "SqlDataType should be convertible to i32, as it is a valid enum variant",
+                )),
                 3 => match type_info.column_size(self.type_mode, max_string_length) {
-                    Some(column_size) => Bson::Int32(column_size as i32),
+                    Some(column_size) => Bson::Int32(i32::from(column_size)),
                     // NULL is returned for data types where column size is not applicable
                     None => Bson::Null,
                 },
@@ -142,19 +145,19 @@ impl MongoStatement for MongoTypesInfo {
                 },
                 6 => Bson::Null,
                 7 => Bson::Int32(Nullability::SQL_NULLABLE as i32),
-                8 => Bson::Int32(type_info.is_case_sensitive as i32),
+                8 => Bson::Int32(i32::from(type_info.is_case_sensitive)),
                 9 => Bson::Int32(type_info.searchable),
                 10 => match type_info.is_unsigned {
-                    Some(signed) => Bson::Int32(signed as i32),
+                    Some(signed) => Bson::Int32(i32::from(signed)),
                     _ => Bson::Null,
                 },
-                11 => Bson::Int32(type_info.fixed_prec_scale as i32),
+                11 => Bson::Int32(i32::from(type_info.fixed_prec_scale)),
                 12 => match type_info.is_auto_unique_value {
-                    Some(is_auto_unique_value) => Bson::Int32(is_auto_unique_value as i32),
+                    Some(is_auto_unique_value) => Bson::Int32(i32::from(is_auto_unique_value)),
                     _ => Bson::Null,
                 },
                 14 | 15 => match type_info.decimal_digit {
-                    Some(scale) => Bson::Int32(scale as i32),
+                    Some(scale) => Bson::Int32(i32::from(scale)),
                     // NULL is returned where scale is not applicable.
                     None => Bson::Null,
                 },
@@ -163,7 +166,7 @@ impl MongoStatement for MongoTypesInfo {
                     _ => Bson::Null,
                 },
                 18 => match type_info.num_prec_radix {
-                    Some(num_prec_radix) => Bson::Int32(num_prec_radix as i32),
+                    Some(num_prec_radix) => Bson::Int32(i32::from(num_prec_radix)),
                     _ => Bson::Null,
                 },
                 19 => Bson::Null,
