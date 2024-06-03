@@ -1,10 +1,15 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use definitions::{
     AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt,
-    Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLColAttributeW, SQLDisconnect,
-    SQLDriverConnectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW, SQLMoreResults,
-    SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
+    Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLBindCol, SQLColAttributeW, SQLDisconnect,
+    SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW,
+    SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
 use std::ptr::null_mut;
 use std::{env, slice};
@@ -178,14 +183,16 @@ pub fn connect_and_allocate_statement(
     env_handle: HEnv,
     in_connection_string: Option<String>,
 ) -> (HDbc, HStmt) {
-    let conn_str = in_connection_string.unwrap_or_else(generate_default_connection_str);
-    let conn_handle = connect_with_conn_string(env_handle, conn_str).unwrap();
+    let conn_handle = connect_with_conn_string(env_handle, in_connection_string).unwrap();
     (conn_handle, allocate_statement(conn_handle).unwrap())
 }
 
 #[allow(dead_code)]
-/// Connects to database with provided connection string
-pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) -> Result<HDbc> {
+/// Connects to database with provided connection string, or default connection string
+pub fn connect_with_conn_string(
+    env_handle: HEnv,
+    in_connection_string: Option<String>,
+) -> Result<HDbc> {
     // Allocate a DBC handle
     let mut dbc: Handle = null_mut();
     unsafe {
@@ -197,6 +204,8 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             SqlReturn::SUCCESS => (),
             sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
         }
+        let in_connection_string =
+            in_connection_string.unwrap_or_else(generate_default_connection_str);
         let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
         in_connection_string_encoded.push(0);
         let str_len_ptr = &mut 0;
@@ -204,7 +213,7 @@ pub fn connect_with_conn_string(env_handle: HEnv, in_connection_string: String) 
             dbc as HDbc,
             null_mut(),
             in_connection_string_encoded.as_ptr(),
-            SQL_NTS as SmallInt,
+            SQL_NTS.try_into().unwrap(),
             null_mut(),
             0,
             str_len_ptr,
@@ -424,4 +433,44 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
             });
         }
     }
+}
+
+#[allow(dead_code)]
+/// Helper function to bind columns.
+pub unsafe fn bind_cols(
+    stmt_handle: HStmt,
+    target_types: Vec<(CDataType, Pointer, Len, *mut Len)>,
+) {
+    for (i, (target_type, binding_buffer, buffer_length, indicator)) in
+        target_types.iter().enumerate()
+    {
+        assert_eq!(
+            SqlReturn::SUCCESS,
+            SQLBindCol(
+                stmt_handle,
+                (i + 1) as USmallInt,
+                *target_type as SmallInt,
+                *binding_buffer,
+                *buffer_length,
+                *indicator,
+            ),
+            "{}",
+            get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+        )
+    }
+}
+
+#[allow(dead_code)]
+/// Helper function to execute the default query
+///    SELECT * FROM integration_test.foo
+/// via SQLExecDirectW.
+pub unsafe fn exec_direct_default_query(stmt_handle: HStmt) {
+    let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT * FROM integration_test.foo");
+    query.push(0);
+    assert_eq!(
+        SqlReturn::SUCCESS,
+        SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS),
+        "{}",
+        get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+    );
 }

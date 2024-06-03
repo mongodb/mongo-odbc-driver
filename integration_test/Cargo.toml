@@ -19,6 +19,7 @@ regex = "1"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
 mongodb = "2.8.2"
+tailcall = "1.0"
 # Do NOT change these features without consulting with other team members. 
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread
@@ -27,3 +28,4 @@ tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
 
 [features]
 result_set = []
+evergreen_tests = []

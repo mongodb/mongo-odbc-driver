@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 /// The tests in this module are based on the Preview Data workflow using SSIS.
@@ -10,13 +16,12 @@ mod common;
 mod integration {
     use crate::common::{
         default_setup_connect_and_alloc_stmt, disconnect_and_free_dbc_and_env_handles,
-        fetch_and_get_data, get_sql_diagnostics,
+        exec_direct_default_query, fetch_and_get_data, get_sql_diagnostics,
     };
     use cstr::WideChar;
     use definitions::{
         AttrOdbcVersion, CDataType, FreeStmtOption, Handle, HandleType, Pointer, SQLCancel,
-        SQLExecDirectW, SQLFreeStmt, SQLPrepareW, SQLSetStmtAttrW, SqlReturn, StatementAttribute,
-        SQL_NTS,
+        SQLFreeStmt, SQLPrepareW, SQLSetStmtAttrW, SqlReturn, StatementAttribute, SQL_NTS,
     };
 
     /// This test is inspired by the SSIS Preview Data result set metadata flow.
@@ -40,7 +45,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
+                SQLPrepareW(stmt_handle, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
@@ -87,15 +92,7 @@ mod integration {
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
 
-            let mut query: Vec<WideChar> =
-                cstr::to_widechar_vec("SELECT * FROM integration_test.foo");
-            query.push(0);
-            assert_eq!(
-                SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
-                "{}",
-                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
-            );
+            exec_direct_default_query(stmt_handle);
 
             fetch_and_get_data(
                 stmt_handle as Handle,

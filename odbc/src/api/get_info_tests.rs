@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 use crate::{
     handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
@@ -92,12 +98,12 @@ macro_rules! test_get_info_expect_u32_sql_all {
 unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
     input_text_to_string_w(
         value_ptr as *const _,
-        out_length / std::mem::size_of::<WideChar>(),
+        (out_length / std::mem::size_of::<WideChar>()) as isize,
     )
 }
 
 unsafe fn modify_string_value_from_runes(value_ptr: Pointer, out_length: usize) -> String {
-    input_text_to_string_w(value_ptr as *const _, out_length)
+    input_text_to_string_w(value_ptr as *const _, out_length as isize)
 }
 
 unsafe fn modify_u32_value(value_ptr: Pointer, _: usize) -> u32 {

@@ -97,7 +97,7 @@ pub unsafe fn get_diag_fieldw(
 ) -> SqlReturn {
     // NOTE: number is dependent on the list of errors, but is a header, hence separating it from the match
     if diag_identifier == DiagType::SQL_DIAG_NUMBER {
-        *(diag_info_ptr as *mut usize) = errors.len();
+        *diag_info_ptr.cast::<usize>() = errors.len();
         SqlReturn::SUCCESS
     } else {
         if buffer_length < 0 || record_number < 1 {

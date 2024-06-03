@@ -39,6 +39,7 @@ impl MongoQuery {
         query_timeout: Option<u32>,
         query: &str,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
     ) -> Result<Self> {
         let current_db = current_db.ok_or(Error::NoDatabase)?;
         let db = client.client.database(&current_db);
@@ -59,8 +60,11 @@ impl MongoQuery {
         let get_result_schema_response: SqlGetSchemaResponse =
             bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
 
-        let metadata =
-            get_result_schema_response.process_result_metadata(&current_db, type_mode)?;
+        let metadata = get_result_schema_response.process_result_metadata(
+            &current_db,
+            type_mode,
+            max_string_length,
+        )?;
 
         Ok(Self {
             resultset_cursor: None,
@@ -109,10 +113,10 @@ impl MongoStatement for MongoQuery {
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, col_index: u16, max_string_length: Option<u16>) -> Result<Option<Bson>> {
         let current = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
         let md = self
-            .get_col_metadata(col_index)
+            .get_col_metadata(col_index, max_string_length)
             .map_err(|_| Error::ColIndexOutOfBounds(col_index))?;
         let datasource = current
             .get_document(&md.table_name)
@@ -121,7 +125,7 @@ impl MongoStatement for MongoQuery {
         Ok(column.cloned())
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
+    fn get_resultset_metadata(&self, _: Option<u16>) -> &Vec<MongoColMetadata> {
         &self.resultset_metadata
     }
 
@@ -147,7 +151,9 @@ impl MongoStatement for MongoQuery {
         let mut max_time = None;
         // If the query timeout is 0, it means "no timeout"
         if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            max_time = Some(Duration::from_millis(self.query_timeout.unwrap() as u64))
+            max_time = Some(Duration::from_millis(u64::from(
+                self.query_timeout.unwrap(),
+            )))
         }
 
         let mut batch_size = None;

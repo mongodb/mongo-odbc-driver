@@ -5,7 +5,6 @@ agent:
   bindAddr: localhost:8027
   batchFlushPeriod: 1s
 backend:
-  authTokens: {}
   bindAddr: localhost:8029
 execution:
   agentOnly: true
@@ -120,7 +119,6 @@ tenant:
           schemaFile: ./testdata/tenantschema/cities.json
     client:
       uri: localhost:8029
-      token: frontend-auth-token
   config:
     server:
       inline:
@@ -129,4 +127,3 @@ tenant:
     server:
       inline:
         file: ./testdata/config/inline_local/tenant-config.json
-

@@ -13,6 +13,8 @@ const SERVER: &str = "server";
 const UID: &str = "uid";
 const URI: &str = "uri";
 const USER: &str = "user";
+const SIMPLE_TYPES_ONLY: &str = "simple_types_only";
+const ENABLE_MAX_STRING_LENGTH: &str = "enable_max_string_length";
 // SQL-1281
 // const LOGPATH: &str = "LOGPATH";
 
@@ -42,6 +44,8 @@ pub struct DsnArgs<S: Into<String> + Copy> {
     pub user: S,
     pub server: S,
     pub driver_name: S,
+    pub simple_types_only: S,
+    pub enable_max_string_length: S,
 }
 
 #[derive(Debug, Default)]
@@ -53,6 +57,8 @@ pub struct Dsn {
     pub user: String,
     pub server: String,
     pub driver_name: String,
+    pub simple_types_only: String,
+    pub enable_max_string_length: String,
 }
 
 impl Dsn {
@@ -76,6 +82,8 @@ impl Dsn {
                 user: args.user.into(),
                 server: args.server.into(),
                 driver_name: args.driver_name.into(),
+                simple_types_only: args.simple_types_only.into(),
+                enable_max_string_length: args.enable_max_string_length.into(),
             })
         } else if !validation[1] {
             Err(DsnError::Dsn(args.dsn.into()))
@@ -182,15 +190,21 @@ impl Dsn {
                     return;
                 }
 
-                let value = unsafe { input_text_to_string_w(buffer.as_mut_ptr(), len as usize) };
+                let value = unsafe {
+                    input_text_to_string_w(
+                        buffer.as_mut_ptr(),
+                        isize::try_from(len)
+                            .expect("Data read from DSN exceeds isize on this system"),
+                    )
+                };
                 dsn_opts.set_field(key, &value);
             });
         // Somehow the registry value was too long. This should never happen unless Microsoft changes registry value rules.
         if !error_key.is_empty() {
             return Err(DsnError::Generic(format!("If you see this error, please report it. Attempted to read a value from registry that was too long for key: `{error_key}`.")));
         }
-        dsn_opts.driver_name = self.driver_name.clone();
-        dsn_opts.dsn = self.dsn.clone();
+        dsn_opts.driver_name.clone_from(&self.driver_name);
+        dsn_opts.dsn.clone_from(&self.dsn);
         Ok(dsn_opts)
     }
 
@@ -204,6 +218,8 @@ impl Dsn {
             URI => self.uri = value.to_string(),
             USER => self.user = value.to_string(),
             UID => self.user = value.to_string(),
+            SIMPLE_TYPES_ONLY => self.simple_types_only = value.to_string(),
+            ENABLE_MAX_STRING_LENGTH => self.enable_max_string_length = value.to_string(),
             // SQL-1281
             // LOGPATH => self.logpath = value.to_string(),
             _ => {}
@@ -244,6 +260,11 @@ impl<'a> DSNIterator<'a> {
                 ("Password", &dsn_opts.password),
                 ("Uri", &dsn_opts.uri),
                 ("User", &dsn_opts.user),
+                ("simple_types_only", &dsn_opts.simple_types_only),
+                (
+                    "enable_max_string_length",
+                    &dsn_opts.enable_max_string_length,
+                ),
                 // SQL-1281
                 // ("Logpath", &dsn_opts.logpath),
             ],
@@ -261,6 +282,7 @@ impl<'a> Iterator for DSNIterator<'a> {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
 
     #[test]
@@ -273,6 +295,8 @@ mod test {
             user: "test",
             server: "test",
             driver_name: "test",
+            simple_types_only: "0",
+            enable_max_string_length: "0",
         });
         assert!(dsn_opts.is_err());
     }
@@ -286,7 +310,7 @@ mod test {
             uri: "test",
             user: "test",
             server: "test",
-            driver_name: "test",
+            ..Default::default()
         });
         assert!(dsn_opts.is_err());
     }
@@ -301,6 +325,7 @@ mod test {
             user: "test",
             server: "test",
             driver_name: "test",
+            ..Default::default()
         });
         assert!(dsn_opts.is_err());
     }
@@ -315,6 +340,7 @@ mod test {
             user: "test",
             server: "t".repeat(MAX_VALUE_LENGTH + 1).as_str(),
             driver_name: "test",
+            ..Default::default()
         });
         assert!(dsn_opts.is_err());
     }
@@ -329,6 +355,7 @@ mod test {
             server: "test",
             user: "t".repeat(MAX_VALUE_LENGTH + 1).as_str(),
             driver_name: "test",
+            ..Default::default()
         });
         assert!(dsn_opts.is_err());
     }
@@ -343,6 +370,7 @@ mod test {
             server: "test",
             user: "test",
             driver_name: "test",
+            ..Default::default()
         });
         assert!(dsn_opts.is_ok());
     }
@@ -358,5 +386,9 @@ mod test {
         assert_eq!(dsn_opts.user, "user1");
         dsn_opts.set_field("user", "user2");
         assert_eq!(dsn_opts.user, "user2");
+        dsn_opts.set_field("simple_types_only", "1");
+        assert_eq!(dsn_opts.simple_types_only, "1");
+        dsn_opts.set_field("enable_max_string_length", "1");
+        assert_eq!(dsn_opts.enable_max_string_length, "1");
     }
 }

@@ -1,3 +1,8 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 mod test_generator_util;
 
 use cstr::WideChar;
@@ -94,7 +99,7 @@ pub struct IntegrationTest {
 pub struct TestEntry {
     pub description: String,
     pub db: String,
-    pub is_simple_type: Option<bool>,
+    pub is_standard_type: Option<bool>,
     pub test_definition: TestDef,
     pub expected_result: Option<Vec<Vec<Value>>>,
     pub skip_reason: Option<String>,
@@ -155,10 +160,10 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
                 None => {
                     let mut conn_str = crate::common::generate_default_connection_str();
                     conn_str.push_str(&("DATABASE=".to_owned() + &test.db + ";"));
-                    if let Some(true) = test.is_simple_type {
-                        conn_str.push_str("SIMPLE_TYPES_ONLY=1;");
+                    if let Some(true) = test.is_standard_type {
+                        conn_str.push_str("SIMPLE_TYPES_ONLY=0;");
                     }
-                    let conn_handle = connect_with_conn_string(env, conn_str).unwrap();
+                    let conn_handle = connect_with_conn_string(env, Some(conn_str)).unwrap();
                     let test_result = match test.test_definition {
                         TestDef::Query(ref q) => run_query_test(q, &test, conn_handle, generate),
                         TestDef::Function(ref f) => {
@@ -199,10 +204,10 @@ pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
                 None => {
                     let mut conn_str = crate::common::generate_default_connection_str();
                     conn_str.push_str(&("DATABASE=".to_owned() + &test.db + ";"));
-                    if let Some(true) = test.is_simple_type {
-                        conn_str.push_str("SIMPLE_TYPES_ONLY=1;");
+                    if let Some(true) = test.is_standard_type {
+                        conn_str.push_str("SIMPLE_TYPES_ONLY=0;");
                     }
-                    let conn_handle = connect_with_conn_string(env, conn_str).unwrap();
+                    let conn_handle = connect_with_conn_string(env, Some(conn_str)).unwrap();
                     let test_result = match test.test_definition {
                         TestDef::Query(ref q) => run_query_test(q, &test, conn_handle, generate),
                         TestDef::Function(ref f) => {

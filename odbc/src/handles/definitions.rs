@@ -180,31 +180,31 @@ pub type MongoHandleRef = &'static mut MongoHandle;
 
 impl From<Handle> for MongoHandleRef {
     fn from(handle: Handle) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
     }
 }
 
 impl From<HEnv> for MongoHandleRef {
     fn from(handle: HEnv) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
     }
 }
 
 impl From<HStmt> for MongoHandleRef {
     fn from(handle: HStmt) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*(handle.cast::<MongoHandle>())).borrow_mut() }
     }
 }
 
 impl From<HDbc> for MongoHandleRef {
     fn from(handle: HDbc) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
     }
 }
 
 impl From<HDesc> for MongoHandleRef {
     fn from(handle: HDesc) -> Self {
-        unsafe { (*(handle as *mut MongoHandle)).borrow_mut() }
+        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
     }
 }
 
@@ -282,6 +282,8 @@ pub struct Connection {
     // type_mode indicates if BsonTypeInfo.simple_type_info will be
     // utilized in place of standard BsonTypeInfo fields
     pub type_mode: RwLock<TypeMode>,
+    // max_string_length is the maximum character length of string data.
+    pub max_string_length: RwLock<Option<u16>>,
 }
 
 #[derive(Debug, Default)]
@@ -318,7 +320,8 @@ impl Connection {
             state: RwLock::new(state),
             statements: RwLock::new(HashSet::new()),
             errors: RwLock::new(vec![]),
-            type_mode: RwLock::new(TypeMode::Standard),
+            type_mode: RwLock::new(TypeMode::Simple),
+            max_string_length: RwLock::new(None),
         }
     }
 }
@@ -497,6 +500,20 @@ impl Statement {
             errors: RwLock::new(vec![]),
             mongo_statement: RwLock::new(None),
             bound_cols: RwLock::new(None),
+        }
+    }
+
+    pub(crate) fn get_max_string_length(&self) -> Option<u16> {
+        unsafe {
+            *self
+                .connection
+                .as_ref()
+                .unwrap()
+                .as_connection()
+                .unwrap()
+                .max_string_length
+                .read()
+                .unwrap()
         }
     }
 
