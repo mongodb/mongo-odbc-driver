@@ -1415,6 +1415,46 @@ functions:
         permissions: public-read
         content_type: application/json
 
+  "static code analysis":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          echo "Running static code analysis with Semgrep..."
+          venv='venv'
+          # Setup or use the existing virtualenv for semgrep
+          if [[ -f "$venv/bin/activate" ]]; then
+              echo 'using existing virtualenv'
+              . "$venv"/bin/activate
+          else
+              echo 'Creating new virtualenv'
+              python3 -m virtualenv "$venv"
+              echo 'Activating new virtualenv'
+              . "$venv"/bin/activate
+          fi
+          python3 -m pip install semgrep
+          # confirm
+          semgrep --version
+          set +e
+          semgrep --config p/rust --sarif --exclude "integration_test" --verbose --error --severity=ERROR --sarif-output=odbc.sast.sarif > odbc.sast.cmd.verbose.out 2>&1
+          SCAN_RESULT=$?
+          set -e
+          # Exit with a failure if the scan found an issue
+          exit $SCAN_RESULT
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_files_include_filter:
+          - mongosql-odbc-driver.sast.*
+        remote_file: artifacts/${version_id}/${build_variant}/ssdlc/
+        content_type: text/plain
+        bucket: mciuploads
+        permissions: public-read
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -1619,6 +1659,11 @@ tasks:
       - func: "upload release"
       - func: "upload debug"
 
+  - name: semgrep
+    exec_timeout_secs: 3600 # 1h
+    commands:
+      - func: "static code analysis"
+
 task_groups:
   - name: windows-windows-test-unit-group
     setup_group_can_fail_task: false
@@ -1666,6 +1711,12 @@ buildvariants:
       - name: clippy
       - name: rustfmt
       - name: asan-compile
+
+  - name: code-quality-security
+    display_name: "Code Quality and Security"
+    run_on: [ubuntu2204-small]
+    tasks:
+      - name: semgrep
 
   - name: windows-64
     tags: ["release-variant"]
