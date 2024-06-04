@@ -1439,7 +1439,7 @@ functions:
           # confirm
           semgrep --version
           set +e
-          semgrep --config p/rust --sarif --exclude "integration_test" --verbose --error --severity=ERROR --sarif-output=odbc.sast.sarif > odbc.sast.cmd.verbose.out 2>&1
+          semgrep --config p/rust --sarif --exclude "integration_test" --verbose --error --severity=ERROR --sarif-output=mongo-odbc-driver.sast.sarif > mongo-odbc-driver.sast.cmd.verbose.out 2>&1
           SCAN_RESULT=$?
           set -e
           # Exit with a failure if the scan found an issue
@@ -1449,8 +1449,8 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_files_include_filter:
-          - mongosql-odbc-driver.sast.*
-        remote_file: artifacts/${version_id}/${build_variant}/ssdlc/
+          - mongo-odbc-driver.sast.*
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
