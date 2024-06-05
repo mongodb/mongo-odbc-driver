@@ -200,28 +200,28 @@ functions:
           echo "------------------------------------"
 
           # Install CycloneDX CLI and JQ
-          CYCLONE_URL=""
-          JQ_URL=""
+          CYCLONE_URL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.25.0"
+          JQ_URL="https://github.com/jqlang/jq/releases/download/jq-1.7.1"
           if [[ "$OS" = "Linux" ]]; then
             if [[ "$ARCH" = "x86_64" ]]; then
-              CYCLONE_URL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.25.0/cyclonedx-linux-x64"
-              JQ_URL="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-linux-x64"
+              JQ_URL="$JQ_URL/jq-linux-amd64"
             elif [ "$ARCH" = "arm64" ]; then
-              CYCLONE_URL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.25.0/cyclonedx-linux-arm64"
-              JQ_URL="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64"
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-linux-arm64"
+              JQ_URL="$JQ_URL/jq-linux-arm64"
             fi
           elif [[ "$OS" = "Darwin" ]]; then
             if [[ "$ARCH" = "arm64" ]]; then
-              CYCLONE_URL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.25.0/cyclonedx-osx-arm64"
-              JQ_URL="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-macos-arm64"
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-osx-arm64"
+              JQ_URL="$JQ_URL/jq-macos-arm64"
             else
-              CYCLONE_URL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.25.0/cyclonedx-osx-x64"
-              JQ_URL="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-macos-amd64"
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-osx-x64"
+              JQ_URL="$JQ_URL/jq-macos-amd64"
             fi
           else
             # Windows
-            CYCLONE_URL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.25.0/cyclonedx-win-x64.exe"
-            JQ_URL="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-windows-amd64.exe"
+            CYCLONE_URL="$CYCLONE_URL/cyclonedx-win-x64.exe"
+            JQ_URL="$JQ_URL/jq-windows-amd64.exe"
           fi
 
           echo "-- Downloading CycloneDX CLI  for $OS-$ARCH $CYCLONE_URL --"
