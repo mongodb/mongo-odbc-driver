@@ -1423,6 +1423,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          export SEMGREP_APP_TOKEN=${semgrep_app_token}
           echo "Running static code analysis with Semgrep..."
           venv='venv'
           # Setup or use the existing virtualenv for semgrep
