@@ -1604,7 +1604,7 @@ functions:
               . "$venv"/bin/activate
           fi
           python3 -m pip install semgrep
-          # confirm
+          # Confirm semgrep version
           semgrep --version
           set +e
           semgrep --config p/rust --sarif --exclude "integration_test" --verbose --error --severity=ERROR --sarif-output=mongo-odbc-driver.sast.sarif > mongo-odbc-driver.sast.cmd.verbose.out 2>&1
