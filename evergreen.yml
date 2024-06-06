@@ -1592,16 +1592,16 @@ functions:
           ${prepare_shell}
           export SEMGREP_APP_TOKEN=${semgrep_app_token}
           echo "Running static code analysis with Semgrep..."
-          venv='venv'
+
           # Setup or use the existing virtualenv for semgrep
-          if [[ -f "$venv/bin/activate" ]]; then
+          if [[ -f "venv/bin/activate" ]]; then
               echo 'using existing virtualenv'
-              . "$venv"/bin/activate
+              . venv/bin/activate
           else
               echo 'Creating new virtualenv'
-              python3 -m virtualenv "$venv"
+              python3 -m virtualenv venv
               echo 'Activating new virtualenv'
-              . "$venv"/bin/activate
+              . venv/bin/activate
           fi
           python3 -m pip install semgrep
           # confirm
