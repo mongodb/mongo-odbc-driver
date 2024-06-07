@@ -1,6 +1,6 @@
 # MongoDB ODBC Driver
 
-An 64-bit unicode ODBC driver for connecting to Atlas Data Lake via the MongoSQL dialect.
+A 64-bit unicode ODBC driver for connecting to Atlas Data Federation using the MongoSQL dialect.
 
 If you're looking for an ODBC driver to use with the [MongoDB
 Connector for BI](https://docs.mongodb.com/bi-connector/current/),
