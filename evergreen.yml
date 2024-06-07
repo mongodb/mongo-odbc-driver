@@ -64,14 +64,17 @@ functions:
           else
             export RELEASE_VERSION=snapshot
           fi
+          export MSI_FILENAME="mongoodbc.msi"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
-          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/mongoodbc.msi"
+          MSI_FILENAME: "$MSI_FILENAME"
+          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
           UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
+            export MSI_FILENAME="$MSI_FILENAME"
             export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
             export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
             export PATH="$PATH"
@@ -210,7 +213,16 @@ functions:
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_jsign_image} \
-            /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 mongoodbc.msi"
+            /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 ${MSI_FILENAME}"
+          
+          # Generating checksums
+          if [ -e $msi_filename ]; then
+            shasum -a 1 ${MSI_FILENAME} | tee ${MSI_FILENAME}.sha1
+            shasum -a 256 ${MSI_FILENAME} | tee ${MSI_FILENAME}.sha256
+            md5sum ${MSI_FILENAME} | tee ${MSI_FILENAME}.md5
+          else
+            echo "${MSI_FILENAME} does not exist. Skipping checksum generation"
+          fi
 
   "sign ubuntu and verify signature":
     - command: shell.exec
@@ -544,10 +556,20 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
-        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}
         bucket: mciuploads
         permissions: public-read
         display_name: mongoodbc-signed.msi
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi.sha256
+        local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}.sha256
+        bucket: mciuploads
+        permissions: public-read
+        display_name: mongoodbc-signed.msi.sha256
         content_type: application/octet-stream
 
   "upload ubuntu sig file":
@@ -578,6 +600,24 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
+        display_name: ${MSI_FILENAME}
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi.sha256
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi.sha256
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi.sha256
+        remote_file: ${WINDOWS_INSTALLER_PATH}.sha256
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+        display_name: ${MSI_FILENAME}.sha256
     - command: s3.get
       params:
         aws_key: ${aws_key}

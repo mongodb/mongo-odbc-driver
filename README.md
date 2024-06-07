@@ -1,4 +1,4 @@
-# mongo-odbc-driver
+# MongoDB ODBC Driver
 
 An 64-bit unicode ODBC driver for connecting to Atlas Data Lake via the MongoSQL dialect.
 
@@ -8,8 +8,15 @@ please see the
 [mongodb/mongo-bi-connector-odbc-driver](https://github.com/mongodb/mongo-bi-connector-odbc-driver)
 repository.
 
+## Verify Integrity of MongoDB ODBC Driver packages
+You can download the [MongoDB ODBC Driver](https://www.mongodb.com/try/download/odbc-driver) from MongoDB Download Center.   
+Select the platform and version you want to verify on that page.   
+Click `Copy link` and use the URL while following the instructions to validate MongoDB packages described [here](https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/).
+
+> :warning: For this [step](!https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/#download-then-import-the-key-file), download and import the MongoDB ODBC Driver public key using this url : `https://pgp.mongodb.com/atlas-sql-odbc.asc`   
 
 ## Set up the ODBC driver on Windows
+### Manually set up the ODBC driver on Windows for local development
 Note: users can utilize the built-in driver manager.
 1. Update the values of `Driver`, `Pwd`, `Server`, `User`, and `Database` in `setup/setupDSN.reg`. The value of `Driver` should be the absolute path of `mongoodbc.dll`. This file should be located in either the `mongo-odbc-driver/target/debug` directory or in the release directory.
 
@@ -17,8 +24,8 @@ Note: users can utilize the built-in driver manager.
 
 3. Run `reg import "setup/setupDSN.reg"` in order to populate the registry editor with the new entries. Alternatively, simply double click on the `setupDSN.reg` file.
 
-## Validate setup
-### 64-bit
+### Validate setup
+#### 64-bit
 Run `reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers"` to verify that `MongoDB Atlas SQL ODBC Driver` has been installed successfully.
 
 There should be a new entry called `ADF_TEST` under `ODBC/ODBC.INI` with the following subentries:
