@@ -89,6 +89,11 @@ functions:
             export ADF_TEST_URI="${adf_test_uri}"
             export SCRIPT_FOLDER="$SCRIPT_FOLDER"
             export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
+            export SBOM_DIR="sbom_tools"
+            export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
+            export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
+            export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
+            export ALLOW_VULNS="${AllowVulns}"
 
             # Windows variables
             export LOCAL_DUMP_ORIGINAL_REG_VAL="$LOCAL_DUMP_ORIGINAL_REG_VAL"
@@ -165,6 +170,168 @@ functions:
         script: |
           ${prepare_shell}
           cargo fmt --all --  --check
+
+  "generate SBOM and scan":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          echo ">>>> Install SBOM tool..."
+
+          OS=$(uname)
+          echo "OS=$OS"
+          ARCH="$(uname -m)"
+          echo "Arch=$ARCH"
+
+          mkdir $SBOM_DIR
+
+          echo "SBOM with vulnerabilities: $SBOM_LICENSES";
+          echo "SBOM with license: $SBOM_VULN";
+          echo "Final SBOM with all information: $SBOM_FINAL"
+
+          # Install cargo-cyclonedx
+          echo "-- Installing cargo-cyclonedx --"
+          cargo install cargo-cyclonedx
+          echo "------------------------------------"
+
+          # Install Grype
+          echo "-- Downloading Grype --"
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b $SBOM_DIR
+          echo "------------------------------------"
+
+          # Install CycloneDX CLI and JQ
+          CYCLONE_URL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.25.0"
+          JQ_URL="https://github.com/jqlang/jq/releases/download/jq-1.7.1"
+          if [[ "$OS" = "Linux" ]]; then
+            if [[ "$ARCH" = "x86_64" ]]; then
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-linux-x64"
+              JQ_URL="$JQ_URL/jq-linux-amd64"
+            elif [ "$ARCH" = "arm64" ]; then
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-linux-arm64"
+              JQ_URL="$JQ_URL/jq-linux-arm64"
+            fi
+          elif [[ "$OS" = "Darwin" ]]; then
+            if [[ "$ARCH" = "arm64" ]]; then
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-osx-arm64"
+              JQ_URL="$JQ_URL/jq-macos-arm64"
+            else
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-osx-x64"
+              JQ_URL="$JQ_URL/jq-macos-amd64"
+            fi
+          else
+            # Windows
+            CYCLONE_URL="$CYCLONE_URL/cyclonedx-win-x64.exe"
+            JQ_URL="$JQ_URL/jq-windows-amd64.exe"
+          fi
+
+          echo "-- Downloading CycloneDX CLI  for $OS-$ARCH $CYCLONE_URL --"
+          curl -L -o $SBOM_DIR/cyclonedx-cli "$CYCLONE_URL" \
+            --silent \
+            --fail \
+            --max-time 60 \
+            --retry 5 \
+            --retry-delay 0
+          chmod +x ./$SBOM_DIR/cyclonedx-cli
+          echo "------------------------------------"
+
+          echo "-- Downloading JQ $JQ_URL --"
+          curl -L -o $SBOM_DIR/jq "$JQ_URL" \
+            --silent \
+            --fail \
+            --max-time 60 \
+            --retry 5 \
+            --retry-delay 0
+          chmod +x ./$SBOM_DIR/jq
+          echo "------------------------------------"
+          echo "<<<< Done installing SBOM tools"
+  
+          echo ">>>> Generate SBOM..."
+          echo "--  Generating SBOMs with the licenses information --"
+          cargo cyclonedx --target all -v -f json
+          echo "------------------------------------"
+
+          echo "-- Merging info from both mongo-odbc-driver and win_setupgui because both are packaged libraries --"
+          echo "./$SBOM_DIR/cyclonedx-cli merge --input-files ./odbc/mongo-odbc-driver.cdx.json ./win_setupgui/win_setupgui.cdx.json --output-format json --input-format json --group mongo-odbc-driver --name mongo-odbc-driver> $SBOM_LICENSES"
+          ./$SBOM_DIR/cyclonedx-cli merge --input-files ./odbc/mongo-odbc-driver.cdx.json ./win_setupgui/win_setupgui.cdx.json --output-format json --input-format json --group mongo-odbc-driver --name mongo-odbc-driver> $SBOM_LICENSES
+          echo "------------------------------------"
+
+          echo "-- Generating SBOM with vulnerabilities information --"
+          echo "./$SBOM_DIR/grype sbom:$SBOM_LICENSES -o cyclonedx-json > $SBOM_VULN"
+          ./$SBOM_DIR/grype sbom:$SBOM_LICENSES -o cyclonedx-json > $SBOM_VULN
+          echo "------------------------------------"
+
+          echo "-- Merging the SBOMs with the licenses information and the SBOM with the  vulnerabilities information in $SBOM_FINAL --"
+          
+          temp_output="temp_output.json"
+          if [[ -f "$temp_output" ]] ; then
+              rm "$temp_output"
+          fi
+          touch $temp_output
+          
+          while IFS= read -r line
+          do
+            if [[ "$line" == *"purl"* ]]; then
+              bash_purl=$(echo $line | cut -d '"' -f4)
+              command=$(echo "./$SBOM_DIR/jq '.components[] | select(.purl == \"$bash_purl\").licenses' $SBOM_LICENSES")
+              # Add the license information back in the augmented SBOM.
+              licenseInfo=$(eval " $command")
+              if [[ -z "$licenseInfo" ]]; then
+                echo "\"licenses\" : []," >> $temp_output
+              else
+                echo "\"licenses\" : $licenseInfo," >> $temp_output
+              fi
+            fi
+            echo "$line" >> $temp_output
+
+          done < $SBOM_VULN
+          echo "------------------------------------"
+          
+          echo "--  Adding the name of the team responsible for each dependency as required by Silk and format the json file --"
+          echo "./$SBOM_DIR/jq '.components[].properties += [{\"name\": \"internal:team_responsible\", \"value\": \"Atlas SQL\"}]' $temp_output > $SBOM_FINAL"
+          ./$SBOM_DIR/jq '.components[].properties += [{"name": "internal:team_responsible", "value": "Atlas SQL"}]' $temp_output > $SBOM_FINAL
+          echo "------------------------------------"
+          echo "<<<< Done generating SBOM"
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_files_include_filter:
+          - mongosql-odbc-driver/*.cdx.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/
+        content_type: text/plain
+        bucket: mciuploads
+        permissions: public-read
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          
+          echo ">>>> Scan SBOM for vulnerabilities..."
+          if [[ "$ALLOW_VULNS" != "" ]]; then
+            echo "Vulnerability ids to ignore : $ALLOW_VULNS"
+            
+            echo "-- Generate .grype.yaml specifying vulnerabilities to ignore --"
+            GRYPE_CONF_FILE=".grype.yaml"
+            touch $GRYPE_CONF_FILE
+            echo "ignore:" > $GRYPE_CONF_FILE
+
+            IFS=','; for VULN_ID in $ALLOW_VULNS; do
+              echo "Ignoring vulnerability with id $VULN_ID"
+              echo "    - vulnerability: $VULN_ID" >> $GRYPE_CONF_FILE
+            done
+            echo "------------------------------------"
+          fi
+          
+          echo "-- Scanning dependency for vulnerabilities --"
+          ./$SBOM_DIR/grype sbom:$SBOM_LICENSES --fail-on low
+          echo "---------------------------------------------"
+          echo "<<<< Done scanning SBOM"
 
   "set and check packages version":
     - command: shell.exec
@@ -1472,6 +1639,12 @@ tasks:
       - func: "install rust toolchain"
       - func: "check rustfmt"
 
+  - name: sbom
+    commands:
+      - func: "install rust toolchain"
+      - func: set and check packages version
+      - func: "generate SBOM and scan"
+
   - name: compile
     commands:
       - func: "install iODBC"
@@ -1706,6 +1879,13 @@ buildvariants:
       - name: clippy
       - name: rustfmt
       - name: asan-compile
+
+buildvariants:
+  - name: code-quality-security
+    display_name: "Code quality and Security"
+    run_on: [ubuntu2204-small]
+    tasks:
+      - name: sbom
 
   - name: windows-64
     tags: ["release-variant"]
