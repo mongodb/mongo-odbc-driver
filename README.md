@@ -13,10 +13,10 @@ You can download the [MongoDB ODBC Driver](https://www.mongodb.com/try/download/
 Select the platform and version you want to verify on that page.   
 Click `Copy link` and use the URL while following the instructions to validate MongoDB packages described [here](https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/).
 
-> :warning: For this [step](!https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/#download-then-import-the-key-file), download and import the MongoDB ODBC Driver public key using this url : `https://pgp.mongodb.com/atlas-sql-odbc.asc`   
+> :warning:  
+> For this [step](!https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/#download-then-import-the-key-file), download and import the MongoDB ODBC Driver public key using this url : `https://pgp.mongodb.com/atlas-sql-odbc.asc`
 
-## Set up the ODBC driver on Windows
-### Manually set up the ODBC driver on Windows for local development
+## Manually set up the ODBC driver on Windows for local development
 Note: users can utilize the built-in driver manager.
 1. Update the values of `Driver`, `Pwd`, `Server`, `User`, and `Database` in `setup/setupDSN.reg`. The value of `Driver` should be the absolute path of `mongoodbc.dll`. This file should be located in either the `mongo-odbc-driver/target/debug` directory or in the release directory.
 
