@@ -8,7 +8,7 @@ please see the
 [mongodb/mongo-bi-connector-odbc-driver](https://github.com/mongodb/mongo-bi-connector-odbc-driver)
 repository.
 
-## Verify Integrity of MongoDB ODBC Driver packages
+## Verify Integrity of MongoDB ODBC Driver Packages
 You can download the [MongoDB ODBC Driver](https://www.mongodb.com/try/download/odbc-driver) from MongoDB Download Center.   
 Select the platform and version you want to verify on that page.   
 Click `Copy link` and use the URL while following the instructions to validate MongoDB packages described [here](https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/).
