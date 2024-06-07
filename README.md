@@ -10,8 +10,8 @@ repository.
 
 ## Verify Integrity of MongoDB ODBC Driver Packages
 You can download the [MongoDB ODBC Driver](https://www.mongodb.com/try/download/odbc-driver) from MongoDB Download Center.   
-Select the platform and version you want to verify on that page.   
-Click `Copy link` and use the URL while following the instructions to validate MongoDB packages described [here](https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/).
+1. Select the platform and version you want to verify on that page.   
+2. Click `Copy link` and use the URL while following the instructions to validate MongoDB packages described [here](https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/).
 
 > :warning:  
 > For this [step](!https://www.mongodb.com/docs/manual/tutorial/verify-mongodb-packages/#download-then-import-the-key-file), download and import the MongoDB ODBC Driver public key using this url : `https://pgp.mongodb.com/atlas-sql-odbc.asc`
