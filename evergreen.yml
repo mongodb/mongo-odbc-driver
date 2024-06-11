@@ -1356,6 +1356,18 @@ functions:
         content_type: application/octet-stream
         display_name: crash-dump-
 
+  "trace artifacts":
+    - command: papertrail.trace
+      params:
+        work_dir: mongosql-odbc-driver
+        key_id: ${papertrail_id}
+        secret_key: ${papertrail_key}
+        product: mongo-odbc-driver
+        version: ${version_id}
+        filenames:
+          - installer/msi/mongoodbc.msi
+          - installer/tgz/mongoodbc.tar.gz
+
   "update download center feed":
     # Download the current json feed used by the download center
     - command: s3.get
@@ -1605,6 +1617,7 @@ tasks:
       - name: release
     commands:
       - func: "update download center feed"
+      - func: "trace artifacts"
 
   - name: release
     git_tag_only: true
