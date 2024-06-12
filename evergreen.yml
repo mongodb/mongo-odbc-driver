@@ -1365,8 +1365,8 @@ functions:
         product: mongo-odbc-driver
         version: ${version_id}
         filenames:
-          - installer/msi/mongoodbc.msi
-          - installer/tgz/mongoodbc.tar.gz
+          - release/mongoodbc-signed.msi
+          - target/release/mongoodbc.tar.gz
 
   "update download center feed":
     # Download the current json feed used by the download center
