@@ -83,11 +83,11 @@ pub struct ConfigGui {
     database_input: nwg::TextInput,
 
     #[nwg_control(flags: "VISIBLE", text: "Enable maximum string length")]
-    #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 2)]
+    #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 4)]
     enable_max_string_length_field: nwg::Label,
 
     #[nwg_control(flags: "VISIBLE", text: "")]
-    #[nwg_layout_item(layout: grid,  row: 6, col: 2, col_span: 7)]
+    #[nwg_layout_item(layout: grid,  row: 6, col: 4, col_span: 3)]
     enable_max_string_length_input: nwg::CheckBox,
 
     #[nwg_control(flags: "VISIBLE", text: "Test")]
