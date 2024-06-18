@@ -13,7 +13,7 @@ use once_cell::sync::OnceCell;
 const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
     type_name: "date",
     sql_type: SqlDataType::SQL_TIMESTAMP,
-    non_concise_type: SqlDataType::SQL_DATETIME,
+    non_concise_type: Some(SqlDataType::SQL_DATETIME),
     searchable: SQL_PRED_BASIC,
     is_case_sensitive: false,
     fixed_prec_scale: true,
