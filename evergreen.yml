@@ -413,7 +413,7 @@ functions:
         content_type: application/json
         bucket: translators-connectors-releases
         permissions: public-read
-        display_name: mongodb-jdbc-${MDBJDBC_VER}.sbom.json
+        display_name: mongosql-odbc-${version_id}.sbom.json
 
   "set and check packages version":
     - command: shell.exec
