@@ -171,7 +171,7 @@ functions:
           ${prepare_shell}
           cargo fmt --all --  --check
 
-  "generate SBOM and scan":
+  "generate SBOM":
     - command: shell.exec
       type: test
       params:
@@ -304,6 +304,8 @@ functions:
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
+
+  "scan SBOM":
     - command: shell.exec
       type: test
       params:
@@ -1764,7 +1766,8 @@ tasks:
     commands:
       - func: "install rust toolchain"
       - func: set and check packages version
-      - func: "generate SBOM and scan"
+      - func: "generate SBOM"
+      - func: "scan SBOM"
       - func: "push SBOM Lite to Silk"
       - func: "pull augmented SBOM from Silk"
   
