@@ -1773,7 +1773,6 @@ tasks:
   
   - name: publish-augmented-sbom
     run_on: ubuntu2204-small
-    git_tag_only: true
     depends_on:
       - name: sbom
         variant: "code-quality-security"
