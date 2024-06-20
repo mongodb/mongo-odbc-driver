@@ -391,6 +391,27 @@ functions:
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
+  
+
+  "publish augmented SBOM":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${version_id}.sbom.json
+        content_type: application/json
+        bucket: translators-connectors-releases
+        permissions: public-read
+        display_name: mongodb-jdbc-${MDBJDBC_VER}.sbom.json
 
   "set and check packages version":
     - command: shell.exec
@@ -1746,6 +1767,16 @@ tasks:
       - func: "generate SBOM and scan"
       - func: "push SBOM Lite to Silk"
       - func: "pull augmented SBOM from Silk"
+  
+  - name: publish-augmented-sbom
+    run_on: ubuntu2204-small
+    git_tag_only: true
+    depends_on:
+      - name: sbom
+        variant: "code-quality-security"
+    exec_timeout_secs: 300 # 5m
+    commands:
+      - func: "publish augmented SBOM"
 
   - name: compile
     commands:
@@ -2049,4 +2080,4 @@ buildvariants:
       - name: release
       - name: snapshot
       - name: download-center-update
-      - name: ssdlc-artifacts
+      - name: publish-augmented-sbom
