@@ -409,7 +409,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/mongosql-odbc-${version_id}.sbom.json
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}.sbom.json
         content_type: application/json
         bucket: translators-connectors-releases
         permissions: public-read
