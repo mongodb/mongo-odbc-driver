@@ -1616,8 +1616,8 @@ tasks:
     depends_on:
       - name: release
     commands:
-      - func: "update download center feed"
       - func: "trace artifacts"
+      - func: "update download center feed"
 
   - name: release
     git_tag_only: true
