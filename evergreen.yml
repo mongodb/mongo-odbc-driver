@@ -364,6 +364,7 @@ functions:
           artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:1.0 \
           upload --silk-asset-group ${SILK_ASSET_GROUP} --sbom-in /pwd/$SBOM_FINAL
           echo "-------------------------------"
+
   "pull augmented SBOM from Silk":
     - command: shell.exec
       type: test
