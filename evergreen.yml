@@ -2074,5 +2074,5 @@ buildvariants:
     tasks:
       - name: release
       - name: snapshot
-      - name: download-center-update
       - name: publish-augmented-sbom
+      - name: download-center-update
