@@ -93,6 +93,7 @@ functions:
             export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
             export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
             export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
+            export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
             export ALLOW_VULNS="${AllowVulns}"
 
             # Windows variables
@@ -332,6 +333,67 @@ functions:
           ./$SBOM_DIR/grype sbom:$SBOM_LICENSES --fail-on low
           echo "---------------------------------------------"
           echo "<<<< Done scanning SBOM"
+  
+  "generate compliance report":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        env:
+          IS_TAG_TRIGGERED: "${triggered_by_git_tag}"
+          AUTHOR: "${author}"
+          AUTHOR_EMAIL: "${author_email}"
+        script: |
+          ${prepare_shell}
+          echo "Author = $AUTHOR"
+          echo "Author email = $AUTHOR_EMAIL"
+          echo "Version = $RELEASE_VERSION"
+          SBOM_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}.sbom.json"
+          SARIF_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongo-odbc-$RELEASE_VERSION.sast.sarif"
+          echo "Sbom url = $SBOM_URL"
+          echo "Sarif Url = $SARIF_URL"
+
+          # Copy template
+          cp resources/ssdlc/mongo-odbc-driver_compliance_report_template.md $COMPLIANCE_REPORT_NAME
+
+          # Update the version
+          sed -i.bu "s,%VERSION%,$RELEASE_VERSION,g" $COMPLIANCE_REPORT_NAME
+          # Update the SBOM link
+          sed -i.bu "s,%SBOM_URL%,$SBOM_URL,g" $COMPLIANCE_REPORT_NAME
+          # Update the SARIF link
+          sed -i.bu "s,%SARIF_URL%,$SARIF_URL,g" $COMPLIANCE_REPORT_NAME
+          # Update the author information
+          sed -i.bu "s,%AUTHOR%,$AUTHOR,g" $COMPLIANCE_REPORT_NAME
+          sed -i.bu "s,%AUTHOR_EMAIL%,$AUTHOR_EMAIL,g" $COMPLIANCE_REPORT_NAME
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver_compliance_report.md
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongo-odbc-driver_compliance_report.md
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
+
+  "publish compliance report":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver_compliance_report.md
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongo-odbc-driver_compliance_report.md
+        content_type: application/json
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver_compliance_report.md
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
+        content_type: application/json
+        bucket: translators-connectors-releases
+        permissions: public-read
+        display_name: mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
 
   "set and check packages version":
     - command: shell.exec
@@ -1686,6 +1748,11 @@ tasks:
       - func: set and check packages version
       - func: "generate SBOM and scan"
 
+  - name: compliance-report
+    commands:
+      - func: "generate compliance report"
+      - func: "publish compliance report"
+
   - name: compile
     commands:
       - func: "install iODBC"
@@ -1932,6 +1999,7 @@ buildvariants:
     tasks:
       - name: semgrep
       - name: sbom
+      - name: compliance-report
 
   - name: windows-64
     tags: ["release-variant"]
