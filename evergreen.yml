@@ -59,6 +59,8 @@ functions:
           export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
           export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
           export SCRIPT_FOLDER=resources
+          export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
+          export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
           else
@@ -71,6 +73,8 @@ functions:
           MSI_FILENAME: "$MSI_FILENAME"
           WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
           UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
+          COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
+          STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
@@ -93,7 +97,8 @@ functions:
             export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
             export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
             export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
-            export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
+            export COMPLIANCE_REPORT_NAME="$COMPLIANCE_REPORT_NAME"
+            export STATIC_CODE_ANALYSIS_NAME="$STATIC_CODE_ANALYSIS_NAME"
             export ALLOW_VULNS="${AllowVulns}"
 
             # Windows variables
@@ -369,9 +374,9 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver_compliance_report.md
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongo-odbc-driver_compliance_report.md
-        content_type: application/json
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/${COMPLIANCE_REPORT_NAME}
+        content_type: text/markdown
         bucket: mciuploads
         permissions: public-read
 
@@ -380,17 +385,17 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver_compliance_report.md
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/mongo-odbc-driver_compliance_report.md
-        content_type: application/json
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/${COMPLIANCE_REPORT_NAME}
+        content_type: text/markdown
         bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver_compliance_report.md
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
         remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
-        content_type: application/json
+        content_type: text/markdown
         bucket: translators-connectors-releases
         permissions: public-read
         display_name: mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
@@ -1684,7 +1689,7 @@ functions:
         permissions: public-read
         content_type: application/json
 
-  "static code analysis":
+  "generate static code analysis":
     - command: shell.exec
       type: test
       params:
@@ -1724,6 +1729,26 @@ functions:
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
+  
+  "publish static code analysis":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file:  mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
+        content_type: application/json
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file: mongosql-odbc-driver/mongo-odbc-${RELEASE_VERSION}.sast.sarif
+        content_type: application/json
+        bucket: translators-connectors-releases
+        permissions: public-read
+        display_name: mongo-odbc-${RELEASE_VERSION}.sast.sarif
 
 pre:
   - func: "fetch source"
@@ -1749,6 +1774,9 @@ tasks:
       - func: "generate SBOM and scan"
 
   - name: compliance-report
+    depends_on:
+      - name: sbom
+      - name: semgrep
     commands:
       - func: "generate compliance report"
       - func: "publish compliance report"
@@ -1943,7 +1971,8 @@ tasks:
   - name: semgrep
     exec_timeout_secs: 3600 # 1h
     commands:
-      - func: "static code analysis"
+      - func: "generate static code analysis"
+      - func: "publish static code analysis"
 
 task_groups:
   - name: windows-windows-test-unit-group
