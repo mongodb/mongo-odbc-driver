@@ -413,7 +413,7 @@ functions:
         bucket: translators-connectors-releases
         content_type: application/json
         permissions: public-read
-        display_name: mongosql-odbc-${version_id}.sbom.json
+        display_name: mongosql-odbc-${RELEASE_VERSION}.sbom.json
 
   "set and check packages version":
     - command: shell.exec
