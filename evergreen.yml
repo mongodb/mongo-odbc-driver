@@ -2075,6 +2075,7 @@ tasks:
 
   - name: ssdlc-artifacts-snapshot
     run_on: ubuntu2204-small
+    allow_for_git_tag: false
     depends_on:
       - name: sbom
         variant: code-quality-security
