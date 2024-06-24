@@ -336,14 +336,6 @@ functions:
           echo "<<<< Done scanning SBOM"
   
   "push SBOM Lite to Silk":
-    - command: s3.get
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.full.cdx.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/mongo-odbc-driver.full.cdx.json
-        content_type: application/json
-        bucket: mciuploads
     - command: shell.exec
       type: test
       params:
