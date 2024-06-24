@@ -340,7 +340,8 @@ functions:
           ./$SBOM_DIR/grype sbom:$SBOM_LICENSES --fail-on low
           echo "---------------------------------------------"
           echo "<<<< Done scanning SBOM"
-      "generate compliance report":
+  
+  "generate compliance report":
     - command: shell.exec
       params:
         shell: bash
@@ -400,10 +401,7 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         display_name: mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
-  
-<<<<<<< HEAD
 
-=======
   "push SBOM Lite to Silk":
     - command: shell.exec
       type: test
