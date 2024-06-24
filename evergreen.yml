@@ -171,7 +171,7 @@ functions:
           ${prepare_shell}
           cargo fmt --all --  --check
 
-  "generate SBOM and scan":
+  "generate SBOM":
     - command: shell.exec
       type: test
       params:
@@ -304,6 +304,8 @@ functions:
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
+
+  "scan SBOM":
     - command: shell.exec
       type: test
       params:
@@ -332,6 +334,71 @@ functions:
           ./$SBOM_DIR/grype sbom:$SBOM_LICENSES --fail-on low
           echo "---------------------------------------------"
           echo "<<<< Done scanning SBOM"
+  
+  "push SBOM Lite to Silk":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cat << EOF > silkbomb.env
+          SILK_CLIENT_ID=${SILK_CLIENT_ID}
+          SILK_CLIENT_SECRET=${SILK_CLIENT_SECRET}
+          EOF
+          
+          echo "SBOM_FINAL = $SBOM_FINAL"
+          
+          echo "-- Uploading initial SBOM Lite to Silk --"
+          docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
+          --env-file silkbomb.env \
+          artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:1.0 \
+          upload --silk-asset-group ${SILK_ASSET_GROUP} --sbom-in /pwd/$SBOM_FINAL
+          echo "-------------------------------"
+
+  "pull augmented SBOM from Silk":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+                    
+          cat << EOF > silkbomb.env
+          SILK_CLIENT_ID=${SILK_CLIENT_ID}
+          SILK_CLIENT_SECRET=${SILK_CLIENT_SECRET}
+          EOF
+          
+          echo "-- Downloading augmented SBOM --"
+          docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
+          --env-file silkbomb.env \
+          artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:1.0 \
+          download --silk-asset-group ${SILK_ASSET_GROUP} --sbom-out /pwd/mongo-odbc-driver.augmented.sbom.json
+          echo "-------------------------------"
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
+  
+
+  "publish augmented SBOM":
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}.sbom.json
+        bucket: translators-connectors-releases
+        content_type: application/json
+        permissions: public-read
+        display_name: mongosql-odbc-${RELEASE_VERSION}.sbom.json
 
   "set and check packages version":
     - command: shell.exec
@@ -1696,7 +1763,11 @@ tasks:
     commands:
       - func: "install rust toolchain"
       - func: set and check packages version
-      - func: "generate SBOM and scan"
+      - func: "generate SBOM"
+      - func: "scan SBOM"
+      - func: "push SBOM Lite to Silk"
+      - func: "pull augmented SBOM from Silk"
+      - func: "publish augmented SBOM"
 
   - name: compile
     commands:
