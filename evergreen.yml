@@ -1791,7 +1791,6 @@ tasks:
       - name: semgrep
     commands:
       - func: "generate compliance report"
-      - func: "publish compliance report"
 
   - name: compile
     commands:
@@ -1985,7 +1984,38 @@ tasks:
     exec_timeout_secs: 3600 # 1h
     commands:
       - func: "generate static code analysis"
+
+  - name: ssdlc-artifacts-release
+    run_on: ubuntu2204-small
+    git_tag_only: true
+    depends_on:
+      - name: "release"
+        variant: "release"
+      - name: sbom
+        variant: code-quality-security
+      - name: semgrep
+        variant: code-quality-security
+      - name: compliance-report
+        variant: code-quality-security
+    exec_timeout_secs: 300 # 5m
+    commands:
       - func: "publish static code analysis"
+      - func: "publish compliance report"
+
+  - name: ssdlc-artifacts-snapshot
+    run_on: ubuntu2204-small
+    depends_on:
+      - name: sbom
+        variant: code-quality-security
+      - name: semgrep
+        variant: code-quality-security
+      - name: compliance-report
+        variant: code-quality-security
+    exec_timeout_secs: 300 # 5m
+    commands:
+      - func: "publish static code analysis"
+      - func: "publish compliance report"
+
 
 task_groups:
   - name: windows-windows-test-unit-group
@@ -2042,6 +2072,7 @@ buildvariants:
       - name: semgrep
       - name: sbom
       - name: compliance-report
+      - name: ssdlc-artifacts-snapshot
 
   - name: windows-64
     tags: ["release-variant"]
