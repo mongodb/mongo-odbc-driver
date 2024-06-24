@@ -298,8 +298,8 @@ functions:
           IFS=','; for vuln_id in $ALLOW_VULNS; do
             echo "-- Updating SBOM with VEX info for vulnerability with id $vuln_id--"
             export VULN_ID=$vuln_id
-            echo "jq --argjson vexinfo "$(<$VULN_ID.analysis.json)" '(.vulnerabilities[] | select(.id == $ENV.VULN_ID)).analysis = ($vexinfo) ' $SBOM_FINAL > output.tmp && mv output.tmp $SBOM_FINAL"
-            jq --argjson vexinfo "$(<$VULN_ID.analysis.json)" '(.vulnerabilities[] | select(.id == $ENV.VULN_ID)).analysis = ($vexinfo) ' $SBOM_FINAL > output.tmp && mv output.tmp $SBOM_FINAL
+            echo "jq --argjson vexinfo "$(<resources/ssdlc/$VULN_ID.analysis.json)" '(.vulnerabilities[] | select(.id == $ENV.VULN_ID)).analysis = ($vexinfo) ' $SBOM_FINAL > output.tmp && mv output.tmp $SBOM_FINAL"
+            jq --argjson vexinfo "$(<resources/ssdlc/$VULN_ID.analysis.json)" '(.vulnerabilities[] | select(.id == $ENV.VULN_ID)).analysis = ($vexinfo) ' $SBOM_FINAL > output.tmp && mv output.tmp $SBOM_FINAL
             echo "--------"
           done
           echo "-----------------------------"
