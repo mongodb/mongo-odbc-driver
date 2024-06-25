@@ -306,7 +306,7 @@ functions:
         aws_secret: ${aws_secret}
         local_files_include_filter:
           - mongosql-odbc-driver/*.cdx.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
@@ -377,7 +377,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${COMPLIANCE_REPORT_NAME}
         content_type: text/markdown
         bucket: mciuploads
         permissions: public-read
@@ -388,7 +388,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${COMPLIANCE_REPORT_NAME}
         content_type: text/markdown
         bucket: mciuploads
     - command: s3.put
@@ -449,7 +449,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -1804,7 +1804,7 @@ functions:
         aws_secret: ${aws_secret}
         local_files_include_filter:
           - mongo-odbc-driver.sast.*
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
@@ -1815,7 +1815,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
-        remote_file:  mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file:  mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
         content_type: application/json
         bucket: mciuploads
     - command: s3.put
@@ -1852,14 +1852,7 @@ tasks:
       - func: set and check packages version
       - func: "generate SBOM"
       - func: "scan SBOM"
-      - func: "push SBOM Lite to Silk"
-
-  - name: compliance-report
-    depends_on:
-      - name: sbom
-      - name: semgrep
-    commands:
-      - func: "generate compliance report"
+      - func: "push SBOM Lite to Silk"      
 
   - name: compile
     commands:
@@ -2085,8 +2078,8 @@ tasks:
       - func: "publish static code analysis"
       - func: "pull augmented SBOM from Silk"
       - func: "publish augmented SBOM"
-       - func: "generate compliance report"
-       - func: "publish compliance report"
+      - func: "generate compliance report"
+      - func: "publish compliance report"
 
 
 task_groups:
@@ -2143,7 +2136,6 @@ buildvariants:
     tasks:
       - name: semgrep
       - name: sbom
-      - name: compliance-report
       - name: ssdlc-artifacts-snapshot
 
   - name: windows-64
@@ -2201,3 +2193,4 @@ buildvariants:
       - name: release
       - name: snapshot
       - name: download-center-update
+      - name: ssdlc-artifacts-release
