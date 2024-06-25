@@ -679,6 +679,15 @@ functions:
         file: mongosql-odbc-driver/expansions.yml
 
   "build msi":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -687,6 +696,7 @@ functions:
           ${prepare_shell}
           cp target/release/*.dll installer/msi
           cp ./README.md installer/msi
+          cp ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               MINOR_VERSION="0.1"
@@ -1130,6 +1140,15 @@ functions:
         bucket: mciuploads
 
   "tar linux artifacts":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -1137,7 +1156,7 @@ functions:
         script: |
           mkdir -p release/mongoodbc/bin
           cp  target/release/libatsql.so release/mongoodbc/bin/
-          cp ./LICENSE ./README.md release/mongoodbc/
+          cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           cd release
           tar -czvf mongoodbc.tar.gz mongoodbc/
 
@@ -1862,9 +1881,13 @@ tasks:
       - func: set and check packages version
       - func: "generate SBOM"
       - func: "scan SBOM"
-      - func: "push SBOM Lite to Silk"      
+      - func: "push SBOM Lite to Silk"
+      - func: "pull augmented SBOM from Silk"
 
   - name: compile
+    depends_on:
+      - name: sbom
+        variant: code-quality-security
     commands:
       - func: "install iODBC"
         variants: [macos, macos-arm]
@@ -2070,7 +2093,6 @@ tasks:
     exec_timeout_secs: 300 # 5m
     commands:
       - func: "publish static code analysis"
-      - func: "pull augmented SBOM from Silk"
       - func: "publish augmented SBOM"
       - func: "generate compliance report"
       - func: "publish compliance report"
@@ -2086,7 +2108,6 @@ tasks:
     exec_timeout_secs: 300 # 5m
     commands:
       - func: "publish static code analysis"
-      - func: "pull augmented SBOM from Silk"
       - func: "publish augmented SBOM"
       - func: "generate compliance report"
       - func: "publish compliance report"
