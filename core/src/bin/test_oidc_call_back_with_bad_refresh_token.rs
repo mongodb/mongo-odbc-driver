@@ -1,4 +1,4 @@
-use mongo_odbc_core::oidc_auth::*;
+use mongo_odbc_core::{oidc_auth::*, test_config::*};
 use mongodb::options::oidc::{CallbackContext, IdpServerInfo};
 
 // This shows that the oidc_call_back function works. The second call will use the refresh token,
@@ -8,14 +8,12 @@ async fn main() {
     let c = CallbackContext::builder()
         .idp_info(
             IdpServerInfo::builder()
-                .issuer("https://mongodb-dev.okta.com/oauth2/ausqrxbcr53xakaRR357".to_string())
-                .client_id(Some("0oarvap2r7PmNIBsS357".to_string()))
+                .issuer(ISSUER_URL.to_string())
+                .client_id(Some(CLIENT_ID.to_string()))
                 .request_scopes(Some(vec!["openid".to_string()]))
                 .build(),
         )
-        .refresh_token(Some(
-            "PnWePzgf-4BqC048C5Q7BhtBxfu3nId9e72y5T5-PLj".to_string(),
-        ))
+        .refresh_token(Some(BAD_REFRESH_TOKEN.to_string()))
         .version(1u32)
         .build();
     // this should return something similar to: Some(Other("OpenID Connect: code exchange failed:
