@@ -12,6 +12,7 @@ cp ./libatsql.dylib components/"$ROOT"/
 cp ./macos_postinstall scripts/postinstall
 cp ./resources/*.rtf components/"$ROOT"/
 cp ../../README.md components/"$ROOT"/
+cp ../../mongo-odbc-driver.augmented.sbom.json components/"$ROOT"/
 
 # build component pkg
 pkgbuild --root=components/ --scripts=scripts/ --identifier='MongoDB Atlas SQL ODBC' 'mongoodbc-component.pkg'
