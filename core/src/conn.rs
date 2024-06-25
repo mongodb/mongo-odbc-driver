@@ -179,7 +179,6 @@ impl MongoConnection {
             login_timeout.map(|to| Duration::new(to as u64, 0));
         let uuid_repr = user_options.uuid_representation;
         let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
-        // drop the Mutex as soon as possible
         let connection = MongoConnection {
             client,
             operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
