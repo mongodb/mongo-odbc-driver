@@ -695,8 +695,7 @@ functions:
         script: |
           ${prepare_shell}
           cp target/release/*.dll installer/msi
-          cp ./README.md installer/msi
-          cp ./mongo-odbc-driver.augmented.sbom.json installer/msi
+          cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               MINOR_VERSION="0.1"
@@ -719,6 +718,15 @@ functions:
               -VersionLabel "$VERSION_LABEL"\
 
   "build dmg":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
