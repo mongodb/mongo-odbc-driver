@@ -31,11 +31,10 @@ log = "0.4.17"
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread
 tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
-mongodb = { git = "https://github.com/mongodb/mongo-rust-driver.git", branch = "main", features = ["aws-auth", "dns-resolver"] }
+mongodb = { version="3", features = ["aws-auth", "dns-resolver"] }
 
 [dependencies.bson]
-git = "https://github.com/mongodb/bson-rust.git"
-branch = "main"
+version = "2"
 features = ["chrono-0_4"]
 
 [dependencies.windows]

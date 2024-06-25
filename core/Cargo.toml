@@ -26,7 +26,7 @@ cstr = { path = "../cstr" }
 fancy-regex = "0.11.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
 log = "0.4.14"
-mongodb = { git = "https://github.com/mongodb/mongo-rust-driver.git", branch = "main", features = ["aws-auth", "dns-resolver"] }
+mongodb = { version = "3", features = ["aws-auth", "dns-resolver"] }
 # Do NOT change these features without consulting with other team members.
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread

@@ -3,7 +3,7 @@ use constants::{
     INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, OPERATION_CANCELLED, TIMEOUT_EXPIRED,
     UNABLE_TO_CONNECT,
 };
-use mongodb::error::{BulkWriteFailure, ErrorKind, WriteFailure};
+use mongodb::error::{ErrorKind, WriteFailure};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -95,19 +95,11 @@ impl Error {
             | Error::InvalidClientOptions(m)
             | Error::QueryCursorUpdate(m)
             | Error::QueryExecutionFailed(m)
-            | Error::MongoParseConnectionString(m) => {
-                match m.kind.as_ref() {
-                    ErrorKind::Command(command_error) => command_error.code,
-                    // errors other than command errors probably will not concern us, but
-                    // the following is included for completeness.
-                    ErrorKind::BulkWrite(BulkWriteFailure {
-                        write_concern_error: Some(wc_error),
-                        ..
-                    }) => wc_error.code,
-                    ErrorKind::Write(WriteFailure::WriteConcernError(wc_error)) => wc_error.code,
-                    _ => 0,
-                }
-            }
+            | Error::MongoParseConnectionString(m) => match m.kind.as_ref() {
+                ErrorKind::Command(command_error) => command_error.code,
+                ErrorKind::Write(WriteFailure::WriteConcernError(wc_error)) => wc_error.code,
+                _ => 0,
+            },
             Error::ColIndexOutOfBounds(_)
             | Error::CollectionDeserialization(_, _)
             | Error::DatabaseVersionDeserialization(_)
