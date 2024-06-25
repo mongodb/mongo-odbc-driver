@@ -293,6 +293,16 @@ functions:
           echo "./$SBOM_DIR/jq '.components[].properties += [{\"name\": \"internal:team_responsible\", \"value\": \"Atlas SQL\"}]' $temp_output > $SBOM_FINAL"
           ./$SBOM_DIR/jq '.components[].properties += [{"name": "internal:team_responsible", "value": "Atlas SQL"}]' $temp_output > $SBOM_FINAL
           echo "------------------------------------"
+          
+          echo "-- Adding VEX info for vulnerabilities still present in SBOM--"
+          IFS=','; for vuln_id in $ALLOW_VULNS; do
+            echo "-- Updating SBOM with VEX info for vulnerability with id $vuln_id--"
+            export VULN_ID=$vuln_id
+            echo "jq --argjson vexinfo "$(<resources/ssdlc/$VULN_ID.analysis.json)" '(.vulnerabilities[] | select(.id == $ENV.VULN_ID)).analysis = ($vexinfo) ' $SBOM_FINAL > output.tmp && mv output.tmp $SBOM_FINAL"
+            jq --argjson vexinfo "$(<resources/ssdlc/$VULN_ID.analysis.json)" '(.vulnerabilities[] | select(.id == $ENV.VULN_ID)).analysis = ($vexinfo) ' $SBOM_FINAL > output.tmp && mv output.tmp $SBOM_FINAL
+            echo "--------"
+          done
+          echo "-----------------------------"
           echo "<<<< Done generating SBOM"
     - command: s3.put
       params:
