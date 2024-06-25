@@ -1853,8 +1853,6 @@ tasks:
       - func: "generate SBOM"
       - func: "scan SBOM"
       - func: "push SBOM Lite to Silk"
-      - func: "pull augmented SBOM from Silk"
-      - func: "publish augmented SBOM"
 
   - name: compliance-report
     depends_on:
@@ -2072,6 +2070,8 @@ tasks:
     commands:
       - func: "publish static code analysis"
       - func: "publish compliance report"
+      - func: "pull augmented SBOM from Silk"
+      - func: "publish augmented SBOM"
 
   - name: ssdlc-artifacts-snapshot
     run_on: ubuntu2204-small
@@ -2087,6 +2087,8 @@ tasks:
     commands:
       - func: "publish static code analysis"
       - func: "publish compliance report"
+      - func: "pull augmented SBOM from Silk"
+      - func: "publish augmented SBOM"
 
 
 task_groups:
