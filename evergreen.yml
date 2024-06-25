@@ -388,7 +388,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${COMPLIANCE_REPORT_NAME}
         content_type: text/markdown
         bucket: mciuploads
     - command: s3.put
