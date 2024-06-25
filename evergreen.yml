@@ -2081,14 +2081,13 @@ tasks:
         variant: code-quality-security
       - name: semgrep
         variant: code-quality-security
-      - name: compliance-report
-        variant: code-quality-security
     exec_timeout_secs: 300 # 5m
     commands:
       - func: "publish static code analysis"
-      - func: "publish compliance report"
       - func: "pull augmented SBOM from Silk"
       - func: "publish augmented SBOM"
+       - func: "generate compliance report"
+       - func: "publish compliance report"
 
 
 task_groups:
