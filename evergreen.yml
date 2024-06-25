@@ -59,6 +59,8 @@ functions:
           export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
           export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
           export SCRIPT_FOLDER=resources
+          export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
+          export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
           else
@@ -71,6 +73,8 @@ functions:
           MSI_FILENAME: "$MSI_FILENAME"
           WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
           UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
+          COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
+          STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
@@ -93,6 +97,8 @@ functions:
             export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
             export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
             export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
+            export COMPLIANCE_REPORT_NAME="$COMPLIANCE_REPORT_NAME"
+            export STATIC_CODE_ANALYSIS_NAME="$STATIC_CODE_ANALYSIS_NAME"
             export ALLOW_VULNS="${AllowVulns}"
 
             # Windows variables
@@ -310,7 +316,7 @@ functions:
         aws_secret: ${aws_secret}
         local_files_include_filter:
           - mongosql-odbc-driver/*.cdx.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
@@ -345,6 +351,67 @@ functions:
           echo "---------------------------------------------"
           echo "<<<< Done scanning SBOM"
   
+  "generate compliance report":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        env:
+          IS_TAG_TRIGGERED: "${triggered_by_git_tag}"
+          AUTHOR: "${author}"
+          AUTHOR_EMAIL: "${author_email}"
+        script: |
+          ${prepare_shell}
+          echo "Author = $AUTHOR"
+          echo "Author email = $AUTHOR_EMAIL"
+          echo "Version = $RELEASE_VERSION"
+          SBOM_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}.sbom.json"
+          SARIF_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongo-odbc-$RELEASE_VERSION.sast.sarif"
+          echo "Sbom url = $SBOM_URL"
+          echo "Sarif Url = $SARIF_URL"
+
+          # Copy template
+          cp resources/ssdlc/mongo-odbc-driver_compliance_report_template.md $COMPLIANCE_REPORT_NAME
+
+          # Update the version
+          sed -i.bu "s,%VERSION%,$RELEASE_VERSION,g" $COMPLIANCE_REPORT_NAME
+          # Update the SBOM link
+          sed -i.bu "s,%SBOM_URL%,$SBOM_URL,g" $COMPLIANCE_REPORT_NAME
+          # Update the SARIF link
+          sed -i.bu "s,%SARIF_URL%,$SARIF_URL,g" $COMPLIANCE_REPORT_NAME
+          # Update the author information
+          sed -i.bu "s,%AUTHOR%,$AUTHOR,g" $COMPLIANCE_REPORT_NAME
+          sed -i.bu "s,%AUTHOR_EMAIL%,$AUTHOR_EMAIL,g" $COMPLIANCE_REPORT_NAME
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${COMPLIANCE_REPORT_NAME}
+        content_type: text/markdown
+        bucket: mciuploads
+        permissions: public-read
+
+  "publish compliance report":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${COMPLIANCE_REPORT_NAME}
+        content_type: text/markdown
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
+        content_type: text/markdown
+        bucket: translators-connectors-releases
+        permissions: public-read
+        display_name: mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
+
   "push SBOM Lite to Silk":
     - command: shell.exec
       type: test
@@ -392,7 +459,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -1711,7 +1778,7 @@ functions:
         permissions: public-read
         content_type: application/json
 
-  "static code analysis":
+  "generate static code analysis":
     - command: shell.exec
       type: test
       params:
@@ -1747,10 +1814,30 @@ functions:
         aws_secret: ${aws_secret}
         local_files_include_filter:
           - mongo-odbc-driver.sast.*
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/ssdlc/
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
+  
+  "publish static code analysis":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file:  mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
+        content_type: application/json
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file: mongosql-odbc-driver/mongo-odbc-${RELEASE_VERSION}.sast.sarif
+        content_type: application/json
+        bucket: translators-connectors-releases
+        permissions: public-read
+        display_name: mongo-odbc-${RELEASE_VERSION}.sast.sarif
 
 pre:
   - func: "fetch source"
@@ -1775,9 +1862,7 @@ tasks:
       - func: set and check packages version
       - func: "generate SBOM"
       - func: "scan SBOM"
-      - func: "push SBOM Lite to Silk"
-      - func: "pull augmented SBOM from Silk"
-      - func: "publish augmented SBOM"
+      - func: "push SBOM Lite to Silk"      
 
   - name: compile
     commands:
@@ -1970,7 +2055,42 @@ tasks:
   - name: semgrep
     exec_timeout_secs: 3600 # 1h
     commands:
-      - func: "static code analysis"
+      - func: "generate static code analysis"
+
+  - name: ssdlc-artifacts-release
+    run_on: ubuntu2204-small
+    git_tag_only: true
+    depends_on:
+      - name: "release"
+        variant: "release"
+      - name: sbom
+        variant: code-quality-security
+      - name: semgrep
+        variant: code-quality-security
+    exec_timeout_secs: 300 # 5m
+    commands:
+      - func: "publish static code analysis"
+      - func: "pull augmented SBOM from Silk"
+      - func: "publish augmented SBOM"
+      - func: "generate compliance report"
+      - func: "publish compliance report"
+
+  - name: ssdlc-artifacts-snapshot
+    run_on: ubuntu2204-small
+    allow_for_git_tag: false
+    depends_on:
+      - name: sbom
+        variant: code-quality-security
+      - name: semgrep
+        variant: code-quality-security
+    exec_timeout_secs: 300 # 5m
+    commands:
+      - func: "publish static code analysis"
+      - func: "pull augmented SBOM from Silk"
+      - func: "publish augmented SBOM"
+      - func: "generate compliance report"
+      - func: "publish compliance report"
+
 
 task_groups:
   - name: windows-windows-test-unit-group
@@ -2026,6 +2146,7 @@ buildvariants:
     tasks:
       - name: semgrep
       - name: sbom
+      - name: ssdlc-artifacts-snapshot
 
   - name: windows-64
     tags: ["release-variant"]
@@ -2082,3 +2203,4 @@ buildvariants:
       - name: release
       - name: snapshot
       - name: download-center-update
+      - name: ssdlc-artifacts-release
