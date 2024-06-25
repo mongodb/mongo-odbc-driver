@@ -200,7 +200,7 @@ impl ODBCUri {
     // are synonyms.
     pub fn remove(&mut self, names: &[&str]) -> Option<String> {
         for name in names.iter() {
-            let ret = self.0.remove(&name.to_string());
+            let ret = self.0.remove(*name);
             if ret.is_some() {
                 return ret;
             }
@@ -351,7 +351,7 @@ impl ODBCUri {
             cred.username =
                 cred.username
                     .as_ref()
-                    .and_then(|x| if x == "" { None } else { Some(x.clone()) });
+                    .and_then(|x| if x.is_empty() { None } else { Some(x.clone()) });
         }
         Ok(UserOptions {
             client_options,
