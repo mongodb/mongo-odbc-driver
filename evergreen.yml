@@ -1754,7 +1754,7 @@ functions:
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/papertrail/mongoodbc-signed.msi
+        local_file: mongosql-odbc-driver/papertrail/${MSI_FILENAME}
         remote_file: ${WINDOWS_INSTALLER_PATH}
         bucket: translators-connectors-releases
         permissions: public-read
