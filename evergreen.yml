@@ -2094,13 +2094,6 @@ tasks:
       - func: "upload release"
       - func: "upload debug"
 
-  - name: trace-artifacts
-    git_tag_only: true
-    depends_on:
-      - name: release
-    commands:
-      - func: "trace artifacts"
-
   - name: download-center-update
     git_tag_only: true
     depends_on:
@@ -2270,6 +2263,5 @@ buildvariants:
     tasks:
       - name: release
       - name: snapshot
-      - name: trace-artifacts
       - name: download-center-update
       - name: ssdlc-artifacts-release
