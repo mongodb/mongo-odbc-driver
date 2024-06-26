@@ -466,6 +466,15 @@ functions:
   
 
   "publish augmented SBOM":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
@@ -2200,7 +2209,7 @@ buildvariants:
       - name: asan-compile
 
   - name: code-quality-security
-    display_name: "Code quality and Security"
+    display_name: "Code Quality and Security"
     run_on: [ubuntu2204-small]
     tasks:
       - name: semgrep
