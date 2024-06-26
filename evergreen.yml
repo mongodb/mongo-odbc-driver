@@ -2179,7 +2179,7 @@ buildvariants:
       - name: asan-compile
 
   - name: code-quality-security
-    display_name: "Code quality and Security"
+    display_name: "Code Quality and Security"
     run_on: [ubuntu2204-small]
     tasks:
       - name: semgrep
