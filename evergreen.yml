@@ -316,7 +316,7 @@ functions:
         aws_secret: ${aws_secret}
         local_files_include_filter:
           - mongosql-odbc-driver/*.cdx.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
+        remote_file: mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
@@ -387,7 +387,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/${COMPLIANCE_REPORT_NAME}
         content_type: text/markdown
         bucket: mciuploads
         permissions: public-read
@@ -398,7 +398,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/${COMPLIANCE_REPORT_NAME}
         content_type: text/markdown
         bucket: mciuploads
     - command: s3.put
@@ -459,7 +459,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/mongo-odbc-driver.augmented.sbom.json
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -684,7 +684,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/mongo-odbc-driver.augmented.sbom.json
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -723,7 +723,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/mongo-odbc-driver.augmented.sbom.json
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -1153,7 +1153,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/mongo-odbc-driver.augmented.sbom.json
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -1735,16 +1735,39 @@ functions:
         display_name: crash-dump-
 
   "trace artifacts":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          mkdir papertrail
+    - command: s3.get
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/papertrail/mongoodbc-signed.msi
+        remote_file: ${WINDOWS_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/papertrail/mongoodbc.tar.gz
+        remote_file: ${UBUNTU2204_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
     - command: papertrail.trace
       params:
         work_dir: mongosql-odbc-driver
         key_id: ${papertrail_id}
         secret_key: ${papertrail_key}
         product: mongo-odbc-driver
-        version: ${version_id}
+        version: ${RELEASE_VERSION}
         filenames:
-          - release/mongoodbc-signed.msi
-          - target/release/mongoodbc.tar.gz
+          - papertrail/*
 
   "update download center feed":
     # Download the current json feed used by the download center
@@ -1841,7 +1864,7 @@ functions:
         aws_secret: ${aws_secret}
         local_files_include_filter:
           - mongo-odbc-driver.sast.*
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
+        remote_file: mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
@@ -1852,7 +1875,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
-        remote_file:  mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file:  mongosql-odbc-driver/artifacts/${RELEASE_VERSION}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
         content_type: application/json
         bucket: mciuploads
     - command: s3.put
@@ -2062,6 +2085,13 @@ tasks:
       - func: "upload release"
       - func: "upload debug"
 
+  - name: trace-artifacts
+    git_tag_only: true
+    depends_on:
+      - name: release
+    commands:
+      - func: "trace artifacts"
+
   - name: download-center-update
     git_tag_only: true
     depends_on:
@@ -2231,5 +2261,6 @@ buildvariants:
     tasks:
       - name: release
       - name: snapshot
+      - name: trace-artifacts
       - name: download-center-update
       - name: ssdlc-artifacts-release
