@@ -149,8 +149,9 @@ impl MongoStatement for MongoQuery {
 
         // If the query timeout is 0, it means "no timeout"
         if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            aggregate =
-                aggregate.max_time(Duration::from_millis(u64::from(self.query_timeout.unwrap())));
+            aggregate = aggregate.max_time(Duration::from_millis(u64::from(
+                self.query_timeout.unwrap(),
+            )));
         }
 
         // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
