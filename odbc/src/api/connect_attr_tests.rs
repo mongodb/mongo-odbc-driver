@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod unit {
     use crate::{
         errors::ODBCError,
@@ -68,7 +74,7 @@ mod unit {
         unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String {
             input_text_to_string_w(
                 value_ptr as *const _,
-                out_length / std::mem::size_of::<WideChar>(),
+                (out_length / std::mem::size_of::<WideChar>()) as isize,
             )
         }
 

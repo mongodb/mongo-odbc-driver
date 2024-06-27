@@ -23,6 +23,13 @@ lazy_static! {
     pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
 }
 
+// The default max string length if a user enables max string length.
+// Typically, the Atlas SQL ODBC driver does not specify a max string
+// length. However, some tools require a max length. The value 4000
+// was chosen since it is the value needed by the only tool known to
+// require a max string length at time of implementation.
+pub const DEFAULT_MAX_STRING_LENGTH: u16 = 4000;
+
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct OdbcState<'a> {
     pub odbc_2_state: &'a str,

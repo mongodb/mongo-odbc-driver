@@ -1,5 +1,7 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 use crate::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
 use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
+use definitions::{Integer, SQL_NTS_ISIZE};
 
 /// atlas_sql_test_connection returns true if a connection can be established
 /// with the provided connection string.
@@ -20,10 +22,9 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const WideChar,
     buffer: *const WideChar,
     buffer_in_len: usize,
-    buffer_out_len: *mut usize,
+    buffer_out_len: *mut Integer,
 ) -> bool {
-    let marker = -1i8;
-    let conn_str = unsafe { input_text_to_string_w(connection_string, marker as usize) };
+    let conn_str = unsafe { input_text_to_string_w(connection_string, SQL_NTS_ISIZE) };
     if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -38,34 +39,38 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                     None,
                     Some(30),
                     TypeMode::Standard,
+                    None,
                     Some(runtime),
                 ) {
                     Ok(_) => true,
                     Err(e) => {
                         let len = write_string_to_buffer(
                             &e.to_string(),
-                            buffer_in_len,
+                            buffer_in_len as isize,
                             buffer as *mut WideChar,
                         );
-                        *buffer_out_len = len;
+                        *buffer_out_len = len as Integer;
                         false
                     }
                 }
             }
             Err(e) => {
-                let len =
-                    write_string_to_buffer(&e.to_string(), buffer_in_len, buffer as *mut WideChar);
-                *buffer_out_len = len;
+                let len = write_string_to_buffer(
+                    &e.to_string(),
+                    buffer_in_len as isize,
+                    buffer as *mut WideChar,
+                );
+                *buffer_out_len = len as Integer;
                 false
             }
         }
     } else {
         let len = write_string_to_buffer(
             "Invalid connection string.",
-            buffer_in_len,
+            buffer_in_len as isize,
             buffer as *mut WideChar,
         );
-        *buffer_out_len = len;
+        *buffer_out_len = len as Integer;
         false
     }
 }
@@ -108,7 +113,7 @@ mod test {
         };
         assert!(!result);
         assert!(unsafe {
-            input_text_to_string_w(buffer.as_ptr(), buffer_len)
+            input_text_to_string_w(buffer.as_ptr(), buffer_len as isize)
                 .to_lowercase()
                 .contains("authentication failed")
         });
@@ -133,9 +138,13 @@ mod test {
         };
         assert!(!result);
         assert!(unsafe {
-            input_text_to_string_w(buffer.as_mut_ptr(), buffer_len as usize)
-                .to_lowercase()
-                .contains("server selection timeout")
+            input_text_to_string_w(
+                buffer.as_mut_ptr(),
+                isize::try_from(buffer_len)
+                    .expect("buffer length is too large for {isize::MAX} on this platform"),
+            )
+            .to_lowercase()
+            .contains("server selection timeout")
         });
     }
 

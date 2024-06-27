@@ -17,10 +17,18 @@
                     Source="$(var.SourceDir)\README.md"
                     DiskId="1" />
             </Component>
+            <Component Id="c_Sbom"
+                Guid="f40564ba-a569-4567-895b-f720b816638c">
+                <File Id="f_Sbom"
+                    Name="mongo-odbc-driver.augmented.sbom.json"
+                    Source="$(var.SourceDir)\mongo-odbc-driver.augmented.sbom.json"
+                    DiskId="1" />
+            </Component>
         </DirectoryRef>
         <ComponentGroup Id="cg_License">
             <ComponentRef Id="c_Readme" />
             <ComponentRef Id="c_License" />
+            <ComponentRef Id="c_Sbom" />
         </ComponentGroup>
         <WixVariable Id="WixUILicenseRtf"
             Value="$(var.ResourceDir)\LICENSE.rtf" />

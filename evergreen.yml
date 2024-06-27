@@ -59,19 +59,26 @@ functions:
           export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
           export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
           export SCRIPT_FOLDER=resources
+          export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
+          export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
           else
             export RELEASE_VERSION=snapshot
           fi
+          export MSI_FILENAME="mongoodbc.msi"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
-          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/mongoodbc.msi"
+          MSI_FILENAME: "$MSI_FILENAME"
+          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
           UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
+          COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
+          STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
+            export MSI_FILENAME="$MSI_FILENAME"
             export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
             export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
             export PATH="$PATH"
@@ -86,6 +93,13 @@ functions:
             export ADF_TEST_URI="${adf_test_uri}"
             export SCRIPT_FOLDER="$SCRIPT_FOLDER"
             export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
+            export SBOM_DIR="sbom_tools"
+            export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
+            export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
+            export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
+            export COMPLIANCE_REPORT_NAME="$COMPLIANCE_REPORT_NAME"
+            export STATIC_CODE_ANALYSIS_NAME="$STATIC_CODE_ANALYSIS_NAME"
+            export ALLOW_VULNS="${AllowVulns}"
 
             # Windows variables
             export LOCAL_DUMP_ORIGINAL_REG_VAL="$LOCAL_DUMP_ORIGINAL_REG_VAL"
@@ -163,6 +177,315 @@ functions:
           ${prepare_shell}
           cargo fmt --all --  --check
 
+  "generate SBOM":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          echo ">>>> Install SBOM tool..."
+
+          OS=$(uname)
+          echo "OS=$OS"
+          ARCH="$(uname -m)"
+          echo "Arch=$ARCH"
+
+          mkdir $SBOM_DIR
+
+          echo "SBOM with vulnerabilities: $SBOM_LICENSES";
+          echo "SBOM with license: $SBOM_VULN";
+          echo "Final SBOM with all information: $SBOM_FINAL"
+
+          # Install cargo-cyclonedx
+          echo "-- Installing cargo-cyclonedx --"
+          cargo install cargo-cyclonedx
+          echo "------------------------------------"
+
+          # Install Grype
+          echo "-- Downloading Grype --"
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b $SBOM_DIR
+          echo "------------------------------------"
+
+          # Install CycloneDX CLI and JQ
+          CYCLONE_URL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.25.0"
+          JQ_URL="https://github.com/jqlang/jq/releases/download/jq-1.7.1"
+          if [[ "$OS" = "Linux" ]]; then
+            if [[ "$ARCH" = "x86_64" ]]; then
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-linux-x64"
+              JQ_URL="$JQ_URL/jq-linux-amd64"
+            elif [ "$ARCH" = "arm64" ]; then
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-linux-arm64"
+              JQ_URL="$JQ_URL/jq-linux-arm64"
+            fi
+          elif [[ "$OS" = "Darwin" ]]; then
+            if [[ "$ARCH" = "arm64" ]]; then
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-osx-arm64"
+              JQ_URL="$JQ_URL/jq-macos-arm64"
+            else
+              CYCLONE_URL="$CYCLONE_URL/cyclonedx-osx-x64"
+              JQ_URL="$JQ_URL/jq-macos-amd64"
+            fi
+          else
+            # Windows
+            CYCLONE_URL="$CYCLONE_URL/cyclonedx-win-x64.exe"
+            JQ_URL="$JQ_URL/jq-windows-amd64.exe"
+          fi
+
+          echo "-- Downloading CycloneDX CLI  for $OS-$ARCH $CYCLONE_URL --"
+          curl -L -o $SBOM_DIR/cyclonedx-cli "$CYCLONE_URL" \
+            --silent \
+            --fail \
+            --max-time 60 \
+            --retry 5 \
+            --retry-delay 0
+          chmod +x ./$SBOM_DIR/cyclonedx-cli
+          echo "------------------------------------"
+
+          echo "-- Downloading JQ $JQ_URL --"
+          curl -L -o $SBOM_DIR/jq "$JQ_URL" \
+            --silent \
+            --fail \
+            --max-time 60 \
+            --retry 5 \
+            --retry-delay 0
+          chmod +x ./$SBOM_DIR/jq
+          echo "------------------------------------"
+          echo "<<<< Done installing SBOM tools"
+  
+          echo ">>>> Generate SBOM..."
+          echo "--  Generating SBOMs with the licenses information --"
+          cargo cyclonedx --target all -v -f json
+          echo "------------------------------------"
+
+          echo "-- Merging info from both mongo-odbc-driver and win_setupgui because both are packaged libraries --"
+          echo "./$SBOM_DIR/cyclonedx-cli merge --input-files ./odbc/mongo-odbc-driver.cdx.json ./win_setupgui/win_setupgui.cdx.json --output-format json --input-format json --group mongo-odbc-driver --name mongo-odbc-driver> $SBOM_LICENSES"
+          ./$SBOM_DIR/cyclonedx-cli merge --input-files ./odbc/mongo-odbc-driver.cdx.json ./win_setupgui/win_setupgui.cdx.json --output-format json --input-format json --group mongo-odbc-driver --name mongo-odbc-driver> $SBOM_LICENSES
+          echo "------------------------------------"
+
+          echo "-- Generating SBOM with vulnerabilities information --"
+          echo "./$SBOM_DIR/grype sbom:$SBOM_LICENSES -o cyclonedx-json > $SBOM_VULN"
+          ./$SBOM_DIR/grype sbom:$SBOM_LICENSES -o cyclonedx-json > $SBOM_VULN
+          echo "------------------------------------"
+
+          echo "-- Merging the SBOMs with the licenses information and the SBOM with the  vulnerabilities information in $SBOM_FINAL --"
+          
+          temp_output="temp_output.json"
+          if [[ -f "$temp_output" ]] ; then
+              rm "$temp_output"
+          fi
+          touch $temp_output
+          
+          while IFS= read -r line
+          do
+            if [[ "$line" == *"purl"* ]]; then
+              bash_purl=$(echo $line | cut -d '"' -f4)
+              command=$(echo "./$SBOM_DIR/jq '.components[] | select(.purl == \"$bash_purl\").licenses' $SBOM_LICENSES")
+              # Add the license information back in the augmented SBOM.
+              licenseInfo=$(eval " $command")
+              if [[ -z "$licenseInfo" ]]; then
+                echo "\"licenses\" : []," >> $temp_output
+              else
+                echo "\"licenses\" : $licenseInfo," >> $temp_output
+              fi
+            fi
+            echo "$line" >> $temp_output
+
+          done < $SBOM_VULN
+          echo "------------------------------------"
+          
+          echo "--  Adding the name of the team responsible for each dependency as required by Silk and format the json file --"
+          echo "./$SBOM_DIR/jq '.components[].properties += [{\"name\": \"internal:team_responsible\", \"value\": \"Atlas SQL\"}]' $temp_output > $SBOM_FINAL"
+          ./$SBOM_DIR/jq '.components[].properties += [{"name": "internal:team_responsible", "value": "Atlas SQL"}]' $temp_output > $SBOM_FINAL
+          echo "------------------------------------"
+          
+          echo "-- Adding VEX info for vulnerabilities still present in SBOM--"
+          IFS=','; for vuln_id in $ALLOW_VULNS; do
+            echo "-- Updating SBOM with VEX info for vulnerability with id $vuln_id--"
+            export VULN_ID=$vuln_id
+            echo "jq --argjson vexinfo "$(<resources/ssdlc/$VULN_ID.analysis.json)" '(.vulnerabilities[] | select(.id == $ENV.VULN_ID)).analysis = ($vexinfo) ' $SBOM_FINAL > output.tmp && mv output.tmp $SBOM_FINAL"
+            jq --argjson vexinfo "$(<resources/ssdlc/$VULN_ID.analysis.json)" '(.vulnerabilities[] | select(.id == $ENV.VULN_ID)).analysis = ($vexinfo) ' $SBOM_FINAL > output.tmp && mv output.tmp $SBOM_FINAL
+            echo "--------"
+          done
+          echo "-----------------------------"
+          echo "<<<< Done generating SBOM"
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_files_include_filter:
+          - mongosql-odbc-driver/*.cdx.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
+        content_type: text/plain
+        bucket: mciuploads
+        permissions: public-read
+
+  "scan SBOM":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          
+          echo ">>>> Scan SBOM for vulnerabilities..."
+          if [[ "$ALLOW_VULNS" != "" ]]; then
+            echo "Vulnerability ids to ignore : $ALLOW_VULNS"
+            
+            echo "-- Generate .grype.yaml specifying vulnerabilities to ignore --"
+            GRYPE_CONF_FILE=".grype.yaml"
+            touch $GRYPE_CONF_FILE
+            echo "ignore:" > $GRYPE_CONF_FILE
+
+            IFS=','; for VULN_ID in $ALLOW_VULNS; do
+              echo "Ignoring vulnerability with id $VULN_ID"
+              echo "    - vulnerability: $VULN_ID" >> $GRYPE_CONF_FILE
+            done
+            echo "------------------------------------"
+          fi
+          
+          echo "-- Scanning dependency for vulnerabilities --"
+          ./$SBOM_DIR/grype sbom:$SBOM_LICENSES --fail-on low
+          echo "---------------------------------------------"
+          echo "<<<< Done scanning SBOM"
+  
+  "generate compliance report":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        env:
+          IS_TAG_TRIGGERED: "${triggered_by_git_tag}"
+          AUTHOR: "${author}"
+          AUTHOR_EMAIL: "${author_email}"
+        script: |
+          ${prepare_shell}
+          echo "Author = $AUTHOR"
+          echo "Author email = $AUTHOR_EMAIL"
+          echo "Version = $RELEASE_VERSION"
+          SBOM_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}.sbom.json"
+          SARIF_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongo-odbc-$RELEASE_VERSION.sast.sarif"
+          echo "Sbom url = $SBOM_URL"
+          echo "Sarif Url = $SARIF_URL"
+
+          # Copy template
+          cp resources/ssdlc/mongo-odbc-driver_compliance_report_template.md $COMPLIANCE_REPORT_NAME
+
+          # Update the version
+          sed -i.bu "s,%VERSION%,$RELEASE_VERSION,g" $COMPLIANCE_REPORT_NAME
+          # Update the SBOM link
+          sed -i.bu "s,%SBOM_URL%,$SBOM_URL,g" $COMPLIANCE_REPORT_NAME
+          # Update the SARIF link
+          sed -i.bu "s,%SARIF_URL%,$SARIF_URL,g" $COMPLIANCE_REPORT_NAME
+          # Update the author information
+          sed -i.bu "s,%AUTHOR%,$AUTHOR,g" $COMPLIANCE_REPORT_NAME
+          sed -i.bu "s,%AUTHOR_EMAIL%,$AUTHOR_EMAIL,g" $COMPLIANCE_REPORT_NAME
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${COMPLIANCE_REPORT_NAME}
+        content_type: text/markdown
+        bucket: mciuploads
+        permissions: public-read
+
+  "publish compliance report":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${COMPLIANCE_REPORT_NAME}
+        content_type: text/markdown
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
+        content_type: text/markdown
+        bucket: translators-connectors-releases
+        permissions: public-read
+        display_name: mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
+
+  "push SBOM Lite to Silk":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cat << EOF > silkbomb.env
+          SILK_CLIENT_ID=${SILK_CLIENT_ID}
+          SILK_CLIENT_SECRET=${SILK_CLIENT_SECRET}
+          EOF
+          
+          echo "SBOM_FINAL = $SBOM_FINAL"
+          
+          echo "-- Uploading initial SBOM Lite to Silk --"
+          docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
+          --env-file silkbomb.env \
+          artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:1.0 \
+          upload --silk-asset-group ${SILK_ASSET_GROUP} --sbom-in /pwd/$SBOM_FINAL
+          echo "-------------------------------"
+
+  "pull augmented SBOM from Silk":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+                    
+          cat << EOF > silkbomb.env
+          SILK_CLIENT_ID=${SILK_CLIENT_ID}
+          SILK_CLIENT_SECRET=${SILK_CLIENT_SECRET}
+          EOF
+          
+          echo "-- Downloading augmented SBOM --"
+          docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
+          --env-file silkbomb.env \
+          artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:1.0 \
+          download --silk-asset-group ${SILK_ASSET_GROUP} --sbom-out /pwd/mongo-odbc-driver.augmented.sbom.json
+          echo "-------------------------------"
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
+  
+
+  "publish augmented SBOM":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}.sbom.json
+        bucket: translators-connectors-releases
+        content_type: application/json
+        permissions: public-read
+        display_name: mongosql-odbc-${RELEASE_VERSION}.sbom.json
+
   "set and check packages version":
     - command: shell.exec
       type: test
@@ -210,7 +533,16 @@ functions:
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_jsign_image} \
-            /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 mongoodbc.msi"
+            /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 ${MSI_FILENAME}"
+          
+          # Generating checksums
+          if [ -e $msi_filename ]; then
+            shasum -a 1 ${MSI_FILENAME} | tee ${MSI_FILENAME}.sha1
+            shasum -a 256 ${MSI_FILENAME} | tee ${MSI_FILENAME}.sha256
+            md5sum ${MSI_FILENAME} | tee ${MSI_FILENAME}.md5
+          else
+            echo "${MSI_FILENAME} does not exist. Skipping checksum generation"
+          fi
 
   "sign ubuntu and verify signature":
     - command: shell.exec
@@ -356,6 +688,15 @@ functions:
         file: mongosql-odbc-driver/expansions.yml
 
   "build msi":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -363,7 +704,7 @@ functions:
         script: |
           ${prepare_shell}
           cp target/release/*.dll installer/msi
-          cp ./README.md installer/msi
+          cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               MINOR_VERSION="0.1"
@@ -386,6 +727,15 @@ functions:
               -VersionLabel "$VERSION_LABEL"\
 
   "build dmg":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -544,10 +894,20 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
-        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}
         bucket: mciuploads
         permissions: public-read
         display_name: mongoodbc-signed.msi
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi.sha256
+        local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}.sha256
+        bucket: mciuploads
+        permissions: public-read
+        display_name: mongoodbc-signed.msi.sha256
         content_type: application/octet-stream
 
   "upload ubuntu sig file":
@@ -578,6 +938,24 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
+        display_name: ${MSI_FILENAME}
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi.sha256
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi.sha256
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi.sha256
+        remote_file: ${WINDOWS_INSTALLER_PATH}.sha256
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+        display_name: ${MSI_FILENAME}.sha256
     - command: s3.get
       params:
         aws_key: ${aws_key}
@@ -779,6 +1157,15 @@ functions:
         bucket: mciuploads
 
   "tar linux artifacts":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -786,7 +1173,7 @@ functions:
         script: |
           mkdir -p release/mongoodbc/bin
           cp  target/release/libatsql.so release/mongoodbc/bin/
-          cp ./LICENSE ./README.md release/mongoodbc/
+          cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           cd release
           tar -czvf mongoodbc.tar.gz mongoodbc/
 
@@ -977,7 +1364,8 @@ functions:
           cargo run --bin data_loader &&
           cargo test integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
-          # the test is feature gated and will only run on evergreen
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
           cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
           EXITCODE=$?
@@ -1095,6 +1483,9 @@ functions:
 
           # Run integration tests with ubuntu
           cargo test integration -- --nocapture &&
+          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
           cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
 
@@ -1168,6 +1559,9 @@ functions:
 
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --nocapture &&
+          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests,definitions/iodbc,cstr/utf32 -- --nocapture &&
           cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features definitions/iodbc,cstr/utf32,bad_host -- --exact --nocapture
           EXITCODE=$?
@@ -1247,6 +1641,9 @@ functions:
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --nocapture &&
+          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
           cargo test --target x86_64-unknown-linux-gnu --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
           EXITCODE=$?
@@ -1346,6 +1743,41 @@ functions:
         content_type: application/octet-stream
         display_name: crash-dump-
 
+  "trace artifacts":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          mkdir papertrail
+    - command: s3.get
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/papertrail/${MSI_FILENAME}
+        remote_file: ${WINDOWS_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/papertrail/mongoodbc.tar.gz
+        remote_file: ${UBUNTU2204_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: papertrail.trace
+      params:
+        work_dir: mongosql-odbc-driver
+        key_id: ${papertrail_id}
+        secret_key: ${papertrail_key}
+        product: mongo-odbc-driver
+        version: ${RELEASE_VERSION}
+        filenames:
+          - papertrail/*
+
   "update download center feed":
     # Download the current json feed used by the download center
     - command: s3.get
@@ -1405,6 +1837,67 @@ functions:
         permissions: public-read
         content_type: application/json
 
+  "generate static code analysis":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          export SEMGREP_APP_TOKEN=${semgrep_app_token}
+          echo "Running static code analysis with Semgrep..."
+
+          # Setup or use the existing virtualenv for semgrep
+          if [[ -f "venv/bin/activate" ]]; then
+              echo 'using existing virtualenv'
+              . venv/bin/activate
+          else
+              echo 'Creating new virtualenv'
+              python3 -m virtualenv venv
+              echo 'Activating new virtualenv'
+              . venv/bin/activate
+          fi
+          python3 -m pip install semgrep
+          # Confirm semgrep version
+          semgrep --version
+          set +e
+          semgrep --config p/rust --sarif --exclude "integration_test" --verbose --error --severity=ERROR --sarif-output=mongo-odbc-driver.sast.sarif > mongo-odbc-driver.sast.cmd.verbose.out 2>&1
+          SCAN_RESULT=$?
+          set -e
+          # Exit with a failure if the scan found an issue
+          exit $SCAN_RESULT
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_files_include_filter:
+          - mongo-odbc-driver.sast.*
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
+        content_type: text/plain
+        bucket: mciuploads
+        permissions: public-read
+  
+  "publish static code analysis":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file:  mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
+        content_type: application/json
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file: mongosql-odbc-driver/mongo-odbc-${RELEASE_VERSION}.sast.sarif
+        content_type: application/json
+        bucket: translators-connectors-releases
+        permissions: public-read
+        display_name: mongo-odbc-${RELEASE_VERSION}.sast.sarif
+
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -1422,7 +1915,19 @@ tasks:
       - func: "install rust toolchain"
       - func: "check rustfmt"
 
+  - name: sbom
+    commands:
+      - func: "install rust toolchain"
+      - func: set and check packages version
+      - func: "generate SBOM"
+      - func: "scan SBOM"
+      - func: "push SBOM Lite to Silk"
+      - func: "pull augmented SBOM from Silk"
+
   - name: compile
+    depends_on:
+      - name: sbom
+        variant: code-quality-security
     commands:
       - func: "install iODBC"
         variants: [macos, macos-arm]
@@ -1589,10 +2094,17 @@ tasks:
       - func: "upload release"
       - func: "upload debug"
 
-  - name: download-center-update
+  - name: trace-artifacts
     git_tag_only: true
     depends_on:
       - name: release
+    commands:
+      - func: "trace artifacts"
+
+  - name: download-center-update
+    git_tag_only: true
+    depends_on:
+      - name: trace-artifacts
     commands:
       - func: "update download center feed"
 
@@ -1608,6 +2120,44 @@ tasks:
     commands:
       - func: "upload release"
       - func: "upload debug"
+
+  - name: semgrep
+    exec_timeout_secs: 3600 # 1h
+    commands:
+      - func: "generate static code analysis"
+
+  - name: ssdlc-artifacts-release
+    run_on: ubuntu2204-small
+    git_tag_only: true
+    depends_on:
+      - name: "release"
+        variant: "release"
+      - name: sbom
+        variant: code-quality-security
+      - name: semgrep
+        variant: code-quality-security
+    exec_timeout_secs: 300 # 5m
+    commands:
+      - func: "publish static code analysis"
+      - func: "publish augmented SBOM"
+      - func: "generate compliance report"
+      - func: "publish compliance report"
+
+  - name: ssdlc-artifacts-snapshot
+    run_on: ubuntu2204-small
+    allow_for_git_tag: false
+    depends_on:
+      - name: sbom
+        variant: code-quality-security
+      - name: semgrep
+        variant: code-quality-security
+    exec_timeout_secs: 300 # 5m
+    commands:
+      - func: "publish static code analysis"
+      - func: "publish augmented SBOM"
+      - func: "generate compliance report"
+      - func: "publish compliance report"
+
 
 task_groups:
   - name: windows-windows-test-unit-group
@@ -1656,6 +2206,14 @@ buildvariants:
       - name: clippy
       - name: rustfmt
       - name: asan-compile
+
+  - name: code-quality-security
+    display_name: "Code Quality and Security"
+    run_on: [ubuntu2204-small]
+    tasks:
+      - name: semgrep
+      - name: sbom
+      - name: ssdlc-artifacts-snapshot
 
   - name: windows-64
     tags: ["release-variant"]
@@ -1711,4 +2269,6 @@ buildvariants:
     tasks:
       - name: release
       - name: snapshot
+      - name: trace-artifacts
       - name: download-center-update
+      - name: ssdlc-artifacts-release

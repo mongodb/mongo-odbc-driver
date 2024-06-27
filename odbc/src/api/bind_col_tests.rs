@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod unit {
     use crate::{
         handles::definitions::{
@@ -11,7 +17,7 @@ mod unit {
     use definitions::{
         BindType, CDataType, Len, Nullability,
         RowStatus::{SQL_ROW_NOROW, SQL_ROW_SUCCESS},
-        SmallInt, SqlReturn, ULen, USmallInt, WChar,
+        SmallInt, SqlReturn, ULen, USmallInt, WChar, SQL_NTS_ISIZE,
     };
     use mongo_odbc_core::{
         json_schema::{
@@ -421,15 +427,16 @@ mod unit {
             assert_eq!(4, *((num_indicator as ULen + 8) as *mut Len));
 
             // assert that the first 2 values from the result set were put in the bound buffer array correctly for column 2.
-            // input_text_to_string_w requires a `usize` value; however, I need a negative value to test that the null termination character was added,
-            // So I input usize::MAX because it casts to -1 in the function.
             assert_eq!(
                 "aaaa",
-                input_text_to_string_w(word_buffer as *const WideChar, usize::MAX)
+                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS_ISIZE)
             );
             assert_eq!(
                 "bbbb",
-                input_text_to_string_w((word_buffer as ULen + 20) as *const WideChar, usize::MAX)
+                input_text_to_string_w(
+                    (word_buffer as ULen + 20) as *const WideChar,
+                    SQL_NTS_ISIZE
+                )
             );
 
             // assert that the indicator has the correct values for column 2.
@@ -463,11 +470,14 @@ mod unit {
             // assert that the last 2 values from the result set were put in the bound buffer array correctly for column 2.
             assert_eq!(
                 "cccc",
-                input_text_to_string_w(word_buffer as *const WideChar, usize::MAX)
+                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS_ISIZE)
             );
             assert_eq!(
                 "dddd",
-                input_text_to_string_w((word_buffer as ULen + 20) as *const WideChar, usize::MAX)
+                input_text_to_string_w(
+                    (word_buffer as ULen + 20) as *const WideChar,
+                    SQL_NTS_ISIZE
+                )
             );
 
             // assert that the indicator has the correct values for column 2.
@@ -577,19 +587,23 @@ mod unit {
             assert_eq!(4, *((num_indicator as ULen + 16) as *mut Len));
 
             // assert that the first 3 values from the result set were put in the bound buffer array correctly for column 2.
-            // input_text_to_string_w requires a `usize` value; however, I need a negative value to test that the null termination character was added,
-            // So I input usize::MAX because it casts to -1 in the function.
             assert_eq!(
                 "aaaa",
-                input_text_to_string_w(word_buffer as *const WideChar, usize::MAX)
+                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS_ISIZE)
             );
             assert_eq!(
                 "bbbb",
-                input_text_to_string_w((word_buffer as ULen + 20) as *const WideChar, usize::MAX)
+                input_text_to_string_w(
+                    (word_buffer as ULen + 20) as *const WideChar,
+                    SQL_NTS_ISIZE
+                )
             );
             assert_eq!(
                 "cccc",
-                input_text_to_string_w((word_buffer as ULen + 40) as *const WideChar, usize::MAX)
+                input_text_to_string_w(
+                    (word_buffer as ULen + 40) as *const WideChar,
+                    SQL_NTS_ISIZE
+                )
             );
 
             // assert that the indicator has the correct values for column 2.
@@ -630,15 +644,21 @@ mod unit {
             // assert that the last value from the result set was put in the bound buffer array correctly for column 2.
             assert_eq!(
                 "dddd",
-                input_text_to_string_w(word_buffer as *const WideChar, usize::MAX)
+                input_text_to_string_w(word_buffer as *const WideChar, SQL_NTS_ISIZE)
             );
             assert_eq!(
                 "bbbb",
-                input_text_to_string_w((word_buffer as ULen + 20) as *const WideChar, usize::MAX)
+                input_text_to_string_w(
+                    (word_buffer as ULen + 20) as *const WideChar,
+                    SQL_NTS_ISIZE
+                )
             );
             assert_eq!(
                 "cccc",
-                input_text_to_string_w((word_buffer as ULen + 40) as *const WideChar, usize::MAX)
+                input_text_to_string_w(
+                    (word_buffer as ULen + 40) as *const WideChar,
+                    SQL_NTS_ISIZE
+                )
             );
 
             // assert that the indicator has the correct values for column 2.
@@ -788,6 +808,7 @@ mod unit {
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
                     Nullability::SQL_NO_NULLS,
                     TypeMode::Simple,
+                    None,
                 ),
                 MongoColMetadata::new(
                     "",
@@ -796,6 +817,7 @@ mod unit {
                     Schema::Atomic(Atomic::Scalar(BsonTypeName::String)),
                     Nullability::SQL_NO_NULLS,
                     TypeMode::Simple,
+                    None,
                 ),
             ],
         )
@@ -811,6 +833,7 @@ mod unit {
                 Schema::Atomic(Atomic::Scalar(BsonTypeName::Int)),
                 Nullability::SQL_NO_NULLS,
                 TypeMode::Simple,
+                None,
             )],
         )
     }

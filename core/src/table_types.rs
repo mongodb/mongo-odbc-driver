@@ -1,6 +1,6 @@
 use crate::{
-    databases::DATABASES_METADATA, err::Result, Error, MongoColMetadata, MongoConnection,
-    MongoStatement,
+    databases::init_databases_metadata, databases::DATABASES_METADATA, err::Result, Error,
+    MongoColMetadata, MongoConnection, MongoStatement,
 };
 use mongodb::bson::Bson;
 
@@ -36,7 +36,7 @@ impl MongoStatement for MongoTableTypes {
     }
 
     // Get the BSON value for the value at the given colIndex on the current row.
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, col_index: u16, _: Option<u16>) -> Result<Option<Bson>> {
         // The mapping for col_index <-> Value will be hard-coded and handled in this function
         // 1..3 | 5-> Null
         // 4 -> table_type[current_table_type_index-1]
@@ -52,7 +52,7 @@ impl MongoStatement for MongoTableTypes {
         }
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<MongoColMetadata> {
-        &DATABASES_METADATA
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata> {
+        DATABASES_METADATA.get_or_init(|| init_databases_metadata(max_string_length))
     }
 }

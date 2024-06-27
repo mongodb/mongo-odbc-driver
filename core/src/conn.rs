@@ -148,6 +148,7 @@ impl MongoConnection {
         login_timeout: Option<u32>,
         type_mode: TypeMode,
         mut runtime: Option<Runtime>,
+        max_string_length: Option<u16>,
     ) -> Result<Self> {
         let runtime = Arc::new(runtime.take().unwrap_or_else(|| {
             tokio::runtime::Builder::new_current_thread()
@@ -156,18 +157,30 @@ impl MongoConnection {
                 .unwrap()
         }));
         user_options.client_options.connect_timeout =
-            login_timeout.map(|to| Duration::new(to as u64, 0));
+            login_timeout.map(|to| Duration::new(u64::from(to), 0));
+        let guard = runtime.enter();
+        let client = runtime.block_on(async {
+            Client::with_options(user_options.client_options).map_err(Error::InvalidClientOptions)
+        })?;
+        drop(guard);
         let uuid_repr = user_options.uuid_representation;
         let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
         let connection = MongoConnection {
             client,
-            operation_timeout: operation_timeout.map(|to| Duration::new(to as u64, 0)),
+            operation_timeout: operation_timeout.map(|to| Duration::new(u64::from(to), 0)),
             uuid_repr,
             runtime,
         };
         // Verify that the connection is working and the user has access to the default DB
         // ADF is supposed to check permissions on this
-        MongoQuery::prepare(&connection, current_db, None, "select 1", type_mode)?;
+        MongoQuery::prepare(
+            &connection,
+            current_db,
+            None,
+            "select 1",
+            type_mode,
+            max_string_length,
+        )?;
         Ok(connection)
     }
 

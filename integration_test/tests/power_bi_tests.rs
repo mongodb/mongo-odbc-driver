@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 mod integration {
@@ -159,7 +165,7 @@ mod integration {
                     dbc as HDbc,
                     null_mut(),
                     in_connection_string_encoded.as_ptr(),
-                    SQL_NTS as SmallInt,
+                    SQL_NTS.try_into().unwrap(),
                     out_connection_string_buff,
                     BUFFER_LENGTH,
                     str_len_ptr,
@@ -434,7 +440,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS as SmallInt as i32),
+                SQLExecDirectW(stmt as HStmt, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
@@ -502,6 +508,7 @@ mod integration {
         let env_handle: HEnv = setup();
         let (conn_handle, _, _, _) = power_bi_connect(env_handle);
         let mut stmt: Handle = null_mut();
+        let empty_string = WideChar::default();
 
         unsafe {
             assert_eq!(
@@ -518,11 +525,11 @@ mod integration {
                 SqlReturn::SUCCESS,
                 SQLTablesW(
                     stmt as HStmt,
-                    null_mut(),
+                    std::ptr::addr_of!(empty_string),
                     0,
-                    null_mut(),
+                    std::ptr::addr_of!(empty_string),
                     0,
-                    null_mut(),
+                    std::ptr::addr_of!(empty_string),
                     0,
                     table_view.as_ptr(),
                     table_view.len() as SmallInt - 1

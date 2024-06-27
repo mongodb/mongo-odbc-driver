@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 mod common;
 
 /// The tests in this module are based on the Preview Data workflow using SSIS.
@@ -39,7 +45,7 @@ mod integration {
             query.push(0);
             assert_eq!(
                 SqlReturn::SUCCESS,
-                SQLPrepareW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
+                SQLPrepareW(stmt_handle, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );

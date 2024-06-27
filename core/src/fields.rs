@@ -12,149 +12,20 @@ use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Bson},
     results::CollectionType,
+    options::ListDatabasesOptions, 
+    results::CollectionType,
 };
+use once_cell::sync::OnceCell;
 use regex::Regex;
 use std::collections::VecDeque;
 
-lazy_static! {
-    static ref FIELDS_METADATA: Vec<MongoColMetadata> = vec![
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "TABLE_CAT".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "TABLE_SCHEM".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "TABLE_NAME".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "COLUMN_NAME".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "DATA_TYPE".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "TYPE_NAME".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "COLUMN_SIZE".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "BUFFER_LENGTH".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "DECIMAL_DIGITS".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "NUM_PREC_RADIX".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "NULLABLE".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "REMARKS".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "COLUMN_DEF".to_string(),
-            BsonTypeInfo::STRING,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "SQL_DATA_TYPE".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "SQL_DATETIME_SUB".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "CHAR_OCTET_LENGTH".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NULLABLE
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "ORDINAL_POSITION".to_string(),
-            BsonTypeInfo::INT,
-            Nullability::SQL_NO_NULLS
-        ),
-        MongoColMetadata::new_metadata_from_bson_type_info_default(
-            "",
-            "".to_string(),
-            "IS_NULLABLE".to_string(),
-            BsonTypeInfo::STRING,
-            // the docs do not say 'not NULL', but they also say the only possible values for
-            // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
-            // the empty varchar... so NO_NULLS seems correct to me.
-            Nullability::SQL_NO_NULLS
-        ),
-    ];
-}
+static FIELDS_METADATA: OnceCell<Vec<MongoColMetadata>> = OnceCell::new();
 
 mod unit {
     #[test]
     fn metadata_size() {
         use crate::{fields::MongoFields, stmt::MongoStatement};
-        assert_eq!(18, MongoFields::empty().get_resultset_metadata().len());
+        assert_eq!(18, MongoFields::empty().get_resultset_metadata(None).len());
     }
 
     #[test]
@@ -163,75 +34,129 @@ mod unit {
         // This gives us assurance that the column names are all correct.
         assert_eq!(
             "TABLE_CAT",
-            MongoFields::empty().get_col_metadata(1).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(1, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "TABLE_SCHEM",
-            MongoFields::empty().get_col_metadata(2).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(2, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "TABLE_NAME",
-            MongoFields::empty().get_col_metadata(3).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(3, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "COLUMN_NAME",
-            MongoFields::empty().get_col_metadata(4).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(4, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "DATA_TYPE",
-            MongoFields::empty().get_col_metadata(5).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(5, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "TYPE_NAME",
-            MongoFields::empty().get_col_metadata(6).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(6, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "COLUMN_SIZE",
-            MongoFields::empty().get_col_metadata(7).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(7, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "BUFFER_LENGTH",
-            MongoFields::empty().get_col_metadata(8).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(8, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "DECIMAL_DIGITS",
-            MongoFields::empty().get_col_metadata(9).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(9, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "NUM_PREC_RADIX",
-            MongoFields::empty().get_col_metadata(10).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(10, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "NULLABLE",
-            MongoFields::empty().get_col_metadata(11).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(11, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "REMARKS",
-            MongoFields::empty().get_col_metadata(12).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(12, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "COLUMN_DEF",
-            MongoFields::empty().get_col_metadata(13).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(13, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "SQL_DATA_TYPE",
-            MongoFields::empty().get_col_metadata(14).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(14, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "SQL_DATETIME_SUB",
-            MongoFields::empty().get_col_metadata(15).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(15, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "CHAR_OCTET_LENGTH",
-            MongoFields::empty().get_col_metadata(16).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(16, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "ORDINAL_POSITION",
-            MongoFields::empty().get_col_metadata(17).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(17, None)
+                .unwrap()
+                .col_name
         );
         assert_eq!(
             "IS_NULLABLE",
-            MongoFields::empty().get_col_metadata(18).unwrap().col_name
+            MongoFields::empty()
+                .get_col_metadata(18, None)
+                .unwrap()
+                .col_name
         );
     }
 
@@ -242,75 +167,129 @@ mod unit {
         // that we do not have smallint, so we use int, however).
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(1).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(1, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(2).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(2, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(3).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(3, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(4).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(4, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(5).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(5, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(6).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(6, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(7).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(7, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(8).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(8, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(9).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(9, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(10).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(10, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(11).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(11, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(12).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(12, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(13).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(13, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(14).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(14, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(15).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(15, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(16).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(16, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "int",
-            MongoFields::empty().get_col_metadata(17).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(17, None)
+                .unwrap()
+                .type_name
         );
         assert_eq!(
             "string",
-            MongoFields::empty().get_col_metadata(18).unwrap().type_name
+            MongoFields::empty()
+                .get_col_metadata(18, None)
+                .unwrap()
+                .type_name
         );
     }
 
@@ -323,119 +302,119 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(1)
+                .get_col_metadata(1, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(2)
+                .get_col_metadata(2, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(3)
+                .get_col_metadata(3, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(4)
+                .get_col_metadata(4, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(5)
+                .get_col_metadata(5, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(6)
+                .get_col_metadata(6, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(7)
+                .get_col_metadata(7, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(8)
+                .get_col_metadata(8, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(9)
+                .get_col_metadata(9, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(10)
+                .get_col_metadata(10, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(11)
+                .get_col_metadata(11, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(12)
+                .get_col_metadata(12, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(13)
+                .get_col_metadata(13, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(14)
+                .get_col_metadata(14, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(15)
+                .get_col_metadata(15, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NULLABLE,
             MongoFields::empty()
-                .get_col_metadata(16)
+                .get_col_metadata(16, None)
                 .unwrap()
                 .nullability
         );
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(17)
+                .get_col_metadata(17, None)
                 .unwrap()
                 .nullability
         );
@@ -443,7 +422,7 @@ mod unit {
         assert_eq!(
             Nullability::SQL_NO_NULLS,
             MongoFields::empty()
-                .get_col_metadata(18)
+                .get_col_metadata(18, None)
                 .unwrap()
                 .nullability
         );
@@ -460,6 +439,7 @@ pub struct MongoFields {
     collection_name_filter: Option<Regex>,
     field_name_filter: Option<Regex>,
     type_mode: TypeMode,
+    max_string_length: Option<u16>,
     /// Whether this mongofield should map to odbc 3 types or not
     odbc_3_types: bool,
 }
@@ -481,6 +461,7 @@ impl MongoFields {
     // (tables) names filters.
     // The query timeout comes from the statement attribute SQL_ATTR_QUERY_TIMEOUT. If there is a
     // timeout, the query must finish before the timeout or an error is returned.
+    #[allow(clippy::too_many_arguments)]
     pub fn list_columns(
         mongo_connection: &MongoConnection,
         _query_timeout: Option<i32>,
@@ -488,6 +469,7 @@ impl MongoFields {
         collection_name_filter: Option<&str>,
         field_name_filter: Option<&str>,
         type_mode: TypeMode,
+        max_string_length: Option<u16>,
         odbc_3_types: bool,
     ) -> Self {
         let dbs = db_name.map_or_else(
@@ -520,6 +502,7 @@ impl MongoFields {
             collection_name_filter: collection_name_filter.and_then(to_name_regex),
             field_name_filter: field_name_filter.and_then(to_name_regex),
             type_mode,
+            max_string_length,
             odbc_3_types,
         }
     }
@@ -534,6 +517,7 @@ impl MongoFields {
             collection_name_filter: None,
             field_name_filter: None,
             type_mode: TypeMode::Standard,
+            max_string_length: None,
             odbc_3_types: true,
         }
     }
@@ -581,6 +565,7 @@ impl MongoFields {
                             &self.current_db_name,
                             collection_name.as_str(),
                             self.type_mode,
+                            self.max_string_length,
                         ) {
                             Ok(current_col_metadata) => {
                                 if !current_col_metadata.is_empty() {
@@ -676,7 +661,7 @@ impl MongoStatement for MongoFields {
 
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
-    fn get_value(&self, col_index: u16) -> Result<Option<Bson>> {
+    fn get_value(&self, col_index: u16, _: Option<u16>) -> Result<Option<Bson>> {
         // use self.current_col_metadata[current_field_for_collection]
         // 1 -> TABLE_CAT
         // 2 -> TABLE_SCHEM  (NULL)
@@ -722,23 +707,23 @@ impl MongoStatement for MongoFields {
                 match get_meta_data()?.column_size {
                     // If the driver cannot determine the column for a variable type, it returns
                     // SQL_NO_TOTAL.
-                    None => definitions::SQL_NO_TOTAL as i32,
-                    Some(col_size) => col_size as i32,
+                    None => definitions::SQL_NO_TOTAL,
+                    Some(col_size) => i32::from(col_size),
                 }
             }),
             // BUFFER_LENGTH = Transfer octet length
             8 => Bson::Int32({
                 let l = get_meta_data()?.transfer_octet_length;
                 match l {
-                    None => definitions::SQL_NO_TOTAL as i32,
-                    Some(l) => l as i32,
+                    None => definitions::SQL_NO_TOTAL,
+                    Some(l) => i32::from(l),
                 }
             }),
             // DECIMAL_DIGITS
             9 => match get_meta_data()?.decimal_digits {
                 // NULL is returned for data types where DECIMAL_DIGITS is not applicable.
                 None => Bson::Null,
-                Some(dec_dg) => Bson::Int32(dec_dg as i32),
+                Some(dec_dg) => Bson::Int32(i32::from(dec_dg)),
             },
             // NUM_PREC_RADIX
             10 => match get_meta_data()?.sql_type {
@@ -770,13 +755,16 @@ impl MongoStatement for MongoFields {
                 SqlDataType::SQL_VARCHAR
                 | SqlDataType::SQL_WVARCHAR
                 | SqlDataType::SQL_VARBINARY => match get_meta_data()?.char_octet_length {
-                    None => Bson::Int32(definitions::SQL_NO_TOTAL as i32),
-                    Some(char_octet_length) => Bson::Int32(char_octet_length as i32),
+                    None => Bson::Int32(definitions::SQL_NO_TOTAL),
+                    Some(char_octet_length) => Bson::Int32(i32::from(char_octet_length)),
                 },
                 _ => Bson::Null,
             },
             // ORDINAL_POSITION
-            17 => Bson::Int32(1 + self.current_field_for_collection as i32),
+            17 => Bson::Int32(
+                1 + i32::try_from(self.current_field_for_collection)
+                    .expect("collection has more fields than i32::MAX"),
+            ),
             // IS_NULLABLE
             18 => Bson::String(
                 // odbc_sys should use an enum instead of constants...
@@ -790,7 +778,157 @@ impl MongoStatement for MongoFields {
         }))
     }
 
-    fn get_resultset_metadata(&self) -> &Vec<crate::MongoColMetadata> {
-        &FIELDS_METADATA
+    fn get_resultset_metadata(&self, max_string_length: Option<u16>) -> &Vec<MongoColMetadata> {
+        FIELDS_METADATA.get_or_init(|| {
+            vec![
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "TABLE_CAT".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "TABLE_SCHEM".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "TABLE_NAME".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "COLUMN_NAME".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "DATA_TYPE".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "TYPE_NAME".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "COLUMN_SIZE".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "BUFFER_LENGTH".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "DECIMAL_DIGITS".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "NUM_PREC_RADIX".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "NULLABLE".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "REMARKS".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "COLUMN_DEF".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "SQL_DATA_TYPE".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "SQL_DATETIME_SUB".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "CHAR_OCTET_LENGTH".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NULLABLE,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "ORDINAL_POSITION".to_string(),
+                    BsonTypeInfo::INT,
+                    max_string_length,
+                    Nullability::SQL_NO_NULLS,
+                ),
+                MongoColMetadata::new_metadata_from_bson_type_info_default(
+                    "",
+                    "".to_string(),
+                    "IS_NULLABLE".to_string(),
+                    BsonTypeInfo::STRING,
+                    max_string_length,
+                    // the docs do not say 'not NULL', but they also say the only possible values for
+                    // ISO SQL are 'YES' and 'NO'. And even for non-ISO SQL they only allow additionally
+                    // the empty varchar... so NO_NULLS seems correct to me.
+                    Nullability::SQL_NO_NULLS,
+                ),
+            ]
+        })
     }
 }

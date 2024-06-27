@@ -1,3 +1,8 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use definitions::{
@@ -208,7 +213,7 @@ pub fn connect_with_conn_string(
             dbc as HDbc,
             null_mut(),
             in_connection_string_encoded.as_ptr(),
-            SQL_NTS as SmallInt,
+            SQL_NTS.try_into().unwrap(),
             null_mut(),
             0,
             str_len_ptr,
@@ -464,7 +469,7 @@ pub unsafe fn exec_direct_default_query(stmt_handle: HStmt) {
     query.push(0);
     assert_eq!(
         SqlReturn::SUCCESS,
-        SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS as i32),
+        SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS),
         "{}",
         get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
     );

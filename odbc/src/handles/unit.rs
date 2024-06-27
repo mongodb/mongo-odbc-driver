@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 use crate::{handles::definitions::*, has_odbc_3_behavior, SQLAllocHandle, SQLFreeHandle};
 use definitions::{AttrOdbcVersion, Handle, HandleType, SqlReturn};
 

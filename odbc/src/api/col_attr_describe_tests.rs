@@ -1,3 +1,9 @@
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
+
 use crate::{
     handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW, SQLDescribeColW,
@@ -450,7 +456,7 @@ mod unit {
                 );
                 assert_eq!(
                     expected,
-                    cstr::input_text_to_string_w(char_buffer as *const _, expected.len(),)
+                    cstr::input_text_to_string_w(char_buffer as *const _, expected.len() as isize,)
                 );
                 let _ = Box::from_raw(char_buffer as *mut WChar);
             }
@@ -628,7 +634,10 @@ mod unit {
             // name_buffer should contain TABLE_NAME
             assert_eq!(
                 "TABLE_NAME".to_string(),
-                cstr::input_text_to_string_w(name_buffer as *const _, *out_name_length as usize)
+                cstr::input_text_to_string_w(
+                    name_buffer as *const _,
+                    isize::from(*out_name_length)
+                )
             );
             let _ = Box::from_raw(name_buffer as *mut WChar);
             let _ = Box::from_raw(conn as *mut WChar);

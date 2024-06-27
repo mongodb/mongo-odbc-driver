@@ -82,6 +82,14 @@ pub struct ConfigGui {
     #[nwg_layout_item(layout: grid,  row: 5, col: 2, col_span: 7)]
     database_input: nwg::TextInput,
 
+    #[nwg_control(flags: "VISIBLE", text: "Enable maximum string length")]
+    #[nwg_layout_item(layout: grid,  row: 6, col: 0, col_span: 4)]
+    enable_max_string_length_field: nwg::Label,
+
+    #[nwg_control(flags: "VISIBLE", text: "")]
+    #[nwg_layout_item(layout: grid,  row: 6, col: 4, col_span: 3)]
+    enable_max_string_length_input: nwg::CheckBox,
+
     #[nwg_control(flags: "VISIBLE", text: "Test")]
     #[nwg_events( OnButtonClick: [ConfigGui::test_connection] )]
     #[nwg_layout_item(layout: grid,  row: 10, col: 0, col_span: 1)]
@@ -147,6 +155,10 @@ impl ConfigGui {
             driver_name: self.driver_name.text().as_str(),
             // TODO: SQL-2050 expose simple_types_only checkbox in ui (on by default)
             simple_types_only: "1",
+            enable_max_string_length: match self.enable_max_string_length_input.check_state() {
+                nwg::CheckBoxState::Checked => "1",
+                _ => "0",
+            },
         }) {
             Err(e) => {
                 nwg::modal_error_message(&self.window, "Error", &e.to_string());
@@ -180,7 +192,12 @@ impl ConfigGui {
                     &format!(
                         "Could not connect with supplied information: {e}",
                         e = unsafe {
-                            input_text_to_string_w(buffer.as_mut_ptr(), buffer_length as usize)
+                            input_text_to_string_w(
+                                buffer.as_mut_ptr(),
+                                buffer_length
+                                    .try_into()
+                                    .expect("buffer length exceeded {isize::MAX} on this platform"),
+                            )
                         }
                     ),
                 );
@@ -277,6 +294,12 @@ pub fn config_dsn(dsn_opts: Dsn, dsn_op: u32) -> bool {
             // app.log_path_input.set_text(&dsn_opts.logpath);
             app.user_input.set_text(&dsn_opts.user);
             app.password_input.set_text(&dsn_opts.password);
+            app.enable_max_string_length_input.set_check_state(
+                match dsn_opts.enable_max_string_length.as_str() {
+                    "1" => nwg::CheckBoxState::Checked,
+                    _ => nwg::CheckBoxState::Unchecked,
+                },
+            )
         }
         _ => unreachable!(),
     }
