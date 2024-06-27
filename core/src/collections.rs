@@ -10,11 +10,9 @@ use crate::{
 };
 use definitions::Nullability;
 use futures::future;
-use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Bson},
     results::CollectionType,
-    options::{ListDatabasesOptions, results::CollectionType},
 };
 use once_cell::sync::OnceCell;
 use regex::Regex;

@@ -1881,7 +1881,7 @@ dependencies = [
  "log",
  "logger",
  "mongodb 3.0.0 (git+https://github.com/mongodb/mongo-rust-driver.git?branch=main)",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "regex",
  "serde",
@@ -2243,7 +2243,7 @@ dependencies = [
  "likely_stable",
  "log",
  "mongodb 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "once_cell",
  "open",
@@ -2274,7 +2274,7 @@ dependencies = [
  "logger",
  "mongo-odbc-core",
  "mongodb 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "regex",
  "serde",
@@ -2321,9 +2321,9 @@ dependencies = [
  "serde_with 1.14.0",
  "sha-1",
  "sha2",
- "socket2 0.5.6",
+ "socket2 0.5.7",
  "stringprep",
- "strsim",
+ "strsim 0.10.0",
  "take_mut",
  "thiserror",
  "tokio",
@@ -2369,7 +2369,7 @@ dependencies = [
  "serde_with 1.14.0",
  "sha-1",
  "sha2",
- "socket2 0.5.6",
+ "socket2 0.5.7",
  "stringprep",
  "strsim 0.10.0",
  "take_mut",
@@ -2392,7 +2392,7 @@ checksum = "1159486b5e1993138c385369c3c46f5608cb0b1c53734e503538366f3c4cedcc"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.58",
+ "syn 2.0.65",
 ]
 
 [[package]]
@@ -2402,7 +2402,7 @@ source = "git+https://github.com/mongodb/mongo-rust-driver.git?branch=main#63ea2
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.58",
+ "syn 2.0.65",
 ]
 
 [[package]]

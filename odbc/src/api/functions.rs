@@ -1146,8 +1146,8 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         connection_timeout,
         login_timeout,
         *conn.type_mode.read().unwrap(),
-        *conn.max_string_length.read().unwrap(),
         Some(runtime),
+        *conn.max_string_length.read().unwrap(),
     )?)
 }
 
