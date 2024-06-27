@@ -1744,16 +1744,39 @@ functions:
         display_name: crash-dump-
 
   "trace artifacts":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          mkdir papertrail
+    - command: s3.get
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/papertrail/${MSI_FILENAME}
+        remote_file: ${WINDOWS_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/papertrail/mongoodbc.tar.gz
+        remote_file: ${UBUNTU2204_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
     - command: papertrail.trace
       params:
         work_dir: mongosql-odbc-driver
         key_id: ${papertrail_id}
         secret_key: ${papertrail_key}
         product: mongo-odbc-driver
-        version: ${version_id}
+        version: ${RELEASE_VERSION}
         filenames:
-          - release/mongoodbc-signed.msi
-          - target/release/mongoodbc.tar.gz
+          - papertrail/*
 
   "update download center feed":
     # Download the current json feed used by the download center
@@ -2071,12 +2094,18 @@ tasks:
       - func: "upload release"
       - func: "upload debug"
 
-  - name: download-center-update
+  - name: trace-artifacts
     git_tag_only: true
     depends_on:
       - name: release
     commands:
       - func: "trace artifacts"
+
+  - name: download-center-update
+    git_tag_only: true
+    depends_on:
+      - name: trace-artifacts
+    commands:
       - func: "update download center feed"
 
   - name: release
@@ -2240,5 +2269,6 @@ buildvariants:
     tasks:
       - name: release
       - name: snapshot
+      - name: trace-artifacts
       - name: download-center-update
       - name: ssdlc-artifacts-release
