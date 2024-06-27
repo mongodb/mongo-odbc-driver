@@ -110,25 +110,6 @@ impl MongoConnection {
         user_options: UserOptions,
         runtime: Arc<Runtime>,
     ) -> Result<(Client, Arc<Runtime>)> {
-        // If we are not authenticating via OIDC, we do not pool the Client, simply
-        // create a new one and return it.
-        if user_options
-            .client_options
-            .credential
-            .as_ref()
-            .unwrap()
-            .mechanism
-            .as_ref()
-            != Some(&AuthMechanism::MongoDbOidc)
-        {
-            let _guard = runtime.enter();
-            // the Client Topology uses tokio::spawn, so we need a guard here.
-            let client = runtime.block_on(async {
-                Client::with_options(user_options.client_options)
-                    .map_err(Error::InvalidClientOptions)
-            })?;
-            return Ok((client, runtime));
-        }
         let mut client_map = runtime.block_on(async { CLIENT_MAP.lock().await });
         if let Some(cv) = client_map.get(&user_options) {
             log::info!("reusing Client");
@@ -213,11 +194,7 @@ impl MongoConnection {
 
     #[cfg(not(feature = "garbage_collect"))]
     pub fn shutdown(self) -> Result<()> {
-        // we need to lock the CLIENT_MAP to potentially remove the client from the map.
-        // This prevents races on the strong_count or with gc().
-        let client_map = self.runtime.block_on(async { CLIENT_MAP.lock().await });
-        // We only want to shutdown the client if the CLIENT_MAP has not been used and this is the last reference to the Runtime.
-        if client_map.0.is_empty() && Arc::strong_count(&self.runtime) == 1 {
+        if Arc::strong_count(&self.runtime) == 1 {
             self.runtime
                 .block_on(async { self.client.shutdown().await });
         }
