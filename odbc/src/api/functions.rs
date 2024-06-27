@@ -1804,13 +1804,17 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
             match FromPrimitive::from_i16(option) {
                 // Drop all pending results from the cursor and close the cursor.
                 Some(FreeStmtOption::SQL_CLOSE) => {
-                    stmt.mongo_statement
-                        .write()
-                        .unwrap()
-                        .as_mut()
-                        .unwrap()
-                        .close_cursor();
-                    SqlReturn::SUCCESS
+                    let mut mongo_statement = stmt.mongo_statement.write().unwrap();
+                    match mongo_statement.as_mut() {
+                        // No-op when the mongo_statement is not set. This is typically an
+                        // invalid workflow, but we have observed some tools attempt this.
+                        None => SqlReturn::SUCCESS,
+                        // When the mongo_statement is set, close the cursor.
+                        Some(mongo_statement) => {
+                            mongo_statement.close_cursor();
+                            SqlReturn::SUCCESS
+                        }
+                    }
                 }
                 // Release all column buffers bound by SQLBindCol by removing the bound_cols map.
                 Some(FreeStmtOption::SQL_UNBIND) => {

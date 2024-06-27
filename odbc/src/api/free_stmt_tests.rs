@@ -165,4 +165,22 @@ mod unit {
             );
         }
     }
+
+    #[test]
+    fn test_free_stmt_close_no_mongo_statement() {
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+
+        unsafe {
+            // By default, the mongo_statement is set to None. In this case, SQLFreeStmt should
+            // result in a no-op, not an error.
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLFreeStmt(stmt as *mut _, FreeStmtOption::SQL_CLOSE as i16)
+            );
+        }
+    }
 }
