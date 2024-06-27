@@ -2,7 +2,6 @@ use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
 use lazy_static::lazy_static;
-use mongodb::options::AuthMechanism;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
     Client,
