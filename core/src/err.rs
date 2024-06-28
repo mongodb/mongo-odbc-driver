@@ -98,6 +98,12 @@ impl Error {
             | Error::MongoParseConnectionString(m) => match m.kind.as_ref() {
                 ErrorKind::Command(command_error) => command_error.code,
                 ErrorKind::Write(WriteFailure::WriteConcernError(wc_error)) => wc_error.code,
+                ErrorKind::BulkWrite(bulk_error) => bulk_error
+                    .write_errors
+                    .iter()
+                    // invoking the axiom of choice here ;)
+                    .last()
+                    .map_or(0, |(_, e)| e.code),
                 _ => 0,
             },
             Error::ColIndexOutOfBounds(_)
