@@ -1,9 +1,12 @@
 use crate::err::{Error, Result};
-use bson::UuidRepresentation;
 use constants::{DEFAULT_APP_NAME, DRIVER_SHORT_NAME};
 use lazy_static::lazy_static;
-use mongodb::options::{
-    ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig, ServerAddress,
+use mongodb::{
+    bson::UuidRepresentation,
+    options::{
+        AuthMechanism, ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig,
+        ServerAddress,
+    },
 };
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use shared_sql_utils::Dsn;
@@ -64,7 +67,7 @@ lazy_static! {
         .unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UserOptions {
     pub client_options: ClientOptions,
     pub uuid_representation: Option<UuidRepresentation>,
@@ -292,7 +295,9 @@ impl ODBCUri {
         // https://github.com/mongodb/mongo-rust-driver?tab=readme-ov-file#windows-dns-note
         let parse_func = || async {
             if cfg!(target_os = "windows") {
-                ClientOptions::parse_with_resolver_config(uri, ResolverConfig::cloudflare()).await
+                ClientOptions::parse(uri)
+                    .resolver_config(ResolverConfig::cloudflare())
+                    .await
             } else {
                 ClientOptions::parse(uri).await
             }
@@ -329,6 +334,27 @@ impl ODBCUri {
         let uuid_representation = ConnectionString::parse(uri)
             .map_err(Error::InvalidClientOptions)?
             .uuid_representation;
+
+        if let Some(AuthMechanism::MongoDbOidc) = client_options
+            .credential
+            .as_ref()
+            .unwrap()
+            .mechanism
+            .as_ref()
+        {
+            use futures::future::FutureExt;
+            let cred = client_options.credential.as_mut().unwrap();
+            cred.oidc_callback = mongodb::options::oidc::Callback::human(move |c| {
+                async move { crate::oidc_auth::oidc_call_back(c).await }.boxed()
+            });
+            // unset passsword, and username if empty string to make up for bad tools like power bi
+            // which require adding empty username and password. OIDC never uses a password.
+            cred.password = None;
+            cred.username =
+                cred.username
+                    .as_ref()
+                    .and_then(|x| if x.is_empty() { None } else { Some(x.clone()) });
+        }
         Ok(UserOptions {
             client_options,
             uuid_representation,

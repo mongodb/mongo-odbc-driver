@@ -2,8 +2,8 @@ use crate::{
     bson_type_info::SQL_PRED_BASIC, col_metadata::MongoColMetadata, conn::MongoConnection,
     err::Result, stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
 };
-use bson::Bson;
 use definitions::{Nullability, SqlCode, SqlDataType};
+use mongodb::bson::Bson;
 
 use num_traits::ToPrimitive;
 use once_cell::sync::OnceCell;
