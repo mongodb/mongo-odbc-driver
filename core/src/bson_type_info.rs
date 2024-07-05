@@ -169,6 +169,8 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(15)),
         simple_type_info: None,
     };
+    // This represents the literal mongodb string type. Other bson type
+    // info mapping to "string" are aliases for thr benefits of bi tools.
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::SQL_WVARCHAR,
