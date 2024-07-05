@@ -66,13 +66,14 @@ mod integration {
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
-    const EXPECTED_DATATYPES: [SqlDataType; 25] = [
+    const EXPECTED_DATATYPES: [SqlDataType; 27] = [
         SqlDataType::SQL_WLONGVARCHAR,
         SqlDataType::SQL_WVARCHAR,
         SqlDataType::SQL_WCHAR,
         SqlDataType::SQL_BIT,
         SqlDataType::SQL_BIGINT,
         SqlDataType::SQL_BINARY,
+        SqlDataType::SQL_LONGVARCHAR,
         SqlDataType::SQL_UNKNOWN_TYPE,
         SqlDataType::SQL_UNKNOWN_TYPE,
         SqlDataType::SQL_UNKNOWN_TYPE,
@@ -87,6 +88,7 @@ mod integration {
         SqlDataType::SQL_UNKNOWN_TYPE,
         SqlDataType::SQL_UNKNOWN_TYPE,
         SqlDataType::SQL_UNKNOWN_TYPE,
+        SqlDataType::SQL_CHAR,
         SqlDataType::SQL_INTEGER,
         SqlDataType::SQL_DOUBLE,
         SqlDataType::SQL_TIMESTAMP,
