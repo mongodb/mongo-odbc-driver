@@ -170,7 +170,7 @@ impl BsonTypeInfo {
         simple_type_info: None,
     };
     // This represents the literal mongodb string type. Other bson type
-    // info mapping to "string" are aliases for thr benefits of bi tools.
+    // info mapping to "string" are aliases for the benefits of bi tools.
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::SQL_WVARCHAR,
