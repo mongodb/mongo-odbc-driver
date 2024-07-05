@@ -218,6 +218,10 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
         simple_type_info: None,
     };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = WLONGVARCHAR. This comes up when scrolling through large string
+    // datasets with direct query enabled.
     pub const WLONGVARCHAR: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::SQL_WLONGVARCHAR,
@@ -241,6 +245,9 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
         simple_type_info: None,
     };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = WCHAR
     pub const WCHAR: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::SQL_WCHAR,
