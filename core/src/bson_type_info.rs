@@ -194,8 +194,7 @@ impl BsonTypeInfo {
     };
     // This is essentially here just to support Direct Query casting
     // to text in Power BI because they look for a type that is specifically
-    // sqltype = CHAR. This comes up when scrolling through large string
-    // datasets with direct query enabled.
+    // sqltype = CHAR.
     pub const CHAR: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::SQL_CHAR,
