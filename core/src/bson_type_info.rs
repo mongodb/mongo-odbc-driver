@@ -218,31 +218,8 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
         simple_type_info: None,
     };
-    pub const WVARCHAR: BsonTypeInfo = BsonTypeInfo {
-        type_name: "wvarchar",
-        sql_type: SqlDataType::SQL_WVARCHAR,
-        non_concise_type: None,
-        searchable: SQL_SEARCHABLE,
-        is_case_sensitive: true,
-        fixed_prec_scale: false,
-        scale: None,
-        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
-        precision: None,
-        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
-        transfer_octet_length: None,
-        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
-        literal_prefix: Some("'"),
-        literal_suffix: Some("'"),
-        sql_code: None,
-        is_auto_unique_value: None,
-        is_unsigned: None,
-        num_prec_radix: None,
-        decimal_digit: None,
-        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
-        simple_type_info: None,
-    };
     pub const WLONGVARCHAR: BsonTypeInfo = BsonTypeInfo {
-        type_name: "wlongvarchar",
+        type_name: "string",
         sql_type: SqlDataType::SQL_WLONGVARCHAR,
         non_concise_type: None,
         searchable: SQL_SEARCHABLE,
@@ -265,7 +242,7 @@ impl BsonTypeInfo {
         simple_type_info: None,
     };
     pub const WCHAR: BsonTypeInfo = BsonTypeInfo {
-        type_name: "wchar",
+        type_name: "string",
         sql_type: SqlDataType::SQL_WCHAR,
         non_concise_type: None,
         searchable: SQL_SEARCHABLE,
