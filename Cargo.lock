@@ -643,26 +643,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bson"
-version = "2.11.0"
-source = "git+https://github.com/mongodb/bson-rust?branch=main#4114d03dd4922b2b5c6d74413ab11bb967560ef2"
-dependencies = [
- "ahash",
- "base64 0.13.1",
- "bitvec",
- "hex",
- "indexmap 2.2.6",
- "js-sys",
- "once_cell",
- "rand",
- "serde",
- "serde_bytes",
- "serde_json",
- "time",
- "uuid",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1880,7 +1860,7 @@ dependencies = [
  "lazy_static",
  "log",
  "logger",
- "mongodb 3.0.0 (git+https://github.com/mongodb/mongo-rust-driver.git?branch=main)",
+ "mongodb",
  "num-derive 0.3.3",
  "num-traits",
  "regex",
@@ -2231,7 +2211,7 @@ dependencies = [
 name = "mongo-odbc-core"
 version = "0.0.0"
 dependencies = [
- "bson 2.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bson",
  "chrono",
  "constants",
  "cstr",
@@ -2242,7 +2222,7 @@ dependencies = [
  "lazy_static",
  "likely_stable",
  "log",
- "mongodb 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mongodb",
  "num-derive 0.3.3",
  "num-traits",
  "once_cell",
@@ -2263,7 +2243,7 @@ name = "mongo-odbc-driver"
 version = "0.0.0"
 dependencies = [
  "async-std",
- "bson 2.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bson",
  "chrono",
  "constants",
  "cstr",
@@ -2273,7 +2253,7 @@ dependencies = [
  "log",
  "logger",
  "mongo-odbc-core",
- "mongodb 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mongodb",
  "num-derive 0.3.3",
  "num-traits",
  "regex",
@@ -2296,7 +2276,7 @@ dependencies = [
  "async-trait",
  "base64 0.13.1",
  "bitflags 1.3.2",
- "bson 2.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bson",
  "chrono",
  "derivative",
  "derive_more",
@@ -2307,55 +2287,7 @@ dependencies = [
  "hex",
  "hmac",
  "md-5",
- "mongodb-internal-macros 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "once_cell",
- "pbkdf2",
- "percent-encoding",
- "rand",
- "reqwest 0.11.27",
- "rustc_version_runtime",
- "rustls",
- "rustls-pemfile 1.0.4",
- "serde",
- "serde_bytes",
- "serde_with 1.14.0",
- "sha-1",
- "sha2",
- "socket2 0.5.7",
- "stringprep",
- "strsim 0.10.0",
- "take_mut",
- "thiserror",
- "tokio",
- "tokio-rustls",
- "tokio-util",
- "trust-dns-proto",
- "trust-dns-resolver",
- "typed-builder",
- "uuid",
- "webpki-roots",
-]
-
-[[package]]
-name = "mongodb"
-version = "3.0.0"
-source = "git+https://github.com/mongodb/mongo-rust-driver.git?branch=main#63ea2f73ab747aba8f32b73011dceeb8c44a79bd"
-dependencies = [
- "async-trait",
- "base64 0.13.1",
- "bitflags 1.3.2",
- "bson 2.11.0 (git+https://github.com/mongodb/bson-rust?branch=main)",
- "chrono",
- "derivative",
- "derive_more",
- "futures-core",
- "futures-executor",
- "futures-io",
- "futures-util",
- "hex",
- "hmac",
- "md-5",
- "mongodb-internal-macros 3.0.0 (git+https://github.com/mongodb/mongo-rust-driver.git?branch=main)",
+ "mongodb-internal-macros",
  "once_cell",
  "pbkdf2",
  "percent-encoding",
@@ -2389,16 +2321,6 @@ name = "mongodb-internal-macros"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1159486b5e1993138c385369c3c46f5608cb0b1c53734e503538366f3c4cedcc"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.65",
-]
-
-[[package]]
-name = "mongodb-internal-macros"
-version = "3.0.0"
-source = "git+https://github.com/mongodb/mongo-rust-driver.git?branch=main#63ea2f73ab747aba8f32b73011dceeb8c44a79bd"
 dependencies = [
  "proc-macro2",
  "quote",

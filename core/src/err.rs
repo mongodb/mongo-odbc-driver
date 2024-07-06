@@ -40,7 +40,7 @@ pub enum Error {
     QueryCursorUpdate(mongodb::error::Error),
     #[error("Getting metadata for query failed with error: {0}")]
     QueryDeserialization(mongodb::bson::de::Error),
-    #[error("Trying to execute query failed with error: {0}")]
+    #[error("Trying to execute query failed with error: {0:?}")]
     QueryExecutionFailed(mongodb::error::Error),
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),

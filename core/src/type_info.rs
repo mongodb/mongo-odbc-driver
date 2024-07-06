@@ -36,11 +36,14 @@ const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
 
 // order of array is by SqlDataType, since that is the ordering of the
 // SQLGetTypeInfo result set according to the spec
-const DATA_TYPES: [BsonTypeInfo; 23] = [
+const DATA_TYPES: [BsonTypeInfo; 27] = [
+    BsonTypeInfo::WLONGVARCHAR,        // SqlDataType(-10)
     BsonTypeInfo::STRING,              // SqlDataType(-9)
+    BsonTypeInfo::WCHAR,               // SqlDataType(-8)
     BsonTypeInfo::BOOL,                // SqlDataType(-7)
     BsonTypeInfo::LONG,                // SqlDataType(-5)
     BsonTypeInfo::BINDATA,             // SqlDataType(-2)
+    BsonTypeInfo::LONGVARCHAR,         // SqlDataType(-1)
     BsonTypeInfo::ARRAY,               // SqlDataType(0)
     BsonTypeInfo::BSON,                // SqlDataType(0)
     BsonTypeInfo::DBPOINTER,           // SqlDataType(0)
@@ -55,6 +58,7 @@ const DATA_TYPES: [BsonTypeInfo; 23] = [
     BsonTypeInfo::SYMBOL,              // SqlDataType(0)
     BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
     BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
+    BsonTypeInfo::CHAR,                // SqlDataType(1)
     BsonTypeInfo::INT,                 // SqlDataType(4)
     BsonTypeInfo::DOUBLE,              // SqlDataType(8)
     LEGACY_DATE,                       // SqlDataType(11)

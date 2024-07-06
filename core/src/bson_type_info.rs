@@ -169,6 +169,8 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(15)),
         simple_type_info: None,
     };
+    // This represents the literal mongodb string type. Other bson type
+    // info mapping to "string" are aliases for the benefits of bi tools.
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::SQL_WVARCHAR,
@@ -194,10 +196,116 @@ impl BsonTypeInfo {
     };
     // This is essentially here just to support Direct Query casting
     // to text in Power BI because they look for a type that is specifically
+    // sqltype = CHAR.
+    pub const CHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "string",
+        sql_type: SqlDataType::SQL_CHAR,
+        non_concise_type: None,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        precision: None,
+        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = LONGVARCHAR. This comes up when scrolling through large string
+    // datasets with direct query enabled.
+    pub const LONGVARCHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "string",
+        sql_type: SqlDataType::SQL_LONGVARCHAR,
+        non_concise_type: None,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        precision: None,
+        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
     // sqltype = VARCHAR
     pub const VARCHAR: BsonTypeInfo = BsonTypeInfo {
         type_name: "varchar",
         sql_type: SqlDataType::SQL_VARCHAR,
+        non_concise_type: None,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        precision: None,
+        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = WLONGVARCHAR. This comes up when scrolling through large string
+    // datasets with direct query enabled.
+    pub const WLONGVARCHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "string",
+        sql_type: SqlDataType::SQL_WLONGVARCHAR,
+        non_concise_type: None,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        precision: None,
+        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = WCHAR
+    pub const WCHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "string",
+        sql_type: SqlDataType::SQL_WCHAR,
         non_concise_type: None,
         searchable: SQL_SEARCHABLE,
         is_case_sensitive: true,
