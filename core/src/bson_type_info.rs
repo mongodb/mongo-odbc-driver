@@ -171,7 +171,6 @@ impl BsonTypeInfo {
     };
     // We support REAL for any types that use it. We map it to "double" as the mongo name for the
     // purposes of CAST in the syntax (e.g., it will generate CAST(x AS DOUBLE) in Direct Query).
-    // For retrieving Data, we will need to cast the f64 to an f32.
     pub const REAL: BsonTypeInfo = BsonTypeInfo {
         type_name: "double",
         sql_type: SqlDataType::SQL_REAL,
