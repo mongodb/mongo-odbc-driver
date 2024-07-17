@@ -169,6 +169,32 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(15)),
         simple_type_info: None,
     };
+    // We support REAL for any types that use it. We map it to "double" as the mongo name for the
+    // purposes of CAST in the syntax (e.g., it will generate CAST(x AS DOUBLE) in Direct Query).
+    // For retrieving Data, we will need to cast the f64 to an f32.
+    pub const REAL: BsonTypeInfo = BsonTypeInfo {
+        type_name: "double",
+        sql_type: SqlDataType::SQL_REAL,
+        non_concise_type: None,
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: false,
+        scale: Some(0),
+        length: make_default_attr_func!(None),
+        precision: Some(15),
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: Some(8),
+        display_size: make_default_attr_func!(Some(24)),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: Some(false),
+        is_unsigned: Some(false),
+        num_prec_radix: Some(2),
+        decimal_digit: Some(0),
+        column_size: make_default_attr_func!(Some(15)),
+        simple_type_info: None,
+    };
     // This represents the literal mongodb string type. Other bson type
     // info mapping to "string" are aliases for the benefits of bi tools.
     pub const STRING: BsonTypeInfo = BsonTypeInfo {

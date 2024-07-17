@@ -36,7 +36,7 @@ const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
 
 // order of array is by SqlDataType, since that is the ordering of the
 // SQLGetTypeInfo result set according to the spec
-const DATA_TYPES: [BsonTypeInfo; 31] = [
+const DATA_TYPES: [BsonTypeInfo; 32] = [
     BsonTypeInfo::WLONGVARCHAR,        // SqlDataType(-10)
     BsonTypeInfo::STRING,              // SqlDataType(-9)
     BsonTypeInfo::WCHAR,               // SqlDataType(-8)
@@ -62,15 +62,13 @@ const DATA_TYPES: [BsonTypeInfo; 31] = [
     BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
     BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
     BsonTypeInfo::CHAR,                // SqlDataType(1)
-    // NUMERIC should be handled with conversions to the C
-    // datatype struct
-    // DECIMAL, consider
+    // NUMERIC should be handled with conversions to the C datatype struct: SqlDataType(2)
+    // DECIMAL, we do not support because it allows precisions arugments: SqlDataType(3)
     BsonTypeInfo::INT,      // SqlDataType(4)
     BsonTypeInfo::SMALLINT, // SqlDataType(5)
-    // FLOAT, need to handle casting returns from double to float
-    // REAL, consider
-    BsonTypeInfo::DOUBLE, // SqlDataType(8)
-    // DATETIME, consider
+    // FLOAT, we do not support because it allows precision arugments: SqlDataType(6)
+    BsonTypeInfo::REAL,    // SqlDataType(7)
+    BsonTypeInfo::DOUBLE,  // SqlDataType(8)
     LEGACY_DATE,           // SqlDataType(11)
     BsonTypeInfo::VARCHAR, // SqlDataType(12)
     BsonTypeInfo::DATE,    // SqlDataType(93)
