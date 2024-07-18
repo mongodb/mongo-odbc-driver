@@ -709,9 +709,9 @@ impl BsonTypeInfo {
         fixed_prec_scale: true,
         scale: Some(0),
         length: make_default_attr_func!(None),
-        precision: Some(10),
+        precision: Some(3),
         char_octet_length: make_default_attr_func!(None),
-        transfer_octet_length: Some(4),
+        transfer_octet_length: Some(1),
         display_size: make_default_attr_func!(Some(11)),
         literal_prefix: None,
         literal_suffix: None,
@@ -720,7 +720,7 @@ impl BsonTypeInfo {
         is_unsigned: Some(false),
         num_prec_radix: Some(10),
         decimal_digit: Some(0),
-        column_size: make_default_attr_func!(Some(10)),
+        column_size: make_default_attr_func!(Some(3)),
         simple_type_info: None,
     };
     // This is essentially here just to support Direct Query casting for small integers. Since int
@@ -734,10 +734,10 @@ impl BsonTypeInfo {
         fixed_prec_scale: true,
         scale: Some(0),
         length: make_default_attr_func!(None),
-        precision: Some(10),
+        precision: Some(5),
         char_octet_length: make_default_attr_func!(None),
         transfer_octet_length: Some(4),
-        display_size: make_default_attr_func!(Some(11)),
+        display_size: make_default_attr_func!(Some(6)),
         literal_prefix: None,
         literal_suffix: None,
         sql_code: None,
@@ -745,7 +745,7 @@ impl BsonTypeInfo {
         is_unsigned: Some(false),
         num_prec_radix: Some(10),
         decimal_digit: Some(0),
-        column_size: make_default_attr_func!(Some(10)),
+        column_size: make_default_attr_func!(Some(5)),
         simple_type_info: None,
     };
     pub const INT: BsonTypeInfo = BsonTypeInfo {
