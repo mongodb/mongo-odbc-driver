@@ -169,6 +169,31 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(15)),
         simple_type_info: None,
     };
+    // This is just here to support any tools that attempt to cast to FLOAT.
+    // FLOAT appears to be identical to DOUBLE other than that a precsion can be specified.
+    pub const FLOAT: BsonTypeInfo = BsonTypeInfo {
+        type_name: "double",
+        sql_type: SqlDataType::SQL_FLOAT,
+        non_concise_type: None,
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: false,
+        scale: Some(0),
+        length: make_default_attr_func!(None),
+        precision: Some(15),
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: Some(8),
+        display_size: make_default_attr_func!(Some(24)),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: Some(false),
+        is_unsigned: Some(false),
+        num_prec_radix: Some(2),
+        decimal_digit: Some(0),
+        column_size: make_default_attr_func!(Some(15)),
+        simple_type_info: None,
+    };
     // We support REAL for any types that use it. We map it to "double" as the mongo name for the
     // purposes of CAST in the syntax (e.g., it will generate CAST(x AS DOUBLE) in Direct Query).
     pub const REAL: BsonTypeInfo = BsonTypeInfo {
@@ -560,6 +585,29 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(23)),
         simple_type_info: None,
     };
+    pub const DATETIME: BsonTypeInfo = BsonTypeInfo {
+        type_name: "date",
+        sql_type: SqlDataType::SQL_DATETIME,
+        non_concise_type: Some(SqlDataType::SQL_DATETIME),
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: true,
+        scale: None,
+        length: make_default_attr_func!(Some(23)),
+        precision: Some(3),
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: Some(16),
+        display_size: make_default_attr_func!(Some(23)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: Some(SqlCode::SQL_CODE_TIMESTAMP),
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: Some(3),
+        column_size: make_default_attr_func!(Some(23)),
+        simple_type_info: None,
+    };
     pub const NULL: BsonTypeInfo = BsonTypeInfo {
         type_name: "null",
         sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
@@ -817,9 +865,64 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(20)),
         simple_type_info: None,
     };
-    pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
+    // MONGO_DECIMAL is our mongo decimal128 floating point type. We use SQL_UNKNOWN_TYPE to ensure
+    // that our uses must cast Mongo Decimals to something else to retrieve, or they are displayed
+    // as json strings by default.
+    pub const MONGO_DECIMAL: BsonTypeInfo = BsonTypeInfo {
         type_name: "decimal",
         sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
+        non_concise_type: None,
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(None),
+        precision: None,
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(None),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: Some(false),
+        is_unsigned: Some(false),
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(None),
+        simple_type_info: SimpleTypeInfo::default(),
+    };
+    // This is just here to support any tools that attempt to cast to NUMERIC.
+    pub const NUMERIC: BsonTypeInfo = BsonTypeInfo {
+        type_name: "decimal",
+        sql_type: SqlDataType::SQL_NUMERIC,
+        non_concise_type: None,
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(None),
+        precision: None,
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(None),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: Some(false),
+        is_unsigned: Some(false),
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(None),
+        simple_type_info: SimpleTypeInfo::default(),
+    };
+    // This is just here to support any tools that attempt to cast to DECIMAL.
+    // Note that this differs entirely from Mongo Decimal, which is a 128 bit floating type
+    // represented by MONGO_DECIMAL, which uses the SQL_UNKNOWN_TYPE SQL_TYPE. This ensures
+    // that our uses must cast Mongo Decimals to something else to retrieve, or they are displayed
+    // as json strings by default.
+    pub const SQL_DECIMAL: BsonTypeInfo = BsonTypeInfo {
+        type_name: "decimal",
+        sql_type: SqlDataType::SQL_DECIMAL,
         non_concise_type: None,
         searchable: SQL_PRED_BASIC,
         is_case_sensitive: false,
