@@ -180,9 +180,9 @@ impl BsonTypeInfo {
         fixed_prec_scale: false,
         scale: Some(0),
         length: make_default_attr_func!(None),
-        precision: Some(15),
+        precision: Some(7),
         char_octet_length: make_default_attr_func!(None),
-        transfer_octet_length: Some(8),
+        transfer_octet_length: Some(4),
         display_size: make_default_attr_func!(Some(24)),
         literal_prefix: None,
         literal_suffix: None,
@@ -191,7 +191,7 @@ impl BsonTypeInfo {
         is_unsigned: Some(false),
         num_prec_radix: Some(2),
         decimal_digit: Some(0),
-        column_size: make_default_attr_func!(Some(15)),
+        column_size: make_default_attr_func!(Some(7)),
         simple_type_info: None,
     };
     // This represents the literal mongodb string type. Other bson type
