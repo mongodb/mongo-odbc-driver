@@ -190,7 +190,6 @@ pub const SQL_FN_CVT_CAST: u32 = 0x00000002;
 // BitMask for supported CAST Types
 pub const SQL_CVT_CHAR: u32 = 0x00000001;
 pub const SQL_CVT_NUMERIC: u32 = 0x00000002;
-#[allow(unused)]
 pub const SQL_CVT_DECIMAL: u32 = 0x00000004;
 pub const SQL_CVT_INTEGER: u32 = 0x00000008;
 pub const SQL_CVT_SMALLINT: u32 = 0x00000010;
@@ -224,6 +223,7 @@ pub const SQL_CVT_WVARCHAR: u32 = 0x00800000;
 pub const SQL_CVT_GUID: u32 = 0x01000000;
 pub const MONGO_CAST_SUPPORT: u32 = SQL_CVT_CHAR
     | SQL_CVT_NUMERIC
+    | SQL_CVT_DECIMAL
     | SQL_CVT_INTEGER
     | SQL_CVT_SMALLINT
     | SQL_CVT_TINYINT
