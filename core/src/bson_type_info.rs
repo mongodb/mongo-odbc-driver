@@ -891,58 +891,6 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(None),
         simple_type_info: SimpleTypeInfo::default(),
     };
-    // This is just here to support any tools that attempt to cast to NUMERIC.
-    pub const NUMERIC: BsonTypeInfo = BsonTypeInfo {
-        type_name: "decimal",
-        sql_type: SqlDataType::SQL_NUMERIC,
-        non_concise_type: None,
-        searchable: SQL_PRED_BASIC,
-        is_case_sensitive: false,
-        fixed_prec_scale: false,
-        scale: None,
-        length: make_default_attr_func!(None),
-        precision: None,
-        char_octet_length: make_default_attr_func!(None),
-        transfer_octet_length: None,
-        display_size: make_default_attr_func!(None),
-        literal_prefix: None,
-        literal_suffix: None,
-        sql_code: None,
-        is_auto_unique_value: Some(false),
-        is_unsigned: Some(false),
-        num_prec_radix: None,
-        decimal_digit: None,
-        column_size: make_default_attr_func!(None),
-        simple_type_info: SimpleTypeInfo::default(),
-    };
-    // This is just here to support any tools that attempt to cast to DECIMAL.
-    // Note that this differs entirely from Mongo Decimal, which is a 128 bit floating type
-    // represented by MONGO_DECIMAL, which uses the SQL_UNKNOWN_TYPE SQL_TYPE. This ensures
-    // that our uses must cast Mongo Decimals to something else to retrieve, or they are displayed
-    // as json strings by default.
-    pub const SQL_DECIMAL: BsonTypeInfo = BsonTypeInfo {
-        type_name: "decimal",
-        sql_type: SqlDataType::SQL_DECIMAL,
-        non_concise_type: None,
-        searchable: SQL_PRED_BASIC,
-        is_case_sensitive: false,
-        fixed_prec_scale: false,
-        scale: None,
-        length: make_default_attr_func!(None),
-        precision: None,
-        char_octet_length: make_default_attr_func!(None),
-        transfer_octet_length: None,
-        display_size: make_default_attr_func!(None),
-        literal_prefix: None,
-        literal_suffix: None,
-        sql_code: None,
-        is_auto_unique_value: Some(false),
-        is_unsigned: Some(false),
-        num_prec_radix: None,
-        decimal_digit: None,
-        column_size: make_default_attr_func!(None),
-        simple_type_info: SimpleTypeInfo::default(),
-    };
     pub const MINKEY: BsonTypeInfo = BsonTypeInfo {
         type_name: "minKey",
         sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
