@@ -502,7 +502,7 @@ mod integration {
     ///      - For columns 1 to {numCols}
     ///          - SQLGetData({colIndex}, {defaultCtoSqlType})
     ///  - SQLMoreResults()
-    ///  -SQLFreeHandle(SQL_HANDLE_STMT)
+    ///  - SQLFreeHandle(SQL_HANDLE_STMT)
     #[test]
     fn test_table_listing() {
         let env_handle: HEnv = setup();
