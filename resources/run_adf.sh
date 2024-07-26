@@ -361,6 +361,10 @@ if [ $ARG = $START ]; then
         # Clone the mongohouse repo
         if [ ! -d "$MONGOHOUSE_DIR" ]; then
             git clone $MONGOHOUSE_URI $MONGOHOUSE_DIR
+            echo "!!!!!!"
+            cd $MONGOHOUSE_DIR
+            git checkout 1e942063a1c1dae2eabe8a2add489ba9da2ee2a0
+            cd -
         fi
         cd $MONGOHOUSE_DIR
 
