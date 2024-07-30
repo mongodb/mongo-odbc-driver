@@ -12,17 +12,17 @@ The following guidelines will be used to determine when each version component w
 ## Release Process
 ### Pre-Release Tasks
 
+#### Determine the correct version to be released
+Go to the [SQL releases page](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=unreleased), and check the content of the tickets that are included in the current release. The fix version by default is a patch version. If there is a backwards incompatible API change in the tickets that are set to be released, we should instead update the major version; if there are new features added in the tickets set to be released, we should instead update the minor version. To do so, update the version on the [SQL releases page](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=unreleased) under "Actions". This will update the fix version on all of the tickets as well.
+
 #### Start Release Ticket
 Move the JIRA ticket for the release to the "In Progress" state.
-Ensure that its fixVersion matches the version being released.
+Ensure that its fixVersion matches the version being released, and update it if it changed in the previous step.
 
 #### Complete the Release in JIRA
 Go to the [SQL releases page](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=unreleased), and ensure that all the tickets in the fixVersion to be released are closed.
 Ensure that all the tickets have the correct type. Take this opportunity to edit ticket titles if they can be made more descriptive.
 The ticket titles will be published in the changelog.
-
-If you are releasing a patch version but a ticket needs a minor bump, update the fixVersion to be a minor version bump.
-If you are releasing a patch or minor version but a ticket needs a major bump, stop the release process immediately.
 
 The only uncompleted ticket in the release should be the release ticket.
 If there are any remaining tickets that will not be included in this release, remove the fixVersion and assign them a new one if appropriate.
