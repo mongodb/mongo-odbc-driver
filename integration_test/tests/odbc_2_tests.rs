@@ -66,30 +66,40 @@ mod integration {
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
-    const EXPECTED_DATATYPES: [SqlDataType; 23] = [
-        SqlDataType::SQL_WVARCHAR,
-        SqlDataType::SQL_BIT,
-        SqlDataType::SQL_BIGINT,
-        SqlDataType::SQL_BINARY,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_UNKNOWN_TYPE,
-        SqlDataType::SQL_INTEGER,
-        SqlDataType::SQL_DOUBLE,
-        SqlDataType::SQL_TIMESTAMP,
-        SqlDataType::SQL_VARCHAR,
-        SqlDataType::SQL_TYPE_TIMESTAMP,
+    const EXPECTED_DATATYPES: [SqlDataType; 33] = [
+        SqlDataType::SQL_WLONGVARCHAR,   // -10
+        SqlDataType::SQL_WVARCHAR,       // -9
+        SqlDataType::SQL_WCHAR,          // -8
+        SqlDataType::SQL_BIT,            // -7
+        SqlDataType::SQL_TINYINT,        // -6
+        SqlDataType::SQL_BIGINT,         // -5
+        SqlDataType::SQL_LONGVARBINARY,  // -4
+        SqlDataType::SQL_VARBINARY,      // -3
+        SqlDataType::SQL_BINARY,         // -2
+        SqlDataType::SQL_LONGVARCHAR,    // -1
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_UNKNOWN_TYPE,   //0
+        SqlDataType::SQL_CHAR,           //1
+        SqlDataType::SQL_INTEGER,        //4
+        SqlDataType::SQL_SMALLINT,       //5
+        SqlDataType::SQL_FLOAT,          //6
+        SqlDataType::SQL_REAL,           //7
+        SqlDataType::SQL_DOUBLE,         //8
+        SqlDataType::SQL_TIMESTAMP,      //11
+        SqlDataType::SQL_VARCHAR,        //12
+        SqlDataType::SQL_TYPE_TIMESTAMP, //93
     ];
 
     /// call SQLGetTypeInfo to verify the correct types are returned. For all types,

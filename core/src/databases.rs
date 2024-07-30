@@ -2,9 +2,8 @@ use crate::{
     col_metadata::MongoColMetadata, conn::MongoConnection, err::Result, stmt::MongoStatement,
     BsonTypeInfo, Error,
 };
-use bson::Bson;
 use definitions::Nullability;
-use mongodb::options::ListDatabasesOptions;
+use mongodb::bson::Bson;
 
 use once_cell::sync::OnceCell;
 
@@ -216,12 +215,8 @@ impl MongoDatabases {
             .block_on(async {
                 mongo_connection
                     .client
-                    .list_database_names(
-                        None,
-                        ListDatabasesOptions::builder()
-                            .authorized_databases(true)
-                            .build(),
-                    )
+                    .list_database_names()
+                    .authorized_databases(true)
                     .await
             })
             .unwrap()

@@ -12,6 +12,7 @@ mod common;
 ///   1. a user allocates and uses a statement, and then calls SQLFreeStmt
 ///   2. a user allocates and uses a statement to execute a query, and then
 ///      calls SQLCancel
+///
 /// These are workflows that could appear in any ODBC use-case, not just SSIS.
 mod integration {
     use crate::common::{

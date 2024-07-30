@@ -169,7 +169,7 @@ async fn drop_collections(client: Client, datasets: Vec<TestData>) -> Result<()>
 
     for (db, c) in namespaces_to_drop {
         let database = client.database(db.as_str());
-        database.collection::<Bson>(c.as_str()).drop(None).await?;
+        database.collection::<Bson>(c.as_str()).drop().await?;
         println!("Dropped {db}.{c}")
     }
 
@@ -185,7 +185,7 @@ async fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> 
                 let collection = db.collection::<Bson>(c.as_str());
 
                 if let Some(docs) = entry.docs {
-                    let res = collection.insert_many(docs, None).await?;
+                    let res = collection.insert_many(docs).await?;
                     println!(
                         "Inserted {} documents into {}.{}",
                         res.inserted_ids.len(),
@@ -195,7 +195,7 @@ async fn load_test_data(client: Client, test_data: Vec<TestData>) -> Result<()> 
                 }
 
                 if let Some(indexes) = entry.indexes {
-                    let res = collection.create_indexes(indexes, None).await?;
+                    let res = collection.create_indexes(indexes).await?;
                     println!(
                         "Created indexes {:?} for {}.{}",
                         res.index_names, entry.db, c
@@ -231,7 +231,7 @@ async fn set_test_data_schemas(client: Client, test_data: Vec<TestData>) -> Resu
                 command_name = "sqlGenerateSchema";
             }
 
-            let res = db.run_command(command_doc, None).await?;
+            let res = db.run_command(command_doc).await?;
             println!(
                 "Set schema for {}.{} via {}; result: {:?}",
                 entry.db, datasource, command_name, res

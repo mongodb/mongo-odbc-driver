@@ -1,5 +1,4 @@
 use crate::api::errors::ODBCError;
-use bson::{Bson, Uuid};
 use cstr::{Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, Concurrency,
@@ -7,6 +6,7 @@ use definitions::{
     Pointer, RetrieveData, SimulateCursor, SmallInt, SqlBool, ULen, USmallInt, UseBookmarks,
 };
 use mongo_odbc_core::TypeMode;
+use mongodb::bson::{Bson, Uuid};
 use std::{
     borrow::BorrowMut,
     collections::{HashMap, HashSet},

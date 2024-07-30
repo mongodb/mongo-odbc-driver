@@ -2,7 +2,7 @@ use crate::{
     databases::init_databases_metadata, databases::DATABASES_METADATA, err::Result, Error,
     MongoColMetadata, MongoConnection, MongoStatement,
 };
-use bson::Bson;
+use mongodb::bson::Bson;
 
 const TABLE_TYPES: [&str; 2] = ["TABLE", "VIEW"];
 

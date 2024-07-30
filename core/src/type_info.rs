@@ -2,8 +2,8 @@ use crate::{
     bson_type_info::SQL_PRED_BASIC, col_metadata::MongoColMetadata, conn::MongoConnection,
     err::Result, stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
 };
-use bson::Bson;
 use definitions::{Nullability, SqlCode, SqlDataType};
+use mongodb::bson::Bson;
 
 use num_traits::ToPrimitive;
 use once_cell::sync::OnceCell;
@@ -36,15 +36,21 @@ const LEGACY_DATE: BsonTypeInfo = BsonTypeInfo {
 
 // order of array is by SqlDataType, since that is the ordering of the
 // SQLGetTypeInfo result set according to the spec
-const DATA_TYPES: [BsonTypeInfo; 23] = [
+const DATA_TYPES: [BsonTypeInfo; 33] = [
+    BsonTypeInfo::WLONGVARCHAR,        // SqlDataType(-10)
     BsonTypeInfo::STRING,              // SqlDataType(-9)
+    BsonTypeInfo::WCHAR,               // SqlDataType(-8)
     BsonTypeInfo::BOOL,                // SqlDataType(-7)
+    BsonTypeInfo::TINYINT,             // SqlDataType(-6)
     BsonTypeInfo::LONG,                // SqlDataType(-5)
+    BsonTypeInfo::LONGVARBINARY,       // SqlDataType(-4)
+    BsonTypeInfo::VARBINARY,           // SqlDataType(-3)
     BsonTypeInfo::BINDATA,             // SqlDataType(-2)
+    BsonTypeInfo::LONGVARCHAR,         // SqlDataType(-1)
     BsonTypeInfo::ARRAY,               // SqlDataType(0)
     BsonTypeInfo::BSON,                // SqlDataType(0)
     BsonTypeInfo::DBPOINTER,           // SqlDataType(0)
-    BsonTypeInfo::DECIMAL,             // SqlDataType(0)
+    BsonTypeInfo::MONGO_DECIMAL,       // SqlDataType(0)
     BsonTypeInfo::JAVASCRIPT,          // SqlDataType(0)
     BsonTypeInfo::JAVASCRIPTWITHSCOPE, // SqlDataType(0)
     BsonTypeInfo::MAXKEY,              // SqlDataType(0)
@@ -55,7 +61,11 @@ const DATA_TYPES: [BsonTypeInfo; 23] = [
     BsonTypeInfo::SYMBOL,              // SqlDataType(0)
     BsonTypeInfo::TIMESTAMP,           // SqlDataType(0)
     BsonTypeInfo::UNDEFINED,           // SqlDataType(0)
+    BsonTypeInfo::CHAR,                // SqlDataType(1)
     BsonTypeInfo::INT,                 // SqlDataType(4)
+    BsonTypeInfo::SMALLINT,            // SqlDataType(5)
+    BsonTypeInfo::FLOAT,               // SqlDataType(6)
+    BsonTypeInfo::REAL,                // SqlDataType(7)
     BsonTypeInfo::DOUBLE,              // SqlDataType(8)
     LEGACY_DATE,                       // SqlDataType(11)
     BsonTypeInfo::VARCHAR,             // SqlDataType(12)
