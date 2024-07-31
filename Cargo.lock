@@ -756,7 +756,6 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "cargo_toml",
- "lazy_static",
  "serde_json",
 ]
 
