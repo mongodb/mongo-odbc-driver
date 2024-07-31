@@ -1,7 +1,7 @@
 use crate::{
     col_metadata::MongoColMetadata, err::Result, stmt::MongoStatement, Error, MongoConnection,
 };
-use bson::{document::ValueAccessError, Bson, Document};
+use mongodb::bson::{document::ValueAccessError, Bson, Document};
 
 #[derive(Debug, Clone)]
 pub struct MongoQuery {

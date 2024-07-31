@@ -169,6 +169,58 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(15)),
         simple_type_info: None,
     };
+    // This is just here to support any tools that attempt to cast to FLOAT.
+    // FLOAT appears to be identical to DOUBLE other than that a precsion can be specified.
+    pub const FLOAT: BsonTypeInfo = BsonTypeInfo {
+        type_name: "double",
+        sql_type: SqlDataType::SQL_FLOAT,
+        non_concise_type: None,
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: false,
+        scale: Some(0),
+        length: make_default_attr_func!(None),
+        precision: Some(15),
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: Some(8),
+        display_size: make_default_attr_func!(Some(24)),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: Some(false),
+        is_unsigned: Some(false),
+        num_prec_radix: Some(2),
+        decimal_digit: Some(0),
+        column_size: make_default_attr_func!(Some(15)),
+        simple_type_info: None,
+    };
+    // We support REAL for any types that use it. We map it to "double" as the mongo name for the
+    // purposes of CAST in the syntax (e.g., it will generate CAST(x AS DOUBLE) in Direct Query).
+    pub const REAL: BsonTypeInfo = BsonTypeInfo {
+        type_name: "double",
+        sql_type: SqlDataType::SQL_REAL,
+        non_concise_type: None,
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: false,
+        scale: Some(0),
+        length: make_default_attr_func!(None),
+        precision: Some(7),
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: Some(4),
+        display_size: make_default_attr_func!(Some(14)),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: Some(false),
+        is_unsigned: Some(false),
+        num_prec_radix: Some(2),
+        decimal_digit: Some(0),
+        column_size: make_default_attr_func!(Some(7)),
+        simple_type_info: None,
+    };
+    // This represents the literal mongodb string type. Other bson type
+    // info mapping to "string" are aliases for the benefits of bi tools.
     pub const STRING: BsonTypeInfo = BsonTypeInfo {
         type_name: "string",
         sql_type: SqlDataType::SQL_WVARCHAR,
@@ -194,10 +246,116 @@ impl BsonTypeInfo {
     };
     // This is essentially here just to support Direct Query casting
     // to text in Power BI because they look for a type that is specifically
+    // sqltype = CHAR.
+    pub const CHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "string",
+        sql_type: SqlDataType::SQL_CHAR,
+        non_concise_type: None,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        precision: None,
+        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = LONGVARCHAR. This comes up when scrolling through large string
+    // datasets with direct query enabled.
+    pub const LONGVARCHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "string",
+        sql_type: SqlDataType::SQL_LONGVARCHAR,
+        non_concise_type: None,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        precision: None,
+        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
     // sqltype = VARCHAR
     pub const VARCHAR: BsonTypeInfo = BsonTypeInfo {
         type_name: "varchar",
         sql_type: SqlDataType::SQL_VARCHAR,
+        non_concise_type: None,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        precision: None,
+        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = WLONGVARCHAR. This comes up when scrolling through large string
+    // datasets with direct query enabled.
+    pub const WLONGVARCHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "string",
+        sql_type: SqlDataType::SQL_WLONGVARCHAR,
+        non_concise_type: None,
+        searchable: SQL_SEARCHABLE,
+        is_case_sensitive: true,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        precision: None,
+        char_octet_length: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        literal_prefix: Some("'"),
+        literal_suffix: Some("'"),
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(Some(MAX_STRING_SIZE)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting
+    // to text in Power BI because they look for a type that is specifically
+    // sqltype = WCHAR
+    pub const WCHAR: BsonTypeInfo = BsonTypeInfo {
+        type_name: "string",
+        sql_type: SqlDataType::SQL_WCHAR,
         non_concise_type: None,
         searchable: SQL_SEARCHABLE,
         is_case_sensitive: true,
@@ -267,6 +425,54 @@ impl BsonTypeInfo {
     pub const BINDATA: BsonTypeInfo = BsonTypeInfo {
         type_name: "binData",
         sql_type: SqlDataType::SQL_BINARY,
+        non_concise_type: None,
+        searchable: SQL_PRED_NONE,
+        is_case_sensitive: false,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(None),
+        precision: None,
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(None),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(None),
+        simple_type_info: SimpleTypeInfo::default(),
+    };
+    // We just map LONGVARBINARY to BINARY since mongo only has one binary type.
+    pub const LONGVARBINARY: BsonTypeInfo = BsonTypeInfo {
+        type_name: "binData",
+        sql_type: SqlDataType::SQL_LONGVARBINARY,
+        non_concise_type: None,
+        searchable: SQL_PRED_NONE,
+        is_case_sensitive: false,
+        fixed_prec_scale: false,
+        scale: None,
+        length: make_default_attr_func!(None),
+        precision: None,
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: None,
+        display_size: make_default_attr_func!(None),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: None,
+        is_unsigned: None,
+        num_prec_radix: None,
+        decimal_digit: None,
+        column_size: make_default_attr_func!(None),
+        simple_type_info: SimpleTypeInfo::default(),
+    };
+    // We just map VARBINARY to BINARY since mongo only has one binary type.
+    pub const VARBINARY: BsonTypeInfo = BsonTypeInfo {
+        type_name: "binData",
+        sql_type: SqlDataType::SQL_VARBINARY,
         non_concise_type: None,
         searchable: SQL_PRED_NONE,
         is_case_sensitive: false,
@@ -383,7 +589,7 @@ impl BsonTypeInfo {
         type_name: "null",
         sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
         non_concise_type: None,
-        searchable: SQL_PRED_NONE,
+        searchable: SQL_SEARCHABLE,
         is_case_sensitive: false,
         fixed_prec_scale: false,
         scale: None,
@@ -517,6 +723,56 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(None),
         simple_type_info: SimpleTypeInfo::default(),
     };
+    // This is essentially here just to support Direct Query casting for small integers. Since int
+    // is the smallest integer type in Mongo, we map all small integers to int.
+    pub const TINYINT: BsonTypeInfo = BsonTypeInfo {
+        type_name: "int",
+        sql_type: SqlDataType::SQL_TINYINT,
+        non_concise_type: None,
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: true,
+        scale: Some(0),
+        length: make_default_attr_func!(None),
+        precision: Some(3),
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: Some(1),
+        display_size: make_default_attr_func!(Some(4)),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: Some(false),
+        is_unsigned: Some(false),
+        num_prec_radix: Some(10),
+        decimal_digit: Some(0),
+        column_size: make_default_attr_func!(Some(3)),
+        simple_type_info: None,
+    };
+    // This is essentially here just to support Direct Query casting for small integers. Since int
+    // is the smallest integer type in Mongo, we map all small integers to int.
+    pub const SMALLINT: BsonTypeInfo = BsonTypeInfo {
+        type_name: "int",
+        sql_type: SqlDataType::SQL_SMALLINT,
+        non_concise_type: None,
+        searchable: SQL_PRED_BASIC,
+        is_case_sensitive: false,
+        fixed_prec_scale: true,
+        scale: Some(0),
+        length: make_default_attr_func!(None),
+        precision: Some(5),
+        char_octet_length: make_default_attr_func!(None),
+        transfer_octet_length: Some(4),
+        display_size: make_default_attr_func!(Some(6)),
+        literal_prefix: None,
+        literal_suffix: None,
+        sql_code: None,
+        is_auto_unique_value: Some(false),
+        is_unsigned: Some(false),
+        num_prec_radix: Some(10),
+        decimal_digit: Some(0),
+        column_size: make_default_attr_func!(Some(5)),
+        simple_type_info: None,
+    };
     pub const INT: BsonTypeInfo = BsonTypeInfo {
         type_name: "int",
         sql_type: SqlDataType::SQL_INTEGER,
@@ -586,7 +842,10 @@ impl BsonTypeInfo {
         column_size: make_default_attr_func!(Some(20)),
         simple_type_info: None,
     };
-    pub const DECIMAL: BsonTypeInfo = BsonTypeInfo {
+    // MONGO_DECIMAL is our mongo decimal128 floating point type. We use SQL_UNKNOWN_TYPE to ensure
+    // that our uses must cast Mongo Decimals to something else to retrieve, or they are displayed
+    // as json strings by default.
+    pub const MONGO_DECIMAL: BsonTypeInfo = BsonTypeInfo {
         type_name: "decimal",
         sql_type: SqlDataType::SQL_UNKNOWN_TYPE,
         non_concise_type: None,

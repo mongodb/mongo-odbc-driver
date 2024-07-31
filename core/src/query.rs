@@ -5,10 +5,9 @@ use crate::{
     stmt::MongoStatement,
     Error, TypeMode,
 };
-use bson::{doc, document::ValueAccessError, Bson, Document};
 use mongodb::{
+    bson::{doc, document::ValueAccessError, Bson, Document},
     error::{CommandError, ErrorKind},
-    options::AggregateOptions,
     Cursor,
 };
 use std::time::Duration;
@@ -52,13 +51,13 @@ impl MongoQuery {
 
         let guard = client.runtime.enter();
         let schema_response = client.runtime.block_on(async {
-            db.run_command(get_result_schema_cmd, None)
+            db.run_command(get_result_schema_cmd)
                 .await
                 .map_err(Error::QueryExecutionFailed)
         })?;
         drop(guard);
         let get_result_schema_response: SqlGetSchemaResponse =
-            bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
+            mongodb::bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
 
         let metadata = get_result_schema_response.process_result_metadata(
             &current_db,
@@ -146,22 +145,19 @@ impl MongoStatement for MongoQuery {
             "statement": &self.query,
         }}];
 
-        let opt = AggregateOptions::builder().comment_bson(Some(stmt_id));
+        let mut aggregate = db.aggregate(pipeline).comment(stmt_id);
 
-        let mut max_time = None;
         // If the query timeout is 0, it means "no timeout"
         if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            max_time = Some(Duration::from_millis(u64::from(
+            aggregate = aggregate.max_time(Duration::from_millis(u64::from(
                 self.query_timeout.unwrap(),
-            )))
+            )));
         }
 
-        let mut batch_size = None;
         // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
         if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
-            batch_size = Some(rowset_size)
+            aggregate = aggregate.batch_size(rowset_size);
         }
-        let options = opt.max_time(max_time).batch_size(batch_size).build();
 
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
         // denote this to the program, otherwise return a generic query execution error
@@ -174,11 +170,9 @@ impl MongoStatement for MongoQuery {
         };
 
         let _guard = connection.runtime.enter();
-        let cursor: Cursor<Document> = connection.runtime.block_on(async {
-            db.aggregate(pipeline, options)
-                .await
-                .map_err(map_query_error)
-        })?;
+        let cursor: Cursor<Document> = connection
+            .runtime
+            .block_on(async { aggregate.await.map_err(map_query_error) })?;
         self.resultset_cursor = Some(cursor);
         Ok(true)
     }

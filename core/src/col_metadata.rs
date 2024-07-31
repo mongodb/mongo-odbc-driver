@@ -328,6 +328,7 @@ impl ObjectSchema {
     /// Gets the nullability of a field in this schema's properties.
     /// Nullability is determined as follows:
     ///   1. If it is not present in the schema's list of properties:
+    ///
     ///     - If it is required or this schema allows additional_properties,
     ///       it is unknown nullability
     ///     - Otherwise, an error is returned
@@ -335,10 +336,12 @@ impl ObjectSchema {
     ///   2. If it is an Any schema, it is considered nullable
     ///
     ///   3. If it is a scalar schema (i.e. not Any or AnyOf):
+    ///
     ///     - If its bson type is Null, it is considered nullable
     ///     - Otherwise, its nullability depends on whether it is required
     ///
     ///   4. If it is an AnyOf schema:
+    ///
     ///     - If one of the component schemas in the AnyOf list is Null, it
     ///       is considered nullable
     ///     - Otherwise, its nullability depends on whether it is required

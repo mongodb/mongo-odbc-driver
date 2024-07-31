@@ -145,7 +145,7 @@ mod integration {
             client,
             operation_timeout: None,
             uuid_repr: None,
-            runtime,
+            runtime: runtime.into(),
         };
         *conn_handle.mongo_connection.write().unwrap() = Some(mongo_connection);
         let conn = &mut MongoHandle::Connection(conn_handle);

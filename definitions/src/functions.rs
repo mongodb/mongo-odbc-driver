@@ -1,6 +1,8 @@
+#[cfg(feature = "odbc_version_3_80")]
+use crate::RetCode;
 use crate::{
-    Char, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, Integer, Len, Pointer, RetCode, SmallInt,
-    SqlReturn, ULen, USmallInt, WChar,
+    Char, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, Integer, Len, Pointer, SmallInt, SqlReturn, ULen,
+    USmallInt, WChar,
 };
 
 pub static mut NUM_ENVIRONMENT: u32 = 0;

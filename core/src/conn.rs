@@ -1,10 +1,91 @@
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
-use bson::{doc, Bson, UuidRepresentation};
-use mongodb::Client;
+use lazy_static::lazy_static;
+use mongodb::{
+    bson::{doc, Bson, UuidRepresentation},
+    Client,
+};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+#[cfg(feature = "garbage_collect")]
+use std::sync::Weak;
+use std::{sync::Arc, time::Duration};
+use tokio::runtime::Runtime;
+
+// we make from UserOptions to Client and Weak<Runtime> so that we do not hold around
+// Clients and Runtimes that are no longer in use. In most cases it won't matter, but for drivers that live in
+// memory for a long time, this could be a problem.
+#[cfg(feature = "garbage_collect")]
+struct ClientMap(Vec<(UserOptions, Client, Weak<Runtime>)>);
+#[cfg(not(feature = "garbage_collect"))]
+struct ClientMap(Vec<(UserOptions, Client, Arc<Runtime>)>);
+
+impl ClientMap {
+    // new creates a new ClientMap.
+    fn new() -> Self {
+        ClientMap(Vec::new())
+    }
+
+    // get returns the client associated with the given user options if it exists.
+    #[cfg(feature = "garbage_collect")]
+    fn get(&mut self, user_options: &UserOptions) -> Option<(Client, Arc<Runtime>)> {
+        let mut to_remove = Vec::new();
+        for (i, (options, client, weak_rt)) in self.0.iter().enumerate() {
+            if options == user_options {
+                if let Some(rt) = weak_rt.upgrade() {
+                    return Some((client.clone(), rt));
+                // if somehow the Runtime cannot be upgraded, we want to remove this entry in the
+                // ClientMap, because the Runtime associated with the Client has been dropped,
+                // which will make the Topology hang forever.
+                } else {
+                    to_remove.push(i);
+                }
+            }
+        }
+        // We have to do this this way due to the borrow checker, it would be nice if we could just
+        // remove in the else above, but we cannot.
+        for i in to_remove.into_iter().rev() {
+            self.0.remove(i);
+        }
+        None
+    }
+
+    // get returns the client associated with the given user options if it exists.
+    #[cfg(not(feature = "garbage_collect"))]
+    fn get(&mut self, user_options: &UserOptions) -> Option<(Client, Arc<Runtime>)> {
+        for (options, client, rt) in self.0.iter() {
+            if options == user_options {
+                return Some((client.clone(), rt.clone()));
+            }
+        }
+        None
+    }
+
+    // gc is garbage collection of any clients that are no longer in use.
+    #[cfg(feature = "garbage_collect")]
+    fn gc(&mut self) {
+        self.0
+            .retain(|(_, _, weak_client)| Weak::strong_count(weak_client) != 0);
+    }
+
+    // insert inserts a new client into the client map keyed on the user options. Note this will
+    // insert duplicates and it is on the user to check if an entry already exists.
+    #[cfg(feature = "garbage_collect")]
+    fn insert(&mut self, user_options: UserOptions, client: &Client, rt: &Arc<Runtime>) {
+        self.0
+            .push((user_options, client.clone(), Arc::downgrade(rt)));
+    }
+
+    #[cfg(not(feature = "garbage_collect"))]
+    fn insert(&mut self, user_options: UserOptions, client: &Client, rt: &Arc<Runtime>) {
+        self.0.push((user_options, client.clone(), rt.clone()));
+    }
+}
+
+lazy_static! {
+    static ref CLIENT_MAP: tokio::sync::Mutex<ClientMap> =
+        tokio::sync::Mutex::new(ClientMap::new());
+}
 
 #[derive(Debug)]
 #[repr(C)]
@@ -20,10 +101,36 @@ pub struct MongoConnection {
     pub uuid_repr: Option<UuidRepresentation>,
 
     /// the tokio runtime
-    pub runtime: tokio::runtime::Runtime,
+    pub runtime: Arc<Runtime>,
 }
 
 impl MongoConnection {
+    fn get_client_and_runtime(
+        user_options: UserOptions,
+        runtime: Arc<Runtime>,
+    ) -> Result<(Client, Arc<Runtime>)> {
+        let mut client_map = runtime.block_on(async { CLIENT_MAP.lock().await });
+        if let Some(cv) = client_map.get(&user_options) {
+            log::info!("reusing Client");
+            Ok(cv)
+        } else {
+            let key_user_options = user_options.clone();
+            log::info!("creating new Client",);
+            let guard = runtime.enter();
+            // the Client Topology uses tokio::spawn, so we need a guard here.
+            let client = runtime.block_on(async {
+                Client::with_options(user_options.client_options)
+                    .map_err(Error::InvalidClientOptions)
+            })?;
+            // we need to drop the guard before we return the runtime to kill the borrow
+            // on the runtime. We drop it before the insert to hold the lock for as little time as
+            // possible.
+            drop(guard);
+            client_map.insert(key_user_options, &client, &runtime);
+            Ok((client, runtime))
+        }
+    }
+
     /// Creates a new MongoConnection with the given settings and runs a command to make
     /// sure that the MongoConnection is valid.
     ///
@@ -40,23 +147,19 @@ impl MongoConnection {
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
         type_mode: TypeMode,
+        mut runtime: Option<Runtime>,
         max_string_length: Option<u16>,
-        mut runtime: Option<tokio::runtime::Runtime>,
     ) -> Result<Self> {
-        let runtime = runtime.take().unwrap_or_else(|| {
+        let runtime = Arc::new(runtime.take().unwrap_or_else(|| {
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .unwrap()
-        });
+        }));
         user_options.client_options.connect_timeout =
             login_timeout.map(|to| Duration::new(u64::from(to), 0));
-        let guard = runtime.enter();
-        let client = runtime.block_on(async {
-            Client::with_options(user_options.client_options).map_err(Error::InvalidClientOptions)
-        })?;
-        drop(guard);
         let uuid_repr = user_options.uuid_representation;
+        let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
         let connection = MongoConnection {
             client,
             operation_timeout: operation_timeout.map(|to| Duration::new(u64::from(to), 0)),
@@ -76,31 +179,51 @@ impl MongoConnection {
         Ok(connection)
     }
 
+    #[cfg(feature = "garbage_collect")]
     pub fn shutdown(self) -> Result<()> {
-        self.runtime
-            .block_on(async { self.client.shutdown().await });
+        // we need to lock the CLIENT_MAP to potentially remove the client from the map.
+        // This prevents races on the strong_count or with gc().
+        let mut client_map = self.runtime.block_on(async { CLIENT_MAP.lock().await });
+        // If this is the last reference to the Runtime, we need to shutdown the Client.
+        if Arc::strong_count(&self.runtime) == 1 {
+            self.runtime
+                .block_on(async { self.client.shutdown().await });
+        }
+        // We need to drop the Runtime before we gc, otherwise this will not be collected.
         drop(self.runtime);
+        // garbage collect any Clients and Runtimes that are no longer in use, which is denoted by
+        // the strong_count for the Runtime being 0. It's possible there could be
+        // other clients that are no longer in use because shutdown was not properly called before,
+        // so we gc them all.
+        client_map.gc();
+        Ok(())
+    }
+
+    #[cfg(not(feature = "garbage_collect"))]
+    pub fn shutdown(self) -> Result<()> {
+        if Arc::strong_count(&self.runtime) == 1 {
+            self.runtime
+                .block_on(async { self.client.shutdown().await });
+        }
         Ok(())
     }
 
     /// Gets the ADF version the client is connected to.
     pub fn get_adf_version(&self) -> Result<String> {
-        let _guard = self.runtime.enter();
         self.runtime.block_on(async {
             let db = self.client.database("admin");
             let cmd_res = db
-                .run_command(doc! {"buildInfo": 1}, None)
+                .run_command(doc! {"buildInfo": 1})
                 .await
                 .map_err(Error::DatabaseVersionRetreival)?;
-            let build_info: BuildInfoResult =
-                bson::from_document(cmd_res).map_err(Error::DatabaseVersionDeserialization)?;
+            let build_info: BuildInfoResult = mongodb::bson::from_document(cmd_res)
+                .map_err(Error::DatabaseVersionDeserialization)?;
             Ok(build_info.data_lake.version)
         })
     }
 
     /// cancels all queries for a given statement id
     pub fn cancel_queries_for_statement(&self, statement_id: Bson) -> Result<bool> {
-        let _guard = self.runtime.enter();
         // because there are so many awaits in this function, the bulk of the function is wrapped in a block_on
         self.runtime.block_on(async {
             // use $currentOp and match the comment field to identify any queries issued by the current statement
@@ -110,7 +233,7 @@ impl MongoConnection {
             ];
             let admin_db = self.client.database("admin");
             let mut cursor = admin_db
-                .aggregate(current_ops_pipeline, None)
+                .aggregate(current_ops_pipeline)
                 .await
                 .map_err(Error::QueryExecutionFailed)?;
 
@@ -122,7 +245,7 @@ impl MongoConnection {
                 if let Some(operation_id) = operation.get("opid") {
                     let killop_doc = doc! { "killOp": 1, "op": operation_id};
                     admin_db
-                        .run_command(killop_doc, None)
+                        .run_command(killop_doc)
                         .await
                         .map_err(Error::QueryExecutionFailed)?;
                 }

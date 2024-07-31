@@ -39,8 +39,8 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                     None,
                     Some(30),
                     TypeMode::Standard,
-                    None,
                     Some(runtime),
+                    None,
                 ) {
                     Ok(_) => true,
                     Err(e) => {

@@ -174,7 +174,7 @@ impl From<BsonTypeName> for BsonTypeInfo {
             BsonTypeName::Int => BsonTypeInfo::INT,
             BsonTypeName::Double => BsonTypeInfo::DOUBLE,
             BsonTypeName::Long => BsonTypeInfo::LONG,
-            BsonTypeName::Decimal => BsonTypeInfo::DECIMAL,
+            BsonTypeName::Decimal => BsonTypeInfo::MONGO_DECIMAL,
             BsonTypeName::BinData => BsonTypeInfo::BINDATA,
             BsonTypeName::ObjectId => BsonTypeInfo::OBJECTID,
             BsonTypeName::Bool => BsonTypeInfo::BOOL,
