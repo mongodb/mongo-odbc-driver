@@ -177,6 +177,22 @@ functions:
           ${prepare_shell}
           cargo fmt --all --  --check
 
+  "check unused dependencies":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          cargo install cargo-machete
+          cargo machete
+          RETURN=$?
+          if [ $RETURN -ne 0 ]; then
+            echo "Unused dependencies found"
+            cargo machete
+          fi
+
   "generate SBOM":
     - command: shell.exec
       type: test
@@ -253,7 +269,7 @@ functions:
           chmod +x ./$SBOM_DIR/jq
           echo "------------------------------------"
           echo "<<<< Done installing SBOM tools"
-  
+
           echo ">>>> Generate SBOM..."
           echo "--  Generating SBOMs with the licenses information --"
           cargo cyclonedx --target all -v -f json
@@ -270,13 +286,13 @@ functions:
           echo "------------------------------------"
 
           echo "-- Merging the SBOMs with the licenses information and the SBOM with the  vulnerabilities information in $SBOM_FINAL --"
-          
+
           temp_output="temp_output.json"
           if [[ -f "$temp_output" ]] ; then
               rm "$temp_output"
           fi
           touch $temp_output
-          
+
           while IFS= read -r line
           do
             if [[ "$line" == *"purl"* ]]; then
@@ -294,12 +310,12 @@ functions:
 
           done < $SBOM_VULN
           echo "------------------------------------"
-          
+
           echo "--  Adding the name of the team responsible for each dependency as required by Silk and format the json file --"
           echo "./$SBOM_DIR/jq '.components[].properties += [{\"name\": \"internal:team_responsible\", \"value\": \"Atlas SQL\"}]' $temp_output > $SBOM_FINAL"
           ./$SBOM_DIR/jq '.components[].properties += [{"name": "internal:team_responsible", "value": "Atlas SQL"}]' $temp_output > $SBOM_FINAL
           echo "------------------------------------"
-          
+
           echo "-- Adding VEX info for vulnerabilities still present in SBOM--"
           IFS=','; for vuln_id in $ALLOW_VULNS; do
             echo "-- Updating SBOM with VEX info for vulnerability with id $vuln_id--"
@@ -329,7 +345,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          
+
           echo ">>>> Scan SBOM for vulnerabilities..."
           if [[ "$ALLOW_VULNS" != "" ]]; then
             echo "Vulnerability ids to ignore : $ALLOW_VULNS"
@@ -345,12 +361,12 @@ functions:
             done
             echo "------------------------------------"
           fi
-          
+
           echo "-- Scanning dependency for vulnerabilities --"
           ./$SBOM_DIR/grype sbom:$SBOM_LICENSES --fail-on low
           echo "---------------------------------------------"
           echo "<<<< Done scanning SBOM"
-  
+
   "generate compliance report":
     - command: shell.exec
       params:
@@ -424,9 +440,9 @@ functions:
           SILK_CLIENT_ID=${SILK_CLIENT_ID}
           SILK_CLIENT_SECRET=${SILK_CLIENT_SECRET}
           EOF
-          
+
           echo "SBOM_FINAL = $SBOM_FINAL"
-          
+
           echo "-- Uploading initial SBOM Lite to Silk --"
           docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
           --env-file silkbomb.env \
@@ -447,7 +463,7 @@ functions:
           SILK_CLIENT_ID=${SILK_CLIENT_ID}
           SILK_CLIENT_SECRET=${SILK_CLIENT_SECRET}
           EOF
-          
+
           echo "-- Downloading augmented SBOM --"
           docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
           --env-file silkbomb.env \
@@ -463,7 +479,6 @@ functions:
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
-  
 
   "publish augmented SBOM":
     - command: s3.get
@@ -534,7 +549,7 @@ functions:
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_jsign_image} \
             /bin/bash -c "jsign -a mongo-authenticode-2021 --replace --tsaurl http://timestamp.digicert.com -d SHA-256 ${MSI_FILENAME}"
-          
+
           # Generating checksums
           if [ -e $msi_filename ]; then
             shasum -a 1 ${MSI_FILENAME} | tee ${MSI_FILENAME}.sha1
@@ -1877,14 +1892,14 @@ functions:
         content_type: text/plain
         bucket: mciuploads
         permissions: public-read
-  
+
   "publish static code analysis":
     - command: s3.get
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
-        remote_file:  mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${STATIC_CODE_ANALYSIS_NAME}
         content_type: application/json
         bucket: mciuploads
     - command: s3.put
@@ -1914,6 +1929,11 @@ tasks:
     commands:
       - func: "install rust toolchain"
       - func: "check rustfmt"
+
+  - name: unused-deps
+    commands:
+      - func: "install rust toolchain"
+      - func: "check unused dependencies"
 
   - name: sbom
     commands:
@@ -2158,7 +2178,6 @@ tasks:
       - func: "generate compliance report"
       - func: "publish compliance report"
 
-
 task_groups:
   - name: windows-windows-test-unit-group
     setup_group_can_fail_task: false
@@ -2205,6 +2224,7 @@ buildvariants:
     tasks:
       - name: clippy
       - name: rustfmt
+      - name: unused-deps
       - name: asan-compile
 
   - name: code-quality-security
