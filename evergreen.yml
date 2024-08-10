@@ -297,7 +297,7 @@ functions:
           do
             if [[ "$line" == *"purl"* ]]; then
               bash_purl=$(echo $line | cut -d '"' -f4)
-              command=$(echo "./$SBOM_DIR/jq '.components[] | select(.purl == \"$bash_purl\").licenses' $SBOM_LICENSES")
+              command=$(echo "./$SBOM_DIR/jq '.components[] | select(.purl == \"$bash_purl\").licenses' $SBOM_LICENSES | ./$SBOM_DIR/jq -s 'flatten(1)'")
               # Add the license information back in the augmented SBOM.
               licenseInfo=$(eval " $command")
               if [[ -z "$licenseInfo" ]]; then
