@@ -17,7 +17,6 @@ logger = { path = "../logger" }
 log = "0.4"
 regex = "1"
 num-traits = "0.2.14"
-num-derive = "0.3.3"
 mongodb = { version = "3", features = ["aws-auth", "dns-resolver"] }
 tailcall = "1.0"
 # Do NOT change these features without consulting with other team members.
