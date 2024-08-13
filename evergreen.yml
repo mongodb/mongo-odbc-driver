@@ -186,11 +186,13 @@ functions:
         script: |
           ${prepare_shell}
           cargo install cargo-machete
+          set +e
           cargo machete
           RETURN=$?
+          set -e
           if [ $RETURN -ne 0 ]; then
-            echo "Unused dependencies found"
-            cargo machete
+            >&2 echo "Unused dependencies found"
+            >&2 cargo machete
           fi
 
   "generate SBOM":
