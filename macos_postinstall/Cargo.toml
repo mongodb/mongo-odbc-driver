@@ -1,12 +1,13 @@
 [package]
 name = "macos_postinstall"
 version = "0.0.0"
-authors = [
-  "Patrick Meredith <pmeredit@protonmail.com>",
-]
+authors = ["Patrick Meredith <pmeredit@protonmail.com>"]
 edition = "2021"
 
 [dependencies]
 rust-ini = "0.20.0"
 itertools = "0.10.5"
 lazy_static = "1"
+
+[package.metadata.cargo-machete]
+ignored = ["rust-ini"]

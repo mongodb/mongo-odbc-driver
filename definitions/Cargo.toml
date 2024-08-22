@@ -17,3 +17,6 @@ iodbc = []
 odbc_version_3_50 = []
 odbc_version_3_80 = ["odbc_version_3_50"]
 odbc_version_4 = ["odbc_version_3_80"]
+
+[package.metadata.cargo-machete]
+ignored = ["num-traits"]
