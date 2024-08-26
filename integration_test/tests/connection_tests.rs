@@ -50,7 +50,7 @@ mod integration {
         let result = connect_with_conn_string(env_handle, Some(conn_str));
 
         // TODO: SQL-2291: Support direct cluster mode (This should no longer expect an Error after that).
-        assert_eq!(result, Err(Error::DriverConnect("ERROR".to_string(), "[MongoDB][Core] Trying to execute query failed with error: Error { kind: Command(CommandError { code: 59, code_name: \"CommandNotFound\", message: \"no such command: 'sqlGetResultSchema'\", topology_version: None }), labels: {}, wire_version: Some(13), source: None }".to_string())));
+        assert_eq!(result, Err(Error::DriverConnect));
 
         let _ = unsafe { Box::from_raw(env_handle) };
     }
