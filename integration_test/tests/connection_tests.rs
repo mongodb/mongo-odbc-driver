@@ -44,6 +44,14 @@ mod integration {
     }
 
     #[test]
+    fn test_srv_style_uri_connection() {
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
+        let conn_str = crate::common::generate_srv_style_connection_string();
+        let _ = connect_with_conn_string(env_handle, Some(conn_str)).unwrap();
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    #[test]
     fn uuid_csharp_legacy() {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str = crate::common::generate_uri_with_default_connection_string(
