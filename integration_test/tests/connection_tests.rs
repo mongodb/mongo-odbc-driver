@@ -50,7 +50,7 @@ mod integration {
         let result = connect_with_conn_string(env_handle, Some(conn_str));
 
         // TODO: SQL-2291: Support direct cluster mode (This should no longer expect an Error after that).
-        assert_eq!(result, Err(Error::DriverConnect));
+        assert!(matches!(result, Err(Error::DriverConnect(_, _))));
 
         let _ = unsafe { Box::from_raw(env_handle) };
     }
