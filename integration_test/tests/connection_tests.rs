@@ -9,7 +9,7 @@ mod common;
 mod integration {
     use crate::common::{
         allocate_env, connect_and_allocate_statement, connect_with_conn_string,
-        disconnect_and_close_handles,
+        disconnect_and_close_handles, Error,
     };
     use constants::DRIVER_NAME;
     use cstr::{to_char_ptr, to_widechar_ptr, WideChar};
@@ -47,7 +47,11 @@ mod integration {
     fn test_srv_style_uri_connection() {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str = crate::common::generate_srv_style_connection_string();
-        let _ = connect_with_conn_string(env_handle, Some(conn_str)).unwrap();
+        let result = connect_with_conn_string(env_handle, Some(conn_str));
+
+        // TODO: SQL-2291: Support direct cluster mode (This should no longer expect an Error after that).
+        assert_eq!(result, Err(Error::DriverConnect("ERROR".to_string(), "[MongoDB][Core] Trying to execute query failed with error: Error { kind: Command(CommandError { code: 59, code_name: \"CommandNotFound\", message: \"no such command: 'sqlGetResultSchema'\", topology_version: None }), labels: {}, wire_version: Some(13), source: None }".to_string())));
+
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 

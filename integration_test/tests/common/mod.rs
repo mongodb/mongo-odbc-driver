@@ -82,6 +82,7 @@ pub fn generate_default_connection_str() -> String {
 }
 
 #[allow(dead_code)]
+/// generate a "mongodb+srv" connection string based on the specified environmental variables.
 pub fn generate_srv_style_connection_string() -> String {
     // This will be the same as ADF
     let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
