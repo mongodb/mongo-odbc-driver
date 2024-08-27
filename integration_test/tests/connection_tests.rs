@@ -49,7 +49,8 @@ mod integration {
         let conn_str = crate::common::generate_srv_style_connection_string();
         let result = connect_with_conn_string(env_handle, Some(conn_str));
 
-        // TODO: SQL-2291: Support direct cluster mode (This should no longer expect an Error after that).
+        // TODO: SQL-2291: Uncomment the below assert!() and remove the uncommented one.
+        // assert!(connection_result.is_ok(), "Expected successful connection, got error: {:?}", connection_result);
         assert!(matches!(result, Err(Error::DriverConnect(_, _))));
 
         let _ = unsafe { Box::from_raw(env_handle) };
