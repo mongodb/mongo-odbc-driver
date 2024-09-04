@@ -10,7 +10,7 @@ const MOCK_LIBRARY_NAME: &str = "mock_mongosqltranslate";
 const LIBRARY_EXTENSION: &str = "dll";
 #[cfg(target_os = "macos")]
 const LIBRARY_EXTENSION: &str = "dylib";
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(target_os = "linux")]
 const LIBRARY_EXTENSION: &str = "so";
 
 // Define library installation paths for different operating systems.
@@ -21,9 +21,10 @@ const LIBRARY_INSTALL_PATH: &str = if cfg!(target_arch = "x86_64") {
 } else {
     "C:\\Program Files\\MongoDB\\ODBC\\bin"
 };
-
 #[cfg(target_os = "macos")]
 const LIBRARY_INSTALL_PATH: &str = "/Library/MongoDB/MongoDB Atlas SQL ODBC Driver/";
+#[cfg(target_os = "linux")]
+const LIBRARY_INSTALL_PATH: &str = "/opt/mongodb/atlas-sql-odbc-driver/";
 
 static INIT: Once = Once::new();
 static mut MONGOSQLTRANSLATE_LIBRARY: Option<Library> = None;
@@ -75,7 +76,10 @@ pub fn load_mongosqltranslate_library() {
         match unsafe { Library::new(library_path.clone()) } {
             Ok(lib) => {
                 unsafe { MONGOSQLTRANSLATE_LIBRARY = Some(lib) };
-                log::info!("Loaded the mongosqltranslate library from: {}", library_path.display());
+                log::info!(
+                    "Loaded the mongosqltranslate library from: {}",
+                    library_path.display()
+                );
             }
             Err(e) => {
                 log::warn!("Failed to load the mongosqltranslate library: {}", e);
@@ -84,8 +88,12 @@ pub fn load_mongosqltranslate_library() {
     });
 }
 
-pub fn get_run_command() -> Result<Symbol<'static, unsafe extern "C" fn(*const u8, usize) -> RunCommandResult>, Box<dyn std::error::Error>> {
-    let library = get_mongosqltranslate_library().ok_or("mongosqltranslate library is not loaded")?;
+pub fn get_run_command() -> Result<
+    Symbol<'static, unsafe extern "C" fn(*const u8, usize) -> RunCommandResult>,
+    Box<dyn std::error::Error>,
+> {
+    let library =
+        get_mongosqltranslate_library().ok_or("mongosqltranslate library is not loaded")?;
     unsafe { library.get(b"runCommand") }.map_err(|e| e.into())
 }
 
@@ -109,10 +117,16 @@ mod unit {
 
         // Call runCommand
         let result = unsafe { run_command(bson_bytes.as_ptr(), bson_bytes.len()) };
-        let result_vec = unsafe { Vec::from_raw_parts(result.result_ptr as *mut u8, result.result_len, result.result_cap) };
-        let result_doc: Document = bson::from_slice(&result_vec).expect("Failed to deserialize result");
+        let result_vec = unsafe {
+            Vec::from_raw_parts(
+                result.result_ptr as *mut u8,
+                result.result_len,
+                result.result_cap,
+            )
+        };
+        let result_doc: Document =
+            bson::from_slice(&result_vec).expect("Failed to deserialize result");
 
         assert_eq!(result_doc, test_doc);
     }
 }
-

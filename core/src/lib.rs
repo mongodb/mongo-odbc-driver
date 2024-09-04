@@ -33,6 +33,6 @@ pub mod util;
 pub use primary_keys::MongoPrimaryKeys;
 mod foreign_keys;
 pub use foreign_keys::MongoForeignKeys;
+pub mod load_library;
 pub mod oidc_auth;
 pub mod test_config;
-pub mod load_library;
