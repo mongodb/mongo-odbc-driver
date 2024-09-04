@@ -1927,6 +1927,7 @@ dependencies = [
  "lazy_static",
  "libloading",
  "log",
+ "mock_mongosqltranslate",
  "mongodb",
  "num-traits",
  "once_cell",
