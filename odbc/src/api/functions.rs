@@ -33,6 +33,7 @@ use mongo_odbc_core::{
 use num_traits::FromPrimitive;
 use std::ptr::null_mut;
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
+use mongo_odbc_core::load_library::load_mongosqltranslate_library;
 // use mongo_odbc_core::load_library::load_library;
 
 const NULL_HANDLE_ERROR: &str = "handle cannot be null";
@@ -255,7 +256,8 @@ fn sql_alloc_handle(
     input_handle: *mut MongoHandle,
     output_handle: *mut Handle,
 ) -> Result<()> {
-    // let _ = load_library();
+
+    load_mongosqltranslate_library();
 
     match handle_type {
         HandleType::SQL_HANDLE_ENV => {
