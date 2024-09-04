@@ -1,6 +1,8 @@
 use bson::{to_vec, Document};
 use std::mem::forget;
 
+// This mock library is designed to simulate the behavior of the `mongosqltranslate` library
+// for testing purposes. It provides a simple implementation of the `runCommand` function.
 #[repr(C)]
 pub struct BsonResult {
     ptr: *const u8,
