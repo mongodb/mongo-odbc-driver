@@ -3,10 +3,13 @@ use std::env;
 use std::path::PathBuf;
 use std::sync::Once;
 
+const LIBRARY_NAME: &str = "libmongosqltranslate";
+const MOCK_LIBRARY_NAME: &str = "libmock_mongosqltranslate";
+
+
 static INIT: Once = Once::new();
 static mut LIBRARY_LOADED: bool = false;
 static mut LIBRARY: Option<Library> = None;
-
 
 fn get_library_path() -> PathBuf {
     let lib_name = if cfg!(target_os = "windows") {
@@ -40,12 +43,12 @@ fn get_library_path_test() -> PathBuf {
     // testing, move the library to the target/debug directory
     let mut path = std::env::current_exe().unwrap();
     path.pop();
-    path.pop(); 
+    path.pop();
     path.push(lib_name);
     path
 }
 
-fn load_library() -> Result<(), Box<dyn std::error::Error>> {
+pub fn load_library() -> Result<(), Box<dyn std::error::Error>> {
     INIT.call_once(|| {
         unsafe {
             match Library::new(get_library_path_test()) {
