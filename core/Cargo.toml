@@ -10,6 +10,7 @@ authors = [
 edition = "2021"
 
 [dependencies]
+libloading = "0.8.3"
 definitions = { path = "../definitions" }
 bson = "2"
 thiserror = "1"

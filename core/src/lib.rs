@@ -35,3 +35,4 @@ mod foreign_keys;
 pub use foreign_keys::MongoForeignKeys;
 pub mod oidc_auth;
 pub mod test_config;
+mod load_library;

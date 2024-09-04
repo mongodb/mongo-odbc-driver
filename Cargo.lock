@@ -1680,6 +1680,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
+name = "libloading"
+version = "0.8.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
+dependencies = [
+ "cfg-if",
+ "windows-targets 0.52.6",
+]
+
+[[package]]
 name = "libm"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1897,6 +1907,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock_mongosqltranslate"
+version = "0.1.0"
+dependencies = [
+ "bson",
+]
+
+[[package]]
 name = "mongo-odbc-core"
 version = "0.0.0"
 dependencies = [
@@ -1908,6 +1925,7 @@ dependencies = [
  "futures",
  "itertools",
  "lazy_static",
+ "libloading",
  "log",
  "mongodb",
  "num-traits",
