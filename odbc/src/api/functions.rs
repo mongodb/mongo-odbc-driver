@@ -34,7 +34,6 @@ use mongo_odbc_core::{
 use num_traits::FromPrimitive;
 use std::ptr::null_mut;
 use std::{collections::HashMap, mem::size_of, panic, sync::mpsc};
-// use mongo_odbc_core::load_library::load_library;
 
 const NULL_HANDLE_ERROR: &str = "handle cannot be null";
 const HANDLE_MUST_BE_ENV_ERROR: &str = "handle must be env";
