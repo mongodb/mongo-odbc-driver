@@ -52,10 +52,7 @@ lazy_static! {
 
         // Due to numerous reasons why the logger could fail to initialize, we wrap it in a catch_unwind
         // so that logger failure does not cause our dll to crash.
-        match std::panic::catch_unwind(logging_body) {
-            Ok(logger) => logger,
-            Err(_) => None,
-        }
+        std::panic::catch_unwind(logging_body).unwrap_or_default()
     };
 }
 
