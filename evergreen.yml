@@ -1535,35 +1535,44 @@ functions:
         mdb_version_ent="mongodb-linux-x86_64-enterprise-ubuntu2204-7.0.14"
         arch="x64"
         
+        # Start MongoDB instances
         bash -x ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
-  
+        
+        # Enterprise test without library
+        cargo test --features cluster_type_tests -- \
+          cluster_type::test_determine_cluster_type_enterprise_fails_no_library --nocapture
+        ENTERPRISE_NOLIB_EXITCODE=$?
+        
         # Build and move mock mongosqltranslate library
         cargo build --package mock_mongosqltranslate
         sudo mkdir -p /opt/mongodb/atlas-sql-odbc-driver/
         sudo mv -f ./target/debug/libmock_mongosqltranslate.so /opt/mongodb/atlas-sql-odbc-driver/libmongosqltranslate.so
         
-        # Enterprise test
-        cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
-        ENTERPRISE_EXITCODE=$?
+        # Enterprise test with library
+        cargo test --features cluster_type_tests -- \
+          cluster_type::test_determine_cluster_type_enterprise_gets_no_sqlgetresultschema_with_library --nocapture
+        ENTERPRISE_LIB_EXITCODE=$?
         
         # Community test
         cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
         COMMUNITY_EXITCODE=$?
         
+        # Stop MongoDB instances
         pkill mongod
-  
+        
         # Determine overall exit code
-        if [ $ENTERPRISE_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
-        OVERALL_EXITCODE=0
+        if [ $ENTERPRISE_NOLIB_EXITCODE -eq 0 ] && [ $ENTERPRISE_LIB_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
+          OVERALL_EXITCODE=0
         else
-        OVERALL_EXITCODE=1
+          OVERALL_EXITCODE=1
         fi
-  
+        
         echo "Cluster test results:"
-        echo "Enterprise test exit code: $ENTERPRISE_EXITCODE"
+        echo "Enterprise test without library exit code: $ENTERPRISE_NOLIB_EXITCODE"
+        echo "Enterprise test with library exit code: $ENTERPRISE_LIB_EXITCODE"
         echo "Community test exit code: $COMMUNITY_EXITCODE"
         echo "Overall exit code: $OVERALL_EXITCODE"
-  
+        
         exit $OVERALL_EXITCODE
 
   "run macos result-set tests":
