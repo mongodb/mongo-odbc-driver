@@ -1,8 +1,8 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
 use crate::load_library::{get_mongosqltranslate_library, load_mongosqltranslate_library};
 use crate::odbc_uri::UserOptions;
+use crate::TypeMode;
 use crate::{err::Result, Error};
-use crate::{MongoQuery, TypeMode};
 use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
@@ -145,12 +145,12 @@ impl MongoConnection {
     /// setting specified in the uri if any.
     pub fn connect(
         mut user_options: UserOptions,
-        current_db: Option<String>,
+        _current_db: Option<String>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
-        type_mode: TypeMode,
+        _type_mode: TypeMode,
         mut runtime: Option<Runtime>,
-        max_string_length: Option<u16>,
+        _max_string_length: Option<u16>,
     ) -> Result<Self> {
         let runtime = Arc::new(runtime.take().unwrap_or_else(|| {
             tokio::runtime::Builder::new_current_thread()
