@@ -197,16 +197,7 @@ impl MongoConnection {
             uuid_repr,
             runtime,
         };
-        // Verify that the connection is working and the user has access to the default DB
-        // ADF is supposed to check permissions on this
-        MongoQuery::prepare(
-            &connection,
-            current_db,
-            None,
-            "select 1",
-            type_mode,
-            max_string_length,
-        )?;
+
         Ok(connection)
     }
 

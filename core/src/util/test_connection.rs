@@ -130,7 +130,7 @@ mod test {
                     Some("example.net:30000".into()),
                     None,
                 ))
-                .0 as *const cstr::WideChar,
+                    .0 as *const cstr::WideChar,
                 buffer.as_ptr(),
                 buffer.len(),
                 &mut buffer_len,
@@ -143,8 +143,8 @@ mod test {
                 isize::try_from(buffer_len)
                     .expect("buffer length is too large for {isize::MAX} on this platform"),
             )
-            .to_lowercase()
-            .contains("server selection timeout")
+                .to_lowercase()
+                .contains("unsupported cluster configuration: unknown cluster/target type detected.")
         });
     }
 
