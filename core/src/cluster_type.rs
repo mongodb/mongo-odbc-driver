@@ -27,6 +27,7 @@ pub async fn determine_cluster_type(client: &Client) -> MongoClusterType {
     // if "ok" is not 1, then the target type could not be determined.
     match cmd_res.get("ok") {
         Some(Bson::Double(f)) if *f == 1.0 => {}
+        Some(Bson::Int64(i)) if *i == 1 => {}
         Some(Bson::Int32(i)) if *i == 1 => {}
         _ => {
             log::error!(

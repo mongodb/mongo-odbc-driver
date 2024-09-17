@@ -83,14 +83,22 @@ mod cluster_type {
         }
     }
 
-    // Tests that connection with enterprise edition and library loaded will succeed
+    // Tests that connection with enterprise edition and library loaded fails
+    // due to missing 'sqlGetResultSchema' command in MongoDB
     #[tokio::test]
-    async fn test_determine_cluster_type_enterprise_with_library_success() {
+    async fn test_enterprise_with_library_fails_due_to_missing_sql_get_result_schema_command() {
         let result = run_cluster_type_test(PortType::Enterprise).await;
         assert!(
-            result.is_ok(),
-            "Expected success with enterprise edition and library loaded"
+            result.is_err(),
+            "Expected an error with enterprise edition and library loaded, but got success"
         );
+        if let Err(e) = result {
+            assert!(
+                e.contains("no such command: 'sqlGetResultSchema'"),
+                "Unexpected error message for enterprise edition: {}",
+                e
+            );
+        }
     }
 
     // Test that connecting with enterprise edition cluster type fails without mongosqltranslate library
