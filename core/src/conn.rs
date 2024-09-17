@@ -1,3 +1,5 @@
+use crate::cluster_type::{determine_cluster_type, MongoClusterType};
+use crate::load_library::{get_mongosqltranslate_library, load_mongosqltranslate_library};
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
@@ -160,12 +162,42 @@ impl MongoConnection {
             login_timeout.map(|to| Duration::new(u64::from(to), 0));
         let uuid_repr = user_options.uuid_representation;
         let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
+
+        load_mongosqltranslate_library();
+
+        let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await });
+        match type_of_cluster {
+            MongoClusterType::AtlasDataFederation => {}
+            MongoClusterType::Community => {
+                // Community edition is not supported
+                return Err(Error::UnsupportedClusterConfiguration(
+                    "Community edition detected. The driver is intended for use with MongoDB Enterprise edition or Atlas Data Federation.".to_string(),
+                ));
+            }
+            MongoClusterType::Enterprise => {
+                // Ensure the library is loaded if Enterprise edition is detected
+                if get_mongosqltranslate_library().is_none() {
+                    return Err(Error::UnsupportedClusterConfiguration(
+                        "Enterprise edition detected, but mongosqltranslate library not found."
+                            .to_string(),
+                    ));
+                }
+            }
+            MongoClusterType::UnknownTarget => {
+                // Unknown cluster type is not supported
+                return Err(Error::UnsupportedClusterConfiguration(
+                    "Unknown cluster/target type detected. The driver is intended for use with MongoDB Enterprise edition or Atlas Data Federation.".to_string(),
+                ));
+            }
+        }
+
         let connection = MongoConnection {
             client,
             operation_timeout: operation_timeout.map(|to| Duration::new(u64::from(to), 0)),
             uuid_repr,
             runtime,
         };
+
         // Verify that the connection is working and the user has access to the default DB
         // ADF is supposed to check permissions on this
         MongoQuery::prepare(
@@ -176,6 +208,7 @@ impl MongoConnection {
             type_mode,
             max_string_length,
         )?;
+
         Ok(connection)
     }
 

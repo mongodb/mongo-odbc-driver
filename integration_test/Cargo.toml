@@ -26,5 +26,6 @@ tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
 
 
 [features]
+cluster_type_tests = []
 result_set = []
 evergreen_tests = []

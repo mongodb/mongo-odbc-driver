@@ -25,7 +25,6 @@ use definitions::{
 use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
-use mongo_odbc_core::load_library::load_mongosqltranslate_library;
 use mongo_odbc_core::{
     odbc_uri::ODBCUri, Error, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
     MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
@@ -255,8 +254,6 @@ fn sql_alloc_handle(
     input_handle: *mut MongoHandle,
     output_handle: *mut Handle,
 ) -> Result<()> {
-    load_mongosqltranslate_library();
-
     match handle_type {
         HandleType::SQL_HANDLE_ENV => {
             let env = Env::with_state(EnvState::Allocated);
