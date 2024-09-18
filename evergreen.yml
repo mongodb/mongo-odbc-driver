@@ -126,6 +126,13 @@ functions:
       params:
         file: mongosql-odbc-driver/expansions.yml
 
+  "generate github token":
+    command: github.generate_token
+    params:
+      owner: 10gen
+      repo: mongohouse
+      expansion_name: github_token
+
   "install rust toolchain":
     - command: shell.exec
       params:
@@ -1381,6 +1388,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1491,6 +1500,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1580,6 +1591,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1621,6 +1634,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1655,6 +1670,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1699,6 +1716,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1737,6 +1756,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1768,6 +1789,8 @@ functions:
     type: test
     params:
       shell: bash
+      env:
+        GITHUB_TOKEN: "${github_token}"
       working_dir: mongosql-odbc-driver
       script: |
         ${prepare_shell}
@@ -2083,6 +2106,7 @@ tasks:
         variants: [ubuntu2204]
       - func: "setup driver with iODBC"
         variants: [macos, macos-arm]
+      - func: "generate github token"
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration test"
@@ -2131,6 +2155,7 @@ tasks:
         variants: [ubuntu2204]
       # - func: "setup driver with iODBC"
       #   variants: [macos, macos-arm]
+      - func: "generate github token"
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
