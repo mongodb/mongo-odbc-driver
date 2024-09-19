@@ -144,7 +144,7 @@ mod test {
                     .expect("buffer length is too large for {isize::MAX} on this platform"),
             )
             .to_lowercase()
-            .contains("server selection timeout")
+            .contains("unsupported cluster configuration: unknown cluster/target type detected.")
         });
     }
 

@@ -84,6 +84,10 @@ functions:
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
             git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+            export LOCAL_MDB_PORT_COM=${local_mdb_port_com}
+            export LOCAL_MDB_PORT_ENT=${local_mdb_port_ent}
+            export LOCAL_MDB_USER=${local_mdb_user}
+            export LOCAL_MDB_PWD=${local_mdb_pwd}
             export ADF_TEST_LOCAL_USER="${adf_test_local_user}"
             export ADF_TEST_LOCAL_PWD="${adf_test_local_pwd}"
             export ADF_TEST_LOCAL_AUTH_DB="${adf_test_local_auth_db}"
@@ -91,6 +95,11 @@ functions:
             export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
             export ADF_TEST_LOCAL_DB="${adf_test_local_db}"
             export ADF_TEST_URI="${adf_test_uri}"
+            export SRV_TEST_DB="${srv_test_db}"
+            export SRV_TEST_AUTH_DB="${srv_test_auth_db}"
+            export SRV_TEST_HOST="${srv_test_host}"
+            export SRV_TEST_USER="${srv_test_user}"
+            export SRV_TEST_PWD="${srv_test_pwd}"
             export SCRIPT_FOLDER="$SCRIPT_FOLDER"
             export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
             export SBOM_DIR="sbom_tools"
@@ -116,6 +125,13 @@ functions:
     - command: expansions.update
       params:
         file: mongosql-odbc-driver/expansions.yml
+
+  "generate github token":
+    command: github.generate_token
+    params:
+      owner: 10gen
+      repo: mongohouse
+      expansion_name: github_token
 
   "install rust toolchain":
     - command: shell.exec
@@ -1372,6 +1388,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1482,6 +1500,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1511,12 +1531,68 @@ functions:
           # Stop the local ADF
           ./resources/run_adf.sh stop
           exit $EXITCODE
+          
+
+  "run ubuntu cluster type integration test":
+    command: shell.exec
+    type: test
+    params:
+      shell: bash
+      working_dir: mongosql-odbc-driver
+      script: |
+        ${prepare_shell}
+        
+        mdb_version_com="mongodb-linux-x86_64-ubuntu2204-7.0.14"
+        mdb_version_ent="mongodb-linux-x86_64-enterprise-ubuntu2204-7.0.14"
+        arch="x64"
+        
+        # Start MongoDB instances
+        ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
+        
+        # Enterprise test without library
+        cargo test --features cluster_type_tests -- \
+          cluster_type::test_determine_cluster_type_enterprise_fails_without_library --nocapture
+        ENTERPRISE_NOLIB_EXITCODE=$?
+        
+        # Build and move mock mongosqltranslate library
+        cargo build --package mock_mongosqltranslate
+        sudo mkdir -p /opt/mongodb/atlas-sql-odbc-driver/
+        sudo mv -f ./target/debug/libmock_mongosqltranslate.so /opt/mongodb/atlas-sql-odbc-driver/libmongosqltranslate.so
+        
+        # Enterprise test with library
+        cargo test --features cluster_type_tests -- \
+          cluster_type::test_enterprise_with_library_fails_due_to_missing_sql_get_result_schema_command --nocapture
+        ENTERPRISE_LIB_EXITCODE=$?
+        
+        # Community test
+        cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
+        COMMUNITY_EXITCODE=$?
+        
+        # Stop MongoDB instances
+        pkill mongod
+        
+        # Determine overall exit code
+        if [ $ENTERPRISE_NOLIB_EXITCODE -eq 0 ] && [ $ENTERPRISE_LIB_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
+          OVERALL_EXITCODE=0
+        else
+          OVERALL_EXITCODE=1
+        fi
+        
+        echo "Cluster test results:"
+        echo "Enterprise test without library exit code: $ENTERPRISE_NOLIB_EXITCODE"
+        echo "Enterprise test with library exit code: $ENTERPRISE_LIB_EXITCODE"
+        echo "Community test exit code: $COMMUNITY_EXITCODE"
+        echo "Overall exit code: $OVERALL_EXITCODE"
+        
+        exit $OVERALL_EXITCODE
 
   "run macos result-set tests":
     - command: shell.exec
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1558,6 +1634,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1592,6 +1670,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1636,6 +1716,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1674,6 +1756,8 @@ functions:
       type: test
       params:
         shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1705,6 +1789,8 @@ functions:
     type: test
     params:
       shell: bash
+      env:
+        GITHUB_TOKEN: "${github_token}"
       working_dir: mongosql-odbc-driver
       script: |
         ${prepare_shell}
@@ -2020,8 +2106,11 @@ tasks:
         variants: [ubuntu2204]
       - func: "setup driver with iODBC"
         variants: [macos, macos-arm]
+      - func: "generate github token"
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
+      - func: "run ubuntu cluster type integration test"
+        variants: [ ubuntu2204 ]
       # Commenting out because the following task only detects
       # memory leaks in the tests
       # - func: "run asan integration tests"
@@ -2066,6 +2155,7 @@ tasks:
         variants: [ubuntu2204]
       # - func: "setup driver with iODBC"
       #   variants: [macos, macos-arm]
+      - func: "generate github token"
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"

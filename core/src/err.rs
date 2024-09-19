@@ -48,6 +48,8 @@ pub enum Error {
     ValueAccess(String, mongodb::bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
+    #[error("Unsupported cluster configuration: {0}")]
+    UnsupportedClusterConfiguration(String),
     #[error("Unsupported operation {0}")]
     UnsupportedOperation(&'static str),
     #[error("Statement not executed")]
@@ -81,6 +83,7 @@ impl Error {
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
+            | Error::UnsupportedClusterConfiguration(_)
             | Error::UnsupportedOperation(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
@@ -120,6 +123,7 @@ impl Error {
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
             | Error::UnsupportedOperation(_)
+            | Error::UnsupportedClusterConfiguration(_)
             | Error::StatementNotExecuted => 0,
         }
     }

@@ -82,6 +82,23 @@ pub fn generate_default_connection_str() -> String {
 }
 
 #[allow(dead_code)]
+/// generate a "mongodb+srv" connection string based on the specified environmental variables.
+pub fn generate_srv_style_connection_string() -> String {
+    // The driver used is the same as the one used for ADF
+    let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
+
+    let db = env::var("SRV_TEST_DB").expect("SRV_TEST_DB is not set");
+    let auth_db = env::var("SRV_TEST_AUTH_DB").expect("SRV_TEST_AUTH_DB is not set");
+    let host = env::var("SRV_TEST_HOST").expect("SRV_TEST_HOST is not set");
+    let username = env::var("SRV_TEST_USER").expect("SRV_TEST_USER is not set");
+    let password = env::var("SRV_TEST_PWD").expect("SRV_TEST_PWD is not set");
+
+    let mongodb_uri = format!("mongodb+srv://{username}:{password}@{host}/?authSource={auth_db}");
+
+    format!("DRIVER={driver};DATABASE={db};URI={mongodb_uri}")
+}
+
+#[allow(dead_code)]
 // Verifies that the expected SQL State, message text, and native error in the handle match
 // the expected input
 pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {

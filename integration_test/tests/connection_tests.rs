@@ -9,7 +9,7 @@ mod common;
 mod integration {
     use crate::common::{
         allocate_env, connect_and_allocate_statement, connect_with_conn_string,
-        disconnect_and_close_handles,
+        disconnect_and_close_handles, Error,
     };
     use constants::DRIVER_NAME;
     use cstr::{to_char_ptr, to_widechar_ptr, WideChar};
@@ -40,6 +40,19 @@ mod integration {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str = crate::common::generate_default_connection_str();
         let _ = connect_with_conn_string(env_handle, Some(conn_str)).unwrap();
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    #[test]
+    fn test_srv_style_uri_connection() {
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
+        let conn_str = crate::common::generate_srv_style_connection_string();
+        let result = connect_with_conn_string(env_handle, Some(conn_str));
+
+        // TODO: SQL-2291: Uncomment the below assert!() and remove the uncommented one.
+        // assert!(connection_result.is_ok(), "Expected successful connection, got error: {:?}", connection_result);
+        assert!(matches!(result, Err(Error::DriverConnect(_, _))));
+
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
