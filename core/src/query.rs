@@ -163,7 +163,7 @@ impl MongoQuery {
 
                 // create the schema_catalog document
                 let mut schema_catalog_doc: Document = doc! {
-                    &current_db: doc!{}
+                    current_db.clone(): doc!{}
                 };
 
                 for namespace in namespaces{
@@ -173,7 +173,7 @@ impl MongoQuery {
                                 "_id": &namespace.collection
                             }).await.expect("error happened").expect("schema doesn't exist in the collection")
                         }
-                    )?;
+                    );
 
                     let bson_schema = namespace_schema_doc.get("schema").expect("`schema` field is missing.");
 
@@ -373,7 +373,7 @@ impl MongoStatement for MongoQuery {
 
                 // create the schema_catalog document
                 let mut schema_catalog_doc: Document = doc! {
-                    &current_db: doc!{}
+                    current_db: doc!{}
                 };
 
                 for namespace in namespaces{
@@ -383,7 +383,7 @@ impl MongoStatement for MongoQuery {
                                 "_id": &namespace.collection
                             }).await.expect("error happened").expect("schema doesn't exist in the collection")
                         }
-                    )?;
+                    );
 
                     let bson_schema = namespace_schema_doc.get("schema").expect("`schema` field is missing.");
 

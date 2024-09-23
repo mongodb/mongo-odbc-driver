@@ -219,7 +219,7 @@ impl MongoConnection {
             let check_driver_version_command = doc! {
                 "command": "checkDriverVersion",
                 "options": {
-                    "driverVersion": &DRIVER_ODBC_VERSION,
+                    "driverVersion": DRIVER_ODBC_VERSION.clone(),
                     "odbcDriver": true
                 },
             };
