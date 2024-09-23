@@ -11,7 +11,7 @@ use mongodb::Client;
 use std::env;
 
 mod integration {
-
+    use mongo_odbc_core::cluster_type::MongoClusterType;
     use super::*;
 
     fn generate_connection_uri() -> String {
@@ -146,6 +146,7 @@ mod integration {
             operation_timeout: None,
             uuid_repr: None,
             runtime: runtime.into(),
+            cluster_type: MongoClusterType::AtlasDataFederation,
         };
         *conn_handle.mongo_connection.write().unwrap() = Some(mongo_connection);
         let conn = &mut MongoHandle::Connection(conn_handle);

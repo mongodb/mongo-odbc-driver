@@ -54,6 +54,12 @@ pub enum Error {
     UnsupportedOperation(&'static str),
     #[error("Statement not executed")]
     StatementNotExecuted,
+    #[error("The driver version `{0}` is incompatible with libmongosqltranslate")]
+    LibmongosqltranslateLibraryIsIncompatible(&'static str),
+    #[error("failed to deserialize JSON Schema from BSON")]
+    BsonDeserializationFailure,
+    #[error("failed to serialize JSON Schema to BSON")]
+    BsonSerializationFailure
 }
 
 impl Error {
