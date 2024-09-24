@@ -2355,7 +2355,7 @@ buildvariants:
 
   - name: macos
     display_name: "macOS 11.0"
-    run_on: [macos-1100]
+    run_on: [macos-11]
     tasks:
       - name: compile
       - name: compile-debug
@@ -2366,7 +2366,7 @@ buildvariants:
 
   - name: macos-arm
     display_name: "macOS 11.0 ARM 64"
-    run_on: [macos-1100-arm64]
+    run_on: [macos-11-arm64]
     tasks:
       - name: compile
       - name: compile-debug
