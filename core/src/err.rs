@@ -93,6 +93,7 @@ impl Error {
             | Error::UnsupportedOperation(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
+            Error::BsonDeserializationFailure | Error::BsonSerializationFailure | Error::LibmongosqltranslateLibraryIsIncompatible(_) => GENERAL_ERROR
         }
     }
 
@@ -130,7 +131,10 @@ impl Error {
             | Error::ValueAccess(_, _)
             | Error::UnsupportedOperation(_)
             | Error::UnsupportedClusterConfiguration(_)
-            | Error::StatementNotExecuted => 0,
+            | Error::StatementNotExecuted
+            | Error::BsonDeserializationFailure
+            | Error::BsonSerializationFailure
+            | Error::LibmongosqltranslateLibraryIsIncompatible(_) => 0,
         }
     }
 }

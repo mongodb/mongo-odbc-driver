@@ -12,7 +12,6 @@ use mongodb::{
     Cursor,
 };
 use std::time::Duration;
-use bson::Array;
 use libloading::Symbol;
 use serde::{Deserialize, Serialize};
 use definitions::LibmongosqltranslateCommand;
@@ -87,8 +86,8 @@ impl MongoQuery {
         type_mode: TypeMode,
         max_string_length: Option<u16>,
     ) -> Result<Self> {
-        let current_db = current_db.ok_or(Error::NoDatabase)?;
-        let db = client.client.database(&current_db);
+        let current_db = current_db.as_ref().ok_or(Error::NoDatabase)?;
+        let db = client.client.database(current_db);
 
         let metadata = match client.cluster_type {
             MongoClusterType::AtlasDataFederation => {
@@ -109,7 +108,7 @@ impl MongoQuery {
                     mongodb::bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
 
                 get_result_schema_response.process_result_metadata(
-                    &current_db,
+                    current_db,
                     type_mode,
                     max_string_length,
                 )?
@@ -128,7 +127,7 @@ impl MongoQuery {
                     "command": "getNamespaces",
                     "options": {
                         "sql": query,
-                        "db": &current_db,
+                        "db": current_db,
                     },
                 };
 
@@ -163,7 +162,7 @@ impl MongoQuery {
 
                 // create the schema_catalog document
                 let mut schema_catalog_doc: Document = doc! {
-                    current_db.clone(): doc!{}
+                    current_db: doc!{}
                 };
 
                 for namespace in namespaces{
@@ -180,7 +179,7 @@ impl MongoQuery {
                     //let json_schema: Schema = Schema::from_bson(bson_schema.clone()).expect("schema could not be deserialized");
 
                     // somehow insert the json_schemas into the mutable document?
-                    schema_catalog_doc.get(&current_db).unwrap().as_document().unwrap().insert(namespace.collection, bson_schema); //json_schema.to_bson().unwrap());
+                    schema_catalog_doc.get_document_mut(current_db).unwrap().insert(namespace.collection, bson_schema); //json_schema.to_bson().unwrap());
                 }
 
                 // translate command. excludeNamespaces = false; relax_schema_checking = true
@@ -189,7 +188,7 @@ impl MongoQuery {
                     "command": "translate",
                     "options": {
                         "sql": query,
-                        "db": &current_db,
+                        "db": current_db,
                         "excludeNamespaces": false,
                         "relaxSchemaChecking": true,
                         "schemaCatalog": schema_catalog_doc
@@ -232,7 +231,7 @@ impl MongoQuery {
                 };
 
                 translation_metadata.process_result_metadata(
-                    &current_db,
+                    current_db,
                     type_mode,
                     max_string_length,
                 )?
@@ -247,7 +246,7 @@ impl MongoQuery {
             resultset_cursor: None,
             resultset_metadata: metadata,
             current: None,
-            current_db: Some(current_db),
+            current_db: Some(current_db.clone()),
             query: query.to_string(),
             query_timeout,
         })
@@ -338,7 +337,7 @@ impl MongoStatement for MongoQuery {
                     "command": "getNamespaces",
                     "options": {
                         "sql": &self.query,
-                        "db": &current_db,
+                        "db": current_db,
                     },
                 };
 
@@ -390,7 +389,7 @@ impl MongoStatement for MongoQuery {
                     //let json_schema: Schema = Schema::from_bson(bson_schema.clone()).expect("schema could not be deserialized");
 
                     // somehow insert the json_schemas into the mutable document?
-                    schema_catalog_doc.get(&current_db).unwrap().as_document().unwrap().insert(namespace.collection, bson_schema); //json_schema.to_bson().unwrap());
+                    schema_catalog_doc.get_document_mut(current_db).unwrap().insert(namespace.collection, bson_schema); //json_schema.to_bson().unwrap());
                 }
 
                 // translate command. excludeNamespaces = false; relax_schema_checking = true
@@ -399,7 +398,7 @@ impl MongoStatement for MongoQuery {
                     "command": "translate",
                     "options": {
                         "sql": &self.query,
-                        "db": &current_db,
+                        "db": current_db,
                         "excludeNamespaces": false,
                         "relaxSchemaChecking": true,
                         "schemaCatalog": schema_catalog_doc
@@ -432,8 +431,8 @@ impl MongoStatement for MongoQuery {
 
                 let mongosql_translation = Translation::from_document(&returned_doc).expect("Failed to deserialize into Translation");
 
-                let pipeline = mongosql_translation.pipeline.as_array().expect("pipeline should be an array").iter()
-                    .map(|bson_doc| bson_doc.as_document().expect("should be a doc")).collect::<Vec<Document>>();
+                let pipeline = mongosql_translation.pipeline.as_array().expect("pipeline should be an array").into_iter()
+                    .map(|bson_doc| bson_doc.as_document().expect("should be a doc").to_owned()).collect::<Vec<Document>>();
 
                 (pipeline, mongosql_translation.target_collection)
             },
@@ -453,28 +452,46 @@ impl MongoStatement for MongoQuery {
             _ => Error::QueryExecutionFailed(e),
         };
 
-        let mut aggregate = if let Some(coll) = collection {
-            db.collection::<Document>(coll.as_str()).aggregate(pipeline)
+        let cursor: Cursor<Document> =  if let Some(c) = collection {
+            let collection = db.collection::<Document>(c.as_str());
+            let mut aggregate = collection.aggregate(pipeline).comment(stmt_id);
+
+            // If the query timeout is 0, it means "no timeout"
+            if self.query_timeout.is_some_and(|timeout| timeout > 0) {
+                aggregate = aggregate.max_time(Duration::from_millis(u64::from(
+                    self.query_timeout.unwrap(),
+                )));
+            }
+
+            // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
+            if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
+                aggregate = aggregate.batch_size(rowset_size);
+            }
+
+            let _guard = connection.runtime.enter();
+            connection
+                .runtime
+                .block_on(async { aggregate.await.map_err(map_query_error) })?
         } else {
-            db.aggregate(pipeline).comment(stmt_id)
+            let mut aggregate = db.aggregate(pipeline).comment(stmt_id);
+            // If the query timeout is 0, it means "no timeout"
+            if self.query_timeout.is_some_and(|timeout| timeout > 0) {
+                aggregate = aggregate.max_time(Duration::from_millis(u64::from(
+                    self.query_timeout.unwrap(),
+                )));
+            }
+
+            // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
+            if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
+                aggregate = aggregate.batch_size(rowset_size);
+            }
+
+            let _guard = connection.runtime.enter();
+            connection
+                .runtime
+                .block_on(async { aggregate.await.map_err(map_query_error) })?
         };
 
-        // If the query timeout is 0, it means "no timeout"
-        if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-            aggregate = aggregate.max_time(Duration::from_millis(u64::from(
-                self.query_timeout.unwrap(),
-            )));
-        }
-
-        // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
-        if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
-            aggregate = aggregate.batch_size(rowset_size);
-        }
-
-        let _guard = connection.runtime.enter();
-        let cursor: Cursor<Document> = connection
-            .runtime
-            .block_on(async { aggregate.await.map_err(map_query_error) })?;
         self.resultset_cursor = Some(cursor);
         Ok(true)
     }

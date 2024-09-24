@@ -1,7 +1,6 @@
 use crate::{BsonTypeInfo, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use bson::{Bson, Document};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
