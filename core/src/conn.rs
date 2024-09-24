@@ -140,6 +140,106 @@ impl MongoConnection {
         }
     }
 
+    fn get_libmongosqltranslate_version(
+        run_command_function: &Symbol<
+            'static,
+            unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
+        >,
+    ) -> Result<&str> {
+        // getLibraryVersion
+        let get_library_version_command = doc! {
+            "command": "getMongosqlTranslateVersion",
+            "options": {},
+        };
+
+        let get_library_version_command_bytes = bson::to_vec(&get_library_version_command)
+            .expect("Failed to serialize Document into BSON bytes");
+
+        let length = get_library_version_command_bytes.len();
+
+        let capacity = get_library_version_command_bytes.capacity();
+
+        let get_library_version_mongosqltranslate_command = LibmongosqltranslateCommand {
+            data: Box::into_raw(get_library_version_command_bytes.into_boxed_slice()).cast(),
+            length,
+            capacity,
+        };
+
+        let decomposed_library_version =
+            unsafe { run_command_function(get_library_version_mongosqltranslate_command) };
+
+        let returned_doc: Document = unsafe {
+            bson::from_slice(
+                Vec::from_raw_parts(
+                    decomposed_library_version.data.cast_mut(),
+                    decomposed_library_version.length,
+                    decomposed_library_version.capacity,
+                )
+                .as_slice(),
+            )
+            .expect("Failed to deserialize result")
+        };
+
+        let libmongosql_library_version = returned_doc
+            .get("version")
+            .expect("`version` was missing")
+            .as_str()
+            .expect("`version` should be a String");
+
+        Ok(libmongosql_library_version)
+    }
+
+    fn is_libmongosqltranslate_compatible_with_driver_version(
+        run_command_function: &Symbol<
+            'static,
+            unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
+        >,
+    ) -> Result<bool> {
+        let check_driver_version_command = doc! {
+            "command": "checkDriverVersion",
+            "options": {
+                "driverVersion": DRIVER_ODBC_VERSION.clone(),
+                "odbcDriver": true
+            },
+        };
+
+        let check_driver_version_command_bytes = bson::to_vec(&check_driver_version_command)
+            .expect("Failed to serialize Document into BSON bytes");
+
+        let length = check_driver_version_command_bytes.len();
+
+        let capacity = check_driver_version_command_bytes.capacity();
+
+        let check_driver_version_mongosqltranslate_command = LibmongosqltranslateCommand {
+            data: Box::into_raw(check_driver_version_command_bytes.into_boxed_slice()).cast(),
+            length,
+            capacity,
+        };
+
+        let decomposed_library_compatibility =
+            unsafe { run_command_function(check_driver_version_mongosqltranslate_command) };
+
+        let returned_doc: Document = unsafe {
+            bson::from_slice(
+                Vec::from_raw_parts(
+                    decomposed_library_compatibility.data.cast_mut(),
+                    decomposed_library_compatibility.length,
+                    decomposed_library_compatibility.capacity,
+                )
+                .as_slice(),
+            )
+            .expect("Failed to deserialize result")
+        };
+
+        let is_libmongosql_library_compatible = returned_doc
+            .get("compatibility")
+            .expect("`compatibility` was missing")
+            .as_bool()
+            .expect("`compatibility` should be a bool");
+
+        Ok(is_libmongosql_library_compatible)
+    }
+
     /// Creates a new MongoConnection with the given settings and runs a command to make
     /// sure that the MongoConnection is valid.
     ///
@@ -183,95 +283,18 @@ impl MongoConnection {
                     .expect("Failed to load runCommand symbol")
             };
 
-            // getLibraryVersion
-            let get_library_version_command = doc! {
-                "command": "getMongosqlTranslateVersion",
-                "options": {},
-            };
+            let libmongosql_library_version =
+                MongoConnection::get_libmongosqltranslate_version(&run_command_function)
+                    .expect("error");
 
-            let get_library_version_command_bytes = bson::to_vec(&get_library_version_command)
-                .expect("Failed to serialize Document into BSON bytes");
-
-            let length = get_library_version_command_bytes.len();
-
-            let capacity = get_library_version_command_bytes.capacity();
-
-            let get_library_version_mongosqltranslate_command = LibmongosqltranslateCommand {
-                data: Box::into_raw(get_library_version_command_bytes.into_boxed_slice()).cast(),
-                length,
-                capacity,
-            };
-
-            let decomposed_library_version =
-                unsafe { run_command_function(get_library_version_mongosqltranslate_command) };
-
-            let returned_doc: Document = unsafe {
-                bson::from_slice(
-                    Vec::from_raw_parts(
-                        decomposed_library_version.data.cast_mut(),
-                        decomposed_library_version.length,
-                        decomposed_library_version.capacity,
-                    )
-                    .as_slice(),
-                )
-                .expect("Failed to deserialize result")
-            };
-
-            let libmongosql_library_version = returned_doc
-                .get("version")
-                .expect("`version` was missing")
-                .as_str()
-                .expect("`version` should be a String");
-
+            // TODO
+            // where do I put the library version for the logs?
             dbg!(libmongosql_library_version);
 
-            // do something with library version
-            // where do I put the library version for the logs?
-
             // CheckDriverVersion
-            let check_driver_version_command = doc! {
-                "command": "checkDriverVersion",
-                "options": {
-                    "driverVersion": DRIVER_ODBC_VERSION.clone(),
-                    "odbcDriver": true
-                },
-            };
-
-            let check_driver_version_command_bytes = bson::to_vec(&check_driver_version_command)
-                .expect("Failed to serialize Document into BSON bytes");
-
-            let length = check_driver_version_command_bytes.len();
-
-            let capacity = check_driver_version_command_bytes.capacity();
-
-            let check_driver_version_mongosqltranslate_command = LibmongosqltranslateCommand {
-                data: Box::into_raw(check_driver_version_command_bytes.into_boxed_slice()).cast(),
-                length,
-                capacity,
-            };
-
-            let decomposed_library_compatibility =
-                unsafe { run_command_function(check_driver_version_mongosqltranslate_command) };
-
-            let returned_doc: Document = unsafe {
-                bson::from_slice(
-                    Vec::from_raw_parts(
-                        decomposed_library_compatibility.data.cast_mut(),
-                        decomposed_library_compatibility.length,
-                        decomposed_library_compatibility.capacity,
-                    )
-                    .as_slice(),
-                )
-                .expect("Failed to deserialize result")
-            };
-
-            let is_libmongosql_library_compatible = returned_doc
-                .get("compatibility")
-                .expect("`compatibility` was missing")
-                .as_bool()
-                .expect("`compatibility` should be a bool");
-
-            if !is_libmongosql_library_compatible {
+            if !MongoConnection::is_libmongosqltranslate_compatible_with_driver_version(
+                &run_command_function,
+            ) {
                 return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
                     &DRIVER_ODBC_VERSION,
                 ));
