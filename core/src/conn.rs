@@ -145,7 +145,7 @@ impl MongoConnection {
             'static,
             unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
         >,
-    ) -> Result<&str> {
+    ) -> Result<String> {
         // getLibraryVersion
         let get_library_version_command = doc! {
             "command": "getMongosqlTranslateVersion",
@@ -184,7 +184,8 @@ impl MongoConnection {
             .get("version")
             .expect("`version` was missing")
             .as_str()
-            .expect("`version` should be a String");
+            .expect("`version` should be a String")
+            .to_string();
 
         Ok(libmongosql_library_version)
     }

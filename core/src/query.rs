@@ -139,9 +139,7 @@ impl MongoQuery {
         let schema_collection = db.collection::<Document>("__sql_schemas_");
 
         // create the schema_catalog document
-        let mut schema_catalog_doc: Document = doc! {
-            db: doc!{}
-        };
+        let mut db_doc = doc! {};
 
         for namespace in namespaces {
             let namespace_schema_doc: Document = client.runtime.block_on(async {
@@ -158,11 +156,12 @@ impl MongoQuery {
                 .get("schema")
                 .expect("`schema` field is missing.");
 
-            schema_catalog_doc
-                .get_document_mut(db)
-                .unwrap()
-                .insert(namespace.collection, bson_schema);
+            db_doc.insert(namespace.collection, bson_schema);
         }
+
+        let schema_catalog_doc: Document = doc! {
+            db: db_doc
+        };
 
         let translate_command = doc! {
             "command": "translate",
