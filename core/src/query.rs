@@ -54,12 +54,6 @@ pub struct Translation {
 }
 
 impl Translation {
-    // pub fn from_bson(bson: Bson) -> Result<Self> {
-    //     let deserializer = bson::Deserializer::new(bson);
-    //     let deserializer = serde_stacker::Deserializer::new(deserializer);
-    //     Deserialize::deserialize(deserializer).map_err(|_| Error::BsonDeserializationFailure)
-    // }
-
     pub fn from_document(doc: &Document) -> Result<Self> {
         let as_bson = Bson::Document(doc.clone());
         let deserializer = bson::Deserializer::new(as_bson);

@@ -20,20 +20,6 @@ pub struct Schema {
 }
 
 impl Schema {
-    // you may not actually need these.
-
-    // pub fn to_bson(&self) -> Result<Bson, Error> {
-    //     let serializer = bson::Serializer::new();
-    //     let serializer = serde_stacker::Serializer::new(serializer);
-    //     self.serialize(serializer)
-    //         .map_err(|_| Error::BsonSerializationFailure)
-    // }
-    // pub fn from_bson(bson: Bson) -> Result<Self, Error> {
-    //     let deserializer = bson::Deserializer::new(bson);
-    //     let deserializer = serde_stacker::Deserializer::new(deserializer);
-    //     Deserialize::deserialize(deserializer).map_err(|_| Error::BsonDeserializationFailure)
-    // }
-
     // Remove multiple recursively removes Multiple Bson Type entries.
     pub fn remove_multiple(mut self) -> Result<Self, Error> {
         // it is invalid for both any_of and bson_type to be set because
