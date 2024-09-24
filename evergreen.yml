@@ -465,7 +465,7 @@ functions:
           docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
           --env-file silkbomb.env \
           artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:1.0 \
-          upload --silk-asset-group ${SILK_ASSET_GROUP} --sbom-in /pwd/$SBOM_FINAL
+          upload --silk-asset-group ${SILK_ASSET_GROUP} --sbom-in /pwd/$SBOM_FINAL --force
           echo "-------------------------------"
 
   "pull augmented SBOM from Silk":
