@@ -3,7 +3,11 @@ use crate::load_library::{get_mongosqltranslate_library, load_mongosqltranslate_
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
+use bson::Document;
+use constants::DRIVER_ODBC_VERSION;
+use definitions::LibmongosqltranslateCommand;
 use lazy_static::lazy_static;
+use libloading::Symbol;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
     Client,
@@ -12,11 +16,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "garbage_collect")]
 use std::sync::Weak;
 use std::{sync::Arc, time::Duration};
-use bson::Document;
-use libloading::Symbol;
 use tokio::runtime::Runtime;
-use constants::DRIVER_ODBC_VERSION;
-use definitions::LibmongosqltranslateCommand;
 
 // we make from UserOptions to Client and Weak<Runtime> so that we do not hold around
 // Clients and Runtimes that are no longer in use. In most cases it won't matter, but for drivers that live in
@@ -172,11 +172,16 @@ impl MongoConnection {
 
         load_mongosqltranslate_library();
 
-        if let Some(library) = get_mongosqltranslate_library(){
-
+        if let Some(library) = get_mongosqltranslate_library() {
             // get runCommand
-            let run_command_function: Symbol<'static, unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand>
-                = unsafe {library.get(b"runCommand").expect("Failed to load runCommand symbol")};
+            let run_command_function: Symbol<
+                'static,
+                unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
+            > = unsafe {
+                library
+                    .get(b"runCommand")
+                    .expect("Failed to load runCommand symbol")
+            };
 
             // getLibraryVersion
             let get_library_version_command = doc! {
@@ -184,7 +189,8 @@ impl MongoConnection {
                 "options": {},
             };
 
-            let get_library_version_command_bytes = bson::to_vec(&get_library_version_command).expect("Failed to serialize Document into BSON bytes");
+            let get_library_version_command_bytes = bson::to_vec(&get_library_version_command)
+                .expect("Failed to serialize Document into BSON bytes");
 
             let length = get_library_version_command_bytes.len();
 
@@ -196,7 +202,8 @@ impl MongoConnection {
                 capacity,
             };
 
-            let decomposed_library_version = unsafe {  run_command_function(get_library_version_mongosqltranslate_command) };
+            let decomposed_library_version =
+                unsafe { run_command_function(get_library_version_mongosqltranslate_command) };
 
             let returned_doc: Document = unsafe {
                 bson::from_slice(
@@ -204,11 +211,17 @@ impl MongoConnection {
                         decomposed_library_version.data.cast_mut(),
                         decomposed_library_version.length,
                         decomposed_library_version.capacity,
-                    ).as_slice(),
-                ).expect("Failed to deserialize result")
+                    )
+                    .as_slice(),
+                )
+                .expect("Failed to deserialize result")
             };
 
-            let libmongosql_library_version = returned_doc.get("version").expect("`version` was missing").as_str().expect("`version` should be a String");
+            let libmongosql_library_version = returned_doc
+                .get("version")
+                .expect("`version` was missing")
+                .as_str()
+                .expect("`version` should be a String");
 
             dbg!(libmongosql_library_version);
 
@@ -224,7 +237,8 @@ impl MongoConnection {
                 },
             };
 
-            let check_driver_version_command_bytes = bson::to_vec(&check_driver_version_command).expect("Failed to serialize Document into BSON bytes");
+            let check_driver_version_command_bytes = bson::to_vec(&check_driver_version_command)
+                .expect("Failed to serialize Document into BSON bytes");
 
             let length = check_driver_version_command_bytes.len();
 
@@ -236,7 +250,8 @@ impl MongoConnection {
                 capacity,
             };
 
-            let decomposed_library_compatibility = unsafe {  run_command_function(check_driver_version_mongosqltranslate_command) };
+            let decomposed_library_compatibility =
+                unsafe { run_command_function(check_driver_version_mongosqltranslate_command) };
 
             let returned_doc: Document = unsafe {
                 bson::from_slice(
@@ -244,16 +259,23 @@ impl MongoConnection {
                         decomposed_library_compatibility.data.cast_mut(),
                         decomposed_library_compatibility.length,
                         decomposed_library_compatibility.capacity,
-                    ).as_slice(),
-                ).expect("Failed to deserialize result")
+                    )
+                    .as_slice(),
+                )
+                .expect("Failed to deserialize result")
             };
 
-            let is_libmongosql_library_compatible = returned_doc.get("compatibility").expect("`compatibility` was missing").as_bool().expect("`compatibility` should be a bool");
+            let is_libmongosql_library_compatible = returned_doc
+                .get("compatibility")
+                .expect("`compatibility` was missing")
+                .as_bool()
+                .expect("`compatibility` should be a bool");
 
-            if !is_libmongosql_library_compatible{
-                return Err(Error::LibmongosqltranslateLibraryIsIncompatible(&DRIVER_ODBC_VERSION));
+            if !is_libmongosql_library_compatible {
+                return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
+                    &DRIVER_ODBC_VERSION,
+                ));
             }
-
         }
 
         let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await });
@@ -287,7 +309,7 @@ impl MongoConnection {
             operation_timeout: operation_timeout.map(|to| Duration::new(u64::from(to), 0)),
             uuid_repr,
             runtime,
-            cluster_type: type_of_cluster
+            cluster_type: type_of_cluster,
         };
 
         // Verify that the connection is working and the user has access to the default DB

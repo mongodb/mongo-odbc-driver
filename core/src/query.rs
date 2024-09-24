@@ -1,4 +1,7 @@
-use std::collections::BTreeSet;
+use crate::cluster_type::MongoClusterType;
+use crate::col_metadata::VersionedJsonSchema;
+use crate::json_schema::Schema;
+use crate::load_library::get_mongosqltranslate_library;
 use crate::{
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     conn::MongoConnection,
@@ -6,19 +9,16 @@ use crate::{
     stmt::MongoStatement,
     Error, TypeMode,
 };
+use definitions::LibmongosqltranslateCommand;
+use libloading::Symbol;
 use mongodb::{
     bson::{doc, document::ValueAccessError, Bson, Document},
     error::{CommandError, ErrorKind},
     Cursor,
 };
-use std::time::Duration;
-use libloading::Symbol;
 use serde::{Deserialize, Serialize};
-use definitions::LibmongosqltranslateCommand;
-use crate::cluster_type::MongoClusterType;
-use crate::col_metadata::VersionedJsonSchema;
-use crate::json_schema::Schema;
-use crate::load_library::get_mongosqltranslate_library;
+use std::collections::BTreeSet;
+use std::time::Duration;
 
 const BATCH_SIZE_REPLACEMENT_THRESHOLD: u32 = 100;
 
@@ -53,7 +53,7 @@ pub struct Translation {
     pub select_order: Vec<Vec<String>>,
 }
 
-impl Translation{
+impl Translation {
     // pub fn from_bson(bson: Bson) -> Result<Self> {
     //     let deserializer = bson::Deserializer::new(bson);
     //     let deserializer = serde_stacker::Deserializer::new(deserializer);
@@ -68,7 +68,7 @@ impl Translation{
     }
 }
 
-impl Namespace{
+impl Namespace {
     pub fn from_bson(bson: Bson) -> Result<BTreeSet<Self>> {
         let deserializer = bson::Deserializer::new(bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
@@ -105,7 +105,8 @@ impl MongoQuery {
                 })?;
                 drop(guard);
                 let get_result_schema_response: SqlGetSchemaResponse =
-                    mongodb::bson::from_document(schema_response).map_err(Error::QueryDeserialization)?;
+                    mongodb::bson::from_document(schema_response)
+                        .map_err(Error::QueryDeserialization)?;
 
                 get_result_schema_response.process_result_metadata(
                     current_db,
@@ -114,13 +115,20 @@ impl MongoQuery {
                 )?
             }
             MongoClusterType::Enterprise => {
-
                 // If the library was not loaded, it would have failed on connection, so
                 // at this point, we can assume that the library is loaded.
                 let library = get_mongosqltranslate_library().expect("Mongosqltranslate library is not available; however, this shouldn't be possible.");
 
-                let run_command_function: Symbol<'static, unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand>
-                    = unsafe {library.get(b"runCommand").expect("Failed to load runCommand symbol")};
+                let run_command_function: Symbol<
+                    'static,
+                    unsafe extern "C" fn(
+                        LibmongosqltranslateCommand,
+                    ) -> LibmongosqltranslateCommand,
+                > = unsafe {
+                    library
+                        .get(b"runCommand")
+                        .expect("Failed to load runCommand symbol")
+                };
 
                 // get relevant namespaces
                 let get_namespaces_command = doc! {
@@ -131,7 +139,8 @@ impl MongoQuery {
                     },
                 };
 
-                let get_namespaces_command_bytes = bson::to_vec(&get_namespaces_command).expect("Failed to serialize Document into BSON bytes");
+                let get_namespaces_command_bytes = bson::to_vec(&get_namespaces_command)
+                    .expect("Failed to serialize Document into BSON bytes");
 
                 let length = get_namespaces_command_bytes.len();
 
@@ -143,7 +152,8 @@ impl MongoQuery {
                     capacity,
                 };
 
-                let decomposed_namespaces = unsafe {  run_command_function(get_namespace_mongosqltranslate_command) };
+                let decomposed_namespaces =
+                    unsafe { run_command_function(get_namespace_mongosqltranslate_command) };
 
                 let returned_doc: Document = unsafe {
                     bson::from_slice(
@@ -151,12 +161,19 @@ impl MongoQuery {
                             decomposed_namespaces.data.cast_mut(),
                             decomposed_namespaces.length,
                             decomposed_namespaces.capacity,
-                        ).as_slice(),
-                    ).expect("Failed to deserialize result")
+                        )
+                        .as_slice(),
+                    )
+                    .expect("Failed to deserialize result")
                 };
 
-                let namespaces: BTreeSet<Namespace> = Namespace::from_bson(returned_doc.get("namespaces")
-                    .expect("`namespace` was missing").clone()).expect("namespaces could not be deserialized");
+                let namespaces: BTreeSet<Namespace> = Namespace::from_bson(
+                    returned_doc
+                        .get("namespaces")
+                        .expect("`namespace` was missing")
+                        .clone(),
+                )
+                .expect("namespaces could not be deserialized");
 
                 let schema_collection = db.collection::<Document>("__sql_schemas_");
 
@@ -165,21 +182,28 @@ impl MongoQuery {
                     current_db: doc!{}
                 };
 
-                for namespace in namespaces{
-                    let namespace_schema_doc: Document = client.runtime.block_on(
-                        async {
-                            schema_collection.find_one(doc! {
+                for namespace in namespaces {
+                    let namespace_schema_doc: Document = client.runtime.block_on(async {
+                        schema_collection
+                            .find_one(doc! {
                                 "_id": &namespace.collection
-                            }).await.expect("error happened").expect("schema doesn't exist in the collection")
-                        }
-                    );
+                            })
+                            .await
+                            .expect("error happened")
+                            .expect("schema doesn't exist in the collection")
+                    });
 
-                    let bson_schema = namespace_schema_doc.get("schema").expect("`schema` field is missing.");
+                    let bson_schema = namespace_schema_doc
+                        .get("schema")
+                        .expect("`schema` field is missing.");
 
                     //let json_schema: Schema = Schema::from_bson(bson_schema.clone()).expect("schema could not be deserialized");
 
                     // somehow insert the json_schemas into the mutable document?
-                    schema_catalog_doc.get_document_mut(current_db).unwrap().insert(namespace.collection, bson_schema); //json_schema.to_bson().unwrap());
+                    schema_catalog_doc
+                        .get_document_mut(current_db)
+                        .unwrap()
+                        .insert(namespace.collection, bson_schema); //json_schema.to_bson().unwrap());
                 }
 
                 // translate command. excludeNamespaces = false; relax_schema_checking = true
@@ -195,7 +219,8 @@ impl MongoQuery {
                     },
                 };
 
-                let translate_command_bytes = bson::to_vec(&translate_command).expect("Failed to serialize Document into BSON bytes");
+                let translate_command_bytes = bson::to_vec(&translate_command)
+                    .expect("Failed to serialize Document into BSON bytes");
 
                 let length = translate_command_bytes.len();
 
@@ -207,7 +232,8 @@ impl MongoQuery {
                     capacity,
                 };
 
-                let decomposed_translation = unsafe {  run_command_function(translate_mongosqltranslate_command) };
+                let decomposed_translation =
+                    unsafe { run_command_function(translate_mongosqltranslate_command) };
 
                 let returned_doc: Document = unsafe {
                     bson::from_slice(
@@ -215,15 +241,18 @@ impl MongoQuery {
                             decomposed_translation.data.cast_mut(),
                             decomposed_translation.length,
                             decomposed_translation.capacity,
-                        ).as_slice(),
-                    ).expect("Failed to deserialize result")
+                        )
+                        .as_slice(),
+                    )
+                    .expect("Failed to deserialize result")
                 };
 
-                let mongosql_translation = Translation::from_document(&returned_doc).expect("Failed to deserialize into Translation");
+                let mongosql_translation = Translation::from_document(&returned_doc)
+                    .expect("Failed to deserialize into Translation");
 
-                let translation_metadata = SqlGetSchemaResponse{
+                let translation_metadata = SqlGetSchemaResponse {
                     ok: 1,
-                    schema: VersionedJsonSchema{
+                    schema: VersionedJsonSchema {
                         version: 1,
                         json_schema: mongosql_translation.result_set_schema,
                     },
@@ -323,14 +352,22 @@ impl MongoStatement for MongoQuery {
                     "statement": &self.query,
                 }}];
                 (pipeline, None)
-            },
+            }
             MongoClusterType::Enterprise => {
                 // If the library was not loaded, it would have failed on connection, so
                 // at this point, we can assume that the library is loaded.
                 let library = get_mongosqltranslate_library().expect("Mongosqltranslate library is not available; however, this shouldn't be possible.");
 
-                let run_command_function: Symbol<'static, unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand>
-                    = unsafe {library.get(b"runCommand").expect("Failed to load runCommand symbol")};
+                let run_command_function: Symbol<
+                    'static,
+                    unsafe extern "C" fn(
+                        LibmongosqltranslateCommand,
+                    ) -> LibmongosqltranslateCommand,
+                > = unsafe {
+                    library
+                        .get(b"runCommand")
+                        .expect("Failed to load runCommand symbol")
+                };
 
                 // get relevant namespaces
                 let get_namespaces_command = doc! {
@@ -341,7 +378,8 @@ impl MongoStatement for MongoQuery {
                     },
                 };
 
-                let get_namespaces_command_bytes = bson::to_vec(&get_namespaces_command).expect("Failed to serialize Document into BSON bytes");
+                let get_namespaces_command_bytes = bson::to_vec(&get_namespaces_command)
+                    .expect("Failed to serialize Document into BSON bytes");
 
                 let length = get_namespaces_command_bytes.len();
 
@@ -353,7 +391,8 @@ impl MongoStatement for MongoQuery {
                     capacity,
                 };
 
-                let decomposed_namespaces = unsafe {  run_command_function(get_namespace_mongosqltranslate_command) };
+                let decomposed_namespaces =
+                    unsafe { run_command_function(get_namespace_mongosqltranslate_command) };
 
                 let returned_doc: Document = unsafe {
                     bson::from_slice(
@@ -361,12 +400,19 @@ impl MongoStatement for MongoQuery {
                             decomposed_namespaces.data.cast_mut(),
                             decomposed_namespaces.length,
                             decomposed_namespaces.capacity,
-                        ).as_slice(),
-                    ).expect("Failed to deserialize result")
+                        )
+                        .as_slice(),
+                    )
+                    .expect("Failed to deserialize result")
                 };
 
-                let namespaces: BTreeSet<Namespace> = Namespace::from_bson(returned_doc.get("namespaces")
-                    .expect("`namespace` was missing").clone()).expect("namespaces could not be deserialized");
+                let namespaces: BTreeSet<Namespace> = Namespace::from_bson(
+                    returned_doc
+                        .get("namespaces")
+                        .expect("`namespace` was missing")
+                        .clone(),
+                )
+                .expect("namespaces could not be deserialized");
 
                 let schema_collection = db.collection::<Document>("__sql_schemas_");
 
@@ -375,21 +421,28 @@ impl MongoStatement for MongoQuery {
                     current_db: doc!{}
                 };
 
-                for namespace in namespaces{
-                    let namespace_schema_doc: Document = connection.runtime.block_on(
-                        async {
-                            schema_collection.find_one(doc! {
+                for namespace in namespaces {
+                    let namespace_schema_doc: Document = connection.runtime.block_on(async {
+                        schema_collection
+                            .find_one(doc! {
                                 "_id": &namespace.collection
-                            }).await.expect("error happened").expect("schema doesn't exist in the collection")
-                        }
-                    );
+                            })
+                            .await
+                            .expect("error happened")
+                            .expect("schema doesn't exist in the collection")
+                    });
 
-                    let bson_schema = namespace_schema_doc.get("schema").expect("`schema` field is missing.");
+                    let bson_schema = namespace_schema_doc
+                        .get("schema")
+                        .expect("`schema` field is missing.");
 
                     //let json_schema: Schema = Schema::from_bson(bson_schema.clone()).expect("schema could not be deserialized");
 
                     // somehow insert the json_schemas into the mutable document?
-                    schema_catalog_doc.get_document_mut(current_db).unwrap().insert(namespace.collection, bson_schema); //json_schema.to_bson().unwrap());
+                    schema_catalog_doc
+                        .get_document_mut(current_db)
+                        .unwrap()
+                        .insert(namespace.collection, bson_schema); //json_schema.to_bson().unwrap());
                 }
 
                 // translate command. excludeNamespaces = false; relax_schema_checking = true
@@ -405,7 +458,8 @@ impl MongoStatement for MongoQuery {
                     },
                 };
 
-                let translate_command_bytes = bson::to_vec(&translate_command).expect("Failed to serialize Document into BSON bytes");
+                let translate_command_bytes = bson::to_vec(&translate_command)
+                    .expect("Failed to serialize Document into BSON bytes");
 
                 let length = translate_command_bytes.len();
 
@@ -417,7 +471,8 @@ impl MongoStatement for MongoQuery {
                     capacity,
                 };
 
-                let decomposed_translation = unsafe {  run_command_function(translate_mongosqltranslate_command) };
+                let decomposed_translation =
+                    unsafe { run_command_function(translate_mongosqltranslate_command) };
 
                 let returned_doc: Document = unsafe {
                     bson::from_slice(
@@ -425,21 +480,29 @@ impl MongoStatement for MongoQuery {
                             decomposed_translation.data.cast_mut(),
                             decomposed_translation.length,
                             decomposed_translation.capacity,
-                        ).as_slice(),
-                    ).expect("Failed to deserialize result")
+                        )
+                        .as_slice(),
+                    )
+                    .expect("Failed to deserialize result")
                 };
 
-                let mongosql_translation = Translation::from_document(&returned_doc).expect("Failed to deserialize into Translation");
+                let mongosql_translation = Translation::from_document(&returned_doc)
+                    .expect("Failed to deserialize into Translation");
 
-                let pipeline = mongosql_translation.pipeline.as_array().expect("pipeline should be an array").into_iter()
-                    .map(|bson_doc| bson_doc.as_document().expect("should be a doc").to_owned()).collect::<Vec<Document>>();
+                let pipeline = mongosql_translation
+                    .pipeline
+                    .as_array()
+                    .expect("pipeline should be an array")
+                    .iter()
+                    .map(|bson_doc| bson_doc.as_document().expect("should be a doc").to_owned())
+                    .collect::<Vec<Document>>();
 
                 (pipeline, mongosql_translation.target_collection)
-            },
+            }
             MongoClusterType::Community | MongoClusterType::UnknownTarget => {
                 // On connection, these types should get caught and throw an error.
                 unreachable!()
-            },
+            }
         };
 
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
@@ -448,11 +511,11 @@ impl MongoStatement for MongoQuery {
             ErrorKind::Command(CommandError {
                 code: 11601, // interrupted
                 ..
-                }) => Error::QueryCancelled,
+            }) => Error::QueryCancelled,
             _ => Error::QueryExecutionFailed(e),
         };
 
-        let cursor: Cursor<Document> =  if let Some(c) = collection {
+        let cursor: Cursor<Document> = if let Some(c) = collection {
             let collection = db.collection::<Document>(c.as_str());
             let mut aggregate = collection.aggregate(pipeline).comment(stmt_id);
 

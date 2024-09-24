@@ -59,7 +59,7 @@ pub enum Error {
     #[error("failed to deserialize JSON Schema from BSON")]
     BsonDeserializationFailure,
     #[error("failed to serialize JSON Schema to BSON")]
-    BsonSerializationFailure
+    BsonSerializationFailure,
 }
 
 impl Error {
@@ -93,7 +93,9 @@ impl Error {
             | Error::UnsupportedOperation(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
-            Error::BsonDeserializationFailure | Error::BsonSerializationFailure | Error::LibmongosqltranslateLibraryIsIncompatible(_) => GENERAL_ERROR
+            Error::BsonDeserializationFailure
+            | Error::BsonSerializationFailure
+            | Error::LibmongosqltranslateLibraryIsIncompatible(_) => GENERAL_ERROR,
         }
     }
 

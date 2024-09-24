@@ -20,7 +20,6 @@ pub struct Schema {
 }
 
 impl Schema {
-
     // you may not actually need these.
 
     // pub fn to_bson(&self) -> Result<Bson, Error> {
