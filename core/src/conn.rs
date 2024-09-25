@@ -295,7 +295,7 @@ impl MongoConnection {
             // CheckDriverVersion
             if !MongoConnection::is_libmongosqltranslate_compatible_with_driver_version(
                 &run_command_function,
-            ) {
+            ).expect("error") {
                 return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
                     &DRIVER_ODBC_VERSION,
                 ));

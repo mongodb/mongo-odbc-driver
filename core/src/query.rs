@@ -11,11 +11,7 @@ use crate::{
 };
 use definitions::LibmongosqltranslateCommand;
 use libloading::Symbol;
-use mongodb::{
-    bson::{doc, document::ValueAccessError, Bson, Document},
-    error::{CommandError, ErrorKind},
-    Cursor,
-};
+use mongodb::{bson::{doc, document::ValueAccessError, Bson, Document}, error::{CommandError, ErrorKind}, Cursor, Database};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::time::Duration;
@@ -132,9 +128,10 @@ impl MongoQuery {
             unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
         >,
         sql_query: &str,
-        db: &String,
+        current_db: &String,
         namespaces: BTreeSet<Namespace>,
         client: &MongoConnection,
+        db: Database
     ) -> Result<Translation> {
         let schema_collection = db.collection::<Document>("__sql_schemas_");
 
@@ -160,14 +157,14 @@ impl MongoQuery {
         }
 
         let schema_catalog_doc: Document = doc! {
-            db: db_doc
+            current_db: db_doc
         };
 
         let translate_command = doc! {
             "command": "translate",
             "options": {
                 "sql": sql_query,
-                "db": db,
+                "db": current_db,
                 "excludeNamespaces": false,
                 "relaxSchemaChecking": true,
                 "schemaCatalog": schema_catalog_doc
@@ -273,6 +270,7 @@ impl MongoQuery {
                     current_db,
                     namespaces,
                     client,
+                    db
                 )
                 .expect("error");
 
@@ -410,6 +408,7 @@ impl MongoStatement for MongoQuery {
                     current_db,
                     namespaces,
                     connection,
+                    db
                 )
                 .expect("error");
 
