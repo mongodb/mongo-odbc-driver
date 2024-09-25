@@ -139,23 +139,22 @@ impl MongoConnection {
     }
 
     fn get_libmongosqltranslate_version() -> Result<String> {
-        // getLibraryVersion
-        let get_library_version_command = doc! {
+        let get_mongosqltranslate_version_command = doc! {
             "command": "getMongosqlTranslateVersion",
             "options": {},
         };
 
         let returned_doc =
-            handle_libmongosqltranslate_command(get_library_version_command).expect("error");
+            handle_libmongosqltranslate_command(get_mongosqltranslate_version_command).expect("error");
 
-        let libmongosql_library_version = returned_doc
+        let libmongosqltranslate_version = returned_doc
             .get("version")
             .expect("`version` was missing")
             .as_str()
             .expect("`version` should be a String")
             .to_string();
 
-        Ok(libmongosql_library_version)
+        Ok(libmongosqltranslate_version)
     }
 
     fn is_libmongosqltranslate_compatible_with_driver_version() -> Result<bool> {
@@ -170,13 +169,13 @@ impl MongoConnection {
         let returned_doc =
             handle_libmongosqltranslate_command(check_driver_version_command).expect("error");
 
-        let is_libmongosql_library_compatible = returned_doc
+        let is_libmongosqltranslate_compatible = returned_doc
             .get("compatibility")
             .expect("`compatibility` was missing")
             .as_bool()
             .expect("`compatibility` should be a bool");
 
-        Ok(is_libmongosql_library_compatible)
+        Ok(is_libmongosqltranslate_compatible)
     }
 
     /// Creates a new MongoConnection with the given settings and runs a command to make
@@ -213,11 +212,11 @@ impl MongoConnection {
 
         let is_libmongosqltranslate_compatible_with_driver_version =
             if get_mongosqltranslate_library().is_some() {
-                let libmongosql_library_version =
+                let libmongosqltranslate_version =
                     MongoConnection::get_libmongosqltranslate_version().expect("error");
 
                 // TODO where do I put the library version for the logs?
-                dbg!(libmongosql_library_version);
+                dbg!(libmongosqltranslate_version);
 
                 // CheckDriverVersion
                 let compatibility =

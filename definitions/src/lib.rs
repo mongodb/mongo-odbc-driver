@@ -413,9 +413,8 @@ pub enum RowStatus {
     SQL_ROW_SUCCESS_WITH_INFO = 6,
 }
 
-// gonna need to resolve this with what oliver did later.
 #[repr(C)]
-pub struct LibmongosqltranslateCommand {
+pub struct LibmongosqltranslateDataIO {
     pub data: *const u8,
     pub length: usize,
     pub capacity: usize,

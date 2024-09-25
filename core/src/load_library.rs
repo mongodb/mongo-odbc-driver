@@ -2,6 +2,7 @@ use libloading::{Library, Symbol};
 use std::env;
 use std::path::PathBuf;
 use std::sync::Once;
+use definitions::LibmongosqltranslateDataIO;
 
 const LIBRARY_NAME: &str = "mongosqltranslate";
 const MOCK_LIBRARY_NAME: &str = "mock_mongosqltranslate";
@@ -28,13 +29,6 @@ const LIBRARY_INSTALL_PATH: &str = "/opt/mongodb/atlas-sql-odbc-driver/";
 
 static INIT: Once = Once::new();
 static mut MONGOSQLTRANSLATE_LIBRARY: Option<Library> = None;
-
-#[repr(C)]
-pub struct RunCommandResult {
-    result_ptr: *const u8,
-    result_len: usize,
-    result_cap: usize,
-}
 
 fn get_library_name(library_type: &str) -> String {
     if cfg!(target_os = "windows") {
@@ -88,8 +82,8 @@ pub fn load_mongosqltranslate_library() {
     });
 }
 
-pub fn get_run_command() -> Result<
-    Symbol<'static, unsafe extern "C" fn(*const u8, usize) -> RunCommandResult>,
+pub fn get_mock_run_command() -> Result<
+    Symbol<'static, unsafe extern "C" fn(*const u8, usize) -> LibmongosqltranslateDataIO>,
     Box<dyn std::error::Error>,
 > {
     let library =
@@ -111,7 +105,7 @@ mod unit {
         load_mongosqltranslate_library();
         assert!(get_mongosqltranslate_library().is_some());
 
-        let run_command = get_run_command().expect("Failed to load runCommand symbol");
+        let run_command = get_mock_run_command().expect("Failed to load runCommand symbol");
         let test_doc = doc! { "test": "value" };
         let bson_bytes = bson::to_vec(&test_doc).expect("Failed to serialize BSON");
 
@@ -119,9 +113,9 @@ mod unit {
         let result = unsafe { run_command(bson_bytes.as_ptr(), bson_bytes.len()) };
         let result_vec = unsafe {
             Vec::from_raw_parts(
-                result.result_ptr as *mut u8,
-                result.result_len,
-                result.result_cap,
+                result.data as *mut u8,
+                result.length,
+                result.capacity,
             )
         };
         let result_doc: Document =

@@ -3,7 +3,7 @@ use bson::{doc, Document};
 use constants::SQL_ALL_TABLE_TYPES;
 mod test_connection;
 use crate::load_library::get_mongosqltranslate_library;
-use definitions::LibmongosqltranslateCommand;
+use definitions::LibmongosqltranslateDataIO;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use libloading::Symbol;
@@ -34,7 +34,7 @@ pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<D
 
     let run_command_function: Symbol<
         'static,
-        unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
+        unsafe extern "C" fn(LibmongosqltranslateDataIO) -> LibmongosqltranslateDataIO,
     > = unsafe {
         library
             .get(b"runCommand")
@@ -48,7 +48,7 @@ pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<D
 
     let command_bytes_capacity = command_bytes_vec.capacity();
 
-    let libmongosqltranslate_command = LibmongosqltranslateCommand {
+    let libmongosqltranslate_command = LibmongosqltranslateDataIO {
         data: Box::into_raw(command_bytes_vec.into_boxed_slice()).cast(),
         length: command_bytes_length,
         capacity: command_bytes_capacity,
