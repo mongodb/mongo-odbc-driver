@@ -1,8 +1,12 @@
-use bson::doc;
+use crate::Result;
+use bson::{doc, Document};
 use constants::SQL_ALL_TABLE_TYPES;
 mod test_connection;
+use crate::load_library::{get_mongosqltranslate_library, get_run_command};
+use definitions::LibmongosqltranslateCommand;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
+use libloading::Symbol;
 use mongodb::results::CollectionType;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 
@@ -22,6 +26,49 @@ lazy_static! {
         .unwrap();
     static ref NON_ESCAPED_UNDERSCORE: FancyRegex = FancyRegex::new(r"(?<!\\\\)_").unwrap();
     static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\\\)%").unwrap();
+}
+
+pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<Document> {
+    let library = get_mongosqltranslate_library()
+        .expect("Mongosqltranslate library is not available; however, this shouldn't be possible.");
+
+    let run_command_function: Symbol<
+        'static,
+        unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
+    > = unsafe {
+        library
+            .get(b"runCommand")
+            .expect("Failed to load runCommand symbol")
+    };
+
+    let command_bytes_vec =
+        bson::to_vec(&command).expect("Failed to serialize Document into BSON bytes");
+
+    let command_bytes_length = command_bytes_vec.len();
+
+    let command_bytes_capacity = command_bytes_vec.capacity();
+
+    let libmongosqltranslate_command = LibmongosqltranslateCommand {
+        data: Box::into_raw(command_bytes_vec.into_boxed_slice()).cast(),
+        length: command_bytes_length,
+        capacity: command_bytes_capacity,
+    };
+
+    let decomposed_returned_doc = unsafe { run_command_function(libmongosqltranslate_command) };
+
+    let returned_doc: Document = unsafe {
+        bson::from_slice(
+            Vec::from_raw_parts(
+                decomposed_returned_doc.data.cast_mut(),
+                decomposed_returned_doc.length,
+                decomposed_returned_doc.capacity,
+            )
+            .as_slice(),
+        )
+        .expect("Failed to deserialize result")
+    };
+
+    Ok(returned_doc)
 }
 
 // Converts SQL pattern characters (% and _) into proper regex patterns.

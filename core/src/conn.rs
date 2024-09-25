@@ -1,13 +1,11 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
 use crate::load_library::{get_mongosqltranslate_library, load_mongosqltranslate_library};
 use crate::odbc_uri::UserOptions;
+use crate::util::handle_libmongosqltranslate_command;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
-use bson::Document;
 use constants::DRIVER_ODBC_VERSION;
-use definitions::LibmongosqltranslateCommand;
 use lazy_static::lazy_static;
-use libloading::Symbol;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
     Client,
@@ -140,45 +138,15 @@ impl MongoConnection {
         }
     }
 
-    fn get_libmongosqltranslate_version(
-        run_command_function: &Symbol<
-            'static,
-            unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
-        >,
-    ) -> Result<String> {
+    fn get_libmongosqltranslate_version() -> Result<String> {
         // getLibraryVersion
         let get_library_version_command = doc! {
             "command": "getMongosqlTranslateVersion",
             "options": {},
         };
 
-        let get_library_version_command_bytes = bson::to_vec(&get_library_version_command)
-            .expect("Failed to serialize Document into BSON bytes");
-
-        let length = get_library_version_command_bytes.len();
-
-        let capacity = get_library_version_command_bytes.capacity();
-
-        let get_library_version_mongosqltranslate_command = LibmongosqltranslateCommand {
-            data: Box::into_raw(get_library_version_command_bytes.into_boxed_slice()).cast(),
-            length,
-            capacity,
-        };
-
-        let decomposed_library_version =
-            unsafe { run_command_function(get_library_version_mongosqltranslate_command) };
-
-        let returned_doc: Document = unsafe {
-            bson::from_slice(
-                Vec::from_raw_parts(
-                    decomposed_library_version.data.cast_mut(),
-                    decomposed_library_version.length,
-                    decomposed_library_version.capacity,
-                )
-                .as_slice(),
-            )
-            .expect("Failed to deserialize result")
-        };
+        let returned_doc =
+            handle_libmongosqltranslate_command(get_library_version_command).expect("error");
 
         let libmongosql_library_version = returned_doc
             .get("version")
@@ -190,12 +158,7 @@ impl MongoConnection {
         Ok(libmongosql_library_version)
     }
 
-    fn is_libmongosqltranslate_compatible_with_driver_version(
-        run_command_function: &Symbol<
-            'static,
-            unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
-        >,
-    ) -> Result<bool> {
+    fn is_libmongosqltranslate_compatible_with_driver_version() -> Result<bool> {
         let check_driver_version_command = doc! {
             "command": "checkDriverVersion",
             "options": {
@@ -204,33 +167,8 @@ impl MongoConnection {
             },
         };
 
-        let check_driver_version_command_bytes = bson::to_vec(&check_driver_version_command)
-            .expect("Failed to serialize Document into BSON bytes");
-
-        let length = check_driver_version_command_bytes.len();
-
-        let capacity = check_driver_version_command_bytes.capacity();
-
-        let check_driver_version_mongosqltranslate_command = LibmongosqltranslateCommand {
-            data: Box::into_raw(check_driver_version_command_bytes.into_boxed_slice()).cast(),
-            length,
-            capacity,
-        };
-
-        let decomposed_library_compatibility =
-            unsafe { run_command_function(check_driver_version_mongosqltranslate_command) };
-
-        let returned_doc: Document = unsafe {
-            bson::from_slice(
-                Vec::from_raw_parts(
-                    decomposed_library_compatibility.data.cast_mut(),
-                    decomposed_library_compatibility.length,
-                    decomposed_library_compatibility.capacity,
-                )
-                .as_slice(),
-            )
-            .expect("Failed to deserialize result")
-        };
+        let returned_doc =
+            handle_libmongosqltranslate_command(check_driver_version_command).expect("error");
 
         let is_libmongosql_library_compatible = returned_doc
             .get("compatibility")
@@ -273,29 +211,19 @@ impl MongoConnection {
 
         load_mongosqltranslate_library();
 
-        if let Some(library) = get_mongosqltranslate_library() {
-            // get runCommand
-            let run_command_function: Symbol<
-                'static,
-                unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
-            > = unsafe {
-                library
-                    .get(b"runCommand")
-                    .expect("Failed to load runCommand symbol")
-            };
-
+        if get_mongosqltranslate_library().is_some() {
             let libmongosql_library_version =
-                MongoConnection::get_libmongosqltranslate_version(&run_command_function)
-                    .expect("error");
+                MongoConnection::get_libmongosqltranslate_version().expect("error");
 
             // TODO
             // where do I put the library version for the logs?
             dbg!(libmongosql_library_version);
 
             // CheckDriverVersion
-            if !MongoConnection::is_libmongosqltranslate_compatible_with_driver_version(
-                &run_command_function,
-            ).expect("error") {
+            // actually you may want to error after the build info, so you know its an enterprise cluster. incompatible library with ADF doesnt matter.
+            if !MongoConnection::is_libmongosqltranslate_compatible_with_driver_version()
+                .expect("error")
+            {
                 return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
                     &DRIVER_ODBC_VERSION,
                 ));

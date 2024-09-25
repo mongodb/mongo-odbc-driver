@@ -1,7 +1,7 @@
 use crate::cluster_type::MongoClusterType;
 use crate::col_metadata::VersionedJsonSchema;
 use crate::json_schema::Schema;
-use crate::load_library::get_mongosqltranslate_library;
+use crate::util::handle_libmongosqltranslate_command;
 use crate::{
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     conn::MongoConnection,
@@ -9,9 +9,11 @@ use crate::{
     stmt::MongoStatement,
     Error, TypeMode,
 };
-use definitions::LibmongosqltranslateCommand;
-use libloading::Symbol;
-use mongodb::{bson::{doc, document::ValueAccessError, Bson, Document}, error::{CommandError, ErrorKind}, Cursor, Database};
+use mongodb::{
+    bson::{doc, document::ValueAccessError, Bson, Document},
+    error::{CommandError, ErrorKind},
+    Cursor, Database,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::time::Duration;
@@ -67,14 +69,7 @@ impl Namespace {
 }
 
 impl MongoQuery {
-    fn get_sql_query_namespaces(
-        run_command_function: &Symbol<
-            'static,
-            unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
-        >,
-        sql_query: &str,
-        db: &String,
-    ) -> Result<BTreeSet<Namespace>> {
+    fn get_sql_query_namespaces(sql_query: &str, db: &String) -> Result<BTreeSet<Namespace>> {
         let get_namespaces_command = doc! {
             "command": "getNamespaces",
             "options": {
@@ -83,33 +78,8 @@ impl MongoQuery {
             },
         };
 
-        let get_namespaces_command_bytes = bson::to_vec(&get_namespaces_command)
-            .expect("Failed to serialize Document into BSON bytes");
-
-        let length = get_namespaces_command_bytes.len();
-
-        let capacity = get_namespaces_command_bytes.capacity();
-
-        let get_namespace_mongosqltranslate_command = LibmongosqltranslateCommand {
-            data: Box::into_raw(get_namespaces_command_bytes.into_boxed_slice()).cast(),
-            length,
-            capacity,
-        };
-
-        let decomposed_namespaces =
-            unsafe { run_command_function(get_namespace_mongosqltranslate_command) };
-
-        let returned_doc: Document = unsafe {
-            bson::from_slice(
-                Vec::from_raw_parts(
-                    decomposed_namespaces.data.cast_mut(),
-                    decomposed_namespaces.length,
-                    decomposed_namespaces.capacity,
-                )
-                .as_slice(),
-            )
-            .expect("Failed to deserialize result")
-        };
+        let returned_doc =
+            handle_libmongosqltranslate_command(get_namespaces_command).expect("erorr");
 
         let namespaces: BTreeSet<Namespace> = Namespace::from_bson(
             returned_doc
@@ -123,15 +93,11 @@ impl MongoQuery {
     }
 
     fn translate_sql(
-        run_command_function: &Symbol<
-            'static,
-            unsafe extern "C" fn(LibmongosqltranslateCommand) -> LibmongosqltranslateCommand,
-        >,
         sql_query: &str,
         current_db: &String,
         namespaces: BTreeSet<Namespace>,
         client: &MongoConnection,
-        db: Database
+        db: Database,
     ) -> Result<Translation> {
         let schema_collection = db.collection::<Document>("__sql_schemas_");
 
@@ -171,33 +137,7 @@ impl MongoQuery {
             },
         };
 
-        let translate_command_bytes =
-            bson::to_vec(&translate_command).expect("Failed to serialize Document into BSON bytes");
-
-        let length = translate_command_bytes.len();
-
-        let capacity = translate_command_bytes.capacity();
-
-        let translate_mongosqltranslate_command = LibmongosqltranslateCommand {
-            data: Box::into_raw(translate_command_bytes.into_boxed_slice()).cast(),
-            length,
-            capacity,
-        };
-
-        let decomposed_translation =
-            unsafe { run_command_function(translate_mongosqltranslate_command) };
-
-        let returned_doc: Document = unsafe {
-            bson::from_slice(
-                Vec::from_raw_parts(
-                    decomposed_translation.data.cast_mut(),
-                    decomposed_translation.length,
-                    decomposed_translation.capacity,
-                )
-                .as_slice(),
-            )
-            .expect("Failed to deserialize result")
-        };
+        let returned_doc = handle_libmongosqltranslate_command(translate_command).expect("erorr");
 
         let mongosql_translation = Translation::from_document(&returned_doc)
             .expect("Failed to deserialize into Translation");
@@ -243,36 +183,14 @@ impl MongoQuery {
                 )?
             }
             MongoClusterType::Enterprise => {
-                // If the library was not loaded, it would have failed on connection, so
-                // at this point, we can assume that the library is loaded.
-                let library = get_mongosqltranslate_library().expect("Mongosqltranslate library is not available; however, this shouldn't be possible.");
-
-                let run_command_function: Symbol<
-                    'static,
-                    unsafe extern "C" fn(
-                        LibmongosqltranslateCommand,
-                    ) -> LibmongosqltranslateCommand,
-                > = unsafe {
-                    library
-                        .get(b"runCommand")
-                        .expect("Failed to load runCommand symbol")
-                };
-
                 // get relevant namespaces
                 let namespaces: BTreeSet<Namespace> =
-                    MongoQuery::get_sql_query_namespaces(&run_command_function, query, current_db)
-                        .expect("error");
+                    MongoQuery::get_sql_query_namespaces(query, current_db).expect("error");
 
                 // translate sql
-                let mongosql_translation = MongoQuery::translate_sql(
-                    &run_command_function,
-                    query,
-                    current_db,
-                    namespaces,
-                    client,
-                    db
-                )
-                .expect("error");
+                let mongosql_translation =
+                    MongoQuery::translate_sql(query, current_db, namespaces, client, db)
+                        .expect("error");
 
                 let translation_metadata = SqlGetSchemaResponse {
                     ok: 1,
@@ -378,39 +296,14 @@ impl MongoStatement for MongoQuery {
                 (pipeline, None)
             }
             MongoClusterType::Enterprise => {
-                // If the library was not loaded, it would have failed on connection, so
-                // at this point, we can assume that the library is loaded.
-                let library = get_mongosqltranslate_library().expect("Mongosqltranslate library is not available; however, this shouldn't be possible.");
-
-                let run_command_function: Symbol<
-                    'static,
-                    unsafe extern "C" fn(
-                        LibmongosqltranslateCommand,
-                    ) -> LibmongosqltranslateCommand,
-                > = unsafe {
-                    library
-                        .get(b"runCommand")
-                        .expect("Failed to load runCommand symbol")
-                };
-
                 // get relevant namespaces
-                let namespaces: BTreeSet<Namespace> = MongoQuery::get_sql_query_namespaces(
-                    &run_command_function,
-                    &self.query,
-                    current_db,
-                )
-                .expect("error");
+                let namespaces: BTreeSet<Namespace> =
+                    MongoQuery::get_sql_query_namespaces(&self.query, current_db).expect("error");
 
                 // translate sql
-                let mongosql_translation = MongoQuery::translate_sql(
-                    &run_command_function,
-                    &self.query,
-                    current_db,
-                    namespaces,
-                    connection,
-                    db
-                )
-                .expect("error");
+                let mongosql_translation =
+                    MongoQuery::translate_sql(&self.query, current_db, namespaces, connection, db)
+                        .expect("error");
 
                 let pipeline = mongosql_translation
                     .pipeline
