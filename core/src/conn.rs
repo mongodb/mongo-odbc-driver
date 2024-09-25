@@ -145,7 +145,8 @@ impl MongoConnection {
         };
 
         let returned_doc =
-            handle_libmongosqltranslate_command(get_mongosqltranslate_version_command).expect("error");
+            handle_libmongosqltranslate_command(get_mongosqltranslate_version_command)
+                .expect("error");
 
         let libmongosqltranslate_version = returned_doc
             .get("version")
@@ -213,15 +214,14 @@ impl MongoConnection {
         let is_libmongosqltranslate_compatible_with_driver_version =
             if get_mongosqltranslate_library().is_some() {
                 let libmongosqltranslate_version =
-                    MongoConnection::get_libmongosqltranslate_version().expect("error");
+                    Self::get_libmongosqltranslate_version().expect("error");
 
                 // TODO where do I put the library version for the logs?
                 dbg!(libmongosqltranslate_version);
 
                 // CheckDriverVersion
                 let compatibility =
-                    MongoConnection::is_libmongosqltranslate_compatible_with_driver_version()
-                        .expect("error");
+                    Self::is_libmongosqltranslate_compatible_with_driver_version().expect("error");
 
                 Some(compatibility)
             } else {

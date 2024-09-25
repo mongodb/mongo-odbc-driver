@@ -1,8 +1,8 @@
+use definitions::LibmongosqltranslateDataIO;
 use libloading::{Library, Symbol};
 use std::env;
 use std::path::PathBuf;
 use std::sync::Once;
-use definitions::LibmongosqltranslateDataIO;
 
 const LIBRARY_NAME: &str = "mongosqltranslate";
 const MOCK_LIBRARY_NAME: &str = "mock_mongosqltranslate";
@@ -111,13 +111,8 @@ mod unit {
 
         // Call runCommand
         let result = unsafe { run_command(bson_bytes.as_ptr(), bson_bytes.len()) };
-        let result_vec = unsafe {
-            Vec::from_raw_parts(
-                result.data as *mut u8,
-                result.length,
-                result.capacity,
-            )
-        };
+        let result_vec =
+            unsafe { Vec::from_raw_parts(result.data as *mut u8, result.length, result.capacity) };
         let result_doc: Document =
             bson::from_slice(&result_vec).expect("Failed to deserialize result");
 

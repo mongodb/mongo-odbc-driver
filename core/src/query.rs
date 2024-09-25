@@ -185,12 +185,11 @@ impl MongoQuery {
             MongoClusterType::Enterprise => {
                 // get relevant namespaces
                 let namespaces: BTreeSet<Namespace> =
-                    MongoQuery::get_sql_query_namespaces(query, current_db).expect("error");
+                    Self::get_sql_query_namespaces(query, current_db).expect("error");
 
                 // translate sql
                 let mongosql_translation =
-                    MongoQuery::translate_sql(query, current_db, namespaces, client, &db)
-                        .expect("error");
+                    Self::translate_sql(query, current_db, namespaces, client, &db).expect("error");
 
                 let translation_metadata = SqlGetSchemaResponse {
                     ok: 1,
@@ -298,11 +297,11 @@ impl MongoStatement for MongoQuery {
             MongoClusterType::Enterprise => {
                 // get relevant namespaces
                 let namespaces: BTreeSet<Namespace> =
-                    MongoQuery::get_sql_query_namespaces(&self.query, current_db).expect("error");
+                    Self::get_sql_query_namespaces(&self.query, current_db).expect("error");
 
                 // translate sql
                 let mongosql_translation =
-                    MongoQuery::translate_sql(&self.query, current_db, namespaces, connection, &db)
+                    Self::translate_sql(&self.query, current_db, namespaces, connection, &db)
                         .expect("error");
 
                 let pipeline = mongosql_translation
