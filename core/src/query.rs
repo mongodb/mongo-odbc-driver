@@ -56,8 +56,7 @@ impl Translation {
         let as_bson = Bson::Document(doc.clone());
         let deserializer = bson::Deserializer::new(as_bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer)
-            .expect("Failed to deserialize Document into Translation")
+        Deserialize::deserialize(deserializer).map_err(Error::QueryDeserialization)
     }
 }
 
@@ -65,7 +64,7 @@ impl Namespace {
     pub fn from_bson(bson: Bson) -> Result<BTreeSet<Self>> {
         let deserializer = bson::Deserializer::new(bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer).expect("Failed to deserialize Bson into Namespace")
+        Deserialize::deserialize(deserializer).map_err(Error::QueryDeserialization)
     }
 }
 
@@ -104,17 +103,19 @@ impl MongoQuery {
         let mut db_doc = doc! {};
 
         for namespace in namespaces {
-            let namespace_schema_doc: Document = client.runtime.block_on(async {
-                schema_collection
-                    .find_one(doc! {
-                        "_id": &namespace.collection
-                    })
-                    .await
-                    .map_err(Error::QueryExecutionFailed)
-                    .ok_or(Error::SchemaDocumentNotFoundInSchemaCollection(
-                        namespace.collection.clone(),
-                    ))?
-            });
+            let namespace_schema_doc = client
+                .runtime
+                .block_on(async {
+                    schema_collection
+                        .find_one(doc! {
+                            "_id": &namespace.collection
+                        })
+                        .await
+                        .map_err(Error::QueryExecutionFailed)
+                })?
+                .ok_or(Error::SchemaDocumentNotFoundInSchemaCollection(
+                    namespace.collection.clone(),
+                ))?;
 
             let bson_schema = namespace_schema_doc
                 .get("schema")

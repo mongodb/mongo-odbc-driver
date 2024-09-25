@@ -56,10 +56,10 @@ pub enum Error {
     StatementNotExecuted,
     #[error("The driver version `{0}` is incompatible with libmongosqltranslate")]
     LibmongosqltranslateLibraryIsIncompatible(&'static str),
-    #[error("The schema document for collection `{}` could not be found in the `__sql_schemas_` collection")]
+    #[error("The schema document for collection `{0}` could not be found in the `__sql_schemas_` collection")]
     SchemaDocumentNotFoundInSchemaCollection(String),
     #[error(
-        "The libmongosqltranslate command `{}` failed. Error message: `{}`. Error is internal: {}"
+        "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"
     )]
     LibmongosqltranslateCommandError(String, String, bool),
 }
