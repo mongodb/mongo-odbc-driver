@@ -97,7 +97,7 @@ impl MongoQuery {
         current_db: &String,
         namespaces: BTreeSet<Namespace>,
         client: &MongoConnection,
-        db: Database,
+        db: &Database,
     ) -> Result<Translation> {
         let schema_collection = db.collection::<Document>("__sql_schemas_");
 
@@ -189,7 +189,7 @@ impl MongoQuery {
 
                 // translate sql
                 let mongosql_translation =
-                    MongoQuery::translate_sql(query, current_db, namespaces, client, db)
+                    MongoQuery::translate_sql(query, current_db, namespaces, client, &db)
                         .expect("error");
 
                 let translation_metadata = SqlGetSchemaResponse {
@@ -302,7 +302,7 @@ impl MongoStatement for MongoQuery {
 
                 // translate sql
                 let mongosql_translation =
-                    MongoQuery::translate_sql(&self.query, current_db, namespaces, connection, db)
+                    MongoQuery::translate_sql(&self.query, current_db, namespaces, connection, &db)
                         .expect("error");
 
                 let pipeline = mongosql_translation
