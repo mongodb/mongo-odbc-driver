@@ -2,7 +2,7 @@ use crate::Result;
 use bson::{doc, Document};
 use constants::SQL_ALL_TABLE_TYPES;
 mod test_connection;
-use crate::load_library::{get_mongosqltranslate_library, get_run_command};
+use crate::load_library::get_mongosqltranslate_library;
 use definitions::LibmongosqltranslateCommand;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;

@@ -211,24 +211,23 @@ impl MongoConnection {
 
         load_mongosqltranslate_library();
 
-        if get_mongosqltranslate_library().is_some() {
-            let libmongosql_library_version =
-                MongoConnection::get_libmongosqltranslate_version().expect("error");
+        let is_libmongosqltranslate_compatible_with_driver_version =
+            if get_mongosqltranslate_library().is_some() {
+                let libmongosql_library_version =
+                    MongoConnection::get_libmongosqltranslate_version().expect("error");
 
-            // TODO
-            // where do I put the library version for the logs?
-            dbg!(libmongosql_library_version);
+                // TODO where do I put the library version for the logs?
+                dbg!(libmongosql_library_version);
 
-            // CheckDriverVersion
-            // actually you may want to error after the build info, so you know its an enterprise cluster. incompatible library with ADF doesnt matter.
-            if !MongoConnection::is_libmongosqltranslate_compatible_with_driver_version()
-                .expect("error")
-            {
-                return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
-                    &DRIVER_ODBC_VERSION,
-                ));
-            }
-        }
+                // CheckDriverVersion
+                let compatibility =
+                    MongoConnection::is_libmongosqltranslate_compatible_with_driver_version()
+                        .expect("error");
+
+                Some(compatibility)
+            } else {
+                None
+            };
 
         let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await });
         match type_of_cluster {
@@ -245,6 +244,14 @@ impl MongoConnection {
                     return Err(Error::UnsupportedClusterConfiguration(
                         "Enterprise edition detected, but mongosqltranslate library not found."
                             .to_string(),
+                    ));
+                }
+
+                if !is_libmongosqltranslate_compatible_with_driver_version
+                    .is_some_and(|is_compatible| is_compatible)
+                {
+                    return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
+                        &DRIVER_ODBC_VERSION,
                     ));
                 }
             }

@@ -85,7 +85,7 @@ impl MongoQuery {
             returned_doc
                 .get("namespaces")
                 .expect("`namespace` was missing")
-                .clone(),
+                .to_owned(),
         )
         .expect("namespaces could not be deserialized");
 
