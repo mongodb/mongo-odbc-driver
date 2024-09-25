@@ -56,7 +56,8 @@ impl Translation {
         let as_bson = Bson::Document(doc.clone());
         let deserializer = bson::Deserializer::new(as_bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer).map_err(|_| Error::BsonDeserializationFailure)
+        Deserialize::deserialize(deserializer)
+            .expect("Failed to deserialize Document into Translation")
     }
 }
 
@@ -64,7 +65,7 @@ impl Namespace {
     pub fn from_bson(bson: Bson) -> Result<BTreeSet<Self>> {
         let deserializer = bson::Deserializer::new(bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer).map_err(|_| Error::BsonDeserializationFailure)
+        Deserialize::deserialize(deserializer).expect("Failed to deserialize Bson into Namespace")
     }
 }
 
@@ -78,16 +79,14 @@ impl MongoQuery {
             },
         };
 
-        let returned_doc =
-            handle_libmongosqltranslate_command(get_namespaces_command).expect("erorr");
+        let returned_doc = handle_libmongosqltranslate_command(get_namespaces_command)?;
 
         let namespaces: BTreeSet<Namespace> = Namespace::from_bson(
             returned_doc
                 .get("namespaces")
-                .expect("`namespace` was missing")
+                .expect("The `namespace` key is missing from the document returned by libmongosqltranslate.")
                 .to_owned(),
-        )
-        .expect("namespaces could not be deserialized");
+        )?;
 
         Ok(namespaces)
     }
@@ -111,13 +110,15 @@ impl MongoQuery {
                         "_id": &namespace.collection
                     })
                     .await
-                    .expect("error happened")
-                    .expect("schema doesn't exist in the collection")
+                    .map_err(Error::QueryExecutionFailed)
+                    .ok_or(Error::SchemaDocumentNotFoundInSchemaCollection(
+                        namespace.collection.clone(),
+                    ))?
             });
 
             let bson_schema = namespace_schema_doc
                 .get("schema")
-                .expect("`schema` field is missing.");
+                .expect("The required `schema` field is missing in the found Document.");
 
             db_doc.insert(namespace.collection, bson_schema);
         }
@@ -137,10 +138,9 @@ impl MongoQuery {
             },
         };
 
-        let returned_doc = handle_libmongosqltranslate_command(translate_command).expect("erorr");
+        let returned_doc = handle_libmongosqltranslate_command(translate_command)?;
 
-        let mongosql_translation = Translation::from_document(&returned_doc)
-            .expect("Failed to deserialize into Translation");
+        let mongosql_translation = Translation::from_document(&returned_doc)?;
 
         Ok(mongosql_translation)
     }
@@ -185,11 +185,11 @@ impl MongoQuery {
             MongoClusterType::Enterprise => {
                 // get relevant namespaces
                 let namespaces: BTreeSet<Namespace> =
-                    Self::get_sql_query_namespaces(query, current_db).expect("error");
+                    Self::get_sql_query_namespaces(query, current_db)?;
 
                 // translate sql
                 let mongosql_translation =
-                    Self::translate_sql(query, current_db, namespaces, client, &db).expect("error");
+                    Self::translate_sql(query, current_db, namespaces, client, &db)?;
 
                 let translation_metadata = SqlGetSchemaResponse {
                     ok: 1,
@@ -297,19 +297,23 @@ impl MongoStatement for MongoQuery {
             MongoClusterType::Enterprise => {
                 // get relevant namespaces
                 let namespaces: BTreeSet<Namespace> =
-                    Self::get_sql_query_namespaces(&self.query, current_db).expect("error");
+                    Self::get_sql_query_namespaces(&self.query, current_db)?;
 
                 // translate sql
                 let mongosql_translation =
-                    Self::translate_sql(&self.query, current_db, namespaces, connection, &db)
-                        .expect("error");
+                    Self::translate_sql(&self.query, current_db, namespaces, connection, &db)?;
 
                 let pipeline = mongosql_translation
                     .pipeline
                     .as_array()
-                    .expect("pipeline should be an array")
+                    .expect("The Translation `pipeline` should be an array.")
                     .iter()
-                    .map(|bson_doc| bson_doc.as_document().expect("should be a doc").to_owned())
+                    .map(|bson_doc| {
+                        bson_doc
+                            .as_document()
+                            .expect("The Translation `pipeline` should only contain Documents.")
+                            .to_owned()
+                    })
                     .collect::<Vec<Document>>();
 
                 (pipeline, mongosql_translation.target_collection)

@@ -145,14 +145,15 @@ impl MongoConnection {
         };
 
         let returned_doc =
-            handle_libmongosqltranslate_command(get_mongosqltranslate_version_command)
-                .expect("error");
+            handle_libmongosqltranslate_command(get_mongosqltranslate_version_command)?;
 
         let libmongosqltranslate_version = returned_doc
             .get("version")
-            .expect("`version` was missing")
+            .expect(
+                "The `version` key is missing from the document returned by libmongosqltranslate.",
+            )
             .as_str()
-            .expect("`version` should be a String")
+            .expect("The `version` key should map to a `String`")
             .to_string();
 
         Ok(libmongosqltranslate_version)
@@ -167,14 +168,13 @@ impl MongoConnection {
             },
         };
 
-        let returned_doc =
-            handle_libmongosqltranslate_command(check_driver_version_command).expect("error");
+        let returned_doc = handle_libmongosqltranslate_command(check_driver_version_command)?;
 
         let is_libmongosqltranslate_compatible = returned_doc
             .get("compatibility")
-            .expect("`compatibility` was missing")
+            .expect("The `compatibility` key is missing from the document returned by libmongosqltranslate.")
             .as_bool()
-            .expect("`compatibility` should be a bool");
+            .expect("The `compatibility` key should map to a `bool`");
 
         Ok(is_libmongosqltranslate_compatible)
     }
@@ -213,15 +213,13 @@ impl MongoConnection {
 
         let is_libmongosqltranslate_compatible_with_driver_version =
             if get_mongosqltranslate_library().is_some() {
-                let libmongosqltranslate_version =
-                    Self::get_libmongosqltranslate_version().expect("error");
+                let libmongosqltranslate_version = Self::get_libmongosqltranslate_version()?;
 
                 // TODO where do I put the library version for the logs?
                 dbg!(libmongosqltranslate_version);
 
                 // CheckDriverVersion
-                let compatibility =
-                    Self::is_libmongosqltranslate_compatible_with_driver_version().expect("error");
+                let compatibility = Self::is_libmongosqltranslate_compatible_with_driver_version()?;
 
                 Some(compatibility)
             } else {

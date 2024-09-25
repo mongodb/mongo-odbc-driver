@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::{Error, Result};
 use bson::{doc, Document};
 use constants::SQL_ALL_TABLE_TYPES;
 mod test_connection;
@@ -29,20 +29,17 @@ lazy_static! {
 }
 
 pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<Document> {
-    let library = get_mongosqltranslate_library()
-        .expect("Mongosqltranslate library is not available; however, this shouldn't be possible.");
+    let library = get_mongosqltranslate_library().expect("libmongosqltranslate is not available.");
 
     let run_command_function: Symbol<
         'static,
         unsafe extern "C" fn(LibmongosqltranslateDataIO) -> LibmongosqltranslateDataIO,
-    > = unsafe {
-        library
-            .get(b"runCommand")
-            .expect("Failed to load runCommand symbol")
-    };
+    > = unsafe { library.get(b"runCommand") }.expect("Failed to load runCommand symbol.");
+
+    let command_type = command.get_str("command").unwrap();
 
     let command_bytes_vec =
-        bson::to_vec(&command).expect("Failed to serialize Document into BSON bytes");
+        bson::to_vec(&command).expect("Failed to serialize Document into BSON bytes.");
 
     let command_bytes_length = command_bytes_vec.len();
 
@@ -65,8 +62,14 @@ pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<D
             )
             .as_slice(),
         )
-        .expect("Failed to deserialize result")
+        .expect("Failed to deserialize BSON bytes into Document.")
     };
+
+    // check for error doc here.
+    if let Ok(error_msg) = returned_doc.get_str("error") {
+        return Err(Error::LibmongosqltranslateCommandError(command_type.to_string(), error_msg.to_string(), returned_doc.get_bool("error_is_internal")
+            .expect("The `error_is_internal` key is missing from the document returned by libmongosqltranslate, or it has the wrong data type.")));
+    }
 
     Ok(returned_doc)
 }

@@ -56,10 +56,12 @@ pub enum Error {
     StatementNotExecuted,
     #[error("The driver version `{0}` is incompatible with libmongosqltranslate")]
     LibmongosqltranslateLibraryIsIncompatible(&'static str),
-    #[error("failed to deserialize JSON Schema from BSON")]
-    BsonDeserializationFailure,
-    #[error("failed to serialize JSON Schema to BSON")]
-    BsonSerializationFailure,
+    #[error("The schema document for collection `{}` could not be found in the `__sql_schemas_` collection")]
+    SchemaDocumentNotFoundInSchemaCollection(String),
+    #[error(
+        "The libmongosqltranslate command `{}` failed. Error message: `{}`. Error is internal: {}"
+    )]
+    LibmongosqltranslateCommandError(String, String, bool),
 }
 
 impl Error {
@@ -90,12 +92,12 @@ impl Error {
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
             | Error::UnsupportedClusterConfiguration(_)
-            | Error::UnsupportedOperation(_) => GENERAL_ERROR,
+            | Error::UnsupportedOperation(_)
+            | Error::LibmongosqltranslateLibraryIsIncompatible(_)
+            | Error::SchemaDocumentNotFoundInSchemaCollection(_)
+            | Error::LibmongosqltranslateCommandError(_, _, _) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
-            Error::BsonDeserializationFailure
-            | Error::BsonSerializationFailure
-            | Error::LibmongosqltranslateLibraryIsIncompatible(_) => GENERAL_ERROR,
         }
     }
 
@@ -134,9 +136,9 @@ impl Error {
             | Error::UnsupportedOperation(_)
             | Error::UnsupportedClusterConfiguration(_)
             | Error::StatementNotExecuted
-            | Error::BsonDeserializationFailure
-            | Error::BsonSerializationFailure
-            | Error::LibmongosqltranslateLibraryIsIncompatible(_) => 0,
+            | Error::LibmongosqltranslateLibraryIsIncompatible(_)
+            | Error::SchemaDocumentNotFoundInSchemaCollection(_)
+            | Error::LibmongosqltranslateCommandError(_, _, _) => 0,
         }
     }
 }
