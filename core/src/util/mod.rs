@@ -53,7 +53,6 @@ pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<D
 
     let decomposed_returned_doc = unsafe { run_command_function(libmongosqltranslate_command) };
 
-    // TODO use serde stacker here.
     let returned_doc: Document = unsafe {
         bson::from_slice(
             Vec::from_raw_parts(

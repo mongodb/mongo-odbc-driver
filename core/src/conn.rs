@@ -218,7 +218,6 @@ impl MongoConnection {
                 // TODO where do I put the library version for the logs?
                 dbg!(libmongosqltranslate_version);
 
-                // CheckDriverVersion
                 let compatibility = Self::is_libmongosqltranslate_compatible_with_driver_version()?;
 
                 Some(compatibility)

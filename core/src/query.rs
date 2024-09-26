@@ -184,11 +184,11 @@ impl MongoQuery {
                 )?
             }
             MongoClusterType::Enterprise => {
-                // get relevant namespaces
+                // Get relevant namespaces
                 let namespaces: BTreeSet<Namespace> =
                     Self::get_sql_query_namespaces(query, current_db)?;
 
-                // translate sql
+                // Translate sql
                 let mongosql_translation =
                     Self::translate_sql(query, current_db, namespaces, client, &db)?;
 
@@ -290,17 +290,18 @@ impl MongoStatement for MongoQuery {
 
         let (pipeline, collection) = match connection.cluster_type {
             MongoClusterType::AtlasDataFederation => {
+                // 2. Run the $sql aggregation to get the result set cursor.
                 let pipeline = vec![doc! {"$sql": {
                     "statement": &self.query,
                 }}];
                 (pipeline, None)
             }
             MongoClusterType::Enterprise => {
-                // get relevant namespaces
+                // Get relevant namespaces
                 let namespaces: BTreeSet<Namespace> =
                     Self::get_sql_query_namespaces(&self.query, current_db)?;
 
-                // translate sql
+                // Translate sql
                 let mongosql_translation =
                     Self::translate_sql(&self.query, current_db, namespaces, connection, &db)?;
 
