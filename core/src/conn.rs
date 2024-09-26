@@ -220,6 +220,7 @@ impl MongoConnection {
                 user_options
                     .client_options
                     .app_name
+                    .as_mut()
                     .expect("app_name unexpectedly has the value `None`")
                     .push_str(
                         &("|libmongosqltranslate+".to_owned() + &libmongosqltranslate_version),
