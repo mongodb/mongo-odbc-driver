@@ -465,7 +465,7 @@ functions:
           docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
           --env-file silkbomb.env \
           artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:1.0 \
-          upload --silk-asset-group ${SILK_ASSET_GROUP} --sbom-in /pwd/$SBOM_FINAL
+          upload --silk-asset-group ${SILK_ASSET_GROUP} --sbom-in /pwd/$SBOM_FINAL --force
           echo "-------------------------------"
 
   "pull augmented SBOM from Silk":
@@ -2354,8 +2354,8 @@ buildvariants:
       - name: sign
 
   - name: macos
-    display_name: "macOS 11.0"
-    run_on: [macos-1100]
+    display_name: "macOS"
+    run_on: [macos-14]
     tasks:
       - name: compile
       - name: compile-debug
@@ -2365,8 +2365,8 @@ buildvariants:
       - name: result-set-test
 
   - name: macos-arm
-    display_name: "macOS 11.0 ARM 64"
-    run_on: [macos-1100-arm64]
+    display_name: "macOS arm64"
+    run_on: [macos-14-arm64]
     tasks:
       - name: compile
       - name: compile-debug
