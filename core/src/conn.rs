@@ -204,10 +204,11 @@ impl MongoConnection {
                 .build()
                 .unwrap()
         }));
+
         user_options.client_options.connect_timeout =
             login_timeout.map(|to| Duration::new(u64::from(to), 0));
+
         let uuid_repr = user_options.uuid_representation;
-        let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
 
         load_mongosqltranslate_library();
 
@@ -215,8 +216,14 @@ impl MongoConnection {
             if get_mongosqltranslate_library().is_some() {
                 let libmongosqltranslate_version = Self::get_libmongosqltranslate_version()?;
 
-                // TODO where do I put the library version for the logs?
-                dbg!(libmongosqltranslate_version);
+                // This appends "|libmongosqltranslate+<version>" to the app_name
+                user_options
+                    .client_options
+                    .app_name
+                    .expect("app_name unexpectedly has the value `None`")
+                    .push_str(
+                        &("|libmongosqltranslate+".to_owned() + &libmongosqltranslate_version),
+                    );
 
                 let compatibility = Self::is_libmongosqltranslate_compatible_with_driver_version()?;
 
@@ -224,6 +231,8 @@ impl MongoConnection {
             } else {
                 None
             };
+
+        let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
 
         let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await });
         match type_of_cluster {
