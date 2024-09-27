@@ -56,8 +56,7 @@ impl Translation {
         let as_bson = Bson::Document(doc.clone());
         let deserializer = bson::Deserializer::new(as_bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer)
-            .map_err(Error::LibmongosqltranslateDeserializationError)
+        Deserialize::deserialize(deserializer).map_err(Error::LibmongosqltranslateDeserialization)
     }
 }
 
@@ -65,8 +64,7 @@ impl Namespace {
     pub fn from_bson(bson: Bson) -> Result<BTreeSet<Self>> {
         let deserializer = bson::Deserializer::new(bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer)
-            .map_err(Error::LibmongosqltranslateDeserializationError)
+        Deserialize::deserialize(deserializer).map_err(Error::LibmongosqltranslateDeserialization)
     }
 }
 
@@ -85,7 +83,10 @@ impl MongoQuery {
         let namespaces: BTreeSet<Namespace> = Namespace::from_bson(
             returned_doc
                 .get("namespaces")
-                .expect("The `namespace` key is missing from the document returned by libmongosqltranslate.")
+                .ok_or(Error::LibmongosqltranslateDocumentKeyMissing(
+                    "getNamespaces".to_string(),
+                    "namespaces".to_string(),
+                ))?
                 .to_owned(),
         )?;
 
@@ -119,9 +120,12 @@ impl MongoQuery {
                     namespace.collection.clone(),
                 ))?;
 
-            let bson_schema = namespace_schema_doc
-                .get("schema")
-                .expect("The required `schema` field is missing in the found Document.");
+            let bson_schema = namespace_schema_doc.get("schema").ok_or(
+                Error::SchemaCollectionDocumentHasMissingKey(
+                    "schema".to_string(),
+                    namespace.collection.clone(),
+                ),
+            )?;
 
             db_doc.insert(namespace.collection, bson_schema);
         }

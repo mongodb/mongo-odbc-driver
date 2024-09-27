@@ -58,16 +58,20 @@ pub enum Error {
     LibmongosqltranslateLibraryIsIncompatible(&'static str),
     #[error("The schema document for collection `{0}` could not be found in the `__sql_schemas_` collection")]
     SchemaDocumentNotFoundInSchemaCollection(String),
+    #[error("The `{0}` key in the schema document for collection `{1}` is missing")]
+    SchemaCollectionDocumentHasMissingKey(String, String),
     #[error(
         "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"
     )]
-    LibmongosqltranslateCommandError(String, String, bool),
+    LibmongosqltranslateCommandFailed(String, String, bool),
     #[error("Loading the runCommand symbol from libmongosqltranslate failed with error: {0}")]
     RunCommandSymbolNotFound(String),
     #[error("Deserializing libmongosqltranslate response failed with error: {0}")]
-    LibmongosqltranslateDeserializationError(mongodb::bson::de::Error),
+    LibmongosqltranslateDeserialization(mongodb::bson::de::Error),
     #[error("Serializing Command Document for libmongosqltranslate failed with error: {0}")]
-    LibmongosqltranslateSerializationError(mongodb::bson::ser::Error),
+    LibmongosqltranslateSerialization(mongodb::bson::ser::Error),
+    #[error("The `{0}` libmongosqltranslate command returned with a document missing the following key: {1}")]
+    LibmongosqltranslateDocumentKeyMissing(String, String),
 }
 
 impl Error {
@@ -101,10 +105,12 @@ impl Error {
             | Error::UnsupportedOperation(_)
             | Error::LibmongosqltranslateLibraryIsIncompatible(_)
             | Error::SchemaDocumentNotFoundInSchemaCollection(_)
-            | Error::LibmongosqltranslateCommandError(_, _, _)
+            | Error::LibmongosqltranslateCommandFailed(_, _, _)
             | Error::RunCommandSymbolNotFound(_)
-            | Error::LibmongosqltranslateDeserializationError(_)
-            | Error::LibmongosqltranslateSerializationError(_) => GENERAL_ERROR,
+            | Error::LibmongosqltranslateDeserialization(_)
+            | Error::LibmongosqltranslateSerialization(_)
+            | Error::LibmongosqltranslateDocumentKeyMissing(_, _)
+            | Error::SchemaCollectionDocumentHasMissingKey(_, _) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
         }
@@ -147,10 +153,12 @@ impl Error {
             | Error::StatementNotExecuted
             | Error::LibmongosqltranslateLibraryIsIncompatible(_)
             | Error::SchemaDocumentNotFoundInSchemaCollection(_)
-            | Error::LibmongosqltranslateCommandError(_, _, _)
+            | Error::LibmongosqltranslateCommandFailed(_, _, _)
             | Error::RunCommandSymbolNotFound(_)
-            | Error::LibmongosqltranslateDeserializationError(_)
-            | Error::LibmongosqltranslateSerializationError(_) => 0,
+            | Error::LibmongosqltranslateDeserialization(_)
+            | Error::LibmongosqltranslateSerialization(_)
+            | Error::LibmongosqltranslateDocumentKeyMissing(_, _)
+            | Error::SchemaCollectionDocumentHasMissingKey(_, _) => 0,
         }
     }
 }

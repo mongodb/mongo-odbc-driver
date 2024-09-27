@@ -36,14 +36,15 @@ pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<D
     let run_command_function: Symbol<
         'static,
         unsafe extern "C" fn(LibmongosqltranslateDataIO) -> LibmongosqltranslateDataIO,
-    > = unsafe { library.get(b"runCommand") }.map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))?;
+    > = unsafe { library.get(b"runCommand") }
+        .map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))?;
 
     let command_type = command
         .get_str("command")
         .map_err(|e: ValueAccessError| Error::ValueAccess("command".to_string(), e))?;
 
     let command_bytes_vec =
-        bson::to_vec(&command).map_err(Error::LibmongosqltranslateSerializationError)?;
+        bson::to_vec(&command).map_err(Error::LibmongosqltranslateSerialization)?;
 
     let command_bytes_length = command_bytes_vec.len();
 
@@ -66,12 +67,12 @@ pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<D
             )
             .as_slice(),
         )
-        .map_err(Error::LibmongosqltranslateDeserializationError)?
+        .map_err(Error::LibmongosqltranslateDeserialization)?
     };
 
     // check for error doc here.
     if let Ok(error_msg) = returned_doc.get_str("error") {
-        return Err(Error::LibmongosqltranslateCommandError(
+        return Err(Error::LibmongosqltranslateCommandFailed(
             command_type.to_string(),
             error_msg.to_string(),
             returned_doc
