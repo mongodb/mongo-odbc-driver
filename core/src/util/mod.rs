@@ -36,7 +36,7 @@ pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<D
     let run_command_function: Symbol<
         'static,
         unsafe extern "C" fn(LibmongosqltranslateDataIO) -> LibmongosqltranslateDataIO,
-    > = unsafe { library.get(b"runCommand") }.map_err(Error::RunCommandSymbolNotFound)?;
+    > = unsafe { library.get(b"runCommand") }.map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))?;
 
     let command_type = command
         .get_str("command")

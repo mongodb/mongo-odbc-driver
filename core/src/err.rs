@@ -63,7 +63,7 @@ pub enum Error {
     )]
     LibmongosqltranslateCommandError(String, String, bool),
     #[error("Loading the runCommand symbol from libmongosqltranslate failed with error: {0}")]
-    RunCommandSymbolNotFound(libloading::Error),
+    RunCommandSymbolNotFound(String),
     #[error("Deserializing libmongosqltranslate response failed with error: {0}")]
     LibmongosqltranslateDeserializationError(mongodb::bson::de::Error),
     #[error("Serializing Command Document for libmongosqltranslate failed with error: {0}")]
