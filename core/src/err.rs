@@ -62,6 +62,12 @@ pub enum Error {
         "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"
     )]
     LibmongosqltranslateCommandError(String, String, bool),
+    #[error("Loading the runCommand symbol from libmongosqltranslate failed with error: {0}")]
+    RunCommandSymbolNotFound(libloading::Error),
+    #[error("Deserializing libmongosqltranslate response failed with error: {0}")]
+    LibmongosqltranslateDeserializationError(mongodb::bson::de::Error),
+    #[error("Serializing Command Document for libmongosqltranslate failed with error: {0}")]
+    LibmongosqltranslateSerializationError(mongodb::bson::ser::Error),
 }
 
 impl Error {
@@ -95,7 +101,10 @@ impl Error {
             | Error::UnsupportedOperation(_)
             | Error::LibmongosqltranslateLibraryIsIncompatible(_)
             | Error::SchemaDocumentNotFoundInSchemaCollection(_)
-            | Error::LibmongosqltranslateCommandError(_, _, _) => GENERAL_ERROR,
+            | Error::LibmongosqltranslateCommandError(_, _, _)
+            | Error::RunCommandSymbolNotFound(_)
+            | Error::LibmongosqltranslateDeserializationError(_)
+            | Error::LibmongosqltranslateSerializationError(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
         }
@@ -138,7 +147,10 @@ impl Error {
             | Error::StatementNotExecuted
             | Error::LibmongosqltranslateLibraryIsIncompatible(_)
             | Error::SchemaDocumentNotFoundInSchemaCollection(_)
-            | Error::LibmongosqltranslateCommandError(_, _, _) => 0,
+            | Error::LibmongosqltranslateCommandError(_, _, _)
+            | Error::RunCommandSymbolNotFound(_)
+            | Error::LibmongosqltranslateDeserializationError(_)
+            | Error::LibmongosqltranslateSerializationError(_) => 0,
         }
     }
 }

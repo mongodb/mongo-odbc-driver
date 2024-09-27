@@ -1,6 +1,6 @@
 use crate::load_library::get_mongosqltranslate_library;
 use crate::{Error, Result};
-use bson::{doc, Document};
+use bson::{doc, document::ValueAccessError, Document};
 use constants::SQL_ALL_TABLE_TYPES;
 use definitions::LibmongosqltranslateDataIO;
 use fancy_regex::Regex as FancyRegex;
@@ -29,17 +29,21 @@ lazy_static! {
 }
 
 pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<Document> {
-    let library = get_mongosqltranslate_library().expect("libmongosqltranslate is not available.");
+    let library = get_mongosqltranslate_library().ok_or(Error::UnsupportedClusterConfiguration(
+        "Enterprise edition was detected, but libmongosqltranslate was not found.".to_string(),
+    ))?;
 
     let run_command_function: Symbol<
         'static,
         unsafe extern "C" fn(LibmongosqltranslateDataIO) -> LibmongosqltranslateDataIO,
-    > = unsafe { library.get(b"runCommand") }.expect("Failed to load runCommand symbol.");
+    > = unsafe { library.get(b"runCommand") }.map_err(Error::RunCommandSymbolNotFound)?;
 
-    let command_type = command.get_str("command").unwrap();
+    let command_type = command
+        .get_str("command")
+        .map_err(|e: ValueAccessError| Error::ValueAccess("command".to_string(), e))?;
 
     let command_bytes_vec =
-        bson::to_vec(&command).expect("Failed to serialize Document into BSON bytes.");
+        bson::to_vec(&command).map_err(Error::LibmongosqltranslateSerializationError)?;
 
     let command_bytes_length = command_bytes_vec.len();
 
@@ -62,13 +66,20 @@ pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<D
             )
             .as_slice(),
         )
-        .expect("Failed to deserialize BSON bytes into Document.")
+        .map_err(Error::LibmongosqltranslateDeserializationError)?
     };
 
     // check for error doc here.
     if let Ok(error_msg) = returned_doc.get_str("error") {
-        return Err(Error::LibmongosqltranslateCommandError(command_type.to_string(), error_msg.to_string(), returned_doc.get_bool("error_is_internal")
-            .expect("The `error_is_internal` key is missing from the document returned by libmongosqltranslate, or it has the wrong data type.")));
+        return Err(Error::LibmongosqltranslateCommandError(
+            command_type.to_string(),
+            error_msg.to_string(),
+            returned_doc
+                .get_bool("error_is_internal")
+                .map_err(|e: ValueAccessError| {
+                    Error::ValueAccess("error_is_internal".to_string(), e)
+                })?,
+        ));
     }
 
     Ok(returned_doc)

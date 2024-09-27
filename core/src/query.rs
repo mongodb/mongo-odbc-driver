@@ -56,7 +56,8 @@ impl Translation {
         let as_bson = Bson::Document(doc.clone());
         let deserializer = bson::Deserializer::new(as_bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer).map_err(Error::QueryDeserialization)
+        Deserialize::deserialize(deserializer)
+            .map_err(Error::LibmongosqltranslateDeserializationError)
     }
 }
 
@@ -64,7 +65,8 @@ impl Namespace {
     pub fn from_bson(bson: Bson) -> Result<BTreeSet<Self>> {
         let deserializer = bson::Deserializer::new(bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer).map_err(Error::QueryDeserialization)
+        Deserialize::deserialize(deserializer)
+            .map_err(Error::LibmongosqltranslateDeserializationError)
     }
 }
 

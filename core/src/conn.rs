@@ -7,7 +7,7 @@ use crate::{MongoQuery, TypeMode};
 use constants::DRIVER_ODBC_VERSION;
 use lazy_static::lazy_static;
 use mongodb::{
-    bson::{doc, Bson, UuidRepresentation},
+    bson::{doc, document::ValueAccessError, Bson, UuidRepresentation},
     Client,
 };
 use serde::{Deserialize, Serialize};
@@ -148,12 +148,8 @@ impl MongoConnection {
             handle_libmongosqltranslate_command(get_mongosqltranslate_version_command)?;
 
         let libmongosqltranslate_version = returned_doc
-            .get("version")
-            .expect(
-                "The `version` key is missing from the document returned by libmongosqltranslate.",
-            )
-            .as_str()
-            .expect("The `version` key should map to a `String`")
+            .get_str("version")
+            .map_err(|e: ValueAccessError| Error::ValueAccess("version".to_string(), e))?
             .to_string();
 
         Ok(libmongosqltranslate_version)
@@ -171,10 +167,8 @@ impl MongoConnection {
         let returned_doc = handle_libmongosqltranslate_command(check_driver_version_command)?;
 
         let is_libmongosqltranslate_compatible = returned_doc
-            .get("compatibility")
-            .expect("The `compatibility` key is missing from the document returned by libmongosqltranslate.")
-            .as_bool()
-            .expect("The `compatibility` key should map to a `bool`");
+            .get_bool("compatibility")
+            .map_err(|e: ValueAccessError| Error::ValueAccess("compatibility".to_string(), e))?;
 
         Ok(is_libmongosqltranslate_compatible)
     }
