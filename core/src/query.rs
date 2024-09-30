@@ -311,18 +311,19 @@ impl MongoStatement for MongoQuery {
                 let mongosql_translation =
                     Self::translate_sql(&self.query, current_db, namespaces, connection, &db)?;
 
-                let pipeline = mongosql_translation
+                let mut pipeline: Vec<Document> = Vec::new();
+
+                for bson_doc in mongosql_translation
                     .pipeline
                     .as_array()
                     .ok_or(Error::TranslationPipelineNotArray)?
                     .iter()
-                    .map(|bson_doc| {
-                        bson_doc
-                            .as_document()
-                            .ok_or(Error::TranslationPipelineArrayContainsNonDocument)?
-                            .to_owned()
-                    })
-                    .collect::<Vec<Document>>();
+                {
+                    match bson_doc.as_document() {
+                        None => return Err(Error::TranslationPipelineArrayContainsNonDocument),
+                        Some(doc) => pipeline.push(doc.to_owned()),
+                    }
+                }
 
                 (pipeline, mongosql_translation.target_collection)
             }
