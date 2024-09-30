@@ -214,7 +214,7 @@ impl MongoConnection {
                     .client_options
                     .app_name
                     .as_mut()
-                    .expect("app_name unexpectedly has the value `None`")
+                    .ok_or(Error::EmptyAppName)?
                     .push_str(
                         &("|libmongosqltranslate+".to_owned() + &libmongosqltranslate_version),
                     );
@@ -251,9 +251,8 @@ impl MongoConnection {
                 {
                     return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
                         &DRIVER_ODBC_VERSION,
-                        libmongosqltranslate_version.expect(
-                            "The libmongosqltranslate version unexpectedly has the value `None`",
-                        ),
+                        libmongosqltranslate_version
+                            .ok_or(Error::EmptyLibmongosqltranslateVersion)?,
                     ));
                 }
             }

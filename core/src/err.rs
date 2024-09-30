@@ -74,6 +74,16 @@ pub enum Error {
     LibmongosqltranslateSerialization(mongodb::bson::ser::Error),
     #[error("The `{0}` libmongosqltranslate command returned with a document missing the following key: {1}")]
     LibmongosqltranslateDocumentHasMissingKey(String, String),
+    #[error("The client app_name is empty. However, this shouldn't be possible.")]
+    EmptyAppName,
+    #[error("The libmongosqltranslate version is empty. However, this shouldn't be possible.")]
+    EmptyLibmongosqltranslateVersion,
+    #[error(
+        "The mongosql Translation `pipeline` should be an array; however this was not the case."
+    )]
+    TranslationPipelineNotArray,
+    #[error("The mongosql Translation `pipeline` array should only contain Documents; however, a non-document bson-type was encountered.")]
+    TranslationPipelineArrayContainsNonDocument,
 }
 
 impl Error {
@@ -112,7 +122,11 @@ impl Error {
             | Error::LibmongosqltranslateDeserialization(_)
             | Error::LibmongosqltranslateSerialization(_)
             | Error::LibmongosqltranslateDocumentHasMissingKey(_, _)
-            | Error::SchemaCollectionDocumentHasMissingKey(_, _) => GENERAL_ERROR,
+            | Error::SchemaCollectionDocumentHasMissingKey(_, _)
+            | Error::EmptyAppName
+            | Error::EmptyLibmongosqltranslateVersion
+            | Error::TranslationPipelineNotArray
+            | Error::TranslationPipelineArrayContainsNonDocument => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
         }
@@ -160,7 +174,11 @@ impl Error {
             | Error::LibmongosqltranslateDeserialization(_)
             | Error::LibmongosqltranslateSerialization(_)
             | Error::LibmongosqltranslateDocumentHasMissingKey(_, _)
-            | Error::SchemaCollectionDocumentHasMissingKey(_, _) => 0,
+            | Error::SchemaCollectionDocumentHasMissingKey(_, _)
+            | Error::EmptyAppName
+            | Error::EmptyLibmongosqltranslateVersion
+            | Error::TranslationPipelineNotArray
+            | Error::TranslationPipelineArrayContainsNonDocument => 0,
         }
     }
 }

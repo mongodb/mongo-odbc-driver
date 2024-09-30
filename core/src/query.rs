@@ -314,12 +314,12 @@ impl MongoStatement for MongoQuery {
                 let pipeline = mongosql_translation
                     .pipeline
                     .as_array()
-                    .expect("The Translation `pipeline` should be an array.")
+                    .ok_or(Error::TranslationPipelineNotArray)?
                     .iter()
                     .map(|bson_doc| {
                         bson_doc
                             .as_document()
-                            .expect("The Translation `pipeline` should only contain Documents.")
+                            .ok_or(Error::TranslationPipelineArrayContainsNonDocument)?
                             .to_owned()
                     })
                     .collect::<Vec<Document>>();
