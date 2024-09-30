@@ -1,7 +1,7 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
 use crate::load_library::{get_mongosqltranslate_library, load_mongosqltranslate_library};
 use crate::odbc_uri::UserOptions;
-use crate::util::handle_libmongosqltranslate_command;
+use crate::util::libmongosqltranslate_run_command;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
 use constants::DRIVER_ODBC_VERSION;
@@ -144,8 +144,7 @@ impl MongoConnection {
             "options": {},
         };
 
-        let returned_doc =
-            handle_libmongosqltranslate_command(get_mongosqltranslate_version_command)?;
+        let returned_doc = libmongosqltranslate_run_command(get_mongosqltranslate_version_command)?;
 
         let libmongosqltranslate_version = returned_doc
             .get_str("version")
@@ -164,11 +163,11 @@ impl MongoConnection {
             },
         };
 
-        let returned_doc = handle_libmongosqltranslate_command(check_driver_version_command)?;
+        let returned_doc = libmongosqltranslate_run_command(check_driver_version_command)?;
 
         let is_libmongosqltranslate_compatible = returned_doc
-            .get_bool("compatibility")
-            .map_err(|e: ValueAccessError| Error::ValueAccess("compatibility".to_string(), e))?;
+            .get_bool("compatible")
+            .map_err(|e: ValueAccessError| Error::ValueAccess("compatible".to_string(), e))?;
 
         Ok(is_libmongosqltranslate_compatible)
     }
@@ -206,7 +205,7 @@ impl MongoConnection {
 
         load_mongosqltranslate_library();
 
-        let is_libmongosqltranslate_compatible_with_driver_version =
+        let (is_libmongosqltranslate_compatible_with_driver_version, libmongosqltranslate_version) =
             if get_mongosqltranslate_library().is_some() {
                 let libmongosqltranslate_version = Self::get_libmongosqltranslate_version()?;
 
@@ -222,9 +221,9 @@ impl MongoConnection {
 
                 let compatibility = Self::is_libmongosqltranslate_compatible_with_driver_version()?;
 
-                Some(compatibility)
+                (Some(compatibility), Some(libmongosqltranslate_version))
             } else {
-                None
+                (None, None)
             };
 
         let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
@@ -252,6 +251,9 @@ impl MongoConnection {
                 {
                     return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
                         &DRIVER_ODBC_VERSION,
+                        libmongosqltranslate_version.expect(
+                            "The libmongosqltranslate version unexpectedly has the value `None`",
+                        ),
                     ));
                 }
             }

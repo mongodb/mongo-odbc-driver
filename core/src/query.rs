@@ -1,7 +1,7 @@
 use crate::cluster_type::MongoClusterType;
 use crate::col_metadata::VersionedJsonSchema;
 use crate::json_schema::Schema;
-use crate::util::handle_libmongosqltranslate_command;
+use crate::util::libmongosqltranslate_run_command;
 use crate::{
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     conn::MongoConnection,
@@ -78,12 +78,12 @@ impl MongoQuery {
             },
         };
 
-        let returned_doc = handle_libmongosqltranslate_command(get_namespaces_command)?;
+        let returned_doc = libmongosqltranslate_run_command(get_namespaces_command)?;
 
         let namespaces: BTreeSet<Namespace> = Namespace::from_bson(
             returned_doc
                 .get("namespaces")
-                .ok_or(Error::LibmongosqltranslateDocumentKeyMissing(
+                .ok_or(Error::LibmongosqltranslateDocumentHasMissingKey(
                     "getNamespaces".to_string(),
                     "namespaces".to_string(),
                 ))?
@@ -100,7 +100,7 @@ impl MongoQuery {
         client: &MongoConnection,
         db: &Database,
     ) -> Result<Translation> {
-        let schema_collection = db.collection::<Document>("__sql_schemas_");
+        let schema_collection = db.collection::<Document>("__sql_schemas");
 
         // create the schema_catalog document
         let mut db_doc = doc! {};
@@ -145,7 +145,7 @@ impl MongoQuery {
             },
         };
 
-        let returned_doc = handle_libmongosqltranslate_command(translate_command)?;
+        let returned_doc = libmongosqltranslate_run_command(translate_command)?;
 
         let mongosql_translation = Translation::from_document(&returned_doc)?;
 
@@ -364,6 +364,7 @@ impl MongoStatement for MongoQuery {
                 .block_on(async { aggregate.await.map_err(map_query_error) })?
         } else {
             let mut aggregate = db.aggregate(pipeline).comment(stmt_id);
+
             // If the query timeout is 0, it means "no timeout"
             if self.query_timeout.is_some_and(|timeout| timeout > 0) {
                 aggregate = aggregate.max_time(Duration::from_millis(u64::from(

@@ -28,7 +28,7 @@ lazy_static! {
     static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\\\)%").unwrap();
 }
 
-pub(crate) fn handle_libmongosqltranslate_command(command: Document) -> Result<Document> {
+pub(crate) fn libmongosqltranslate_run_command(command: Document) -> Result<Document> {
     let library = get_mongosqltranslate_library().ok_or(Error::UnsupportedClusterConfiguration(
         "Enterprise edition was detected, but libmongosqltranslate was not found.".to_string(),
     ))?;
