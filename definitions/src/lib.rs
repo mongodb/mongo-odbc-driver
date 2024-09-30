@@ -414,7 +414,7 @@ pub enum RowStatus {
 }
 
 #[repr(C)]
-pub struct LibmongosqltranslateDataIO {
+pub struct BsonBuffer {
     pub data: *const u8,
     pub length: usize,
     pub capacity: usize,

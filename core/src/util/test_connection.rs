@@ -119,35 +119,35 @@ mod test {
         });
     }
 
-    // TODO: Fix in SQL-2288
-    // #[test]
-    // #[cfg(feature = "bad_host")]
-    // fn bad_host() {
-    //     let mut buffer = [0; 1024];
-    //     let mut buffer_len = 0;
-    //     let result = unsafe {
-    //         atlas_sql_test_connection(
-    //             to_widechar_ptr(&generate_connection_str(
-    //                 Some("example.net:30000".into()),
-    //                 None,
-    //             ))
-    //             .0 as *const cstr::WideChar,
-    //             buffer.as_ptr(),
-    //             buffer.len(),
-    //             &mut buffer_len,
-    //         )
-    //     };
-    //     assert!(!result);
-    //     assert!(unsafe {
-    //         input_text_to_string_w(
-    //             buffer.as_mut_ptr(),
-    //             isize::try_from(buffer_len)
-    //                 .expect("buffer length is too large for {isize::MAX} on this platform"),
-    //         )
-    //         .to_lowercase()
-    //         .contains("unsupported cluster configuration: unknown cluster/target type detected.")
-    //     });
-    // }
+    #[test]
+    #[ignore = "SQL-2288: need real libmongosqltranslate"]
+    #[cfg(feature = "bad_host")]
+    fn bad_host() {
+        let mut buffer = [0; 1024];
+        let mut buffer_len = 0;
+        let result = unsafe {
+            atlas_sql_test_connection(
+                to_widechar_ptr(&generate_connection_str(
+                    Some("example.net:30000".into()),
+                    None,
+                ))
+                .0 as *const cstr::WideChar,
+                buffer.as_ptr(),
+                buffer.len(),
+                &mut buffer_len,
+            )
+        };
+        assert!(!result);
+        assert!(unsafe {
+            input_text_to_string_w(
+                buffer.as_mut_ptr(),
+                isize::try_from(buffer_len)
+                    .expect("buffer length is too large for {isize::MAX} on this platform"),
+            )
+            .to_lowercase()
+            .contains("unsupported cluster configuration: unknown cluster/target type detected.")
+        });
+    }
 
     // lifted and modified from integration_test\tests\connection_tests.rs
     // this cannot be included due to dependendy issues

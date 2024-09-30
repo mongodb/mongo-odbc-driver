@@ -2,7 +2,7 @@ use crate::load_library::get_mongosqltranslate_library;
 use crate::{Error, Result};
 use bson::{doc, document::ValueAccessError, Document};
 use constants::SQL_ALL_TABLE_TYPES;
-use definitions::LibmongosqltranslateDataIO;
+use definitions::BsonBuffer;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use libloading::Symbol;
@@ -28,16 +28,17 @@ lazy_static! {
     static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\\\)%").unwrap();
 }
 
+/// This function handles libmongosqltranslate runCommands. It takes in a `runCommand`,
+/// handles serializing it into a BSON byte vector, calls the libmongosqltranslate runCommand,
+/// deserializes the response, and returns either an error or a valid response for the given `runCommand`.
 pub(crate) fn libmongosqltranslate_run_command(command: Document) -> Result<Document> {
     let library = get_mongosqltranslate_library().ok_or(Error::UnsupportedClusterConfiguration(
         "Enterprise edition was detected, but libmongosqltranslate was not found.".to_string(),
     ))?;
 
-    let run_command_function: Symbol<
-        'static,
-        unsafe extern "C" fn(LibmongosqltranslateDataIO) -> LibmongosqltranslateDataIO,
-    > = unsafe { library.get(b"runCommand") }
-        .map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))?;
+    let run_command_function: Symbol<'static, unsafe extern "C" fn(BsonBuffer) -> BsonBuffer> =
+        unsafe { library.get(b"runCommand") }
+            .map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))?;
 
     let command_type = command
         .get_str("command")
@@ -50,7 +51,7 @@ pub(crate) fn libmongosqltranslate_run_command(command: Document) -> Result<Docu
 
     let command_bytes_capacity = command_bytes_vec.capacity();
 
-    let libmongosqltranslate_command = LibmongosqltranslateDataIO {
+    let libmongosqltranslate_command = BsonBuffer {
         data: Box::into_raw(command_bytes_vec.into_boxed_slice()).cast(),
         length: command_bytes_length,
         capacity: command_bytes_capacity,

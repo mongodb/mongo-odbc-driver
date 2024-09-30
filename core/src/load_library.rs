@@ -1,4 +1,4 @@
-use definitions::LibmongosqltranslateDataIO;
+use definitions::BsonBuffer;
 use libloading::{Library, Symbol};
 use std::env;
 use std::path::PathBuf;
@@ -83,7 +83,7 @@ pub fn load_mongosqltranslate_library() {
 }
 
 pub fn get_mock_run_command() -> Result<
-    Symbol<'static, unsafe extern "C" fn(*const u8, usize) -> LibmongosqltranslateDataIO>,
+    Symbol<'static, unsafe extern "C" fn(*const u8, usize) -> BsonBuffer>,
     Box<dyn std::error::Error>,
 > {
     let library =

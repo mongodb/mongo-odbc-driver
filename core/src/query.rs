@@ -161,8 +161,8 @@ impl MongoQuery {
         type_mode: TypeMode,
         max_string_length: Option<u16>,
     ) -> Result<Self> {
-        let current_db = current_db.as_ref().ok_or(Error::NoDatabase)?;
-        let db = client.client.database(current_db);
+        let working_db = current_db.as_ref().ok_or(Error::NoDatabase)?;
+        let db = client.client.database(working_db);
 
         let metadata = match client.cluster_type {
             MongoClusterType::AtlasDataFederation => {
@@ -184,7 +184,7 @@ impl MongoQuery {
                         .map_err(Error::QueryDeserialization)?;
 
                 get_result_schema_response.process_result_metadata(
-                    current_db,
+                    working_db,
                     type_mode,
                     max_string_length,
                 )?
@@ -192,11 +192,11 @@ impl MongoQuery {
             MongoClusterType::Enterprise => {
                 // Get relevant namespaces
                 let namespaces: BTreeSet<Namespace> =
-                    Self::get_sql_query_namespaces(query, current_db)?;
+                    Self::get_sql_query_namespaces(query, working_db)?;
 
                 // Translate sql
                 let mongosql_translation =
-                    Self::translate_sql(query, current_db, namespaces, client, &db)?;
+                    Self::translate_sql(query, working_db, namespaces, client, &db)?;
 
                 let translation_metadata = SqlGetSchemaResponse {
                     ok: 1,
@@ -208,7 +208,7 @@ impl MongoQuery {
                 };
 
                 translation_metadata.process_result_metadata(
-                    current_db,
+                    working_db,
                     type_mode,
                     max_string_length,
                 )?
@@ -223,7 +223,7 @@ impl MongoQuery {
             resultset_cursor: None,
             resultset_metadata: metadata,
             current: None,
-            current_db: Some(current_db.clone()),
+            current_db,
             query: query.to_string(),
             query_timeout,
         })
