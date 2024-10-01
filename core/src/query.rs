@@ -1,12 +1,10 @@
-use crate::cluster_type::MongoClusterType;
-use crate::col_metadata::ResultSetSchema;
-use crate::json_schema::Schema;
-use crate::util::libmongosqltranslate_run_command;
 use crate::{
-    col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
+    cluster_type::MongoClusterType,
+    col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
+    util::libmongosqltranslate_run_command,
     Error, TypeMode,
 };
 use mongodb::{
@@ -103,36 +101,45 @@ impl MongoQuery {
         let schema_collection = db.collection::<Document>("__sql_schemas");
 
         // create the schema_catalog document
-        let mut db_doc = doc! {};
+        let collections_schema_doc: Document = client.runtime.block_on(async {
+            let collection_names = namespaces
+                .iter()
+                .map(|namespace| namespace.collection.as_str())
+                .collect::<Vec<&str>>();
 
-        for namespace in namespaces {
-            let namespace_schema_doc = client
-                .runtime
-                .block_on(async {
-                    schema_collection
-                        .find_one(doc! {
-                            "_id": &namespace.collection
-                        })
-                        .await
-                        .map_err(Error::QueryExecutionFailed)
-                })?
-                .ok_or(Error::SchemaDocumentNotFoundInSchemaCollection(
-                    namespace.collection.clone(),
-                ))?;
+            let namespace_schema_doc = schema_collection
+                .find(doc! {
+                    "_id": { "$in": collection_names }
+                })
+                .await
+                .map_err(Error::QueryExecutionFailed)?
+                .try_collect::<Vec<Document>>()
+                .await
+                .map_err(Error::QueryExecutionFailed)?;
 
-            let bson_schema = namespace_schema_doc.get("schema").ok_or(
-                Error::SchemaCollectionDocumentHasMissingKey(
-                    "schema".to_string(),
-                    namespace.collection.clone(),
-                ),
-            )?;
+            Ok(namespace_schema_doc.iter().fold(doc! {}, |mut acc, doc| {
+                if let (Some(_id), Some(schema)) =
+                    (doc.get("_id").and_then(Bson::as_str), doc.get("schema"))
+                {
+                    acc.insert(_id, schema);
+                } else {
+                    log::error!("Schema document missing _id or schema field: {:?}", doc);
+                }
+                acc
+            }))
+        })?;
 
-            db_doc.insert(namespace.collection, bson_schema);
+        if namespaces.len() != collections_schema_doc.len() {
+            let missing_collections: Vec<String> = namespaces
+                .iter()
+                .map(|namespace| namespace.collection.clone())
+                .filter(|collection| !collections_schema_doc.contains_key(collection.as_str()))
+                .collect();
+
+            return Err(Error::SchemaDocumentNotFoundInSchemaCollection(
+                missing_collections,
+            ));
         }
-
-        let schema_catalog_doc: Document = doc! {
-            current_db: db_doc
-        };
 
         let translate_command = doc! {
             "command": "translate",
@@ -141,7 +148,9 @@ impl MongoQuery {
                 "db": current_db,
                 "excludeNamespaces": false,
                 "relaxSchemaChecking": true,
-                "schemaCatalog": schema_catalog_doc
+                "schemaCatalog": {
+                    current_db: collections_schema_doc
+                }
             },
         };
 

@@ -58,10 +58,8 @@ pub enum Error {
         "The ODBC driver version `{0}` is incompatible with libmongosqltranslate version `{1}`"
     )]
     LibmongosqltranslateLibraryIsIncompatible(&'static str, String),
-    #[error("The schema document for collection `{0}` could not be found in the `__sql_schemas` collection")]
-    SchemaDocumentNotFoundInSchemaCollection(String),
-    #[error("The `{0}` key in the schema document for collection `{1}` is missing")]
-    SchemaCollectionDocumentHasMissingKey(String, String),
+    #[error("The following collections were not found in the `__sql_schemas` collection: {0}")]
+    SchemaDocumentNotFoundInSchemaCollection(Vec<String>),
     #[error(
         "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"
     )]
@@ -122,7 +120,6 @@ impl Error {
             | Error::LibmongosqltranslateDeserialization(_)
             | Error::LibmongosqltranslateSerialization(_)
             | Error::LibmongosqltranslateDocumentHasMissingKey(_, _)
-            | Error::SchemaCollectionDocumentHasMissingKey(_, _)
             | Error::EmptyAppName
             | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
@@ -174,7 +171,6 @@ impl Error {
             | Error::LibmongosqltranslateDeserialization(_)
             | Error::LibmongosqltranslateSerialization(_)
             | Error::LibmongosqltranslateDocumentHasMissingKey(_, _)
-            | Error::SchemaCollectionDocumentHasMissingKey(_, _)
             | Error::EmptyAppName
             | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
