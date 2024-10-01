@@ -193,7 +193,7 @@ impl MongoQuery {
                     mongodb::bson::from_document(schema_response)
                         .map_err(Error::QueryDeserialization)?;
 
-                get_result_schema_response.into()
+                ResultSetSchema::from(get_result_schema_response)
             }
             MongoClusterType::Enterprise => {
                 // Get relevant namespaces
