@@ -1,3 +1,4 @@
+use crate::col_metadata::ResultSetSchema;
 use crate::{
     col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
@@ -557,7 +558,8 @@ impl MongoFields {
                             warnings.push(error);
                             continue;
                         }
-                        let current_col_metadata_response = current_col_metadata_response.unwrap();
+                        let current_col_metadata_response: ResultSetSchema =
+                            current_col_metadata_response.unwrap().into();
                         match current_col_metadata_response.process_collection_metadata(
                             &self.current_db_name,
                             collection_name.as_str(),

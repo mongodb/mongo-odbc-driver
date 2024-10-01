@@ -170,7 +170,23 @@ pub struct VersionedJsonSchema {
     pub json_schema: crate::json_schema::Schema,
 }
 
-impl SqlGetSchemaResponse {
+// Struct representing the ResultSetSchema.
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
+pub struct ResultSetSchema {
+    pub schema: crate::json_schema::Schema,
+    pub select_order: Option<Vec<Vec<String>>>,
+}
+
+impl Into<ResultSetSchema> for SqlGetSchemaResponse {
+    fn into(self) -> ResultSetSchema {
+        ResultSetSchema {
+            schema: self.schema.json_schema,
+            select_order: self.select_order,
+        }
+    }
+}
+
+impl ResultSetSchema {
     /// Converts a sqlGetResultSchema command response into a list of column
     /// metadata. Ensures the top-level schema is an Object with properties,
     /// and ensures the same for each top-level property -- which correspond
@@ -199,7 +215,7 @@ impl SqlGetSchemaResponse {
         max_string_length: Option<u16>,
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
-            self.schema.json_schema.clone().try_into()?;
+            self.schema.clone().try_into()?;
         let result_set_object_schema = result_set_schema.assert_object_schema()?;
 
         // create a map from the naming convention used by select order ([datasource name, column name]),
@@ -275,7 +291,7 @@ impl SqlGetSchemaResponse {
         max_string_length: Option<u16>,
     ) -> Result<Vec<MongoColMetadata>> {
         let collection_schema: crate::json_schema::simplified::Schema =
-            self.schema.json_schema.clone().try_into()?;
+            self.schema.clone().try_into()?;
         Self::schema_to_col_metadata(
             &collection_schema,
             current_db,

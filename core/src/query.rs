@@ -1,5 +1,5 @@
 use crate::cluster_type::MongoClusterType;
-use crate::col_metadata::VersionedJsonSchema;
+use crate::col_metadata::ResultSetSchema;
 use crate::json_schema::Schema;
 use crate::util::libmongosqltranslate_run_command;
 use crate::{
@@ -164,7 +164,7 @@ impl MongoQuery {
         let working_db = current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = client.client.database(working_db);
 
-        let metadata = match client.cluster_type {
+        let result_set_schema: ResultSetSchema = match client.cluster_type {
             MongoClusterType::AtlasDataFederation => {
                 // 1. Run the sqlGetResultSchema command to get the result set
                 // metadata. Column metadata is sorted alphabetically by table
@@ -183,11 +183,7 @@ impl MongoQuery {
                     mongodb::bson::from_document(schema_response)
                         .map_err(Error::QueryDeserialization)?;
 
-                get_result_schema_response.process_result_metadata(
-                    working_db,
-                    type_mode,
-                    max_string_length,
-                )?
+                get_result_schema_response.into()
             }
             MongoClusterType::Enterprise => {
                 // Get relevant namespaces
@@ -198,26 +194,19 @@ impl MongoQuery {
                 let mongosql_translation =
                     Self::translate_sql(query, working_db, namespaces, client, &db)?;
 
-                let translation_metadata = SqlGetSchemaResponse {
-                    ok: 1,
-                    schema: VersionedJsonSchema {
-                        version: 1,
-                        json_schema: mongosql_translation.result_set_schema,
-                    },
+                ResultSetSchema {
+                    schema: mongosql_translation.result_set_schema,
                     select_order: Some(mongosql_translation.select_order),
-                };
-
-                translation_metadata.process_result_metadata(
-                    working_db,
-                    type_mode,
-                    max_string_length,
-                )?
+                }
             }
             MongoClusterType::Community | MongoClusterType::UnknownTarget => {
                 // On connection, these types should get caught and throw an error.
                 unreachable!()
             }
         };
+
+        let metadata =
+            result_set_schema.process_result_metadata(working_db, type_mode, max_string_length)?;
 
         Ok(Self {
             resultset_cursor: None,
