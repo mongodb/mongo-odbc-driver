@@ -7,6 +7,7 @@ use crate::{
     util::libmongosqltranslate_run_command,
     Error, TypeMode,
 };
+use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, document::ValueAccessError, Bson, Document},
     error::{CommandError, ErrorKind},
