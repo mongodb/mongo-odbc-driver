@@ -1,6 +1,5 @@
-use crate::col_metadata::ResultSetSchema;
 use crate::{
-    col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
+    col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
     err::{Error, Result},

@@ -47,8 +47,8 @@ pub struct Translation {
     pub target_db: String,
     pub target_collection: Option<String>,
     pub pipeline: bson::Bson,
-    pub result_set_schema: Schema,
-    pub select_order: Vec<Vec<String>>,
+    #[serde(flatten)]
+    pub result_set_schema: ResultSetSchema,
 }
 
 impl Translation {
@@ -194,10 +194,7 @@ impl MongoQuery {
                 let mongosql_translation =
                     Self::translate_sql(query, working_db, namespaces, client, &db)?;
 
-                ResultSetSchema {
-                    schema: mongosql_translation.result_set_schema,
-                    select_order: Some(mongosql_translation.select_order),
-                }
+                mongosql_translation.result_set_schema
             }
             MongoClusterType::Community | MongoClusterType::UnknownTarget => {
                 // On connection, these types should get caught and throw an error.
