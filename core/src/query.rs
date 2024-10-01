@@ -290,7 +290,7 @@ impl MongoStatement for MongoQuery {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = connection.client.database(current_db);
 
-        let (pipeline, collection) = match connection.cluster_type {
+        let (pipeline, collection_name) = match connection.cluster_type {
             MongoClusterType::AtlasDataFederation => {
                 // 2. Run the $sql aggregation to get the result set cursor.
                 let pipeline = vec![doc! {"$sql": {
@@ -329,6 +329,28 @@ impl MongoStatement for MongoQuery {
             }
         };
 
+        let collection;
+        let mut aggregate = if let Some(c_name) = collection_name {
+            collection = db.collection::<Document>(c_name.as_str());
+            collection.aggregate(pipeline)
+        } else {
+            db.aggregate(pipeline)
+        };
+
+        aggregate = aggregate.comment(stmt_id);
+
+        // If the query timeout is 0, it means "no timeout"
+        if self.query_timeout.is_some_and(|timeout| timeout > 0) {
+            aggregate = aggregate.max_time(Duration::from_millis(u64::from(
+                self.query_timeout.unwrap(),
+            )));
+        }
+
+        // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
+        if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
+            aggregate = aggregate.batch_size(rowset_size);
+        }
+
         // handle an error coming back from execution; if it was cancelled, throw a specific error to
         // denote this to the program, otherwise return a generic query execution error
         let map_query_error = |e: mongodb::error::Error| match *e.kind {
@@ -339,46 +361,10 @@ impl MongoStatement for MongoQuery {
             _ => Error::QueryExecutionFailed(e),
         };
 
-        let cursor: Cursor<Document> = if let Some(c) = collection {
-            let collection = db.collection::<Document>(c.as_str());
-            let mut aggregate = collection.aggregate(pipeline).comment(stmt_id);
-
-            // If the query timeout is 0, it means "no timeout"
-            if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-                aggregate = aggregate.max_time(Duration::from_millis(u64::from(
-                    self.query_timeout.unwrap(),
-                )));
-            }
-
-            // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
-            if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
-                aggregate = aggregate.batch_size(rowset_size);
-            }
-
-            let _guard = connection.runtime.enter();
-            connection
-                .runtime
-                .block_on(async { aggregate.await.map_err(map_query_error) })?
-        } else {
-            let mut aggregate = db.aggregate(pipeline).comment(stmt_id);
-
-            // If the query timeout is 0, it means "no timeout"
-            if self.query_timeout.is_some_and(|timeout| timeout > 0) {
-                aggregate = aggregate.max_time(Duration::from_millis(u64::from(
-                    self.query_timeout.unwrap(),
-                )));
-            }
-
-            // If rowset_size is large, then update the batch_size to be rowset_size for better efficiency.
-            if rowset_size > BATCH_SIZE_REPLACEMENT_THRESHOLD {
-                aggregate = aggregate.batch_size(rowset_size);
-            }
-
-            let _guard = connection.runtime.enter();
-            connection
-                .runtime
-                .block_on(async { aggregate.await.map_err(map_query_error) })?
-        };
+        let _guard = connection.runtime.enter();
+        let cursor: Cursor<Document> = connection
+            .runtime
+            .block_on(async { aggregate.await.map_err(map_query_error) })?;
 
         self.resultset_cursor = Some(cursor);
         Ok(true)
