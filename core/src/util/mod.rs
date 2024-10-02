@@ -33,9 +33,10 @@ pub struct BsonBuffer {
     pub capacity: usize,
 }
 
-/// This function handles libmongosqltranslate runCommands. It takes in a `runCommand`,
+/// This function handles libmongosqltranslate runCommands. It takes in a `runCommand` as a Document,
 /// handles serializing it into a BSON byte vector, calls the libmongosqltranslate runCommand,
-/// deserializes the response, and returns either an error or a valid response for the given `runCommand`.
+/// deserializes the response, and returns a document containing either an error or a valid response
+/// for the given `runCommand`.
 pub(crate) fn libmongosqltranslate_run_command(command: Document) -> Result<Document> {
     let library = get_mongosqltranslate_library().ok_or(Error::UnsupportedClusterConfiguration(
         "Enterprise edition was detected, but libmongosqltranslate was not found.".to_string(),
