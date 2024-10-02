@@ -182,11 +182,9 @@ pub struct CheckDriverVersionCommandResponse {
 
 #[test]
 fn test_custom_serializer() {
-    let command = Command::new(Translate::new(
-        "SELECT * FROM foo".to_string(),
-        "bar".to_string(),
-        doc! {},
-    ));
+    let translate = Translate::new("SELECT * FROM foo".to_string(), "bar".to_string(), doc! {});
+
+    let command = Command::from(translate);
 
     let serialized = serde_json::to_string(&command).unwrap();
 
