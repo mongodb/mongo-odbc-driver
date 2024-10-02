@@ -4,7 +4,7 @@ use crate::{
     conn::MongoConnection,
     err::Result,
     mongosqltranslate_data_types::{
-        Command, CommandResponse, GetNamespaces, Namespace, Translate, TranslateCommandResponse,
+        CommandResponse, GetNamespaces, Namespace, Translate, TranslateCommandResponse,
     },
     stmt::MongoStatement,
     util::libmongosqltranslate_run_command,
@@ -39,7 +39,7 @@ pub struct MongoQuery {
 
 impl MongoQuery {
     fn get_sql_query_namespaces(sql_query: &str, db: &String) -> Result<BTreeSet<Namespace>> {
-        let command = Command::new(GetNamespaces::new(sql_query.to_string(), db.to_string()));
+        let command = GetNamespaces::new(sql_query.to_string(), db.to_string());
 
         let command_response = libmongosqltranslate_run_command(command)?;
 
@@ -104,11 +104,11 @@ impl MongoQuery {
             current_db: collections_schema_doc
         };
 
-        let command = Command::new(Translate::new(
+        let command = Translate::new(
             sql_query.to_string(),
             current_db.to_string(),
             schema_catalog_doc,
-        ));
+        );
 
         let command_response = libmongosqltranslate_run_command(command)?;
 

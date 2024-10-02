@@ -66,9 +66,11 @@ pub enum Error {
     LibmongosqltranslateCommandFailed(&'static str, String, bool),
     #[error("Loading the runCommand symbol from libmongosqltranslate failed with error: {0}")]
     RunCommandSymbolNotFound(String),
-    #[error("Deserializing libmongosqltranslate response failed with error: {0}")]
+    #[error("Deserializing libmongosqltranslate response to BSON Document failed with error: {0}")]
     LibmongosqltranslateDeserialization(mongodb::bson::de::Error),
-    #[error("Serializing Command Document for libmongosqltranslate failed with error: {0}")]
+    #[error("Deserializing libmongosqltranslate response Document to CommandResponse failed with error: {0}")]
+    BsonDocumentToCommandResponseDeserialization(mongodb::bson::de::Error),
+    #[error("Serializing runCommand for libmongosqltranslate failed with error: {0}")]
     LibmongosqltranslateSerialization(mongodb::bson::ser::Error),
     #[error("The client app_name is empty. However, this shouldn't be possible.")]
     EmptyAppName,
@@ -120,7 +122,8 @@ impl Error {
             | Error::EmptyAppName
             | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
-            | Error::TranslationPipelineArrayContainsNonDocument => GENERAL_ERROR,
+            | Error::TranslationPipelineArrayContainsNonDocument
+            | Error::BsonDocumentToCommandResponseDeserialization(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
         }
@@ -170,7 +173,8 @@ impl Error {
             | Error::EmptyAppName
             | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
-            | Error::TranslationPipelineArrayContainsNonDocument => 0,
+            | Error::TranslationPipelineArrayContainsNonDocument
+            | Error::BsonDocumentToCommandResponseDeserialization(_) => 0,
         }
     }
 }

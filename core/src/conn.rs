@@ -1,7 +1,7 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
 use crate::load_library::{get_mongosqltranslate_library, load_mongosqltranslate_library};
 use crate::mongosqltranslate_data_types::{
-    CheckDriverVersion, Command, CommandResponse, GetMongosqlTranslateVersion,
+    CheckDriverVersion, CommandResponse, GetMongosqlTranslateVersion,
 };
 use crate::odbc_uri::UserOptions;
 use crate::util::libmongosqltranslate_run_command;
@@ -142,7 +142,7 @@ impl MongoConnection {
     }
 
     fn get_libmongosqltranslate_version() -> Result<String> {
-        let command = Command::new(GetMongosqlTranslateVersion::default());
+        let command = GetMongosqlTranslateVersion::default();
 
         let command_response = libmongosqltranslate_run_command(command)?;
 
@@ -154,7 +154,7 @@ impl MongoConnection {
     }
 
     fn is_libmongosqltranslate_compatible_with_driver_version() -> Result<bool> {
-        let command = Command::new(CheckDriverVersion::new(DRIVER_ODBC_VERSION.clone()));
+        let command = CheckDriverVersion::new(DRIVER_ODBC_VERSION.clone());
 
         let command_response = libmongosqltranslate_run_command(command)?;
 

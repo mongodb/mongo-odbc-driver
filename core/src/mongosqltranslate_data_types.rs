@@ -33,6 +33,12 @@ impl<T> Command<T> {
     }
 }
 
+impl<T: CommandName + Serialize> From<T> for Command<T> {
+    fn from(options: T) -> Self {
+        Self { options }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetNamespaces {
     pub sql: String,
@@ -139,7 +145,8 @@ impl CommandResponse {
         let as_bson = Bson::Document(doc.clone());
         let deserializer = bson::Deserializer::new(as_bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer).map_err(Error::LibmongosqltranslateDeserialization)
+        Deserialize::deserialize(deserializer)
+            .map_err(Error::BsonDocumentToCommandResponseDeserialization)
     }
 }
 

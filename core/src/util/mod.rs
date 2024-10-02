@@ -43,7 +43,7 @@ pub struct BsonBuffer {
 /// deserializes the response, and returns either an error or a valid response
 /// for the given `runCommand`.
 pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
-    command: Command<T>,
+    command: impl Into<Command<T>>,
 ) -> Result<CommandResponse> {
     let library = get_mongosqltranslate_library().ok_or(Error::UnsupportedClusterConfiguration(
         "Enterprise edition was detected, but libmongosqltranslate was not found.".to_string(),
@@ -52,6 +52,8 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
     let run_command_function: Symbol<'static, unsafe extern "C" fn(BsonBuffer) -> BsonBuffer> =
         unsafe { library.get(b"runCommand") }
             .map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))?;
+
+    let command = command.into();
 
     let command_bytes_vec =
         bson::to_vec(&command).map_err(Error::LibmongosqltranslateSerialization)?;
