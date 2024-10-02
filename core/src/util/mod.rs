@@ -1,8 +1,6 @@
-use crate::load_library::get_mongosqltranslate_library;
-use crate::{Error, Result};
+use crate::{load_library::get_mongosqltranslate_library, Error, Result};
 use bson::{doc, document::ValueAccessError, Document};
 use constants::SQL_ALL_TABLE_TYPES;
-use definitions::BsonBuffer;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use libloading::Symbol;
@@ -26,6 +24,13 @@ lazy_static! {
         .unwrap();
     static ref NON_ESCAPED_UNDERSCORE: FancyRegex = FancyRegex::new(r"(?<!\\\\)_").unwrap();
     static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\\\)%").unwrap();
+}
+
+#[repr(C)]
+pub struct BsonBuffer {
+    pub data: *const u8,
+    pub length: usize,
+    pub capacity: usize,
 }
 
 /// This function handles libmongosqltranslate runCommands. It takes in a `runCommand`,

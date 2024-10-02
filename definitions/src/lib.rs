@@ -412,10 +412,3 @@ pub enum RowStatus {
     SQL_ROW_ERROR = 5,
     SQL_ROW_SUCCESS_WITH_INFO = 6,
 }
-
-#[repr(C)]
-pub struct BsonBuffer {
-    pub data: *const u8,
-    pub length: usize,
-    pub capacity: usize,
-}

@@ -1,4 +1,4 @@
-use definitions::BsonBuffer;
+use crate::util::BsonBuffer;
 use libloading::{Library, Symbol};
 use std::env;
 use std::path::PathBuf;
