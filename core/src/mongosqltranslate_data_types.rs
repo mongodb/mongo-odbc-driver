@@ -27,12 +27,6 @@ where
     }
 }
 
-impl<T> Command<T> {
-    pub fn new(options: T) -> Self {
-        Self { options }
-    }
-}
-
 impl<T: CommandName + Serialize> From<T> for Command<T> {
     fn from(options: T) -> Self {
         Self { options }
