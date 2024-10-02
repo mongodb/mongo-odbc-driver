@@ -1,5 +1,8 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
 use crate::load_library::{get_mongosqltranslate_library, load_mongosqltranslate_library};
+use crate::mongosqltranslate_data_types::{
+    CheckDriverVersion, Command, CommandResponse, GetMongosqlTranslateVersion,
+};
 use crate::odbc_uri::UserOptions;
 use crate::util::libmongosqltranslate_run_command;
 use crate::{err::Result, Error};
@@ -7,7 +10,7 @@ use crate::{MongoQuery, TypeMode};
 use constants::DRIVER_ODBC_VERSION;
 use lazy_static::lazy_static;
 use mongodb::{
-    bson::{doc, document::ValueAccessError, Bson, UuidRepresentation},
+    bson::{doc, Bson, UuidRepresentation},
     Client,
 };
 use serde::{Deserialize, Serialize};
@@ -139,37 +142,27 @@ impl MongoConnection {
     }
 
     fn get_libmongosqltranslate_version() -> Result<String> {
-        let get_mongosqltranslate_version_command = doc! {
-            "command": "getMongosqlTranslateVersion",
-            "options": {},
-        };
+        let command = Command::new(GetMongosqlTranslateVersion::default());
 
-        let returned_doc = libmongosqltranslate_run_command(get_mongosqltranslate_version_command)?;
+        let command_response = libmongosqltranslate_run_command(command)?;
 
-        let libmongosqltranslate_version = returned_doc
-            .get_str("version")
-            .map_err(|e: ValueAccessError| Error::ValueAccess("version".to_string(), e))?
-            .to_string();
-
-        Ok(libmongosqltranslate_version)
+        if let CommandResponse::GetMongosqlTranslateVersion(response) = command_response {
+            Ok(response.version)
+        } else {
+            unreachable!()
+        }
     }
 
     fn is_libmongosqltranslate_compatible_with_driver_version() -> Result<bool> {
-        let check_driver_version_command = doc! {
-            "command": "checkDriverVersion",
-            "options": {
-                "driverVersion": DRIVER_ODBC_VERSION.clone(),
-                "odbcDriver": true
-            },
-        };
+        let command = Command::new(CheckDriverVersion::new(DRIVER_ODBC_VERSION.clone()));
 
-        let returned_doc = libmongosqltranslate_run_command(check_driver_version_command)?;
+        let command_response = libmongosqltranslate_run_command(command)?;
 
-        let is_libmongosqltranslate_compatible = returned_doc
-            .get_bool("compatible")
-            .map_err(|e: ValueAccessError| Error::ValueAccess("compatible".to_string(), e))?;
-
-        Ok(is_libmongosqltranslate_compatible)
+        if let CommandResponse::CheckDriverVersion(response) = command_response {
+            Ok(response.compatible)
+        } else {
+            unreachable!()
+        }
     }
 
     /// Creates a new MongoConnection with the given settings and runs a command to make

@@ -1937,6 +1937,7 @@ dependencies = [
  "reqwest 0.12.5",
  "rfc8252_http_server",
  "serde",
+ "serde_json",
  "serde_stacker",
  "shared_sql_utils",
  "thiserror",

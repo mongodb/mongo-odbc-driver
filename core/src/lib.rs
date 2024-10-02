@@ -38,3 +38,4 @@ pub mod oidc_auth;
 pub mod test_config;
 
 pub mod cluster_type;
+pub mod mongosqltranslate_data_types;

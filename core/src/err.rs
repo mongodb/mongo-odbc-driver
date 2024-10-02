@@ -63,15 +63,13 @@ pub enum Error {
     #[error(
         "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"
     )]
-    LibmongosqltranslateCommandFailed(String, String, bool),
+    LibmongosqltranslateCommandFailed(&'static str, String, bool),
     #[error("Loading the runCommand symbol from libmongosqltranslate failed with error: {0}")]
     RunCommandSymbolNotFound(String),
     #[error("Deserializing libmongosqltranslate response failed with error: {0}")]
     LibmongosqltranslateDeserialization(mongodb::bson::de::Error),
     #[error("Serializing Command Document for libmongosqltranslate failed with error: {0}")]
     LibmongosqltranslateSerialization(mongodb::bson::ser::Error),
-    #[error("The `{0}` libmongosqltranslate command returned with a document missing the following key: {1}")]
-    LibmongosqltranslateDocumentHasMissingKey(String, String),
     #[error("The client app_name is empty. However, this shouldn't be possible.")]
     EmptyAppName,
     #[error("The libmongosqltranslate version is empty. However, this shouldn't be possible.")]
@@ -119,7 +117,6 @@ impl Error {
             | Error::RunCommandSymbolNotFound(_)
             | Error::LibmongosqltranslateDeserialization(_)
             | Error::LibmongosqltranslateSerialization(_)
-            | Error::LibmongosqltranslateDocumentHasMissingKey(_, _)
             | Error::EmptyAppName
             | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
@@ -170,7 +167,6 @@ impl Error {
             | Error::RunCommandSymbolNotFound(_)
             | Error::LibmongosqltranslateDeserialization(_)
             | Error::LibmongosqltranslateSerialization(_)
-            | Error::LibmongosqltranslateDocumentHasMissingKey(_, _)
             | Error::EmptyAppName
             | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray

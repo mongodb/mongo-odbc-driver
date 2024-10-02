@@ -3,6 +3,9 @@ use crate::{
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
     err::Result,
+    mongosqltranslate_data_types::{
+        Command, CommandResponse, GetNamespaces, Namespace, Translate, TranslateCommandResponse,
+    },
     stmt::MongoStatement,
     util::libmongosqltranslate_run_command,
     Error, TypeMode,
@@ -13,7 +16,6 @@ use mongodb::{
     error::{CommandError, ErrorKind},
     Cursor, Database,
 };
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::time::Duration;
 
@@ -35,61 +37,17 @@ pub struct MongoQuery {
     pub query_timeout: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, PartialOrd, Ord)]
-pub struct Namespace {
-    pub database: String,
-    pub collection: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Translation {
-    pub target_db: String,
-    pub target_collection: Option<String>,
-    pub pipeline: bson::Bson,
-    #[serde(flatten)]
-    pub result_set_schema: ResultSetSchema,
-}
-
-impl Translation {
-    pub fn from_document(doc: &Document) -> Result<Self> {
-        let as_bson = Bson::Document(doc.clone());
-        let deserializer = bson::Deserializer::new(as_bson);
-        let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer).map_err(Error::LibmongosqltranslateDeserialization)
-    }
-}
-
-impl Namespace {
-    pub fn from_bson(bson: Bson) -> Result<BTreeSet<Self>> {
-        let deserializer = bson::Deserializer::new(bson);
-        let deserializer = serde_stacker::Deserializer::new(deserializer);
-        Deserialize::deserialize(deserializer).map_err(Error::LibmongosqltranslateDeserialization)
-    }
-}
-
 impl MongoQuery {
     fn get_sql_query_namespaces(sql_query: &str, db: &String) -> Result<BTreeSet<Namespace>> {
-        let get_namespaces_command = doc! {
-            "command": "getNamespaces",
-            "options": {
-                "sql": sql_query,
-                "db": db,
-            },
-        };
+        let command = Command::new(GetNamespaces::new(sql_query.to_string(), db.to_string()));
 
-        let returned_doc = libmongosqltranslate_run_command(get_namespaces_command)?;
+        let command_response = libmongosqltranslate_run_command(command)?;
 
-        let namespaces: BTreeSet<Namespace> = Namespace::from_bson(
-            returned_doc
-                .get("namespaces")
-                .ok_or(Error::LibmongosqltranslateDocumentHasMissingKey(
-                    "getNamespaces".to_string(),
-                    "namespaces".to_string(),
-                ))?
-                .to_owned(),
-        )?;
-
-        Ok(namespaces)
+        if let CommandResponse::GetNamespaces(response) = command_response {
+            Ok(response.namespaces)
+        } else {
+            unreachable!()
+        }
     }
 
     fn translate_sql(
@@ -98,7 +56,7 @@ impl MongoQuery {
         namespaces: BTreeSet<Namespace>,
         client: &MongoConnection,
         db: &Database,
-    ) -> Result<Translation> {
+    ) -> Result<TranslateCommandResponse> {
         let schema_collection = db.collection::<Document>("__sql_schemas");
 
         // create the schema_catalog document
@@ -142,24 +100,23 @@ impl MongoQuery {
             ));
         }
 
-        let translate_command = doc! {
-            "command": "translate",
-            "options": {
-                "sql": sql_query,
-                "db": current_db,
-                "excludeNamespaces": false,
-                "relaxSchemaChecking": true,
-                "schemaCatalog": {
-                    current_db: collections_schema_doc
-                }
-            },
+        let schema_catalog_doc = doc! {
+            current_db: collections_schema_doc
         };
 
-        let returned_doc = libmongosqltranslate_run_command(translate_command)?;
+        let command = Command::new(Translate::new(
+            sql_query.to_string(),
+            current_db.to_string(),
+            schema_catalog_doc,
+        ));
 
-        let mongosql_translation = Translation::from_document(&returned_doc)?;
+        let command_response = libmongosqltranslate_run_command(command)?;
 
-        Ok(mongosql_translation)
+        if let CommandResponse::Translate(response) = command_response {
+            Ok(response)
+        } else {
+            unreachable!()
+        }
     }
 
     // Create a MongoQuery with only the resultset_metadata.
