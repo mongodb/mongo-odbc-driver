@@ -82,6 +82,12 @@ pub enum Error {
     TranslationPipelineNotArray,
     #[error("The mongosql Translation `pipeline` array should only contain Documents; however, a non-document bson-type was encountered.")]
     TranslationPipelineArrayContainsNonDocument,
+    #[error("No schema information returned for the requested collections.")]
+    NoSchemaInformationReturned,
+    #[error(
+        "Multiple Documents were returned when getting the schema; however, only one was expected."
+    )]
+    MultipleSchemaDocumentsReturned(usize),
 }
 
 impl Error {
@@ -123,7 +129,9 @@ impl Error {
             | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
-            | Error::BsonDocumentToCommandResponseDeserialization(_) => GENERAL_ERROR,
+            | Error::BsonDocumentToCommandResponseDeserialization(_)
+            | Error::NoSchemaInformationReturned
+            | Error::MultipleSchemaDocumentsReturned(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
         }
@@ -174,7 +182,9 @@ impl Error {
             | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
-            | Error::BsonDocumentToCommandResponseDeserialization(_) => 0,
+            | Error::BsonDocumentToCommandResponseDeserialization(_)
+            | Error::NoSchemaInformationReturned
+            | Error::MultipleSchemaDocumentsReturned(_) => 0,
         }
     }
 }

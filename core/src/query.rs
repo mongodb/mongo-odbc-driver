@@ -3,11 +3,11 @@ use crate::{
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
     err::Result,
-    mongosqltranslate_data_types::{
-        CommandResponse, GetNamespaces, Namespace, Translate, TranslateCommandResponse,
+    mongosqltranslate::{
+        libmongosqltranslate_run_command, CommandResponse, GetNamespaces, Namespace, Translate,
+        TranslateCommandResponse,
     },
     stmt::MongoStatement,
-    util::libmongosqltranslate_run_command,
     Error, TypeMode,
 };
 use futures::TryStreamExt;
@@ -31,8 +31,10 @@ pub struct MongoQuery {
     current: Option<Document>,
     // The current database
     pub current_db: Option<String>,
-    // The query
-    pub query: String,
+    // The current collection. Only used in Enterprise mode.
+    pub current_collection: Option<String>,
+    // The MQL aggregation pipeline
+    pub pipeline: Vec<Document>,
     // The query timeout
     pub query_timeout: Option<u32>,
 }
@@ -59,34 +61,76 @@ impl MongoQuery {
     ) -> Result<TranslateCommandResponse> {
         let schema_collection = db.collection::<Document>("__sql_schemas");
 
-        // create the schema_catalog document
-        let collections_schema_doc: Document = client.runtime.block_on(async {
-            let collection_names = namespaces
-                .iter()
-                .map(|namespace| namespace.collection.as_str())
-                .collect::<Vec<&str>>();
+        let collection_names = namespaces
+            .iter()
+            .map(|namespace| namespace.collection.as_str())
+            .collect::<Vec<&str>>();
 
-            let namespace_schema_doc = schema_collection
-                .find(doc! {
-                    "_id": { "$in": collection_names }
-                })
+        // Create an aggregation pipeline to fetch the schema information for the specified collections.
+        // The pipeline uses $in to query all the specified collections and projects them into the desired format:
+        // "dbName": { "collection1" : "Schema1", "collection2" : "Schema2", ... }
+        let schema_catalog_aggregation_pipeline = vec![
+            doc! {"$match": {
+                "_id": {
+                    "$in": collection_names
+                    }
+                }
+            },
+            doc! {"$project":{
+                "_id": 1,
+                "schema": 1
+                }
+            },
+            doc! {"$group": {
+                "_id": null,
+                "collections": {
+                    "collectionName": "$_id",
+                    "schema": "$schema"
+                    }
+                }
+            },
+            doc! {"$project": {
+                "_id": 0,
+                current_db: {
+                    "$arrayToObject": [{
+                        "$map": {
+                            "input": "$collections",
+                            "as": "coll",
+                            "in": {
+                                "k": "$$coll.collectionName",
+                                "v": "$$coll.schema"
+                                }
+                            }
+                        }]
+                    }
+                }
+            },
+        ];
+
+        // create the schema_catalog document
+        let schema_catalog_doc_vec: Vec<Document> = client.runtime.block_on(async {
+            schema_collection
+                .aggregate(schema_catalog_aggregation_pipeline)
                 .await
                 .map_err(Error::QueryExecutionFailed)?
                 .try_collect::<Vec<Document>>()
                 .await
-                .map_err(Error::QueryExecutionFailed)?;
-
-            Ok(namespace_schema_doc.iter().fold(doc! {}, |mut acc, doc| {
-                if let (Some(_id), Some(schema)) =
-                    (doc.get("_id").and_then(Bson::as_str), doc.get("schema"))
-                {
-                    acc.insert(_id, schema);
-                } else {
-                    log::error!("Schema document missing _id or schema field: {:?}", doc);
-                }
-                acc
-            }))
+                .map_err(Error::QueryExecutionFailed)
         })?;
+
+        if schema_catalog_doc_vec.len() > 1 {
+            return Err(Error::MultipleSchemaDocumentsReturned(
+                schema_catalog_doc_vec.len(),
+            ));
+        } else if schema_catalog_doc_vec.is_empty() {
+            return Err(Error::NoSchemaInformationReturned);
+        }
+
+        let schema_catalog_doc = schema_catalog_doc_vec[0].to_owned();
+
+        let collections_schema_doc = schema_catalog_doc
+            .get_document(current_db)
+            .map_err(|e: ValueAccessError| Error::ValueAccess(current_db.to_string(), e))?;
 
         if namespaces.len() != collections_schema_doc.len() {
             let missing_collections: Vec<String> = namespaces
@@ -99,10 +143,6 @@ impl MongoQuery {
                 missing_collections,
             ));
         }
-
-        let schema_catalog_doc = doc! {
-            current_db: collections_schema_doc
-        };
 
         let command = Translate::new(
             sql_query.to_string(),
@@ -131,7 +171,7 @@ impl MongoQuery {
         let working_db = current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = client.client.database(working_db);
 
-        let result_set_schema: ResultSetSchema = match client.cluster_type {
+        let (pipeline, current_collection, result_set_schema) = match client.cluster_type {
             MongoClusterType::AtlasDataFederation => {
                 // 1. Run the sqlGetResultSchema command to get the result set
                 // metadata. Column metadata is sorted alphabetically by table
@@ -150,7 +190,16 @@ impl MongoQuery {
                     mongodb::bson::from_document(schema_response)
                         .map_err(Error::QueryDeserialization)?;
 
-                ResultSetSchema::from(get_result_schema_response)
+                // 2. Run the $sql aggregation to get the result set cursor.
+                let pipeline = vec![doc! {"$sql": {
+                    "statement": query,
+                }}];
+
+                (
+                    pipeline,
+                    None,
+                    ResultSetSchema::from(get_result_schema_response),
+                )
             }
             MongoClusterType::Enterprise => {
                 // Get relevant namespaces
@@ -161,7 +210,25 @@ impl MongoQuery {
                 let mongosql_translation =
                     Self::translate_sql(query, working_db, namespaces, client, &db)?;
 
-                mongosql_translation.result_set_schema
+                let mut pipeline: Vec<Document> = Vec::new();
+
+                for bson_doc in mongosql_translation
+                    .pipeline
+                    .as_array()
+                    .ok_or(Error::TranslationPipelineNotArray)?
+                    .iter()
+                {
+                    match bson_doc.as_document() {
+                        None => return Err(Error::TranslationPipelineArrayContainsNonDocument),
+                        Some(doc) => pipeline.push(doc.to_owned()),
+                    }
+                }
+
+                (
+                    pipeline,
+                    mongosql_translation.target_collection,
+                    mongosql_translation.result_set_schema,
+                )
             }
             MongoClusterType::Community | MongoClusterType::UnknownTarget => {
                 // On connection, these types should get caught and throw an error.
@@ -177,7 +244,8 @@ impl MongoQuery {
             resultset_metadata: metadata,
             current: None,
             current_db,
-            query: query.to_string(),
+            current_collection,
+            pipeline,
             query_timeout,
         })
     }
@@ -247,51 +315,12 @@ impl MongoStatement for MongoQuery {
         let current_db = self.current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = connection.client.database(current_db);
 
-        let (pipeline, collection_name) = match connection.cluster_type {
-            MongoClusterType::AtlasDataFederation => {
-                // 2. Run the $sql aggregation to get the result set cursor.
-                let pipeline = vec![doc! {"$sql": {
-                    "statement": &self.query,
-                }}];
-                (pipeline, None)
-            }
-            MongoClusterType::Enterprise => {
-                // Get relevant namespaces
-                let namespaces: BTreeSet<Namespace> =
-                    Self::get_sql_query_namespaces(&self.query, current_db)?;
-
-                // Translate sql
-                let mongosql_translation =
-                    Self::translate_sql(&self.query, current_db, namespaces, connection, &db)?;
-
-                let mut pipeline: Vec<Document> = Vec::new();
-
-                for bson_doc in mongosql_translation
-                    .pipeline
-                    .as_array()
-                    .ok_or(Error::TranslationPipelineNotArray)?
-                    .iter()
-                {
-                    match bson_doc.as_document() {
-                        None => return Err(Error::TranslationPipelineArrayContainsNonDocument),
-                        Some(doc) => pipeline.push(doc.to_owned()),
-                    }
-                }
-
-                (pipeline, mongosql_translation.target_collection)
-            }
-            MongoClusterType::Community | MongoClusterType::UnknownTarget => {
-                // On connection, these types should get caught and throw an error.
-                unreachable!()
-            }
-        };
-
         let collection;
-        let mut aggregate = if let Some(c_name) = collection_name {
-            collection = db.collection::<Document>(c_name.as_str());
-            collection.aggregate(pipeline)
+        let mut aggregate = if let Some(c_name) = self.current_collection.as_ref() {
+            collection = db.collection::<Document>(c_name);
+            collection.aggregate(self.pipeline.to_owned())
         } else {
-            db.aggregate(pipeline)
+            db.aggregate(self.pipeline.to_owned())
         };
 
         aggregate = aggregate.comment(stmt_id);

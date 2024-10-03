@@ -1,10 +1,10 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
-use crate::load_library::{get_mongosqltranslate_library, load_mongosqltranslate_library};
-use crate::mongosqltranslate_data_types::{
-    CheckDriverVersion, CommandResponse, GetMongosqlTranslateVersion,
+use crate::mongosqltranslate::{
+    get_mongosqltranslate_library, libmongosqltranslate_run_command,
+    load_mongosqltranslate_library, CheckDriverVersion, CommandResponse,
+    GetMongosqlTranslateVersion,
 };
 use crate::odbc_uri::UserOptions;
-use crate::util::libmongosqltranslate_run_command;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
 use constants::DRIVER_ODBC_VERSION;

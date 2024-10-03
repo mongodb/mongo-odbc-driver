@@ -1,16 +1,9 @@
-use crate::{
-    load_library::get_mongosqltranslate_library,
-    mongosqltranslate_data_types::{Command, CommandName, CommandResponse},
-    Error, Result,
-};
-use bson::{doc, Document};
 use constants::SQL_ALL_TABLE_TYPES;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
-use libloading::Symbol;
 use mongodb::results::CollectionType;
 use regex::{Regex, RegexSet, RegexSetBuilder};
-use serde::Serialize;
+
 mod test_connection;
 
 pub(crate) const TABLE: &str = "TABLE";
@@ -29,70 +22,6 @@ lazy_static! {
         .unwrap();
     static ref NON_ESCAPED_UNDERSCORE: FancyRegex = FancyRegex::new(r"(?<!\\\\)_").unwrap();
     static ref NON_ESCAPED_PERCENT: FancyRegex = FancyRegex::new(r"(?<!\\\\)%").unwrap();
-}
-
-#[repr(C)]
-pub struct BsonBuffer {
-    pub data: *const u8,
-    pub length: usize,
-    pub capacity: usize,
-}
-
-/// This function handles libmongosqltranslate runCommands. It takes in a `runCommand`,
-/// handles serializing it into a BSON byte vector, calls the libmongosqltranslate runCommand,
-/// deserializes the response, and returns either an error or a valid response
-/// for the given `runCommand`.
-pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
-    command: impl Into<Command<T>>,
-) -> Result<CommandResponse> {
-    let library = get_mongosqltranslate_library().ok_or(Error::UnsupportedClusterConfiguration(
-        "Enterprise edition was detected, but libmongosqltranslate was not found.".to_string(),
-    ))?;
-
-    let run_command_function: Symbol<'static, unsafe extern "C" fn(BsonBuffer) -> BsonBuffer> =
-        unsafe { library.get(b"runCommand") }
-            .map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))?;
-
-    let command = command.into();
-
-    let command_bytes_vec =
-        bson::to_vec(&command).map_err(Error::LibmongosqltranslateSerialization)?;
-
-    let command_bytes_length = command_bytes_vec.len();
-
-    let command_bytes_capacity = command_bytes_vec.capacity();
-
-    let libmongosqltranslate_command = BsonBuffer {
-        data: Box::into_raw(command_bytes_vec.into_boxed_slice()).cast(),
-        length: command_bytes_length,
-        capacity: command_bytes_capacity,
-    };
-
-    let decomposed_returned_doc = unsafe { run_command_function(libmongosqltranslate_command) };
-
-    let command_response_doc: Document = unsafe {
-        bson::from_slice(
-            Vec::from_raw_parts(
-                decomposed_returned_doc.data.cast_mut(),
-                decomposed_returned_doc.length,
-                decomposed_returned_doc.capacity,
-            )
-            .as_slice(),
-        )
-        .map_err(Error::LibmongosqltranslateDeserialization)?
-    };
-
-    let command_response = CommandResponse::from_document(&command_response_doc)?;
-
-    if let CommandResponse::Error(error_response) = command_response {
-        return Err(Error::LibmongosqltranslateCommandFailed(
-            T::command_name(),
-            error_response.error,
-            error_response.error_is_internal,
-        ));
-    }
-
-    Ok(command_response)
 }
 
 // Converts SQL pattern characters (% and _) into proper regex patterns.
