@@ -11,8 +11,8 @@ use mongodb::Client;
 use std::env;
 
 mod integration {
-
     use super::*;
+    use mongo_odbc_core::cluster_type::MongoClusterType;
 
     fn generate_connection_uri() -> String {
         let user_name = env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set");
@@ -146,6 +146,7 @@ mod integration {
             operation_timeout: None,
             uuid_repr: None,
             runtime: runtime.into(),
+            cluster_type: MongoClusterType::AtlasDataFederation,
         };
         *conn_handle.mongo_connection.write().unwrap() = Some(mongo_connection);
         let conn = &mut MongoHandle::Connection(conn_handle);
