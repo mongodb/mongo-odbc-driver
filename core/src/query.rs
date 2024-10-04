@@ -190,7 +190,7 @@ impl MongoQuery {
                     mongodb::bson::from_document(schema_response)
                         .map_err(Error::QueryDeserialization)?;
 
-                // 2. Run the $sql aggregation to get the result set cursor.
+                // 2. Generate the $sql aggregation pipeline to use at execution time.
                 let pipeline = vec![doc! {"$sql": {
                     "statement": query,
                 }}];

@@ -86,13 +86,13 @@ pub fn load_mongosqltranslate_library() {
     });
 }
 
-pub fn get_mock_run_command() -> std::result::Result<
-    Symbol<'static, unsafe extern "C" fn(*const u8, usize) -> BsonBuffer>,
-    Box<dyn std::error::Error>,
-> {
-    let library =
-        get_mongosqltranslate_library().ok_or("mongosqltranslate library is not loaded")?;
-    unsafe { library.get(b"runCommand") }.map_err(|e| e.into())
+pub fn get_run_command_fn_ptr(
+) -> std::result::Result<Symbol<'static, unsafe extern "C" fn(BsonBuffer) -> BsonBuffer>, Error> {
+    let library = get_mongosqltranslate_library().ok_or(Error::UnsupportedClusterConfiguration(
+        "Enterprise edition was detected, but libmongosqltranslate was not found.".to_string(),
+    ))?;
+    unsafe { library.get(b"runCommand") }
+        .map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))
 }
 
 pub fn get_mongosqltranslate_library() -> Option<&'static Library> {
@@ -289,13 +289,7 @@ pub struct BsonBuffer {
 pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
     command: impl Into<Command<T>>,
 ) -> Result<CommandResponse> {
-    let library = get_mongosqltranslate_library().ok_or(Error::UnsupportedClusterConfiguration(
-        "Enterprise edition was detected, but libmongosqltranslate was not found.".to_string(),
-    ))?;
-
-    let run_command_function: Symbol<'static, unsafe extern "C" fn(BsonBuffer) -> BsonBuffer> =
-        unsafe { library.get(b"runCommand") }
-            .map_err(|e| Error::RunCommandSymbolNotFound(e.to_string()))?;
+    let run_command_function = get_run_command_fn_ptr()?;
 
     let command = command.into();
 
@@ -349,12 +343,18 @@ mod unit {
         load_mongosqltranslate_library();
         assert!(get_mongosqltranslate_library().is_some());
 
-        let run_command = get_mock_run_command().expect("Failed to load runCommand symbol");
+        let run_command = get_run_command_fn_ptr().expect("Failed to load runCommand symbol");
         let test_doc = doc! { "test": "value" };
         let bson_bytes = bson::to_vec(&test_doc).expect("Failed to serialize BSON");
 
         // Call runCommand
-        let result = unsafe { run_command(bson_bytes.as_ptr(), bson_bytes.len()) };
+        let command = BsonBuffer {
+            data: bson_bytes.as_ptr(),
+            length: bson_bytes.len(),
+            capacity: bson_bytes.capacity(),
+        };
+
+        let result = unsafe { run_command(command) };
         let result_vec =
             unsafe { Vec::from_raw_parts(result.data as *mut u8, result.length, result.capacity) };
         let result_doc: Document =
