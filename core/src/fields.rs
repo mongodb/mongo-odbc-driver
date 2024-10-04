@@ -1,5 +1,5 @@
 use crate::{
-    col_metadata::{MongoColMetadata, SqlGetSchemaResponse},
+    col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
     err::{Error, Result},
@@ -557,7 +557,8 @@ impl MongoFields {
                             warnings.push(error);
                             continue;
                         }
-                        let current_col_metadata_response = current_col_metadata_response.unwrap();
+                        let current_col_metadata_response: ResultSetSchema =
+                            current_col_metadata_response.unwrap().into();
                         match current_col_metadata_response.process_collection_metadata(
                             &self.current_db_name,
                             collection_name.as_str(),

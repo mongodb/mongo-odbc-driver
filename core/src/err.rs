@@ -54,6 +54,40 @@ pub enum Error {
     UnsupportedOperation(&'static str),
     #[error("Statement not executed")]
     StatementNotExecuted,
+    #[error(
+        "The ODBC driver version `{0}` is incompatible with libmongosqltranslate version `{1}`"
+    )]
+    LibmongosqltranslateLibraryIsIncompatible(&'static str, String),
+    #[error("The following collections were not found in the `__sql_schemas` collection: {0:?}")]
+    SchemaDocumentNotFoundInSchemaCollection(Vec<String>),
+    #[error(
+        "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"
+    )]
+    LibmongosqltranslateCommandFailed(&'static str, String, bool),
+    #[error("Loading the runCommand symbol from libmongosqltranslate failed with error: {0}")]
+    RunCommandSymbolNotFound(String),
+    #[error("Deserializing libmongosqltranslate response to BSON Document failed with error: {0}")]
+    LibmongosqltranslateDeserialization(mongodb::bson::de::Error),
+    #[error("Deserializing libmongosqltranslate response Document to CommandResponse failed with error: {0}")]
+    BsonDocumentToCommandResponseDeserialization(mongodb::bson::de::Error),
+    #[error("Serializing runCommand for libmongosqltranslate failed with error: {0}")]
+    LibmongosqltranslateSerialization(mongodb::bson::ser::Error),
+    #[error("The client app_name is empty. However, this shouldn't be possible.")]
+    EmptyAppName,
+    #[error("The libmongosqltranslate version is empty. However, this shouldn't be possible.")]
+    EmptyLibmongosqltranslateVersion,
+    #[error(
+        "The mongosql Translation `pipeline` should be an array; however this was not the case."
+    )]
+    TranslationPipelineNotArray,
+    #[error("The mongosql Translation `pipeline` array should only contain Documents; however, a non-document bson-type was encountered.")]
+    TranslationPipelineArrayContainsNonDocument,
+    #[error("No schema information returned for the requested collections.")]
+    NoSchemaInformationReturned,
+    #[error(
+        "Multiple Documents were returned when getting the schema; however, only one was expected."
+    )]
+    MultipleSchemaDocumentsReturned(usize),
 }
 
 impl Error {
@@ -84,7 +118,20 @@ impl Error {
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
             | Error::UnsupportedClusterConfiguration(_)
-            | Error::UnsupportedOperation(_) => GENERAL_ERROR,
+            | Error::UnsupportedOperation(_)
+            | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
+            | Error::SchemaDocumentNotFoundInSchemaCollection(_)
+            | Error::LibmongosqltranslateCommandFailed(_, _, _)
+            | Error::RunCommandSymbolNotFound(_)
+            | Error::LibmongosqltranslateDeserialization(_)
+            | Error::LibmongosqltranslateSerialization(_)
+            | Error::EmptyAppName
+            | Error::EmptyLibmongosqltranslateVersion
+            | Error::TranslationPipelineNotArray
+            | Error::TranslationPipelineArrayContainsNonDocument
+            | Error::BsonDocumentToCommandResponseDeserialization(_)
+            | Error::NoSchemaInformationReturned
+            | Error::MultipleSchemaDocumentsReturned(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
         }
@@ -124,7 +171,20 @@ impl Error {
             | Error::ValueAccess(_, _)
             | Error::UnsupportedOperation(_)
             | Error::UnsupportedClusterConfiguration(_)
-            | Error::StatementNotExecuted => 0,
+            | Error::StatementNotExecuted
+            | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
+            | Error::SchemaDocumentNotFoundInSchemaCollection(_)
+            | Error::LibmongosqltranslateCommandFailed(_, _, _)
+            | Error::RunCommandSymbolNotFound(_)
+            | Error::LibmongosqltranslateDeserialization(_)
+            | Error::LibmongosqltranslateSerialization(_)
+            | Error::EmptyAppName
+            | Error::EmptyLibmongosqltranslateVersion
+            | Error::TranslationPipelineNotArray
+            | Error::TranslationPipelineArrayContainsNonDocument
+            | Error::BsonDocumentToCommandResponseDeserialization(_)
+            | Error::NoSchemaInformationReturned
+            | Error::MultipleSchemaDocumentsReturned(_) => 0,
         }
     }
 }
