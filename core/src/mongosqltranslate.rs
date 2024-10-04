@@ -347,11 +347,15 @@ mod unit {
         let test_doc = doc! { "test": "value" };
         let bson_bytes = bson::to_vec(&test_doc).expect("Failed to serialize BSON");
 
+        let command_bytes_length = bson_bytes.len();
+
+        let command_bytes_capacity = bson_bytes.capacity();
+
         // Call runCommand
         let command = BsonBuffer {
-            data: bson_bytes.as_ptr(),
-            length: bson_bytes.len(),
-            capacity: bson_bytes.capacity(),
+            data: Box::into_raw(bson_bytes.into_boxed_slice()).cast(),
+            length: command_bytes_length,
+            capacity: command_bytes_capacity,
         };
 
         let result = unsafe { run_command(command) };
