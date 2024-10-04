@@ -22,7 +22,5 @@ pub unsafe extern "C" fn runCommand(command: BsonBuffer) -> BsonBuffer {
     let len = bytes.len();
     let cap = bytes.capacity();
 
-    forget(bytes);
-
     BsonBuffer { ptr, len, cap }
 }
