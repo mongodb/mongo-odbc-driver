@@ -10,6 +10,7 @@ use crate::{
     stmt::MongoStatement,
     Error, TypeMode,
 };
+use constants::SQL_SCHEMAS_COLLECTION;
 use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, document::ValueAccessError, Bson, Document},
@@ -59,7 +60,7 @@ impl MongoQuery {
         client: &MongoConnection,
         db: &Database,
     ) -> Result<TranslateCommandResponse> {
-        let schema_collection = db.collection::<Document>("__sql_schemas");
+        let schema_collection = db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
 
         let collection_names = namespaces
             .iter()
