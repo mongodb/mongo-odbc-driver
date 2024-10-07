@@ -60,8 +60,61 @@ impl MongoQuery {
         client: &MongoConnection,
         db: &Database,
     ) -> Result<TranslateCommandResponse> {
-        let collection_names: Vec<String> = client.runtime.block_on(async {
-            db.list_collection_names()
+        let schema_collection = db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
+
+        let collection_names = namespaces
+            .iter()
+            .map(|namespace| namespace.collection.as_str())
+            .collect::<Vec<&str>>();
+
+        // Create an aggregation pipeline to fetch the schema information for the specified collections.
+        // The pipeline uses $in to query all the specified collections and projects them into the desired format:
+        // "dbName": { "collection1" : "Schema1", "collection2" : "Schema2", ... }
+        let schema_catalog_aggregation_pipeline = vec![
+            doc! {"$match": {
+                "_id": {
+                    "$in": collection_names
+                    }
+                }
+            },
+            doc! {"$project":{
+                "_id": 1,
+                "schema": 1
+                }
+            },
+            doc! {"$group": {
+                "_id": null,
+                "collections": {
+                    "collectionName": "$_id",
+                    "schema": "$schema"
+                    }
+                }
+            },
+            doc! {"$project": {
+                "_id": 0,
+                current_db: {
+                    "$arrayToObject": [{
+                        "$map": {
+                            "input": "$collections",
+                            "as": "coll",
+                            "in": {
+                                "k": "$$coll.collectionName",
+                                "v": "$$coll.schema"
+                                }
+                            }
+                        }]
+                    }
+                }
+            },
+        ];
+
+        // create the schema_catalog document
+        let schema_catalog_doc_vec: Vec<Document> = client.runtime.block_on(async {
+            schema_collection
+                .aggregate(schema_catalog_aggregation_pipeline)
+                .await
+                .map_err(Error::QueryExecutionFailed)?
+                .try_collect::<Vec<Document>>()
                 .await
                 .map_err(Error::QueryExecutionFailed)
         })?;

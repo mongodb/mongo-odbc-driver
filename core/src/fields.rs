@@ -561,35 +561,30 @@ impl MongoFields {
                                     Error::CollectionDeserialization(collection_name.clone(), e)
                                 });
 
-                            let error_checked_sql_get_schema_response =
-                                match sql_get_schema_response {
-                                    Ok(sql_get_schema_response) => sql_get_schema_response,
-                                    Err(error) => {
-                                        // If there is an Error while deserializing the schema, we won't show any columns for it
-                                        warnings.push(error);
-                                        continue;
-                                    }
-                                };
+                            if let Err(error) = sql_get_schema_response {
+                                // If there is an Error while deserializing the schema, we won't show any columns for it
+                                warnings.push(error);
+                                continue;
+                            }
 
-                            error_checked_sql_get_schema_response.into()
+                            sql_get_schema_response.unwrap().into()
                         } else if mongo_connection.cluster_type == MongoClusterType::Enterprise {
                             let schema_collection =
                                 db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
 
-                            // If the schema for `collection_name` isn't found, default to an empty schema.
-                            let schema_doc: Document = schema_collection
-                                .find_one(doc! {
-                                    "_id": &collection_name
-                                })
-                                .await
-                                .map_err(Error::QueryExecutionFailed)?
-                                .unwrap_or({
-                                    log::warn!("No schema was found for collection `{}`. It will be assigned\
-                                    an empty schema. Hint: Generate schemas for your collections.", collection_name);
-
-                                    doc! {
-                                    "schema": doc!{}
-                                }});
+                            let schema_doc: Document = mongo_connection
+                                .runtime
+                                .block_on(async {
+                                    schema_collection
+                                        .find_one(doc! {
+                                            "_id": &collection_name
+                                        })
+                                        .await
+                                        .map_err(Error::QueryExecutionFailed)
+                                })?
+                                .ok_or(Error::SchemaDocumentNotFoundInSchemaCollection(vec![
+                                    collection_name.clone(),
+                                ]))?;
 
                             let result_set_schema: Result<ResultSetSchema> =
                                 ResultSetSchema::from_sql_schemas_document(&schema_doc).map_err(
@@ -598,14 +593,13 @@ impl MongoFields {
                                     },
                                 );
 
-                            match result_set_schema {
-                                Ok(result_set_schema) => result_set_schema,
-                                Err(error) => {
-                                    // If there is an Error while deserializing the schema, we won't show any columns for it
-                                    warnings.push(error);
-                                    continue;
-                                }
+                            if let Err(error) = result_set_schema {
+                                // If there is an Error while deserializing the schema, we won't show any columns for it
+                                warnings.push(error);
+                                continue;
                             }
+
+                            result_set_schema.unwrap()
                         } else {
                             unreachable!()
                         };
