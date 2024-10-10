@@ -2087,6 +2087,8 @@ tasks:
       - func: "trace artifacts"
 
   - name: download-center-update
+    # TODO: remove this before merging eap branch back into main branch, to allow download center to update.
+    disable: true
     git_tag_only: true
     depends_on:
       - name: trace-artifacts
