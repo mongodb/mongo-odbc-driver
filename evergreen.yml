@@ -2039,6 +2039,7 @@ tasks:
       #   variants: [ ubuntu2204 ]
 
   - name: sign
+    allowed_requesters: ["github_tag", "patch"]
     depends_on:
       - name: compile
     commands:
