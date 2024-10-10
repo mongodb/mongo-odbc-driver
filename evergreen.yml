@@ -2071,8 +2071,6 @@ tasks:
         variant: ".release-variant"
       - name: result-set-test
         variant: ".release-variant"
-      - name: sign
-        variant: ".release-variant"
     commands:
       - func: "upload release"
 
