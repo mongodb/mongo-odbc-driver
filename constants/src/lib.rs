@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 
 pub const VENDOR_IDENTIFIER: &str = "MongoDB";
 pub const DRIVER_NAME: &str = "MongoDB Atlas SQL ODBC Driver";
@@ -7,22 +7,27 @@ pub const ODBC_VERSION: &str = "03.80";
 pub const DRIVER_SHORT_NAME: &str = "mongodb-odbc";
 pub const SQL_SCHEMAS_COLLECTION: &str = "__sql_schemas";
 
-lazy_static! {
-    pub static ref DRIVER_METRICS_VERSION: String = format!(
+pub static DRIVER_METRICS_VERSION: LazyLock<String> = LazyLock::new(|| {
+    format!(
         "{}.{}.{}",
         env!("CARGO_PKG_VERSION_MAJOR"),
         env!("CARGO_PKG_VERSION_MINOR"),
         env!("CARGO_PKG_VERSION_PATCH")
-    );
-    pub static ref DRIVER_LOG_VERSION: String = format!(
+    )
+});
+
+pub static DRIVER_LOG_VERSION: LazyLock<String> = LazyLock::new(|| {
+    format!(
         "{}.{}",
         env!("CARGO_PKG_VERSION_MAJOR"),
         env!("CARGO_PKG_VERSION_MINOR")
-    );
-    pub static ref DEFAULT_APP_NAME: String =
-        format!("{}+{}", DRIVER_SHORT_NAME, DRIVER_METRICS_VERSION.as_str());
-    pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
-}
+    )
+});
+
+pub static DEFAULT_APP_NAME: LazyLock<String> =
+LazyLock::new(|| format!("{}+{}", DRIVER_SHORT_NAME, DRIVER_METRICS_VERSION.as_str()));
+
+pub static DRIVER_ODBC_VERSION: LazyLock<String> = LazyLock::new(|| format_driver_version());
 
 // The default max string length if a user enables max string length.
 // Typically, the Atlas SQL ODBC driver does not specify a max string
