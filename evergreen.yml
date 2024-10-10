@@ -2039,6 +2039,8 @@ tasks:
       #   variants: [ ubuntu2204 ]
 
   - name: sign
+    allow_for_git_tag: true
+    disable: false
     depends_on:
       - name: compile
     commands:
