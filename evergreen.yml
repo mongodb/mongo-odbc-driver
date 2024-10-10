@@ -62,22 +62,26 @@ functions:
           export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
-            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
+            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f1 | sed s/v//)
+            export LIBMONGOTRANSLATE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f2 | sed s/libv//)
           else
             export RELEASE_VERSION=snapshot
+            export LIBMONGOTRANSLATE_VERSION=snapshot
           fi
           export MSI_FILENAME="mongoodbc.msi"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
+          LIBMONGOTRANSLATE_VERSION: "$LIBMONGOTRANSLATE_VERSION"
           MSI_FILENAME: "$MSI_FILENAME"
-          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
-          UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
+          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION-libv$LIBMONGOTRANSLATE_VERSION/release/$MSI_FILENAME"
+          UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-libv$LIBMONGOTRANSLATE_VERSION/release/mongoodbc.tar.gz"
           COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
           STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
+            export LIBMONGOTRANSLATE_VERSION="$LIBMONGOTRANSLATE_VERSION"
             export MSI_FILENAME="$MSI_FILENAME"
             export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
             export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
