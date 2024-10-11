@@ -45,6 +45,16 @@ functions:
       params:
         directory: mongosql-odbc-driver
 
+  "fetch mongosqltranslate":
+    - command: s3.get
+      params:
+        working_dir: mongo-odbc-driver/target/release
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongo-jdbc-driver/src/main/resources/${arch}/${platform}/${lib_prefix}mongosqltranslate.${ext}
+        remote_file: mongosqltranslate/${lib_prefix}mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-${platform}-${arch}.${ext}
+        bucket: translators-connectors-releases
+
   "generate expansions":
     - command: shell.exec
       params:
@@ -63,25 +73,25 @@ functions:
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f1 | sed s/v//)
-            export LIBMONGOTRANSLATE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f2 | sed s/libv//)
+            export LIBMONGOSQLTRANSLATE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f2 | sed s/libv//)
           else
             export RELEASE_VERSION=snapshot
-            export LIBMONGOTRANSLATE_VERSION=snapshot
+            export LIBMONGOSQLTRANSLATE_VERSION=snapshot
           fi
           export MSI_FILENAME="mongoodbc.msi"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
-          LIBMONGOTRANSLATE_VERSION: "$LIBMONGOTRANSLATE_VERSION"
+          LIBMONGOSQLTRANSLATE_VERSION: "$LIBMONGOSQLTRANSLATE_VERSION"
           MSI_FILENAME: "$MSI_FILENAME"
-          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION-libv$LIBMONGOTRANSLATE_VERSION/release/$MSI_FILENAME"
-          UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-libv$LIBMONGOTRANSLATE_VERSION/release/mongoodbc.tar.gz"
+          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION-libv$LIBMONGOSQLTRANSLATE_VERSION/release/$MSI_FILENAME"
+          UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-libv$LIBMONGOSQLTRANSLATE_VERSION/release/mongoodbc.tar.gz"
           COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
           STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
-            export LIBMONGOTRANSLATE_VERSION="$LIBMONGOTRANSLATE_VERSION"
+            export LIBMONGOSQLTRANSLATE_VERSION="$LIBMONGOSQLTRANSLATE_VERSION"
             export MSI_FILENAME="$MSI_FILENAME"
             export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
             export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
@@ -1938,10 +1948,38 @@ tasks:
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
         variants: [macos, macos-arm]
+      - func: "fetch mongosqltranslate"
+        variants: [windows-64]
+        vars:
+          arch: "x86_64"
+          platform: "windows"
+          lib_prefix: ""
+          ext: "dll"
       - func: "build msi"
         variants: [windows-64]
+      - func: "fetch mongosqltranslate"
+        variants: [ubuntu2204]
+        vars:
+          arch: "x86_64"
+          platform: "linux"
+          lib_prefix: "lib"
+          ext: "so"
       - func: "tar linux artifacts"
         variants: [ubuntu2204]
+      - func: "fetch mongosqltranslate"
+        variants: [macos]
+        vars:
+          arch: "x86_64"
+          platform: "macos"
+          lib_prefix: "lib"
+          ext: "dylib"
+      - func: "fetch mongosqltranslate"
+        variants: [macos-arm]
+        vars:
+          arch: "arm"
+          platform: "macos"
+          lib_prefix: "lib"
+          ext: "dylib"
       - func: "build dmg"
         variants: [macos, macos-arm]
       - func: "mciuploads release artifacts"
