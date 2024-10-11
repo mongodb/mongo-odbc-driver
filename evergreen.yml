@@ -854,7 +854,7 @@ functions:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/release/${UBUNTU_FILENAME}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${UBUNTU_FILENAME}
         bucket: mciuploads
         permissions: public-read
