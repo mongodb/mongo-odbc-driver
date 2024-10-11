@@ -68,8 +68,8 @@ functions:
             export RELEASE_VERSION=snapshot
             export LIBMONGOTRANSLATE_VERSION=snapshot
           fi
-          export MSI_FILENAME="mongoodbc-eap-$RELEASE_VERSION-lib-$LIBMONGOTRANSLATE_VERSION.msi"
-          export UBUNTU_FILENAME="mongoodbc-eap-$RELEASE_VERSION-lib-$LIBMONGOTRANSLATE_VERSION.tar.gz"
+          export MSI_FILENAME="mongoodbc-eap-$RELEASE_VERSION.msi"
+          export UBUNTU_FILENAME="mongoodbc-eap-$RELEASE_VERSION.tar.gz"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
@@ -2047,7 +2047,7 @@ tasks:
       #   variants: [ ubuntu2204 ]
 
   - name: sign
-    allowed_requesters: ["patch", "github_tag"]
+    allowed_requesters: ["ad_hoc", "github_tag"]
     depends_on:
       - name: compile
     commands:
