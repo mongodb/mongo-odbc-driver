@@ -48,10 +48,10 @@ functions:
   "fetch mongosqltranslate":
     - command: s3.get
       params:
-        working_dir: mongo-odbc-driver/target/release
+        working_dir: mongo-odbc-driver
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongo-jdbc-driver/src/main/resources/${arch}/${platform}/${lib_prefix}mongosqltranslate.${ext}
+        local_file: mongo-odbc-driver/target/release/${lib_prefix}mongosqltranslate.${ext}
         remote_file: mongosqltranslate/${lib_prefix}mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-${platform}-${arch}.${ext}
         bucket: translators-connectors-releases
 
