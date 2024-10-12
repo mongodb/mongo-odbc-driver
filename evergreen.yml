@@ -1105,7 +1105,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           mkdir -p release/mongoodbc/bin
-          cp  target/release/libatsql.so release/mongoodbc/bin/
+          cp  target/release/*.so release/mongoodbc/bin/
           cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           cd release
           tar -czvf mongoodbc.tar.gz mongoodbc/
