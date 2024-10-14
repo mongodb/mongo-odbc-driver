@@ -173,6 +173,7 @@ pub struct VersionedJsonSchema {
 // Struct representing the ResultSetSchema.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct ResultSetSchema {
+    #[serde(rename = "result_set_schema")]
     pub schema: crate::json_schema::Schema,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub select_order: Option<Vec<Vec<String>>>,

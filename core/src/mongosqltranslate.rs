@@ -42,8 +42,8 @@ fn get_library_name(library_type: &str) -> String {
     }
 }
 
-fn get_library_path(library_type: &str) -> PathBuf {
-    let lib_name = get_library_name(library_type);
+fn get_library_path() -> PathBuf {
+    let lib_name = get_library_name(LIBRARY_NAME);
     let mut path = PathBuf::from(LIBRARY_INSTALL_PATH);
     path.push(lib_name);
     path
@@ -63,12 +63,12 @@ fn get_mock_library_path() -> PathBuf {
 // and is responsible for determining the library name and path.
 // The library name and path are determined based on the operating system and architecture.
 // It is stored in a static variable to ensure that it is only loaded once.
-pub fn load_mongosqltranslate_library() {
+pub fn load_mongosqltranslate_library(mock_library: bool) {
     INIT.call_once(|| {
-        let library_path = if cfg!(test) {
+        let library_path = if mock_library {
             get_mock_library_path()
         } else {
-            get_library_path(LIBRARY_NAME)
+            get_library_path()
         };
 
         match unsafe { Library::new(library_path.clone()) } {
@@ -221,6 +221,7 @@ impl CheckDriverVersion {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "command_type")]
 pub enum CommandResponse {
     Translate(TranslateCommandResponse),
     GetNamespaces(GetNamespacesCommandResponse),
@@ -308,7 +309,7 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
 
     let decomposed_returned_doc = unsafe { run_command_function(libmongosqltranslate_command) };
 
-    let command_response_doc: Document = unsafe {
+    let mut command_response_doc: Document = unsafe {
         bson::from_slice(
             Vec::from_raw_parts(
                 decomposed_returned_doc.data.cast_mut(),
@@ -319,6 +320,20 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
         )
         .map_err(Error::LibmongosqltranslateDeserialization)?
     };
+
+    let command_type = if command_response_doc.get_str("error").is_ok() {
+        "Error"
+    } else {
+        match T::command_name() {
+            "getNamespaces" => "GetNamespaces",
+            "translate" => "Translate",
+            "getMongosqlTranslateVersion" => "GetMongosqlTranslateVersion",
+            "checkDriverVersion" => "CheckDriverVersion",
+            _ => unreachable!(),
+        }
+    };
+
+    command_response_doc.insert("command_type", command_type);
 
     let command_response = CommandResponse::from_document(&command_response_doc)?;
 
@@ -340,7 +355,7 @@ mod unit {
 
     #[test]
     fn library_load_and_run_command_test() {
-        load_mongosqltranslate_library();
+        load_mongosqltranslate_library(true);
         assert!(get_mongosqltranslate_library().is_some());
 
         let run_command = get_run_command_fn_ptr().expect("Failed to load runCommand symbol");

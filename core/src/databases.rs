@@ -221,7 +221,13 @@ impl MongoDatabases {
             })
             .unwrap()
             .iter()
-            .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
+            .filter(|&db_name| {
+                !db_name.is_empty()
+                    && !db_name.eq("admin")
+                    && !db_name.eq("config")
+                    && !db_name.eq("local")
+                    && !db_name.eq("system")
+            })
             .map(|s| s.to_string())
             .collect();
 

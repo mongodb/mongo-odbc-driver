@@ -60,90 +60,113 @@ impl MongoQuery {
         client: &MongoConnection,
         db: &Database,
     ) -> Result<TranslateCommandResponse> {
-        let schema_collection = db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
-
-        let collection_names = namespaces
-            .iter()
-            .map(|namespace| namespace.collection.as_str())
-            .collect::<Vec<&str>>();
-
-        // Create an aggregation pipeline to fetch the schema information for the specified collections.
-        // The pipeline uses $in to query all the specified collections and projects them into the desired format:
-        // "dbName": { "collection1" : "Schema1", "collection2" : "Schema2", ... }
-        let schema_catalog_aggregation_pipeline = vec![
-            doc! {"$match": {
-                "_id": {
-                    "$in": collection_names
-                    }
-                }
-            },
-            doc! {"$project":{
-                "_id": 1,
-                "schema": 1
-                }
-            },
-            doc! {"$group": {
-                "_id": null,
-                "collections": {
-                    "collectionName": "$_id",
-                    "schema": "$schema"
-                    }
-                }
-            },
-            doc! {"$project": {
-                "_id": 0,
-                current_db: {
-                    "$arrayToObject": [{
-                        "$map": {
-                            "input": "$collections",
-                            "as": "coll",
-                            "in": {
-                                "k": "$$coll.collectionName",
-                                "v": "$$coll.schema"
-                                }
-                            }
-                        }]
-                    }
-                }
-            },
-        ];
-
-        // create the schema_catalog document
-        let schema_catalog_doc_vec: Vec<Document> = client.runtime.block_on(async {
-            schema_collection
-                .aggregate(schema_catalog_aggregation_pipeline)
-                .await
-                .map_err(Error::QueryExecutionFailed)?
-                .try_collect::<Vec<Document>>()
+        let collection_names: Vec<String> = client.runtime.block_on(async {
+            db.list_collection_names()
                 .await
                 .map_err(Error::QueryExecutionFailed)
         })?;
 
-        if schema_catalog_doc_vec.len() > 1 {
-            return Err(Error::MultipleSchemaDocumentsReturned(
-                schema_catalog_doc_vec.len(),
-            ));
-        } else if schema_catalog_doc_vec.is_empty() {
-            return Err(Error::NoSchemaInformationReturned);
+        let sql_schemas_collection_exists =
+            collection_names.contains(&SQL_SCHEMAS_COLLECTION.to_string());
+
+        if !sql_schemas_collection_exists {
+            log::warn!("The `__sql_schemas` collection does not exist in database `{0}`. Therefore, there is no schema for the collections in `{0}`, so most queries will fail.", current_db);
         }
 
-        let schema_catalog_doc = schema_catalog_doc_vec[0].to_owned();
+        let schema_catalog_doc = if !namespaces.is_empty() && sql_schemas_collection_exists {
+            let schema_collection = db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
 
-        let collections_schema_doc = schema_catalog_doc
-            .get_document(current_db)
-            .map_err(|e: ValueAccessError| Error::ValueAccess(current_db.to_string(), e))?;
-
-        if namespaces.len() != collections_schema_doc.len() {
-            let missing_collections: Vec<String> = namespaces
+            let collection_names = namespaces
                 .iter()
-                .map(|namespace| namespace.collection.clone())
-                .filter(|collection| !collections_schema_doc.contains_key(collection.as_str()))
-                .collect();
+                .map(|namespace| namespace.collection.as_str())
+                .collect::<Vec<&str>>();
 
-            return Err(Error::SchemaDocumentNotFoundInSchemaCollection(
-                missing_collections,
-            ));
-        }
+            // Create an aggregation pipeline to fetch the schema information for the specified collections.
+            // The pipeline uses $in to query all the specified collections and projects them into the desired format:
+            // "dbName": { "collection1" : "Schema1", "collection2" : "Schema2", ... }
+            let schema_catalog_aggregation_pipeline = vec![
+                doc! {"$match": {
+                    "_id": {
+                        "$in": collection_names
+                        }
+                    }
+                },
+                doc! {"$project":{
+                    "_id": 1,
+                    "schema": 1
+                    }
+                },
+                doc! {"$group": {
+                    "_id": null,
+                    "collections": {
+                        "$push": {
+                            "collectionName": "$_id",
+                            "schema": "$schema"
+                            }
+                        }
+                    }
+                },
+                doc! {"$project": {
+                    "_id": 0,
+                    current_db: {
+                        "$arrayToObject": [{
+                            "$map": {
+                                "input": "$collections",
+                                "as": "coll",
+                                "in": {
+                                    "k": "$$coll.collectionName",
+                                    "v": "$$coll.schema"
+                                    }
+                                }
+                            }]
+                        }
+                    }
+                },
+            ];
+
+            // create the schema_catalog document
+            let schema_catalog_doc_vec: Vec<Document> = client.runtime.block_on(async {
+                schema_collection
+                    .aggregate(schema_catalog_aggregation_pipeline)
+                    .await
+                    .map_err(Error::QueryExecutionFailed)?
+                    .try_collect::<Vec<Document>>()
+                    .await
+                    .map_err(Error::QueryExecutionFailed)
+            })?;
+
+            if schema_catalog_doc_vec.len() > 1 {
+                return Err(Error::MultipleSchemaDocumentsReturned(
+                    schema_catalog_doc_vec.len(),
+                ));
+            } else if schema_catalog_doc_vec.is_empty() {
+                return Err(Error::NoSchemaInformationReturned);
+            }
+
+            let schema_catalog_doc = schema_catalog_doc_vec[0].to_owned();
+
+            let collections_schema_doc = schema_catalog_doc
+                .get_document(current_db)
+                .map_err(|e: ValueAccessError| Error::ValueAccess(current_db.to_string(), e))?;
+
+            if namespaces.len() != collections_schema_doc.len() {
+                let missing_collections: Vec<String> = namespaces
+                    .iter()
+                    .map(|namespace| namespace.collection.clone())
+                    .filter(|collection| !collections_schema_doc.contains_key(collection.as_str()))
+                    .collect();
+
+                return Err(Error::SchemaDocumentNotFoundInSchemaCollection(
+                    missing_collections,
+                ));
+            }
+
+            schema_catalog_doc
+        } else {
+            doc! {
+                current_db: doc! {},
+            }
+        };
 
         let command = Translate::new(
             sql_query.to_string(),

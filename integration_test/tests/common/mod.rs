@@ -83,11 +83,16 @@ pub fn generate_default_connection_str() -> String {
 
 #[allow(dead_code)]
 /// generate a "mongodb+srv" connection string based on the specified environmental variables.
-pub fn generate_srv_style_connection_string() -> String {
+pub fn generate_srv_style_connection_string(db: Option<String>) -> String {
     // The driver used is the same as the one used for ADF
     let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
 
-    let db = env::var("SRV_TEST_DB").expect("SRV_TEST_DB is not set");
+    let db = if let Some(db) = db {
+        db
+    } else {
+        env::var("SRV_TEST_DB").expect("SRV_TEST_DB is not set")
+    };
+
     let auth_db = env::var("SRV_TEST_AUTH_DB").expect("SRV_TEST_AUTH_DB is not set");
     let host = env::var("SRV_TEST_HOST").expect("SRV_TEST_HOST is not set");
     let username = env::var("SRV_TEST_USER").expect("SRV_TEST_USER is not set");
@@ -154,9 +159,11 @@ pub fn sql_return_to_string(return_code: SqlReturn) -> String {
 ///     - SQLAllocHandle(SQL_HANDLE_STMT)
 pub fn default_setup_connect_and_alloc_stmt(
     odbc_version_value: AttrOdbcVersion,
+    in_connection_string: Option<String>,
 ) -> (HEnv, HDbc, HStmt) {
     let env_handle = allocate_env(odbc_version_value);
-    let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
+    let (conn_handle, stmt_handle) =
+        connect_and_allocate_statement(env_handle, in_connection_string);
 
     (env_handle, conn_handle, stmt_handle)
 }

@@ -7,7 +7,7 @@ use crate::mongosqltranslate::{
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
-use constants::DRIVER_ODBC_VERSION;
+use constants::DRIVER_METRICS_VERSION;
 use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
@@ -154,7 +154,7 @@ impl MongoConnection {
     }
 
     fn is_libmongosqltranslate_compatible_with_driver_version() -> Result<bool> {
-        let command = CheckDriverVersion::new(DRIVER_ODBC_VERSION.clone());
+        let command = CheckDriverVersion::new(DRIVER_METRICS_VERSION.clone());
 
         let command_response = libmongosqltranslate_run_command(command)?;
 
@@ -196,7 +196,7 @@ impl MongoConnection {
 
         let uuid_repr = user_options.uuid_representation;
 
-        load_mongosqltranslate_library();
+        load_mongosqltranslate_library(false);
 
         let (is_libmongosqltranslate_compatible_with_driver_version, libmongosqltranslate_version) =
             if get_mongosqltranslate_library().is_some() {
@@ -243,7 +243,7 @@ impl MongoConnection {
                     .is_some_and(|is_compatible| is_compatible)
                 {
                     return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
-                        &DRIVER_ODBC_VERSION,
+                        &DRIVER_METRICS_VERSION,
                         libmongosqltranslate_version
                             .ok_or(Error::EmptyLibmongosqltranslateVersion)?,
                     ));
