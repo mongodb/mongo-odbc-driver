@@ -1418,7 +1418,7 @@ functions:
           ./resources/run_adf.sh stop
           exit $EXITCODE
 
-  "run mongosqltranslate integration test":
+  "run mongosqltranslate integration tests":
     - command: s3.get
       params:
         aws_key: ${aws_key}
@@ -1438,7 +1438,7 @@ functions:
           cargo test mongosqltranslate -- --nocapture        
           
 
-  "run ubuntu cluster type integration test":
+  "run ubuntu cluster type integration tests":
     - command: s3.get
       params:
         aws_key: ${aws_key}
@@ -2005,9 +2005,9 @@ tasks:
       - func: "generate github token"
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
-      - func: "run ubuntu cluster type integration test"
+      - func: "run ubuntu cluster type integration tests"
         variants: [ubuntu2204]
-      - func: "run mongosqltranslate integration test"
+      - func: "run mongosqltranslate integration tests"
         variants: [ubuntu2204]
       # Commenting out because the following task only detects
       # memory leaks in the tests
