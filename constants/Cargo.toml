@@ -1,6 +1,6 @@
 [package]
 name = "constants"
-version = "2.0.0"
+version = "0.0.0"
 authors = [
     "Ryan Chipman <ryan@ryanchipman.com>",
     "Natacha Bagnard <natacha.bagnard@mongodb.com>",
