@@ -1418,7 +1418,7 @@ functions:
           ./resources/run_adf.sh stop
           exit $EXITCODE
 
-  "run mongosqltranslate integration tests":
+  "run ubuntu mongosqltranslate integration tests":
     - command: s3.get
       params:
         aws_key: ${aws_key}
@@ -2007,7 +2007,7 @@ tasks:
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration tests"
         variants: [ubuntu2204]
-      - func: "run mongosqltranslate integration tests"
+      - func: "run ubuntu mongosqltranslate integration tests"
         variants: [ubuntu2204]
       # Commenting out because the following task only detects
       # memory leaks in the tests
