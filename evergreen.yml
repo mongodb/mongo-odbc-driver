@@ -1423,9 +1423,9 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-rs/artifacts/67046714cb2efd0007eb7608/mongosqltranslate-rhel76/libmongosqltranslate.so
+        remote_file: mongosqltranslate/snapshot/libmongosqltranslate-linux.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
-        bucket: mciuploads
+        bucket: translators-connectors-releases
     - command: shell.exec
       type: test
       params:
@@ -1443,9 +1443,9 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-rs/artifacts/67046714cb2efd0007eb7608/mongosqltranslate-rhel76/libmongosqltranslate.so
+        remote_file: mongosqltranslate/snapshot/libmongosqltranslate-linux.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
-        bucket: mciuploads
+        bucket: translators-connectors-releases
     - command: shell.exec
       type: test
       params:
