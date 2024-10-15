@@ -1,6 +1,5 @@
 mod common;
 
-#[cfg(test)]
 mod mongosqltranslate {
     use crate::common::{
         allocate_env, connect_with_conn_string, default_setup_connect_and_alloc_stmt,
