@@ -5,6 +5,7 @@ pub const DRIVER_NAME: &str = "MongoDB Atlas SQL ODBC Driver";
 pub const DBMS_NAME: &str = "MongoDB Atlas";
 pub const ODBC_VERSION: &str = "03.80";
 pub const DRIVER_SHORT_NAME: &str = "mongodb-odbc";
+pub const SQL_SCHEMAS_COLLECTION: &str = "__sql_schemas";
 
 lazy_static! {
     pub static ref DRIVER_METRICS_VERSION: String = format!(

@@ -11,7 +11,6 @@ mod cluster_type {
     use std::env;
 
     #[derive(Debug)]
-    #[allow(dead_code)]
     enum PortType {
         Enterprise,
         Community,
@@ -68,7 +67,6 @@ mod cluster_type {
 
     // Tests that connection with community edition fails
     #[tokio::test]
-    #[ignore = "SQL-2288: need real libmongosqltranslate"]
     async fn test_determine_cluster_type_community_fails() {
         let result = run_cluster_type_test(PortType::Community).await;
         assert!(
@@ -88,20 +86,12 @@ mod cluster_type {
     // Tests that connection with enterprise edition and library loaded fails
     // due to missing 'sqlGetResultSchema' command in MongoDB
     #[tokio::test]
-    #[ignore = "SQL-2288: need real libmongosqltranslate"]
-    async fn test_enterprise_with_library_fails_due_to_missing_sql_get_result_schema_command() {
+    async fn test_enterprise_with_library_succeeds() {
         let result = run_cluster_type_test(PortType::Enterprise).await;
         assert!(
-            result.is_err(),
-            "Expected an error with enterprise edition and library loaded, but got success"
+            result.is_ok(),
+            "Expected success with enterprise edition and library loaded, but got an error"
         );
-        if let Err(e) = result {
-            assert!(
-                e.contains("no such command: 'sqlGetResultSchema'"),
-                "Unexpected error message for enterprise edition: {}",
-                e
-            );
-        }
     }
 
     // Test that connecting with enterprise edition cluster type fails without mongosqltranslate library

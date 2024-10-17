@@ -58,7 +58,7 @@ pub enum Error {
         "The ODBC driver version `{0}` is incompatible with libmongosqltranslate version `{1}`"
     )]
     LibmongosqltranslateLibraryIsIncompatible(&'static str, String),
-    #[error("The following collections were not found in the `__sql_schemas` collection: {0:?}")]
+    #[error("The following collection(s) were not found in the `__sql_schemas` collection: {0:?}")]
     SchemaDocumentNotFoundInSchemaCollection(Vec<String>),
     #[error(
         "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"

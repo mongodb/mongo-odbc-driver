@@ -38,7 +38,7 @@ mod integration {
     #[test]
     fn test_free_stmt() {
         let (env_handle, conn_handle, stmt_handle) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         unsafe {
             let mut query: Vec<WideChar> =
@@ -76,7 +76,7 @@ mod integration {
     #[test]
     fn test_cancel_noop() {
         let (_, _, stmt_handle) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         unsafe {
             let timeout: i32 = 15;
