@@ -5,7 +5,7 @@ use crate::{
     conn::MongoConnection,
     err::{Error, Result},
     stmt::MongoStatement,
-    util::to_name_regex,
+    util::{databases_filter, to_name_regex},
     BsonTypeInfo, TypeMode,
 };
 use constants::SQL_SCHEMAS_COLLECTION;
@@ -486,13 +486,7 @@ impl MongoFields {
                     .unwrap()
                     // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
                     .iter()
-                    .filter(|&db_name| {
-                        !db_name.is_empty()
-                            && !db_name.eq("admin")
-                            && !db_name.eq("config")
-                            && !db_name.eq("local")
-                            && !db_name.eq("system")
-                    })
+                    .filter(|&db_name| databases_filter(db_name))
                     .map(|s| s.to_string())
                     .collect()
             },
@@ -567,13 +561,17 @@ impl MongoFields {
                                     Error::CollectionDeserialization(collection_name.clone(), e)
                                 });
 
-                            if let Err(error) = sql_get_schema_response {
-                                // If there is an Error while deserializing the schema, we won't show any columns for it
-                                warnings.push(error);
-                                continue;
-                            }
+                            let error_checked_sql_get_schema_response =
+                                match sql_get_schema_response {
+                                    Ok(sql_get_schema_response) => sql_get_schema_response,
+                                    Err(error) => {
+                                        // If there is an Error while deserializing the schema, we won't show any columns for it
+                                        warnings.push(error);
+                                        continue;
+                                    }
+                                };
 
-                            sql_get_schema_response.unwrap().into()
+                            error_checked_sql_get_schema_response.into()
                         } else if mongo_connection.cluster_type == MongoClusterType::Enterprise {
                             let schema_collection =
                                 db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
@@ -599,13 +597,14 @@ impl MongoFields {
                                     },
                                 );
 
-                            if let Err(error) = result_set_schema {
-                                // If there is an Error while deserializing the schema, we won't show any columns for it
-                                warnings.push(error);
-                                continue;
+                            match result_set_schema {
+                                Ok(result_set_schema) => result_set_schema,
+                                Err(error) => {
+                                    // If there is an Error while deserializing the schema, we won't show any columns for it
+                                    warnings.push(error);
+                                    continue;
+                                }
                             }
-
-                            result_set_schema.unwrap()
                         } else {
                             unreachable!()
                         };

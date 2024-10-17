@@ -125,6 +125,13 @@ mod mongosqltranslate {
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
+            let error_message = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
+            assert!(
+                error_message.contains("No schema information returned for the requested collections."),
+                "Expected error message: `No schema information returned for the requested collections.`; actual error message: {}",
+                error_message
+            );
+
             disconnect_and_close_handles(dbc, stmt);
         }
         let _ = unsafe { Box::from_raw(env_handle) };
@@ -148,6 +155,13 @@ mod mongosqltranslate {
                 SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
+            );
+
+            let error_message = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
+            assert!(
+                error_message.contains("The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`. Error is internal: false"),
+                "Expected error message: `The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`. Error is internal: false`; actual error message: {}",
+                error_message
             );
 
             disconnect_and_close_handles(dbc, stmt);

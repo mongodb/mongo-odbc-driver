@@ -307,6 +307,11 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
         capacity: command_bytes_capacity,
     };
 
+    log::info!(
+        "Calling `{}` libmongosqltranslate runCommand.",
+        T::command_name()
+    );
+
     let decomposed_returned_doc = unsafe { run_command_function(libmongosqltranslate_command) };
 
     let mut command_response_doc: Document = unsafe {

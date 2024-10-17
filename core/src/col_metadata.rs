@@ -171,9 +171,12 @@ pub struct VersionedJsonSchema {
 }
 
 // Struct representing the ResultSetSchema.
+// The `schema` field needs the alias `result_set_schema` because this struct is used to get the schema
+// from the __sql_schemas collection, which stores the schema in it's `schema` field, and the libmongosqltranslate
+// `translate` command, which stores the schema in it's `result_set_schema` field.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct ResultSetSchema {
-    #[serde(rename = "result_set_schema")]
+    #[serde(alias = "result_set_schema")]
     pub schema: crate::json_schema::Schema,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub select_order: Option<Vec<Vec<String>>>,

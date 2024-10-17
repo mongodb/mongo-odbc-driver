@@ -214,6 +214,8 @@ impl MongoConnection {
 
                 let compatibility = Self::is_libmongosqltranslate_compatible_with_driver_version()?;
 
+                log::info!("libmongosqltranslate version: `{0}`. ODBC driver version: `{1}`. The ODBC driver and libmongosqltranslate library is compatible: `{2}`.", libmongosqltranslate_version, *DRIVER_METRICS_VERSION, compatibility);
+
                 (Some(compatibility), Some(libmongosqltranslate_version))
             } else {
                 (None, None)
