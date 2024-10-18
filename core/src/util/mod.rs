@@ -78,6 +78,14 @@ pub(crate) fn table_type_filter_to_vec(table_type: &str) -> Option<Vec<Collectio
     };
 }
 
+pub(crate) fn databases_filter(db_name: &str) -> bool {
+    !db_name.is_empty()
+        && !db_name.eq("admin")
+        && !db_name.eq("config")
+        && !db_name.eq("local")
+        && !db_name.eq("system")
+}
+
 #[macro_export]
 macro_rules! map {
         ($($key:expr => $val:expr),* $(,)?) => {

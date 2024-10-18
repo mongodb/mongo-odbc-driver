@@ -112,7 +112,7 @@ mod integration {
 
         for buffer_size in buffer_sizes {
             let (env_handle, conn_handle, stmt_handle) =
-                default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+                default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
             unsafe {
                 let query = b"SELECT * FROM integration_test.class\0".map(|c| c.into());

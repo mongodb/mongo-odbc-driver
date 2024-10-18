@@ -120,7 +120,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "SQL-2288: need real libmongosqltranslate"]
     #[cfg(feature = "bad_host")]
     fn bad_host() {
         let mut buffer = [0; 1024];

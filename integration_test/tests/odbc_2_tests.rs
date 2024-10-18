@@ -29,7 +29,7 @@ mod integration {
     #[test]
     fn test_list_tables() {
         let (env_handle, conn_handle, stmt_handle) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC2);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC2, None);
 
         unsafe {
             let mut table_view: Vec<WideChar> = cstr::to_widechar_vec("TABLE");

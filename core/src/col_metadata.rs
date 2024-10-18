@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     json_schema::{
         simplified::{Atomic, ObjectSchema, Schema},
@@ -7,9 +5,11 @@ use crate::{
     },
     BsonTypeInfo, Error, Result, TypeMode,
 };
+use bson::{Bson, Document};
 use definitions::{Nullability, SqlCode, SqlDataType};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Metadata information for a column of the result set.
 // The information is to be used when reporting columns information from
@@ -171,10 +171,24 @@ pub struct VersionedJsonSchema {
 }
 
 // Struct representing the ResultSetSchema.
+// The `schema` field needs the alias `result_set_schema` because this struct is used to get the schema
+// from the __sql_schemas collection, which stores the schema in it's `schema` field, and the libmongosqltranslate
+// `translate` command, which stores the schema in it's `result_set_schema` field.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct ResultSetSchema {
+    #[serde(alias = "result_set_schema")]
     pub schema: crate::json_schema::Schema,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub select_order: Option<Vec<Vec<String>>>,
+}
+
+impl ResultSetSchema {
+    pub fn from_sql_schemas_document(doc: &Document) -> bson::de::Result<Self> {
+        let as_bson = Bson::Document(doc.clone());
+        let deserializer = bson::Deserializer::new(as_bson);
+        let deserializer = serde_stacker::Deserializer::new(deserializer);
+        Deserialize::deserialize(deserializer)
+    }
 }
 
 impl From<SqlGetSchemaResponse> for ResultSetSchema {
