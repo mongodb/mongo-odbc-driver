@@ -576,16 +576,12 @@ impl MongoFields {
                             let schema_collection =
                                 db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
 
-                            let schema_doc: Document = mongo_connection
-                                .runtime
-                                .block_on(async {
-                                    schema_collection
-                                        .find_one(doc! {
-                                            "_id": &collection_name
-                                        })
-                                        .await
-                                        .map_err(Error::QueryExecutionFailed)
-                                })?
+                            let schema_doc: Document = schema_collection
+                                .find_one(doc! {
+                                    "_id": &collection_name
+                                })
+                                .await
+                                .map_err(Error::QueryExecutionFailed)?
                                 .ok_or(Error::SchemaDocumentNotFoundInSchemaCollection(vec![
                                     collection_name.clone(),
                                 ]))?;

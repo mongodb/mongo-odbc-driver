@@ -105,8 +105,6 @@ mod integration {
     /// call SQLGetTypeInfo to verify the correct types are returned. For all types,
     /// we should get both date types back. For date, we should get the specific date type
     /// we expect back.
-    ///
-    /// NOTE: FLAKY TEST
     #[test]
     fn test_type_listing() {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC2);

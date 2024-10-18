@@ -8,9 +8,10 @@ mod mongosqltranslate {
     };
     use cstr::WideChar;
     use definitions::{
-        AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQLExecDirectW, SQLExecute,
-        SQLPrepareW, SqlReturn, SQL_NTS,
+        AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQLColumnsW, SQLExecDirectW,
+        SQLExecute, SQLPrepareW, SmallInt, SqlReturn, SQL_NTS,
     };
+    use std::ptr;
 
     #[test]
     fn test_srv_style_uri_connection() {
@@ -162,6 +163,50 @@ mod mongosqltranslate {
                 error_message.contains("The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`. Error is internal: false"),
                 "Expected error message: `The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`. Error is internal: false`; actual error message: {}",
                 error_message
+            );
+
+            disconnect_and_close_handles(dbc, stmt);
+        }
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    #[test]
+    fn test_sql_columnsw_with_library_loaded_and_valid_schemas_created() {
+        let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
+            AttrOdbcVersion::SQL_OV_ODBC3,
+            Some(crate::common::generate_srv_style_connection_string(Some(
+                "sample_airbnb".to_string(),
+            ))),
+        );
+
+        unsafe {
+            let mut table_name: Vec<WideChar> = cstr::to_widechar_vec("listingsAndReviews");
+            table_name.push(0);
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLColumnsW(
+                    stmt as HStmt,
+                    ptr::null(),
+                    0,
+                    ptr::null(),
+                    0,
+                    table_name.as_ptr(),
+                    SQL_NTS as SmallInt,
+                    ptr::null(),
+                    0
+                ),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
+            );
+
+            get_column_attributes(stmt as Handle, 18);
+
+            fetch_and_get_data(
+                stmt as Handle,
+                Some(42),
+                vec![SqlReturn::SUCCESS; 3],
+                vec![CDataType::SQL_C_WCHAR; 3],
             );
 
             disconnect_and_close_handles(dbc, stmt);
