@@ -10,6 +10,15 @@ pub(crate) const TABLE: &str = "TABLE";
 pub(crate) const COLLECTION: &str = "collection";
 pub(crate) const TIMESERIES: &str = "timeseries";
 pub(crate) const VIEW: &str = "view";
+pub(crate) const DISALLOWED_DB_NAMES: [&str; 4] = ["admin", "config", "local", "system"];
+pub(crate) const DISALLOWED_COLLECTION_NAMES: [&str; 6] = [
+    "system.namespaces",
+    "system.indexes",
+    "system.profile",
+    "system.js",
+    "system.views",
+    "__sql_schemas",
+];
 
 lazy_static! {
     pub(crate) static ref TABLE_VALUES: RegexSet = RegexSetBuilder::new(["^table$", "^\'table\'$"])
@@ -76,14 +85,6 @@ pub(crate) fn table_type_filter_to_vec(table_type: &str) -> Option<Vec<Collectio
             Some(table_type_filters)
         }
     };
-}
-
-pub(crate) fn databases_filter(db_name: &str) -> bool {
-    !db_name.is_empty()
-        && !db_name.eq("admin")
-        && !db_name.eq("config")
-        && !db_name.eq("local")
-        && !db_name.eq("system")
 }
 
 #[macro_export]

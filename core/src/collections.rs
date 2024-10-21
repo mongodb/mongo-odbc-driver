@@ -1,5 +1,8 @@
 use crate::stmt::EmptyStatement;
-use crate::util::{databases_filter, is_match, table_type_filter_to_vec, to_name_regex};
+use crate::util::{
+    is_match, table_type_filter_to_vec, to_name_regex, DISALLOWED_COLLECTION_NAMES,
+    DISALLOWED_DB_NAMES,
+};
 use crate::{
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
@@ -123,7 +126,7 @@ impl MongoCollections {
                     .unwrap()
                     .iter()
                     // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
-                    .filter(|&db_name| databases_filter(db_name))
+                    .filter(|&db_name| !DISALLOWED_DB_NAMES.contains(&db_name.as_str()))
                     .filter(|&db_name| is_match(db_name, db_name_filter, accept_search_patterns))
                     .map(|val| async move {
                         CollectionsForDb {
@@ -131,7 +134,10 @@ impl MongoCollections {
                 collection_list: mongo_connection.client.database(val.as_str()).run_command(
                     doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
                 ).await.unwrap().get_document("cursor").map(|doc| {
-                    doc.get_array("firstBatch").unwrap().iter().map(|val| {
+                    doc.get_array("firstBatch").unwrap().iter().filter(|val| {
+                        let name = val.as_document().unwrap().get_str("name").unwrap();
+                        !DISALLOWED_COLLECTION_NAMES.contains(&name)
+                    }).map(|val| {
                         let doc = val.as_document().unwrap();
                         let name = doc.get_str("name").unwrap().to_string();
                         let collection_type = match doc.get_str("type").unwrap() {

@@ -1,6 +1,6 @@
 use crate::{
     col_metadata::MongoColMetadata, conn::MongoConnection, err::Result, stmt::MongoStatement,
-    util::databases_filter, BsonTypeInfo, Error,
+    util::DISALLOWED_DB_NAMES, BsonTypeInfo, Error,
 };
 use definitions::Nullability;
 use mongodb::bson::Bson;
@@ -221,7 +221,7 @@ impl MongoDatabases {
             })
             .unwrap()
             .iter()
-            .filter(|&db_name| databases_filter(db_name))
+            .filter(|&db_name| !DISALLOWED_DB_NAMES.contains(&db_name.as_str()))
             .map(|s| s.to_string())
             .collect();
 

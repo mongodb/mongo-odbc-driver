@@ -1,3 +1,4 @@
+use crate::util::DISALLOWED_COLLECTION_NAMES;
 use crate::{
     cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
@@ -5,7 +6,7 @@ use crate::{
     conn::MongoConnection,
     err::{Error, Result},
     stmt::MongoStatement,
-    util::{databases_filter, to_name_regex},
+    util::{to_name_regex, DISALLOWED_DB_NAMES},
     BsonTypeInfo, TypeMode,
 };
 use constants::SQL_SCHEMAS_COLLECTION;
@@ -486,7 +487,7 @@ impl MongoFields {
                     .unwrap()
                     // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
                     .iter()
-                    .filter(|&db_name| databases_filter(db_name))
+                    .filter(|&db_name| !DISALLOWED_DB_NAMES.contains(&db_name.as_str()))
                     .map(|s| s.to_string())
                     .collect()
             },
@@ -534,14 +535,13 @@ impl MongoFields {
                         self.collections_for_db.as_mut().unwrap().pop_front()
                     {
                         let collection_name = current_collection.name.clone();
-                        if self.collection_name_filter.is_some()
-                            && !self
-                                .collection_name_filter
-                                .as_ref()
-                                .unwrap()
-                                .is_match(&collection_name)
+                        if self
+                            .collection_name_filter
+                            .as_ref()
+                            .is_some_and(|filter| !filter.is_match(&collection_name))
+                            || DISALLOWED_COLLECTION_NAMES.contains(&collection_name.as_str())
                         {
-                            // The collection does not match the filter, moving to the next one
+                            // The collection does not match the filter or is a disallowed collection name; moving to the next one
                             continue;
                         }
 
