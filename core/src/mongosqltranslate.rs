@@ -59,7 +59,10 @@ fn get_library_path(library_type: &str) -> Result<PathBuf> {
     };
 
     let exe_path = env::current_exe().map_err(|e| {
-        Error::LibraryPathError(format!("Failed to get current executable path: {}", e))
+        Error::LibraryPathError(format!(
+            "Failed to get current executable path: {}",
+            e
+        ))
     })?;
     let exe_dir = exe_path.parent().ok_or_else(|| {
         Error::LibraryPathError("Failed to get executable's parent directory".to_string())
@@ -76,6 +79,10 @@ fn get_library_path(library_type: &str) -> Result<PathBuf> {
 // The library is stored in a static variable to ensure that it is only loaded once.
 pub fn load_mongosqltranslate_library() {
     INIT.call_once(|| {
+        let library_path = if cfg!(test) {
+            get_mock_library_path()
+        } else {
+            get_library_path()
         let library_path = match get_library_path(LIBRARY_NAME) {
             Ok(path) => path,
             Err(e) => {
@@ -339,9 +346,9 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
                 decomposed_returned_doc.length,
                 decomposed_returned_doc.capacity,
             )
-            .as_slice(),
+                .as_slice(),
         )
-        .map_err(Error::LibmongosqltranslateDeserialization)?
+            .map_err(Error::LibmongosqltranslateDeserialization)?
     };
 
     let command_type = if command_response_doc.get_str("error").is_ok() {
