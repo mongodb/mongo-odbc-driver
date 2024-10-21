@@ -86,8 +86,6 @@ pub enum Error {
     MultipleSchemaDocumentsReturned(usize),
     #[error("Library path error: {0}")]
     LibraryPathError(String),
-    #[error("The buildInfo command failed with the following error: `{0}`")]
-    BuildInfoCmdExecutionFailed(mongodb::error::Error),
 }
 
 impl Error {
