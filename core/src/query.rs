@@ -70,7 +70,7 @@ impl MongoQuery {
             collection_names.contains(&SQL_SCHEMAS_COLLECTION.to_string());
 
         if !sql_schemas_collection_exists {
-            log::warn!("The `__sql_schemas` collection does not exist in database `{0}`. Therefore, there is no schema for the collections in `{0}`, so most queries will fail.", current_db);
+            log::warn!("There is no schema information in database `{0}`, so SQL capabilities will be very limited. Please make sure to add schema information before using the driver", current_db);
         }
 
         let schema_catalog_doc = if !namespaces.is_empty() && sql_schemas_collection_exists {
@@ -140,15 +140,18 @@ impl MongoQuery {
                     schema_catalog_doc_vec.len(),
                 ));
             } else if schema_catalog_doc_vec.is_empty() {
-                return Err(Error::NoSchemaInformationReturned);
+                return Err(Error::SchemaCollExistsButNoSchemaInformationWasReturned(
+                    current_db.to_string(),
+                ));
             }
 
-            let schema_catalog_doc = schema_catalog_doc_vec[0].to_owned();
+            let mut schema_catalog_doc = schema_catalog_doc_vec[0].to_owned();
 
             let collections_schema_doc = schema_catalog_doc
-                .get_document(current_db)
+                .get_document_mut(current_db)
                 .map_err(|e: ValueAccessError| Error::ValueAccess(current_db.to_string(), e))?;
 
+            // If there are collections with no schema available, assign them empty schemas.
             if namespaces.len() != collections_schema_doc.len() {
                 let missing_collections: Vec<String> = namespaces
                     .iter()
@@ -156,13 +159,15 @@ impl MongoQuery {
                     .filter(|collection| !collections_schema_doc.contains_key(collection.as_str()))
                     .collect();
 
-                return Err(Error::SchemaDocumentNotFoundInSchemaCollection(
-                    missing_collections,
-                ));
+                for collection in missing_collections {
+                    collections_schema_doc.insert(collection, doc! {});
+                }
             }
 
             schema_catalog_doc
         } else {
+            // If there are no namespaces (most importantly for the `SELECT 1` query) or no schema information,
+            // assign an empty schema to `current_db`.
             doc! {
                 current_db: doc! {},
             }
