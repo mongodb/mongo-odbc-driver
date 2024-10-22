@@ -116,7 +116,7 @@ mod mongosqltranslate_tests {
 
         unsafe {
             let mut query: Vec<WideChar> =
-                cstr::to_widechar_vec("select * from non_existent_collection");
+                cstr::to_widechar_vec("SELECT bed_type.type FROM listingsAndReviews");
             query.push(0);
 
             assert_eq!(
@@ -128,8 +128,8 @@ mod mongosqltranslate_tests {
 
             let error_message = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             assert!(
-                error_message.contains("No schema information returned for the requested collections."),
-                "Expected error message: `No schema information returned for the requested collections.`; actual error message: {}",
+                error_message.contains("[MongoDB][Core] The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string."),
+                "Expected error message: `[MongoDB][Core] The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string.`; actual error message: {}",
                 error_message
             );
 
@@ -148,7 +148,7 @@ mod mongosqltranslate_tests {
         );
 
         unsafe {
-            let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from foo");
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT * FROM foo");
             query.push(0);
 
             assert_eq!(

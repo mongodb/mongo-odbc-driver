@@ -1920,7 +1920,6 @@ version = "0.0.0"
 dependencies = [
  "bson",
  "constants",
- "cstr",
  "definitions",
  "fancy-regex",
  "futures",
