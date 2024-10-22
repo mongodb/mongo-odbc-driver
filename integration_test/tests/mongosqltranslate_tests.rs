@@ -1,6 +1,6 @@
 mod common;
 
-mod mongosqltranslate {
+mod mongosqltranslate_tests {
     use crate::common::{
         allocate_env, connect_with_conn_string, default_setup_connect_and_alloc_stmt,
         disconnect_and_close_handles, fetch_and_get_data, get_column_attributes,

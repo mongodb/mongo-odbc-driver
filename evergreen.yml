@@ -1287,8 +1287,7 @@ functions:
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
-          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
+          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture 
           EXITCODE=$?
           echo "****** ls -l ./target/debug/deps *******"
           ls -l ./target/debug/deps
@@ -1409,8 +1408,7 @@ functions:
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
-          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
+          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture 
 
           EXITCODE=$?
 
@@ -1435,7 +1433,7 @@ functions:
           ${prepare_shell}
           sudo mkdir -p /opt/mongodb/atlas-sql-odbc-driver/
           sudo mv -f libmongosqltranslate.so /opt/mongodb/atlas-sql-odbc-driver/libmongosqltranslate.so
-          cargo test mongosqltranslate -- --nocapture        
+          cargo test mongosqltranslate_tests -- --nocapture        
           
 
   "run ubuntu cluster type integration tests":
@@ -1568,8 +1566,7 @@ functions:
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests,definitions/iodbc,cstr/utf32 -- --nocapture &&
-          cargo test --package mongo-odbc-core --lib util::test_connection::test::bad_host --features definitions/iodbc,cstr/utf32,bad_host -- --exact --nocapture
+          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests,definitions/iodbc,cstr/utf32 -- --nocapture 
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1654,8 +1651,7 @@ functions:
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture &&
-          cargo test --target x86_64-unknown-linux-gnu --package mongo-odbc-core --lib util::test_connection::test::bad_host --features bad_host -- --exact --nocapture
+          cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture 
           EXITCODE=$?
 
           # Stop the local ADF

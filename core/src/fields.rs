@@ -582,9 +582,9 @@ impl MongoFields {
                                 })
                                 .await
                                 .map_err(Error::QueryExecutionFailed)?
-                                .ok_or(Error::SchemaDocumentNotFoundInSchemaCollection(vec![
-                                    collection_name.clone(),
-                                ]))?;
+                                .unwrap_or(doc! {
+                                    "schema": doc!{}
+                                });
 
                             let result_set_schema: Result<ResultSetSchema> =
                                 ResultSetSchema::from_sql_schemas_document(&schema_doc).map_err(

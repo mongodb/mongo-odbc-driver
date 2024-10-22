@@ -4,8 +4,6 @@ use lazy_static::lazy_static;
 use mongodb::results::CollectionType;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 
-mod test_connection;
-
 pub(crate) const TABLE: &str = "TABLE";
 pub(crate) const COLLECTION: &str = "collection";
 pub(crate) const TIMESERIES: &str = "timeseries";

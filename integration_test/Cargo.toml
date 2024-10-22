@@ -12,6 +12,7 @@ lazy_static = "1"
 definitions = { path = "../definitions", default-features = false }
 cstr = { path = "../cstr" }
 constants = { path = "../constants" }
+mongo-odbc-core = { path = "../core" }
 shared_sql_utils = { path = "../shared_sql_utils" }
 logger = { path = "../logger" }
 log = "0.4"

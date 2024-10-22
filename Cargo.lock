@@ -1576,6 +1576,7 @@ dependencies = [
  "lazy_static",
  "log",
  "logger",
+ "mongo-odbc-core",
  "mongodb",
  "num-traits",
  "regex",

@@ -196,7 +196,7 @@ impl MongoConnection {
 
         let uuid_repr = user_options.uuid_representation;
 
-        load_mongosqltranslate_library(false);
+        load_mongosqltranslate_library();
 
         let (is_libmongosqltranslate_compatible_with_driver_version, libmongosqltranslate_version) =
             if get_mongosqltranslate_library().is_some() {
@@ -223,7 +223,7 @@ impl MongoConnection {
 
         let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
 
-        let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await });
+        let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await })?;
         match type_of_cluster {
             MongoClusterType::AtlasDataFederation => {}
             MongoClusterType::Community => {

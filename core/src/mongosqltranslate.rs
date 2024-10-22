@@ -63,9 +63,9 @@ fn get_mock_library_path() -> PathBuf {
 // and is responsible for determining the library name and path.
 // The library name and path are determined based on the operating system and architecture.
 // It is stored in a static variable to ensure that it is only loaded once.
-pub fn load_mongosqltranslate_library(mock_library: bool) {
+pub fn load_mongosqltranslate_library() {
     INIT.call_once(|| {
-        let library_path = if mock_library {
+        let library_path = if cfg!(test) {
             get_mock_library_path()
         } else {
             get_library_path()
@@ -360,7 +360,7 @@ mod unit {
 
     #[test]
     fn library_load_and_run_command_test() {
-        load_mongosqltranslate_library(true);
+        load_mongosqltranslate_library();
         assert!(get_mongosqltranslate_library().is_some());
 
         let run_command = get_run_command_fn_ptr().expect("Failed to load runCommand symbol");
