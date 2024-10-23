@@ -339,9 +339,9 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
                 decomposed_returned_doc.length,
                 decomposed_returned_doc.capacity,
             )
-                .as_slice(),
+            .as_slice(),
         )
-            .map_err(Error::LibmongosqltranslateDeserialization)?
+        .map_err(Error::LibmongosqltranslateDeserialization)?
     };
 
     let command_type = if command_response_doc.get_str("error").is_ok() {
