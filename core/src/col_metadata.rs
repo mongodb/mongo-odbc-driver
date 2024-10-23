@@ -802,4 +802,63 @@ mod unit {
             }
         }
     }
+
+    mod from_sql_schemas_document_tests {
+        use crate::{col_metadata::ResultSetSchema, Error};
+        use bson::{datetime, doc, Bson};
+
+        #[test]
+        fn schema_field_is_the_wrong_type() {
+            let schema_doc = doc! {
+                "_id": "coll_name",
+                "type": "Collection",
+                "schema": 1,
+                "lastUpdated": datetime::DateTime::now(),
+            };
+
+            // We are mapping the error to mimic the way that this function is used in `fn get_next_metadata(...)` in `fields.rs` (the only place it is used).
+            let result_set_schema = ResultSetSchema::from_sql_schemas_document(&schema_doc)
+                .map_err(|e| Error::CollectionDeserialization("coll_name".to_string(), e));
+
+            assert!(
+                result_set_schema.is_err(),
+                "expected error, got {:?}",
+                result_set_schema
+            );
+
+            if let Err(error) = result_set_schema {
+                assert_eq!("Getting metadata for collection 'coll_name' failed with error: invalid type: integer `1`, expected struct Schema", error.to_string());
+            }
+        }
+
+        #[test]
+        fn schema_field_is_the_right_type_but_cant_be_converted_to_json_schema() {
+            let invald_bson_value: Bson = Bson::Array(vec![
+                Bson::String("foo".to_string()),
+                Bson::String("bar".to_string()),
+                Bson::String("baz".to_string()),
+            ]);
+
+            let schema_doc = doc! {
+                "_id": "coll_name",
+                "type": "Collection",
+                "schema": invald_bson_value,
+                "lastUpdated": datetime::DateTime::now(),
+            };
+
+            // We are mapping the error to mimic the way that this function is used in `fn get_next_metadata(...)` in `fields.rs` (the only place it is used).
+            let result_set_schema = ResultSetSchema::from_sql_schemas_document(&schema_doc)
+                .map_err(|e| Error::CollectionDeserialization("coll_name".to_string(), e));
+
+            assert!(
+                result_set_schema.is_err(),
+                "expected error, got {:?}",
+                result_set_schema
+            );
+
+            if let Err(error) = result_set_schema {
+                assert_eq!("Getting metadata for collection 'coll_name' failed with error: data did not match any variant of untagged enum BsonType", error.to_string());
+            }
+        }
+    }
 }
