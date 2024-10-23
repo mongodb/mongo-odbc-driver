@@ -803,7 +803,7 @@ mod unit {
         }
     }
 
-    mod from_sql_schemas_document_tests {
+    mod from_sql_schemas_document_function_error_handling_tests {
         use crate::{col_metadata::ResultSetSchema, Error};
         use bson::{datetime, doc, Bson};
 
@@ -816,7 +816,7 @@ mod unit {
                 "lastUpdated": datetime::DateTime::now(),
             };
 
-            // We are mapping the error to mimic the way that this function is used in `fn get_next_metadata(...)` in `fields.rs` (the only place it is used).
+            // We are mapping the error to mimic the way that this function handles errors in `fn get_next_metadata(...)` in `fields.rs` (the only place it is used).
             let result_set_schema = ResultSetSchema::from_sql_schemas_document(&schema_doc)
                 .map_err(|e| Error::CollectionDeserialization("coll_name".to_string(), e));
 
@@ -846,7 +846,7 @@ mod unit {
                 "lastUpdated": datetime::DateTime::now(),
             };
 
-            // We are mapping the error to mimic the way that this function is used in `fn get_next_metadata(...)` in `fields.rs` (the only place it is used).
+            // We are mapping the error to mimic the way that this function handles errors in `fn get_next_metadata(...)` in `fields.rs` (the only place it is used).
             let result_set_schema = ResultSetSchema::from_sql_schemas_document(&schema_doc)
                 .map_err(|e| Error::CollectionDeserialization("coll_name".to_string(), e));
 
