@@ -88,6 +88,9 @@ pub enum Error {
         "Multiple Documents were returned when getting the schema; however, only one was expected."
     )]
     MultipleSchemaDocumentsReturned(usize),
+
+    #[error("Library path error: {0}")]
+    LibraryPathError(String),
 }
 
 impl Error {
@@ -134,6 +137,7 @@ impl Error {
             | Error::MultipleSchemaDocumentsReturned(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
+            Error::LibraryPathError(_) => GENERAL_ERROR,
         }
     }
 
@@ -184,6 +188,7 @@ impl Error {
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::BsonDocumentToCommandResponseDeserialization(_)
             | Error::NoSchemaInformationReturned
+            | Error::LibraryPathError(_)
             | Error::MultipleSchemaDocumentsReturned(_) => 0,
         }
     }
