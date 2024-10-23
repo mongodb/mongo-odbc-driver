@@ -3,7 +3,10 @@ use bson::{Bson, Document};
 use libloading::{Library, Symbol};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize};
+#[cfg(not(test))]
+use shared_sql_utils::driver_settings::DriverSettings;
 use std::collections::BTreeSet;
+#[cfg(test)]
 use std::env;
 use std::path::PathBuf;
 use std::sync::Once;
@@ -32,17 +35,18 @@ fn get_library_name(library_type: &str) -> String {
 fn get_library_path(library_type: &str) -> Result<PathBuf> {
     let lib_name = get_library_name(library_type);
 
-    let exe_path = env::current_exe().map_err(|e| {
+    let settings = DriverSettings::from_private_profile_string()
+        .map_err(|e| Error::LibraryPathError(format!("Failed to obtain driver settings: {}", e)))?;
+
+    let driver_path = PathBuf::from(settings.driver);
+    let library_dir = driver_path.parent().ok_or_else(|| {
         Error::LibraryPathError(format!(
-            "Failed to get current executable path: {}",
-            e
+            "Failed to get parent directory from driver path: '{}'",
+            driver_path.display()
         ))
     })?;
-    let exe_dir = exe_path.parent().ok_or_else(|| {
-        Error::LibraryPathError("Failed to get executable's parent directory".to_string())
-    })?;
 
-    let path = PathBuf::from(exe_dir).join(lib_name);
+    let path = PathBuf::from(library_dir).join(lib_name);
     Ok(path)
 }
 
@@ -55,10 +59,7 @@ fn get_library_path(library_type: &str) -> Result<PathBuf> {
     };
 
     let exe_path = env::current_exe().map_err(|e| {
-        Error::LibraryPathError(format!(
-            "Failed to get current executable path: {}",
-            e
-        ))
+        Error::LibraryPathError(format!("Failed to get current executable path: {}", e))
     })?;
     let exe_dir = exe_path.parent().ok_or_else(|| {
         Error::LibraryPathError("Failed to get executable's parent directory".to_string())
@@ -327,9 +328,9 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
                 decomposed_returned_doc.length,
                 decomposed_returned_doc.capacity,
             )
-                .as_slice(),
+            .as_slice(),
         )
-            .map_err(Error::LibmongosqltranslateDeserialization)?
+        .map_err(Error::LibmongosqltranslateDeserialization)?
     };
 
     let command_response = CommandResponse::from_document(&command_response_doc)?;
