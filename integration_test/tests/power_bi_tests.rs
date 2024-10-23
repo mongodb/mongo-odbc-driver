@@ -467,7 +467,7 @@ mod integration {
             //      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
             //      - SQLColAttributeW(SQL_COLUMN_LENGTH)
             //      - SQLColAttributeW(SQL_COLUMN_SCALE)
-            get_column_attributes(stmt, 2);
+            get_column_attributes(stmt, 2, None);
 
             //  - Until SQLFetch returns SQL_NO_DATA
             //      - SQLFetch()
@@ -479,6 +479,7 @@ mod integration {
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
                 vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
+                None,
             );
         }
     }
@@ -547,7 +548,7 @@ mod integration {
             //      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
             //      - SQLColAttributeW(SQL_COLUMN_LENGTH)
             //      - SQLColAttributeW(SQL_COLUMN_SCALE)
-            get_column_attributes(stmt, 5);
+            get_column_attributes(stmt, 5, None);
 
             //  - Until SQLFetch returns SQL_NO_DATA
             //      - SQLFetch()
@@ -565,6 +566,7 @@ mod integration {
                     SqlReturn::NO_DATA,
                 ],
                 vec![CDataType::SQL_C_WCHAR; 5],
+                None,
             );
         }
     }

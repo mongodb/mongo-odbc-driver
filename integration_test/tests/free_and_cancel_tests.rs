@@ -100,6 +100,7 @@ mod integration {
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
                 vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_SBIGINT],
+                None,
             );
 
             assert_eq!(

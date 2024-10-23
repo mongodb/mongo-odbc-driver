@@ -11,6 +11,7 @@ mod mongosqltranslate_tests {
         AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQLColumnsW, SQLExecDirectW,
         SQLExecute, SQLPrepareW, SmallInt, SqlReturn, SQL_NTS,
     };
+    use serde_json::{Number, Value};
     use std::ptr;
 
     #[test]
@@ -50,7 +51,9 @@ mod mongosqltranslate_tests {
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
-            get_column_attributes(stmt as Handle, 5);
+            let expected_column_metadata_values = create_expected_column_metadata();
+
+            get_column_attributes(stmt as Handle, 5, Some(expected_column_metadata_values));
 
             assert_eq!(
                 SqlReturn::SUCCESS,
@@ -59,11 +62,14 @@ mod mongosqltranslate_tests {
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
+            let expected_column_values = create_expected_column_values();
+
             fetch_and_get_data(
                 stmt as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 5],
                 vec![CDataType::SQL_C_WCHAR; 5],
+                Some(expected_column_values),
             );
 
             disconnect_and_close_handles(dbc, stmt);
@@ -91,13 +97,18 @@ mod mongosqltranslate_tests {
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
-            get_column_attributes(stmt as Handle, 5);
+            let expected_column_metadata_values = create_expected_column_metadata();
+
+            get_column_attributes(stmt as Handle, 5, Some(expected_column_metadata_values));
+
+            let expected_column_values = create_expected_column_values();
 
             fetch_and_get_data(
                 stmt as Handle,
                 Some(3),
                 vec![SqlReturn::SUCCESS; 5],
                 vec![CDataType::SQL_C_WCHAR; 5],
+                Some(expected_column_values),
             );
 
             disconnect_and_close_handles(dbc, stmt);
@@ -200,17 +211,94 @@ mod mongosqltranslate_tests {
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
 
-            get_column_attributes(stmt as Handle, 18);
+            get_column_attributes(stmt as Handle, 18, None);
 
             fetch_and_get_data(
                 stmt as Handle,
                 Some(42),
                 vec![SqlReturn::SUCCESS; 3],
                 vec![CDataType::SQL_C_WCHAR; 3],
+                None,
             );
 
             disconnect_and_close_handles(dbc, stmt);
         }
         let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    fn create_expected_column_metadata() -> Vec<Vec<Value>> {
+        vec![
+            vec![
+                Value::Number(Number::from(-9)),
+                Value::Number(Number::from(1)),
+                Value::String("property_type".to_string()),
+                Value::Number(Number::from(0)),
+                Value::String("string".to_string()),
+                Value::Number(Number::from(0)),
+                Value::Number(Number::from(0)),
+            ],
+            vec![
+                Value::Number(Number::from(-9)),
+                Value::Number(Number::from(1)),
+                Value::String("room_type".to_string()),
+                Value::Number(Number::from(0)),
+                Value::String("string".to_string()),
+                Value::Number(Number::from(0)),
+                Value::Number(Number::from(0)),
+            ],
+            vec![
+                Value::Number(Number::from(-9)),
+                Value::Number(Number::from(1)),
+                Value::String("bed_type".to_string()),
+                Value::Number(Number::from(0)),
+                Value::String("string".to_string()),
+                Value::Number(Number::from(0)),
+                Value::Number(Number::from(0)),
+            ],
+            vec![
+                Value::Number(Number::from(-9)),
+                Value::Number(Number::from(1)),
+                Value::String("minimum_nights".to_string()),
+                Value::Number(Number::from(0)),
+                Value::String("string".to_string()),
+                Value::Number(Number::from(0)),
+                Value::Number(Number::from(0)),
+            ],
+            vec![
+                Value::Number(Number::from(-9)),
+                Value::Number(Number::from(1)),
+                Value::String("maximum_nights".to_string()),
+                Value::Number(Number::from(0)),
+                Value::String("string".to_string()),
+                Value::Number(Number::from(0)),
+                Value::Number(Number::from(0)),
+            ],
+        ]
+    }
+
+    fn create_expected_column_values() -> Vec<Vec<String>> {
+        vec![
+            vec![
+                "House".to_string(),
+                "Entire home/apt".to_string(),
+                "Real Bed".to_string(),
+                "2".to_string(),
+                "1125".to_string(),
+            ],
+            vec![
+                "Apartment".to_string(),
+                "Entire home/apt".to_string(),
+                "Real Bed".to_string(),
+                "2".to_string(),
+                "1125".to_string(),
+            ],
+            vec![
+                "House".to_string(),
+                "Entire home/apt".to_string(),
+                "Real Bed".to_string(),
+                "2".to_string(),
+                "30".to_string(),
+            ],
+        ]
     }
 }
