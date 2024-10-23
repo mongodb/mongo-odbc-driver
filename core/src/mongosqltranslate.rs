@@ -59,10 +59,7 @@ fn get_library_path(library_type: &str) -> Result<PathBuf> {
     };
 
     let exe_path = env::current_exe().map_err(|e| {
-        Error::LibraryPathError(format!(
-            "Failed to get current executable path: {}",
-            e
-        ))
+        Error::LibraryPathError(format!("Failed to get current executable path: {}", e))
     })?;
     let exe_dir = exe_path.parent().ok_or_else(|| {
         Error::LibraryPathError("Failed to get executable's parent directory".to_string())
@@ -346,9 +343,9 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
                 decomposed_returned_doc.length,
                 decomposed_returned_doc.capacity,
             )
-                .as_slice(),
+            .as_slice(),
         )
-            .map_err(Error::LibmongosqltranslateDeserialization)?
+        .map_err(Error::LibmongosqltranslateDeserialization)?
     };
 
     let command_type = if command_response_doc.get_str("error").is_ok() {
