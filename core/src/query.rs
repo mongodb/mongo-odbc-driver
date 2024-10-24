@@ -70,7 +70,8 @@ impl MongoQuery {
             collection_names.contains(&SQL_SCHEMAS_COLLECTION.to_string());
 
         if !sql_schemas_collection_exists {
-            log::warn!("There is no schema information in database `{0}`, so SQL capabilities will be very limited. Please make sure to add schema information before using the driver", current_db);
+            log::warn!("There is no schema information in database `{0}`, so all the collections will be assigned empty schemas. \
+            Therefore, SQL capabilities will be very limited. Hint: Please make sure to generate schemas before using the driver", current_db);
         }
 
         let schema_catalog_doc = if !namespaces.is_empty() && sql_schemas_collection_exists {
@@ -87,7 +88,7 @@ impl MongoQuery {
             let schema_catalog_aggregation_pipeline = vec![
                 doc! {"$match": {
                     "_id": {
-                        "$in": collection_names
+                        "$in": &collection_names
                         }
                     }
                 },
@@ -125,7 +126,7 @@ impl MongoQuery {
             ];
 
             // create the schema_catalog document
-            let schema_catalog_doc_vec: Vec<Document> = client.runtime.block_on(async {
+            let mut schema_catalog_doc_vec: Vec<Document> = client.runtime.block_on(async {
                 schema_collection
                     .aggregate(schema_catalog_aggregation_pipeline)
                     .await
@@ -140,9 +141,21 @@ impl MongoQuery {
                     schema_catalog_doc_vec.len(),
                 ));
             } else if schema_catalog_doc_vec.is_empty() {
-                return Err(Error::SchemaCollExistsButNoSchemaInformationWasReturned(
-                    current_db.to_string(),
-                ));
+                log::warn!("There is a `__sql_schemas` collection in database `{0}`; however, no schema information was returned for the requested collections.\
+                This means that all the requested collections either don't exists in `{0}` or don't have an entry in the `__sql_schemas` collection. For now, they will\
+                be assigned empty schemas. Hint: You either need to generate schemas for your collections or correct your query.", current_db);
+
+                let mut collections_schema_doc = doc! {};
+
+                for collection in collection_names {
+                    collections_schema_doc.insert(collection, doc! {});
+                }
+
+                let schema_catalog_doc = doc! {
+                  current_db: collections_schema_doc,
+                };
+
+                schema_catalog_doc_vec.push(schema_catalog_doc);
             }
 
             let mut schema_catalog_doc = schema_catalog_doc_vec[0].to_owned();
@@ -158,6 +171,9 @@ impl MongoQuery {
                     .map(|namespace| namespace.collection.clone())
                     .filter(|collection| !collections_schema_doc.contains_key(collection.as_str()))
                     .collect();
+
+                log::warn!("No schema was found for the following collections: {:?}. These collections will be assigned empty schemas.\
+                Hint: Generate schemas for your collections.", missing_collections);
 
                 for collection in missing_collections {
                     collections_schema_doc.insert(collection, doc! {});

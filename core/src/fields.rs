@@ -583,9 +583,13 @@ impl MongoFields {
                                 })
                                 .await
                                 .map_err(Error::QueryExecutionFailed)?
-                                .unwrap_or(doc! {
+                                .unwrap_or({
+                                    log::warn!("No schema was found for collection `{}`. It will be assigned\
+                                    an empty schema. Hint: Generate schemas for your collections.", collection_name);
+
+                                    doc! {
                                     "schema": doc!{}
-                                });
+                                }});
 
                             let result_set_schema: Result<ResultSetSchema> =
                                 ResultSetSchema::from_sql_schemas_document(&schema_doc).map_err(

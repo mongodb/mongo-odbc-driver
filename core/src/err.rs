@@ -80,8 +80,6 @@ pub enum Error {
     TranslationPipelineNotArray,
     #[error("The mongosql Translation `pipeline` array should only contain Documents; however, a non-document bson-type was encountered.")]
     TranslationPipelineArrayContainsNonDocument,
-    #[error("The __sql_schemas collection exists in database `{0}`; however, no schema information was returned.")]
-    SchemaCollExistsButNoSchemaInformationWasReturned(String),
     #[error(
         "Multiple Documents were returned when getting the schema; however, only one was expected."
     )]
@@ -129,7 +127,6 @@ impl Error {
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::BsonDocumentToCommandResponseDeserialization(_)
-            | Error::SchemaCollExistsButNoSchemaInformationWasReturned(_)
             | Error::MultipleSchemaDocumentsReturned(_)
             | Error::BuildInfoCmdExecutionFailed(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
@@ -182,7 +179,6 @@ impl Error {
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::BsonDocumentToCommandResponseDeserialization(_)
-            | Error::SchemaCollExistsButNoSchemaInformationWasReturned(_)
             | Error::MultipleSchemaDocumentsReturned(_)
             | Error::BuildInfoCmdExecutionFailed(_) => 0,
         }
