@@ -1421,7 +1421,7 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosqltranslate/snapshot/libmongosqltranslate-linux.so
+        remote_file: mongosqltranslate/libmongosqltranslate-vsnapshot-linux-x86_64.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
         bucket: translators-connectors-releases
     - command: shell.exec
@@ -1434,14 +1434,13 @@ functions:
           sudo mkdir -p /opt/mongodb/atlas-sql-odbc-driver/
           sudo mv -f libmongosqltranslate.so /opt/mongodb/atlas-sql-odbc-driver/libmongosqltranslate.so
           cargo test mongosqltranslate_tests -- --nocapture        
-          
 
   "run ubuntu cluster type integration tests":
     - command: s3.get
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosqltranslate/snapshot/libmongosqltranslate-linux.so
+        remote_file: mongosqltranslate/libmongosqltranslate-vsnapshot-linux-x86_64.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
         bucket: translators-connectors-releases
     - command: shell.exec
