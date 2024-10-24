@@ -62,14 +62,18 @@ functions:
           export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
+            # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
             export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
+            export LIBMONGOSQLTRANSLATE_VER=$(echo ${triggered_by_git_tag} | cut -d '-' -f 2 | sed s/libv//)
           else
             export RELEASE_VERSION=snapshot
+            export LIBMONGOSQLTRANSLATE_VER=snapshot
           fi
           export MSI_FILENAME="mongoodbc.msi"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
+          LIBMONGOSQLTRANSLATE_VER: "$LIBMONGOSQLTRANSLATE_VER"
           MSI_FILENAME: "$MSI_FILENAME"
           WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
           UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
@@ -78,6 +82,7 @@ functions:
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
+            export LIBMONGOSQLTRANSLATE_VER=${LIBMONGOSQLTRANSLATE_VER}
             export MSI_FILENAME="$MSI_FILENAME"
             export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
             export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
@@ -1421,7 +1426,7 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosqltranslate/libmongosqltranslate-vsnapshot-linux-x86_64.so
+        remote_file: mongosqltranslate/libmongosqltranslate-v${LIBMONGOSQLTRANSLATE_VER}-linux-x86_64.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
         bucket: translators-connectors-releases
     - command: shell.exec
@@ -1440,7 +1445,7 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosqltranslate/libmongosqltranslate-vsnapshot-linux-x86_64.so
+        remote_file: mongosqltranslate/libmongosqltranslate-v${LIBMONGOSQLTRANSLATE_VER}-linux-x86_64.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
         bucket: translators-connectors-releases
     - command: shell.exec
