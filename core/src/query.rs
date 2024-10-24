@@ -141,9 +141,9 @@ impl MongoQuery {
                     schema_catalog_doc_vec.len(),
                 ));
             } else if schema_catalog_doc_vec.is_empty() {
-                log::warn!("There is a `__sql_schemas` collection in database `{0}`; however, no schema information was returned for the requested collections.\
-                This means that all the requested collections either don't exists in `{0}` or don't have an entry in the `__sql_schemas` collection. For now, they will\
-                be assigned empty schemas. Hint: You either need to generate schemas for your collections or correct your query.", current_db);
+                log::warn!("No schema information was found for the requested collections `{:?}` in database `{1}`. Either the collections don't exists \
+                in `{1}` or they don't have a schema. For now, they will be assigned empty schemas. Hint: You either need to generate schemas for your collections \
+                or correct your query.", collection_names, current_db);
 
                 let mut collections_schema_doc = doc! {};
 
