@@ -63,7 +63,7 @@ functions:
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
-            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
+            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | cut -d '-' -f 1 | sed s/v// )
             export LIBMONGOSQLTRANSLATE_VER=$(echo ${triggered_by_git_tag} | cut -d '-' -f 2 | sed s/libv//)
           else
             export RELEASE_VERSION=snapshot
