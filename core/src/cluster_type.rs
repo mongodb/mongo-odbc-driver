@@ -1,3 +1,4 @@
+use crate::{err::Result, Error};
 use mongodb::bson::{doc, Bson, Document};
 use mongodb::Client;
 use serde::{Deserialize, Serialize};
@@ -10,19 +11,16 @@ pub enum MongoClusterType {
     UnknownTarget,
 }
 
-pub async fn determine_cluster_type(client: &Client) -> MongoClusterType {
+pub async fn determine_cluster_type(client: &Client) -> Result<MongoClusterType> {
     let db = client.database("admin");
 
     // The { buildInfo: 1 } command returns information that indicates
     // the type of the cluster.
     let build_info_cmd = doc! { "buildInfo": 1 };
-    let cmd_res: Document = match db.run_command(build_info_cmd).await {
-        Ok(res) => res,
-        Err(e) => {
-            log::error!("Failed to run buildInfo command: {:?}", e);
-            return MongoClusterType::UnknownTarget;
-        }
-    };
+    let cmd_res: Document = db
+        .run_command(build_info_cmd)
+        .await
+        .map_err(Error::BuildInfoCmdExecutionFailed)?;
 
     // if "ok" is not 1, then the target type could not be determined.
     match cmd_res.get("ok") {
@@ -34,13 +32,13 @@ pub async fn determine_cluster_type(client: &Client) -> MongoClusterType {
                 "buildInfo command returned a non-ok response: {:?}",
                 cmd_res
             );
-            return MongoClusterType::UnknownTarget;
+            return Ok(MongoClusterType::UnknownTarget);
         }
     }
 
     // If the "dataLake" field is present, it must be an ADF cluster.
     if cmd_res.get_document("dataLake").is_ok() {
-        MongoClusterType::AtlasDataFederation
+        Ok(MongoClusterType::AtlasDataFederation)
     } else {
         // Otherwise, if "modules" is present and contains "enterprise",
         // this must be an Enterprise cluster.
@@ -50,12 +48,12 @@ pub async fn determine_cluster_type(client: &Client) -> MongoClusterType {
                     .iter()
                     .any(|mod_name| mod_name.as_str() == Some("enterprise"))
                 {
-                    MongoClusterType::Enterprise
+                    Ok(MongoClusterType::Enterprise)
                 } else {
-                    MongoClusterType::Community
+                    Ok(MongoClusterType::Community)
                 }
             }
-            Err(_) => MongoClusterType::Community,
+            Err(_) => Ok(MongoClusterType::Community),
         }
     }
 }

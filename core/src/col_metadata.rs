@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     json_schema::{
         simplified::{Atomic, ObjectSchema, Schema},
@@ -7,9 +5,11 @@ use crate::{
     },
     BsonTypeInfo, Error, Result, TypeMode,
 };
+use bson::{Bson, Document};
 use definitions::{Nullability, SqlCode, SqlDataType};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Metadata information for a column of the result set.
 // The information is to be used when reporting columns information from
@@ -171,10 +171,24 @@ pub struct VersionedJsonSchema {
 }
 
 // Struct representing the ResultSetSchema.
+// The `schema` field needs the alias `result_set_schema` because this struct is used to get the schema
+// from the __sql_schemas collection, which stores the schema in it's `schema` field, and the libmongosqltranslate
+// `translate` command, which stores the schema in it's `result_set_schema` field.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct ResultSetSchema {
+    #[serde(alias = "result_set_schema")]
     pub schema: crate::json_schema::Schema,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub select_order: Option<Vec<Vec<String>>>,
+}
+
+impl ResultSetSchema {
+    pub fn from_sql_schemas_document(doc: &Document) -> bson::de::Result<Self> {
+        let as_bson = Bson::Document(doc.clone());
+        let deserializer = bson::Deserializer::new(as_bson);
+        let deserializer = serde_stacker::Deserializer::new(deserializer);
+        Deserialize::deserialize(deserializer)
+    }
 }
 
 impl From<SqlGetSchemaResponse> for ResultSetSchema {
@@ -785,6 +799,65 @@ mod unit {
                 Err(Error::UnknownColumn(_)) => (),
                 Err(e) => panic!("unexpected error: {e:?}"),
                 Ok(ok) => panic!("unexpected result: {ok:?}"),
+            }
+        }
+    }
+
+    mod from_sql_schemas_document_function_error_handling_tests {
+        use crate::{col_metadata::ResultSetSchema, Error};
+        use bson::{datetime, doc, Bson};
+
+        #[test]
+        fn schema_field_is_the_wrong_type() {
+            let schema_doc = doc! {
+                "_id": "coll_name",
+                "type": "Collection",
+                "schema": 1,
+                "lastUpdated": datetime::DateTime::now(),
+            };
+
+            // We are mapping the error to mimic the way that this function handles errors in `fn get_next_metadata(...)` in `fields.rs` (the only place it is used).
+            let result_set_schema = ResultSetSchema::from_sql_schemas_document(&schema_doc)
+                .map_err(|e| Error::CollectionDeserialization("coll_name".to_string(), e));
+
+            assert!(
+                result_set_schema.is_err(),
+                "expected error, got {:?}",
+                result_set_schema
+            );
+
+            if let Err(error) = result_set_schema {
+                assert_eq!("Getting metadata for collection 'coll_name' failed with error: invalid type: integer `1`, expected struct Schema", error.to_string());
+            }
+        }
+
+        #[test]
+        fn schema_field_is_the_right_type_but_cant_be_converted_to_json_schema() {
+            let invald_bson_value: Bson = Bson::Array(vec![
+                Bson::String("foo".to_string()),
+                Bson::String("bar".to_string()),
+                Bson::String("baz".to_string()),
+            ]);
+
+            let schema_doc = doc! {
+                "_id": "coll_name",
+                "type": "Collection",
+                "schema": invald_bson_value,
+                "lastUpdated": datetime::DateTime::now(),
+            };
+
+            // We are mapping the error to mimic the way that this function handles errors in `fn get_next_metadata(...)` in `fields.rs` (the only place it is used).
+            let result_set_schema = ResultSetSchema::from_sql_schemas_document(&schema_doc)
+                .map_err(|e| Error::CollectionDeserialization("coll_name".to_string(), e));
+
+            assert!(
+                result_set_schema.is_err(),
+                "expected error, got {:?}",
+                result_set_schema
+            );
+
+            if let Err(error) = result_set_schema {
+                assert_eq!("Getting metadata for collection 'coll_name' failed with error: data did not match any variant of untagged enum BsonType", error.to_string());
             }
         }
     }

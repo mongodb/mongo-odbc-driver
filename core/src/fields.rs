@@ -1,15 +1,18 @@
+use crate::util::DISALLOWED_COLLECTION_NAMES;
 use crate::{
+    cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
     err::{Error, Result},
     stmt::MongoStatement,
-    util::to_name_regex,
+    util::{to_name_regex, DISALLOWED_DB_NAMES},
     BsonTypeInfo, TypeMode,
 };
+use constants::SQL_SCHEMAS_COLLECTION;
 use definitions::{Nullability, SqlDataType};
 use mongodb::{
-    bson::{doc, Bson},
+    bson::{doc, Bson, Document},
     results::CollectionType,
 };
 use once_cell::sync::OnceCell;
@@ -484,7 +487,7 @@ impl MongoFields {
                     .unwrap()
                     // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
                     .iter()
-                    .filter(|&db_name| !db_name.is_empty() && !db_name.eq("admin"))
+                    .filter(|&db_name| !DISALLOWED_DB_NAMES.contains(&db_name.as_str()))
                     .map(|s| s.to_string())
                     .collect()
             },
@@ -532,33 +535,81 @@ impl MongoFields {
                         self.collections_for_db.as_mut().unwrap().pop_front()
                     {
                         let collection_name = current_collection.name.clone();
-                        if self.collection_name_filter.is_some()
-                            && !self
-                                .collection_name_filter
-                                .as_ref()
-                                .unwrap()
-                                .is_match(&collection_name)
+                        if self
+                            .collection_name_filter
+                            .as_ref()
+                            .is_some_and(|filter| !filter.is_match(&collection_name))
+                            || DISALLOWED_COLLECTION_NAMES.contains(&collection_name.as_str())
                         {
-                            // The collection does not match the filter, moving to the next one
+                            // The collection does not match the filter or is a disallowed collection name; moving to the next one
                             continue;
                         }
-                        let get_schema_cmd = doc! {"sqlGetSchema": collection_name.clone()};
 
                         let db = mongo_connection.client.database(&self.current_db_name);
-                        let current_col_metadata_response: Result<SqlGetSchemaResponse> =
-                            mongodb::bson::from_document(
-                                db.run_command(get_schema_cmd).await.unwrap(),
-                            )
-                            .map_err(|e| {
-                                Error::CollectionDeserialization(collection_name.clone(), e)
-                            });
-                        if let Err(error) = current_col_metadata_response {
-                            // If there is an Error while deserializing the schema, we won't show any columns for it
-                            warnings.push(error);
-                            continue;
-                        }
-                        let current_col_metadata_response: ResultSetSchema =
-                            current_col_metadata_response.unwrap().into();
+
+                        let current_col_metadata_response: ResultSetSchema = if mongo_connection
+                            .cluster_type
+                            == MongoClusterType::AtlasDataFederation
+                        {
+                            let get_schema_cmd = doc! {"sqlGetSchema": &collection_name};
+
+                            let sql_get_schema_response: Result<SqlGetSchemaResponse> =
+                                mongodb::bson::from_document(
+                                    db.run_command(get_schema_cmd).await.unwrap(),
+                                )
+                                .map_err(|e| {
+                                    Error::CollectionDeserialization(collection_name.clone(), e)
+                                });
+
+                            let error_checked_sql_get_schema_response =
+                                match sql_get_schema_response {
+                                    Ok(sql_get_schema_response) => sql_get_schema_response,
+                                    Err(error) => {
+                                        // If there is an Error while deserializing the schema, we won't show any columns for it
+                                        warnings.push(error);
+                                        continue;
+                                    }
+                                };
+
+                            error_checked_sql_get_schema_response.into()
+                        } else if mongo_connection.cluster_type == MongoClusterType::Enterprise {
+                            let schema_collection =
+                                db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
+
+                            // If the schema for `collection_name` isn't found, default to an empty schema.
+                            let schema_doc: Document = schema_collection
+                                .find_one(doc! {
+                                    "_id": &collection_name
+                                })
+                                .await
+                                .map_err(Error::QueryExecutionFailed)?
+                                .unwrap_or({
+                                    log::warn!("No schema was found for collection `{}`. It will be assigned\
+                                    an empty schema. Hint: Generate schemas for your collections.", collection_name);
+
+                                    doc! {
+                                    "schema": doc!{}
+                                }});
+
+                            let result_set_schema: Result<ResultSetSchema> =
+                                ResultSetSchema::from_sql_schemas_document(&schema_doc).map_err(
+                                    |e| {
+                                        Error::CollectionDeserialization(collection_name.clone(), e)
+                                    },
+                                );
+
+                            match result_set_schema {
+                                Ok(result_set_schema) => result_set_schema,
+                                Err(error) => {
+                                    // If there is an Error while deserializing the schema, we won't show any columns for it
+                                    warnings.push(error);
+                                    continue;
+                                }
+                            }
+                        } else {
+                            unreachable!()
+                        };
+
                         match current_col_metadata_response.process_collection_metadata(
                             &self.current_db_name,
                             collection_name.as_str(),

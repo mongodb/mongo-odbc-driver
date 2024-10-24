@@ -11,6 +11,7 @@ use definitions::{
     SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW,
     SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
+use serde_json::{json, Value};
 use std::ptr::null_mut;
 use std::{env, slice};
 use thiserror::Error;
@@ -83,11 +84,16 @@ pub fn generate_default_connection_str() -> String {
 
 #[allow(dead_code)]
 /// generate a "mongodb+srv" connection string based on the specified environmental variables.
-pub fn generate_srv_style_connection_string() -> String {
+pub fn generate_srv_style_connection_string(db: Option<String>) -> String {
     // The driver used is the same as the one used for ADF
     let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
 
-    let db = env::var("SRV_TEST_DB").expect("SRV_TEST_DB is not set");
+    let db = if let Some(db) = db {
+        db
+    } else {
+        env::var("SRV_TEST_DB").expect("SRV_TEST_DB is not set")
+    };
+
     let auth_db = env::var("SRV_TEST_AUTH_DB").expect("SRV_TEST_AUTH_DB is not set");
     let host = env::var("SRV_TEST_HOST").expect("SRV_TEST_HOST is not set");
     let username = env::var("SRV_TEST_USER").expect("SRV_TEST_USER is not set");
@@ -154,9 +160,11 @@ pub fn sql_return_to_string(return_code: SqlReturn) -> String {
 ///     - SQLAllocHandle(SQL_HANDLE_STMT)
 pub fn default_setup_connect_and_alloc_stmt(
     odbc_version_value: AttrOdbcVersion,
+    in_connection_string: Option<String>,
 ) -> (HEnv, HDbc, HStmt) {
     let env_handle = allocate_env(odbc_version_value);
-    let (conn_handle, stmt_handle) = connect_and_allocate_statement(env_handle, None);
+    let (conn_handle, stmt_handle) =
+        connect_and_allocate_statement(env_handle, in_connection_string);
 
     (env_handle, conn_handle, stmt_handle)
 }
@@ -350,11 +358,15 @@ pub fn fetch_and_get_data(
     expected_fetch_count: Option<SmallInt>,
     expected_sql_returns: Vec<SqlReturn>,
     target_types: Vec<CDataType>,
+    mongosqltranslate_test_exp_vals: Option<Vec<Vec<String>>>,
 ) {
-    let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+    let output_buffer: *mut std::ffi::c_void =
+        Box::into_raw(Box::new([0u8; BUFFER_LENGTH as usize])) as *mut _;
     let mut successful_fetch_count = 0;
     let str_len_ptr = &mut 0;
+
     unsafe {
+        let mut loop_index = 0;
         loop {
             let result = SQLFetch(stmt as HStmt);
             assert!(
@@ -379,11 +391,21 @@ pub fn fetch_and_get_data(
                             "{}",
                             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                         );
+
+                        if let Some(ref values) = mongosqltranslate_test_exp_vals {
+                            let actual_val = cstr::from_widechar_ref_lossy(
+                                &*(output_buffer as *const [WideChar; BUFFER_LENGTH as usize]),
+                            )[0..(*str_len_ptr as usize / std::mem::size_of::<WideChar>())]
+                                .to_string();
+
+                            assert_eq!(actual_val, values[loop_index][col_num]);
+                        }
                     }
                 }
                 // break if SQLFetch returns SQL_NO_DATA
                 _ => break,
             }
+            loop_index += 1;
         }
 
         if let Some(exp_fetch_count) = expected_fetch_count {
@@ -394,6 +416,8 @@ pub fn fetch_and_get_data(
         }
 
         assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt as HStmt));
+
+        let _ = Box::from_raw(output_buffer as *mut [u8; BUFFER_LENGTH as usize]);
     }
 }
 
@@ -408,9 +432,14 @@ pub fn fetch_and_get_data(
 ///     - SQLColAttributeW(SQL_DESC_TYPE_NAME)
 ///     - SQLColAttributeW(SQL_COLUMN_LENGTH)
 ///     - SQLColAttributeW(SQL_COLUMN_SCALE)
-pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
+pub fn get_column_attributes(
+    stmt: Handle,
+    expected_col_count: SmallInt,
+    mongosqltranslate_test_exp_vals: Option<Vec<Vec<Value>>>,
+) {
     let str_len_ptr = &mut 0;
-    let output_buffer = &mut [0u16; (BUFFER_LENGTH as usize - 1)] as *mut _;
+    let character_attrib_ptr: *mut std::ffi::c_void =
+        Box::into_raw(Box::new([0; BUFFER_LENGTH as usize])) as *mut _;
     unsafe {
         let column_count_ptr = &mut 0;
         assert_eq!(
@@ -432,14 +461,14 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
             Desc::SQL_DESC_SCALE,
         ];
         for col_num in 0..*column_count_ptr {
-            FIELD_IDS.iter().for_each(|field_type| {
+            FIELD_IDS.iter().enumerate().for_each(|(i, field_type)| {
                 assert_eq!(
                     SqlReturn::SUCCESS,
                     SQLColAttributeW(
                         stmt as HStmt,
                         (col_num + 1) as u16,
                         *field_type as u16,
-                        output_buffer as Pointer,
+                        character_attrib_ptr as Pointer,
                         BUFFER_LENGTH,
                         str_len_ptr,
                         numeric_attribute_ptr,
@@ -447,8 +476,23 @@ pub fn get_column_attributes(stmt: Handle, expected_col_count: SmallInt) {
                     "{}",
                     get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                 );
+
+                if let Some(ref values) = mongosqltranslate_test_exp_vals {
+                    let actual_val = match values[col_num as usize][i] {
+                        Value::String(_) => json!(cstr::from_widechar_ref_lossy(
+                            &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH as usize])
+                        )[0..(*str_len_ptr as usize / std::mem::size_of::<WideChar>())]
+                            .to_string()),
+                        Value::Number(_) => json!(*numeric_attribute_ptr),
+                        _ => unreachable!("An unexpected metadata type was encountered."),
+                    };
+
+                    assert_eq!(actual_val, values[col_num as usize][i]);
+                }
             });
         }
+
+        let _ = Box::from_raw(character_attrib_ptr as *mut [u8; BUFFER_LENGTH as usize]);
     }
 }
 

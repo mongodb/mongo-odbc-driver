@@ -58,8 +58,6 @@ pub enum Error {
         "The ODBC driver version `{0}` is incompatible with libmongosqltranslate version `{1}`"
     )]
     LibmongosqltranslateLibraryIsIncompatible(&'static str, String),
-    #[error("The following collections were not found in the `__sql_schemas` collection: {0:?}")]
-    SchemaDocumentNotFoundInSchemaCollection(Vec<String>),
     #[error(
         "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"
     )]
@@ -82,12 +80,12 @@ pub enum Error {
     TranslationPipelineNotArray,
     #[error("The mongosql Translation `pipeline` array should only contain Documents; however, a non-document bson-type was encountered.")]
     TranslationPipelineArrayContainsNonDocument,
-    #[error("No schema information returned for the requested collections.")]
-    NoSchemaInformationReturned,
     #[error(
         "Multiple Documents were returned when getting the schema; however, only one was expected."
     )]
     MultipleSchemaDocumentsReturned(usize),
+    #[error("The buildInfo command failed with the following error: `{0}`")]
+    BuildInfoCmdExecutionFailed(mongodb::error::Error),
 }
 
 impl Error {
@@ -120,7 +118,6 @@ impl Error {
             | Error::UnsupportedClusterConfiguration(_)
             | Error::UnsupportedOperation(_)
             | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
-            | Error::SchemaDocumentNotFoundInSchemaCollection(_)
             | Error::LibmongosqltranslateCommandFailed(_, _, _)
             | Error::RunCommandSymbolNotFound(_)
             | Error::LibmongosqltranslateDeserialization(_)
@@ -130,8 +127,8 @@ impl Error {
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::BsonDocumentToCommandResponseDeserialization(_)
-            | Error::NoSchemaInformationReturned
-            | Error::MultipleSchemaDocumentsReturned(_) => GENERAL_ERROR,
+            | Error::MultipleSchemaDocumentsReturned(_)
+            | Error::BuildInfoCmdExecutionFailed(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
         }
@@ -173,7 +170,6 @@ impl Error {
             | Error::UnsupportedClusterConfiguration(_)
             | Error::StatementNotExecuted
             | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
-            | Error::SchemaDocumentNotFoundInSchemaCollection(_)
             | Error::LibmongosqltranslateCommandFailed(_, _, _)
             | Error::RunCommandSymbolNotFound(_)
             | Error::LibmongosqltranslateDeserialization(_)
@@ -183,8 +179,8 @@ impl Error {
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::BsonDocumentToCommandResponseDeserialization(_)
-            | Error::NoSchemaInformationReturned
-            | Error::MultipleSchemaDocumentsReturned(_) => 0,
+            | Error::MultipleSchemaDocumentsReturned(_)
+            | Error::BuildInfoCmdExecutionFailed(_) => 0,
         }
     }
 }
