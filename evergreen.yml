@@ -27,8 +27,8 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.msi
-        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${MSI_FILENAME}
+        local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}
         bucket: mciuploads
 
   "fetch for ubuntu sign":
@@ -36,14 +36,24 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
-        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${UBUNTU_FILENAME}
+        local_file: mongosql-odbc-driver/installer/tgz/${UBUNTU_FILENAME}
         bucket: mciuploads
 
   "fetch source":
     - command: git.get_project
       params:
         directory: mongosql-odbc-driver
+
+  "fetch mongosqltranslate":
+    - command: s3.get
+      params:
+        working_dir: mongo-odbc-driver
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongo-odbc-driver/target/release/${lib_prefix}mongosqltranslate.${ext}
+        remote_file: mongosqltranslate/${lib_prefix}mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-${platform}-${arch}.${ext}
+        bucket: translators-connectors-releases
 
   "generate expansions":
     - command: shell.exec
@@ -63,27 +73,30 @@ functions:
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
-            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | cut -d '-' -f 1 | sed s/v// )
-            export LIBMONGOSQLTRANSLATE_VERSION=$(echo ${triggered_by_git_tag} | cut -d '-' -f 2 | sed s/libv//)
+            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f1 | sed s/v//)
+            export LIBMONGOSQLTRANSLATE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f2 | sed s/libv//)
           else
             export RELEASE_VERSION=snapshot
             export LIBMONGOSQLTRANSLATE_VERSION=snapshot
           fi
-          export MSI_FILENAME="mongoodbc.msi"
+          export MSI_FILENAME="mongoodbc-eap-$RELEASE_VERSION.msi"
+          export UBUNTU_FILENAME="mongoodbc-eap-$RELEASE_VERSION.tar.gz"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
           LIBMONGOSQLTRANSLATE_VERSION: "$LIBMONGOSQLTRANSLATE_VERSION"
           MSI_FILENAME: "$MSI_FILENAME"
-          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
-          UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/mongoodbc.tar.gz"
+          UBUNTU_FILENAME: "$UBUNTU_FILENAME"
+          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION-lib$LIBMONGOSQLTRANSLATE_VERSION/release/${MSI_FILENAME}"
+          UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-lib$LIBMONGOTRANSLATE_VERSION/release/${UBUNTU_FILENAME}"
           COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
           STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
-            export LIBMONGOSQLTRANSLATE_VERSION=${LIBMONGOSQLTRANSLATE_VERSION}
+            export LIBMONGOSQLTRANSLATE_VERSION="$LIBMONGOSQLTRANSLATE_VERSION"
             export MSI_FILENAME="$MSI_FILENAME"
+            export UBUNTU_FILENAME="$UBUNTU_FILENAME"
             export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
             export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
             export PATH="$PATH"
@@ -604,7 +617,7 @@ functions:
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
-            /bin/bash -c "gpgloader && gpg --yes -v --armor -o mongoodbc.tar.gz.sig --detach-sign mongoodbc.tar.gz"
+            /bin/bash -c "gpgloader && gpg --yes -v --armor -o $UBUNTU_FILENAME.sig --detach-sign $UBUNTU_FILENAME"
     - command: shell.exec
       type: system
       params:
@@ -620,7 +633,7 @@ functions:
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
-            /bin/bash -c "gpgloader && gpg --verify mongoodbc.tar.gz.sig mongoodbc.tar.gz"
+            /bin/bash -c "gpgloader && gpg --verify $UBUNTU_FILENAME.sig $UBUNTU_FILENAME"
 
   "compile ubuntu and win release":
     - command: shell.exec
@@ -809,7 +822,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.msi
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${MSI_FILENAME}
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -852,8 +865,8 @@ functions:
           - ubuntu2204
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/release/mongoodbc.tar.gz
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/release/${UBUNTU_FILENAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${UBUNTU_FILENAME}
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -907,8 +920,8 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
-        local_file: mongosql-odbc-driver/installer/tgz/mongoodbc.tar.gz.sig
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}.sig
+        local_file: mongosql-odbc-driver/installer/tgz/${UBUNTU_FILENAME}.sig
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -1000,8 +1013,8 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz
-        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -1009,7 +1022,7 @@ functions:
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}
         remote_file: ${UBUNTU2204_INSTALLER_PATH}
         bucket: translators-connectors-releases
         permissions: public-read
@@ -1018,8 +1031,8 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/mongoodbc.tar.gz.sig
-        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz.sig
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}.sig
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
         bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
@@ -1027,8 +1040,8 @@ functions:
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/target/release/mongoodbc.tar.gz.sig
-        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/mongoodbc.tar.gz.sig
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
+        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/${UBUNTU_FILENAME}.sig
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1095,11 +1108,12 @@ functions:
         shell: bash
         working_dir: mongosql-odbc-driver
         script: |
+          ${prepare_shell}
           mkdir -p release/mongoodbc/bin
-          cp  target/release/libatsql.so release/mongoodbc/bin/
+          cp  target/release/*.so release/mongoodbc/bin/
           cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           cd release
-          tar -czvf mongoodbc.tar.gz mongoodbc/
+          tar -czvf $UBUNTU_FILENAME mongoodbc/
 
   "setup driver on Windows":
     - command: shell.exec
@@ -1777,7 +1791,7 @@ functions:
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/papertrail/mongoodbc.tar.gz
+        local_file: mongosql-odbc-driver/papertrail/${UBUNTU_FILENAME}
         remote_file: ${UBUNTU2204_INSTALLER_PATH}
         bucket: translators-connectors-releases
         permissions: public-read
@@ -1959,10 +1973,38 @@ tasks:
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
         variants: [macos, macos-arm]
+      - func: "fetch mongosqltranslate"
+        variants: [windows-64]
+        vars:
+          arch: "x86_64"
+          platform: "windows"
+          lib_prefix: ""
+          ext: "dll"
       - func: "build msi"
         variants: [windows-64]
+      - func: "fetch mongosqltranslate"
+        variants: [ubuntu2204]
+        vars:
+          arch: "x86_64"
+          platform: "linux"
+          lib_prefix: "lib"
+          ext: "so"
       - func: "tar linux artifacts"
         variants: [ubuntu2204]
+      - func: "fetch mongosqltranslate"
+        variants: [macos]
+        vars:
+          arch: "x86_64"
+          platform: "macos"
+          lib_prefix: "lib"
+          ext: "dylib"
+      - func: "fetch mongosqltranslate"
+        variants: [macos-arm]
+        vars:
+          arch: "arm"
+          platform: "macos"
+          lib_prefix: "lib"
+          ext: "dylib"
       - func: "build dmg"
         variants: [macos, macos-arm]
       - func: "mciuploads release artifacts"
@@ -2066,6 +2108,7 @@ tasks:
       #   variants: [ ubuntu2204 ]
 
   - name: sign
+    allowed_requesters: ["ad_hoc", "github_tag"]
     depends_on:
       - name: compile
     commands:
@@ -2109,6 +2152,8 @@ tasks:
       - func: "trace artifacts"
 
   - name: download-center-update
+    # TODO: remove this before merging eap branch back into main branch, to allow download center to update.
+    disable: true
     git_tag_only: true
     depends_on:
       - name: trace-artifacts
