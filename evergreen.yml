@@ -831,7 +831,7 @@ functions:
           - windows-64
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
+        local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${MSI_FILENAME}
         bucket: mciuploads
         permissions: public-read
