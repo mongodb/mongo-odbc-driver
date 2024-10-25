@@ -21,7 +21,7 @@ mod integration {
     #[test]
     fn test_error_execute_before_prepare() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
         query.push(0);
@@ -41,7 +41,7 @@ mod integration {
     #[test]
     fn test_prepare_get_resultset_metadata() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -56,7 +56,7 @@ mod integration {
             );
 
             // Retrieve result set metadata
-            get_column_attributes(stmt as Handle, 2);
+            get_column_attributes(stmt as Handle, 2, None);
 
             disconnect_and_close_handles(dbc, stmt);
         }
@@ -66,7 +66,7 @@ mod integration {
     #[test]
     fn test_error_fetch_before_execute() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -79,7 +79,7 @@ mod integration {
             );
 
             // Retrieve result set metadata
-            get_column_attributes(stmt as Handle, 2);
+            get_column_attributes(stmt as Handle, 2, None);
 
             assert_eq!(SqlReturn::ERROR, SQLFetch(stmt as HStmt),);
 
@@ -94,7 +94,7 @@ mod integration {
     #[test]
     fn test_prepare_execute_retrieve_data() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -107,7 +107,7 @@ mod integration {
             );
 
             // Retrieve result set metadata
-            get_column_attributes(stmt as Handle, 2);
+            get_column_attributes(stmt as Handle, 2, None);
 
             // Executing the prepared statement.
             // The $sql pipeline is now executed and the result set cursor.
@@ -123,6 +123,7 @@ mod integration {
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
                 vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
+                None,
             );
 
             assert_eq!(
@@ -140,7 +141,7 @@ mod integration {
     #[test]
     fn test_prepare_execute_multiple_times() {
         let (env_handle, dbc, stmt) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         unsafe {
             let mut query: Vec<WideChar> = cstr::to_widechar_vec("select * from example");
@@ -175,6 +176,7 @@ mod integration {
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
                 vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
+                None,
             );
 
             // A prepared statement can be executed multiple times.
@@ -190,6 +192,7 @@ mod integration {
                 Some(3),
                 vec![SqlReturn::SUCCESS; 2],
                 vec![CDataType::SQL_C_SLONG, CDataType::SQL_C_WCHAR],
+                None,
             );
 
             disconnect_and_close_handles(dbc, stmt);

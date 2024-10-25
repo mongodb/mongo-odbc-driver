@@ -239,6 +239,7 @@ impl CheckDriverVersion {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "command_type")]
 pub enum CommandResponse {
     Translate(TranslateCommandResponse),
     GetNamespaces(GetNamespacesCommandResponse),
@@ -324,9 +325,14 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
         capacity: command_bytes_capacity,
     };
 
+    log::info!(
+        "Calling `{}` libmongosqltranslate runCommand.",
+        T::command_name()
+    );
+
     let decomposed_returned_doc = unsafe { run_command_function(libmongosqltranslate_command) };
 
-    let command_response_doc: Document = unsafe {
+    let mut command_response_doc: Document = unsafe {
         bson::from_slice(
             Vec::from_raw_parts(
                 decomposed_returned_doc.data.cast_mut(),
@@ -337,6 +343,20 @@ pub(crate) fn libmongosqltranslate_run_command<T: CommandName + Serialize>(
         )
         .map_err(Error::LibmongosqltranslateDeserialization)?
     };
+
+    let command_type = if command_response_doc.get_str("error").is_ok() {
+        "Error"
+    } else {
+        match T::command_name() {
+            "getNamespaces" => "GetNamespaces",
+            "translate" => "Translate",
+            "getMongosqlTranslateVersion" => "GetMongosqlTranslateVersion",
+            "checkDriverVersion" => "CheckDriverVersion",
+            _ => unreachable!(),
+        }
+    };
+
+    command_response_doc.insert("command_type", command_type);
 
     let command_response = CommandResponse::from_document(&command_response_doc)?;
 

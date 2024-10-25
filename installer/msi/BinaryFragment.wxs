@@ -17,6 +17,9 @@
                 <File Id="atsqls.dll"
                     Name="atsqls.dll"
                     Source="atsqls.dll" />
+                <File Id="mongosqltranslate.dll"
+                    Name="mongosqltranslate.dll"
+                    Source="mongosqltranslate.dll" />
                 <RegistryKey ForceCreateOnInstall="yes"
                     ForceDeleteOnUninstall="yes"
                     Id="MongoDBKey"

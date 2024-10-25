@@ -34,7 +34,7 @@ mod integration {
     #[test]
     fn test_unbind_cols() {
         let (_, _, stmt_handle) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         unsafe {
             exec_direct_default_query(stmt_handle);
@@ -91,7 +91,7 @@ mod integration {
     #[test]
     fn test_bind_cols_and_fetch_next_rowset() {
         let (_, _, stmt_handle) =
-            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3);
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
         unsafe {
             const ROW_ARRAY_SIZE: usize = 2;

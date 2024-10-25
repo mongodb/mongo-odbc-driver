@@ -8,7 +8,7 @@ ROOT="/Library/MongoDB/MongoDB Atlas SQL ODBC Driver/$VERSION"
 rm -Rf components
 mkdir -p components/"$ROOT"
 mkdir -p scripts
-cp ./libatsql.dylib components/"$ROOT"/
+cp ./*.dylib components/"$ROOT"/
 cp ./macos_postinstall scripts/postinstall
 cp ./resources/*.rtf components/"$ROOT"/
 cp ../../README.md components/"$ROOT"/

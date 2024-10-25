@@ -4,12 +4,19 @@ use lazy_static::lazy_static;
 use mongodb::results::CollectionType;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 
-mod test_connection;
-
 pub(crate) const TABLE: &str = "TABLE";
 pub(crate) const COLLECTION: &str = "collection";
 pub(crate) const TIMESERIES: &str = "timeseries";
 pub(crate) const VIEW: &str = "view";
+pub(crate) const DISALLOWED_DB_NAMES: [&str; 4] = ["admin", "config", "local", "system"];
+pub(crate) const DISALLOWED_COLLECTION_NAMES: [&str; 6] = [
+    "system.namespaces",
+    "system.indexes",
+    "system.profile",
+    "system.js",
+    "system.views",
+    "__sql_schemas",
+];
 
 lazy_static! {
     pub(crate) static ref TABLE_VALUES: RegexSet = RegexSetBuilder::new(["^table$", "^\'table\'$"])
