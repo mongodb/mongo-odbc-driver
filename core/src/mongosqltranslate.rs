@@ -69,11 +69,11 @@ fn get_library_path(library_type: &str) -> Result<PathBuf> {
     Ok(path)
 }
 
-// load_mongosqltranslate_library is the entry point for loading the mongosqltranslate library.
-// The library is expected to be in the same directory as the MongoDB ODBC driver.
+// load_mongosqltranslate_library is the entry point for loading the mongosqltranslate library
 // and is responsible for determining the library name and path.
 // The library name and path are determined based on the operating system and architecture.
-// It is stored in a static variable to ensure that it is only loaded once.
+// Additionally, the library is expected to be in the same directory as the MongoDB ODBC driver.
+// The library is stored in a static variable to ensure that it is only loaded once.
 pub fn load_mongosqltranslate_library() {
     INIT.call_once(|| {
         let library_path = match get_library_path(LIBRARY_NAME) {
