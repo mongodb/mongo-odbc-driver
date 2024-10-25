@@ -88,7 +88,6 @@ pub enum Error {
         "Multiple Documents were returned when getting the schema; however, only one was expected."
     )]
     MultipleSchemaDocumentsReturned(usize),
-
     #[error("Library path error: {0}")]
     LibraryPathError(String),
 }
