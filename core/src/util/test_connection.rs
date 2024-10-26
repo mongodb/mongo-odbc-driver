@@ -1,5 +1,5 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-use crate::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
+use crate::{odbc_uri::ODBCUri, MongoConnection};
 use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
 use definitions::{Integer, SQL_NTS_ISIZE};
 
@@ -38,9 +38,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
                     odbc_uri.get("database").map(|s| s.to_owned()),
                     None,
                     Some(30),
-                    TypeMode::Standard,
                     Some(runtime),
-                    None,
                 ) {
                     Ok(_) => true,
                     Err(e) => {

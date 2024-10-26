@@ -1145,9 +1145,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         database,
         connection_timeout,
         login_timeout,
-        *conn.type_mode.read().unwrap(),
         Some(runtime),
-        *conn.max_string_length.read().unwrap(),
     )?)
 }
 
@@ -2423,7 +2421,7 @@ macro_rules! sql_get_info_helper {
                         .unwrap()
                         .as_ref()
                         .unwrap()
-                        .get_adf_version();
+                        .get_server_version();
                     match version {
                         Ok(version) => i16_len::set_output_wstring_as_bytes(
                             version.as_str(),

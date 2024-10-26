@@ -43,7 +43,6 @@ pub struct MongoQuery {
 impl MongoQuery {
     fn get_sql_query_namespaces(sql_query: &str, db: &String) -> Result<BTreeSet<Namespace>> {
         let command = GetNamespaces::new(sql_query.to_string(), db.to_string());
-
         let command_response = libmongosqltranslate_run_command(command)?;
 
         if let CommandResponse::GetNamespaces(response) = command_response {
@@ -61,7 +60,6 @@ impl MongoQuery {
         db: &Database,
     ) -> Result<TranslateCommandResponse> {
         let schema_collection = db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
-
         let collection_names = namespaces
             .iter()
             .map(|namespace| namespace.collection.as_str())
@@ -85,8 +83,10 @@ impl MongoQuery {
             doc! {"$group": {
                 "_id": null,
                 "collections": {
-                    "collectionName": "$_id",
-                    "schema": "$schema"
+                    "$push": {
+                        "collectionName": "$_id",
+                        "schema": "$schema"
+                    }
                     }
                 }
             },
@@ -228,7 +228,10 @@ impl MongoQuery {
                 (
                     pipeline,
                     mongosql_translation.target_collection,
-                    mongosql_translation.result_set_schema,
+                    ResultSetSchema {
+                        schema: mongosql_translation.result_set_schema,
+                        select_order: mongosql_translation.select_order,
+                    },
                 )
             }
             MongoClusterType::Community | MongoClusterType::UnknownTarget => {

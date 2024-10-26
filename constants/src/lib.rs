@@ -159,6 +159,11 @@ pub const CONNECTION_NOT_OPEN: OdbcState<'static> = OdbcState {
     odbc_3_state: "08003",
 };
 
+pub const INVALID_AUTHORIZATION_SPECIFICATION: OdbcState<'static> = OdbcState {
+    odbc_2_state: "28000",
+    odbc_3_state: "28000",
+};
+
 pub const SQL_ALL_TABLE_TYPES: &str = "%";
 pub const SQL_ALL_CATALOGS: &str = "%";
 pub const SQL_ALL_SCHEMAS: &str = "%";

@@ -1,7 +1,7 @@
 use constants::{
-    OdbcState, FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE,
-    INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, OPERATION_CANCELLED, TIMEOUT_EXPIRED,
-    UNABLE_TO_CONNECT,
+    OdbcState, FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_AUTHORIZATION_SPECIFICATION,
+    INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, OPERATION_CANCELLED,
+    TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
 };
 use mongodb::error::{ErrorKind, WriteFailure};
 use thiserror::Error;
@@ -10,6 +10,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, Clone)]
 pub enum Error {
+    #[error("Authentication failed: {0}")]
+    AuthenticationFailed(String),
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
     #[error("Trying to access collection metadata failed with: {0}")]
@@ -138,6 +140,7 @@ impl Error {
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
             Error::LibraryPathError(_) => GENERAL_ERROR,
+            Error::AuthenticationFailed(_) => INVALID_AUTHORIZATION_SPECIFICATION,
         }
     }
 
@@ -160,6 +163,7 @@ impl Error {
                     .map_or(0, |(_, e)| e.code),
                 _ => 0,
             },
+            Error::AuthenticationFailed(e) => e.parse().unwrap_or(28000),
             Error::ColIndexOutOfBounds(_)
             | Error::CollectionDeserialization(_, _)
             | Error::DatabaseVersionDeserialization(_)

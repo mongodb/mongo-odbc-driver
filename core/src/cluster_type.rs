@@ -19,7 +19,14 @@ pub async fn determine_cluster_type(client: &Client) -> MongoClusterType {
     let cmd_res: Document = match db.run_command(build_info_cmd).await {
         Ok(res) => res,
         Err(e) => {
-            log::error!("Failed to run buildInfo command: {:?}", e);
+            match *e.kind {
+                mongodb::error::ErrorKind::Authentication { message, .. } => {
+                    log::error!("Authentication error: {}", message);
+                }
+                _ => {
+                    log::error!("Failed to run buildInfo command: {:?}", e);
+                }
+            }
             return MongoClusterType::UnknownTarget;
         }
     };

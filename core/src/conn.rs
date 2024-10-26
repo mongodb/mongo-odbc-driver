@@ -6,8 +6,7 @@ use crate::mongosqltranslate::{
 };
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
-use crate::{MongoQuery, TypeMode};
-use constants::DRIVER_ODBC_VERSION;
+use constants::{DRIVER_METRICS_VERSION, DRIVER_ODBC_VERSION};
 use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
@@ -146,15 +145,15 @@ impl MongoConnection {
 
         let command_response = libmongosqltranslate_run_command(command)?;
 
-        if let CommandResponse::GetMongosqlTranslateVersion(response) = command_response {
-            Ok(response.version)
+        if let CommandResponse::GetMongosqlTranslateVersion(version) = command_response {
+            Ok(version.version)
         } else {
             unreachable!()
         }
     }
 
     fn is_libmongosqltranslate_compatible_with_driver_version() -> Result<bool> {
-        let command = CheckDriverVersion::new(DRIVER_ODBC_VERSION.clone());
+        let command = CheckDriverVersion::new(DRIVER_METRICS_VERSION.clone());
 
         let command_response = libmongosqltranslate_run_command(command)?;
 
@@ -180,9 +179,7 @@ impl MongoConnection {
         current_db: Option<String>,
         operation_timeout: Option<u32>,
         login_timeout: Option<u32>,
-        type_mode: TypeMode,
         mut runtime: Option<Runtime>,
-        max_string_length: Option<u16>,
     ) -> Result<Self> {
         let runtime = Arc::new(runtime.take().unwrap_or_else(|| {
             tokio::runtime::Builder::new_current_thread()
@@ -221,8 +218,14 @@ impl MongoConnection {
 
         let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
 
-        let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await });
-        match type_of_cluster {
+        Self::authz_authn_check(
+            &client,
+            current_db.as_deref().unwrap_or("admin"),
+            runtime.clone(),
+        )?;
+
+        let cluster_type = runtime.block_on(async { determine_cluster_type(&client).await });
+        match cluster_type {
             MongoClusterType::AtlasDataFederation => {}
             MongoClusterType::Community => {
                 // Community edition is not supported
@@ -262,21 +265,28 @@ impl MongoConnection {
             operation_timeout: operation_timeout.map(|to| Duration::new(u64::from(to), 0)),
             uuid_repr,
             runtime,
-            cluster_type: type_of_cluster,
+            cluster_type,
         };
 
-        // Verify that the connection is working and the user has access to the default DB
-        // ADF is supposed to check permissions on this
-        MongoQuery::prepare(
-            &connection,
-            current_db,
-            None,
-            "select 1",
-            type_mode,
-            max_string_length,
-        )?;
-
         Ok(connection)
+    }
+
+    fn authz_authn_check(client: &Client, db: &str, runtime: Arc<Runtime>) -> Result<()> {
+        let db = client.database(db);
+        runtime
+            .block_on(async {
+                db.run_command(
+                    doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
+                )
+                .await
+            })
+            .map_err(|e| match *e.kind {
+                mongodb::error::ErrorKind::Authentication { message, .. } => {
+                    Error::AuthenticationFailed(message)
+                }
+                _ => Error::QueryExecutionFailed(e),
+            })?;
+        Ok(())
     }
 
     #[cfg(feature = "garbage_collect")]
@@ -309,7 +319,7 @@ impl MongoConnection {
     }
 
     /// Gets the ADF version the client is connected to.
-    pub fn get_adf_version(&self) -> Result<String> {
+    pub fn get_server_version(&self) -> Result<String> {
         self.runtime.block_on(async {
             let db = self.client.database("admin");
             let cmd_res = db
@@ -318,7 +328,11 @@ impl MongoConnection {
                 .map_err(Error::DatabaseVersionRetreival)?;
             let build_info: BuildInfoResult = mongodb::bson::from_document(cmd_res)
                 .map_err(Error::DatabaseVersionDeserialization)?;
-            Ok(build_info.data_lake.version)
+            if build_info.data_lake.is_some() {
+                Ok(build_info.data_lake.unwrap().version)
+            } else {
+                Ok(build_info.version.to_string())
+            }
         })
     }
 
@@ -358,12 +372,9 @@ impl MongoConnection {
 // Struct representing the response for a buildInfo command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 struct BuildInfoResult {
-    pub ok: i32,
     pub version: String,
-    #[serde(rename = "versionArray")]
-    pub version_array: Vec<i32>,
     #[serde(rename = "dataLake")]
-    pub data_lake: DataLakeBuildInfo,
+    pub data_lake: Option<DataLakeBuildInfo>,
 }
 
 // Auxiliary struct representing part of the response for a buildInfo command.

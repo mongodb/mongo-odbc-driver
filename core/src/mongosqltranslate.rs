@@ -1,4 +1,4 @@
-use crate::{col_metadata::ResultSetSchema, Error, Result};
+use crate::{Error, Result};
 use bson::{Bson, Document};
 use libloading::{Library, Symbol};
 use serde::ser::SerializeMap;
@@ -240,9 +240,13 @@ impl CheckDriverVersion {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CommandResponse {
+    #[serde(rename = "translation")]
     Translate(TranslateCommandResponse),
+    #[serde(rename = "namespaces")]
     GetNamespaces(GetNamespacesCommandResponse),
+    #[serde(rename = "version")]
     GetMongosqlTranslateVersion(GetMongosqlTranslateVersionCommandResponse),
+    #[serde(rename = "compatible")]
     CheckDriverVersion(CheckDriverVersionCommandResponse),
     Error(ErrorResponse),
 }
@@ -268,8 +272,9 @@ pub struct TranslateCommandResponse {
     pub target_db: String,
     pub target_collection: Option<String>,
     pub pipeline: Bson,
-    #[serde(flatten)]
-    pub result_set_schema: ResultSetSchema,
+    pub result_set_schema: crate::json_schema::Schema,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub select_order: Option<Vec<Vec<String>>>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, PartialOrd, Ord)]
@@ -279,17 +284,23 @@ pub struct Namespace {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct GetNamespacesCommandResponse {
+    #[serde(flatten)]
     pub namespaces: BTreeSet<Namespace>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct GetMongosqlTranslateVersionCommandResponse {
+    #[serde(flatten)]
     pub version: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct CheckDriverVersionCommandResponse {
+    #[serde(flatten)]
     pub compatible: bool,
 }
 
