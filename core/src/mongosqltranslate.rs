@@ -76,10 +76,6 @@ fn get_library_path(library_type: &str) -> Result<PathBuf> {
 // The library is stored in a static variable to ensure that it is only loaded once.
 pub fn load_mongosqltranslate_library() {
     INIT.call_once(|| {
-        let library_path = if cfg!(test) {
-            get_mock_library_path()
-        } else {
-            get_library_path()
         let library_path = match get_library_path(LIBRARY_NAME) {
             Ok(path) => path,
             Err(e) => {

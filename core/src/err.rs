@@ -84,6 +84,8 @@ pub enum Error {
         "Multiple Documents were returned when getting the schema; however, only one was expected."
     )]
     MultipleSchemaDocumentsReturned(usize),
+    #[error("The buildInfo command failed with the following error: `{0}`")]
+    BuildInfoCmdExecutionFailed(mongodb::error::Error),
     #[error("Library path error: {0}")]
     LibraryPathError(String),
 }
