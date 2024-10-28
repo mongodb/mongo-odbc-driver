@@ -45,11 +45,8 @@ On linux system, `unixodbc` is required.
 
 #### Windows Installation
 
-##### Prerequisites
-
-[Microsoft Visual C++ Redistributable 17.0](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) or higher
-is required for the proper C and C++ (MSVC) runtime libraries to be present. You can find a link to an installer for your system [here](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version).
-
+1. [Download the `MSI`](TODO).
+2. Install and Configure the ODBC Driver.
 To install the ODBC driver, run the installation file that you downloaded
 and open the Setup Wizard. Follow the steps in the Setup Wizard.
 
@@ -196,17 +193,6 @@ Note: The warning `[MongoDB][API] Buffer size "0" not large enough for data.` do
 impact driver operation and is not a sign of a faulty installation.
 
 ## Usage
-
-### Escape Fields
-
-It may be required to select a field with a name that conflicts with an operator
-keyword. To do so, surround the field name with backticks.
-
-For example, to select a field called "select" from the table "SQL":
-
-```sh
-SELECT `select` from SQL
-```
 
 ### Databases
 
@@ -590,6 +576,8 @@ SELECT ProductSold, SUM(DISTINCT Price)
 FROM Transactions
 GROUP BY ProductSold;
 ```
+
+
 
 ### Scalar Functions
 
