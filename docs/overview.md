@@ -25,12 +25,17 @@ the MongoDB Atlas SQL ODBC driver.
 #### Supported Operating Systems
 
 The MongoDB ODBC driver is compatible with Windows x86_64 architecture, linux x86_64,
-and linux arm2 systems.
+and linux arm64 systems.
 
 #### Dependencies
 
 When querying a MongoDB standalone server or cluster (not [Atlas SQL](https://www.mongodb.com/docs/atlas/data-federation/query/query-with-sql/) powered by [Atlas Data Federation](https://www.mongodb.com/docs/atlas/data-federation/)), the accompanying
 `mongosqltranslate.dll` or `libmongosqltranslate.a` library is required to be colocated with the driver (`mongoodbc.dll` or `libatsql.so`).
+
+##### `libmongosqltranslate/mongosqltranslate` Location
+
+For Linux, the location of `libmongosqltranslate` will be wherever you extracted the download artifacts, in the `bin` dirctory.
+For Windows, the default location is `C:\Program Files\MongoDB\Atlas SQL ODBC Driver\bin`.
 
 On linux system, `unixodbc` is required.
 
@@ -116,7 +121,7 @@ ODBC Driver.
 - Database: The name of the database to which to connect.
 - Enable maximum: Checkbox to enforce maximum string length of 4000 characters. You
 must enable this option to work with BI tools like Microsoft SQL Sever Management Studio that
-can't upport variable length string data with unknown maximum length.
+can't support variable length string data with unknown maximum length.
 6. Once you enter the required connection information, you can test your connection by clicking the "Test" button.
 
 #### Linux Verification
@@ -184,7 +189,7 @@ A successful connection will show the following:
 +---------------------------------------+
 ```
 
-Note: The warning `[MongoDB][API] Bufer size "0" not large enough for data.` does not
+Note: The warning `[MongoDB][API] Buffer size "0" not large enough for data.` does not
 impact driver operation and is not a sign of a faulty installation.
 
 ## Usage
@@ -338,9 +343,9 @@ Perform joins between collections:
 SELECT
   b.ProductSold,
   CAST(b._id AS string) AS ID,
-  (b.Price *b.Quantity) AS totalAmount
+  (b.Price * b.Quantity) AS totalAmount
 FROM
-  (SELECT* FROM Sales a WHERE customer.gender = 'F') a
+  (SELECT * FROM Sales a WHERE customer.gender = 'F') a
 INNER JOIN
   Transactions b
 ON
@@ -355,9 +360,9 @@ Supported Joins: INNER JOIN, (CROSS) JOIN, LEFT OUTER JOIN, and RIGHT OUTER JOIN
 Combine result sets using UNION ALL:
 
 ```sql
-SELECT *FROM Sales
+SELECT * FROM Sales
 UNION ALL
-SELECT* FROM Transactions;
+SELECT * FROM Transactions;
 ```
 
 Note: UNION (which removes duplicates) is not supported. Only UNION ALL is supported.
@@ -368,7 +373,7 @@ Use subqueries with aliases:
 
 ```sql
 SELECT *
-FROM (SELECT* FROM Sales) AS subSelect;
+FROM (SELECT * FROM Sales) AS subSelect;
 ```
 
 Note: MongoSQL requires nested selects to have an alias, although this is not a SQL-92 requirement.
@@ -788,7 +793,13 @@ If [configured](https://www.mongodb.com/docs/manual/tutorial/configure-ssl/), th
 
 ### Logging and Diagnostics
 
-By default, the MongoDB Atlas SQL ODBC driver produces logs in `/%HOME%/MongoDB/Atlas SQL/logs`.
+By default, the MongoDB Atlas SQL ODBC driver produces logs in `/%HOME%/Documents/MongoDB/Atlas SQL ODBC/<version>/logs`.
+
+Ubuntu example:
+`/users/azurediamond/Documents/MongoDB/Atlas SQL ODBC/2.0.0/logs`
+
+Windows example:
+`C:\Users\AzureDiamond\Documents\MongoDB\Atlas SQL ODBC\2.0.0\logs`
 
 Logging can be fine-tuned by passing the `LOGLEVEL` property in your ODBC connection
 string or configuring it in your DSN.
@@ -797,7 +808,7 @@ The following is a list of valid values for LOGLEVEL and their precedence:
 - ERROR - Only errors will be logged.
 - WARN - Information about operations that could be an error in future versions of the driver.
 - INFO - Informational log messages. Default
-- DEBUG - Debug information useful for debegging purposes. Enable this mode to submit a log with a HELP ticket.
+- DEBUG - Debug information useful for debugging purposes. Enable this mode to submit a log with a HELP ticket.
 - TRACE - Extremely verbose logging, including network traffic and information from ancillary libraries used in the driver. Not recommended unless
 asked for by MongoDB support.
 
@@ -808,11 +819,14 @@ messages, while ERROR will include only ERROR messages.
 
 ### Common Issues
 
-If you see the following message:
-> The driver returned or failed to returned invalid ODBC version 03.80
+- The driver returned or failed to returned invalid ODBC version 03.80
 
 Ensure your credentials are correct and you have network access to the target
 cluster.
+
+- Enterprise edition detected, but mongosqltranslate library not found.
+
+Ensure that the `mongosqltranslate` library exists in the same directory as the MongoDB Atlas SQL ODBC driver.
 
 ### Debugging Tips
 
