@@ -764,6 +764,9 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          # Delete mock library to prevent it from getting bundled in
+          rm target/release/mock_mongosqltranslate.dll
+          
           cp target/release/*.dll installer/msi
           cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
@@ -803,6 +806,9 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          # Delete mock library to prevent it from getting bundled in
+          rm target/release/libmock_mongosqltranslate.dylib
+          
           cp target/release/*.dylib installer/dmg
           cp target/release/macos_postinstall installer/dmg
           cd installer/dmg
@@ -1119,8 +1125,11 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          # Delete mock library to prevent it from getting bundled in
+          rm target/release/libmock_mongosqltranslate.so
+          
           mkdir -p release/mongoodbc/bin
-          cp  target/release/*.so release/mongoodbc/bin/
+          cp target/release/*.so release/mongoodbc/bin/
           cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           cd release
           tar -czvf $UBUNTU_FILENAME mongoodbc/
