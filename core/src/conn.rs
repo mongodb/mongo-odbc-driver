@@ -311,7 +311,7 @@ impl MongoConnection {
     }
 
     /// Gets the ADF version the client is connected to.
-    pub fn get_adf_version(&self) -> Result<String> {
+    pub fn get_server_version(&self) -> Result<String> {
         self.runtime.block_on(async {
             let db = self.client.database("admin");
             let cmd_res = db
@@ -320,7 +320,11 @@ impl MongoConnection {
                 .map_err(Error::DatabaseVersionRetreival)?;
             let build_info: BuildInfoResult = mongodb::bson::from_document(cmd_res)
                 .map_err(Error::DatabaseVersionDeserialization)?;
-            Ok(build_info.data_lake.version)
+            if let Some(datalake) = build_info.data_lake {
+                Ok(datalake.version)
+            } else {
+                Ok(build_info.version)
+            }
         })
     }
 
@@ -360,12 +364,9 @@ impl MongoConnection {
 // Struct representing the response for a buildInfo command.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 struct BuildInfoResult {
-    pub ok: i32,
     pub version: String,
-    #[serde(rename = "versionArray")]
-    pub version_array: Vec<i32>,
     #[serde(rename = "dataLake")]
-    pub data_lake: DataLakeBuildInfo,
+    pub data_lake: Option<DataLakeBuildInfo>,
 }
 
 // Auxiliary struct representing part of the response for a buildInfo command.
