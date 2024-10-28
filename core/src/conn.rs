@@ -310,7 +310,7 @@ impl MongoConnection {
         Ok(())
     }
 
-    /// Gets the ADF version the client is connected to.
+    /// Gets the server version the client is connected to.
     pub fn get_server_version(&self) -> Result<String> {
         self.runtime.block_on(async {
             let db = self.client.database("admin");
