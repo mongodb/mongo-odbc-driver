@@ -41,7 +41,7 @@ mod mongosqltranslate_tests {
         );
 
         unsafe {
-            let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews LIMIT 3");
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews ORDER BY _id LIMIT 3");
             query.push(0);
 
             assert_eq!(
@@ -87,7 +87,7 @@ mod mongosqltranslate_tests {
         );
 
         unsafe {
-            let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews LIMIT 3");
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews ORDER BY _id LIMIT 3");
             query.push(0);
 
             assert_eq!(
@@ -283,7 +283,7 @@ mod mongosqltranslate_tests {
                 "Entire home/apt".to_string(),
                 "Real Bed".to_string(),
                 "2".to_string(),
-                "1125".to_string(),
+                "30".to_string(),
             ],
             vec![
                 "Apartment".to_string(),
@@ -293,11 +293,11 @@ mod mongosqltranslate_tests {
                 "1125".to_string(),
             ],
             vec![
-                "House".to_string(),
+                "Condominium".to_string(),
                 "Entire home/apt".to_string(),
                 "Real Bed".to_string(),
-                "2".to_string(),
-                "30".to_string(),
+                "3".to_string(),
+                "365".to_string(),
             ],
         ]
     }
