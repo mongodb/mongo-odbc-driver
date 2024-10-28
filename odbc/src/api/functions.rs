@@ -2423,7 +2423,7 @@ macro_rules! sql_get_info_helper {
                         .unwrap()
                         .as_ref()
                         .unwrap()
-                        .get_adf_version();
+                        .get_server_version();
                     match version {
                         Ok(version) => i16_len::set_output_wstring_as_bytes(
                             version.as_str(),
