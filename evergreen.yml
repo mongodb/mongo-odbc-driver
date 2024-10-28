@@ -48,11 +48,21 @@ functions:
   "fetch mongosqltranslate":
     - command: s3.get
       params:
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongo-odbc-driver/target/release/${lib_prefix}mongosqltranslate.${ext}
+        local_file: mongosql-odbc-driver/target/release/${lib_prefix}mongosqltranslate.${ext}
         remote_file: mongosqltranslate/${lib_prefix}mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-${platform}-${arch}.${ext}
+        bucket: translators-connectors-releases
+
+  "fetch mongosqltranslate windows":
+    - command: s3.get
+      params:
+        working_dir: mongosql-odbc-driver
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/mongosqltranslate.dll
+        remote_file: mongosqltranslate/mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-win.dll
         bucket: translators-connectors-releases
 
   "generate expansions":
@@ -754,6 +764,9 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          # Delete mock library to prevent it from getting bundled in
+          rm target/release/mock_mongosqltranslate.dll
+          
           cp target/release/*.dll installer/msi
           cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
@@ -793,6 +806,9 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          # Delete mock library to prevent it from getting bundled in
+          rm target/release/libmock_mongosqltranslate.dylib
+          
           cp target/release/*.dylib installer/dmg
           cp target/release/macos_postinstall installer/dmg
           cd installer/dmg
@@ -1109,8 +1125,11 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+          # Delete mock library to prevent it from getting bundled in
+          rm target/release/libmock_mongosqltranslate.so
+          
           mkdir -p release/mongoodbc/bin
-          cp  target/release/*.so release/mongoodbc/bin/
+          cp target/release/*.so release/mongoodbc/bin/
           cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           cd release
           tar -czvf $UBUNTU_FILENAME mongoodbc/
@@ -1438,8 +1457,8 @@ functions:
   "run ubuntu mongosqltranslate integration tests":
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
         remote_file: mongosqltranslate/libmongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-linux-x86_64.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
         bucket: translators-connectors-releases
@@ -1457,8 +1476,8 @@ functions:
   "run ubuntu cluster type integration tests":
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
         remote_file: mongosqltranslate/libmongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-linux-x86_64.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
         bucket: translators-connectors-releases
@@ -1973,13 +1992,8 @@ tasks:
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
         variants: [macos, macos-arm]
-      - func: "fetch mongosqltranslate"
+      - func: "fetch mongosqltranslate windows"
         variants: [windows-64]
-        vars:
-          arch: "x86_64"
-          platform: "windows"
-          lib_prefix: ""
-          ext: "dll"
       - func: "build msi"
         variants: [windows-64]
       - func: "fetch mongosqltranslate"
