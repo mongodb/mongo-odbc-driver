@@ -627,7 +627,7 @@ functions:
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
-            /bin/bash -c "gpgloader && gpg --yes -v --armor -o $UBUNTU_FILENAME.sig --detach-sign $UBUNTU_FILENAME"
+            /bin/bash -c "gpgloader && gpg --yes -v --armor -o ${UBUNTU_FILENAME}.sig --detach-sign ${UBUNTU_FILENAME}"
     - command: shell.exec
       type: system
       params:
@@ -643,7 +643,7 @@ functions:
             --rm \
             -v $(pwd):$(pwd) -w $(pwd) \
             ${garasign_gpg_image} \
-            /bin/bash -c "gpgloader && gpg --verify $UBUNTU_FILENAME.sig $UBUNTU_FILENAME"
+            /bin/bash -c "gpgloader && gpg --verify ${UBUNTU_FILENAME}.sig ${UBUNTU_FILENAME}"
 
   "compile ubuntu and win release":
     - command: shell.exec
