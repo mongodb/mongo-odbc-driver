@@ -48,20 +48,20 @@ functions:
   "fetch mongosqltranslate":
     - command: s3.get
       params:
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongo-odbc-driver/target/release/${lib_prefix}mongosqltranslate.${ext}
+        local_file: mongosql-odbc-driver/target/release/${lib_prefix}mongosqltranslate.${ext}
         remote_file: mongosqltranslate/${lib_prefix}mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-${platform}-${arch}.${ext}
         bucket: translators-connectors-releases
 
   "fetch mongosqltranslate windows":
     - command: s3.get
       params:
-        working_dir: mongo-odbc-driver
+        working_dir: mongosql-odbc-driver
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongo-odbc-driver/target/release/mongosqltranslate.dll
+        local_file: mongosql-odbc-driver/target/release/mongosqltranslate.dll
         remote_file: mongosqltranslate/mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-win.dll
         bucket: translators-connectors-releases
 
@@ -1448,8 +1448,8 @@ functions:
   "run ubuntu mongosqltranslate integration tests":
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
         remote_file: mongosqltranslate/libmongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-linux-x86_64.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
         bucket: translators-connectors-releases
@@ -1467,8 +1467,8 @@ functions:
   "run ubuntu cluster type integration tests":
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
         remote_file: mongosqltranslate/libmongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-linux-x86_64.so
         local_file: mongosql-odbc-driver/libmongosqltranslate.so
         bucket: translators-connectors-releases
