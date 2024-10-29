@@ -1469,8 +1469,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          sudo mkdir -p /opt/mongodb/atlas-sql-odbc-driver/
-          sudo mv -f libmongosqltranslate.so /opt/mongodb/atlas-sql-odbc-driver/libmongosqltranslate.so
+          sudo mv -f libmongosqltranslate.so target/release/libmongosqltranslate.so
           cargo test mongosqltranslate_tests -- --nocapture        
 
   "run ubuntu cluster type integration tests":
@@ -1502,8 +1501,7 @@ functions:
           ENTERPRISE_NOLIB_EXITCODE=$?
         
           # Move mongosqltranslate library to the correct location
-          sudo mkdir -p /opt/mongodb/atlas-sql-odbc-driver/
-          sudo mv -f libmongosqltranslate.so /opt/mongodb/atlas-sql-odbc-driver/libmongosqltranslate.so
+          sudo mv -f libmongosqltranslate.so target/release/libmongosqltranslate.so
         
           # Enterprise test with library
           cargo test --features cluster_type_tests -- \

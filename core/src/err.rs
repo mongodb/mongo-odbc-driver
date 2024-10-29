@@ -86,6 +86,8 @@ pub enum Error {
     MultipleSchemaDocumentsReturned(usize),
     #[error("The buildInfo command failed with the following error: `{0}`")]
     BuildInfoCmdExecutionFailed(mongodb::error::Error),
+    #[error("Library path error: {0}")]
+    LibraryPathError(String),
 }
 
 impl Error {
@@ -131,6 +133,7 @@ impl Error {
             | Error::BuildInfoCmdExecutionFailed(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
+            Error::LibraryPathError(_) => GENERAL_ERROR,
         }
     }
 
@@ -179,6 +182,7 @@ impl Error {
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::BsonDocumentToCommandResponseDeserialization(_)
+            | Error::LibraryPathError(_)
             | Error::MultipleSchemaDocumentsReturned(_)
             | Error::BuildInfoCmdExecutionFailed(_) => 0,
         }

@@ -1,15 +1,17 @@
 use crate::{col_metadata::ResultSetSchema, Error, Result};
-use bson::{doc, Bson, Document};
+use bson::{Bson, Document};
 use libloading::{Library, Symbol};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize};
+#[cfg(not(test))]
+use shared_sql_utils::driver_settings::DriverSettings;
 use std::collections::BTreeSet;
+#[cfg(test)]
 use std::env;
 use std::path::PathBuf;
 use std::sync::Once;
 
 const LIBRARY_NAME: &str = "mongosqltranslate";
-const MOCK_LIBRARY_NAME: &str = "mock_mongosqltranslate";
 
 #[cfg(target_os = "windows")]
 const LIBRARY_EXTENSION: &str = "dll";
@@ -17,19 +19,6 @@ const LIBRARY_EXTENSION: &str = "dll";
 const LIBRARY_EXTENSION: &str = "dylib";
 #[cfg(target_os = "linux")]
 const LIBRARY_EXTENSION: &str = "so";
-
-// Define library installation paths for different operating systems.
-// The expected library path is in the same directory as the ODBC driver.
-#[cfg(target_os = "windows")]
-const LIBRARY_INSTALL_PATH: &str = if cfg!(target_arch = "x86_64") {
-    "C:\\Program Files\\MongoDB\\Atlas SQL ODBC Driver\\bin"
-} else {
-    "C:\\Program Files\\MongoDB\\ODBC\\bin"
-};
-#[cfg(target_os = "macos")]
-const LIBRARY_INSTALL_PATH: &str = "/Library/MongoDB/MongoDB Atlas SQL ODBC Driver/";
-#[cfg(target_os = "linux")]
-const LIBRARY_INSTALL_PATH: &str = "/opt/mongodb/atlas-sql-odbc-driver/";
 
 static INIT: Once = Once::new();
 static mut MONGOSQLTRANSLATE_LIBRARY: Option<Library> = None;
@@ -42,36 +31,60 @@ fn get_library_name(library_type: &str) -> String {
     }
 }
 
-fn get_library_path() -> PathBuf {
-    let lib_name = get_library_name(LIBRARY_NAME);
-    let mut path = PathBuf::from(LIBRARY_INSTALL_PATH);
-    path.push(lib_name);
-    path
+#[cfg(not(test))]
+fn get_library_path(library_type: &str) -> Result<PathBuf> {
+    let lib_name = get_library_name(library_type);
+
+    let settings = DriverSettings::from_private_profile_string()
+        .map_err(|e| Error::LibraryPathError(format!("Failed to obtain driver settings: {}", e)))?;
+
+    let driver_path = PathBuf::from(settings.driver);
+    let library_dir = driver_path.parent().ok_or_else(|| {
+        Error::LibraryPathError(format!(
+            "Failed to get parent directory from driver path: '{}'",
+            driver_path.display()
+        ))
+    })?;
+
+    let path = PathBuf::from(library_dir).join(lib_name);
+    Ok(path)
 }
 
-fn get_mock_library_path() -> PathBuf {
-    let lib_name = get_library_name(MOCK_LIBRARY_NAME);
-    let mut path = env::current_exe().unwrap();
-    path.pop();
-    path.pop();
-    path.push("deps"); // Go to the 'deps' directory where the library should be located
-    path.push(lib_name);
-    path
+#[cfg(test)]
+fn get_library_path(library_type: &str) -> Result<PathBuf> {
+    let lib_name = if cfg!(target_os = "windows") {
+        format!("mock_{}.{}", library_type, LIBRARY_EXTENSION)
+    } else {
+        format!("libmock_{}.{}", library_type, LIBRARY_EXTENSION)
+    };
+
+    let exe_path = env::current_exe().map_err(|e| {
+        Error::LibraryPathError(format!("Failed to get current executable path: {}", e))
+    })?;
+    let exe_dir = exe_path.parent().ok_or_else(|| {
+        Error::LibraryPathError("Failed to get executable's parent directory".to_string())
+    })?;
+
+    let path = PathBuf::from(exe_dir).join(lib_name);
+    Ok(path)
 }
 
 // load_mongosqltranslate_library is the entry point for loading the mongosqltranslate library
 // and is responsible for determining the library name and path.
 // The library name and path are determined based on the operating system and architecture.
-// It is stored in a static variable to ensure that it is only loaded once.
+// Additionally, the library is expected to be in the same directory as the MongoDB ODBC driver.
+// The library is stored in a static variable to ensure that it is only loaded once.
 pub fn load_mongosqltranslate_library() {
     INIT.call_once(|| {
-        let library_path = if cfg!(test) {
-            get_mock_library_path()
-        } else {
-            get_library_path()
+        let library_path = match get_library_path(LIBRARY_NAME) {
+            Ok(path) => path,
+            Err(e) => {
+                log::warn!("Failed to determine library path: {}", e);
+                return;
+            }
         };
 
-        match unsafe { Library::new(library_path.clone()) } {
+        match unsafe { Library::new(&library_path) } {
             Ok(lib) => {
                 unsafe { MONGOSQLTRANSLATE_LIBRARY = Some(lib) };
                 log::info!(
@@ -80,7 +93,11 @@ pub fn load_mongosqltranslate_library() {
                 );
             }
             Err(e) => {
-                log::warn!("Failed to load the mongosqltranslate library: {}", e);
+                log::warn!(
+                    "Failed to load the mongosqltranslate library from {}: {}",
+                    library_path.display(),
+                    e
+                );
             }
         }
     });
@@ -107,6 +124,7 @@ pub trait CommandName {
 pub struct Command<T> {
     pub options: T,
 }
+
 impl<T> serde::ser::Serialize for Command<T>
 where
     T: CommandName + serde::ser::Serialize,
@@ -250,7 +268,7 @@ pub struct ErrorResponse {
 pub struct TranslateCommandResponse {
     pub target_db: String,
     pub target_collection: Option<String>,
-    pub pipeline: bson::Bson,
+    pub pipeline: Bson,
     #[serde(flatten)]
     pub result_set_schema: ResultSetSchema,
 }
@@ -368,7 +386,6 @@ mod unit {
         let bson_bytes = bson::to_vec(&test_doc).expect("Failed to serialize BSON");
 
         let command_bytes_length = bson_bytes.len();
-
         let command_bytes_capacity = bson_bytes.capacity();
 
         // Call runCommand
@@ -386,6 +403,7 @@ mod unit {
 
         assert_eq!(result_doc, test_doc);
     }
+
     #[test]
     fn test_custom_serializer() {
         let translate = Translate::new("SELECT * FROM foo".to_string(), "bar".to_string(), doc! {});
