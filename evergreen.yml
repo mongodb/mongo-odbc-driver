@@ -55,16 +55,6 @@ functions:
         remote_file: mongosqltranslate/${lib_prefix}mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-${platform}-${arch}.${ext}
         bucket: translators-connectors-releases
 
-  "fetch mongosqltranslate windows":
-    - command: s3.get
-      params:
-        working_dir: mongosql-odbc-driver
-        aws_key: ${release_aws_key}
-        aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/target/release/mongosqltranslate.dll
-        remote_file: mongosqltranslate/mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-win.dll
-        bucket: translators-connectors-releases
-
   "generate expansions":
     - command: shell.exec
       params:
@@ -1990,8 +1980,13 @@ tasks:
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
         variants: [macos, macos-arm]
-      - func: "fetch mongosqltranslate windows"
+      - func: "fetch mongosqltranslate"
         variants: [windows-64]
+        vars:
+          arch: "x86_64"
+          platform: "win"
+          lib_prefix: ""
+          ext: "dll"
       - func: "build msi"
         variants: [windows-64]
       - func: "fetch mongosqltranslate"
