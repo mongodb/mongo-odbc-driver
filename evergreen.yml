@@ -73,8 +73,10 @@ functions:
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
-            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f1 | sed s/v//)
-            export LIBMONGOSQLTRANSLATE_VERSION=$(echo ${triggered_by_git_tag} | cut -d'-' -f2 | sed s/libv//)
+            # we split on `-libv` to get the two versions
+            read RELEASE_VERSION LIBMONGOSQLTRANSLATE_VERSION <<< $(echo ${triggered_by_git_tag} | awk -F '-libv' '{print $1, $2}')
+            export RELEASE_VERSION="$RELEASE_VERSION"
+            export LIBMONGOSQLTRANSLATE_VERSION="$LIBMONGOSQLTRANSLATE_VERSION"
           else
             export RELEASE_VERSION=snapshot
             export LIBMONGOSQLTRANSLATE_VERSION=snapshot
@@ -87,8 +89,8 @@ functions:
           LIBMONGOSQLTRANSLATE_VERSION: "$LIBMONGOSQLTRANSLATE_VERSION"
           MSI_FILENAME: "$MSI_FILENAME"
           UBUNTU_FILENAME: "$UBUNTU_FILENAME"
-          WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION-lib$LIBMONGOSQLTRANSLATE_VERSION/release/${MSI_FILENAME}"
-          UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-lib$LIBMONGOTRANSLATE_VERSION/release/${UBUNTU_FILENAME}"
+          WINDOWS_INSTALLER_PATH: "/eap/mongosql-odbc-driver/windows/$RELEASE_VERSION-lib$LIBMONGOSQLTRANSLATE_VERSION/release/${MSI_FILENAME}"
+          UBUNTU2204_INSTALLER_PATH: "/eap/mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-lib$LIBMONGOTRANSLATE_VERSION/release/${UBUNTU_FILENAME}"
           COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
           STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
@@ -385,7 +387,7 @@ functions:
           echo ">>>> Scan SBOM for vulnerabilities..."
           if [[ "$ALLOW_VULNS" != "" ]]; then
             echo "Vulnerability ids to ignore : $ALLOW_VULNS"
-            
+
             echo "-- Generate .grype.yaml specifying vulnerabilities to ignore --"
             GRYPE_CONF_FILE=".grype.yaml"
             touch $GRYPE_CONF_FILE
@@ -494,7 +496,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-                    
+
           cat << EOF > silkbomb.env
           SILK_CLIENT_ID=${SILK_CLIENT_ID}
           SILK_CLIENT_SECRET=${SILK_CLIENT_SECRET}
@@ -756,7 +758,7 @@ functions:
           ${prepare_shell}
           # Delete mock library to prevent it from getting bundled in
           rm target/release/mock_mongosqltranslate.dll
-          
+
           cp target/release/*.dll installer/msi
           cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
@@ -798,7 +800,7 @@ functions:
           ${prepare_shell}
           # Delete mock library to prevent it from getting bundled in
           rm target/release/libmock_mongosqltranslate.dylib
-          
+
           cp target/release/*.dylib installer/dmg
           cp target/release/macos_postinstall installer/dmg
           cd installer/dmg
@@ -979,7 +981,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.dll
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.dll
+        remote_file: /eap/mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -995,7 +997,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsqls.dll
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsqls.dll
+        remote_file: eap/mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsqls.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1011,7 +1013,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.pdb
-        remote_file: mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.pdb
+        remote_file: eap/mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1047,7 +1049,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
-        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/${UBUNTU_FILENAME}.sig
+        remote_file: /eap/mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/${UBUNTU_FILENAME}.sig
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1065,7 +1067,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.so
-        remote_file: mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
+        remote_file: /eap/mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1117,7 +1119,7 @@ functions:
           ${prepare_shell}
           # Delete mock library to prevent it from getting bundled in
           rm target/release/libmock_mongosqltranslate.so
-          
+
           mkdir -p release/mongoodbc/bin
           cp target/release/*.so release/mongoodbc/bin/
           cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
@@ -1315,7 +1317,7 @@ functions:
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture 
+          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
           EXITCODE=$?
           echo "****** ls -l ./target/debug/deps *******"
           ls -l ./target/debug/deps
@@ -1355,7 +1357,7 @@ functions:
           tar xf "$iODBC_dir.tar.gz"
           cd "$iODBC_dir"
           ./configure --prefix="$INSTALLED_ODBC_PATH"
-          make 
+          make
           make install
 
   "install unix odbc":
@@ -1436,7 +1438,7 @@ functions:
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture 
+          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
 
           EXITCODE=$?
 
@@ -1460,7 +1462,7 @@ functions:
         script: |
           ${prepare_shell}
           sudo mv -f libmongosqltranslate.so target/release/libmongosqltranslate.so
-          cargo test mongosqltranslate_tests -- --nocapture        
+          cargo test mongosqltranslate_tests -- --nocapture
 
   "run ubuntu cluster type integration tests":
     - command: s3.get
@@ -1477,47 +1479,47 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-        
+
           mdb_version_com="mongodb-linux-x86_64-ubuntu2204-7.0.14"
           mdb_version_ent="mongodb-linux-x86_64-enterprise-ubuntu2204-7.0.14"
           arch="x64"
-        
+
           # Start MongoDB instances
           ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
-        
+
           # Enterprise test without library
           cargo test --features cluster_type_tests -- \
             cluster_type::test_determine_cluster_type_enterprise_fails_without_library --nocapture
           ENTERPRISE_NOLIB_EXITCODE=$?
-        
+
           # Move mongosqltranslate library to the correct location
           sudo mv -f libmongosqltranslate.so target/release/libmongosqltranslate.so
-        
+
           # Enterprise test with library
           cargo test --features cluster_type_tests -- \
             cluster_type::test_enterprise_with_library_fails_due_to_missing_sql_get_result_schema_command --nocapture
           ENTERPRISE_LIB_EXITCODE=$?
-        
+
           # Community test
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
           COMMUNITY_EXITCODE=$?
-        
+
           # Stop MongoDB instances
           pkill mongod
-        
+
           # Determine overall exit code
           if [ $ENTERPRISE_NOLIB_EXITCODE -eq 0 ] && [ $ENTERPRISE_LIB_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
             OVERALL_EXITCODE=0
           else
             OVERALL_EXITCODE=1
           fi
-        
+
           echo "Cluster test results:"
           echo "Enterprise test without library exit code: $ENTERPRISE_NOLIB_EXITCODE"
           echo "Enterprise test with library exit code: $ENTERPRISE_LIB_EXITCODE"
           echo "Community test exit code: $COMMUNITY_EXITCODE"
           echo "Overall exit code: $OVERALL_EXITCODE"
-        
+
           exit $OVERALL_EXITCODE
 
   "run macos result-set tests":
@@ -1591,7 +1593,7 @@ functions:
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests,definitions/iodbc,cstr/utf32 -- --nocapture 
+          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests,definitions/iodbc,cstr/utf32 -- --nocapture
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1676,7 +1678,7 @@ functions:
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture 
+          cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
           EXITCODE=$?
 
           # Stop the local ADF
@@ -2297,7 +2299,7 @@ buildvariants:
 
   - name: macos
     display_name: "macOS"
-    run_on: [macos-14]
+    run_on: [macos-1100]
     tasks:
       - name: compile
       - name: unit-test
@@ -2307,7 +2309,7 @@ buildvariants:
 
   - name: macos-arm
     display_name: "macOS arm64"
-    run_on: [macos-14-arm64]
+    run_on: [macos-13-arm64]
     tasks:
       - name: compile
       - name: unit-test
