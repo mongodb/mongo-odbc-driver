@@ -72,11 +72,17 @@ functions:
           export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
-            # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
-            # we split on `-libv` to get the two versions
-            read RELEASE_VERSION LIBMONGOSQLTRANSLATE_VERSION <<< $(echo ${triggered_by_git_tag} | awk -F '-libv' '{print $1, $2}')
-            export RELEASE_VERSION="$RELEASE_VERSION"
-            export LIBMONGOSQLTRANSLATE_VERSION="$LIBMONGOSQLTRANSLATE_VERSION"
+            if [[ "${triggered_by_git_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-libv[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
+              # we split on `-libv` to get the two versions
+              read RELEASE_VERSION LIBMONGOSQLTRANSLATE_VERSION <<< $(echo ${triggered_by_git_tag} | awk -F '-libv' '{print $1, $2}')
+              export RELEASE_VERSION="$RELEASE_VERSION"
+              export LIBMONGOSQLTRANSLATE_VERSION="$LIBMONGOSQLTRANSLATE_VERSION"
+            else
+              echo "Error: Invalid tag format. Expected format: v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>"
+              echo "Received tag: ${triggered_by_git_tag}"
+              exit 1
+            fi
           else
             export RELEASE_VERSION=snapshot
             export LIBMONGOSQLTRANSLATE_VERSION=snapshot
@@ -89,8 +95,8 @@ functions:
           LIBMONGOSQLTRANSLATE_VERSION: "$LIBMONGOSQLTRANSLATE_VERSION"
           MSI_FILENAME: "$MSI_FILENAME"
           UBUNTU_FILENAME: "$UBUNTU_FILENAME"
-          WINDOWS_INSTALLER_PATH: "/eap/mongosql-odbc-driver/windows/$RELEASE_VERSION-lib$LIBMONGOSQLTRANSLATE_VERSION/release/${MSI_FILENAME}"
-          UBUNTU2204_INSTALLER_PATH: "/eap/mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-lib$LIBMONGOTRANSLATE_VERSION/release/${UBUNTU_FILENAME}"
+          WINDOWS_INSTALLER_PATH: "eap/mongosql-odbc-driver/windows/$RELEASE_VERSION-lib$LIBMONGOSQLTRANSLATE_VERSION/release/${MSI_FILENAME}"
+          UBUNTU2204_INSTALLER_PATH: "eap/mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-lib$LIBMONGOTRANSLATE_VERSION/release/${UBUNTU_FILENAME}"
           COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
           STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
@@ -981,7 +987,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.dll
-        remote_file: /eap/mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.dll
+        remote_file: eap/mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1049,7 +1055,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
-        remote_file: /eap/mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/${UBUNTU_FILENAME}.sig
+        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/${UBUNTU_FILENAME}.sig
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1067,7 +1073,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.so
-        remote_file: /eap/mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
+        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
