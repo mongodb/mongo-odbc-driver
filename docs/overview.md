@@ -50,8 +50,6 @@ On linux system, `unixodbc` is required.
 [Microsoft Visual C++ Redistributable 17.0](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) or higher
 is required for the proper C and C++ (MSVC) runtime libraries to be present. You can find a link to an installer for your system [here](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version).
 
-1. [Download the `MSI`](TODO).
-2. Install and Configure the ODBC Driver.
 To install the ODBC driver, run the installation file that you downloaded
 and open the Setup Wizard. Follow the steps in the Setup Wizard.
 
