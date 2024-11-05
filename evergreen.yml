@@ -37,7 +37,7 @@ functions:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
-        remote_file: mongosql-odbc-driver/artifacts/docs/mongodb-schema-manager/MongoDB_ODBC_Guide.pdf
+        remote_file: mongosql-odbc-driver/artifacts/docs/MongoDB_ODBC_Guide.pdf
         bucket: mciuploads
         permissions: public-read
         content_type: application/pdf
