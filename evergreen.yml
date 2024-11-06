@@ -22,6 +22,26 @@ timeout:
         ls -la
 
 functions:
+  "build odbc documentation":
+    - command: subprocess.exec
+      params:
+        binary: bash
+        working_dir: mongosql-odbc-driver
+        args:
+          - "./evergreen/make_docs.sh"
+        add_expansions_to_env: true
+
+  "upload odbc docs":
+    - command: s3.put
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
+        remote_file: mongosql-odbc-driver/artifacts/docs/MongoDB_ODBC_Guide.pdf
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/pdf
+
   "fetch for windows sign":
     - command: s3.get
       params:
@@ -747,15 +767,16 @@ functions:
         file: mongosql-odbc-driver/expansions.yml
 
   "build msi":
-    - command: s3.get
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
-        content_type: application/json
-        bucket: mciuploads
-        permissions: public-read
+    # TODO: Uncomment prior to merging back into master
+    # - command: s3.get
+    #   params:
+    #     aws_key: ${aws_key}
+    #     aws_secret: ${aws_secret}
+    #     local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+    #     remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+    #     content_type: application/json
+    #     bucket: mciuploads
+    #     permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -766,7 +787,10 @@ functions:
           rm target/release/mock_mongosqltranslate.dll
 
           cp target/release/*.dll installer/msi
-          cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
+          # TODO: Uncomment prior to merging back into master
+          # cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
+          # TODO: Delete the following line prior to merging back into master
+          cp ./README.md installer/msi
           cd installer/msi
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               MINOR_VERSION="0.1"
@@ -789,15 +813,16 @@ functions:
               -VersionLabel "$VERSION_LABEL"\
 
   "build dmg":
-    - command: s3.get
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
-        content_type: application/json
-        bucket: mciuploads
-        permissions: public-read
+    # TODO: Uncomment prior to merging back into master
+    # - command: s3.get
+    #   params:
+    #     aws_key: ${aws_key}
+    #     aws_secret: ${aws_secret}
+    #     local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+    #     remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+    #     content_type: application/json
+    #     bucket: mciuploads
+    #     permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -941,6 +966,23 @@ functions:
         content_type: application/octet-stream
 
   "upload release":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/docs/MongoDB_ODBC_Guide.pdf
+        local_file: mongosql-odbc-driver/release/docs/MongoDB_ODBC_Guide.pdf
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/docs/MongoDB_ODBC_Guide.pdf
+        remote_file: eap/mongodb-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
+        bucket: translators-connectors-releases
+        permissions: public-read
+        skip_existing: false
+        content_type: application/pdf
     - command: s3.get
       params:
         aws_key: ${aws_key}
@@ -1108,15 +1150,16 @@ functions:
         bucket: mciuploads
 
   "tar linux artifacts":
-    - command: s3.get
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
-        content_type: application/json
-        bucket: mciuploads
-        permissions: public-read
+    # TODO: Uncomment prior to merging back into master
+    # - command: s3.get
+    #   params:
+    #     aws_key: ${aws_key}
+    #     aws_secret: ${aws_secret}
+    #     local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+    #     remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+    #     content_type: application/json
+    #     bucket: mciuploads
+    #     permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -1128,7 +1171,10 @@ functions:
 
           mkdir -p release/mongoodbc/bin
           cp target/release/*.so release/mongoodbc/bin/
-          cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
+          # TODO: Uncomment prior to merging back into master
+          # cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
+          # TODO: Delete the following line prior merging back into master
+          cp ./LICENSE ./README.md release/mongoodbc/
           cd release
           tar -czvf $UBUNTU_FILENAME mongoodbc/
 
@@ -1948,6 +1994,13 @@ post:
   - func: "upload start_adf logs"
 
 tasks:
+  - name: make-odbc-docs
+    depends_on:
+      - name: compile
+    commands:
+      - func: "build odbc documentation"
+        run_on: ubuntu2004-large
+      - func: "upload odbc docs"
   - name: clippy
     commands:
       - func: "install rust toolchain"
@@ -1973,9 +2026,10 @@ tasks:
       - func: "pull augmented SBOM from Silk"
 
   - name: compile
-    depends_on:
-      - name: sbom
-        variant: code-quality-security
+    # TODO: Uncomment the following block prior to merging back to master
+    # depends_on:
+    #   - name: sbom
+    #     variant: code-quality-security
     commands:
       - func: "install iODBC"
         variants: [macos, macos-arm]
@@ -2176,13 +2230,15 @@ tasks:
       - func: "update download center feed"
 
   - name: release
-    git_tag_only: true
+    allowed_requesters: ["github_tag", "patch"]
     depends_on:
       - name: compile
         variant: "*"
       - name: sign
         variant: ".release-variant"
     commands:
+      - func: "build odbc documentation"
+      - func: "upload odbc docs"
       - func: "upload release"
 
   - name: semgrep
@@ -2276,8 +2332,9 @@ buildvariants:
     run_on: [ubuntu2204-small]
     tasks:
       - name: semgrep
-      - name: sbom
-      - name: ssdlc-artifacts-snapshot
+      # TODO: Uncomment the following block prior to merging back to master
+      # - name: sbom
+      # - name: ssdlc-artifacts-snapshot
 
   - name: windows-64
     tags: ["release-variant"]
@@ -2323,7 +2380,17 @@ buildvariants:
       # - name: integration-test
       - name: result-set-test
 
+  - name: eap-release
+    display_name: "EAP Release"
+    run_on: [ubuntu2004-medium]
+    tasks:
+      - name: make-odbc-docs
+      - name: release
+      - name: snapshot
+
+
   - name: release
+    disable: true
     display_name: "Release"
     run_on: [ubuntu2004-medium]
     tasks:
