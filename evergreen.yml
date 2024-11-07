@@ -2017,6 +2017,8 @@ tasks:
       - func: "check unused dependencies"
 
   - name: sbom
+    # TODO: Remove the following prior to merging back to master
+    disable: true
     commands:
       - func: "install rust toolchain"
       - func: set and check packages version
@@ -2214,6 +2216,8 @@ tasks:
       - func: "upload release"
 
   - name: trace-artifacts
+    # TODO: remove this before merging eap branch back into main branch
+    disable: true
     git_tag_only: true
     depends_on:
       - name: release
@@ -2247,6 +2251,8 @@ tasks:
       - func: "generate static code analysis"
 
   - name: ssdlc-artifacts-release
+    # TODO: remove this before merging eap branch back into main branch
+    disable: true
     run_on: ubuntu2204-small
     git_tag_only: true
     depends_on:
@@ -2264,6 +2270,8 @@ tasks:
       - func: "publish compliance report"
 
   - name: ssdlc-artifacts-snapshot
+    # TODO: remove this before merging eap branch back into main branch
+    disable: true
     run_on: ubuntu2204-small
     allow_for_git_tag: false
     depends_on:
@@ -2384,18 +2392,20 @@ buildvariants:
     display_name: "EAP Release"
     run_on: [ubuntu2004-medium]
     tasks:
+      - name: compile
       - name: make-odbc-docs
       - name: release
       - name: snapshot
 
 
   - name: release
-    disable: true
     display_name: "Release"
     run_on: [ubuntu2004-medium]
     tasks:
+      - name: compile
+      - name: make-odbc-docs
       - name: release
       - name: snapshot
-      - name: trace-artifacts
-      - name: download-center-update
-      - name: ssdlc-artifacts-release
+      # - name: trace-artifacts
+      # - name: download-center-update
+      # - name: ssdlc-artifacts-release
