@@ -92,17 +92,10 @@ functions:
           export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
-            if [[ "${triggered_by_git_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-libv[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
-              # we split on `-libv` to get the two versions
-              read RELEASE_VERSION LIBMONGOSQLTRANSLATE_VERSION <<< $(echo ${triggered_by_git_tag} | awk -F '-libv' '{print $1, $2}')
-              export RELEASE_VERSION="$RELEASE_VERSION"
-              export LIBMONGOSQLTRANSLATE_VERSION="$LIBMONGOSQLTRANSLATE_VERSION"
-            else
-              echo "Error: Invalid tag format. Expected format: v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>"
-              echo "Received tag: ${triggered_by_git_tag}"
-              exit 1
-            fi
+            # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
+            # we split on `-libv` to get the two versions
+            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | awk -F'-libv' '{print $1}' | sed s/v// )
+            export LIBMONGOSQLTRANSLATE_VER=$(echo ${triggered_by_git_tag}  | awk -F'-libv' '{print $2}')
           else
             export RELEASE_VERSION=snapshot
             export LIBMONGOSQLTRANSLATE_VERSION=snapshot
@@ -2017,6 +2010,8 @@ tasks:
       - func: "check unused dependencies"
 
   - name: sbom
+    # TODO: Remove the following prior to merging back to master
+    disable: true
     commands:
       - func: "install rust toolchain"
       - func: set and check packages version
@@ -2214,6 +2209,8 @@ tasks:
       - func: "upload release"
 
   - name: trace-artifacts
+    # TODO: remove this before merging eap branch back into main branch
+    disable: true
     git_tag_only: true
     depends_on:
       - name: release
@@ -2247,6 +2244,8 @@ tasks:
       - func: "generate static code analysis"
 
   - name: ssdlc-artifacts-release
+    # TODO: remove this before merging eap branch back into main branch
+    disable: true
     run_on: ubuntu2204-small
     git_tag_only: true
     depends_on:
@@ -2264,6 +2263,8 @@ tasks:
       - func: "publish compliance report"
 
   - name: ssdlc-artifacts-snapshot
+    # TODO: remove this before merging eap branch back into main branch
+    disable: true
     run_on: ubuntu2204-small
     allow_for_git_tag: false
     depends_on:
@@ -2384,18 +2385,20 @@ buildvariants:
     display_name: "EAP Release"
     run_on: [ubuntu2004-medium]
     tasks:
+      - name: compile
       - name: make-odbc-docs
       - name: release
       - name: snapshot
 
 
   - name: release
-    disable: true
     display_name: "Release"
     run_on: [ubuntu2004-medium]
     tasks:
+      - name: compile
+      - name: make-odbc-docs
       - name: release
       - name: snapshot
-      - name: trace-artifacts
-      - name: download-center-update
-      - name: ssdlc-artifacts-release
+      # - name: trace-artifacts
+      # - name: download-center-update
+      # - name: ssdlc-artifacts-release
