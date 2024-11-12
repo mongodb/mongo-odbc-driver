@@ -2026,6 +2026,7 @@ tasks:
     #   - name: sbom
     #     variant: code-quality-security
     commands:
+      - func: "install rust toolchain"
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install rust toolchain"
@@ -2381,22 +2382,10 @@ buildvariants:
       # - name: integration-test
       - name: result-set-test
 
-  - name: eap-release
-    display_name: "EAP Release"
-    run_on: [ubuntu2004-medium]
-    tasks:
-      - name: rustfmt
-      - name: compile
-      - name: make-odbc-docs
-      - name: release
-      - name: snapshot
-
-
   - name: release
     display_name: "Release"
     run_on: [ubuntu2004-medium]
     tasks:
-      - name: rustfmt
       - name: compile
       - name: make-odbc-docs
       - name: release
