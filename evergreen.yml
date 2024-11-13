@@ -2026,7 +2026,6 @@ tasks:
     #   - name: sbom
     #     variant: code-quality-security
     commands:
-      - func: "install rust toolchain"
       - func: "install iODBC"
         variants: [macos, macos-arm]
       - func: "install rust toolchain"
@@ -2386,7 +2385,6 @@ buildvariants:
     display_name: "Release"
     run_on: [ubuntu2004-medium]
     tasks:
-      - name: compile
       - name: make-odbc-docs
       - name: release
       - name: snapshot
