@@ -3,11 +3,14 @@
 This document describes the version policy and release process for the MongoDB Atlas SQL interface ODBC Driver.
 
 ## Versioning
-Versions will follow the [semantic versioning](https://semver.org/) system.  
+
+Versions will follow the [semantic versioning](https://semver.org/) system.
 The following guidelines will be used to determine when each version component will be updated:
 - **major**: backwards-breaking changes
 - **minor**: functionality added in a backwards compatible manner
 - **patch**: backwards compatible bug fixes
+- **pre-release**: The pre-release version
+- **libv**: to specify which version of `libmongosqltranslate` gets built with the driver during a release
 
 ## Release Process
 ### Pre-Release Tasks
@@ -38,11 +41,16 @@ Ensure that the build you are releasing is passing the tests on the evergreen wa
 Ensure you have the `master` branch checked out, and that you have pulled the latest commit from `mongodb/mongo-odbc-driver`.
 
 #### Create the tag and push
+
+Git tags are used to specify which version of [`libmongosqltranslate`](https://github.com/10gen/mongosql-rs) to use.
+
 Create an annotated tag and push it:
-```
-git tag -a -m X.Y.Z vX.Y.Z
+
+```sh
+git tag -am X.Y.Z-alpha-1-libv1.0.0-alpa-1 vX.Y.Z-alpha-1-libv1.0.0-alpa-1
 git push --tags
 ```
+
 This should trigger an Evergreen version that can be viewed on the [mongo-odbc-driver waterfall](https://evergreen.mongodb.com/waterfall/mongosql-odbc-driver).
 If it does not, you may have to ask the project manager to give you the right permissions to do so.
 Make sure to run the 'release' task, if it is not run automatically.
@@ -68,7 +76,7 @@ Check that the released files, library and symbols, are available at the followi
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/mongoodbc.msi`
 - Ubuntu 2204
   - Release build
-    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so`  
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so`
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}/release/mongoodbc.tar.gz`
 
 ##### Verify that the driver works with PowerBI
