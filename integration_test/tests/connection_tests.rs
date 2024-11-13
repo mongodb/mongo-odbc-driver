@@ -12,9 +12,7 @@ mod integration {
         disconnect_and_close_handles,
     };
     use constants::DRIVER_NAME;
-    use cstr::{
-        input_text_to_string_w, to_char_ptr, to_widechar_ptr, WideChar,
-    };
+    use cstr::{input_text_to_string_w, to_char_ptr, to_widechar_ptr, WideChar};
     use definitions::{AttrOdbcVersion, SQLExecDirectW, SqlReturn};
     use lazy_static::lazy_static;
     use logger::Logger;

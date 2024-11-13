@@ -1,9 +1,14 @@
-use cstr::{
-    input_text_to_string_w, write_string_to_buffer, WideChar,
-};
-use definitions::{Integer, SQL_NTS_ISIZE};
-use crate::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
+#![allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 
+use crate::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
+use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
+use definitions::{Integer, SQL_NTS_ISIZE};
+
+/// This function is exported as part of the atsql public API, and must not be moved from this crate.
 /// atlas_sql_test_connection returns true if a connection can be established
 /// with the provided connection string.
 /// If the connection fails, the error message is written to the buffer.
@@ -31,8 +36,7 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
             .enable_all()
             .build()
             .unwrap();
-        let client_options =
-            runtime.block_on(async { odbc_uri.try_into_client_options().await });
+        let client_options = runtime.block_on(async { odbc_uri.try_into_client_options().await });
         match client_options {
             Ok(client_options) => {
                 match MongoConnection::connect(
