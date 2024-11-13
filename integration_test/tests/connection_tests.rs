@@ -13,12 +13,12 @@ mod integration {
     };
     use constants::DRIVER_NAME;
     use cstr::{
-        input_text_to_string_w, to_char_ptr, to_widechar_ptr, write_string_to_buffer, WideChar,
+        input_text_to_string_w, to_char_ptr, to_widechar_ptr, WideChar,
     };
-    use definitions::{AttrOdbcVersion, Integer, SQLExecDirectW, SqlReturn, SQL_NTS_ISIZE};
+    use definitions::{AttrOdbcVersion, SQLExecDirectW, SqlReturn};
     use lazy_static::lazy_static;
     use logger::Logger;
-    use mongo_odbc_core::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
+    use mongo_odbc_core::util::test_connection::atlas_sql_test_connection;
     use regex::Regex;
     use shared_sql_utils::driver_settings::{DriverSettings, LOGLEVEL, ODBCINSTINI};
     use shared_sql_utils::odbcinst::{SQLWritePrivateProfileString, SQLWritePrivateProfileStringW};
