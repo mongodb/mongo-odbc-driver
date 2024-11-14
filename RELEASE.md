@@ -12,7 +12,7 @@ The following guidelines will be used to determine when each version component w
 - **pre-release**: The pre-release version, used for preview builds
 - **libv**: to specify which version of `libmongosqltranslate` gets bundled with the driver during a release
   - Our build system will fetch *exactly* the version of `libmongosqltranslate` specified after `libv` and bundle it with the driver. If you are unsure
-  what version to use, check the release ticket (see instructions in the next section) and/or the latest release of [`libmongosqltranslate`](https://github.com/10gen/mongosql-rs).
+  what version to use, check the [releases](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin:release-page&status=released&contains=libv) page and use the latest **released** tag.
 
 ## Release Process
 
@@ -25,6 +25,8 @@ Go to the [SQL releases page](https://jira.mongodb.org/projects/SQL?selectedItem
 #### Start Release Ticket
 Move the JIRA ticket for the release to the "In Progress" state.
 Ensure that its fixVersion matches the version being released, and update it if it changed in the previous step.
+
+Add the fixVersion for the version of `libmongosqltranslate` that will be bundled as a separate fix version to the ticket.
 
 #### Complete the Release in JIRA
 Go to the [SQL releases page](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=unreleased), and ensure that all the tickets in the fixVersion to be released are closed.
