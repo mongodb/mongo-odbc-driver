@@ -2381,21 +2381,10 @@ buildvariants:
       # - name: integration-test
       - name: result-set-test
 
-  - name: eap-release
-    display_name: "EAP Release"
-    run_on: [ubuntu2004-medium]
-    tasks:
-      - name: compile
-      - name: make-odbc-docs
-      - name: release
-      - name: snapshot
-
-
   - name: release
     display_name: "Release"
     run_on: [ubuntu2004-medium]
     tasks:
-      - name: compile
       - name: make-odbc-docs
       - name: release
       - name: snapshot
