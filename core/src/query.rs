@@ -215,71 +215,77 @@ impl MongoQuery {
     ) -> Result<Self> {
         let working_db = current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = client.client.database(working_db);
+        let (pipeline, current_db, current_collection, result_set_schema) =
+            match client.cluster_type {
+                MongoClusterType::AtlasDataFederation => {
+                    // 1. Run the sqlGetResultSchema command to get the result set
+                    // metadata. Column metadata is sorted alphabetically by table
+                    // and column name.
+                    let get_result_schema_cmd =
+                        doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
 
-        let (pipeline, current_collection, result_set_schema) = match client.cluster_type {
-            MongoClusterType::AtlasDataFederation => {
-                // 1. Run the sqlGetResultSchema command to get the result set
-                // metadata. Column metadata is sorted alphabetically by table
-                // and column name.
-                let get_result_schema_cmd =
-                    doc! {"sqlGetResultSchema": 1, "query": query, "schemaVersion": 1};
+                    let guard = client.runtime.enter();
+                    let schema_response = client.runtime.block_on(async {
+                        db.run_command(get_result_schema_cmd)
+                            .await
+                            .map_err(Error::QueryExecutionFailed)
+                    })?;
+                    drop(guard);
+                    let get_result_schema_response: SqlGetSchemaResponse =
+                        mongodb::bson::from_document(schema_response)
+                            .map_err(Error::QueryDeserialization)?;
 
-                let guard = client.runtime.enter();
-                let schema_response = client.runtime.block_on(async {
-                    db.run_command(get_result_schema_cmd)
-                        .await
-                        .map_err(Error::QueryExecutionFailed)
-                })?;
-                drop(guard);
-                let get_result_schema_response: SqlGetSchemaResponse =
-                    mongodb::bson::from_document(schema_response)
-                        .map_err(Error::QueryDeserialization)?;
+                    // 2. Generate the $sql aggregation pipeline to use at execution time.
+                    let pipeline = vec![doc! {"$sql": {
+                        "statement": query,
+                    }}];
 
-                // 2. Generate the $sql aggregation pipeline to use at execution time.
-                let pipeline = vec![doc! {"$sql": {
-                    "statement": query,
-                }}];
-
-                (
-                    pipeline,
-                    None,
-                    ResultSetSchema::from(get_result_schema_response),
-                )
-            }
-            MongoClusterType::Enterprise => {
-                // Get relevant namespaces
-                let namespaces: BTreeSet<Namespace> =
-                    Self::get_sql_query_namespaces(query, working_db)?;
-
-                // Translate sql
-                let mongosql_translation =
-                    Self::translate_sql(query, working_db, namespaces, client, &db)?;
-
-                let mut pipeline: Vec<Document> = Vec::new();
-
-                for bson_doc in mongosql_translation
-                    .pipeline
-                    .as_array()
-                    .ok_or(Error::TranslationPipelineNotArray)?
-                    .iter()
-                {
-                    match bson_doc.as_document() {
-                        None => return Err(Error::TranslationPipelineArrayContainsNonDocument),
-                        Some(doc) => pipeline.push(doc.to_owned()),
-                    }
+                    (
+                        pipeline,
+                        working_db.to_string(),
+                        None,
+                        ResultSetSchema::from(get_result_schema_response),
+                    )
                 }
+                MongoClusterType::Enterprise => {
+                    let namespaces: BTreeSet<Namespace> =
+                        Self::get_sql_query_namespaces(query, working_db)?;
 
-                (
-                    pipeline,
-                    mongosql_translation.target_collection,
-                    mongosql_translation.result_set_schema,
-                )
-            }
-            MongoClusterType::Community | MongoClusterType::UnknownTarget => {
-                // On connection, these types should get caught and throw an error.
-                unreachable!()
-            }
-        };
+                    // Translate sql
+                    let mongosql_translation = if namespaces.is_empty() {
+                        Self::translate_sql(query, working_db, namespaces, client, &db)?
+                    } else {
+                        let query_db = &namespaces.first().unwrap().database.clone();
+                        let db = client.client.database(query_db);
+                        Self::translate_sql(query, query_db, namespaces, client, &db)?
+                    };
+
+                    let mut pipeline: Vec<Document> = Vec::new();
+
+                    for bson_doc in mongosql_translation
+                        .pipeline
+                        .as_array()
+                        .ok_or(Error::TranslationPipelineNotArray)?
+                        .iter()
+                    {
+                        match bson_doc.as_document() {
+                            None => return Err(Error::TranslationPipelineArrayContainsNonDocument),
+                            Some(doc) => pipeline.push(doc.to_owned()),
+                        }
+                    }
+
+                    (
+                        pipeline,
+                        mongosql_translation.target_db,
+                        mongosql_translation.target_collection,
+                        mongosql_translation.result_set_schema,
+                    )
+                }
+                MongoClusterType::Community | MongoClusterType::UnknownTarget => {
+                    // On connection, these types should get caught and throw an error.
+                    unreachable!()
+                }
+            };
 
         let metadata =
             result_set_schema.process_result_metadata(working_db, type_mode, max_string_length)?;
@@ -288,7 +294,7 @@ impl MongoQuery {
             resultset_cursor: None,
             resultset_metadata: metadata,
             current: None,
-            current_db,
+            current_db: Some(current_db),
             current_collection,
             pipeline,
             query_timeout,
