@@ -21,6 +21,7 @@ serde_stacker = "0.1"
 itertools = "0.10.4"
 lazy_static = "1.4.0"
 num-traits = "0.2.14"
+cstr = { path = "../cstr" }
 fancy-regex = "0.11.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
 log = "0.4.14"
