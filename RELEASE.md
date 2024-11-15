@@ -5,11 +5,12 @@ This document describes the version policy and release process for the MongoDB A
 ## Versioning
 
 Versions will follow the [semantic versioning](https://semver.org/) system.
+
 The following guidelines will be used to determine when each version component will be updated:
 - **major**: backwards-breaking changes
 - **minor**: functionality added in a backwards compatible manner
-- **patch**: backwards compatible bug fixes
-- **pre-release**: The pre-release version, used for preview builds
+- **patch**: backwards compatible bug fixes.
+- **pre-release**: The pre-release version, used for preview builds and when updating a preview version of `libmongosqltranslate`
 - **libv**: to specify which version of `libmongosqltranslate` gets bundled with the driver during a release
   - Our build system will fetch *exactly* the version of `libmongosqltranslate` specified after `libv` and bundle it with the driver. If you are unsure
   what version to use, check the [releases](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin:release-page&status=released&contains=libv) page and use the latest **released** tag.
