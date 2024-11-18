@@ -95,7 +95,7 @@ functions:
             # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
             # we split on `-libv` to get the two versions
             export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | awk -F'-libv' '{print $1}' | sed s/v// )
-            export LIBMONGOSQLTRANSLATE_VER=$(echo ${triggered_by_git_tag}  | awk -F'-libv' '{print $2}')
+            export LIBMONGOSQLTRANSLATE_VERSION=$(echo ${triggered_by_git_tag}  | awk -F'-libv' '{print $2}')
           else
             export RELEASE_VERSION=snapshot
             export LIBMONGOSQLTRANSLATE_VERSION=snapshot
