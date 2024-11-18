@@ -335,26 +335,37 @@ impl ODBCUri {
             .map_err(Error::InvalidClientOptions)?
             .uuid_representation;
 
-        if let Some(AuthMechanism::MongoDbOidc) = client_options
+        match client_options
             .credential
             .as_ref()
             .unwrap()
             .mechanism
             .as_ref()
         {
-            use futures::future::FutureExt;
-            let cred = client_options.credential.as_mut().unwrap();
-            cred.oidc_callback = mongodb::options::oidc::Callback::human(move |c| {
-                async move { crate::oidc_auth::oidc_call_back(c).await }.boxed()
-            });
-            // unset passsword, and username if empty string to make up for bad tools like power bi
-            // which require adding empty username and password. OIDC never uses a password.
-            cred.password = None;
-            cred.username =
-                cred.username
-                    .as_ref()
-                    .and_then(|x| if x.is_empty() { None } else { Some(x.clone()) });
+            Some(AuthMechanism::MongoDbX509) => {
+                client_options.credential.as_mut().unwrap().username = None;
+                client_options.credential.as_mut().unwrap().password = None;
+            }
+            Some(AuthMechanism::MongoDbOidc) => {
+                use futures::future::FutureExt;
+                let cred = client_options.credential.as_mut().unwrap();
+                cred.oidc_callback = mongodb::options::oidc::Callback::human(move |c| {
+                    async move { crate::oidc_auth::oidc_call_back(c).await }.boxed()
+                });
+                // unset passsword, and username if empty string to make up for bad tools like power bi
+                // which require adding empty username and password. OIDC never uses a password.
+                cred.password = None;
+                cred.username = cred.username.as_ref().and_then(|x| {
+                    if x.is_empty() {
+                        None
+                    } else {
+                        Some(x.clone())
+                    }
+                });
+            }
+            _ => {}
         }
+
         Ok(UserOptions {
             client_options,
             uuid_representation,
