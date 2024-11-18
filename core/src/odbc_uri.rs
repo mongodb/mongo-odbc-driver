@@ -352,8 +352,9 @@ impl ODBCUri {
                 cred.oidc_callback = mongodb::options::oidc::Callback::human(move |c| {
                     async move { crate::oidc_auth::oidc_call_back(c).await }.boxed()
                 });
-                // unset passsword, and username if empty string to make up for bad tools like power bi
-                // which require adding empty username and password. OIDC never uses a password.
+                // Unset the password and username if they are empty strings.
+                // This is to accommodate tools like Power BI that require adding empty username and password fields.
+                // Note: OIDC (OpenID Connect) never uses a password.
                 cred.password = None;
                 cred.username = cred.username.as_ref().and_then(|x| {
                     if x.is_empty() {
