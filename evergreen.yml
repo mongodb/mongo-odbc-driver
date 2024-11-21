@@ -1531,7 +1531,6 @@ functions:
           # Stop the local ADF
           ./resources/run_adf.sh stop
           exit $EXITCODE
-          
 
   "run ubuntu cluster type integration test":
     command: shell.exec
@@ -1541,49 +1540,49 @@ functions:
       working_dir: mongosql-odbc-driver
       script: |
         ${prepare_shell}
-        
+
         mdb_version_com="mongodb-linux-x86_64-ubuntu2204-7.0.14"
         mdb_version_ent="mongodb-linux-x86_64-enterprise-ubuntu2204-7.0.14"
         arch="x64"
-        
+
         # Start MongoDB instances
         ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
-        
+
         # Enterprise test without library
         cargo test --features cluster_type_tests -- \
           cluster_type::test_determine_cluster_type_enterprise_fails_without_library --nocapture
         ENTERPRISE_NOLIB_EXITCODE=$?
-        
+
         # Build and move mock mongosqltranslate library
         cargo build --package mock_mongosqltranslate
         sudo mkdir -p /opt/mongodb/atlas-sql-odbc-driver/
         sudo mv -f ./target/debug/libmock_mongosqltranslate.so /opt/mongodb/atlas-sql-odbc-driver/libmongosqltranslate.so
-        
+
         # Enterprise test with library
         cargo test --features cluster_type_tests -- \
           cluster_type::test_enterprise_with_library_fails_due_to_missing_sql_get_result_schema_command --nocapture
         ENTERPRISE_LIB_EXITCODE=$?
-        
+
         # Community test
         cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
         COMMUNITY_EXITCODE=$?
-        
+
         # Stop MongoDB instances
         pkill mongod
-        
+
         # Determine overall exit code
         if [ $ENTERPRISE_NOLIB_EXITCODE -eq 0 ] && [ $ENTERPRISE_LIB_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
           OVERALL_EXITCODE=0
         else
           OVERALL_EXITCODE=1
         fi
-        
+
         echo "Cluster test results:"
         echo "Enterprise test without library exit code: $ENTERPRISE_NOLIB_EXITCODE"
         echo "Enterprise test with library exit code: $ENTERPRISE_LIB_EXITCODE"
         echo "Community test exit code: $COMMUNITY_EXITCODE"
         echo "Overall exit code: $OVERALL_EXITCODE"
-        
+
         exit $OVERALL_EXITCODE
 
   "run macos result-set tests":
@@ -2110,7 +2109,7 @@ tasks:
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration test"
-        variants: [ ubuntu2204 ]
+        variants: [ubuntu2204]
       # Commenting out because the following task only detects
       # memory leaks in the tests
       # - func: "run asan integration tests"
@@ -2355,7 +2354,7 @@ buildvariants:
 
   - name: macos
     display_name: "macOS"
-    run_on: [macos-14]
+    run_on: [macos-1100]
     tasks:
       - name: compile
       - name: compile-debug
@@ -2366,7 +2365,7 @@ buildvariants:
 
   - name: macos-arm
     display_name: "macOS arm64"
-    run_on: [macos-14-arm64]
+    run_on: [macos-13-arm64]
     tasks:
       - name: compile
       - name: compile-debug
