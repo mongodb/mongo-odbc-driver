@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     json_schema::{
         simplified::{Atomic, ObjectSchema, Schema},
@@ -7,9 +5,11 @@ use crate::{
     },
     BsonTypeInfo, Error, Result, TypeMode,
 };
+use bson::{Bson, Document};
 use definitions::{Nullability, SqlCode, SqlDataType};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Metadata information for a column of the result set.
 // The information is to be used when reporting columns information from
@@ -170,7 +170,33 @@ pub struct VersionedJsonSchema {
     pub json_schema: crate::json_schema::Schema,
 }
 
-impl SqlGetSchemaResponse {
+// Struct representing the ResultSetSchema.
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
+pub struct ResultSetSchema {
+    pub schema: crate::json_schema::Schema,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub select_order: Option<Vec<Vec<String>>>,
+}
+
+impl ResultSetSchema {
+    pub fn from_sql_schemas_document(doc: &Document) -> bson::de::Result<Self> {
+        let as_bson = Bson::Document(doc.clone());
+        let deserializer = bson::Deserializer::new(as_bson);
+        let deserializer = serde_stacker::Deserializer::new(deserializer);
+        Deserialize::deserialize(deserializer)
+    }
+}
+
+impl From<SqlGetSchemaResponse> for ResultSetSchema {
+    fn from(sql_get_schema_response: SqlGetSchemaResponse) -> Self {
+        Self {
+            schema: sql_get_schema_response.schema.json_schema,
+            select_order: sql_get_schema_response.select_order,
+        }
+    }
+}
+
+impl ResultSetSchema {
     /// Converts a sqlGetResultSchema command response into a list of column
     /// metadata. Ensures the top-level schema is an Object with properties,
     /// and ensures the same for each top-level property -- which correspond
@@ -199,7 +225,7 @@ impl SqlGetSchemaResponse {
         max_string_length: Option<u16>,
     ) -> Result<Vec<MongoColMetadata>> {
         let result_set_schema: crate::json_schema::simplified::Schema =
-            self.schema.json_schema.clone().try_into()?;
+            self.schema.clone().try_into()?;
         let result_set_object_schema = result_set_schema.assert_object_schema()?;
 
         // create a map from the naming convention used by select order ([datasource name, column name]),
@@ -275,7 +301,7 @@ impl SqlGetSchemaResponse {
         max_string_length: Option<u16>,
     ) -> Result<Vec<MongoColMetadata>> {
         let collection_schema: crate::json_schema::simplified::Schema =
-            self.schema.json_schema.clone().try_into()?;
+            self.schema.clone().try_into()?;
         Self::schema_to_col_metadata(
             &collection_schema,
             current_db,
@@ -393,21 +419,17 @@ impl ObjectSchema {
 mod unit {
     mod process_metadata {
         use crate::{
-            col_metadata::{SqlGetSchemaResponse, VersionedJsonSchema},
+            col_metadata::ResultSetSchema,
             json_schema::{BsonType, BsonTypeName, Schema},
             map, Error, TypeMode,
         };
 
         #[test]
         fn top_level_schema_not_object() {
-            let input = SqlGetSchemaResponse {
-                ok: 1,
-                schema: VersionedJsonSchema {
-                    version: 1,
-                    json_schema: Schema {
-                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                        ..Default::default()
-                    },
+            let input = ResultSetSchema {
+                schema: Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                    ..Default::default()
                 },
                 select_order: Some(vec![]),
             };
@@ -423,26 +445,22 @@ mod unit {
 
         #[test]
         fn null_columns_are_sql_unknown_without_simple_types() {
-            let input = SqlGetSchemaResponse {
-                ok: 1,
-                schema: VersionedJsonSchema {
-                    version: 1,
-                    json_schema: Schema {
-                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                        properties: Some(map! {
-                            "foo".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                properties: Some(map! {
-                                    "null".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Null)),
-                                        ..Default::default()
-                                    },
-                                }),
-                                ..Default::default()
-                            },
-                        }),
-                        ..Default::default()
-                    },
+            let input = ResultSetSchema {
+                schema: Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                    properties: Some(map! {
+                        "foo".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "null".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Null)),
+                                    ..Default::default()
+                                },
+                            }),
+                            ..Default::default()
+                        },
+                    }),
+                    ..Default::default()
                 },
                 select_order: None,
             };
@@ -458,26 +476,22 @@ mod unit {
 
         #[test]
         fn null_columns_are_sql_wvarchar_with_simple_types() {
-            let input = SqlGetSchemaResponse {
-                ok: 1,
-                schema: VersionedJsonSchema {
-                    version: 1,
-                    json_schema: Schema {
-                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                        properties: Some(map! {
-                            "foo".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                properties: Some(map! {
-                                    "null".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Null)),
-                                        ..Default::default()
-                                    },
-                                }),
-                                ..Default::default()
-                            },
-                        }),
-                        ..Default::default()
-                    },
+            let input = ResultSetSchema {
+                schema: Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                    properties: Some(map! {
+                        "foo".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "null".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Null)),
+                                    ..Default::default()
+                                },
+                            }),
+                            ..Default::default()
+                        },
+                    }),
+                    ..Default::default()
                 },
                 select_order: None,
             };
@@ -493,20 +507,16 @@ mod unit {
 
         #[test]
         fn property_schema_not_object() {
-            let input = SqlGetSchemaResponse {
-                ok: 1,
-                schema: VersionedJsonSchema {
-                    version: 1,
-                    json_schema: Schema {
-                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                        properties: Some(map! {
-                            "a".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                ..Default::default()
-                            }
-                        }),
-                        ..Default::default()
-                    },
+            let input = ResultSetSchema {
+                schema: Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                    properties: Some(map! {
+                        "a".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                            ..Default::default()
+                        }
+                    }),
+                    ..Default::default()
                 },
                 select_order: Some(vec![]),
             };
@@ -522,40 +532,36 @@ mod unit {
 
         #[test]
         fn fields_sorted_alphabetical_no_select_order() {
-            let input = SqlGetSchemaResponse {
-                ok: 1,
-                schema: VersionedJsonSchema {
-                    version: 1,
-                    json_schema: Schema {
-                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                        properties: Some(map! {
-                            "foo".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                properties: Some(map! {
-                                    "b".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    },
-                                    "a".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    }
-                                }),
-                                ..Default::default()
-                            },
-                            "bar".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                properties: Some(map! {
-                                    "c".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    }
-                                }),
-                                ..Default::default()
-                            }
-                        }),
-                        ..Default::default()
-                    },
+            let input = ResultSetSchema {
+                schema: Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                    properties: Some(map! {
+                        "foo".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "b".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                },
+                                "a".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                }
+                            }),
+                            ..Default::default()
+                        },
+                        "bar".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "c".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                }
+                            }),
+                            ..Default::default()
+                        }
+                    }),
+                    ..Default::default()
                 },
                 select_order: None,
             };
@@ -583,40 +589,36 @@ mod unit {
 
         #[test]
         fn fields_sorted_out_of_order_select_order() {
-            let input = SqlGetSchemaResponse {
-                ok: 1,
-                schema: VersionedJsonSchema {
-                    version: 1,
-                    json_schema: Schema {
-                        bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                        properties: Some(map! {
-                            "foo".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                properties: Some(map! {
-                                    "b".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    },
-                                    "a".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    }
-                                }),
-                                ..Default::default()
-                            },
-                            "bar".to_string() => Schema {
-                                bson_type: Some(BsonType::Single(BsonTypeName::Object)),
-                                properties: Some(map! {
-                                    "c".to_string() => Schema {
-                                        bson_type: Some(BsonType::Single(BsonTypeName::Int)),
-                                        ..Default::default()
-                                    }
-                                }),
-                                ..Default::default()
-                            }
-                        }),
-                        ..Default::default()
-                    },
+            let input = ResultSetSchema {
+                schema: Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                    properties: Some(map! {
+                        "foo".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "b".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                },
+                                "a".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                }
+                            }),
+                            ..Default::default()
+                        },
+                        "bar".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "c".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                }
+                            }),
+                            ..Default::default()
+                        }
+                    }),
+                    ..Default::default()
                 },
                 select_order: Some(vec![
                     vec!["foo".to_string(), "b".to_string()],

@@ -4,18 +4,18 @@ use std::mem::forget;
 // This mock library is designed to simulate the behavior of the `mongosqltranslate` library
 // for testing purposes. It provides a simple implementation of the `runCommand` function.
 #[repr(C)]
-pub struct BsonResult {
+pub struct BsonBuffer {
     ptr: *const u8,
     len: usize,
     cap: usize,
 }
 
 /// # Safety
-/// The caller must ensure that the `command` is a valid pointer to a UTF-8 byte slice.
+/// The caller must ensure that the `command.ptr` is a valid pointer to a UTF-8 byte slice.
 #[no_mangle]
-pub unsafe extern "C" fn runCommand(command: *const u8, length: usize) -> BsonResult {
-    let bson_bytes_slice = std::slice::from_raw_parts(command, length);
-    let result_docs: Document = bson::from_slice(bson_bytes_slice).unwrap();
+pub unsafe extern "C" fn runCommand(command: BsonBuffer) -> BsonBuffer {
+    let bson_bytes_slice = Vec::from_raw_parts(command.ptr.cast_mut(), command.len, command.cap);
+    let result_docs: Document = bson::from_slice(&bson_bytes_slice).unwrap();
 
     let bytes = to_vec(&result_docs).expect("Failed to convert to BSON");
     let ptr = bytes.as_ptr();
@@ -24,5 +24,5 @@ pub unsafe extern "C" fn runCommand(command: *const u8, length: usize) -> BsonRe
 
     forget(bytes);
 
-    BsonResult { ptr, len, cap }
+    BsonBuffer { ptr, len, cap }
 }

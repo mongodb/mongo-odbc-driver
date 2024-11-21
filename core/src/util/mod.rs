@@ -1,10 +1,10 @@
-use bson::doc;
 use constants::SQL_ALL_TABLE_TYPES;
-mod test_connection;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use mongodb::results::CollectionType;
 use regex::{Regex, RegexSet, RegexSetBuilder};
+
+mod test_connection;
 
 pub(crate) const TABLE: &str = "TABLE";
 pub(crate) const COLLECTION: &str = "collection";
