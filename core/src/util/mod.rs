@@ -111,63 +111,93 @@ macro_rules! set {
 
 #[cfg(test)]
 mod filtering {
-    use super::{is_match, to_name_regex};
+    use super::{is_match, table_type_filter_to_vec, to_name_regex};
 
-    #[test]
-    fn test_to_name_regex() {
-        assert!(to_name_regex("%").is_none());
-        assert!(to_name_regex("").is_none());
-        assert!(to_name_regex("filter").is_some());
+    mod table_type_filter_to_vec {
+        use super::table_type_filter_to_vec;
+        use mongodb::results::CollectionType;
+
+        #[test]
+        fn test_table_type_filter_to_vec() {
+            assert_eq!(
+                table_type_filter_to_vec("table"),
+                Some(vec![CollectionType::Collection])
+            );
+            assert_eq!(
+                table_type_filter_to_vec("view"),
+                Some(vec![CollectionType::View])
+            );
+            assert_eq!(
+                table_type_filter_to_vec("table,view"),
+                Some(vec![CollectionType::Collection, CollectionType::View])
+            );
+            assert_eq!(table_type_filter_to_vec(""), None);
+            assert_eq!(table_type_filter_to_vec("%"), None);
+        }
     }
 
-    #[test]
-    fn test_is_positive_match_literal() {
-        assert!(is_match("%", "%", false));
-        assert!(is_match("%test", "%test", false));
-        assert!(is_match("down_times", "down_times", false));
-        assert!(is_match("filter", "filter", false));
-        assert!(is_match("downtimes", "downtimes", false));
-        assert!(is_match("money$$bags", "money$$bags", false));
-        assert!(is_match("money$.bags", "money$.bags", false));
+    mod to_name_regex {
+        use super::to_name_regex;
+
+        #[test]
+        fn test_to_name_regex() {
+            assert!(to_name_regex("%").is_none());
+            assert!(to_name_regex("").is_none());
+            assert!(to_name_regex("filter").is_some());
+        }
     }
 
-    #[test]
-    fn test_is_negative_match_literal() {
-        assert!(!is_match("filter", "%", false));
-        assert!(!is_match("customerssales", "customer_sales", false));
-        assert!(!is_match("conversions2022", "conversions%", false));
-        assert!(!is_match("integration_test", "%test", false));
-        assert!(!is_match("integration_test", "integrationstest", false));
-    }
+    mod is_match {
+        use super::is_match;
+        #[test]
+        fn test_is_positive_match_literal() {
+            assert!(is_match("%", "%", false));
+            assert!(is_match("%test", "%test", false));
+            assert!(is_match("down_times", "down_times", false));
+            assert!(is_match("filter", "filter", false));
+            assert!(is_match("downtimes", "downtimes", false));
+            assert!(is_match("money$$bags", "money$$bags", false));
+            assert!(is_match("money$.bags", "money$.bags", false));
+        }
 
-    #[test]
-    fn test_is_positive_match_pattern() {
-        assert!(is_match("filter", "%", true));
-        assert!(is_match("filter", "filter", true));
-        assert!(is_match("downtimes", "downtimes", true));
-        assert!(is_match("customerssales", "customer_sales", true));
-        assert!(is_match("myiphone", "my_phone", true));
-        assert!(is_match("conversions2022", "conversions%", true));
-        assert!(is_match("integration_test", "%test", true));
-        assert!(is_match("money$$bags", "money$$bags", true));
-        assert!(is_match("money$.bags", "money$.bags", true));
-    }
+        #[test]
+        fn test_is_negative_match_literal() {
+            assert!(!is_match("filter", "%", false));
+            assert!(!is_match("customerssales", "customer_sales", false));
+            assert!(!is_match("conversions2022", "conversions%", false));
+            assert!(!is_match("integration_test", "%test", false));
+            assert!(!is_match("integration_test", "integrationstest", false));
+        }
 
-    #[test]
-    fn test_is_negative_match_odbc_pattern() {
-        assert!(!is_match("filter", "filt", true));
-        assert!(!is_match("filter", r"filt_er", true));
-        assert!(!is_match("downtimestatus", "downtimes", true));
-        assert!(!is_match("downtimestatus", "status", true));
-        assert!(!is_match("integration_test_2", "%test", true));
-        assert!(!is_match("money$$bags", "money$.bags", true));
-    }
+        #[test]
+        fn test_is_positive_match_pattern() {
+            assert!(is_match("filter", "%", true));
+            assert!(is_match("filter", "filter", true));
+            assert!(is_match("downtimes", "downtimes", true));
+            assert!(is_match("customerssales", "customer_sales", true));
+            assert!(is_match("myiphone", "my_phone", true));
+            assert!(is_match("conversions2022", "conversions%", true));
+            assert!(is_match("integration_test", "%test", true));
+            assert!(is_match("money$$bags", "money$$bags", true));
+            assert!(is_match("money$.bags", "money$.bags", true));
+        }
 
-    #[test]
-    fn test_escaped_chars_in_pattern() {
-        assert!(is_match("my_phone", r"my\_phone", true));
-        assert!(!is_match("myiphone", r"my\_phone", true));
-        assert!(is_match("conversion%2022", r"conversion\%2022", true));
-        assert!(!is_match("conversions2022", r"conversion\%2022", true));
+        #[test]
+        fn test_is_negative_match_odbc_pattern() {
+            assert!(!is_match("filter", "filt", true));
+            assert!(!is_match("filter", r"filt_er", true));
+            assert!(!is_match("downtimestatus", "downtimes", true));
+            assert!(!is_match("downtimestatus", "status", true));
+            assert!(!is_match("integration_test_2", "%test", true));
+            assert!(!is_match("money$$bags", "money$.bags", true));
+        }
+
+        #[test]
+        fn test_escaped_chars_in_pattern() {
+            assert!(is_match("my_phone", r"my\_phone", true));
+            assert!(!is_match("myiphone", r"my\_phone", true));
+            assert!(is_match("conversion%2022", r"conversion\%2022", true));
+            assert!(!is_match("conversions2022", r"conversion\%2022", true));
+        }
     }
 }
