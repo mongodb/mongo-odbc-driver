@@ -2363,7 +2363,7 @@ buildvariants:
 
   - name: macos
     display_name: "macOS"
-    run_on: [macos-1100]
+    run_on: [macos-11]
     tasks:
       - name: compile
       - name: unit-test
