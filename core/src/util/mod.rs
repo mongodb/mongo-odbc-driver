@@ -64,7 +64,7 @@ pub(crate) fn is_match(name: &str, filter: &str, accept_search_patterns: bool) -
 // Create the list of Collection types to filter on
 pub(crate) fn table_type_filter_to_vec(table_type: &str) -> Option<Vec<CollectionType>> {
     return match table_type {
-        SQL_ALL_TABLE_TYPES => None,
+        SQL_ALL_TABLE_TYPES | "" => None,
         _ => {
             let table_type_entries = table_type
                 .split(',')
