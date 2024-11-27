@@ -22,6 +22,39 @@ lazy_static! {
     pub static ref DEFAULT_APP_NAME: String =
         format!("{}+{}", DRIVER_SHORT_NAME, DRIVER_METRICS_VERSION.as_str());
     pub static ref DRIVER_ODBC_VERSION: String = format_driver_version();
+    pub static ref KEYWORDS: String = [
+        "AGGREGATE".to_string(),
+        "ARRAY".to_string(),
+        "BINDATA".to_string(),
+        "BOOL".to_string(),
+        "BOOLEAN".to_string(),
+        "BSON_DATE".to_string(),
+        "BSON_TIMESTAMP".to_string(),
+        "DBPOINTER".to_string(),
+        "DEPTH".to_string(),
+        "DOCUMENT".to_string(),
+        "ERROR".to_string(),
+        "FLATTEN".to_string(),
+        "JAVASCRIPT".to_string(),
+        "JAVASCRIPTWITHSCOPE".to_string(),
+        "LIMIT".to_string(),
+        "LONG".to_string(),
+        "MAXKEY".to_string(),
+        "MINKEY".to_string(),
+        "MISSING".to_string(),
+        "NUMBER".to_string(),
+        "OBJECTID".to_string(),
+        "OFFSET".to_string(),
+        "ORDER".to_string(),
+        "PATH".to_string(),
+        "REGEX".to_string(),
+        "SEPARATOR".to_string(),
+        "STRING".to_string(),
+        "SYMBOL".to_string(),
+        "UNDEFINED".to_string(),
+        "UNWIND".to_string(),
+    ]
+    .join(",");
 }
 
 // The default max string length if a user enables max string length.
