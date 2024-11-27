@@ -1182,22 +1182,9 @@ pub unsafe extern "C" fn SQLDriverConnectW(
                 function_name!()
             );
 
-            // SQL_NO_PROMPT is the only option supported for DriverCompletion
-            match FromPrimitive::from_u16(driver_completion) {
-                Some(driver_completion) => match driver_completion {
-                    DriverConnectOption::SQL_DRIVER_COMPLETE
-                    | DriverConnectOption::SQL_DRIVER_COMPLETE_REQUIRED
-                    | DriverConnectOption::SQL_DRIVER_PROMPT => {
-                        add_diag_info!(
-                            conn_handle,
-                            ODBCError::UnsupportedDriverConnectOption(format!(
-                                "{driver_completion:?}"
-                            ))
-                        );
-                        return SqlReturn::ERROR;
-                    }
-                    DriverConnectOption::SQL_DRIVER_NO_PROMPT => {}
-                },
+            // We will treat any valid option passed for driver complete as a no-op
+            match <DriverConnectOption as FromPrimitive>::from_u16(driver_completion) {
+                Some(_) => {},
                 None => {
                     add_diag_info!(
                         conn_handle,
