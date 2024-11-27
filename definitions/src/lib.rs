@@ -420,3 +420,11 @@ pub enum Autocommit {
     #[default]
     On,
 }
+
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
+#[repr(u32)]
+pub enum AccessMode {
+    ReadWrite = 0,
+    #[default]
+    ReadOnly,
+}

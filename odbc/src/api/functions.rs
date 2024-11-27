@@ -15,12 +15,12 @@ use mongodb::bson::{doc, Bson};
 use cstr::{input_text_to_string_w, Charset, WideChar};
 
 use definitions::{
-    AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType,
-    CDataType, Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType,
-    Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption,
-    HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Pointer, RetCode,
-    RetrieveData, RowStatus, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
-    USmallInt, UseBookmarks, SQL_NTS,
+    AccessMode, AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion,
+    BindType, CDataType, Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity,
+    CursorType, Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation,
+    FreeStmtOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan,
+    Pointer, RetCode, RetrieveData, RowStatus, SmallInt, SqlBool, SqlDataType, SqlReturn,
+    StatementAttribute, ULen, USmallInt, UseBookmarks, SQL_NTS,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -3576,9 +3576,25 @@ unsafe fn set_connect_attrw_helper(
                         SqlReturn::SUCCESS
                     }
                     None => {
-                        conn_handle.add_diag_info(ODBCError::InvalidAttrValue(
-                            "SQL_ATTR_CURSOR_SCROLLABLE",
+                        conn_handle
+                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_AUTOCOMMIT"));
+                        SqlReturn::ERROR
+                    }
+                }
+            }
+            ConnectionAttribute::SQL_ATTR_ACCESS_MODE => {
+                match FromPrimitive::from_u32(value_ptr as u32) {
+                    Some(AccessMode::ReadOnly) => SqlReturn::SUCCESS,
+                    Some(AccessMode::ReadWrite) => {
+                        conn_handle.add_diag_info(ODBCError::OptionValueChanged(
+                            "SQL_MODE_READ_WRITE",
+                            "SQL_MODE_READ",
                         ));
+                        SqlReturn::SUCCESS_WITH_INFO
+                    }
+                    None => {
+                        conn_handle
+                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ACCESS_MODE"));
                         SqlReturn::ERROR
                     }
                 }

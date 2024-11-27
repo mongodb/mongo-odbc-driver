@@ -238,9 +238,8 @@ mod unit {
         }
     }
 
-    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 16] = [
+    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 15] = [
         ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE,
-        ConnectionAttribute::SQL_ATTR_ACCESS_MODE,
         ConnectionAttribute::SQL_ATTR_TRACE,
         ConnectionAttribute::SQL_ATTR_TRACEFILE,
         ConnectionAttribute::SQL_ATTR_TRANSLATE_LIB,
