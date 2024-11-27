@@ -1184,7 +1184,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
 
             // We will treat any valid option passed for driver complete as a no-op
             match <DriverConnectOption as FromPrimitive>::from_u16(driver_completion) {
-                Some(_) => {},
+                Some(_) => {}
                 None => {
                     add_diag_info!(
                         conn_handle,
@@ -3547,7 +3547,8 @@ unsafe fn set_connect_attrw_helper(
                 conn.attributes.write().unwrap().login_timeout = Some(value_ptr as u32);
                 SqlReturn::SUCCESS
             }
-            ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => SqlReturn::SUCCESS,
+            ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE
+            | ConnectionAttribute::SQL_ATTR_QUIET_MODE => SqlReturn::SUCCESS,
             ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
                 let current_db = input_text_to_string_w(
                     value_ptr as *const _,

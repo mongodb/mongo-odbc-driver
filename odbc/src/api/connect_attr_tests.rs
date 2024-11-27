@@ -238,7 +238,7 @@ mod unit {
         }
     }
 
-    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 17] = [
+    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 16] = [
         ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE,
         ConnectionAttribute::SQL_ATTR_ACCESS_MODE,
         ConnectionAttribute::SQL_ATTR_TRACE,
@@ -247,7 +247,6 @@ mod unit {
         ConnectionAttribute::SQL_ATTR_TRANSLATE_OPTION,
         ConnectionAttribute::SQL_ATTR_TXN_ISOLATION,
         ConnectionAttribute::SQL_ATTR_ODBC_CURSORS,
-        ConnectionAttribute::SQL_ATTR_QUIET_MODE,
         ConnectionAttribute::SQL_ATTR_PACKET_SIZE,
         ConnectionAttribute::SQL_ATTR_DISCONNECT_BEHAVIOR,
         ConnectionAttribute::SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE,
