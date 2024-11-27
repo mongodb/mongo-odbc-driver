@@ -45,7 +45,6 @@ lazy_static! {
         "NUMBER".to_string(),
         "OBJECTID".to_string(),
         "OFFSET".to_string(),
-        "ORDER".to_string(),
         "PATH".to_string(),
         "REGEX".to_string(),
         "SEPARATOR".to_string(),
