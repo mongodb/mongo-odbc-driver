@@ -11,6 +11,7 @@ use mongodb::{
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use shared_sql_utils::Dsn;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
 const INVALID_ATTR_FORMAT_ERROR: &str = "all URI attributes must be of the form keyword=value";
@@ -65,6 +66,12 @@ lazy_static! {
         .case_insensitive(true)
         .build()
         .unwrap();
+    static ref AUTH_MECHANISM_REGEX: Regex =
+        RegexBuilder::new(r#"[&?]authMechanism=(?P<mechanism>[^&]*)"#)
+            .case_insensitive(true)
+            .build()
+            .unwrap();
+    static ref USERNAME_PASSWORD_REGEX: Regex = Regex::new(r#"(^.*)@.*/?(.*)?"#).unwrap();
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -198,6 +205,17 @@ impl ODBCUri {
         Ok((value.to_string(), rest.get(1..).map(String::from)))
     }
 
+    // get_attribute will return the first value with a given one of the names passed, assuming all names,
+    // without modifying internal state.
+    pub fn get_attribute(&self, names: &[&str]) -> Option<&String> {
+        for name in names.iter() {
+            if let Some(value) = self.0.get(*name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
     // remove will remove the first value with a given one of the names passed, assuming all names
     // are synonyms.
     pub fn remove(&mut self, names: &[&str]) -> Option<String> {
@@ -285,14 +303,74 @@ impl ODBCUri {
         Ok(())
     }
 
+    fn split_uri(uri: &str) -> Result<(&str, &str)> {
+        // find the index of the protocol separator
+        // if it's not there, it's an error anyway
+        let index = uri.find("://");
+        if index.is_none() {
+            return Err(Error::InvalidUriFormat(format!(
+                "Invalid URI: {uri} does not contain `://` after protocol"
+            )));
+        }
+        // split the uri into the protocol and the rest of the uri
+        // safe to unwrap because we know the index is there
+        let (protocol, rest) = uri.split_at(index.unwrap() + "://".len());
+        Ok((protocol, rest))
+    }
+
+    fn contains_username_and_or_password(in_str: &str) -> bool {
+        USERNAME_PASSWORD_REGEX.is_match(in_str)
+    }
+
+    /// construct_uri_for_parsing will construct a URI that can be parsed by the MongoDB driver if the
+    /// the authMechanism is one of the following: SCRAM-SHA-1, SCRAM-SHA-256, or PLAIN. If the
+    /// authMechanism is not one of these, the URI will be returned as is.
+    fn construct_uri_for_parsing(&mut self, uri: &str) -> Result<String> {
+        // if the uri already contains a username and (optionally) a password, we don't need to do anything
+        if Self::contains_username_and_or_password(uri) {
+            return Ok(uri.to_string());
+        }
+        if let Some(mechanism) = AUTH_MECHANISM_REGEX
+            .captures(uri)
+            .and_then(|cap| cap.name("mechanism").map(|s| s.as_str()))
+        {
+            match AuthMechanism::from_str(mechanism.to_uppercase().as_str()) {
+                Ok(mechanism) => match mechanism {
+                    AuthMechanism::ScramSha1
+                    | AuthMechanism::ScramSha256
+                    | AuthMechanism::Plain => self.inject_username_and_password_into_uri(uri),
+                    _ => Ok(uri.to_string()),
+                },
+                Err(_) => Ok(uri.to_string()),
+            }
+        } else {
+            self.inject_username_and_password_into_uri(uri)
+        }
+    }
+
+    fn inject_username_and_password_into_uri(&mut self, uri: &str) -> Result<String> {
+        let (protocol, rest) = Self::split_uri(uri)?;
+        let username = self.get_attribute(USER_KWS);
+        let password = self.get_attribute(PWD_KWS);
+        Ok(
+            if let (Some(username), Some(password)) = (username, password) {
+                format!("{protocol}{username}:{password}@{rest}")
+            } else {
+                uri.to_string()
+            },
+        )
+    }
+
     async fn handle_uri(&mut self, uri: &str) -> Result<UserOptions> {
         let server = self.remove(SERVER_KWS);
         let source = AUTH_SOURCE_REGEX
             .captures(uri)
             .and_then(|cap| cap.name("source").map(|s| s.as_str()));
+
         // trust-dns-resolver has a performance issue on windows, so we'll use cloudflare's resolver
         // instead of the system resolver
         // https://github.com/mongodb/mongo-rust-driver?tab=readme-ov-file#windows-dns-note
+        let uri = &self.construct_uri_for_parsing(uri)?;
         let parse_func = || async {
             if cfg!(target_os = "windows") {
                 ClientOptions::parse(uri)
@@ -324,6 +402,7 @@ impl ODBCUri {
             client_options.credential =
                 Some(Credential::builder().username(user).password(pwd).build());
         }
+
         Self::set_server_and_source(&mut client_options, server, source.map(String::from))?;
 
         let app_name = self.handle_app_name(client_options.app_name);
@@ -442,6 +521,90 @@ impl ODBCUri {
 }
 
 mod unit {
+
+    mod test_username_password_detection {
+        #[test]
+        fn test_username_password_detection() {
+            use crate::odbc_uri::ODBCUri;
+            assert!(ODBCUri::contains_username_and_or_password(
+                "foo:bar@localhost"
+            ));
+            assert!(ODBCUri::contains_username_and_or_password("foo@localhost"));
+            assert!(!ODBCUri::contains_username_and_or_password(
+                "localhost:27017"
+            ));
+            assert!(!ODBCUri::contains_username_and_or_password(
+                "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-1"
+            ));
+        }
+    }
+
+    mod test_uri_construction {
+        #[test]
+        fn test_no_auth_mechanism_specified_means_scram() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://localhost:27017";
+            let expected = "mongodb://foo:bar@localhost:27017";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
+        }
+
+        #[test]
+        fn test_scram_sha1_specified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-1";
+            let expected = "mongodb://foo:bar@localhost:27017/abc?authMechanism=SCRAM-SHA-1";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
+        }
+
+        #[test]
+        fn test_scram_sha_256_specified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-256";
+            let expected = "mongodb://foo:bar@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar;")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
+        }
+
+        #[test]
+        fn test_plain_specified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
+            let expected =
+                "mongodb://foo:bar@localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
+        }
+
+        #[test]
+        fn test_mechanism_not_recognized() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-512";
+            let expected = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-512";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
+        }
+
+        #[test]
+        fn test_x509_does_not_modify_uri() {
+            use crate::odbc_uri::ODBCUri;
+            let uri =
+                "mongodb://localhost:27017/abc?authSource=$external&authMechanism=MONGODB-X509";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+
+        #[test]
+        fn test_aws_does_not_modify_uri() {
+            use crate::odbc_uri::ODBCUri;
+            let uri =
+                "mongodb://localhost:27017/abc?authSource=$external&authMechanism=MONGODB-AWS";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+    }
+
     mod get_next_attribute {
         #[test]
         fn get_unbraced() {
@@ -948,19 +1111,40 @@ mod unit {
         }
 
         #[tokio::test(flavor = "current_thread")]
+        async fn ldap_correctness() {
+            use crate::odbc_uri::ODBCUri;
+            let odbc_str = "URI=mongodb://localhost/abc?authSource=$external&authMechanism=PLAIN;UID=foo;PWD=bar";
+            let actual = ODBCUri::new(odbc_str.to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap()
+                .client_options
+                .credential
+                .unwrap();
+            assert_eq!(
+                Some(mongodb::options::AuthMechanism::Plain),
+                actual.mechanism
+            );
+            assert_eq!(Some("$external".to_string()), actual.source);
+            assert_eq!(Some("foo".to_string()), actual.username);
+        }
+
+        #[tokio::test(flavor = "current_thread")]
         async fn auth_source_correctness() {
             use crate::odbc_uri::ODBCUri;
-            for (source, uri) in [
+            for (expected, uri) in [
                 (Some("authDB".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar"),
-                (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
+                (Some("admin".to_string()), "URI=mongodb://localhost/;UID=foo;PWD=bar"),
                 (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B;UID=foo;PWD=bar"),
                 (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B&appName=tgg#fed;UID=foo;PWD=bar"),
                 (Some("$external".to_string()), "URI=mongodb://uid:pwd@localhost/?authSource=$external&appName=tgg#fed;UID=foo;PWD=bar"),
                 (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?appName=test&auTHSource=aut:hD@B;UID=foo;PWD=bar"),
                 (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
             ] {
+                let actual = ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().await.unwrap().client_options.credential.unwrap().source;
             assert_eq!(
-                source, ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().await.unwrap().client_options.credential.unwrap().source);
+                expected, actual, "expected {expected:?}, got {actual:?}" );
             }
         }
 
