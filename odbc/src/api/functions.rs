@@ -1272,14 +1272,13 @@ pub unsafe extern "C" fn SQLDriversW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
-#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLEndTran(
     _handle_type: HandleType,
-    handle: Handle,
+    _handle: Handle,
     _completion_type: SmallInt,
 ) -> SqlReturn {
-    unimpl!(handle);
+    SqlReturn::SUCCESS
 }
 
 ///
@@ -1914,6 +1913,10 @@ unsafe fn sql_get_connect_attrw_helper(
             ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => {
                 let connection_timeout = attributes.connection_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
+            }
+            ConnectionAttribute::SQL_ATTR_AUTOCOMMIT => {
+                let autocommit = attributes.autocommit;
+                i32_len::set_output_fixed_data(&autocommit, value_ptr, string_length_ptr)
             }
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
@@ -3578,6 +3581,20 @@ unsafe fn set_connect_attrw_helper(
                     SqlReturn::SUCCESS_WITH_INFO
                 }
             },
+            ConnectionAttribute::SQL_ATTR_AUTOCOMMIT => {
+                match FromPrimitive::from_u32(value_ptr as u32) {
+                    Some(autocommit) => {
+                        conn.attributes.write().unwrap().autocommit = autocommit;
+                        SqlReturn::SUCCESS
+                    }
+                    None => {
+                        conn_handle.add_diag_info(ODBCError::InvalidAttrValue(
+                            "SQL_ATTR_CURSOR_SCROLLABLE",
+                        ));
+                        SqlReturn::ERROR
+                    }
+                }
+            }
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
                     connection_attribute_to_string(attribute),

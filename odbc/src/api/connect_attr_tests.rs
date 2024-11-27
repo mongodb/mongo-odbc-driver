@@ -12,7 +12,7 @@ mod unit {
         SQLGetConnectAttrW, SQLSetConnectAttrW,
     };
     use cstr::input_text_to_string_w;
-    use definitions::{ConnectionAttribute, Integer, Pointer, SqlReturn, UInteger};
+    use definitions::{Autocommit, ConnectionAttribute, Integer, Pointer, SqlReturn, UInteger};
     use std::sync::RwLock;
 
     mod get {
@@ -154,6 +154,15 @@ mod unit {
             expected_value = 1u32,
             actual_value_modifier = modify_numeric_attr,
         );
+
+        test_get_attr!(
+            autocommit,
+            attribute = ConnectionAttribute::SQL_ATTR_AUTOCOMMIT as i32,
+            expected_sql_return = SqlReturn::SUCCESS,
+            expected_length = std::mem::size_of::<u32>() as i32,
+            expected_value = 1u32,
+            actual_value_modifier = modify_numeric_attr,
+        );
     }
 
     // Test setting LoginTimeout attribute.
@@ -205,10 +214,33 @@ mod unit {
         }
     }
 
-    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 18] = [
+    // Test setting the current catalog attribute.
+    #[test]
+    fn set_autocommit() {
+        unsafe {
+            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+            let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
+
+            let autocommit_value: UInteger = 0u32;
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLSetConnectAttrW(
+                    mongo_handle as *mut _,
+                    ConnectionAttribute::SQL_ATTR_AUTOCOMMIT as i32,
+                    autocommit_value as Pointer,
+                    0
+                )
+            );
+            let conn_handle = (*mongo_handle).as_connection().unwrap();
+            let attributes = &conn_handle.attributes.read().unwrap();
+            assert_eq!(attributes.autocommit, Autocommit::Off);
+        }
+    }
+
+    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 17] = [
         ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE,
         ConnectionAttribute::SQL_ATTR_ACCESS_MODE,
-        ConnectionAttribute::SQL_ATTR_AUTOCOMMIT,
         ConnectionAttribute::SQL_ATTR_TRACE,
         ConnectionAttribute::SQL_ATTR_TRACEFILE,
         ConnectionAttribute::SQL_ATTR_TRANSLATE_LIB,
