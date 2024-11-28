@@ -2888,6 +2888,14 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
+                InfoType::SQL_KEYWORDS => {
+                    i16_len::set_output_wstring_as_bytes(
+                        KEYWORDS.as_str(),
+                        info_value_ptr,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    )
+                }
                 _ => {
                     err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
                         info_type.to_string(),
