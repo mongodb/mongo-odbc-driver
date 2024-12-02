@@ -975,7 +975,6 @@ pub unsafe extern "C" fn SQLDataSourcesW(
     unsupported_function!(environment_handle)
 }
 */
-
 ///
 /// [`SQLDescribeColW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDescribeCol-function
 ///
@@ -1246,10 +1245,10 @@ pub unsafe extern "C" fn SQLDriverConnectW(
 
 ///
 /// [`SQLDriversW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDrivers-function
-///
 /// This function is implemented only by the Driver Manager.
 ///
 /// # Safety
+///
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 /**
@@ -1268,7 +1267,6 @@ pub unsafe extern "C" fn SQLDriversW(
     unsupported_function!(henv)
 }
 **/
-
 ///
 /// [`SQLEndTran`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLEndTran-function
 ///

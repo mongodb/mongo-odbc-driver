@@ -63,7 +63,7 @@ pub(crate) fn is_match(name: &str, filter: &str, accept_search_patterns: bool) -
 
 // Create the list of Collection types to filter on
 pub(crate) fn table_type_filter_to_vec(table_type: &str) -> Option<Vec<CollectionType>> {
-    return match table_type {
+    match table_type {
         SQL_ALL_TABLE_TYPES | "" => None,
         _ => {
             let table_type_entries = table_type
@@ -81,10 +81,9 @@ pub(crate) fn table_type_filter_to_vec(table_type: &str) -> Option<Vec<Collectio
                     table_type_filters.push(CollectionType::View);
                 }
             }
-
             Some(table_type_filters)
         }
-    };
+    }
 }
 
 #[macro_export]
