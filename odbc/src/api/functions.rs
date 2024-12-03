@@ -12,7 +12,7 @@ use crate::{
 use constants::*;
 use mongodb::bson::{doc, Bson};
 
-use cstr::{input_text_to_string_w, Charset, WideChar};
+use cstr::{input_text_to_string_w, input_text_to_string_w_allow_null, Charset, WideChar};
 
 use definitions::{
     AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType,
@@ -844,20 +844,23 @@ pub unsafe extern "C" fn SQLColumnsW(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let odbc_3_data_types = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog_string = input_text_to_string_w(catalog_name, catalog_name_length.into());
+            let catalog_string =
+                input_text_to_string_w_allow_null(catalog_name, catalog_name_length.into());
             let catalog = if catalog_name.is_null() || catalog_string.is_empty() {
                 None
             } else {
                 Some(catalog_string.as_str())
             };
             // ignore schema
-            let table_string = input_text_to_string_w(table_name, table_name_length.into());
+            let table_string =
+                input_text_to_string_w_allow_null(table_name, table_name_length.into());
             let table = if table_name.is_null() {
                 None
             } else {
                 Some(table_string.as_str())
             };
-            let column_name_string = input_text_to_string_w(column_name, column_name_length.into());
+            let column_name_string =
+                input_text_to_string_w_allow_null(column_name, column_name_length.into());
             let column = if column_name.is_null() {
                 None
             } else {
@@ -972,7 +975,6 @@ pub unsafe extern "C" fn SQLDataSourcesW(
     unsupported_function!(environment_handle)
 }
 */
-
 ///
 /// [`SQLDescribeColW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDescribeCol-function
 ///
@@ -1243,10 +1245,10 @@ pub unsafe extern "C" fn SQLDriverConnectW(
 
 ///
 /// [`SQLDriversW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDrivers-function
-///
 /// This function is implemented only by the Driver Manager.
 ///
 /// # Safety
+///
 /// Because this is a C-interface, this is necessarily unsafe
 ///
 /**
@@ -1265,7 +1267,6 @@ pub unsafe extern "C" fn SQLDriversW(
     unsupported_function!(henv)
 }
 **/
-
 ///
 /// [`SQLEndTran`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLEndTran-function
 ///
@@ -4182,8 +4183,8 @@ pub unsafe extern "C" fn SQLTablesW(
             let odbc_behavior = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog = input_text_to_string_w(catalog_name, name_length_1.into());
-            let schema = input_text_to_string_w(schema_name, name_length_2.into());
-            let table = input_text_to_string_w(table_name, name_length_3.into());
+            let schema = input_text_to_string_w_allow_null(schema_name, name_length_2.into());
+            let table = input_text_to_string_w_allow_null(table_name, name_length_3.into());
             let table_t = input_text_to_string_w(table_type, name_length_4.into());
             let connection = (*stmt.connection).as_connection().unwrap();
             let max_string_length = *connection.max_string_length.read().unwrap();
