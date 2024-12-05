@@ -92,7 +92,7 @@ macro_rules! test_connection_diagnostics {
 mod integration {
     use crate::common::verify_sql_diagnostics;
     use atsql::{SQLAllocHandle, SQLDisconnect, SQLDriverConnectW, SQLFreeHandle};
-    use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
+    use constants::{NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
     use definitions::{DriverConnectOption, Handle, HandleType, SqlReturn};
     use std::ptr::null_mut;
 

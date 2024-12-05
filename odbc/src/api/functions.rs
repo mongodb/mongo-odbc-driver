@@ -1184,7 +1184,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
                 function_name!()
             );
 
-            // We will treat any valid option passed for driver complete as a no-op
+            // We will treat any valid option passed for DriverComplete as a no-op
             // because we don't have any UI involved in the process and don't plan to add any in the future
             match <DriverConnectOption as FromPrimitive>::from_u16(driver_completion) {
                 Some(_) => {}
@@ -1261,13 +1261,14 @@ pub unsafe extern "C" fn SQLDriversW(
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
+#[named]
 #[no_mangle]
 pub unsafe extern "C" fn SQLEndTran(
     _handle_type: HandleType,
-    _handle: Handle,
+    handle: Handle,
     _completion_type: SmallInt,
 ) -> SqlReturn {
-    SqlReturn::SUCCESS
+    unimpl!(handle);
 }
 
 ///
@@ -1903,6 +1904,9 @@ unsafe fn sql_get_connect_attrw_helper(
                 let connection_timeout = attributes.connection_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
             }
+            ConnectionAttribute::SQL_ATTR_ACCESS_MODE => {
+                i32_len::set_output_fixed_data(&AccessMode::ReadOnly, value_ptr, string_length_ptr)
+            }
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
                     connection_attribute_to_string(attribute),
@@ -2193,6 +2197,7 @@ macro_rules! sql_get_diag_rec_impl {
                     return SqlReturn::ERROR;
                 }
                 let mongo_handle = $handle.cast::<MongoHandle>();
+                println!("here");
                 let odbc_version = (*mongo_handle).get_odbc_version();
                 // Make the record number zero-indexed
                 let rec_number = ($rec_number - 1) as usize;
