@@ -2197,7 +2197,6 @@ macro_rules! sql_get_diag_rec_impl {
                     return SqlReturn::ERROR;
                 }
                 let mongo_handle = $handle.cast::<MongoHandle>();
-                println!("here");
                 let odbc_version = (*mongo_handle).get_odbc_version();
                 // Make the record number zero-indexed
                 let rec_number = ($rec_number - 1) as usize;
