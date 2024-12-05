@@ -1,7 +1,7 @@
 use crate::api::errors::ODBCError;
 use cstr::{Charset, WideChar};
 use definitions::{
-    AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, Autocommit, BindType,
+    AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType,
     Concurrency, CursorScrollable, CursorSensitivity, CursorType, HDbc, HDesc, HEnv, HStmt, Handle,
     Len, NoScan, Pointer, RetrieveData, SimulateCursor, SmallInt, SqlBool, ULen, USmallInt,
     UseBookmarks,
@@ -300,9 +300,6 @@ pub struct ConnectionAttributes {
     // to wait for any operation on a connection to timeout (other than
     // initial login).
     pub connection_timeout: Option<u32>,
-    // SQL_ATTR_AUTOCOMMIT: we allow tools to set this to true/false, but do not
-    // actually support commits/transactions.
-    pub autocommit: Autocommit,
 }
 
 #[derive(Debug, PartialEq, Eq)]

@@ -1183,6 +1183,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             );
 
             // We will treat any valid option passed for driver complete as a no-op
+            // because we don't have any UI involved in the process and don't plan to add any in the future
             match <DriverConnectOption as FromPrimitive>::from_u16(driver_completion) {
                 Some(_) => {}
                 None => {
@@ -1900,10 +1901,6 @@ unsafe fn sql_get_connect_attrw_helper(
             ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => {
                 let connection_timeout = attributes.connection_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
-            }
-            ConnectionAttribute::SQL_ATTR_AUTOCOMMIT => {
-                let autocommit = attributes.autocommit;
-                i32_len::set_output_fixed_data(&autocommit, value_ptr, string_length_ptr)
             }
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
@@ -3547,8 +3544,7 @@ unsafe fn set_connect_attrw_helper(
                 conn.attributes.write().unwrap().login_timeout = Some(value_ptr as u32);
                 SqlReturn::SUCCESS
             }
-            ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE
-            | ConnectionAttribute::SQL_ATTR_QUIET_MODE => SqlReturn::SUCCESS,
+            ConnectionAttribute::SQL_ATTR_APP_WCHAR_TYPE => SqlReturn::SUCCESS,
             ConnectionAttribute::SQL_ATTR_CURRENT_CATALOG => {
                 let current_db = input_text_to_string_w(
                     value_ptr as *const _,
@@ -3569,19 +3565,6 @@ unsafe fn set_connect_attrw_helper(
                     SqlReturn::SUCCESS_WITH_INFO
                 }
             },
-            ConnectionAttribute::SQL_ATTR_AUTOCOMMIT => {
-                match FromPrimitive::from_u32(value_ptr as u32) {
-                    Some(autocommit) => {
-                        conn.attributes.write().unwrap().autocommit = autocommit;
-                        SqlReturn::SUCCESS
-                    }
-                    None => {
-                        conn_handle
-                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_AUTOCOMMIT"));
-                        SqlReturn::ERROR
-                    }
-                }
-            }
             ConnectionAttribute::SQL_ATTR_ACCESS_MODE => {
                 match FromPrimitive::from_u32(value_ptr as u32) {
                     Some(AccessMode::ReadOnly) => SqlReturn::SUCCESS,
