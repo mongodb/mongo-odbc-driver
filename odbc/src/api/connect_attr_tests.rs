@@ -15,13 +15,13 @@ mod unit {
     };
     use cstr::{input_text_to_string_w, WideChar};
     use definitions::{
-        AccessMode, ConnectionAttribute, HandleType, Integer, Pointer, SqlReturn, UInteger,
+        AccessMode, ConnectionAttribute, HandleType, Integer, Pointer, SqlReturn, UInteger, WChar,
     };
     use std::ffi::c_void;
+    use std::mem::size_of;
     use std::sync::RwLock;
 
     mod get {
-        use std::mem::size_of;
 
         use super::*;
 
@@ -270,7 +270,7 @@ mod unit {
                 )
             );
             assert_eq!(AccessMode::ReadOnly as u32, *(value_ptr as *mut UInteger));
-            let _ = Box::from_raw(value_ptr);
+            let _ = Box::from_raw(value_ptr as *mut WChar);
         }
     }
 
