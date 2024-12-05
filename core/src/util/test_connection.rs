@@ -22,7 +22,6 @@ use definitions::{Integer, SQL_NTS_ISIZE};
 /// # Safety
 /// Because this function is called from C, it is unsafe.
 ///
-
 #[no_mangle]
 pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const WideChar,
