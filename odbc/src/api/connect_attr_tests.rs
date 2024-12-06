@@ -7,18 +7,21 @@
 mod unit {
     use crate::{
         errors::ODBCError,
-        handles::definitions::{Connection, ConnectionAttributes, ConnectionState, MongoHandle},
+        handles::definitions::{
+            Connection, ConnectionAttributes, ConnectionState, Env, EnvState, MongoHandle,
+        },
         util::connection_attribute_to_string,
-        SQLGetConnectAttrW, SQLSetConnectAttrW,
+        SQLGetConnectAttrW, SQLGetDiagFieldW, SQLSetConnectAttrW,
     };
-    use cstr::input_text_to_string_w;
-    use definitions::{ConnectionAttribute, Integer, Pointer, SqlReturn, UInteger};
+    use cstr::{input_text_to_string_w, WideChar};
+    use definitions::{
+        AccessMode, ConnectionAttribute, HandleType, Integer, Pointer, SqlReturn, UInteger, WChar,
+    };
+    use std::ffi::c_void;
+    use std::mem::size_of;
     use std::sync::RwLock;
 
     mod get {
-        use std::mem::size_of;
-
-        use cstr::WideChar;
 
         use super::*;
 
@@ -205,9 +208,74 @@ mod unit {
         }
     }
 
-    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 18] = [
+    // Test setting the access mode attribute
+    #[test]
+    fn get_set_access_mode() {
+        unsafe {
+            let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+            let conn = Connection::with_state(env, ConnectionState::Connected);
+            let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
+            let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 40])) as *mut _;
+
+            // check the existing default value is read only
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetConnectAttrW(
+                    mongo_handle as *mut _,
+                    ConnectionAttribute::SQL_ATTR_ACCESS_MODE as i32,
+                    value_ptr,
+                    0,
+                    &mut 0,
+                )
+            );
+            assert_eq!(AccessMode::ReadOnly as u32, *(value_ptr as *mut UInteger));
+
+            // check that setting to ReadWrite provides sucesss with info and the value remains read only
+            assert_eq!(
+                SqlReturn::SUCCESS_WITH_INFO,
+                SQLSetConnectAttrW(
+                    mongo_handle as *mut _,
+                    ConnectionAttribute::SQL_ATTR_ACCESS_MODE as i32,
+                    (AccessMode::ReadWrite as u32) as Pointer,
+                    0,
+                )
+            );
+
+            let message_text = &mut [0; 89 * size_of::<WideChar>()] as *mut _ as *mut c_void;
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetDiagFieldW(
+                    HandleType::SQL_HANDLE_DBC,
+                    mongo_handle as *mut _,
+                    1,
+                    6, //DiagType::SQL_DIAG_MESSAGE_TEXT
+                    message_text,
+                    89 * size_of::<WideChar>() as i16,
+                    &mut 0
+                )
+            );
+            assert_eq!(
+             "[MongoDB][API] Invalid value for attribute SQL_MODE_READ_WRITE, changed to SQL_MODE_READ\0",
+                cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 89]))
+            );
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetConnectAttrW(
+                    mongo_handle as *mut _,
+                    ConnectionAttribute::SQL_ATTR_ACCESS_MODE as i32,
+                    value_ptr,
+                    0,
+                    &mut 0,
+                )
+            );
+            assert_eq!(AccessMode::ReadOnly as u32, *(value_ptr as *mut UInteger));
+            let _ = Box::from_raw(value_ptr as *mut WChar);
+        }
+    }
+
+    const UNSUPPORTED_ATTRS: [ConnectionAttribute; 17] = [
         ConnectionAttribute::SQL_ATTR_ASYNC_ENABLE,
-        ConnectionAttribute::SQL_ATTR_ACCESS_MODE,
         ConnectionAttribute::SQL_ATTR_AUTOCOMMIT,
         ConnectionAttribute::SQL_ATTR_TRACE,
         ConnectionAttribute::SQL_ATTR_TRACEFILE,
