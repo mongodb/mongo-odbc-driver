@@ -194,7 +194,6 @@ pub enum Desc {
     /// -----------------------------------------------------------------------------------------
     /// ODBC 2.x field identifiers which must be supported by an ODBC 3.x driver
     /// ODBC 2.0 specification can be found here for more details: https://download.oracle.com/otn_hosted_doc/timesten/703/TimesTen-Documentation/ms.odbc.pdf
-
     /// ODBC 2.x field identifier for the Transfer Octet.
     /// The length of a column is the maximum number of bytes returned to the application when data
     /// is transferred to its default C data type. For character data, the length does not include
