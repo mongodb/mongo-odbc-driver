@@ -121,4 +121,31 @@ mod integration {
         expected_error_message =
             "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
     );
+    test_connection_diagnostics!(
+        missing_driver_driver_connect_option_prompt,
+        in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
+        driver_completion = DriverConnectOption::SQL_DRIVER_PROMPT,
+        expected_sql_state = NO_DSN_OR_DRIVER,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message =
+            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
+    );
+    test_connection_diagnostics!(
+        missing_driver_driver_connect_option_complete,
+        in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
+        driver_completion = DriverConnectOption::SQL_DRIVER_COMPLETE,
+        expected_sql_state = NO_DSN_OR_DRIVER,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message =
+            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
+    );
+    test_connection_diagnostics!(
+        missing_driver_driver_connect_option_complete_required,
+        in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
+        driver_completion = DriverConnectOption::SQL_DRIVER_COMPLETE_REQUIRED,
+        expected_sql_state = NO_DSN_OR_DRIVER,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message =
+            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
+    );
 }
