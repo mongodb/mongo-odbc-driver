@@ -573,11 +573,11 @@ impl MongoFields {
 
                             error_checked_sql_get_schema_response.into()
                         } else if mongo_connection.cluster_type == MongoClusterType::Enterprise {
-                            let schema_collection =
-                                db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
+                            // let schema_collection =
+                            //     db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
 
                             // If the schema for `collection_name` isn't found, default to an empty schema.
-                            let schema_doc: Document = schema_collection
+                            let schema_doc: Document = db.collection::<Document>(SQL_SCHEMAS_COLLECTION)
                                 .find_one(doc! {
                                     "_id": &collection_name
                                 })
