@@ -92,7 +92,7 @@ macro_rules! test_connection_diagnostics {
 mod integration {
     use crate::common::verify_sql_diagnostics;
     use atsql::{SQLAllocHandle, SQLDisconnect, SQLDriverConnectW, SQLFreeHandle};
-    use constants::{NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
+    use constants::{NO_DSN_OR_DRIVER, UNABLE_TO_CONNECT};
     use definitions::{DriverConnectOption, Handle, HandleType, SqlReturn};
     use std::ptr::null_mut;
 
@@ -122,30 +122,30 @@ mod integration {
             "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
     );
     test_connection_diagnostics!(
-        unsupported_driver_connect_option_prompt,
+        missing_driver_driver_connect_option_prompt,
         in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
         driver_completion = DriverConnectOption::SQL_DRIVER_PROMPT,
-        expected_sql_state = NOT_IMPLEMENTED,
+        expected_sql_state = NO_DSN_OR_DRIVER,
         expected_sql_return = SqlReturn::ERROR,
         expected_error_message =
-            "[MongoDB][API] The driver connect option SQL_DRIVER_PROMPT is not supported"
+            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
     );
     test_connection_diagnostics!(
-        unsupported_driver_connect_option_complete,
+        missing_driver_driver_connect_option_complete,
         in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
         driver_completion = DriverConnectOption::SQL_DRIVER_COMPLETE,
-        expected_sql_state = NOT_IMPLEMENTED,
+        expected_sql_state = NO_DSN_OR_DRIVER,
         expected_sql_return = SqlReturn::ERROR,
         expected_error_message =
-            "[MongoDB][API] The driver connect option SQL_DRIVER_COMPLETE is not supported"
+            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
     );
     test_connection_diagnostics!(
-        unsupported_driver_connect_option_complete_required,
+        missing_driver_driver_connect_option_complete_required,
         in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",
         driver_completion = DriverConnectOption::SQL_DRIVER_COMPLETE_REQUIRED,
-        expected_sql_state = NOT_IMPLEMENTED,
+        expected_sql_state = NO_DSN_OR_DRIVER,
         expected_sql_return = SqlReturn::ERROR,
         expected_error_message =
-            "[MongoDB][API] The driver connect option SQL_DRIVER_COMPLETE_REQUIRED is not supported"
+            "[MongoDB][API] Missing property \"Driver\" or \"DSN\" in connection string"
     );
 }

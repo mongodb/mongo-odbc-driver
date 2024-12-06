@@ -412,3 +412,11 @@ pub enum RowStatus {
     SQL_ROW_ERROR = 5,
     SQL_ROW_SUCCESS_WITH_INFO = 6,
 }
+
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
+#[repr(u32)]
+pub enum AccessMode {
+    ReadWrite = 0,
+    #[default]
+    ReadOnly,
+}
