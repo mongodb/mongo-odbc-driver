@@ -616,9 +616,17 @@ impl MongoFields {
                                 .map_err(Error::QueryExecutionFailed)?;
 
                             let schema_doc2 = if schema_doc.len() > 0 {
+                                log::info!(
+                                    "schema was found for this collection: {}. schema: {:?}",
+                                    collection_name,
+                                    schema_doc[0].clone()
+                                );
                                 schema_doc[0].clone()
                             } else {
-                                log::warn!("something happened");
+                                log::warn!(
+                                    "schema not found for this collection: {}",
+                                    collection_name
+                                );
                                 doc! {"schema": doc!{}}
                             };
 
