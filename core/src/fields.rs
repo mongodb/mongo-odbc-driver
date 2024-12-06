@@ -11,6 +11,7 @@ use crate::{
 };
 use constants::SQL_SCHEMAS_COLLECTION;
 use definitions::{Nullability, SqlDataType};
+use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, Bson, Document},
     results::CollectionType,
@@ -577,22 +578,52 @@ impl MongoFields {
                                 db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
 
                             // If the schema for `collection_name` isn't found, default to an empty schema.
-                            let schema_doc: Document = schema_collection
-                                .find_one(doc! {
+                            // let schema_doc: Document = schema_collection
+                            //     .find_one(doc! {
+                            //         "_id": &collection_name
+                            //     })
+                            //     .await
+                            //     .map_err(Error::QueryExecutionFailed)?
+                            //     .unwrap_or({
+                            //         log::warn!("No schema was found for collection `{}`. It will be assigned\
+                            //         an empty schema. Hint: Generate schemas for your collections.", collection_name);
+                            //
+                            //         doc! {
+                            //         "schema": doc!{}
+                            //     }});
+                            //
+
+                            // let mut schema_catalog_doc_vec: Vec<Document> = client.runtime.block_on(async {
+                            //     schema_collection
+                            //         .aggregate(schema_catalog_aggregation_pipeline)
+                            //         .await
+                            //         .map_err(Error::QueryExecutionFailed)?
+                            //         .try_collect::<Vec<Document>>()
+                            //         .await
+                            //         .map_err(Error::QueryExecutionFailed)
+                            // })?;
+                            let agg_doc = vec![doc! {
+                                "$match": {
                                     "_id": &collection_name
-                                })
+                                }
+                            }];
+                            let schema_doc: Vec<Document> = schema_collection
+                                .aggregate(agg_doc)
                                 .await
                                 .map_err(Error::QueryExecutionFailed)?
-                                .unwrap_or({
-                                    log::warn!("No schema was found for collection `{}`. It will be assigned\
-                                    an empty schema. Hint: Generate schemas for your collections.", collection_name);
+                                .try_collect::<Vec<Document>>()
+                                .await
+                                .map_err(Error::QueryExecutionFailed)?;
 
-                                    doc! {
-                                    "schema": doc!{}
-                                }});
+                            let schema_doc2 = if schema_doc.len() > 0 {
+                                schema_doc[0].clone()
+                            } else {
+                                log::warn!("something happened");
+                                doc! {"schema": doc!{}}
+                            };
 
                             let result_set_schema: Result<ResultSetSchema> =
-                                ResultSetSchema::from_sql_schemas_document(&schema_doc).map_err(
+                                ResultSetSchema::from_sql_schemas_document(&schema_doc2).map_err(
                                     |e| {
                                         Error::CollectionDeserialization(collection_name.clone(), e)
                                     },
