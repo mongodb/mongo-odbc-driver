@@ -113,7 +113,10 @@ pub fn get_run_command_fn_ptr(
 }
 
 pub fn get_mongosqltranslate_library() -> Option<&'static Library> {
-    unsafe { MONGOSQLTRANSLATE_LIBRARY.as_ref() }
+    #[allow(static_mut_refs)]
+    unsafe {
+        MONGOSQLTRANSLATE_LIBRARY.as_ref()
+    }
 }
 
 pub trait CommandName {
