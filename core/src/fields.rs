@@ -11,6 +11,7 @@ use crate::{
 };
 use constants::SQL_SCHEMAS_COLLECTION;
 use definitions::{Nullability, SqlDataType};
+use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, Bson, Document},
     results::CollectionType,
@@ -576,20 +577,40 @@ impl MongoFields {
                             let schema_collection =
                                 db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
 
-                            // If the schema for `collection_name` isn't found, default to an empty schema.
-                            let schema_doc: Document = schema_collection
-                                .find_one(doc! {
+                            let match_agg_pipeline = vec![doc! {
+                                "$match": {
                                     "_id": &collection_name
-                                })
+                                }
+                            }];
+
+                            let mut schema_coll_agg_response: Vec<Document> = schema_collection
+                                .aggregate(match_agg_pipeline)
                                 .await
                                 .map_err(Error::QueryExecutionFailed)?
-                                .unwrap_or({
-                                    log::warn!("No schema was found for collection `{}`. It will be assigned\
-                                    an empty schema. Hint: Generate schemas for your collections.", collection_name);
+                                .try_collect::<Vec<Document>>()
+                                .await
+                                .map_err(Error::QueryExecutionFailed)?;
 
-                                    doc! {
-                                    "schema": doc!{}
-                                }});
+                            if schema_coll_agg_response.len() > 1 {
+                                return Err(Error::MultipleSchemaDocumentsReturned(
+                                    schema_coll_agg_response.len(),
+                                ));
+                            } else if schema_coll_agg_response.is_empty() {
+                                log::warn!(
+                                    "No schema was found for collection `{}`. It will be assigned \
+                                    an empty schema. Hint: Generate schemas for your collections.",
+                                    collection_name
+                                );
+
+                                // If the schema for `collection_name` isn't found, default to an empty object schema.
+                                schema_coll_agg_response.push(doc! {
+                                    "schema": doc!{
+                                        "bsonType": "object"
+                                    }
+                                });
+                            }
+
+                            let schema_doc = schema_coll_agg_response[0].to_owned();
 
                             let result_set_schema: Result<ResultSetSchema> =
                                 ResultSetSchema::from_sql_schemas_document(&schema_doc).map_err(
