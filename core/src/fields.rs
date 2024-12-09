@@ -577,61 +577,43 @@ impl MongoFields {
                             let schema_collection =
                                 db.collection::<Document>(SQL_SCHEMAS_COLLECTION);
 
-                            // If the schema for `collection_name` isn't found, default to an empty schema.
-                            // let schema_doc: Document = schema_collection
-                            //     .find_one(doc! {
-                            //         "_id": &collection_name
-                            //     })
-                            //     .await
-                            //     .map_err(Error::QueryExecutionFailed)?
-                            //     .unwrap_or({
-                            //         log::warn!("No schema was found for collection `{}`. It will be assigned\
-                            //         an empty schema. Hint: Generate schemas for your collections.", collection_name);
-                            //
-                            //         doc! {
-                            //         "schema": doc!{}
-                            //     }});
-                            //
-
-                            // let mut schema_catalog_doc_vec: Vec<Document> = client.runtime.block_on(async {
-                            //     schema_collection
-                            //         .aggregate(schema_catalog_aggregation_pipeline)
-                            //         .await
-                            //         .map_err(Error::QueryExecutionFailed)?
-                            //         .try_collect::<Vec<Document>>()
-                            //         .await
-                            //         .map_err(Error::QueryExecutionFailed)
-                            // })?;
-                            let agg_doc = vec![doc! {
+                            let match_agg_pipeline = vec![doc! {
                                 "$match": {
                                     "_id": &collection_name
                                 }
                             }];
-                            let schema_doc: Vec<Document> = schema_collection
-                                .aggregate(agg_doc)
+
+                            let mut schema_coll_agg_response: Vec<Document> = schema_collection
+                                .aggregate(match_agg_pipeline)
                                 .await
                                 .map_err(Error::QueryExecutionFailed)?
                                 .try_collect::<Vec<Document>>()
                                 .await
                                 .map_err(Error::QueryExecutionFailed)?;
 
-                            let schema_doc2 = if schema_doc.len() > 0 {
-                                log::info!(
-                                    "schema was found for this collection: {}. schema: {:?}",
-                                    collection_name,
-                                    schema_doc[0].clone()
-                                );
-                                schema_doc[0].clone()
-                            } else {
+                            if schema_coll_agg_response.len() > 1 {
+                                return Err(Error::MultipleSchemaDocumentsReturned(
+                                    schema_coll_agg_response.len(),
+                                ));
+                            } else if schema_coll_agg_response.is_empty() {
                                 log::warn!(
-                                    "schema not found for this collection: {}",
+                                    "No schema was found for collection `{}`. It will be assigned \
+                                    an empty schema. Hint: Generate schemas for your collections.",
                                     collection_name
                                 );
-                                doc! {"schema": doc!{}}
-                            };
+
+                                // If the schema for `collection_name` isn't found, default to an empty object schema.
+                                schema_coll_agg_response.push(doc! {
+                                    "schema": doc!{
+                                        "bsonType": "object"
+                                    }
+                                });
+                            }
+
+                            let schema_doc = schema_coll_agg_response[0].to_owned();
 
                             let result_set_schema: Result<ResultSetSchema> =
-                                ResultSetSchema::from_sql_schemas_document(&schema_doc2).map_err(
+                                ResultSetSchema::from_sql_schemas_document(&schema_doc).map_err(
                                     |e| {
                                         Error::CollectionDeserialization(collection_name.clone(), e)
                                     },
