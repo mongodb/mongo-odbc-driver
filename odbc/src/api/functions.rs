@@ -12,15 +12,15 @@ use crate::{
 use constants::*;
 use mongodb::bson::{doc, Bson};
 
-use cstr::{input_text_to_string_w, Charset, WideChar};
+use cstr::{input_text_to_string_w, input_text_to_string_w_allow_null, Charset, WideChar};
 
 use definitions::{
-    AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType,
-    CDataType, Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity, CursorType,
-    Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation, FreeStmtOption,
-    HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan, Pointer, RetCode,
-    RetrieveData, RowStatus, SmallInt, SqlBool, SqlDataType, SqlReturn, StatementAttribute, ULen,
-    USmallInt, UseBookmarks, SQL_NTS,
+    AccessMode, AllocType, AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion,
+    BindType, CDataType, Concurrency, ConnectionAttribute, CursorScrollable, CursorSensitivity,
+    CursorType, Desc, DiagType, DriverConnectOption, EnvironmentAttribute, FetchOrientation,
+    FreeStmtOption, HDbc, HDesc, HEnv, HStmt, HWnd, Handle, HandleType, Integer, Len, NoScan,
+    Pointer, RetCode, RetrieveData, RowStatus, SmallInt, SqlBool, SqlDataType, SqlReturn,
+    StatementAttribute, ULen, USmallInt, UseBookmarks, SQL_NTS,
 };
 use function_name::named;
 use log::{debug, error, info};
@@ -844,20 +844,23 @@ pub unsafe extern "C" fn SQLColumnsW(
             let mongo_handle = MongoHandleRef::from(statement_handle);
             let odbc_3_data_types = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog_string = input_text_to_string_w(catalog_name, catalog_name_length.into());
+            let catalog_string =
+                input_text_to_string_w_allow_null(catalog_name, catalog_name_length.into());
             let catalog = if catalog_name.is_null() || catalog_string.is_empty() {
                 None
             } else {
                 Some(catalog_string.as_str())
             };
             // ignore schema
-            let table_string = input_text_to_string_w(table_name, table_name_length.into());
+            let table_string =
+                input_text_to_string_w_allow_null(table_name, table_name_length.into());
             let table = if table_name.is_null() {
                 None
             } else {
                 Some(table_string.as_str())
             };
-            let column_name_string = input_text_to_string_w(column_name, column_name_length.into());
+            let column_name_string =
+                input_text_to_string_w_allow_null(column_name, column_name_length.into());
             let column = if column_name.is_null() {
                 None
             } else {
@@ -972,7 +975,6 @@ pub unsafe extern "C" fn SQLDataSourcesW(
     unsupported_function!(environment_handle)
 }
 */
-
 ///
 /// [`SQLDescribeColW`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLDescribeCol-function
 ///
@@ -1182,22 +1184,10 @@ pub unsafe extern "C" fn SQLDriverConnectW(
                 function_name!()
             );
 
-            // SQL_NO_PROMPT is the only option supported for DriverCompletion
-            match FromPrimitive::from_u16(driver_completion) {
-                Some(driver_completion) => match driver_completion {
-                    DriverConnectOption::SQL_DRIVER_COMPLETE
-                    | DriverConnectOption::SQL_DRIVER_COMPLETE_REQUIRED
-                    | DriverConnectOption::SQL_DRIVER_PROMPT => {
-                        add_diag_info!(
-                            conn_handle,
-                            ODBCError::UnsupportedDriverConnectOption(format!(
-                                "{driver_completion:?}"
-                            ))
-                        );
-                        return SqlReturn::ERROR;
-                    }
-                    DriverConnectOption::SQL_DRIVER_NO_PROMPT => {}
-                },
+            // We will treat any valid option passed for DriverComplete as a no-op
+            // because we don't have any UI involved in the process and don't plan to add any in the future
+            match <DriverConnectOption as FromPrimitive>::from_u16(driver_completion) {
+                Some(_) => {}
                 None => {
                     add_diag_info!(
                         conn_handle,
@@ -1265,7 +1255,6 @@ pub unsafe extern "C" fn SQLDriversW(
     unsupported_function!(henv)
 }
 **/
-
 ///
 /// [`SQLEndTran`]: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/SQLEndTran-function
 ///
@@ -1914,6 +1903,9 @@ unsafe fn sql_get_connect_attrw_helper(
             ConnectionAttribute::SQL_ATTR_CONNECTION_TIMEOUT => {
                 let connection_timeout = attributes.connection_timeout.unwrap_or(0);
                 i32_len::set_output_fixed_data(&connection_timeout, value_ptr, string_length_ptr)
+            }
+            ConnectionAttribute::SQL_ATTR_ACCESS_MODE => {
+                i32_len::set_output_fixed_data(&AccessMode::ReadOnly, value_ptr, string_length_ptr)
             }
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
@@ -2887,6 +2879,14 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
+                InfoType::SQL_KEYWORDS => {
+                    i16_len::set_output_wstring_as_bytes(
+                        KEYWORDS.as_str(),
+                        info_value_ptr,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    )
+                }
                 _ => {
                     err = Some(ODBCError::UnsupportedInfoTypeRetrieval(
                         info_type.to_string(),
@@ -3578,6 +3578,23 @@ unsafe fn set_connect_attrw_helper(
                     SqlReturn::SUCCESS_WITH_INFO
                 }
             },
+            ConnectionAttribute::SQL_ATTR_ACCESS_MODE => {
+                match FromPrimitive::from_u32(value_ptr as u32) {
+                    Some(AccessMode::ReadOnly) => SqlReturn::SUCCESS,
+                    Some(AccessMode::ReadWrite) => {
+                        conn_handle.add_diag_info(ODBCError::OptionValueChanged(
+                            "SQL_MODE_READ_WRITE",
+                            "SQL_MODE_READ",
+                        ));
+                        SqlReturn::SUCCESS_WITH_INFO
+                    }
+                    None => {
+                        conn_handle
+                            .add_diag_info(ODBCError::InvalidAttrValue("SQL_ATTR_ACCESS_MODE"));
+                        SqlReturn::ERROR
+                    }
+                }
+            }
             _ => {
                 err = Some(ODBCError::UnsupportedConnectionAttribute(
                     connection_attribute_to_string(attribute),
@@ -4174,8 +4191,8 @@ pub unsafe extern "C" fn SQLTablesW(
             let odbc_behavior = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog = input_text_to_string_w(catalog_name, name_length_1.into());
-            let schema = input_text_to_string_w(schema_name, name_length_2.into());
-            let table = input_text_to_string_w(table_name, name_length_3.into());
+            let schema = input_text_to_string_w_allow_null(schema_name, name_length_2.into());
+            let table = input_text_to_string_w_allow_null(table_name, name_length_3.into());
             let table_t = input_text_to_string_w(table_type, name_length_4.into());
             let connection = (*stmt.connection).as_connection().unwrap();
             let max_string_length = *connection.max_string_length.read().unwrap();

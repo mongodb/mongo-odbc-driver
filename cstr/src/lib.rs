@@ -116,6 +116,25 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> Strin
         _ => unreachable!("input_text_to_string_w: len was neither negative, zero, nor positive."),
     }
 }
+
+///
+/// input_text_to_string_w_allow_null converts a u16 cstring to a rust String.
+/// It assumes null termination if the supplied length is negative.
+///
+/// This function will return an empty string if passed a null pointer.
+///
+/// # Safety
+/// This converts raw C-pointers to rust Strings, which requires unsafe operations
+///
+#[allow(clippy::uninit_vec)]
+pub unsafe fn input_text_to_string_w_allow_null(text: *const WideChar, len: isize) -> String {
+    if text.is_null() {
+        String::new()
+    } else {
+        input_text_to_string_w(text, len)
+    }
+}
+
 ///
 /// parse_attribute_string_w converts a null-separated doubly null terminated *Widechar string to a Rust
 /// string separated by `;`.
@@ -488,6 +507,22 @@ mod test {
         let test = "".as_bytes();
         let test = test.as_ptr();
         let test = unsafe { input_text_to_string_a(test, 0) };
+        assert_eq!(expected, test);
+    }
+
+    #[test]
+    fn test_null_ptr_input_text_to_string_w() {
+        let expected = "";
+        let test = std::ptr::null();
+        let test = unsafe { input_text_to_string_w_allow_null(test, 0) };
+        assert_eq!(expected, test);
+    }
+    #[test]
+    fn test_nonnull_ptr_input_text_to_string_w() {
+        let expected = "test";
+        let test = to_widechar_vec("test");
+        let test = test.as_ptr();
+        let test = unsafe { input_text_to_string_w_allow_null(test, expected.len() as isize) };
         assert_eq!(expected, test);
     }
 }
