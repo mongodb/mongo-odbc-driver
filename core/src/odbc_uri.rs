@@ -344,7 +344,8 @@ impl ODBCUri {
                 Err(_) => Ok(uri.to_string()),
             }
         } else {
-            self.inject_username_and_password_into_uri(uri)
+            // no authentication mechanism specified in the URI, so we'll treat it as an authless connection
+            Ok(uri.to_string())
         }
     }
 
@@ -541,12 +542,11 @@ mod unit {
 
     mod test_uri_construction {
         #[test]
-        fn test_no_auth_mechanism_specified_means_scram() {
+        fn test_no_auth_mechanism_specified_is_unmodified() {
             use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017";
-            let expected = "mongodb://foo:bar@localhost:27017";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
-            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
         }
 
         #[test]
@@ -1135,7 +1135,7 @@ mod unit {
             use crate::odbc_uri::ODBCUri;
             for (expected, uri) in [
                 (Some("authDB".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar"),
-                (Some("admin".to_string()), "URI=mongodb://localhost/;UID=foo;PWD=bar"),
+                (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
                 (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B;UID=foo;PWD=bar"),
                 (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B&appName=tgg#fed;UID=foo;PWD=bar"),
                 (Some("$external".to_string()), "URI=mongodb://uid:pwd@localhost/?authSource=$external&appName=tgg#fed;UID=foo;PWD=bar"),
