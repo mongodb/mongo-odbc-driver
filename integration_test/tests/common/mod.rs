@@ -358,7 +358,7 @@ pub fn fetch_and_get_data(
     expected_fetch_count: Option<SmallInt>,
     expected_sql_returns: Vec<SqlReturn>,
     target_types: Vec<CDataType>,
-    mongosqltranslate_test_exp_vals: Option<Vec<Vec<String>>>,
+    mongosqltranslate_test_exp_vals: Option<Vec<Vec<Value>>>,
 ) {
     let output_buffer: *mut std::ffi::c_void =
         Box::into_raw(Box::new([0u8; BUFFER_LENGTH as usize])) as *mut _;
@@ -393,10 +393,22 @@ pub fn fetch_and_get_data(
                         );
 
                         if let Some(ref values) = mongosqltranslate_test_exp_vals {
-                            let actual_val = cstr::from_widechar_ref_lossy(
-                                &*(output_buffer as *const [WideChar; BUFFER_LENGTH as usize]),
-                            )[0..(*str_len_ptr as usize / std::mem::size_of::<WideChar>())]
-                                .to_string();
+                            let actual_val = match target_types[col_num] {
+                                CDataType::SQL_C_SLONG => json!(*(output_buffer as *mut i32)),
+                                CDataType::SQL_C_WCHAR => {
+                                    if *str_len_ptr < 0 {
+                                        Value::Null
+                                    } else {
+                                        json!(cstr::from_widechar_ref_lossy(
+                                            &*(output_buffer
+                                                as *const [WideChar; BUFFER_LENGTH as usize])
+                                        )[0..(*str_len_ptr as usize
+                                            / std::mem::size_of::<WideChar>())]
+                                            .to_string())
+                                    }
+                                }
+                                _ => unreachable!("An unexpected type was encountered."),
+                            };
 
                             assert_eq!(actual_val, values[loop_index][col_num]);
                         }
