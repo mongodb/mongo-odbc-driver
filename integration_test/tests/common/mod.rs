@@ -7,10 +7,9 @@ use constants::DRIVER_NAME;
 use cstr::{self, WideChar};
 use definitions::{
     AttrOdbcVersion, CDataType, Desc, DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt,
-    Handle, HandleType, Integer, Len, Pointer, SQLAllocHandle, SQLBindCol, SQLColAttributeW,
-    SQLDisconnect, SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLGetData,
-    SQLGetDiagRecW, SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn,
-    USmallInt, SQL_NTS,
+    Handle, HandleType, Len, Pointer, SQLAllocHandle, SQLBindCol, SQLColAttributeW, SQLDisconnect,
+    SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW,
+    SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
 use serde_json::{json, Value};
 use std::ptr::null_mut;
