@@ -163,7 +163,7 @@ pub fn run_resultset_tests(generate: bool) -> Result<()> {
                     if let Some(true) = test.is_standard_type {
                         conn_str.push_str("SIMPLE_TYPES_ONLY=0;");
                     }
-                    let conn_handle = connect_with_conn_string(env, Some(conn_str)).unwrap();
+                    let conn_handle = connect_with_conn_string(env, Some(conn_str), true).unwrap();
                     let test_result = match test.test_definition {
                         TestDef::Query(ref q) => run_query_test(q, &test, conn_handle, generate),
                         TestDef::Function(ref f) => {
@@ -207,7 +207,7 @@ pub fn run_resultset_tests_odbc_2(generate: bool) -> Result<()> {
                     if let Some(true) = test.is_standard_type {
                         conn_str.push_str("SIMPLE_TYPES_ONLY=0;");
                     }
-                    let conn_handle = connect_with_conn_string(env, Some(conn_str)).unwrap();
+                    let conn_handle = connect_with_conn_string(env, Some(conn_str), true).unwrap();
                     let test_result = match test.test_definition {
                         TestDef::Query(ref q) => run_query_test(q, &test, conn_handle, generate),
                         TestDef::Function(ref f) => {
