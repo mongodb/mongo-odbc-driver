@@ -19,7 +19,7 @@ mod mongosqltranslate_tests {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str =
             crate::common::generate_srv_style_connection_string(Some("test".to_string()));
-        let result = connect_with_conn_string(env_handle, Some(conn_str));
+        let result = connect_with_conn_string(env_handle, Some(conn_str), true);
 
         assert!(
             result.is_ok(),
