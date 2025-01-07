@@ -20,7 +20,7 @@ mod cluster_type {
         let connection_string = generate_mdb_connection_str(port_type);
 
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
-        match connect_with_conn_string(env_handle, Some(connection_string)) {
+        match connect_with_conn_string(env_handle, Some(connection_string), true) {
             Ok(_) => Ok(()),
             Err(e) => Err(e.to_string()),
         }

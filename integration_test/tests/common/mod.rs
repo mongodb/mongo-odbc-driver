@@ -208,7 +208,7 @@ pub fn connect_and_allocate_statement(
     env_handle: HEnv,
     in_connection_string: Option<String>,
 ) -> (HDbc, HStmt) {
-    let conn_handle = connect_with_conn_string(env_handle, in_connection_string).unwrap();
+    let conn_handle = connect_with_conn_string(env_handle, in_connection_string, true).unwrap();
     (conn_handle, allocate_statement(conn_handle).unwrap())
 }
 
@@ -217,6 +217,7 @@ pub fn connect_and_allocate_statement(
 pub fn connect_with_conn_string(
     env_handle: HEnv,
     in_connection_string: Option<String>,
+    use_str_len_ptr: bool,
 ) -> Result<HDbc> {
     // Allocate a DBC handle
     let mut dbc: Handle = null_mut();
@@ -233,7 +234,12 @@ pub fn connect_with_conn_string(
             in_connection_string.unwrap_or_else(generate_default_connection_str);
         let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
         in_connection_string_encoded.push(0);
-        let str_len_ptr = &mut 0;
+        let mut len_buffer: i16 = 0;
+        let str_len_ptr = if use_str_len_ptr {
+            &mut len_buffer as *mut _
+        } else {
+            null_mut()
+        };
         match SQLDriverConnectW(
             dbc as HDbc,
             null_mut(),
