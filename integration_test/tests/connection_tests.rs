@@ -27,7 +27,7 @@ mod integration {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         // Missing PWD
         let conn_str = "Driver=MongoDB Atlas SQL ODBC Driver;USER=N_A;SERVER=N_A";
-        let result = connect_with_conn_string(env_handle, Some(conn_str.to_string()));
+        let result = connect_with_conn_string(env_handle, Some(conn_str.to_string()), true);
 
         assert!(
             result.is_err(),
@@ -40,7 +40,7 @@ mod integration {
     fn test_default_connection() {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
         let conn_str = crate::common::generate_default_connection_str();
-        let _ = connect_with_conn_string(env_handle, Some(conn_str)).unwrap();
+        let _ = connect_with_conn_string(env_handle, Some(conn_str), true).unwrap();
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
@@ -50,7 +50,7 @@ mod integration {
         let conn_str = crate::common::generate_uri_with_default_connection_string(
             "uuidRepresentation=csharpLegacy",
         );
-        let _ = connect_with_conn_string(env_handle, Some(conn_str)).unwrap();
+        let _ = connect_with_conn_string(env_handle, Some(conn_str), true).unwrap();
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
@@ -60,7 +60,7 @@ mod integration {
         let conn_str = crate::common::generate_uri_with_default_connection_string(
             "uuidRepresentation=javaLegacy",
         );
-        let _ = connect_with_conn_string(env_handle, Some(conn_str)).unwrap();
+        let _ = connect_with_conn_string(env_handle, Some(conn_str), true).unwrap();
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
@@ -70,7 +70,17 @@ mod integration {
         let conn_str = crate::common::generate_uri_with_default_connection_string(
             "uuidRepresentation=pythonLegacy",
         );
-        let _ = connect_with_conn_string(env_handle, Some(conn_str)).unwrap();
+        let _ = connect_with_conn_string(env_handle, Some(conn_str), true).unwrap();
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    #[test]
+    fn test_str_len_ptr_null() {
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
+        let conn_str = crate::common::generate_default_connection_str();
+
+        // Test with str_len_ptr as null (use_str_len_ptr = false)
+        let _ = connect_with_conn_string(env_handle, Some(conn_str.clone()), false).unwrap();
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
@@ -85,7 +95,7 @@ mod integration {
         fn test_valid_dsn_connection() {
             let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
             let conn_str = "DSN=ADF_Test";
-            connect_with_conn_string(env_handle, Some(conn_str.to_string())).unwrap();
+            connect_with_conn_string(env_handle, Some(conn_str.to_string()), true).unwrap();
             let _ = unsafe { Box::from_raw(env_handle) };
         }
 
@@ -93,7 +103,7 @@ mod integration {
         fn test_uri_opts_override_dsn() {
             let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
             let conn_str = "PWD=wrong;DSN=ADF_Test";
-            let result = connect_with_conn_string(env_handle, Some(conn_str.to_string()));
+            let result = connect_with_conn_string(env_handle, Some(conn_str.to_string()), true);
             assert!(
                 result.is_err(),
                 "The connection should have failed, but it was successful."
