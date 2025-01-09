@@ -10,7 +10,7 @@ authors = [
 edition = "2021"
 
 [dependencies]
-lazy_static = "1.4.0"
+lazy_static = { workspace = true }
 cargo_toml = "0.15.2"
 anyhow = "*"
-serde_json = "1.0.64"
+serde_json = { workspace = true }
