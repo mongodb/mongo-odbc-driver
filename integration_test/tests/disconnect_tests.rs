@@ -21,7 +21,7 @@ mod integration {
     #[test]
     fn sql_disconnect_handles_many_statement_states_properly() {
         let env = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
-        let dbc = connect_with_conn_string(env, None)
+        let dbc = connect_with_conn_string(env, None, true)
             .expect("Failed to connect with default connection string");
         // The following statements will be allocated and interacted with in the following ways:
         // stmt_1 will be closed

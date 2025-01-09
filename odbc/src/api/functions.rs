@@ -1209,10 +1209,13 @@ pub unsafe extern "C" fn SQLDriverConnectW(
             // given that we only currently support DriverConnectOption::SQL_DRIVER_NO_PROMPT.
             // given that we only currently support DriverConnectOption::NoPrompt.
             if buffer_length <= 0 || out_connection_string.is_null() {
-                *string_length_2 = odbc_uri_string
-                    .len()
-                    .try_into()
-                    .expect("odbc_uri_string.len exceeds i16");
+                // Only assign to string_length_2 if it is not null
+                if !string_length_2.is_null() {
+                    *string_length_2 = odbc_uri_string
+                        .len()
+                        .try_into()
+                        .expect("odbc_uri_string.len exceeds i16");
+                }
                 return SqlReturn::SUCCESS;
             }
             let buffer_len = usize::try_from(buffer_length).unwrap();
