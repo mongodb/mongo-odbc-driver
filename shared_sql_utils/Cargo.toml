@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 cstr = { path = "../cstr" }
-thiserror = { workspace = true }
+thiserror = "1"
 constants = { path = "../constants" }
