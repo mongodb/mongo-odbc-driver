@@ -12,132 +12,132 @@ use thiserror::Error;
 #[derive(Debug, Error, Clone)]
 #[repr(C)]
 pub enum ODBCError {
-    #[error("[{}][API] {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] {0}", vendor = VENDOR_IDENTIFIER)]
     General(&'static str),
-    #[error("[{}][API] {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] {0}", vendor = VENDOR_IDENTIFIER)]
     GeneralWarning(String),
-    #[error("[{}][API] Caught panic: {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Caught panic: {0}", vendor = VENDOR_IDENTIFIER)]
     Panic(String),
-    #[error("[{}][API] The feature {0} is not implemented", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] The feature {0} is not implemented", vendor = VENDOR_IDENTIFIER)]
     Unimplemented(&'static str),
-    #[error("[{}][API] The data type {0} is not implemented", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] The data type {0} is not implemented", vendor = VENDOR_IDENTIFIER)]
     UnimplementedDataType(String),
     #[error(
-        "[{}][API] The driver connect option {0} is not supported",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] The driver connect option {0} is not supported",
+        vendor = VENDOR_IDENTIFIER
     )]
     UnsupportedDriverConnectOption(String),
     #[error(
-        "[{}][API] The connection attribute {0} is not supported",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] The connection attribute {0} is not supported",
+        vendor = VENDOR_IDENTIFIER
     )]
     UnsupportedConnectionAttribute(String),
     #[error(
-        "[{}][API] The statement attribute {0} is not supported",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] The statement attribute {0} is not supported",
+        vendor = VENDOR_IDENTIFIER
     )]
     UnsupportedStatementAttribute(String),
     #[error(
-        "[{}][API] A schema pattern was specified, and the driver does not support schemas",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] A schema pattern was specified, and the driver does not support schemas",
+        vendor = VENDOR_IDENTIFIER
     )]
     UnsupportedFieldSchema(),
     #[error(
-        "[{}][API] The field descriptor value {0} is not supported",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] The field descriptor value {0} is not supported",
+        vendor = VENDOR_IDENTIFIER
     )]
     UnsupportedFieldDescriptor(u16),
     #[error(
-        "[{}][API] Retrieving value for infoType {0} is not implemented yet",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] Retrieving value for infoType {0} is not implemented yet",
+        vendor = VENDOR_IDENTIFIER
     )]
     UnsupportedInfoTypeRetrieval(String),
-    #[error("[{}][API] InfoType {0} out of range", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] InfoType {0} out of range", vendor = VENDOR_IDENTIFIER)]
     UnknownInfoType(String),
     #[error(
-        "[{}][API] Indicator variable was null when null data was accessed",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] Indicator variable was null when null data was accessed",
+        vendor = VENDOR_IDENTIFIER
     )]
     IndicatorVariableRequiredButNotSupplied,
-    #[error("[{}][API] The field index {0} is out of bounds", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] The field index {0} is out of bounds", vendor = VENDOR_IDENTIFIER)]
     InvalidDescriptorIndex(u16),
-    #[error("[{}][API] The column index {0} is out of bounds", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] The column index {0} is out of bounds", vendor = VENDOR_IDENTIFIER)]
     InvalidColumnNumber(u16),
-    #[error("[{}][API] No ResultSet", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] No ResultSet", vendor = VENDOR_IDENTIFIER)]
     InvalidCursorState,
-    #[error("[{}][API] Invalid SQL Type: {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Invalid SQL Type: {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidSqlType(String),
-    #[error("[{}][API] Invalid handle type, expected {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Invalid handle type, expected {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidHandleType(&'static str),
-    #[error("[{}][API] Invalid value for attribute {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Invalid value for attribute {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidAttrValue(&'static str),
-    #[error("[{}][API] Invalid attribute identifier {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Invalid attribute identifier {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidAttrIdentifier(i32),
-    #[error("[{}][API] Fetch type out of range {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Fetch type out of range {0}", vendor = VENDOR_IDENTIFIER)]
     FetchTypeOutOfRange(i16),
-    #[error("[{}][API] Invalid target type {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Invalid target type {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidTargetType(i16),
-    #[error("[{}][API] Invalid driver completion type {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Invalid driver completion type {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidDriverCompletion(u16),
     #[error(
-        "[{}][API] Missing property \"Driver\" or \"DSN\" in connection string",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] Missing property \"Driver\" or \"DSN\" in connection string",
+        vendor = VENDOR_IDENTIFIER
     )]
     MissingDriverOrDSNProperty,
     #[error(
-        "[{}][API] Buffer size \"{0}\" not large enough for data",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] Buffer size \"{0}\" not large enough for data",
+        vendor = VENDOR_IDENTIFIER
     )]
     OutStringTruncated(usize),
     #[error(
-        "[{}][API] floating point data \"{0}\" was truncated to fixed point",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] floating point data \"{0}\" was truncated to fixed point",
+        vendor = VENDOR_IDENTIFIER
     )]
     FractionalTruncation(String),
     #[error(
-        "[{}][API] fractional seconds for data \"{0}\" was truncated to nanoseconds",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] fractional seconds for data \"{0}\" was truncated to nanoseconds",
+        vendor = VENDOR_IDENTIFIER
     )]
     FractionalSecondsTruncation(String),
     #[error(
-        "[{}][API] fractional seconds data truncated from \"{0}\"",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] fractional seconds data truncated from \"{0}\"",
+        vendor = VENDOR_IDENTIFIER
     )]
     SecondsTruncation(String),
     #[error(
-        "[{}][API] datetime data \"{0}\" was truncated to date",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] datetime data \"{0}\" was truncated to date",
+        vendor = VENDOR_IDENTIFIER
     )]
     TimeTruncation(String),
     #[error(
-        "[{}][API] integral data \"{0}\" was truncated due to overflow",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] integral data \"{0}\" was truncated due to overflow",
+        vendor = VENDOR_IDENTIFIER
     )]
     IntegralTruncation(String),
-    #[error("[{}][API] invalid datetime format", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] invalid datetime format", vendor = VENDOR_IDENTIFIER)]
     InvalidDatetimeFormat,
     #[error(
-        "[{}][API] invalid character value for cast to type: {0}",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] invalid character value for cast to type: {0}",
+        vendor = VENDOR_IDENTIFIER
     )]
     InvalidCharacterValue(&'static str),
-    #[error("[{}][API] Invalid field descriptor value {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Invalid field descriptor value {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidFieldDescriptor(u16),
     #[error(
-        "[{}][API] Invalid value for attribute {0}, changed to {1}",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] Invalid value for attribute {0}, changed to {1}",
+        vendor = VENDOR_IDENTIFIER
     )]
     OptionValueChanged(&'static str, &'static str),
     #[error(
-        "[{}][API] BSON type {0} cannot be converted to ODBC type {1}",
-        VENDOR_IDENTIFIER
+        "[{vendor}][API] BSON type {0} cannot be converted to ODBC type {1}",
+        vendor = VENDOR_IDENTIFIER
     )]
     RestrictedDataType(&'static str, &'static str),
-    #[error("[{}][API] No resultset for statement", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] No resultset for statement", vendor = VENDOR_IDENTIFIER)]
     NoResultSet,
     #[error("Connection not open")]
     ConnectionNotOpen,
-    #[error("[{}][Core] {0}", VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][Core] {0}", vendor = VENDOR_IDENTIFIER)]
     Core(mongo_odbc_core::Error),
 }
 

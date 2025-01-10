@@ -8,5 +8,5 @@ crate-type = ["cdylib"]
 name = "mock_mongosqltranslate"
 
 [dependencies]
-bson = "2.0"
+bson = { workspace = true }
 
