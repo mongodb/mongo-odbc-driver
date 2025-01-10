@@ -76,7 +76,7 @@ fn string_contains_fractional_precision_micros(s: &str) -> bool {
     Regex::new(r"(\.\d+)")
         .unwrap()
         .find(s)
-        .map_or(false, |mat| mat.as_str().len() > 10) // 9 digits plus a '.'
+        .is_some_and(|mat| mat.as_str().len() > 10) // 9 digits plus a '.'
 }
 
 fn from_string(s: &str, conversion_error_type: &'static str) -> Result<f64> {
