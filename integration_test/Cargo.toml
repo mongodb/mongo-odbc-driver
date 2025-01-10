@@ -4,26 +4,26 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-serde = { workspace = true }
-serde_json = { workspace = true }
+serde = { version = "1.0.143", features = ["derive"] }
+serde_json = "1"
 serde_yaml = "0.9.4"
-thiserror = { workspace = true }
-lazy_static = { workspace = true }
+thiserror = "1"
+lazy_static = "1"
 definitions = { path = "../definitions", default-features = false }
 cstr = { path = "../cstr" }
 constants = { path = "../constants" }
 mongo-odbc-core = { path = "../core" }
 shared_sql_utils = { path = "../shared_sql_utils" }
-logger = { workspace = true }
-log = { workspace = true }
-regex = { workspace = true }
-num-traits = { workspace = true }
-mongodb = { workspace = true }
+logger = { path = "../logger" }
+log = "0.4"
+regex = "1"
+num-traits = "0.2.14"
+mongodb = { version = "3", features = ["aws-auth", "dns-resolver"] }
 tailcall = "1.0"
 # Do NOT change these features without consulting with other team members.
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread
-tokio = { workspace = true, features = ["rt", "sync", "io-util", "macros", "net"] }
+tokio = { version = "1", features = ["rt", "sync", "io-util", "macros", "net"] }
 
 
 [features]

@@ -6,8 +6,8 @@ edition = "2021"
 
 [dependencies]
 rust-ini = "0.20.0"
-itertools = { workspace = true }
-lazy_static = { workspace = true }
+itertools = "0.10.5"
+lazy_static = "1"
 
 [package.metadata.cargo-machete]
 ignored = ["rust-ini"]
