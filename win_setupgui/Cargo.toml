@@ -18,8 +18,8 @@ constants = { path = "../constants" }
 cstr = { path = "../cstr" }
 function_name = "0.3.0"
 shared_sql_utils = { path = "../shared_sql_utils" }
-thiserror = "1"
-log = "0.4.17"
+thiserror = { workspace = true }
+log = { workspace = true }
 
 [lib]
 name = "atsqls"
