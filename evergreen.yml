@@ -22,6 +22,15 @@ timeout:
         ls -la
 
 functions:
+  "generate third party licenses":
+    - command: subprocess.exec
+      params:
+        binary: bash
+        working_dir: mongosql-odbc-driver
+        args:
+          - "./evergreen/generate_licenses.sh"
+        add_expansions_to_env: true
+
   "build odbc documentation":
     - command: subprocess.exec
       params:
@@ -780,6 +789,7 @@ functions:
           rm target/release/mock_mongosqltranslate.dll
 
           cp target/release/*.dll installer/msi
+          cp THIRD_PARTY_LICENSES.txt installer/msi
           # TODO: Uncomment prior to merging back into master
           # cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           # TODO: Delete the following line prior to merging back into master
@@ -1167,7 +1177,7 @@ functions:
           # TODO: Uncomment prior to merging back into master
           # cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           # TODO: Delete the following line prior merging back into master
-          cp ./LICENSE ./README.md release/mongoodbc/
+          cp ./LICENSE ./THIRD_PARTY_LICENSES.txt ./README.md release/mongoodbc/
           cd release
           tar -czvf $UBUNTU_FILENAME mongoodbc/
 
@@ -2044,6 +2054,7 @@ tasks:
           platform: "win"
           lib_prefix: ""
           ext: "dll"
+      - func: "generate third party licenses"
       - func: "build msi"
         variants: [windows-64]
       - func: "fetch mongosqltranslate"
