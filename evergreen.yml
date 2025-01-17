@@ -789,11 +789,10 @@ functions:
           rm target/release/mock_mongosqltranslate.dll
 
           cp target/release/*.dll installer/msi
-          cp THIRD_PARTY_LICENSES.txt installer/msi
           # TODO: Uncomment prior to merging back into master
-          # cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
+          # cp ./THIRD_PARTY_LICENSES.txt ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           # TODO: Delete the following line prior to merging back into master
-          cp ./README.md installer/msi
+          cp ./THIRD_PARTY_LICENSES.txt ./README.md installer/msi
           cd installer/msi
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               MINOR_VERSION="0.1"
@@ -2043,6 +2042,8 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
+      - func: "generate third party licenses"
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "compile ubuntu and win release"
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
@@ -2054,7 +2055,6 @@ tasks:
           platform: "win"
           lib_prefix: ""
           ext: "dll"
-      - func: "generate third party licenses"
       - func: "build msi"
         variants: [windows-64]
       - func: "fetch mongosqltranslate"
