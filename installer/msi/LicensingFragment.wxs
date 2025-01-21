@@ -17,6 +17,13 @@
                     Source="$(var.SourceDir)\README.md"
                     DiskId="1" />
             </Component>
+            <Component Id="c_ThirdParty"
+                Guid="2804697e-9086-4f8c-ba4a-6a28fa814600">
+                <File Id="f_Third_Party_Licenses"
+                    Name="THIRD_PARTY_LICENSES.txt"
+                    Source="$(var.SourceDir)\THIRD_PARTY_LICENSES.txt"
+                    DiskId="1" />
+            </Component>
             <!-- TODO: Uncommented the following before merging eap into master -->
             <!-- <Component Id="c_Sbom"
                 Guid="f40564ba-a569-4567-895b-f720b816638c">
@@ -29,6 +36,7 @@
         <ComponentGroup Id="cg_License">
             <ComponentRef Id="c_Readme" />
             <ComponentRef Id="c_License" />
+            <ComponentRef Id="c_ThirdParty"/>
             <!-- TODO: Uncomment the following before merging back into master -->
             <!-- <ComponentRef Id="c_Sbom" /> -->
         </ComponentGroup>

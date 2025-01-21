@@ -22,6 +22,15 @@ timeout:
         ls -la
 
 functions:
+  "generate third party licenses":
+    - command: subprocess.exec
+      params:
+        binary: bash
+        working_dir: mongosql-odbc-driver
+        args:
+          - "./evergreen/generate_licenses.sh"
+        add_expansions_to_env: true
+
   "build odbc documentation":
     - command: subprocess.exec
       params:
@@ -781,9 +790,9 @@ functions:
 
           cp target/release/*.dll installer/msi
           # TODO: Uncomment prior to merging back into master
-          # cp ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
+          # cp ./THIRD_PARTY_LICENSES.txt ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           # TODO: Delete the following line prior to merging back into master
-          cp ./README.md installer/msi
+          cp ./THIRD_PARTY_LICENSES.txt ./README.md installer/msi
           cd installer/msi
           if [ "$RELEASE_VERSION" == "snapshot" ]; then
               MINOR_VERSION="0.1"
@@ -1167,7 +1176,7 @@ functions:
           # TODO: Uncomment prior to merging back into master
           # cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           # TODO: Delete the following line prior merging back into master
-          cp ./LICENSE ./README.md release/mongoodbc/
+          cp ./LICENSE ./THIRD_PARTY_LICENSES.txt ./README.md release/mongoodbc/
           cd release
           tar -czvf $UBUNTU_FILENAME mongoodbc/
 
@@ -2033,6 +2042,8 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
+      - func: "generate third party licenses"
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "compile ubuntu and win release"
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
