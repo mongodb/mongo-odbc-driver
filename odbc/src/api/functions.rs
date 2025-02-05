@@ -133,7 +133,11 @@ macro_rules! panic_safe_exec_keep_diagnostics {
     ($level:ident, $function:expr, $handle:expr) => {{
         let function = $function;
         let handle = $handle;
-        let handle_ref = MongoHandleRef::from(handle);
+        let mut maybe_handle_ref = if handle.is_null() {
+            None
+        } else {
+            Some(MongoHandleRef::from(handle))
+        };
         let previous_hook = panic::take_hook();
         let (s, r) = mpsc::sync_channel(1);
         let fct_name: &str = function_name!();
@@ -149,10 +153,10 @@ macro_rules! panic_safe_exec_keep_diagnostics {
             Ok(sql_return) => {
                 #[allow(unused_variables)]
                 let trace = trace_outcome(&sql_return);
-                if handle.is_null() {
-                    crate::trace_odbc!($level, trace, fct_name);
+                if let Some(ref mut h) = maybe_handle_ref {
+                    crate::trace_odbc!($level, h, trace, fct_name);
                 } else {
-                    crate::trace_odbc!($level, handle_ref, trace, fct_name);
+                    crate::trace_odbc!($level, trace, fct_name);
                 }
 
                 return sql_return;
@@ -163,23 +167,13 @@ macro_rules! panic_safe_exec_keep_diagnostics {
                 } else {
                     format!("{:?}\n{:?}", err, r.recv())
                 };
-
-                if handle.is_null() {
-                    crate::trace_odbc_error!(ODBCError::Panic(panic_msg.clone()), fct_name);
-                } else {
-                    add_diag_with_function!(
-                        handle_ref,
-                        ODBCError::Panic(panic_msg.clone()),
-                        fct_name
-                    );
-                }
                 let sql_return = SqlReturn::ERROR;
-                #[allow(unused_variables)]
-                let trace = trace_outcome(&sql_return);
-                if handle.is_null() {
-                    crate::trace_odbc_error!(trace, fct_name);
+                if let Some(ref mut h) = maybe_handle_ref {
+                    add_diag_with_function!(h, ODBCError::Panic(panic_msg.clone()), fct_name);
+                    crate::trace_odbc_error!(h, trace_outcome(&sql_return), fct_name);
                 } else {
-                    crate::trace_odbc_error!(handle_ref, trace, fct_name);
+                    crate::trace_odbc_error!(ODBCError::Panic(panic_msg.clone()), fct_name);
+                    crate::trace_odbc_error!(trace_outcome(&sql_return), fct_name);
                 }
                 return sql_return;
             }
