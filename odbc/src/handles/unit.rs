@@ -4,8 +4,9 @@
     clippy::cast_possible_wrap
 )]
 
+use crate::api::errors::ODBCError;
 use crate::{handles::definitions::*, has_odbc_3_behavior, SQLAllocHandle, SQLFreeHandle};
-use definitions::{AttrOdbcVersion, Handle, HandleType, SqlReturn};
+use definitions::{AttrOdbcVersion, HDbc, HDesc, HEnv, HStmt, Handle, HandleType, SqlReturn};
 
 #[test]
 fn test_env_alloc_free() {
@@ -149,6 +150,64 @@ fn test_statement_alloc_free() {
                 .len()
         );
     }
+}
+
+#[test]
+fn test_try_from_null_handles() {
+    let null_handle: Handle = std::ptr::null_mut();
+    let result = MongoHandleRef::try_from(null_handle);
+    assert!(
+        result.is_err(),
+        "Expected conversion of a null Handle to fail"
+    );
+    assert!(
+        matches!(result, Err(ODBCError::InvalidHandleType(msg)) if msg == "handle cannot be null"),
+        "Unexpected error variant or message: got {result:?}",
+    );
+
+    let null_henv: HEnv = std::ptr::null_mut();
+    let result = MongoHandleRef::try_from(null_henv);
+    assert!(
+        result.is_err(),
+        "Expected conversion of a null HEnv to fail"
+    );
+    assert!(
+        matches!(result, Err(ODBCError::InvalidHandleType(msg)) if msg == "handle cannot be null"),
+        "Unexpected error variant or message: got {result:?}",
+    );
+
+    let null_hstmt: HStmt = std::ptr::null_mut();
+    let result = MongoHandleRef::try_from(null_hstmt);
+    assert!(
+        result.is_err(),
+        "Expected conversion of a null HStmt to fail"
+    );
+    assert!(
+        matches!(result, Err(ODBCError::InvalidHandleType(msg)) if msg == "handle cannot be null"),
+        "Unexpected error variant or message: got {result:?}",
+    );
+
+    let null_hdbc: HDbc = std::ptr::null_mut();
+    let result = MongoHandleRef::try_from(null_hdbc);
+    assert!(
+        result.is_err(),
+        "Expected conversion of a null HDbc to fail"
+    );
+    assert!(
+        matches!(result, Err(ODBCError::InvalidHandleType(msg)) if msg == "handle cannot be null"),
+        "Unexpected error variant or message: got {result:?}",
+    );
+
+    let null_hdesc: HDesc = std::ptr::null_mut();
+    let result = MongoHandleRef::try_from(null_hdesc);
+    assert!(
+        result.is_err(),
+        "Expected conversion of a null HDesc to fail"
+    );
+    assert!(
+        matches!(result, Err(ODBCError::InvalidHandleType(msg)) if msg == "handle cannot be null"),
+        "Unexpected error variant or message: got {result:?}",
+    );
 }
 
 #[test]
