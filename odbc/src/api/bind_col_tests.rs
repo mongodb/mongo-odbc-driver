@@ -130,6 +130,73 @@ mod unit {
     }
 
     #[test]
+    fn test_binding_column_with_odbc_2_type_that_is_deprecated_in_odbc_3() {
+        // Set up MongoHandle
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+
+        unsafe {
+            // Get Statement
+            let s = (*stmt).as_statement().unwrap();
+
+            // set all statement attributes to the correct values.
+            s.attributes.write().unwrap().row_bind_offset_ptr = null_mut();
+            s.attributes.write().unwrap().row_array_size = 1;
+            s.attributes.write().unwrap().row_bind_type = BindType::SQL_BIND_BY_COLUMN as usize;
+
+            // Set the mongo_statement to have non-empty cursor initially.
+            // Here, we create a MockQuery with nonsense dummy data since the
+            // values themselves do not matter.
+            let mock_query = &mut create_mongo_query_for_bind_col_tests();
+
+            // Must call next to set the `current` field.
+            let _ = mock_query.next(None);
+
+            // Set the mongo_statement
+            *s.mongo_statement.write().unwrap() = Some(Box::new(mock_query.clone()));
+
+            let indicator: *mut Len = null_mut();
+
+            // Test binding a new column
+            let new_binding_buffer: *mut std::ffi::c_void =
+                Box::into_raw(Box::new([0u8; 4])) as *mut _;
+
+            // Assert that SQLBindCol is successful when the `target_type` is a ODBC 2.x type
+            // that is deprecated in ODBC 3*.x*.
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLBindCol(
+                    stmt as *mut _,
+                    1,
+                    CDataType::SQL_C_LONG as SmallInt,
+                    new_binding_buffer,
+                    4,
+                    indicator
+                )
+            );
+
+            // Assert that bound_cols has the correct value inside
+            assert_eq!(
+                Some(map! {
+                    1 => BoundColInfo {
+                        target_type: CDataType::SQL_C_LONG as SmallInt,
+                        target_buffer: new_binding_buffer,
+                        buffer_length: 4,
+                        length_or_indicator: indicator,
+                    }
+                }),
+                *s.bound_cols.read().unwrap()
+            );
+
+            // free buffer
+            let _ = Box::from_raw(new_binding_buffer as *mut WChar);
+        }
+    }
+
+    #[test]
     fn test_unbinding_column() {
         // Set up MongoHandle
         let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));

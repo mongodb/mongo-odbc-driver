@@ -10,10 +10,13 @@ pub const C_TYPES_EXTENDED: i16 = 0x04000;
 pub enum CDataType {
     SQL_ARD_TYPE = -99,
     SQL_APD_TYPE = -100,
+    SQL_C_TINYINT = -6,
     SQL_C_UTINYINT = -28,
     SQL_C_UBIGINT = -27,
     SQL_C_STINYINT = -26,
     SQL_C_SBIGINT = -25,
+    SQL_C_LONG = 4,
+    SQL_C_SHORT = 5,
     SQL_C_ULONG = -18,
     SQL_C_USHORT = -17,
     SQL_C_SLONG = -16,
