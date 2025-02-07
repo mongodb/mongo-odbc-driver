@@ -1,4 +1,5 @@
 use crate::api::errors::ODBCError;
+
 use cstr::{Charset, WideChar};
 use definitions::{
     AsyncEnable, AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, BindType, Concurrency,
@@ -178,33 +179,47 @@ macro_rules! has_odbc_3_behavior {
 
 pub type MongoHandleRef = &'static mut MongoHandle;
 
-impl From<Handle> for MongoHandleRef {
-    fn from(handle: Handle) -> Self {
-        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
+impl TryFrom<Handle> for MongoHandleRef {
+    type Error = ODBCError;
+
+    fn try_from(handle: Handle) -> Result<Self, Self::Error> {
+        if handle.is_null() {
+            Err(ODBCError::InvalidHandleType("handle cannot be null"))
+        } else {
+            Ok(unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() })
+        }
     }
 }
 
-impl From<HEnv> for MongoHandleRef {
-    fn from(handle: HEnv) -> Self {
-        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
+impl TryFrom<HEnv> for MongoHandleRef {
+    type Error = ODBCError;
+
+    fn try_from(handle: HEnv) -> Result<Self, Self::Error> {
+        MongoHandleRef::try_from(handle as Handle)
     }
 }
 
-impl From<HStmt> for MongoHandleRef {
-    fn from(handle: HStmt) -> Self {
-        unsafe { (*(handle.cast::<MongoHandle>())).borrow_mut() }
+impl TryFrom<HStmt> for MongoHandleRef {
+    type Error = ODBCError;
+
+    fn try_from(handle: HStmt) -> Result<Self, Self::Error> {
+        MongoHandleRef::try_from(handle as Handle)
     }
 }
 
-impl From<HDbc> for MongoHandleRef {
-    fn from(handle: HDbc) -> Self {
-        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
+impl TryFrom<HDbc> for MongoHandleRef {
+    type Error = ODBCError;
+
+    fn try_from(handle: HDbc) -> Result<Self, Self::Error> {
+        MongoHandleRef::try_from(handle as Handle)
     }
 }
 
-impl From<HDesc> for MongoHandleRef {
-    fn from(handle: HDesc) -> Self {
-        unsafe { (*handle.cast::<MongoHandle>()).borrow_mut() }
+impl TryFrom<HDesc> for MongoHandleRef {
+    type Error = ODBCError;
+
+    fn try_from(handle: HDesc) -> Result<Self, Self::Error> {
+        MongoHandleRef::try_from(handle as Handle)
     }
 }
 

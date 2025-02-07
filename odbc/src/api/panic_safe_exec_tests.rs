@@ -5,6 +5,7 @@
 )]
 
 use crate::trace_outcome;
+use crate::try_mongo_handle;
 use crate::{
     add_diag_with_function,
     errors::ODBCError,
