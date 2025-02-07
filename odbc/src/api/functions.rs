@@ -129,7 +129,6 @@ macro_rules! panic_safe_exec_clear_diagnostics {
         use crate::panic_safe_exec_keep_diagnostics;
         let handle = $handle;
         let handle_ref = try_mongo_handle!(handle);
-
         handle_ref.clear_diagnostics();
         panic_safe_exec_keep_diagnostics!($level, $function, $handle);
     }};
