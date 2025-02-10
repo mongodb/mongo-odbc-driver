@@ -110,6 +110,16 @@ macro_rules! odbc_unwrap {
     }};
 }
 
+macro_rules! try_mongo_handle {
+    ($raw:expr) => {{
+        match MongoHandleRef::try_from($raw) {
+            Ok(handle) => handle,
+            Err(_) => return SqlReturn::INVALID_HANDLE,
+        }
+    }};
+}
+pub(crate) use try_mongo_handle;
+
 /// panic_safe_exec_clear_diagnostics executes `function` such that any panics do not crash the runtime,
 /// while clearing any diagnostics in the $handle's error vec.
 /// If a panic occurs during execution, the panic is caught and turned into a String.
@@ -118,7 +128,7 @@ macro_rules! panic_safe_exec_clear_diagnostics {
     ($level:ident, $function:expr, $handle:expr) => {{
         use crate::panic_safe_exec_keep_diagnostics;
         let handle = $handle;
-        let handle_ref = MongoHandleRef::from(handle);
+        let handle_ref = try_mongo_handle!(handle);
         handle_ref.clear_diagnostics();
         panic_safe_exec_keep_diagnostics!($level, $function, $handle);
     }};
@@ -133,11 +143,7 @@ macro_rules! panic_safe_exec_keep_diagnostics {
     ($level:ident, $function:expr, $handle:expr) => {{
         let function = $function;
         let handle = $handle;
-        let mut maybe_handle_ref = if handle.is_null() {
-            None
-        } else {
-            Some(MongoHandleRef::from(handle))
-        };
+        let mut maybe_handle_ref = MongoHandleRef::try_from(handle).ok();
         let previous_hook = panic::take_hook();
         let (s, r) = mpsc::sync_channel(1);
         let fct_name: &str = function_name!();
@@ -192,7 +198,7 @@ macro_rules! unsupported_function {
         panic_safe_exec_clear_diagnostics!(
             info,
             || {
-                let mongo_handle = MongoHandleRef::from($handle);
+                let mongo_handle = try_mongo_handle!($handle);
                 let name = function_name!();
                 add_diag_info!(mongo_handle, ODBCError::Unimplemented(name));
                 SqlReturn::ERROR
@@ -340,14 +346,14 @@ pub unsafe extern "C" fn SQLBindCol(
     panic_safe_exec_keep_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(hstmt);
+            let mongo_handle = try_mongo_handle!(hstmt);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
 
             // Currently, we only support column binding with no offsets.
             // Make sure that column-wise binding is being used.
             if stmt.attributes.read().unwrap().row_bind_type != BindType::SQL_BIND_BY_COLUMN as ULen
             {
-                let mongo_handle = MongoHandleRef::from(hstmt);
+                let mongo_handle = try_mongo_handle!(hstmt);
                 add_diag_info!(
                     mongo_handle,
                     ODBCError::Unimplemented("`row-wise column binding`")
@@ -363,7 +369,7 @@ pub unsafe extern "C" fn SQLBindCol(
                 .row_bind_offset_ptr
                 .is_null()
             {
-                let mongo_handle = MongoHandleRef::from(hstmt);
+                let mongo_handle = try_mongo_handle!(hstmt);
                 add_diag_info!(
                     mongo_handle,
                     ODBCError::Unimplemented("`column binding with offsets`")
@@ -388,14 +394,14 @@ pub unsafe extern "C" fn SQLBindCol(
 
             // Make sure that col_number is in bounds. Columns are 1-indexed as per the ODBC spec.
             if (col_number as usize) > max_col_index || col_number == 0 {
-                let mongo_handle = MongoHandleRef::from(hstmt);
+                let mongo_handle = try_mongo_handle!(hstmt);
                 add_diag_info!(mongo_handle, ODBCError::InvalidColumnNumber(col_number));
                 return SqlReturn::ERROR;
             }
 
             // make sure that target_type is valid.
             if <CDataType as FromPrimitive>::from_i16(target_type).is_none() {
-                let mongo_handle = MongoHandleRef::from(hstmt);
+                let mongo_handle = try_mongo_handle!(hstmt);
                 add_diag_info!(mongo_handle, ODBCError::InvalidTargetType(target_type));
                 return SqlReturn::ERROR;
             }
@@ -507,7 +513,7 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
     panic_safe_exec_keep_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
 
             // use the statement state to determine if a query is executing or not
@@ -520,7 +526,7 @@ pub unsafe extern "C" fn SQLCancel(statement_handle: HStmt) -> SqlReturn {
                     if let Some(mongo_connection) = conn.mongo_connection.read().unwrap().as_ref() {
                         odbc_unwrap!(
                             mongo_connection.cancel_queries_for_statement(stmt_id),
-                            MongoHandleRef::from(statement_handle)
+                            try_mongo_handle!(statement_handle)
                         );
                         SqlReturn::SUCCESS
                     } else {
@@ -584,7 +590,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let odbc_version = mongo_handle.get_odbc_version();
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let mongo_stmt = stmt.mongo_statement.read().unwrap();
@@ -595,7 +601,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
             }
             let max_string_length = stmt.get_max_string_length();
             let string_col_attr = |f: &dyn Fn(&MongoColMetadata) -> &str| {
-                let mongo_handle = MongoHandleRef::from(statement_handle);
+                let mongo_handle = try_mongo_handle!(statement_handle);
                 let col_metadata = mongo_stmt
                     .as_ref()
                     .unwrap()
@@ -763,7 +769,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     | Desc::SQL_DESC_PARAMETER_TYPE
                     | Desc::SQL_DESC_ROWS_PROCESSED_PTR
                     | Desc::SQL_DESC_ROWVER) => {
-                        let mongo_handle = MongoHandleRef::from(statement_handle);
+                        let mongo_handle = try_mongo_handle!(statement_handle);
                         let _ = must_be_valid!((*mongo_handle).as_statement());
                         add_diag_info!(
                             mongo_handle,
@@ -773,7 +779,7 @@ pub unsafe extern "C" fn SQLColAttributeW(
                     }
                 },
                 None => {
-                    let mongo_handle = MongoHandleRef::from(statement_handle);
+                    let mongo_handle = try_mongo_handle!(statement_handle);
                     let _ = must_be_valid!((*mongo_handle).as_statement());
                     add_diag_info!(
                         mongo_handle,
@@ -835,7 +841,7 @@ pub unsafe extern "C" fn SQLColumnsW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let odbc_3_data_types = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog_string =
@@ -993,7 +999,7 @@ pub unsafe extern "C" fn SQLDescribeColW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let stmt_handle = MongoHandleRef::from(hstmt);
+            let stmt_handle = try_mongo_handle!(hstmt);
             let odbc_version = stmt_handle.get_odbc_version();
             {
                 let stmt = must_be_valid!(stmt_handle.as_statement());
@@ -1065,7 +1071,7 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
     panic_safe_exec_clear_diagnostics!(
         info,
         || {
-            let conn_handle = MongoHandleRef::from(connection_handle);
+            let conn_handle = try_mongo_handle!(connection_handle);
             let conn = must_be_valid!((*conn_handle).as_connection());
 
             // Close any open cursors on statements and drop all statements
@@ -1170,7 +1176,7 @@ pub unsafe extern "C" fn SQLDriverConnectW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let conn_handle = MongoHandleRef::from(connection_handle);
+            let conn_handle = try_mongo_handle!(connection_handle);
             trace_odbc!(
                 info,
                 conn_handle,
@@ -1286,7 +1292,7 @@ pub unsafe extern "C" fn SQLExecDirectW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
             let mongo_statement = odbc_unwrap!(
@@ -1322,7 +1328,7 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
             // set the statment state to executing so SQLCancel knows to search the op log for hanging queries
@@ -1377,7 +1383,7 @@ pub unsafe extern "C" fn SQLFetch(statement_handle: HStmt) -> SqlReturn {
 }
 
 unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlReturn {
-    let mongo_handle = MongoHandleRef::from(statement_handle);
+    let mongo_handle = try_mongo_handle!(statement_handle);
     let stmt = must_be_valid!(mongo_handle.as_statement());
 
     let mut encountered_success_with_info = false;
@@ -1432,9 +1438,10 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
         };
 
         if let Ok((has_next, mut row_warnings_opt)) = move_to_next_result {
+            let mongo_handle = try_mongo_handle!(statement_handle);
             row_warnings_opt.iter().for_each(|warning| {
                 add_diag_with_function!(
-                    MongoHandleRef::from(statement_handle),
+                    mongo_handle,
                     ODBCError::GeneralWarning(warning.to_string()),
                     function_name.to_string()
                 );
@@ -1504,7 +1511,7 @@ unsafe fn sql_fetch_helper(statement_handle: HStmt, function_name: &str) -> SqlR
             }
         } else {
             // An error happened when moving the cursor and fetching the next row
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             add_diag_with_function!(
                 mongo_handle,
                 move_to_next_result.as_ref().unwrap_err().clone(),
@@ -1557,7 +1564,10 @@ unsafe fn sql_fetch_bound_buffers(
     bound_cols: &HashMap<USmallInt, BoundColInfo>,
     function_name: &str,
 ) -> (bool, bool) {
-    let mongo_handle_for_sql_get_data_helper = MongoHandleRef::from(statement_handle);
+    let mongo_handle_for_sql_get_data_helper = match MongoHandleRef::try_from(statement_handle) {
+        Ok(h) => h,
+        Err(_) => return (true, false), // Returning (true, false) to indicate SqlReturn::ERROR was encountered
+    };
 
     let mut encountered_error_getting_data = false;
     let mut encountered_success_with_info_getting_data = false;
@@ -1630,7 +1640,7 @@ pub unsafe extern "C" fn SQLFetchScroll(
                     sql_fetch_helper(statement_handle, "SQLFetchScroll")
                 }
                 _ => {
-                    let stmt_handle = MongoHandleRef::from(statement_handle);
+                    let stmt_handle = try_mongo_handle!(statement_handle);
                     add_diag_info!(
                         stmt_handle,
                         ODBCError::FetchTypeOutOfRange(fetch_orientation)
@@ -1671,7 +1681,7 @@ pub unsafe extern "C" fn SQLForeignKeysW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let max_string_length = stmt.get_max_string_length();
             let mongo_statement = MongoForeignKeys::empty(max_string_length);
@@ -1784,7 +1794,7 @@ pub unsafe extern "C" fn SQLFreeStmt(statement_handle: HStmt, option: SmallInt) 
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
 
             match FromPrimitive::from_i16(option) {
@@ -1836,7 +1846,7 @@ pub unsafe extern "C" fn SQLGetConnectAttrW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let conn_handle = MongoHandleRef::from(connection_handle);
+            let conn_handle = try_mongo_handle!(connection_handle);
 
             match FromPrimitive::from_i32(attribute) {
                 Some(valid_attr) => sql_get_connect_attrw_helper(
@@ -1957,12 +1967,12 @@ pub unsafe extern "C" fn SQLGetData(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
 
             // Make sure that SQLGetData only runs when dealing with rowsets of size 1.
             if stmt.attributes.read().unwrap().row_array_size != 1 {
-                let mongo_handle = MongoHandleRef::from(statement_handle);
+                let mongo_handle = try_mongo_handle!(statement_handle);
                 add_diag_info!(
                     mongo_handle,
                     ODBCError::Unimplemented("`SQLGetData with rowset size greater than 1`")
@@ -2288,7 +2298,7 @@ pub unsafe extern "C" fn SQLGetEnvAttr(
     panic_safe_exec_clear_diagnostics!(
         info,
         || {
-            let env_handle = MongoHandleRef::from(environment_handle);
+            let env_handle = try_mongo_handle!(environment_handle);
 
             match FromPrimitive::from_i32(attribute) {
                 Some(valid_attr) => {
@@ -2353,7 +2363,7 @@ macro_rules! sql_get_info_helper {
     let buffer_length = $buffer_length;
     let string_length_ptr = $string_length_ptr;
 
-    let conn_handle = MongoHandleRef::from(connection_handle);
+    let conn_handle = try_mongo_handle!(connection_handle);
     let mut err = None;
     let sql_return = match FromPrimitive::from_u16(info_type) {
         Some(some_info_type) => {
@@ -2957,7 +2967,7 @@ pub unsafe extern "C" fn SQLGetStmtAttrW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let stmt_handle = MongoHandleRef::from(handle);
+            let stmt_handle = try_mongo_handle!(handle);
             if value_ptr.is_null() {
                 return SqlReturn::ERROR;
             }
@@ -3183,7 +3193,7 @@ pub unsafe extern "C" fn SQLGetTypeInfoW(handle: HStmt, data_type: SmallInt) -> 
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(handle);
+            let mongo_handle = try_mongo_handle!(handle);
             let odbc_version = mongo_handle.get_odbc_version();
             match FromPrimitive::from_i16(data_type) {
                 Some(sql_data_type) => {
@@ -3276,7 +3286,7 @@ pub unsafe extern "C" fn SQLNumResultCols(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
 
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let max_string_length = stmt.get_max_string_length();
@@ -3330,7 +3340,7 @@ pub unsafe extern "C" fn SQLPrepareW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
             let mongo_statement = odbc_unwrap!(
@@ -3404,7 +3414,7 @@ pub unsafe extern "C" fn SQLPrimaryKeysW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let max_string_length = stmt.get_max_string_length();
             let mongo_statement = MongoPrimaryKeys::empty(max_string_length);
@@ -3492,7 +3502,7 @@ pub unsafe extern "C" fn SQLRowCount(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             // even though we always return 0, we must still assert that the proper handle
             // type is sent by the client.
             let _ = must_be_valid!((*mongo_handle).as_statement());
@@ -3522,7 +3532,7 @@ pub unsafe extern "C" fn SQLSetConnectAttrW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let conn_handle = MongoHandleRef::from(connection_handle);
+            let conn_handle = try_mongo_handle!(connection_handle);
 
             match FromPrimitive::from_i32(attribute) {
                 Some(valid_attr) => set_connect_attrw_helper(conn_handle, valid_attr, value_ptr),
@@ -3702,7 +3712,7 @@ pub unsafe extern "C" fn SQLSetEnvAttr(
     panic_safe_exec_clear_diagnostics!(
         info,
         || {
-            let env_handle = MongoHandleRef::from(environment_handle);
+            let env_handle = try_mongo_handle!(environment_handle);
 
             match FromPrimitive::from_i32(attribute) {
                 Some(valid_attr) => sql_set_env_attrw_helper(env_handle, valid_attr, value),
@@ -3811,7 +3821,7 @@ pub unsafe extern "C" fn SQLSetStmtAttrW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let stmt_handle = MongoHandleRef::from(hstmt);
+            let stmt_handle = try_mongo_handle!(hstmt);
 
             match FromPrimitive::from_i32(attr) {
                 Some(valid_attr) => sql_set_stmt_attrw_helper(stmt_handle, valid_attr, value),
@@ -4184,7 +4194,7 @@ pub unsafe extern "C" fn SQLTablesW(
     panic_safe_exec_clear_diagnostics!(
         debug,
         || {
-            let mongo_handle = MongoHandleRef::from(statement_handle);
+            let mongo_handle = try_mongo_handle!(statement_handle);
             let odbc_behavior = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog = input_text_to_string_w(catalog_name, name_length_1.into());
