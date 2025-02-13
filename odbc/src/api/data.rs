@@ -717,7 +717,7 @@ pub unsafe fn format_cached_data(
     function_name: &str,
 ) -> SqlReturn {
     match cached_data {
-        // Fixed cannot be streamed, and this data has already been retrived before.
+        // Fixed cannot be streamed, and this data has already been retrieved before.
         a @ CachedData::Fixed => {
             let stmt = (*mongo_handle).as_statement().unwrap();
             // we need to insert Fixed so that we can return SqlReturn::NO_DATA if this is
@@ -925,7 +925,7 @@ pub unsafe fn format_bson_data(
                 str_len_or_ind_ptr
             )
         }
-        CDataType::SQL_C_SLONG => {
+        CDataType::SQL_C_SLONG | CDataType::SQL_C_LONG => {
             fixed_data_with_warnings!(
                 mongo_handle,
                 col_num,
