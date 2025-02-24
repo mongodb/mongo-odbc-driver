@@ -389,7 +389,7 @@ impl ODBCUri {
             if user.is_some() {
                 client_options.credential.as_mut().unwrap().username = user;
             }
-            // passwo d set as attribute should supercede mongo uri
+            // password set as attribute should supercede mongo uri
             let pwd = self.remove(PWD_KWS);
             if pwd.is_some() {
                 client_options.credential.as_mut().unwrap().password = pwd;
