@@ -345,17 +345,21 @@ pub mod simplified {
         fn from(v: Schema) -> Self {
             match v {
                 Schema::Atomic(a) => a.into(),
-                Schema::AnyOf(b) => (b.len() == 2)
-                    .then(|| {
+                Schema::AnyOf(b) => {
+                    if b.len() == 2 {
                         let atomics = b
                             .into_iter()
                             .filter(|a| !matches!(a, Atomic::Scalar(BsonTypeName::Null)))
                             .collect::<Vec<Atomic>>();
-                        (atomics.len() == 1)
-                            .then(|| atomics.first().unwrap().to_owned().into())
-                            .unwrap_or(BsonTypeInfo::BSON)
-                    })
-                    .unwrap_or(BsonTypeInfo::BSON),
+                        if atomics.len() == 1 {
+                            atomics.first().unwrap().to_owned().into()
+                        } else {
+                            BsonTypeInfo::BSON
+                        }
+                    } else {
+                        BsonTypeInfo::BSON
+                    }
+                }
             }
         }
     }
