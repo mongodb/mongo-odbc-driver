@@ -298,7 +298,7 @@ impl ODBCUri {
             opts.hosts = vec![ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?];
         }
         if source.is_some() {
-            opts.credential.as_mut().unwrap().source = source.map(String::from);
+            opts.credential.as_mut().unwrap().source = source;
         }
         Ok(())
     }
@@ -387,12 +387,12 @@ impl ODBCUri {
             // user name set as attribute should supercede mongo uri
             let user = self.remove(USER_KWS);
             if user.is_some() {
-                client_options.credential.as_mut().unwrap().username = user.map(String::from);
+                client_options.credential.as_mut().unwrap().username = user;
             }
             // password set as attribute should supercede mongo uri
             let pwd = self.remove(PWD_KWS);
             if pwd.is_some() {
-                client_options.credential.as_mut().unwrap().password = pwd.map(String::from);
+                client_options.credential.as_mut().unwrap().password = pwd;
             }
             Self::check_client_opts_credentials(&client_options)?;
         } else {
