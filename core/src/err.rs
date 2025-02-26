@@ -88,6 +88,8 @@ pub enum Error {
         "Multiple Documents were returned when getting the schema; however, only one was expected."
     )]
     MultipleSchemaDocumentsReturned(usize),
+    #[error("The buildInfo command failed with the following error: `{0}`")]
+    BuildInfoCmdExecutionFailed(mongodb::error::Error),
 }
 
 impl Error {
@@ -131,7 +133,8 @@ impl Error {
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::BsonDocumentToCommandResponseDeserialization(_)
             | Error::NoSchemaInformationReturned
-            | Error::MultipleSchemaDocumentsReturned(_) => GENERAL_ERROR,
+            | Error::MultipleSchemaDocumentsReturned(_)
+            | Error::BuildInfoCmdExecutionFailed(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
         }
@@ -184,7 +187,8 @@ impl Error {
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::BsonDocumentToCommandResponseDeserialization(_)
             | Error::NoSchemaInformationReturned
-            | Error::MultipleSchemaDocumentsReturned(_) => 0,
+            | Error::MultipleSchemaDocumentsReturned(_)
+            | Error::BuildInfoCmdExecutionFailed(_) => 0,
         }
     }
 }
