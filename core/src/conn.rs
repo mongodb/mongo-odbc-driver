@@ -235,8 +235,8 @@ impl MongoConnection {
                 if get_mongosqltranslate_library().is_none() {
                     return Err(Error::UnsupportedClusterConfiguration(
                         "Enterprise edition detected, but mongosqltranslate library not found. \
-                        You are either (1) trying to connect to an on-premises cluster and have the wrong driver \
-                        or are (2) trying to connect to an Atlas cluster directly instead of through an ADF instance.".to_string(),
+                        You are either (1) trying to connect to an on-premises cluster and have the wrong driver or are \
+                        (2) trying to connect directly to an Atlas cluster instead of through an Atlas Data Federation instance.".to_string(),
                     ));
                 }
 
