@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use constants::{
     OdbcState, FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE,
     INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, OPERATION_CANCELLED, TIMEOUT_EXPIRED,
@@ -6,12 +8,22 @@ use constants::{
 use mongodb::error::{ErrorKind, WriteFailure};
 use thiserror::Error;
 
+use crate::{mock_query, MongoQuery};
+
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Represents potential errors that can occur in the MongoDB ODBC driver at the
+/// core level, when interacting with MongoDB.
+///
+/// All errors implement the `std::error::Error` trait, and a custom
+/// `ErrorDetails` trait that is used to provide additional context for
+/// certain errors.
 #[derive(Error, Debug, Clone)]
 pub enum Error {
     #[error("Column index {0} out of bounds")]
     ColIndexOutOfBounds(u16),
+    #[error("Column index {0} out of bounds")]
+    ColIndexOutOfBoundsWithDiagnostics(u16, QueryDiagnostics),
     #[error("Trying to access collection metadata failed with: {0}")]
     CollectionCursorUpdate(mongodb::error::Error),
     #[error("Getting metadata for collection '{0}' failed with error: {1}")]
@@ -24,6 +36,8 @@ pub enum Error {
     InvalidClientOptions(mongodb::error::Error),
     #[error("Invalid cursor state: cursor not advanced")]
     InvalidCursorState,
+    #[error("Invalid cursor state: cursor not advanced")]
+    InvalidCursorStateWithDiagnostics(QueryDiagnostics),
     #[error("{0}")]
     InvalidResultSetJsonSchema(&'static str),
     #[error("Invalid Uri: {0}")]
@@ -38,6 +52,8 @@ pub enum Error {
     QueryCancelled,
     #[error("Getting query result failed with error: {0}")]
     QueryCursorUpdate(mongodb::error::Error),
+    #[error("Getting query result failed with error: {0}")]
+    QueryCursorUpdateWithDiagnostics(mongodb::error::Error, QueryDiagnostics),
     #[error("Getting metadata for query failed with error: {0}")]
     QueryDeserialization(mongodb::bson::de::Error),
     #[error("Trying to execute query failed with error: {0:?}")]
@@ -45,7 +61,15 @@ pub enum Error {
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
     #[error("Error retrieving data for field {0}: {1}")]
+    ValueAccessWithDiagnostics(
+        String,
+        mongodb::bson::document::ValueAccessError,
+        QueryDiagnostics,
+    ),
+    #[error("Error retrieving data for field {0}: {1}")]
     ValueAccess(String, mongodb::bson::document::ValueAccessError),
+    #[error("Error retrieving schema information, data for field {0}: {1}")]
+    SchemaValueAccess(String, mongodb::bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
     #[error("Unsupported cluster configuration: {0}")]
@@ -90,6 +114,36 @@ pub enum Error {
     LibraryPathError(String),
 }
 
+pub trait ErrorDetails {
+    /// Returns the `QueryDiagnostics` if available, otherwise `None`.
+    fn details(&self) -> Option<&QueryDiagnostics>;
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct QueryDiagnostics {
+    query: Arc<str>,
+    schema: Arc<str>,
+    translation: Arc<str>,
+}
+
+impl From<&MongoQuery> for QueryDiagnostics {
+    fn from(value: &MongoQuery) -> Self {
+        Self {
+            query: value.query.clone(),
+            schema: value.schema.clone(),
+            translation: value.translation.clone(),
+        }
+    }
+}
+
+impl From<&mock_query::MongoQuery> for QueryDiagnostics {
+    fn from(_: &mock_query::MongoQuery) -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
+}
+
 impl Error {
     pub fn get_sql_state(&self) -> OdbcState {
         match self {
@@ -97,6 +151,7 @@ impl Error {
             | Error::DatabaseVersionRetreival(err)
             | Error::InvalidClientOptions(err)
             | Error::QueryCursorUpdate(err)
+            | Error::QueryCursorUpdateWithDiagnostics(err, _)
             | Error::QueryExecutionFailed(err) => {
                 if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
@@ -108,7 +163,9 @@ impl Error {
             Error::MongoParseConnectionString(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
+            Error::ColIndexOutOfBoundsWithDiagnostics(_, _) => INVALID_DESCRIPTOR_INDEX,
             Error::InvalidCursorState => INVALID_CURSOR_STATE,
+            Error::InvalidCursorStateWithDiagnostics(_) => INVALID_CURSOR_STATE,
             Error::CollectionDeserialization(_, _)
             | Error::DatabaseVersionDeserialization(_)
             | Error::InvalidResultSetJsonSchema(_)
@@ -117,6 +174,8 @@ impl Error {
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
+            | Error::ValueAccessWithDiagnostics(_, _, _)
+            | Error::SchemaValueAccess(_, _)
             | Error::UnsupportedClusterConfiguration(_)
             | Error::UnsupportedOperation(_)
             | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
@@ -144,6 +203,7 @@ impl Error {
             | Error::DatabaseVersionRetreival(m)
             | Error::InvalidClientOptions(m)
             | Error::QueryCursorUpdate(m)
+            | Error::QueryCursorUpdateWithDiagnostics(m, _)
             | Error::QueryExecutionFailed(m)
             | Error::MongoParseConnectionString(m) => match m.kind.as_ref() {
                 ErrorKind::Command(command_error) => command_error.code,
@@ -157,9 +217,11 @@ impl Error {
                 _ => 0,
             },
             Error::ColIndexOutOfBounds(_)
+            | Error::ColIndexOutOfBoundsWithDiagnostics(_, _)
             | Error::CollectionDeserialization(_, _)
             | Error::DatabaseVersionDeserialization(_)
             | Error::InvalidCursorState
+            | Error::InvalidCursorStateWithDiagnostics(_)
             | Error::InvalidResultSetJsonSchema(_)
             | Error::InvalidUriFormat(_)
             | Error::MissingConnection(_)
@@ -169,6 +231,8 @@ impl Error {
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
+            | Error::ValueAccessWithDiagnostics(_, _, _)
+            | Error::SchemaValueAccess(_, _)
             | Error::UnsupportedOperation(_)
             | Error::UnsupportedClusterConfiguration(_)
             | Error::StatementNotExecuted
@@ -186,5 +250,30 @@ impl Error {
             | Error::MultipleSchemaDocumentsReturned(_)
             | Error::BuildInfoCmdExecutionFailed(_) => 0,
         }
+    }
+}
+
+impl ErrorDetails for Error {
+    fn details(&self) -> Option<&QueryDiagnostics> {
+        match self {
+            Error::InvalidCursorStateWithDiagnostics(diagnostics)
+            | Error::ColIndexOutOfBoundsWithDiagnostics(_, diagnostics)
+            | Error::ValueAccessWithDiagnostics(_, _, diagnostics)
+            | Error::QueryCursorUpdateWithDiagnostics(_, diagnostics) => Some(diagnostics),
+            _ => None,
+        }
+    }
+}
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_details_exist() {
+        let diagnostics = QueryDiagnostics {
+            query: Arc::from("test_query"),
+            schema: Arc::from("test_schema"),
+            translation: Arc::from("test_translation"),
+        };
     }
 }

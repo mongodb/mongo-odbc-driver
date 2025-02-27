@@ -7,6 +7,7 @@ use constants::{
     NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE,
     RESTRICTED_DATATYPE, RIGHT_TRUNCATED, VENDOR_IDENTIFIER,
 };
+use mongo_odbc_core::ErrorDetails;
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
@@ -235,6 +236,9 @@ impl ODBCError {
 
 impl From<mongo_odbc_core::Error> for ODBCError {
     fn from(err: mongo_odbc_core::Error) -> Self {
+        if let Some(details) = err.details() {
+            log::error!("{details:?}");
+        }
         match err {
             mongo_odbc_core::Error::ColIndexOutOfBounds(u) => ODBCError::InvalidDescriptorIndex(u),
             e => ODBCError::Core(e),
@@ -244,6 +248,9 @@ impl From<mongo_odbc_core::Error> for ODBCError {
 
 impl From<&mongo_odbc_core::Error> for ODBCError {
     fn from(err: &mongo_odbc_core::Error) -> Self {
+        if let Some(details) = err.details() {
+            log::error!("{details:?}");
+        }
         match err {
             mongo_odbc_core::Error::ColIndexOutOfBounds(u) => ODBCError::InvalidDescriptorIndex(*u),
             e => ODBCError::Core(e.clone()),

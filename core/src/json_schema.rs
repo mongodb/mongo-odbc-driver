@@ -1,6 +1,6 @@
 use crate::{BsonTypeInfo, Error};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
@@ -120,6 +120,15 @@ impl Schema {
             self.items = None;
         }
         self
+    }
+}
+
+impl Display for Schema {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match serde_json::to_string_pretty(self) {
+            Ok(json) => write!(f, "{}", json),
+            Err(err) => write!(f, "{:?}", err),
+        }
     }
 }
 

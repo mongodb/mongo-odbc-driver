@@ -2,7 +2,7 @@ use crate::{
     cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
-    err::Result,
+    err::{QueryDiagnostics, Result},
     mongosqltranslate::{
         libmongosqltranslate_run_command, CommandResponse, GetNamespaces, Namespace, Translate,
         TranslateCommandResponse,
@@ -17,8 +17,8 @@ use mongodb::{
     error::{CommandError, ErrorKind},
     Cursor, Database,
 };
-use std::collections::BTreeSet;
 use std::time::Duration;
+use std::{collections::BTreeSet, sync::Arc};
 
 const BATCH_SIZE_REPLACEMENT_THRESHOLD: u32 = 100;
 
@@ -38,6 +38,12 @@ pub struct MongoQuery {
     pub pipeline: Vec<Document>,
     // The query timeout
     pub query_timeout: Option<u32>,
+    // The sql query
+    pub query: Arc<str>,
+    // The schema fulfilling the query
+    pub schema: Arc<str>,
+    // The translation of the query. Not available from ADF.
+    pub translation: Arc<str>,
 }
 
 impl MongoQuery {
@@ -160,9 +166,17 @@ impl MongoQuery {
 
             let mut schema_catalog_doc = schema_catalog_doc_vec[0].to_owned();
 
-            let collections_schema_doc = schema_catalog_doc
-                .get_document_mut(current_db)
-                .map_err(|e: ValueAccessError| Error::ValueAccess(current_db.to_string(), e))?;
+            let collections_schema_doc =
+                schema_catalog_doc
+                    .get_document_mut(current_db)
+                    .map_err(|e| {
+                        log::warn!(
+                            "Failed to get schema document for database `{0}`: {1}",
+                            current_db,
+                            e
+                        );
+                        Error::SchemaValueAccess(current_db.to_string(), e)
+                    })?;
 
             // If there are collections with no schema available, assign them empty schemas.
             if namespaces.len() != collections_schema_doc.len() {
@@ -290,6 +304,18 @@ impl MongoQuery {
         let metadata =
             result_set_schema.process_result_metadata(working_db, type_mode, max_string_length)?;
 
+        let query = Arc::from(query.to_string().into_boxed_str());
+        let schema = Arc::from(result_set_schema.schema.to_string().into_boxed_str());
+        let translation = Arc::from(
+            serde_json::to_string_pretty(&pipeline)
+                .unwrap_or("Unable to serialize".to_string())
+                .into_boxed_str(),
+        );
+
+        if log::Level::Debug <= log::max_level() {
+            log::debug!("MongoQuery::prepare: query: {query}, pipeline: {pipeline:?}, metadata: {metadata:?}");
+        }
+
         Ok(Self {
             resultset_cursor: None,
             resultset_metadata: metadata,
@@ -298,6 +324,9 @@ impl MongoQuery {
             current_collection,
             pipeline,
             query_timeout,
+            query,
+            schema,
+            translation,
         })
     }
 }
@@ -308,14 +337,16 @@ impl MongoStatement for MongoQuery {
     // This method deserializes the current row and stores it in self.
     fn next(&mut self, connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         let guard = connection.unwrap().runtime.enter();
+        let diagnostics = QueryDiagnostics::from(&*self);
         let res = self
             .resultset_cursor
             .as_mut()
             .map_or(Err(Error::StatementNotExecuted), |c| {
-                connection
-                    .unwrap()
-                    .runtime
-                    .block_on(async { c.advance().await.map_err(Error::QueryCursorUpdate) })
+                connection.unwrap().runtime.block_on(async {
+                    c.advance().await.map_err(|e| {
+                        Error::QueryCursorUpdateWithDiagnostics(e, diagnostics.clone())
+                    })
+                })
             })?;
         drop(guard);
         // Cursor::advance must return Ok(true) before Cursor::deserialize_current can be invoked.
@@ -327,7 +358,7 @@ impl MongoStatement for MongoQuery {
                     .as_ref()
                     .unwrap()
                     .deserialize_current()
-                    .map_err(Error::QueryCursorUpdate)?,
+                    .map_err(|e| Error::QueryCursorUpdateWithDiagnostics(e, diagnostics))?,
             );
         } else {
             self.current = None;
@@ -339,13 +370,19 @@ impl MongoStatement for MongoQuery {
     // Get the BSON value for the cell at the given colIndex on the current row.
     // Fails if the first row as not been retrieved (next must be called at least once before getValue).
     fn get_value(&self, col_index: u16, max_string_length: Option<u16>) -> Result<Option<Bson>> {
-        let current = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
+        // let current = self.current.as_ref().ok_or(Error::InvalidCursorState)?;
+        let current = self
+            .current
+            .as_ref()
+            .ok_or(Error::InvalidCursorStateWithDiagnostics(self.into()))?;
         let md = self
             .get_col_metadata(col_index, max_string_length)
-            .map_err(|_| Error::ColIndexOutOfBounds(col_index))?;
+            .map_err(|_| Error::ColIndexOutOfBoundsWithDiagnostics(col_index, self.into()))?;
         let datasource = current
             .get_document(&md.table_name)
-            .map_err(|e: ValueAccessError| Error::ValueAccess(col_index.to_string(), e))?;
+            .map_err(|e: ValueAccessError| {
+                Error::ValueAccessWithDiagnostics(col_index.to_string(), e, self.into())
+            })?;
         let column = datasource.get(&md.col_name);
         Ok(column.cloned())
     }

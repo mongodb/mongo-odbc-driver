@@ -14,7 +14,7 @@ pub use databases::MongoDatabases;
 mod table_types;
 pub use table_types::MongoTableTypes;
 mod err;
-pub use err::{Error, Result};
+pub use err::{Error, ErrorDetails, Result};
 mod fields;
 pub use fields::MongoFields;
 pub mod col_metadata;
