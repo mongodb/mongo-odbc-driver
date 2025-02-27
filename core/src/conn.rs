@@ -1,4 +1,5 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
+use crate::err::QueryDiagnostics;
 use crate::mongosqltranslate::{
     get_mongosqltranslate_library, libmongosqltranslate_run_command,
     load_mongosqltranslate_library, CheckDriverVersion, CommandResponse,
@@ -16,7 +17,10 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "garbage_collect")]
 use std::sync::Weak;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 use tokio::runtime::Runtime;
 
 // we make from UserOptions to Client and Weak<Runtime> so that we do not hold around
@@ -112,6 +116,9 @@ pub struct MongoConnection {
 
     /// client cluster type. Valid types are AtlasDataFederation and Enterprise
     pub cluster_type: MongoClusterType,
+
+    /// diagnostic info for error logging
+    pub diagnostics: Option<Arc<RwLock<QueryDiagnostics>>>,
 }
 
 impl MongoConnection {
@@ -265,6 +272,7 @@ impl MongoConnection {
             uuid_repr,
             runtime,
             cluster_type: type_of_cluster,
+            diagnostics: None,
         };
 
         // Verify that the connection is working and the user has access to the default DB

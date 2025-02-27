@@ -2,7 +2,7 @@ use crate::{
     cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
-    err::Result,
+    err::{QueryDiagnostics, Result},
     mongosqltranslate::{
         libmongosqltranslate_run_command, CommandResponse, GetNamespaces, Namespace, Translate,
         TranslateCommandResponse,
@@ -160,9 +160,17 @@ impl MongoQuery {
 
             let mut schema_catalog_doc = schema_catalog_doc_vec[0].to_owned();
 
-            let collections_schema_doc = schema_catalog_doc
-                .get_document_mut(current_db)
-                .map_err(|e: ValueAccessError| Error::ValueAccess(current_db.to_string(), e))?;
+            let collections_schema_doc =
+                schema_catalog_doc
+                    .get_document_mut(current_db)
+                    .map_err(|e| {
+                        log::warn!(
+                            "Failed to get schema document for database `{0}`: {1}",
+                            current_db,
+                            e
+                        );
+                        Error::SchemaValueAccess(current_db.to_string(), e)
+                    })?;
 
             // If there are collections with no schema available, assign them empty schemas.
             if namespaces.len() != collections_schema_doc.len() {
@@ -290,6 +298,18 @@ impl MongoQuery {
         let metadata =
             result_set_schema.process_result_metadata(working_db, type_mode, max_string_length)?;
 
+        let query = query.to_string();
+        let schema = result_set_schema.schema.to_string();
+        let translation = serde_json::to_string_pretty(&pipeline)
+            .unwrap_or("Unable to serialize translation".to_string());
+
+        let diagnostics = QueryDiagnostics::new(query.clone(), schema.clone(), translation.clone());
+        if logger::DEFAULT_DIAGNOSTIC_LEVEL >= log::max_level() {
+            log::debug!("{diagnostics}");
+        }
+
+        *client.diagnostics.as_ref().unwrap().write().unwrap() = diagnostics;
+
         Ok(Self {
             resultset_cursor: None,
             resultset_metadata: metadata,
@@ -308,6 +328,22 @@ impl MongoStatement for MongoQuery {
     // This method deserializes the current row and stores it in self.
     fn next(&mut self, connection: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
         let guard = connection.unwrap().runtime.enter();
+        if let Some(diag) = match connection {
+            Some(c) => c.diagnostics.as_ref(),
+            None => {
+                log::debug!("No connection found for diagnostics");
+                None
+            }
+        } {
+            let row = {
+                let diag = diag.read().unwrap();
+                diag.row.get()
+            };
+            let new_row = if let Some(row) = row { row + 1 } else { 1 };
+            if let Ok(write) = diag.write() {
+                write.row.set(Some(new_row));
+            }
+        }
         let res = self
             .resultset_cursor
             .as_mut()

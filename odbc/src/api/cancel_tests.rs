@@ -147,6 +147,7 @@ mod integration {
             uuid_repr: None,
             runtime: runtime.into(),
             cluster_type: MongoClusterType::AtlasDataFederation,
+            diagnostics: None,
         };
         *conn_handle.mongo_connection.write().unwrap() = Some(mongo_connection);
         let conn = &mut MongoHandle::Connection(conn_handle);

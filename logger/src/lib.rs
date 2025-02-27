@@ -18,6 +18,11 @@ use std::path::{Path, PathBuf};
 
 const LOG_FILE_SIZE: u64 = 1024 * 500;
 
+// The original ticket, SQL-2660, specified to log at trace. However,
+// trace contains a *lot* of information, so we log at debug instead.
+// If we ever need to log at trace, we can change this.
+pub const DEFAULT_DIAGNOSTIC_LEVEL: log::Level = log::Level::Debug;
+
 // The logger is global to the application.
 // The first initialization will create a logger a provide a handle back.
 // The logger configuration can then be updated through the handle.

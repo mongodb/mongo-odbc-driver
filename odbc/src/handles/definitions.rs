@@ -71,9 +71,40 @@ impl MongoHandle {
                 e.errors.write().unwrap().push(error);
             }
             MongoHandle::Connection(c) => {
+                if let Ok(r) = c.mongo_connection.read() {
+                    if let Some(c) = r.as_ref() {
+                        log::error!(
+                            "{}",
+                            c.diagnostics
+                                .as_ref()
+                                .map(|d| d.read().map(|d| d.to_string()).unwrap_or_default())
+                                .unwrap_or_default()
+                        );
+                    }
+                }
                 c.errors.write().unwrap().push(error);
             }
             MongoHandle::Statement(s) => {
+                if !s.connection.is_null() {
+                    if let Some(c) = unsafe { s.connection.as_ref() } {
+                        if let Some(c) = c.as_connection() {
+                            if let Ok(r) = c.mongo_connection.read() {
+                                if let Some(c) = r.as_ref() {
+                                    log::error!(
+                                        "{}",
+                                        c.diagnostics
+                                            .as_ref()
+                                            .map(|d| d
+                                                .read()
+                                                .map(|d| d.to_string())
+                                                .unwrap_or_default())
+                                            .unwrap_or_default()
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
                 s.errors.write().unwrap().push(error);
             }
             MongoHandle::Descriptor(d) => {
