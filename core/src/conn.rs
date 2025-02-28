@@ -221,7 +221,7 @@ impl MongoConnection {
 
         let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
 
-        let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await });
+        let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await })?;
         match type_of_cluster {
             MongoClusterType::AtlasDataFederation => {}
             MongoClusterType::Community => {
@@ -234,8 +234,9 @@ impl MongoConnection {
                 // Ensure the library is loaded if Enterprise edition is detected
                 if get_mongosqltranslate_library().is_none() {
                     return Err(Error::UnsupportedClusterConfiguration(
-                        "Enterprise edition detected, but mongosqltranslate library not found."
-                            .to_string(),
+                        "Enterprise edition detected, but mongosqltranslate library not found. \
+                        You are either (1) trying to connect to an on-premises cluster and have the wrong driver or are \
+                        (2) trying to connect directly to an Atlas cluster instead of through an Atlas Data Federation instance.".to_string(),
                     ));
                 }
 
