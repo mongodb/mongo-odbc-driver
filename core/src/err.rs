@@ -1,3 +1,5 @@
+use std::{cell::Cell, fmt::Display};
+
 use constants::{
     OdbcState, FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE,
     INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, OPERATION_CANCELLED, TIMEOUT_EXPIRED,
@@ -46,6 +48,8 @@ pub enum Error {
     UnknownColumn(String),
     #[error("Error retrieving data for field {0}: {1}")]
     ValueAccess(String, mongodb::bson::document::ValueAccessError),
+    #[error("Error retrieving schema information data for field {0}: {1}")]
+    SchemaValueAccess(String, mongodb::bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
     MissingConnection(&'static str),
     #[error("Unsupported cluster configuration: {0}")]
@@ -90,6 +94,35 @@ pub enum Error {
     LibraryPathError(String),
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct QueryDiagnostics {
+    pub query: String,
+    pub schema: String,
+    pub translation: String,
+    pub row: Cell<Option<usize>>,
+}
+
+impl QueryDiagnostics {
+    pub fn new(query: String, schema: String, translation: String) -> Self {
+        Self {
+            query,
+            schema,
+            translation,
+            ..Default::default()
+        }
+    }
+}
+
+impl Display for QueryDiagnostics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Query: {}, Schema: {}, Translation: {}",
+            self.query, self.schema, self.translation
+        )
+    }
+}
+
 impl Error {
     pub fn get_sql_state(&self) -> OdbcState {
         match self {
@@ -117,6 +150,7 @@ impl Error {
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
+            | Error::SchemaValueAccess(_, _)
             | Error::UnsupportedClusterConfiguration(_)
             | Error::UnsupportedOperation(_)
             | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
@@ -169,6 +203,7 @@ impl Error {
             | Error::QueryDeserialization(_)
             | Error::UnknownColumn(_)
             | Error::ValueAccess(_, _)
+            | Error::SchemaValueAccess(_, _)
             | Error::UnsupportedOperation(_)
             | Error::UnsupportedClusterConfiguration(_)
             | Error::StatementNotExecuted
