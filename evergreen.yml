@@ -93,7 +93,11 @@ functions:
           export CARGO_NET_GIT_FETCH_WITH_CLI=true
           export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
           export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
-          export PATH="$LD_LIBRARY_PATH:$PATH:$HOME/.cargo/bin"
+          if [ "Windows_NT" == "$OS" ]; then
+            export PATH="$HOME/.rustup/bin:$HOME/.cargo/bin:$LD_LIBRARY_PATH:$PATH"
+          else
+            export PATH="$HOME/.cargo/bin:$LD_LIBRARY_PATH:$PATH"
+          fi
           export DUMP_FOLDER=dumps
           export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
           export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
@@ -208,7 +212,7 @@ functions:
           # rustup installs into C:\Users\$USER instead of
           # C:\home\$USER, so we symlink both .rustup and .cargo
           if [ "Windows_NT" == "$OS" ]; then
-              ln -sf /cygdrive/c/Users/$USER/.rustup/ ~/.rustup
+              ln -sf /cygdrive/c/Users/$USER/.rustup/toolchains/$DEFAULT_TOOLCHAIN ~/.rustup
               ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
 
               rustup toolchain install $DEFAULT_TOOLCHAIN
@@ -219,6 +223,8 @@ functions:
           rustup show
           echo ----- Rustup toolchain list -----
           rustup toolchain list
+          echo --------- Cargo version ---------
+          cargo --version
           echo ---------------------------------
 
   "check clippy":
