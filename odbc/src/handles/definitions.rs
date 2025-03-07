@@ -77,19 +77,23 @@ impl MongoHandle {
                 c.errors.write().unwrap().push(error);
             }
             MongoHandle::Statement(s) => {
-                unsafe {
-                    if let Some(ref diagnostics) = s
-                        .connection
-                        .as_ref()
-                        .unwrap()
-                        .as_connection()
-                        .unwrap()
-                        .diagnostics
-                        .read()
-                        .unwrap()
-                        .as_ref()
-                    {
-                        log::error!("Diagnostics: {:?}", diagnostics);
+                // SAFETY: we must ensure the connection is not null,
+                // otherwise this entire chain will cause unhappiness and chaos
+                if !s.connection.is_null() {
+                    unsafe {
+                        if let Some(ref diagnostics) = s
+                            .connection
+                            .as_ref()
+                            .unwrap()
+                            .as_connection()
+                            .unwrap()
+                            .diagnostics
+                            .read()
+                            .unwrap()
+                            .as_ref()
+                        {
+                            log::error!("Diagnostics: {:?}", diagnostics);
+                        }
                     }
                 }
                 s.errors.write().unwrap().push(error);
