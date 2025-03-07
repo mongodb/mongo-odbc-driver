@@ -6,6 +6,23 @@ use constants::{
 use mongodb::error::{ErrorKind, WriteFailure};
 use thiserror::Error;
 
+#[derive(Debug, Clone)]
+pub struct Diagnostics {
+    pub query: String,
+    pub schema: String,
+    pub translation: String,
+}
+
+impl Diagnostics {
+    pub fn new(query: String, schema: String, translation: String) -> Self {
+        Self {
+            query,
+            schema,
+            translation,
+        }
+    }
+}
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug, Clone)]
