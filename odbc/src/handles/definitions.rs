@@ -6,7 +6,7 @@ use definitions::{
     CursorScrollable, CursorSensitivity, CursorType, HDbc, HDesc, HEnv, HStmt, Handle, Len, NoScan,
     Pointer, RetrieveData, SimulateCursor, SmallInt, SqlBool, ULen, USmallInt, UseBookmarks,
 };
-use mongo_odbc_core::TypeMode;
+use mongo_odbc_core::{Diagnostics, TypeMode};
 use mongodb::bson::{Bson, Uuid};
 use std::{
     borrow::BorrowMut,
@@ -71,9 +71,27 @@ impl MongoHandle {
                 e.errors.write().unwrap().push(error);
             }
             MongoHandle::Connection(c) => {
+                if let Some(ref diagnostics) = c.diagnostics.read().unwrap().as_ref() {
+                    log::error!("Diagnostics: {:?}", diagnostics);
+                }
                 c.errors.write().unwrap().push(error);
             }
             MongoHandle::Statement(s) => {
+                unsafe {
+                    if let Some(ref diagnostics) = s
+                        .connection
+                        .as_ref()
+                        .unwrap()
+                        .as_connection()
+                        .unwrap()
+                        .diagnostics
+                        .read()
+                        .unwrap()
+                        .as_ref()
+                    {
+                        log::error!("Diagnostics: {:?}", diagnostics);
+                    }
+                }
                 s.errors.write().unwrap().push(error);
             }
             MongoHandle::Descriptor(d) => {
@@ -299,6 +317,8 @@ pub struct Connection {
     pub type_mode: RwLock<TypeMode>,
     // max_string_length is the maximum character length of string data.
     pub max_string_length: RwLock<Option<u16>>,
+    // query diagnostics for logging in errors
+    pub diagnostics: RwLock<Option<Diagnostics>>,
 }
 
 #[derive(Debug, Default)]
@@ -337,6 +357,7 @@ impl Connection {
             errors: RwLock::new(vec![]),
             type_mode: RwLock::new(TypeMode::Simple),
             max_string_length: RwLock::new(None),
+            diagnostics: RwLock::new(None),
         }
     }
 }

@@ -3369,7 +3369,7 @@ fn sql_prepare(
         )
     };
     query = query.strip_suffix(';').unwrap_or(&query).to_string();
-    let mongo_statement = {
+    if let Ok((mongo_statement, diagnostics)) = {
         let type_mode = *connection.type_mode.read().unwrap();
         let max_string_length = *connection.max_string_length.read().unwrap();
         let attributes = connection.attributes.read().unwrap();
@@ -3388,8 +3388,12 @@ fn sql_prepare(
         } else {
             Err(ODBCError::InvalidCursorState)
         }
-    };
-    mongo_statement
+    } {
+        *connection.diagnostics.write().unwrap() = Some(diagnostics);
+        Ok(mongo_statement)
+    } else {
+        Err(ODBCError::InvalidCursorState)
+    }
 }
 
 ///
