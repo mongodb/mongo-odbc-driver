@@ -13,7 +13,7 @@ pub struct QueryDiagnostics {
     pub translation: String,
 }
 
-impl Diagnostics {
+impl QueryDiagnostics {
     pub fn new(query: String, schema: String, translation: String) -> Self {
         Self {
             query,

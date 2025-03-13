@@ -2,7 +2,7 @@ use crate::{
     cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
-    err::{Diagnostics, Result},
+    err::{QueryDiagnostics, Result},
     mongosqltranslate::{
         libmongosqltranslate_run_command, CommandResponse, GetNamespaces, Namespace, Translate,
         TranslateCommandResponse,
@@ -212,7 +212,7 @@ impl MongoQuery {
         query: &str,
         type_mode: TypeMode,
         max_string_length: Option<u16>,
-    ) -> Result<(Self, Diagnostics)> {
+    ) -> Result<(Self, QueryDiagnostics)> {
         log::debug!("Preparing query with metadata - query: {query}");
         let working_db = current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = client.client.database(working_db);
@@ -298,7 +298,8 @@ impl MongoQuery {
             "Prepared query with metadata - pipeline: {pipeline:?}, json_schema: {json_schema:?}, result_set_schema: {result_set_schema:?}",
         );
 
-        let diagnostics = Diagnostics::new(query.to_string(), json_schema, format!("{pipeline:?}"));
+        let diagnostics =
+            QueryDiagnostics::new(query.to_string(), json_schema, format!("{pipeline:?}"));
 
         Ok((
             Self {
