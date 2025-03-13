@@ -295,7 +295,7 @@ impl MongoQuery {
             result_set_schema.process_result_metadata(working_db, type_mode, max_string_length)?;
 
         log::debug!(
-            "Prepared query with metadata - pipeline: {pipeline:?}, json_schema: {json_schema:?}",
+            "Prepared query with metadata - pipeline: {pipeline:?}, json_schema: {json_schema:?}, result_set_schema: {result_set_schema:?}",
         );
 
         let diagnostics = Diagnostics::new(query.to_string(), json_schema, format!("{pipeline:?}"));
