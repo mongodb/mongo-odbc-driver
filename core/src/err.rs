@@ -7,7 +7,7 @@ use mongodb::error::{ErrorKind, WriteFailure};
 use thiserror::Error;
 
 #[derive(Debug, Clone)]
-pub struct Diagnostics {
+pub struct QueryDiagnostics {
     pub query: String,
     pub schema: String,
     pub translation: String,
