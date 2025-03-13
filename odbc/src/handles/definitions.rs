@@ -78,7 +78,7 @@ impl MongoHandle {
                 // otherwise this entire chain will cause unhappiness and chaos
                 if !s.connection.is_null() {
                     if let Some(diagnostics) = s.diagnostics.read().unwrap().as_ref() {
-                        log::error!("Diagnostics: {:?}", diagnostics);
+                        log::error!("Query diagnostics: {:?}", diagnostics);
                     }
                 }
                 s.errors.write().unwrap().push(error);
