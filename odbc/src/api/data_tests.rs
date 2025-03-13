@@ -3369,7 +3369,6 @@ mod unit_tests {
             errors: RwLock::new(vec![]),
             type_mode: RwLock::new(TypeMode::Simple),
             max_string_length: RwLock::new(Some(6)),
-            diagnostics: RwLock::new(None),
         })));
 
         // use simple type mode to test string columns for complex types

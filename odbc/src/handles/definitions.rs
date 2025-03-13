@@ -71,29 +71,14 @@ impl MongoHandle {
                 e.errors.write().unwrap().push(error);
             }
             MongoHandle::Connection(c) => {
-                if let Some(ref diagnostics) = c.diagnostics.read().unwrap().as_ref() {
-                    log::error!("Diagnostics: {:?}", diagnostics);
-                }
                 c.errors.write().unwrap().push(error);
             }
             MongoHandle::Statement(s) => {
                 // SAFETY: we must ensure the connection is not null,
                 // otherwise this entire chain will cause unhappiness and chaos
                 if !s.connection.is_null() {
-                    unsafe {
-                        if let Some(ref diagnostics) = s
-                            .connection
-                            .as_ref()
-                            .unwrap()
-                            .as_connection()
-                            .unwrap()
-                            .diagnostics
-                            .read()
-                            .unwrap()
-                            .as_ref()
-                        {
-                            log::error!("Diagnostics: {:?}", diagnostics);
-                        }
+                    if let Some(diagnostics) = s.diagnostics.read().unwrap().as_ref() {
+                        log::error!("Diagnostics: {:?}", diagnostics);
                     }
                 }
                 s.errors.write().unwrap().push(error);
@@ -321,8 +306,6 @@ pub struct Connection {
     pub type_mode: RwLock<TypeMode>,
     // max_string_length is the maximum character length of string data.
     pub max_string_length: RwLock<Option<u16>>,
-    // query diagnostics for logging in errors
-    pub diagnostics: RwLock<Option<Diagnostics>>,
 }
 
 #[derive(Debug, Default)]
@@ -361,7 +344,6 @@ impl Connection {
             errors: RwLock::new(vec![]),
             type_mode: RwLock::new(TypeMode::Simple),
             max_string_length: RwLock::new(None),
-            diagnostics: RwLock::new(None),
         }
     }
 }
@@ -396,6 +378,8 @@ pub struct Statement {
     pub statement_id: RwLock<Bson>,
     // pub cursor: RwLock<Option<Box<Peekable<Cursor>>>>,
     pub errors: RwLock<Vec<ODBCError>>,
+    // query diagnostics for logging in errors
+    pub diagnostics: RwLock<Option<Diagnostics>>,
     pub bound_cols: RwLock<Option<HashMap<USmallInt, BoundColInfo>>>,
 }
 
@@ -540,6 +524,7 @@ impl Statement {
             errors: RwLock::new(vec![]),
             mongo_statement: RwLock::new(None),
             bound_cols: RwLock::new(None),
+            diagnostics: RwLock::new(None),
         }
     }
 

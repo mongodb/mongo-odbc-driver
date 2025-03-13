@@ -26,9 +26,9 @@ use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
 use mongo_odbc_core::{
-    odbc_uri::ODBCUri, Error, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
-    MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
-    MongoTypesInfo, TypeMode,
+    odbc_uri::ODBCUri, Diagnostics, Error, MongoColMetadata, MongoCollections, MongoConnection,
+    MongoDatabases, MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement,
+    MongoTableTypes, MongoTypesInfo, TypeMode,
 };
 use num_traits::FromPrimitive;
 use std::ptr::null_mut;
@@ -1295,12 +1295,13 @@ pub unsafe extern "C" fn SQLExecDirectW(
             let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
-            let mongo_statement = odbc_unwrap!(
+            let (mongo_statement, diagnostics) = odbc_unwrap!(
                 sql_prepare(statement_text, text_length, connection,),
                 mongo_handle
             );
 
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            *stmt.diagnostics.write().unwrap() = Some(diagnostics);
 
             // set the statment state to executing so SQLCancel knows to search the op log for hanging queries
             *stmt.state.write().unwrap() = StatementState::SynchronousQueryExecuting;
@@ -3343,12 +3344,13 @@ pub unsafe extern "C" fn SQLPrepareW(
             let mongo_handle = try_mongo_handle!(statement_handle);
             let stmt = must_be_valid!(mongo_handle.as_statement());
             let connection = must_be_valid!((*stmt.connection).as_connection());
-            let mongo_statement = odbc_unwrap!(
+            let (mongo_statement, diagnostics) = odbc_unwrap!(
                 sql_prepare(statement_text, text_length, connection,),
                 mongo_handle
             );
 
             *stmt.mongo_statement.write().unwrap() = Some(Box::new(mongo_statement));
+            *stmt.diagnostics.write().unwrap() = Some(diagnostics);
             SqlReturn::SUCCESS
         },
         statement_handle
@@ -3359,7 +3361,7 @@ fn sql_prepare(
     statement_text: *const WideChar,
     text_length: Integer,
     connection: &Connection,
-) -> Result<MongoQuery> {
+) -> Result<(MongoQuery, Diagnostics)> {
     let mut query = unsafe {
         input_text_to_string_w(
             statement_text,
@@ -3369,7 +3371,7 @@ fn sql_prepare(
         )
     };
     query = query.strip_suffix(';').unwrap_or(&query).to_string();
-    let mongo_statement_result = {
+    let mongo_statement = {
         let type_mode = *connection.type_mode.read().unwrap();
         let max_string_length = *connection.max_string_length.read().unwrap();
         let attributes = connection.attributes.read().unwrap();
@@ -3389,13 +3391,7 @@ fn sql_prepare(
             Err(ODBCError::InvalidCursorState)
         }
     };
-    match mongo_statement_result {
-        Ok((mongo_statement, diagnostics)) => {
-            *connection.diagnostics.write().unwrap() = Some(diagnostics);
-            Ok(mongo_statement)
-        }
-        Err(e) => Err(e),
-    }
+    mongo_statement
 }
 
 ///
