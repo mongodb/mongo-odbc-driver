@@ -2,7 +2,7 @@ use crate::{
     cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
-    err::Result,
+    err::{QueryDiagnostics, Result},
     mongosqltranslate::{
         libmongosqltranslate_run_command, CommandResponse, GetNamespaces, Namespace, Translate,
         TranslateCommandResponse,
@@ -59,7 +59,7 @@ impl MongoQuery {
         namespaces: BTreeSet<Namespace>,
         client: &MongoConnection,
         db: &Database,
-    ) -> Result<TranslateCommandResponse> {
+    ) -> Result<(TranslateCommandResponse, Document)> {
         let collection_names: Vec<String> = client.runtime.block_on(async {
             db.list_collection_names()
                 .await
@@ -192,13 +192,13 @@ impl MongoQuery {
         let command = Translate::new(
             sql_query.to_string(),
             current_db.to_string(),
-            schema_catalog_doc,
+            schema_catalog_doc.clone(),
         );
 
         let command_response = libmongosqltranslate_run_command(command)?;
 
         if let CommandResponse::Translate(response) = command_response {
-            Ok(response)
+            Ok((response, schema_catalog_doc))
         } else {
             unreachable!()
         }
@@ -212,10 +212,11 @@ impl MongoQuery {
         query: &str,
         type_mode: TypeMode,
         max_string_length: Option<u16>,
-    ) -> Result<Self> {
+    ) -> Result<(Self, QueryDiagnostics)> {
+        log::debug!("Preparing query with metadata - query: {query}");
         let working_db = current_db.as_ref().ok_or(Error::NoDatabase)?;
         let db = client.client.database(working_db);
-        let (pipeline, current_db, current_collection, result_set_schema) =
+        let (pipeline, current_db, current_collection, result_set_schema, json_schema) =
             match client.cluster_type {
                 MongoClusterType::AtlasDataFederation => {
                     // 1. Run the sqlGetResultSchema command to get the result set
@@ -245,6 +246,7 @@ impl MongoQuery {
                         working_db.to_string(),
                         None,
                         ResultSetSchema::from(get_result_schema_response),
+                        String::from("ADF schema..."),
                     )
                 }
                 MongoClusterType::Enterprise => {
@@ -252,7 +254,7 @@ impl MongoQuery {
                         Self::get_sql_query_namespaces(query, working_db)?;
 
                     // Translate sql
-                    let mongosql_translation = if namespaces.is_empty() {
+                    let (mongosql_translation, schema) = if namespaces.is_empty() {
                         Self::translate_sql(query, working_db, namespaces, client, &db)?
                     } else {
                         let query_db = &namespaces.first().unwrap().database.clone();
@@ -279,6 +281,8 @@ impl MongoQuery {
                         mongosql_translation.target_db,
                         mongosql_translation.target_collection,
                         mongosql_translation.result_set_schema,
+                        serde_json::to_string(&schema)
+                            .unwrap_or_else(|e| format!("Unable to serialize schema: {e}")),
                     )
                 }
                 MongoClusterType::Community | MongoClusterType::UnknownTarget => {
@@ -290,15 +294,25 @@ impl MongoQuery {
         let metadata =
             result_set_schema.process_result_metadata(working_db, type_mode, max_string_length)?;
 
-        Ok(Self {
-            resultset_cursor: None,
-            resultset_metadata: metadata,
-            current: None,
-            current_db: Some(current_db),
-            current_collection,
-            pipeline,
-            query_timeout,
-        })
+        log::debug!(
+            "Prepared query with metadata - pipeline: {pipeline:?}, json_schema: {json_schema:?}, result_set_schema: {result_set_schema:?}",
+        );
+
+        let diagnostics =
+            QueryDiagnostics::new(query.to_string(), json_schema, format!("{pipeline:?}"));
+
+        Ok((
+            Self {
+                resultset_cursor: None,
+                resultset_metadata: metadata,
+                current: None,
+                current_db: Some(current_db),
+                current_collection,
+                pipeline,
+                query_timeout,
+            },
+            diagnostics,
+        ))
     }
 }
 

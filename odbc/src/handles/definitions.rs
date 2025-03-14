@@ -6,7 +6,7 @@ use definitions::{
     CursorScrollable, CursorSensitivity, CursorType, HDbc, HDesc, HEnv, HStmt, Handle, Len, NoScan,
     Pointer, RetrieveData, SimulateCursor, SmallInt, SqlBool, ULen, USmallInt, UseBookmarks,
 };
-use mongo_odbc_core::TypeMode;
+use mongo_odbc_core::{QueryDiagnostics, TypeMode};
 use mongodb::bson::{Bson, Uuid};
 use std::{
     borrow::BorrowMut,
@@ -74,6 +74,13 @@ impl MongoHandle {
                 c.errors.write().unwrap().push(error);
             }
             MongoHandle::Statement(s) => {
+                // SAFETY: we must ensure the connection is not null,
+                // otherwise this entire chain will cause unhappiness and chaos
+                if !s.connection.is_null() {
+                    if let Some(diagnostics) = s.diagnostics.read().unwrap().as_ref() {
+                        log::error!("Query diagnostics: {:?}", diagnostics);
+                    }
+                }
                 s.errors.write().unwrap().push(error);
             }
             MongoHandle::Descriptor(d) => {
@@ -371,6 +378,8 @@ pub struct Statement {
     pub statement_id: RwLock<Bson>,
     // pub cursor: RwLock<Option<Box<Peekable<Cursor>>>>,
     pub errors: RwLock<Vec<ODBCError>>,
+    // query diagnostics for logging in errors
+    pub diagnostics: RwLock<Option<QueryDiagnostics>>,
     pub bound_cols: RwLock<Option<HashMap<USmallInt, BoundColInfo>>>,
 }
 
@@ -515,6 +524,7 @@ impl Statement {
             errors: RwLock::new(vec![]),
             mongo_statement: RwLock::new(None),
             bound_cols: RwLock::new(None),
+            diagnostics: RwLock::new(None),
         }
     }
 
