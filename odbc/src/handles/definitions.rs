@@ -6,7 +6,7 @@ use definitions::{
     CursorScrollable, CursorSensitivity, CursorType, HDbc, HDesc, HEnv, HStmt, Handle, Len, NoScan,
     Pointer, RetrieveData, SimulateCursor, SmallInt, SqlBool, ULen, USmallInt, UseBookmarks,
 };
-use mongo_odbc_core::{Diagnostics, TypeMode};
+use mongo_odbc_core::{QueryDiagnostics, TypeMode};
 use mongodb::bson::{Bson, Uuid};
 use std::{
     borrow::BorrowMut,
@@ -379,7 +379,7 @@ pub struct Statement {
     // pub cursor: RwLock<Option<Box<Peekable<Cursor>>>>,
     pub errors: RwLock<Vec<ODBCError>>,
     // query diagnostics for logging in errors
-    pub diagnostics: RwLock<Option<Diagnostics>>,
+    pub diagnostics: RwLock<Option<QueryDiagnostics>>,
     pub bound_cols: RwLock<Option<HashMap<USmallInt, BoundColInfo>>>,
 }
 

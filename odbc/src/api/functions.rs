@@ -26,9 +26,9 @@ use function_name::named;
 use log::{debug, error, info};
 use logger::Logger;
 use mongo_odbc_core::{
-    odbc_uri::ODBCUri, Diagnostics, Error, MongoColMetadata, MongoCollections, MongoConnection,
-    MongoDatabases, MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement,
-    MongoTableTypes, MongoTypesInfo, TypeMode,
+    odbc_uri::ODBCUri, Error, MongoColMetadata, MongoCollections, MongoConnection, MongoDatabases,
+    MongoFields, MongoForeignKeys, MongoPrimaryKeys, MongoQuery, MongoStatement, MongoTableTypes,
+    MongoTypesInfo, QueryDiagnostics, TypeMode,
 };
 use num_traits::FromPrimitive;
 use std::ptr::null_mut;
@@ -3361,7 +3361,7 @@ fn sql_prepare(
     statement_text: *const WideChar,
     text_length: Integer,
     connection: &Connection,
-) -> Result<(MongoQuery, Diagnostics)> {
+) -> Result<(MongoQuery, QueryDiagnostics)> {
     let mut query = unsafe {
         input_text_to_string_w(
             statement_text,
