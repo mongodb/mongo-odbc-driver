@@ -11,7 +11,6 @@ edition = "2021"
 
 [dependencies]
 mongosql = { git = "https://github.com/mongodb/mongosql.git", branch = "main" }
-libloading = "0.8.3"
 definitions = { path = "../definitions" }
 bson = { workspace = true }
 thiserror = { workspace = true }
