@@ -616,30 +616,58 @@ pub unsafe fn format_datetime(
     let stmt = (*mongo_handle).as_statement().unwrap();
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
     let dt = data.to_datetime();
+
     match dt {
-        Ok((dt, warning)) => {
-            let data = Timestamp {
-                year: dt.year().try_into().expect("year exceeded i16 maximum"),
-                month: dt.month().try_into().expect("month exceeded u16 maximum"),
-                day: dt.day().try_into().expect("day exceeded u16 maximum"),
-                hour: dt.hour().try_into().expect("hour exceeded u16 maximum"),
-                minute: dt.minute().try_into().expect("minute exceeded u16 maximum"),
-                second: dt.second().try_into().expect("second exceeded u16 maximum"),
-                fraction: dt.nanosecond(),
-            };
-            let sqlreturn =
-                isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
-            if let Some(warning) = warning {
-                stmt.errors.write().unwrap().push(warning);
-                return SqlReturn::SUCCESS_WITH_INFO;
+        Ok((dt, warning)) => match format_datetime_helper(dt) {
+            Ok(data) => {
+                let sqlreturn =
+                    isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
+                if let Some(warning) = warning {
+                    stmt.errors.write().unwrap().push(warning);
+                    return SqlReturn::SUCCESS_WITH_INFO;
+                }
+                sqlreturn
             }
-            sqlreturn
-        }
+            Err(e) => {
+                stmt.errors.write().unwrap().push(e);
+                SqlReturn::ERROR
+            }
+        },
         Err(e) => {
             stmt.errors.write().unwrap().push(e);
             SqlReturn::ERROR
         }
     }
+}
+
+fn format_datetime_helper(datetime: DateTime<Utc>) -> Result<Timestamp> {
+    Ok(Timestamp {
+        year: datetime
+            .year()
+            .try_into()
+            .map_err(|_| ODBCError::General("year exceeded i16 maximum"))?,
+        month: datetime
+            .month()
+            .try_into()
+            .map_err(|_| ODBCError::General("month exceeded u16 maximum"))?,
+        day: datetime
+            .day()
+            .try_into()
+            .map_err(|_| ODBCError::General("day exceeded u16 maximum"))?,
+        hour: datetime
+            .hour()
+            .try_into()
+            .map_err(|_| ODBCError::General("hour exceeded u16 maximum"))?,
+        minute: datetime
+            .minute()
+            .try_into()
+            .map_err(|_| ODBCError::General("minute exceeded u16 maximum"))?,
+        second: datetime
+            .second()
+            .try_into()
+            .map_err(|_| ODBCError::General("second exceeded u16 maximum"))?,
+        fraction: datetime.nanosecond(),
+    })
 }
 
 pub unsafe fn format_time(
@@ -653,25 +681,43 @@ pub unsafe fn format_time(
     let time = data.to_time();
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
     match time {
-        Ok((time, warning)) => {
-            let data = Time {
-                hour: time.hour().try_into().expect("hour exceeded u16 space"),
-                minute: time.minute().try_into().expect("minute exceeded u16 space"),
-                second: time.second().try_into().expect("second exceeded u16 space"),
-            };
-            let sqlreturn =
-                isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
-            if let Some(warning) = warning {
-                stmt.errors.write().unwrap().push(warning);
-                return SqlReturn::SUCCESS_WITH_INFO;
+        Ok((time, warning)) => match format_time_helper(time) {
+            Ok(data) => {
+                let sqlreturn =
+                    isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
+                if let Some(warning) = warning {
+                    stmt.errors.write().unwrap().push(warning);
+                    return SqlReturn::SUCCESS_WITH_INFO;
+                }
+                sqlreturn
             }
-            sqlreturn
-        }
+            Err(e) => {
+                stmt.errors.write().unwrap().push(e);
+                SqlReturn::ERROR
+            }
+        },
         Err(e) => {
             stmt.errors.write().unwrap().push(e);
             SqlReturn::ERROR
         }
     }
+}
+
+fn format_time_helper(time: NaiveTime) -> Result<Time> {
+    Ok(Time {
+        hour: time
+            .hour()
+            .try_into()
+            .map_err(|_| ODBCError::General("hour exceeded u16 maximum"))?,
+        minute: time
+            .minute()
+            .try_into()
+            .map_err(|_| ODBCError::General("minute exceeded u16 maximum"))?,
+        second: time
+            .second()
+            .try_into()
+            .map_err(|_| ODBCError::General("second exceeded u16 maximum"))?,
+    })
 }
 
 pub unsafe fn format_date(
@@ -685,26 +731,45 @@ pub unsafe fn format_date(
     let dt = data.to_date();
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
     match dt {
-        Ok((dt, warning)) => {
-            let data = Date {
-                year: dt.year().try_into().expect("year exceeded u16 space"),
-                month: dt.month().try_into().expect("month exceeded u16 space"),
-                day: dt.day().try_into().expect("day exceeded u16 space"),
-            };
-            let sqlreturn =
-                isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
-            if let Some(warning) = warning {
-                stmt.errors.write().unwrap().push(warning);
-                return SqlReturn::SUCCESS_WITH_INFO;
+        Ok((dt, warning)) => match format_date_helper(dt) {
+            Ok(data) => {
+                let sqlreturn =
+                    isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
+                if let Some(warning) = warning {
+                    stmt.errors.write().unwrap().push(warning);
+                    return SqlReturn::SUCCESS_WITH_INFO;
+                }
+                sqlreturn
             }
-            sqlreturn
-        }
+            Err(e) => {
+                stmt.errors.write().unwrap().push(e);
+                SqlReturn::ERROR
+            }
+        },
         Err(e) => {
             stmt.errors.write().unwrap().push(e);
             SqlReturn::ERROR
         }
     }
 }
+
+fn format_date_helper(date: NaiveDate) -> Result<Date> {
+    Ok(Date {
+        year: date
+            .year()
+            .try_into()
+            .map_err(|_| ODBCError::General("year exceeded u16 maximum"))?,
+        month: date
+            .month()
+            .try_into()
+            .map_err(|_| ODBCError::General("month exceeded u16 maximum"))?,
+        day: date
+            .day()
+            .try_into()
+            .map_err(|_| ODBCError::General("day exceeded u16 maximum"))?,
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub unsafe fn format_cached_data(
     mongo_handle: &mut MongoHandle,
