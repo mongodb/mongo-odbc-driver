@@ -28,8 +28,17 @@ log = { workspace = true }
 # Do NOT change these features without consulting with other team members.
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread
-tokio = { workspace = true, features = ["rt", "sync", "io-util", "macros", "net"] }
+tokio = { workspace = true, features = [
+    "rt",
+    "sync",
+    "io-util",
+    "macros",
+    "net",
+] }
 mongodb = { workspace = true }
+
+[build-dependencies]
+reqwest = { version = "0.12", features = ["blocking"] }
 
 [dependencies.bson]
 version = "2"

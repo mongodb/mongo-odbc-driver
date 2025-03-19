@@ -5,7 +5,7 @@ use crate::{
     },
     BsonTypeInfo, Error, Result, TypeMode,
 };
-use bson::{Bson, Document};
+use bson::{doc, Bson, Document};
 use definitions::{Nullability, SqlCode, SqlDataType};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -188,6 +188,20 @@ impl ResultSetSchema {
         let deserializer = bson::Deserializer::new(as_bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
         Deserialize::deserialize(deserializer)
+    }
+}
+
+// TODO: Just use monngosql scheam directly at some point
+impl From<mongosql::Translation> for ResultSetSchema {
+    fn from(translation: mongosql::Translation) -> Self {
+        Self {
+            schema: translation.result_set_schema.into(),
+            select_order: if translation.select_order.is_empty() {
+                None
+            } else {
+                Some(translation.select_order)
+            },
+        }
     }
 }
 

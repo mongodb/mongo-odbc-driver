@@ -1,13 +1,7 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
-use crate::mongosqltranslate::{
-    get_mongosqltranslate_library, libmongosqltranslate_run_command,
-    load_mongosqltranslate_library, CheckDriverVersion, CommandResponse,
-    GetMongosqlTranslateVersion,
-};
 use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
-use constants::DRIVER_METRICS_VERSION;
 use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
@@ -141,30 +135,6 @@ impl MongoConnection {
         }
     }
 
-    fn get_libmongosqltranslate_version() -> Result<String> {
-        let command = GetMongosqlTranslateVersion::default();
-
-        let command_response = libmongosqltranslate_run_command(command)?;
-
-        if let CommandResponse::GetMongosqlTranslateVersion(response) = command_response {
-            Ok(response.version)
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn is_libmongosqltranslate_compatible_with_driver_version() -> Result<bool> {
-        let command = CheckDriverVersion::new(DRIVER_METRICS_VERSION.clone());
-
-        let command_response = libmongosqltranslate_run_command(command)?;
-
-        if let CommandResponse::CheckDriverVersion(response) = command_response {
-            Ok(response.compatible)
-        } else {
-            unreachable!()
-        }
-    }
-
     /// Creates a new MongoConnection with the given settings and runs a command to make
     /// sure that the MongoConnection is valid.
     ///
@@ -196,60 +166,16 @@ impl MongoConnection {
 
         let uuid_repr = user_options.uuid_representation;
 
-        load_mongosqltranslate_library();
-
-        let (is_libmongosqltranslate_compatible_with_driver_version, libmongosqltranslate_version) =
-            if get_mongosqltranslate_library().is_some() {
-                let libmongosqltranslate_version = Self::get_libmongosqltranslate_version()?;
-
-                // This appends "|libmongosqltranslate+<version>" to the app_name
-                user_options
-                    .client_options
-                    .app_name
-                    .as_mut()
-                    .ok_or(Error::EmptyAppName)?
-                    .push_str(
-                        &("|libmongosqltranslate+".to_owned() + &libmongosqltranslate_version),
-                    );
-
-                let compatibility = Self::is_libmongosqltranslate_compatible_with_driver_version()?;
-
-                log::info!("libmongosqltranslate version: `{0}`. ODBC driver version: `{1}`. The ODBC driver and libmongosqltranslate library is compatible: `{2}`.", libmongosqltranslate_version, *DRIVER_METRICS_VERSION, compatibility);
-
-                (Some(compatibility), Some(libmongosqltranslate_version))
-            } else {
-                (None, None)
-            };
-
         let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
 
         let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await })?;
         match type_of_cluster {
-            MongoClusterType::AtlasDataFederation => {}
+            MongoClusterType::AtlasDataFederation | MongoClusterType::Enterprise => {}
             MongoClusterType::Community => {
                 // Community edition is not supported
                 return Err(Error::UnsupportedClusterConfiguration(
                     "Community edition detected. The driver is intended for use with MongoDB Enterprise edition or Atlas Data Federation.".to_string(),
                 ));
-            }
-            MongoClusterType::Enterprise => {
-                // Ensure the library is loaded if Enterprise edition is detected
-                if get_mongosqltranslate_library().is_none() {
-                    return Err(Error::UnsupportedClusterConfiguration(
-                        "Enterprise edition detected, but mongosqltranslate library not found."
-                            .to_string(),
-                    ));
-                }
-
-                if !is_libmongosqltranslate_compatible_with_driver_version
-                    .is_some_and(|is_compatible| is_compatible)
-                {
-                    return Err(Error::LibmongosqltranslateLibraryIsIncompatible(
-                        &DRIVER_METRICS_VERSION,
-                        libmongosqltranslate_version
-                            .ok_or(Error::EmptyLibmongosqltranslateVersion)?,
-                    ));
-                }
             }
             MongoClusterType::UnknownTarget => {
                 // Unknown cluster type is not supported

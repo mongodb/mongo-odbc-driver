@@ -75,10 +75,8 @@ pub enum Error {
         "The ODBC driver version `{0}` is incompatible with libmongosqltranslate version `{1}`"
     )]
     LibmongosqltranslateLibraryIsIncompatible(&'static str, String),
-    #[error(
-        "The libmongosqltranslate command `{0}` failed. Error message: `{1}`. Error is internal: {2}"
-    )]
-    LibmongosqltranslateCommandFailed(&'static str, String, bool),
+    #[error("The libmongosqltranslate command `{0}` failed. Error message: `{1}`.")]
+    LibmongosqltranslateCommandFailed(&'static str, String),
     #[error("Loading the runCommand symbol from libmongosqltranslate failed with error: {0}")]
     RunCommandSymbolNotFound(String),
     #[error("Deserializing libmongosqltranslate response to BSON Document failed with error: {0}")]
@@ -137,7 +135,7 @@ impl Error {
             | Error::UnsupportedClusterConfiguration(_)
             | Error::UnsupportedOperation(_)
             | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
-            | Error::LibmongosqltranslateCommandFailed(_, _, _)
+            | Error::LibmongosqltranslateCommandFailed(_, _)
             | Error::RunCommandSymbolNotFound(_)
             | Error::LibmongosqltranslateDeserialization(_)
             | Error::LibmongosqltranslateSerialization(_)
@@ -190,7 +188,7 @@ impl Error {
             | Error::UnsupportedClusterConfiguration(_)
             | Error::StatementNotExecuted
             | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
-            | Error::LibmongosqltranslateCommandFailed(_, _, _)
+            | Error::LibmongosqltranslateCommandFailed(_, _)
             | Error::RunCommandSymbolNotFound(_)
             | Error::LibmongosqltranslateDeserialization(_)
             | Error::LibmongosqltranslateSerialization(_)

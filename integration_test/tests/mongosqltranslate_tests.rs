@@ -139,8 +139,8 @@ mod mongosqltranslate_tests {
 
             let error_message = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             assert!(
-                error_message.contains("[MongoDB][Core] The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string."),
-                "Expected error message: `[MongoDB][Core] The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string.`; actual error message: {}",
+                error_message.contains("[MongoDB][Core] The libmongosqltranslate command `translate_sql` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string."),
+                "Expected error message: `[MongoDB][Core] The libmongosqltranslate command `translate_sql` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string.`; actual error message: {}",
                 error_message
             );
 
@@ -171,8 +171,8 @@ mod mongosqltranslate_tests {
 
             let error_message = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             assert!(
-                error_message.contains("The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`. Error is internal: false"),
-                "Expected error message: `The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`. Error is internal: false`; actual error message: {}",
+                error_message.contains("[MongoDB][Core] The libmongosqltranslate command `translate_sql` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`"),
+                "Expected error message: `[MongoDB][Core] The libmongosqltranslate command `translate_sql` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`.; actual error message: {}",
                 error_message
             );
 
