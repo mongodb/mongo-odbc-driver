@@ -191,7 +191,6 @@ impl ResultSetSchema {
     }
 }
 
-// TODO: Just use monngosql scheam directly at some point
 impl From<mongosql::Translation> for ResultSetSchema {
     fn from(translation: mongosql::Translation) -> Self {
         Self {
