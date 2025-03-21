@@ -71,24 +71,10 @@ pub enum Error {
     UnsupportedOperation(&'static str),
     #[error("Statement not executed")]
     StatementNotExecuted,
-    #[error(
-        "The ODBC driver version `{0}` is incompatible with libmongosqltranslate version `{1}`"
-    )]
-    LibmongosqltranslateLibraryIsIncompatible(&'static str, String),
-    #[error("The libmongosqltranslate command `{0}` failed. Error message: `{1}`.")]
-    LibmongosqltranslateCommandFailed(&'static str, String),
-    #[error("Loading the runCommand symbol from libmongosqltranslate failed with error: {0}")]
-    RunCommandSymbolNotFound(String),
-    #[error("Deserializing libmongosqltranslate response to BSON Document failed with error: {0}")]
-    LibmongosqltranslateDeserialization(mongodb::bson::de::Error),
-    #[error("Deserializing libmongosqltranslate response Document to CommandResponse failed with error: {0}")]
-    BsonDocumentToCommandResponseDeserialization(mongodb::bson::de::Error),
-    #[error("Serializing runCommand for libmongosqltranslate failed with error: {0}")]
-    LibmongosqltranslateSerialization(mongodb::bson::ser::Error),
+    #[error("The mongosql translate command `{0}` failed. Error message: `{1}`.")]
+    MongoSQLCommandFailed(&'static str, String),
     #[error("The client app_name is empty. However, this shouldn't be possible.")]
     EmptyAppName,
-    #[error("The libmongosqltranslate version is empty. However, this shouldn't be possible.")]
-    EmptyLibmongosqltranslateVersion,
     #[error(
         "The mongosql Translation `pipeline` should be an array; however this was not the case."
     )]
@@ -134,16 +120,10 @@ impl Error {
             | Error::ValueAccess(_, _)
             | Error::UnsupportedClusterConfiguration(_)
             | Error::UnsupportedOperation(_)
-            | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
-            | Error::LibmongosqltranslateCommandFailed(_, _)
-            | Error::RunCommandSymbolNotFound(_)
-            | Error::LibmongosqltranslateDeserialization(_)
-            | Error::LibmongosqltranslateSerialization(_)
+            | Error::MongoSQLCommandFailed(_, _)
             | Error::EmptyAppName
-            | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
-            | Error::BsonDocumentToCommandResponseDeserialization(_)
             | Error::MultipleSchemaDocumentsReturned(_)
             | Error::BuildInfoCmdExecutionFailed(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
@@ -187,16 +167,10 @@ impl Error {
             | Error::UnsupportedOperation(_)
             | Error::UnsupportedClusterConfiguration(_)
             | Error::StatementNotExecuted
-            | Error::LibmongosqltranslateLibraryIsIncompatible(_, _)
-            | Error::LibmongosqltranslateCommandFailed(_, _)
-            | Error::RunCommandSymbolNotFound(_)
-            | Error::LibmongosqltranslateDeserialization(_)
-            | Error::LibmongosqltranslateSerialization(_)
+            | Error::MongoSQLCommandFailed(_, _)
             | Error::EmptyAppName
-            | Error::EmptyLibmongosqltranslateVersion
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
-            | Error::BsonDocumentToCommandResponseDeserialization(_)
             | Error::LibraryPathError(_)
             | Error::MultipleSchemaDocumentsReturned(_)
             | Error::BuildInfoCmdExecutionFailed(_) => 0,

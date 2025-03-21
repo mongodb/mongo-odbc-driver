@@ -96,7 +96,7 @@ functions:
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
             # we split on `-libv` to get the two versions
-            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | awk -F'-libv' '{print $1}' | sed s/v// )
+            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v// )
           else
             export RELEASE_VERSION=snapshot
           fi

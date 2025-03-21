@@ -45,10 +45,7 @@ impl MongoQuery {
     fn get_sql_query_namespaces(sql_query: &str, db: &str) -> Result<BTreeSet<Namespace>> {
         match get_namespaces(db, sql_query) {
             Ok(namespaces) => Ok(namespaces),
-            Err(e) => Err(Error::LibmongosqltranslateCommandFailed(
-                "getNamespaces",
-                e.to_string(),
-            )),
+            Err(e) => Err(Error::MongoSQLCommandFailed("getNamespaces", e.to_string())),
         }
     }
 
@@ -206,10 +203,7 @@ impl MongoQuery {
 
                 let schema = Schema::from_document(&inner_value.as_document().unwrap().to_owned())
                     .map_err(|e| {
-                        Error::LibmongosqltranslateCommandFailed(
-                            "Schema::from_document",
-                            e.to_string(),
-                        )
+                        Error::MongoSQLCommandFailed("Schema::from_document", e.to_string())
                     })?;
 
                 inner_map.insert(inner_key, schema);
@@ -221,7 +215,7 @@ impl MongoQuery {
         let catalog = match build_catalog_from_catalog_schema(schema_map) {
             Ok(catalog) => catalog,
             Err(e) => {
-                return Err(Error::LibmongosqltranslateCommandFailed(
+                return Err(Error::MongoSQLCommandFailed(
                     "build_catalog_from_catalog_schema",
                     e.to_string(),
                 ))
@@ -238,10 +232,7 @@ impl MongoQuery {
             ),
         ) {
             Ok(translation) => Ok((translation, schema_catalog_doc)),
-            Err(e) => Err(Error::LibmongosqltranslateCommandFailed(
-                "translate_sql",
-                e.to_string(),
-            )),
+            Err(e) => Err(Error::MongoSQLCommandFailed("translate_sql", e.to_string())),
         }
     }
 
