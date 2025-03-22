@@ -3,10 +3,6 @@ use crate::{
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
     err::{QueryDiagnostics, Result},
-    mongosqltranslate::{
-        libmongosqltranslate_run_command, CommandResponse, GetNamespaces, Namespace, Translate,
-        TranslateCommandResponse,
-    },
     stmt::MongoStatement,
     Error, TypeMode,
 };
@@ -17,10 +13,15 @@ use mongodb::{
     error::{CommandError, ErrorKind},
     Cursor, Database,
 };
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
 const BATCH_SIZE_REPLACEMENT_THRESHOLD: u32 = 100;
+
+use mongosql::{
+    build_catalog_from_catalog_schema, get_namespaces, json_schema::Schema, options::SqlOptions,
+    translate_sql, Namespace, Translation,
+};
 
 #[derive(Debug)]
 pub struct MongoQuery {
@@ -41,15 +42,10 @@ pub struct MongoQuery {
 }
 
 impl MongoQuery {
-    fn get_sql_query_namespaces(sql_query: &str, db: &String) -> Result<BTreeSet<Namespace>> {
-        let command = GetNamespaces::new(sql_query.to_string(), db.to_string());
-
-        let command_response = libmongosqltranslate_run_command(command)?;
-
-        if let CommandResponse::GetNamespaces(response) = command_response {
-            Ok(response.namespaces)
-        } else {
-            unreachable!()
+    fn get_sql_query_namespaces(sql_query: &str, db: &str) -> Result<BTreeSet<Namespace>> {
+        match get_namespaces(db, sql_query) {
+            Ok(namespaces) => Ok(namespaces),
+            Err(e) => Err(Error::MongoSQLCommandFailed("getNamespaces", e.to_string())),
         }
     }
 
@@ -59,7 +55,7 @@ impl MongoQuery {
         namespaces: BTreeSet<Namespace>,
         client: &MongoConnection,
         db: &Database,
-    ) -> Result<(TranslateCommandResponse, Document)> {
+    ) -> Result<(Translation, Document)> {
         let collection_names: Vec<String> = client.runtime.block_on(async {
             db.list_collection_names()
                 .await
@@ -189,18 +185,54 @@ impl MongoQuery {
             }
         };
 
-        let command = Translate::new(
-            sql_query.to_string(),
-            current_db.to_string(),
-            schema_catalog_doc.clone(),
-        );
+        let mut schema_map = BTreeMap::new();
 
-        let command_response = libmongosqltranslate_run_command(command)?;
+        for (outer_key, outer_value) in schema_catalog_doc.clone().into_iter() {
+            // Expecting each outer value to be a document.
+            let inner_doc = match outer_value {
+                Bson::Document(d) => d,
+                _ => unimplemented!(),
+            };
 
-        if let CommandResponse::Translate(response) = command_response {
-            Ok((response, schema_catalog_doc))
-        } else {
-            unreachable!()
+            let mut inner_map = BTreeMap::new();
+
+            // Iterate over each key-value pair in the inner document.
+            for (inner_key, inner_value) in inner_doc.into_iter() {
+                // Convert the inner BSON value to a Schema.
+                // This requires that Schema implements TryFrom<Bson> or that you provide a custom conversion.
+
+                let schema = Schema::from_document(&inner_value.as_document().unwrap().to_owned())
+                    .map_err(|e| {
+                        Error::MongoSQLCommandFailed("Schema::from_document", e.to_string())
+                    })?;
+
+                inner_map.insert(inner_key, schema);
+            }
+
+            schema_map.insert(outer_key, inner_map);
+        }
+
+        let catalog = match build_catalog_from_catalog_schema(schema_map) {
+            Ok(catalog) => catalog,
+            Err(e) => {
+                return Err(Error::MongoSQLCommandFailed(
+                    "build_catalog_from_catalog_schema",
+                    e.to_string(),
+                ))
+            }
+        };
+
+        match translate_sql(
+            db.name(),
+            sql_query,
+            &catalog,
+            SqlOptions::new(
+                mongosql::options::ExcludeNamespacesOption::IncludeNamespaces,
+                mongosql::SchemaCheckingMode::Relaxed,
+            ),
+        ) {
+            Ok(translation) => Ok((translation, schema_catalog_doc)),
+            Err(e) => Err(Error::MongoSQLCommandFailed("translate_sql", e.to_string())),
         }
     }
 
@@ -275,12 +307,16 @@ impl MongoQuery {
                             Some(doc) => pipeline.push(doc.to_owned()),
                         }
                     }
+                    let target_db = mongosql_translation.target_db.clone();
+                    let target_collection = mongosql_translation.target_collection.clone();
+
+                    let result_set_schema = ResultSetSchema::from(mongosql_translation);
 
                     (
                         pipeline,
-                        mongosql_translation.target_db,
-                        mongosql_translation.target_collection,
-                        mongosql_translation.result_set_schema,
+                        target_db,
+                        target_collection,
+                        result_set_schema,
                         serde_json::to_string(&schema)
                             .unwrap_or_else(|e| format!("Unable to serialize schema: {e}")),
                     )

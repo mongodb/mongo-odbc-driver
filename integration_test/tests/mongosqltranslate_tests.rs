@@ -117,7 +117,7 @@ mod mongosqltranslate_tests {
     }
 
     #[test]
-    fn test_enterprise_mode_with_library_loaded_and_invalid_query_and_valid_schemas_created() {
+    fn test_enterprise_mode_with_invalid_query_and_valid_schemas_created() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_srv_style_connection_string(Some(
@@ -139,8 +139,8 @@ mod mongosqltranslate_tests {
 
             let error_message = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             assert!(
-                error_message.contains("[MongoDB][Core] The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string."),
-                "Expected error message: `[MongoDB][Core] The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string.`; actual error message: {}",
+                error_message.contains("[MongoDB][Core] The mongosql translate command `translate_sql` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string."),
+                "Expected error message: `[MongoDB][Core] The mongosql translate command `translate_sql` failed. Error message: `algebrize error: Error 1002: Incorrect argument type for `FieldAccess`. Required: object type. Found: string.`; actual error message: {}",
                 error_message
             );
 
@@ -150,7 +150,7 @@ mod mongosqltranslate_tests {
     }
 
     #[test]
-    fn test_enterprise_mode_with_library_loaded_and_valid_query_and_no_sql_schemas_collection() {
+    fn test_enterprise_mode_with_valid_query_and_no_sql_schemas_collection() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_srv_style_connection_string(Some(
@@ -171,8 +171,8 @@ mod mongosqltranslate_tests {
 
             let error_message = get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle);
             assert!(
-                error_message.contains("The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`. Error is internal: false"),
-                "Expected error message: `The libmongosqltranslate command `translate` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`. Error is internal: false`; actual error message: {}",
+                error_message.contains("[MongoDB][Core] The mongosql translate command `translate_sql` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`"),
+                "Expected error message: `[MongoDB][Core] The mongosql translate command `translate_sql` failed. Error message: `algebrize error: Error 1016: unknown collection 'foo' in database 'test'`.; actual error message: {}",
                 error_message
             );
 

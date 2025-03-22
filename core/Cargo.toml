@@ -10,7 +10,7 @@ authors = [
 edition = "2021"
 
 [dependencies]
-libloading = "0.8.3"
+mongosql = { git = "https://github.com/mongodb/mongosql.git", branch = "main" }
 definitions = { path = "../definitions" }
 bson = { workspace = true }
 thiserror = { workspace = true }
@@ -29,7 +29,13 @@ mongodb = { workspace = true }
 # Do NOT change these features without consulting with other team members.
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread
-tokio = { workspace = true, features = ["rt", "sync", "io-util", "macros", "net"] }
+tokio = { workspace = true, features = [
+    "rt",
+    "sync",
+    "io-util",
+    "macros",
+    "net",
+] }
 futures = "0.3"
 openidconnect = "3"
 open = "5"
@@ -37,9 +43,6 @@ reqwest = { version = "0", features = ["blocking"] }
 rfc8252_http_server = { path = "../rfc8252_http_server" }
 once_cell = { workspace = true }
 serde_json = { workspace = true }
-
-[dev-dependencies]
-mock_mongosqltranslate = { path = "../mock_mongosqltranslate" }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.44.0", features = [

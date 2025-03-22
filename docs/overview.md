@@ -27,18 +27,6 @@ the MongoDB Atlas SQL ODBC driver.
 The MongoDB ODBC driver is compatible with Windows x86_64 architecture, linux x86_64,
 and linux arm64 systems.
 
-#### Dependencies
-
-When querying a MongoDB standalone server or cluster (not [Atlas SQL](https://www.mongodb.com/docs/atlas/data-federation/query/query-with-sql/) powered by [Atlas Data Federation](https://www.mongodb.com/docs/atlas/data-federation/)), the accompanying
-`mongosqltranslate.dll` or `libmongosqltranslate.a` library is required to be colocated with the driver (`mongoodbc.dll` or `libatsql.so`).
-
-##### `libmongosqltranslate/mongosqltranslate` Location
-
-For Linux, the location of `libmongosqltranslate` will be wherever you extracted the download artifacts, in the `bin` dirctory.
-For Windows, the default location is `C:\Program Files\MongoDB\Atlas SQL ODBC Driver\bin`.
-
-On linux system, `unixodbc` is required.
-
 ## Installation
 
 ### Installation Steps
@@ -836,9 +824,6 @@ messages, while ERROR will include only ERROR messages.
 Ensure your credentials are correct and you have network access to the target
 cluster.
 
-- Enterprise edition detected, but mongosqltranslate library not found.
-
-Ensure that the `mongosqltranslate` library exists in the same directory as the MongoDB Atlas SQL ODBC driver.
 
 ### Debugging Tips
 
@@ -857,7 +842,6 @@ and clean up the registry.
 
 #### Linux Uninstallation
 
-1. Delete `libmongoodbc.a`, `libmongosqltranslate.a`.
 2. Delete `~/Documents/MongoDB/Atlas SQL ODBC` to delete all log files.
 
 ## Appendix

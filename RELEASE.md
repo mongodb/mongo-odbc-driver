@@ -10,10 +10,7 @@ The following guidelines will be used to determine when each version component w
 - **major**: backwards-breaking changes
 - **minor**: functionality added in a backwards compatible manner
 - **patch**: backwards compatible bug fixes.
-- **pre-release**: The pre-release version, used for preview builds and when updating a preview version of `libmongosqltranslate`
-- **libv**: to specify which version of `libmongosqltranslate` gets bundled with the driver during a release
-  - Our build system will fetch *exactly* the version of `libmongosqltranslate` specified after `libv` and bundle it with the driver. If you are unsure
-  what version to use, check the [releases](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin:release-page&status=released&contains=libv) page and use the latest **released** tag.
+- **pre-release**: The pre-release version, used for preview builds
 
 ## Release Process
 
@@ -23,11 +20,13 @@ The following guidelines will be used to determine when each version component w
 
 Go to the [SQL releases page](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=unreleased), and check the content of the tickets that are included in the current release. The fix version by default is a patch version. If there is a backwards incompatible API change in the tickets that are set to be released, we should instead update the major version; if there are new features added in the tickets set to be released, we should instead update the minor version. To do so, update the version on the [SQL releases page](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=unreleased) under "Actions". This will update the fix version on all of the tickets as well.
 
+##### Determine the correct version of `mongosql` to tag in `odbc/cargo.toml`. Cargo will use this specific tag.
+
 #### Start Release Ticket
 Move the JIRA ticket for the release to the "In Progress" state.
 Ensure that its fixVersion matches the version being released, and update it if it changed in the previous step.
 
-Add the fixVersion for the version of `libmongosqltranslate` that will be bundled as a separate fix version to the ticket.
+Add the fixVersion for the version of `mongosql-rs` that will be bundled as a separate fix version to the ticket.
 
 #### Complete the Release in JIRA
 Go to the [SQL releases page](https://jira.mongodb.org/projects/SQL?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=unreleased), and ensure that all the tickets in the fixVersion to be released are closed.
@@ -49,16 +48,13 @@ Ensure you have the `master` branch checked out, and that you have pulled the la
 
 #### Create the tag and push
 
-Git tags are used to specify which version of [`libmongosqltranslate`](https://github.com/10gen/mongosql-rs) to use, and
-formatted as follows:
-
-`v<ODBC major>.<ODBC minor>.<ODBC patch>[-<prereleaseversion>]-libv<libmongosqltranslate major>.<libmongosqltranslate minor>.<libmongosqltranslate patch>[-<prereleaseversion>]`
+`v<ODBC major>.<ODBC minor>.<ODBC patch>[-<prereleaseversion>]`
 
 Create an annotated tag and push it:
 
 ```sh
-#git tag -am X.Y.Z[-<ODBCprerelease>]-libvXX.YY.ZZ[-<prerelease>]
-git tag -am X.Y.Z-alpha-1-libv2.0.0-alpha-2 vX.Y.Z-alpha-1-libv1.0.0-alpha-2
+#git tag -am X.Y.Z[-<ODBCprerelease>]
+git tag -am X.Y.Z-alpha-1 vX.Y.Z-alpha-1
 git push --tags
 ```
 
@@ -125,4 +121,4 @@ Move the JIRA ticket tracking this release to the "Closed" state.
 #### Ensure next release ticket and fixVersion created
 
 Ensure that a JIRA ticket tracking the next release has been created and is assigned the appropriate fixVersion. The fixVersion should
-contain the patch or pre-release version of `libmongosqltranslate`.
+contain the `mongosql-rs` version. 

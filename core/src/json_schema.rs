@@ -19,6 +19,31 @@ pub struct Schema {
     pub any_of: Option<Vec<Schema>>,
 }
 
+impl From<mongosql::json_schema::Schema> for Schema {
+    fn from(value: mongosql::json_schema::Schema) -> Self {
+        Self {
+            // Copy matching fields directly.
+            bson_type: value.bson_type.map(Into::into),
+            // Convert items to the new format.
+            required: value.required,
+            additional_properties: value.additional_properties,
+            items: value.items.map(Into::into),
+            // Convert nested properties recursively.
+            properties: value.properties.map(|props| {
+                props
+                    .into_iter()
+                    .map(|(key, value)| (key, value.into()))
+                    .collect::<HashMap<_, _>>()
+            }),
+            any_of: value
+                .any_of
+                .map(|schemas| schemas.into_iter().map(|schema| schema.into()).collect()),
+            // The fields max_items and one_of in the mongosql schema
+            // are not present in the ODBC JSON schema so they are ignored.
+        }
+    }
+}
+
 impl Schema {
     // Remove multiple recursively removes Multiple Bson Type entries.
     pub fn remove_multiple(mut self) -> Result<Self, Error> {
@@ -130,6 +155,17 @@ pub enum BsonType {
     Multiple(Vec<BsonTypeName>),
 }
 
+impl From<mongosql::json_schema::BsonType> for BsonType {
+    fn from(m_bson_type: mongosql::json_schema::BsonType) -> Self {
+        match m_bson_type {
+            mongosql::json_schema::BsonType::Single(bson_type) => Self::Single(bson_type.into()),
+            mongosql::json_schema::BsonType::Multiple(bson_types) => {
+                Self::Multiple(bson_types.into_iter().map(Into::into).collect())
+            }
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum BsonTypeName {
@@ -157,11 +193,50 @@ pub enum BsonTypeName {
     Any,
 }
 
+impl From<mongosql::json_schema::BsonTypeName> for BsonTypeName {
+    fn from(value: mongosql::json_schema::BsonTypeName) -> Self {
+        match value {
+            mongosql::json_schema::BsonTypeName::Object => Self::Object,
+            mongosql::json_schema::BsonTypeName::Array => Self::Array,
+            mongosql::json_schema::BsonTypeName::Null => Self::Null,
+            mongosql::json_schema::BsonTypeName::String => Self::String,
+            mongosql::json_schema::BsonTypeName::Int => Self::Int,
+            mongosql::json_schema::BsonTypeName::Double => Self::Double,
+            mongosql::json_schema::BsonTypeName::Long => Self::Long,
+            mongosql::json_schema::BsonTypeName::Decimal => Self::Decimal,
+            mongosql::json_schema::BsonTypeName::BinData => Self::BinData,
+            mongosql::json_schema::BsonTypeName::ObjectId => Self::ObjectId,
+            mongosql::json_schema::BsonTypeName::Bool => Self::Bool,
+            mongosql::json_schema::BsonTypeName::Date => Self::Date,
+            mongosql::json_schema::BsonTypeName::Regex => Self::Regex,
+            mongosql::json_schema::BsonTypeName::DbPointer => Self::DbPointer,
+            mongosql::json_schema::BsonTypeName::Javascript => Self::Javascript,
+            mongosql::json_schema::BsonTypeName::Symbol => Self::Symbol,
+            mongosql::json_schema::BsonTypeName::JavascriptWithScope => Self::JavascriptWithScope,
+            mongosql::json_schema::BsonTypeName::Timestamp => Self::Timestamp,
+            mongosql::json_schema::BsonTypeName::MinKey => Self::MinKey,
+            mongosql::json_schema::BsonTypeName::MaxKey => Self::MaxKey,
+            mongosql::json_schema::BsonTypeName::Undefined => Self::Undefined,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 #[serde(untagged)]
 pub enum Items {
     Single(Box<Schema>),
     Multiple(Vec<Schema>),
+}
+
+impl From<mongosql::json_schema::Items> for Items {
+    fn from(value: mongosql::json_schema::Items) -> Self {
+        match value {
+            mongosql::json_schema::Items::Single(s) => Self::Single(Box::new((*s).into())),
+            mongosql::json_schema::Items::Multiple(s) => {
+                Self::Multiple(s.into_iter().map(Into::into).collect())
+            }
+        }
+    }
 }
 
 impl From<BsonTypeName> for BsonTypeInfo {

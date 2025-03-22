@@ -5,7 +5,7 @@ use crate::{
     },
     BsonTypeInfo, Error, Result, TypeMode,
 };
-use bson::{Bson, Document};
+use bson::{doc, Bson, Document};
 use definitions::{Nullability, SqlCode, SqlDataType};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -172,7 +172,7 @@ pub struct VersionedJsonSchema {
 
 // Struct representing the ResultSetSchema.
 // The `schema` field needs the alias `result_set_schema` because this struct is used to get the schema
-// from the __sql_schemas collection, which stores the schema in it's `schema` field, and the libmongosqltranslate
+// from the __sql_schemas collection, which stores the schema in it's `schema` field, and the mongosql
 // `translate` command, which stores the schema in it's `result_set_schema` field.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct ResultSetSchema {
@@ -188,6 +188,19 @@ impl ResultSetSchema {
         let deserializer = bson::Deserializer::new(as_bson);
         let deserializer = serde_stacker::Deserializer::new(deserializer);
         Deserialize::deserialize(deserializer)
+    }
+}
+
+impl From<mongosql::Translation> for ResultSetSchema {
+    fn from(translation: mongosql::Translation) -> Self {
+        Self {
+            schema: translation.result_set_schema.into(),
+            select_order: if translation.select_order.is_empty() {
+                None
+            } else {
+                Some(translation.select_order)
+            },
+        }
     }
 }
 

@@ -74,16 +74,6 @@ functions:
       params:
         directory: mongosql-odbc-driver
 
-  "fetch mongosqltranslate":
-    - command: s3.get
-      params:
-        working_dir: mongosql-odbc-driver
-        aws_key: ${release_aws_key}
-        aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/target/release/${lib_prefix}mongosqltranslate.${ext}
-        remote_file: mongosqltranslate/${lib_prefix}mongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-${platform}-${arch}.${ext}
-        bucket: translators-connectors-releases
-
   "generate expansions":
     - command: shell.exec
       params:
@@ -105,37 +95,30 @@ functions:
           export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
           export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
           if [[ "${triggered_by_git_tag}" != "" ]]; then
-            # tag should be formatted as `v<ODBC major>.<minor>.<patch>-libv<libmongosqltranslate major>.<minor>.<patch>`
-            # we split on `-libv` to get the two versions
-            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | awk -F'-libv' '{print $1}' | sed s/v// )
-            export LIBMONGOSQLTRANSLATE_VERSION=$(echo ${triggered_by_git_tag}  | awk -F'-libv' '{print $2}')
+            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v// )
           else
             export RELEASE_VERSION=snapshot
-            export LIBMONGOSQLTRANSLATE_VERSION=snapshot
           fi
           export MSI_FILENAME="mongoodbc-eap-$RELEASE_VERSION.msi"
           export UBUNTU_FILENAME="mongoodbc-eap-$RELEASE_VERSION.tar.gz"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
-          LIBMONGOSQLTRANSLATE_VERSION: "$LIBMONGOSQLTRANSLATE_VERSION"
           MSI_FILENAME: "$MSI_FILENAME"
           UBUNTU_FILENAME: "$UBUNTU_FILENAME"
-          WINDOWS_INSTALLER_PATH: "eap/mongosql-odbc-driver/windows/$RELEASE_VERSION-lib$LIBMONGOSQLTRANSLATE_VERSION/release/$MSI_FILENAME"
-          UBUNTU2204_INSTALLER_PATH: "eap/mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION-lib$LIBMONGOTRANSLATE_VERSION/release/$UBUNTU_FILENAME"
+          WINDOWS_INSTALLER_PATH: "eap/mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
+          UBUNTU2204_INSTALLER_PATH: "eap/mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/$UBUNTU_FILENAME"
           COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
           STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
-            export LIBMONGOSQLTRANSLATE_VERSION="$LIBMONGOSQLTRANSLATE_VERSION"
             export MSI_FILENAME="$MSI_FILENAME"
             export UBUNTU_FILENAME="$UBUNTU_FILENAME"
             export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
             export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
             export PATH="$PATH"
             export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
-            git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
             export LOCAL_MDB_PORT_COM=${local_mdb_port_com}
             export LOCAL_MDB_PORT_ENT=${local_mdb_port_ent}
             export LOCAL_MDB_USER=${local_mdb_user}
@@ -788,8 +771,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          # Delete mock library to prevent it from getting bundled in
-          rm target/release/mock_mongosqltranslate.dll
 
           cp target/release/*.dll installer/msi
           # TODO: Uncomment prior to merging back into master
@@ -834,8 +815,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          # Delete mock library to prevent it from getting bundled in
-          rm target/release/libmock_mongosqltranslate.dylib
 
           cp target/release/*.dylib installer/dmg
           cp target/release/macos_postinstall installer/dmg
@@ -1171,8 +1150,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          # Delete mock library to prevent it from getting bundled in
-          rm target/release/libmock_mongosqltranslate.so
 
           mkdir -p release/mongoodbc/bin
           cp target/release/*.so release/mongoodbc/bin/
@@ -1504,13 +1481,6 @@ functions:
           exit $EXITCODE
 
   "run ubuntu mongosqltranslate integration tests":
-    - command: s3.get
-      params:
-        aws_key: ${release_aws_key}
-        aws_secret: ${release_aws_secret}
-        remote_file: mongosqltranslate/libmongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-linux-x86_64.so
-        local_file: mongosql-odbc-driver/libmongosqltranslate.so
-        bucket: translators-connectors-releases
     - command: shell.exec
       type: test
       params:
@@ -1518,17 +1488,9 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          sudo mv -f libmongosqltranslate.so target/release/libmongosqltranslate.so
           cargo test mongosqltranslate_tests -- --nocapture
 
   "run ubuntu cluster type integration tests":
-    - command: s3.get
-      params:
-        aws_key: ${release_aws_key}
-        aws_secret: ${release_aws_secret}
-        remote_file: mongosqltranslate/libmongosqltranslate-v${LIBMONGOSQLTRANSLATE_VERSION}-linux-x86_64.so
-        local_file: mongosql-odbc-driver/libmongosqltranslate.so
-        bucket: translators-connectors-releases
     - command: shell.exec
       type: test
       params:
@@ -1536,6 +1498,8 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+
+          set +e
 
           mdb_version_com="mongodb-linux-x86_64-ubuntu2204-7.0.14"
           mdb_version_ent="mongodb-linux-x86_64-enterprise-ubuntu2204-7.0.14"
@@ -1544,18 +1508,10 @@ functions:
           # Start MongoDB instances
           ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
 
-          # Enterprise test without library
-          cargo test --features cluster_type_tests -- \
-            cluster_type::test_determine_cluster_type_enterprise_fails_without_library --nocapture
-          ENTERPRISE_NOLIB_EXITCODE=$?
 
-          # Move mongosqltranslate library to the correct location
-          sudo mv -f libmongosqltranslate.so target/release/libmongosqltranslate.so
-
-          # Enterprise test with library
-          cargo test --features cluster_type_tests -- \
-            cluster_type::test_enterprise_with_library_fails_due_to_missing_sql_get_result_schema_command --nocapture
-          ENTERPRISE_LIB_EXITCODE=$?
+          # Enterprise test
+          cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
+          ENTERPRISE_EXITCODE=$?
 
           # Community test
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
@@ -1564,20 +1520,21 @@ functions:
           # Stop MongoDB instances
           pkill mongod
 
-          # Determine overall exit code
-          if [ $ENTERPRISE_NOLIB_EXITCODE -eq 0 ] && [ $ENTERPRISE_LIB_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
+          if [ $ENTERPRISE_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
             OVERALL_EXITCODE=0
           else
             OVERALL_EXITCODE=1
           fi
 
           echo "Cluster test results:"
-          echo "Enterprise test without library exit code: $ENTERPRISE_NOLIB_EXITCODE"
-          echo "Enterprise test with library exit code: $ENTERPRISE_LIB_EXITCODE"
+          echo "Enterprise test exit code: $ENTERPRISE_EXITCODE"
           echo "Community test exit code: $COMMUNITY_EXITCODE"
           echo "Overall exit code: $OVERALL_EXITCODE"
 
+          set -e
+
           exit $OVERALL_EXITCODE
+
 
   "run macos result-set tests":
     - command: shell.exec
@@ -2051,38 +2008,10 @@ tasks:
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
         variants: [macos, macos-arm]
-      - func: "fetch mongosqltranslate"
-        variants: [windows-64]
-        vars:
-          arch: "x86_64"
-          platform: "win"
-          lib_prefix: ""
-          ext: "dll"
       - func: "build msi"
         variants: [windows-64]
-      - func: "fetch mongosqltranslate"
-        variants: [ubuntu2204]
-        vars:
-          arch: "x86_64"
-          platform: "linux"
-          lib_prefix: "lib"
-          ext: "so"
       - func: "tar linux artifacts"
         variants: [ubuntu2204]
-      - func: "fetch mongosqltranslate"
-        variants: [macos]
-        vars:
-          arch: "x86_64"
-          platform: "macos"
-          lib_prefix: "lib"
-          ext: "dylib"
-      - func: "fetch mongosqltranslate"
-        variants: [macos-arm]
-        vars:
-          arch: "arm"
-          platform: "macos"
-          lib_prefix: "lib"
-          ext: "dylib"
       - func: "build dmg"
         variants: [macos, macos-arm]
       - func: "mciuploads release artifacts"
