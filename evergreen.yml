@@ -102,6 +102,9 @@ functions:
           export MSI_FILENAME="mongoodbc-eap-$RELEASE_VERSION.msi"
           export UBUNTU_FILENAME="mongoodbc-eap-$RELEASE_VERSION.tar.gz"
 
+          # get latest mongosql tag
+          export MONGOSQL_VERSION=$(curl -s "https://api.github.com/repos/mongodb/mongosql/tags" | jq -r '.[0].name')
+
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
           MSI_FILENAME: "$MSI_FILENAME"
@@ -110,8 +113,10 @@ functions:
           UBUNTU2204_INSTALLER_PATH: "eap/mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/$UBUNTU_FILENAME"
           COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
           STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
+          MONGOSQL_VERSION: "$MONGOSQL_VERSION"
           prepare_shell: |
             set -o errexit
+            export MONGOSQL_VERSION="$MONGOSQL_VERSION"
             export RELEASE_VERSION="$RELEASE_VERSION"
             export MSI_FILENAME="$MSI_FILENAME"
             export UBUNTU_FILENAME="$UBUNTU_FILENAME"
@@ -657,6 +662,10 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+
+          # change mongosql version in core/Cargo.toml from branch to tag
+          sed -i "s/branch = \"main\"/tag = \"${MONGOSQL_VERSION}\"/" core/Cargo.toml
+
           # Compile release build
           cargo build --release
 
@@ -671,6 +680,9 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+
+          # change mongosql version in core/Cargo.toml from branch to tag
+          sed -i "s/branch = \"main\"/tag = \"${MONGOSQL_VERSION}\"/" core/Cargo.toml
 
           # Compile debug build
           cargo build

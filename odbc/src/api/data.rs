@@ -1076,7 +1076,11 @@ unsafe fn set_output_wstring_helper(
     );
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars_written != 0 && num_chars_written <= message.len().try_into().unwrap() {
+    if num_chars_written != 0
+        && num_chars_written
+            <= <usize as std::convert::TryInto<isize>>::try_into(message.len())
+                .expect("message len could not be converted to isize")
+    {
         (
             (num_chars_written - 1) as usize,
             SqlReturn::SUCCESS_WITH_INFO,
@@ -1115,7 +1119,11 @@ unsafe fn set_output_string_helper(
 
     // return the number of characters in the message string, excluding the
     // null terminator
-    if num_chars_written != 0 && num_chars_written <= message.len().try_into().unwrap() {
+    if num_chars_written != 0
+        && num_chars_written
+            <= <usize as std::convert::TryInto<isize>>::try_into(message.len())
+                .expect("message len could not be converted to isize")
+    {
         // if the num_chars_written is 0, we didn't even write a null terminator
         (
             (num_chars_written - 1) as usize,
