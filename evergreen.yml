@@ -584,7 +584,10 @@ functions:
               echo "Error: Failed to fetch valid mongosql tags"
               exit 1
           fi
-          sed -i "s/^\(mongosql = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
+
+          if [[ "$OS" != "Darwin" ]]; then
+            sed -i "s/^\(mongosql = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
+          fi
 
 
   "sign windows":
