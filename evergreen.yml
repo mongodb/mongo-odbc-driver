@@ -580,12 +580,14 @@ functions:
           # use the latest mongosql release tag
           MONGOSQL_VERSION=$(curl -sSfL --retry 5 "https://api.github.com/repos/mongodb/mongosql/tags" | jq -r '.[0].name')
           echo "MONGOSQL_VERSION: $MONGOSQL_VERSION"
-          if [ -z "$MONGOSQL_VERSION" ] || [ "$MONGOSQL_VERSION" = "null" ]; then
+          if [ -z "$MONGOSQL_VERSION" ] || [ "$MONGOSQL_VERSION" = "null" ] || [ "$MONGOSQL_VERSION" = "" ]; then
               echo "Error: Failed to fetch valid mongosql tags"
               exit 1
           fi
 
-          if [[ "$OS" != "Darwin" ]]; then
+          if [[ "$(uname -s)" = "Darwin" ]]; then
+            sed -i '' 's/\(mongosql = {.*\)branch = "main"\(.*}\)/\1tag = "'"$MONGOSQL_VERSION"'"\2/' core/Cargo.toml
+          else
             sed -i "s/^\(mongosql = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
           fi
 
