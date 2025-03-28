@@ -102,6 +102,7 @@ functions:
           export MSI_FILENAME="mongoodbc-eap-$RELEASE_VERSION.msi"
           export UBUNTU_FILENAME="mongoodbc-eap-$RELEASE_VERSION.tar.gz"
 
+
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
           MSI_FILENAME: "$MSI_FILENAME"
@@ -576,6 +577,21 @@ functions:
             exit 1
           fi
 
+          # use the latest mongosql release tag
+          MONGOSQL_VERSION=$(curl -sSfL --retry 5 "https://api.github.com/repos/mongodb/mongosql/tags" | jq -r '.[0].name')
+          echo "MONGOSQL_VERSION: $MONGOSQL_VERSION"
+          if [ -z "$MONGOSQL_VERSION" ] || [ "$MONGOSQL_VERSION" = "null" ] || [ "$MONGOSQL_VERSION" = "" ]; then
+              echo "Error: Failed to fetch valid mongosql tags"
+              exit 1
+          fi
+
+          if [[ "$(uname -s)" = "Darwin" ]]; then
+            sed -i '' 's/\(mongosql = {.*\)branch = "main"\(.*}\)/\1tag = "'"$MONGOSQL_VERSION"'"\2/' core/Cargo.toml
+          else
+            sed -i "s/^\(mongosql = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
+          fi
+
+
   "sign windows":
     - command: shell.exec
       type: system
@@ -657,6 +673,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+
           # Compile release build
           cargo build --release
 
