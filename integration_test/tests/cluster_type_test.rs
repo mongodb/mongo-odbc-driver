@@ -74,8 +74,15 @@ mod cluster_type {
             "Expected an error for community edition, but got success"
         );
         if let Err(e) = result {
+            assert!(e.contains("Unsupported cluster configuration"));
+            #[cfg(not(feature = "eap"))]
             assert!(
-                e.contains("Unsupported cluster configuration: Community edition detected") &&
+                e.contains("The driver is intended for use with MongoDB Atlas Data Federation"),
+                "Unexpected error message for community edition: {}",
+                e
+            );
+            #[cfg(feature = "eap")]
+            assert!(
                     e.contains("The driver is intended for use with MongoDB Enterprise edition or Atlas Data Federation"),
                 "Unexpected error message for community edition: {}",
                 e
@@ -86,6 +93,12 @@ mod cluster_type {
     #[tokio::test]
     async fn test_determine_cluster_type_enterprise_succeeds() {
         let result = run_cluster_type_test(PortType::Enterprise).await;
+        #[cfg(not(feature = "eap"))]
+        assert!(
+            result.is_err(),
+            "Expected an error for enterprise edition, but got success"
+        );
+        #[cfg(feature = "eap")]
         assert!(
             result.is_ok(),
             "Expected success with enterprise edition, but got an error: {result:?}"

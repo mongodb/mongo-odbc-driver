@@ -52,6 +52,7 @@ windows = { version = "0.44.0", features = [
 
 [features]
 garbage_collect = []
+eap = []
 
 [lib]
 name = "mongo_odbc_core"
