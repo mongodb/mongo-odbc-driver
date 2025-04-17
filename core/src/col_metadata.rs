@@ -256,24 +256,26 @@ impl ResultSetSchema {
                 .flatten_ok()
                 .collect::<Result<HashMap<Vec<String>, MongoColMetadata>>>()?;
 
-        Ok(match self.select_order {
-            // in the select list order is None, for example if using an older adf version, sort
-            None => processed_result_set_metadata
-                .into_values()
-                .sorted_by(|a, b| match Ord::cmp(&a.table_name, &b.table_name) {
-                    core::cmp::Ordering::Equal => Ord::cmp(&a.col_name, &b.col_name),
-                    v => v,
-                })
-                .collect(),
-            // given a select order, convert the values of the map into an ordered vector
-            _ => self
-                .select_order
-                .as_ref()
-                .unwrap()
-                .iter()
-                .map(|key| processed_result_set_metadata.remove(key).unwrap())
-                .collect(),
-        })
+        Ok(
+            // the select list order is None or empty, for example if using an older adf version, sort by column name
+            if self.select_order.is_none() || self.select_order.as_ref().unwrap().is_empty() {
+                processed_result_set_metadata
+                    .into_values()
+                    .sorted_by(|a, b| match Ord::cmp(&a.table_name, &b.table_name) {
+                        core::cmp::Ordering::Equal => Ord::cmp(&a.col_name, &b.col_name),
+                        v => v,
+                    })
+                    .collect()
+            } else {
+                // given a select order, convert the values of the map into an ordered vector
+                self.select_order
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .map(|key| processed_result_set_metadata.remove(key).unwrap())
+                    .collect()
+            },
+        )
     }
 
     /// Converts a sqlGetSchema command response into a list of column
