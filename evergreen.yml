@@ -578,12 +578,13 @@ functions:
           fi
 
           # use the latest mongosql release tag
-          MONGOSQL_VERSION=$(curl -sSfL --retry 5 "https://api.github.com/repos/mongodb/mongosql/tags" | jq -r '.[0].name')
-          echo "MONGOSQL_VERSION: $MONGOSQL_VERSION"
-          if [ -z "$MONGOSQL_VERSION" ] || [ "$MONGOSQL_VERSION" = "null" ] || [ "$MONGOSQL_VERSION" = "" ]; then
+          set -o pipefail
+          MONGOSQL_VERSION=$(git ls-remote --tags --refs https://github.com/mongodb/mongosql.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*' | sed 's/refs\/tags\///' | sort -V | tail -n 1)
+          if [ $? -ne 0 ] || [ -z "$MONGOSQL_VERSION" ] || [ "$MONGOSQL_VERSION" = "null" ] || [ "$MONGOSQL_VERSION" = "" ]; then
               echo "Error: Failed to fetch valid mongosql tags"
               exit 1
           fi
+          echo "MONGOSQL_VERSION: $MONGOSQL_VERSION"
 
           if [[ "$(uname -s)" = "Darwin" ]]; then
             sed -i '' 's/\(mongosql = {.*\)branch = "main"\(.*}\)/\1tag = "'"$MONGOSQL_VERSION"'"\2/' core/Cargo.toml
