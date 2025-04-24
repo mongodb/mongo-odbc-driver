@@ -361,7 +361,7 @@ fn remove_and_return_field_if_exist(
     match processed_result_set_metadata.remove(key) {
         Some(metadata) => Ok(metadata.clone()),
         None => Err(Error::MetadataAccess(
-            key.get(0)
+            key.first()
                 .unwrap_or(&"unspecified datasource".to_string())
                 .clone(),
             key.get(1)
