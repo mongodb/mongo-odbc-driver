@@ -272,8 +272,10 @@ impl ResultSetSchema {
                     .as_ref()
                     .unwrap()
                     .iter()
-                    .map(|key| processed_result_set_metadata.remove(key).unwrap())
-                    .collect()
+                    .map(|key| {
+                        remove_and_return_field_if_exist(&mut processed_result_set_metadata, key)
+                    })
+                    .collect::<Result<Vec<_>>>()?
             },
         )
     }
@@ -349,6 +351,23 @@ impl ResultSetSchema {
                 ))
             })
             .collect::<Result<Vec<_>>>()
+    }
+}
+
+fn remove_and_return_field_if_exist(
+    processed_result_set_metadata: &mut HashMap<Vec<String>, MongoColMetadata>,
+    key: &Vec<String>,
+) -> Result<MongoColMetadata> {
+    match processed_result_set_metadata.remove(key) {
+        Some(metadata) => Ok(metadata.clone()),
+        None => Err(Error::MetadataAccess(
+            key.get(0)
+                .unwrap_or(&"unspecified datasource".to_string())
+                .clone(),
+            key.get(1)
+                .unwrap_or(&"unspecified column".to_string())
+                .clone(),
+        )),
     }
 }
 
@@ -532,6 +551,26 @@ mod unit {
             }
         }
 
+        fn validate_fields_order(input: ResultSetSchema, expected_output: Vec<(i32, &str, &str)>) {
+            let res = input.process_result_metadata("test_db", TypeMode::Standard, None);
+
+            match res {
+                Err(e) => panic!("unexpected error: {e:?}"),
+                Ok(actual) => {
+                    // There should be 3 fields
+                    assert_eq!(3, actual.len());
+
+                    for (idx, table_name, col_name) in expected_output {
+                        let md = &actual[idx as usize];
+                        assert_eq!(
+                            (table_name, col_name),
+                            (md.table_name.as_str(), md.col_name.as_str())
+                        )
+                    }
+                }
+            }
+        }
+
         #[test]
         fn fields_sorted_alphabetical_no_select_order() {
             let input = ResultSetSchema {
@@ -567,26 +606,51 @@ mod unit {
                 },
                 select_order: None,
             };
+            validate_fields_order(
+                input,
+                vec![(0, "bar", "c"), (1, "foo", "a"), (2, "foo", "b")],
+            )
+        }
 
-            let res = input.process_result_metadata("test_db", TypeMode::Standard, None);
-
-            match res {
-                Err(e) => panic!("unexpected error: {e:?}"),
-                Ok(actual) => {
-                    // There should be 3 fields
-                    assert_eq!(3, actual.len());
-
-                    for (idx, table_name, col_name) in
-                        [(0, "bar", "c"), (1, "foo", "a"), (2, "foo", "b")]
-                    {
-                        let md = &actual[idx];
-                        assert_eq!(
-                            (table_name, col_name),
-                            (md.table_name.as_str(), md.col_name.as_str())
-                        )
-                    }
-                }
-            }
+        #[test]
+        fn fields_sorted_alphabetical_empty_select_order() {
+            let input = ResultSetSchema {
+                schema: Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                    properties: Some(map! {
+                        "foo".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "b".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                },
+                                "a".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                }
+                            }),
+                            ..Default::default()
+                        },
+                        "bar".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "c".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                }
+                            }),
+                            ..Default::default()
+                        }
+                    }),
+                    ..Default::default()
+                },
+                select_order: Some(vec![]),
+            };
+            validate_fields_order(
+                input,
+                vec![(0, "bar", "c"), (1, "foo", "a"), (2, "foo", "b")],
+            )
         }
 
         #[test]
@@ -628,25 +692,58 @@ mod unit {
                     vec!["bar".to_string(), "c".to_string()],
                 ]),
             };
+            validate_fields_order(
+                input,
+                vec![(0, "foo", "b"), (1, "foo", "a"), (2, "bar", "c")],
+            );
+        }
+
+        #[test]
+        fn fields_list_and_select_order_not_matching() {
+            let input = ResultSetSchema {
+                schema: Schema {
+                    bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                    properties: Some(map! {
+                        "foo".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "b".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                },
+                                "a".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                }
+                            }),
+                            ..Default::default()
+                        },
+                        "bar".to_string() => Schema {
+                            bson_type: Some(BsonType::Single(BsonTypeName::Object)),
+                            properties: Some(map! {
+                                "c".to_string() => Schema {
+                                    bson_type: Some(BsonType::Single(BsonTypeName::Int)),
+                                    ..Default::default()
+                                }
+                            }),
+                            ..Default::default()
+                        }
+                    }),
+                    ..Default::default()
+                },
+                select_order: Some(vec![
+                    vec!["foo".to_string(), "b".to_string()],
+                    vec!["foo".to_string(), "d".to_string()],
+                    vec!["bar".to_string(), "c".to_string()],
+                ]),
+            };
 
             let res = input.process_result_metadata("test_db", TypeMode::Standard, None);
 
             match res {
+                Err(Error::MetadataAccess(_, _)) => (),
                 Err(e) => panic!("unexpected error: {e:?}"),
-                Ok(actual) => {
-                    // There should be 3 fields
-                    assert_eq!(3, actual.len());
-
-                    for (idx, table_name, col_name) in
-                        [(0, "foo", "b"), (1, "foo", "a"), (2, "bar", "c")]
-                    {
-                        let md = &actual[idx];
-                        assert_eq!(
-                            (table_name, col_name),
-                            (md.table_name.as_str(), md.col_name.as_str())
-                        )
-                    }
-                }
+                Ok(ok) => panic!("unexpected result: {ok:?}"),
             }
         }
     }
