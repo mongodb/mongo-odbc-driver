@@ -61,6 +61,8 @@ pub enum Error {
     QueryExecutionFailed(mongodb::error::Error),
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
+    #[error("Error retrieving metadata for field {0}.{1}")]
+    MetadataAccess(String, String),
     #[error("Error retrieving data for field {0}: {1}")]
     ValueAccess(String, mongodb::bson::document::ValueAccessError),
     #[error("Missing connection {0}")]
@@ -125,6 +127,7 @@ impl Error {
             | Error::TranslationPipelineNotArray
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::MultipleSchemaDocumentsReturned(_)
+            | Error::MetadataAccess(_, _)
             | Error::BuildInfoCmdExecutionFailed(_) => GENERAL_ERROR,
             Error::StatementNotExecuted => FUNCTION_SEQUENCE_ERROR,
             Error::QueryCancelled => OPERATION_CANCELLED,
@@ -173,7 +176,8 @@ impl Error {
             | Error::TranslationPipelineArrayContainsNonDocument
             | Error::LibraryPathError(_)
             | Error::MultipleSchemaDocumentsReturned(_)
-            | Error::BuildInfoCmdExecutionFailed(_) => 0,
+            | Error::BuildInfoCmdExecutionFailed(_)
+            | Error::MetadataAccess(_, _) => 0,
         }
     }
 }
