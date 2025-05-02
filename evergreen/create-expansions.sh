@@ -14,7 +14,6 @@ export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
 export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
 export FEATURE_FLAGS=""
 export PRODUCT_NAME="mongoodbc"
-export PATH_PREFIX=""
 
 echo "snapshot-eap: ${snapshot-eap}"
 
@@ -25,7 +24,6 @@ if [[ "${triggered_by_git_tag}" != "" ]]; then
     if [[ "${triggered_by_git_tag}" == *"beta"* || "${snapshot-eap}" == "true" ]]; then
         export FEATURE_FLAGS="eap"
         export PRODUCT_NAME="mongoodbc-eap"
-        export PATH_PREFIX="eap/"
     fi
 else
     # If not a tag, we are in a snapshot build. We need to see if we're in beta mode or not
@@ -34,7 +32,6 @@ else
         export RELEASE_VERSION="snapshot-eap"
         export FEATURE_FLAGS="eap"
         export PRODUCT_NAME="mongoodbc-eap"
-        export PATH_PREFIX="eap/"
         echo "Building EAP version"
     else
         export RELEASE_VERSION="snapshot"
@@ -47,7 +44,6 @@ export UBUNTU_FILENAME="$PRODUCT_NAME-$RELEASE_VERSION.tar.gz"
 cat <<EOT >expansions.yml
 RELEASE_VERSION: "$RELEASE_VERSION"
 FEATURE_FLAGS: "$FEATURE_FLAGS"
-PATH_PREFIX: "$PATH_PREFIX"
 PRODUCT_NAME: "$PRODUCT_NAME"
 MSI_FILENAME: "$MSI_FILENAME"
 UBUNTU_FILENAME: "$UBUNTU_FILENAME"
@@ -58,7 +54,6 @@ STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
 prepare_shell: |
   set -o errexit
   export RELEASE_VERSION="$RELEASE_VERSION"
-  export PATH_PREFIX="$PATH_PREFIX"
   export FEATURE_FLAGS="$FEATURE_FLAGS"
   export PRODUCT_NAME="$PRODUCT_NAME"
   export MSI_FILENAME="$MSI_FILENAME"
@@ -107,12 +102,3 @@ prepare_shell: |
 EOT
 
 cat expansions.yml
-
-curl https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/ubuntu2204/1.4.3/release/mongoodbc.tar.gz --output mongoodbc.tar.gz
-curl -LO https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/ubuntu2204/1.4.3/release/mongoodbc.tar.gz.sig
-curl -LO https://pgp.mongodb.com/atlas-sql-odbc.asc
-gpg --import atlas-sql-odbc.asc
-gpg --verify mongoodbc.tar.gz.sig mongoodbc.tar.gz
-
-echo "Verifying env in expansions"
-env

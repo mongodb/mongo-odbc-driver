@@ -33,7 +33,7 @@ variables:
       working_dir: mongosql-odbc-driver
       script: |
         ${PREPARE_SHELL}
-        if [ "${FEAURE_FLAGS}" != "eap" ]; then
+        if [ "${FEATURE_FLAGS}" != "eap" ]; then
           echo "FEATURE_FLAGS (${"FEATURE_FLAGS}) is not 'eap'. Stopping task execution."
           curl -d '{"status":"success", "should_continue": false}' -H "Content-Type: application/json" -X POST localhost:2285/task_status
         else
