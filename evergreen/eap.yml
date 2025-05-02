@@ -189,18 +189,12 @@ tasks:
       - func: "generate third party licenses"
         variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "compile ubuntu and win release"
-        vars:
-          snapshot-eap: "true"
         variants: [ubuntu2204, windows-64]
       - func: "build msi"
-        vars:
-          snapshot-eap: "true"
         variants: [windows-64]
       - func: "tar linux artifacts"
         variants: [ubuntu2204]
       - func: "mciuploads release artifacts"
-        vars:
-          snapshot-eap: "true"
 
   - name: unit-test-eap
     depends_on:
@@ -232,8 +226,6 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "compile release with debug info"
-        vars:
-          snapshot-eap: "true"
         variants: [ubuntu2204]
       - func: "compile macos release with debug info"
         variants: [macos, macos-arm]
@@ -247,8 +239,6 @@ tasks:
       - func: "run ubuntu cluster type integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu mongosqltranslate integration tests"
-        vars:
-          snapshot-eap: "true"
         variants: [ubuntu2204]
       # Commenting out because the following task only detects
       # memory leaks in the tests
@@ -271,8 +261,6 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "compile release with debug info"
-        vars:
-          snapshot-eap: "true"
         variants: [ubuntu2204]
       # - func: "compile macos release with debug info"
       #   variants: [macos, macos-arm]
@@ -329,8 +317,6 @@ task_groups:
         vars:
           snapshot-eap: "true"
       - func: "download artifact"
-        vars:
-          snapshot-eap: "true"
       - func: "setup driver on Windows"
       - func: "setup crash dump collection"
     teardown_group:
@@ -348,8 +334,6 @@ task_groups:
         vars:
           snapshot-eap: "true"
       - func: "download artifact"
-        vars:
-          snapshot-eap: "true"
       - func: "setup driver on Windows"
       - func: "setup crash dump collection"
     teardown_group:

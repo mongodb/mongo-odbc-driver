@@ -640,9 +640,9 @@ functions:
         script: |
           ${prepare_shell}
           # Compile release build with features if needed
-          # if FEATURE_FLAGS is set to eap or snapshot-eap is true, build with eap features
-          if [[ "$FEATURE_FLAGS" == "eap" || "$snapshot-eap" == "true" ]]; then
-            cargo build --release --features eap
+          # if FEATURE_FLAGS is not empty, build with features
+          if [[ "$FEATURE_FLAGS" != "" ]]; then
+            cargo build --release --features $FEATURE_FLAGS
           else
             cargo build --release
           fi
@@ -660,11 +660,10 @@ functions:
           ${prepare_shell}
 
           # Compile release build with features if needed
-          # if FEATURE_FLAGS is set to eap or snapshot-eap is true, build with eap features
-          if [[ "$FEATURE_FLAGS" == "eap" || "$snapshot-eap" == "true" ]]; then
-            cargo build --release --features eap
+          if [[ "$FEATURE_FLAGS" != "" ]]; then
+            cargo build --features $FEATURE_FLAGS
           else
-            cargo build --release
+            cargo build
           fi
 
   "compile ubuntu with asan":
