@@ -260,7 +260,7 @@ The query SELECT * from FLATTEN(users) will return the following columns, with t
 
 ### Work with Arrays
 
-Arrays can be unwound using the UNWIND operator, which flattens array elements into individual rows in the result set.
+Arrays can be unwound using the UNWIND operator, which expands array elements into individual rows in the result set.
 
 #### UNWIND Syntax
 
