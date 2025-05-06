@@ -12,7 +12,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/docs/MongoDB_ODBC_Guide.pdf
-        remote_file: eap/mongodb-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
+        remote_file: mongosql-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
         bucket: translators-connectors-releases
         permissions: public-read
         skip_existing: false

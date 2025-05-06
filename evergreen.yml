@@ -1460,7 +1460,6 @@ functions:
         shell: bash
         env:
           GITHUB_TOKEN: "${github_token}"
-          snapshot_eap: "${snapshot_eap}"
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
@@ -1521,30 +1520,34 @@ functions:
 
           # Enterprise test no eap
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
+          ENTERPRISE_NO_MSQL_EXITCODE=$?
           # Enterprise test eap
           cargo test --features cluster_type_tests, eap -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
-          ENTERPRISE_EXITCODE=$?
+          ENTERPRISE_MSQL_EXITCODE=$?
 
           # Enterprise test with eap
 
           # Community test
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
+          COMMUNITY_NO_MSQL_EXITCODE=$?
           # Community test with eap
           cargo test --features cluster_type_tests, eap -- cluster_type::test_determine_cluster_type_community_fails --nocapture
-          COMMUNITY_EXITCODE=$?
+          COMMUNITY_MSQL_EXITCODE=$?
 
           # Stop MongoDB instances
           pkill mongod
 
-          if [ $ENTERPRISE_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
+          if [ $ENTERPRISE_NO_MSQL_EXITCODE -eq 0 ] && [ $ENTERPRISE_MSQL_EXITCODE -eq 0 ] && [ $COMMUNITY_NO_MSQL_EXITCODE -eq 0 ] && [ $COMMUNITY_MSQL_EXITCODE -eq 0 ] ; then
             OVERALL_EXITCODE=0
           else
             OVERALL_EXITCODE=1
           fi
 
           echo "Cluster test results:"
-          echo "Enterprise test exit code: $ENTERPRISE_EXITCODE"
-          echo "Community test exit code: $COMMUNITY_EXITCODE"
+          echo "Enterprise no mongosql test exit code: $ENTERPRISE_NO_MSQL_EXITCODE"
+          echo "Enterprise mongosql test exit code: $ENTERPRISE_MSQL_EXITCODE"
+          echo "Community no mongosql test exit code: $COMMUNITY_NO_MSQL_EXITCODE"
+          echo "Community mongosql test exit code: $COMMUNITY_MSQL_EXITCODE"
           echo "Overall exit code: $OVERALL_EXITCODE"
 
           set -e
