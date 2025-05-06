@@ -23,10 +23,17 @@ tailcall = "1.0"
 # Do NOT change these features without consulting with other team members.
 # The features are used to control the behavior of tokio. Tokio is unsafe to use
 # across ABI boundaries in any other runtime but current_thread
-tokio = { workspace = true, features = ["rt", "sync", "io-util", "macros", "net"] }
+tokio = { workspace = true, features = [
+    "rt",
+    "sync",
+    "io-util",
+    "macros",
+    "net",
+] }
 
 
 [features]
 cluster_type_tests = []
 result_set = []
 evergreen_tests = []
+eap = []

@@ -88,10 +88,22 @@ async fn main() -> Result<()> {
         "mongodb://localhost:{}",
         env::var("MDB_TEST_LOCAL_PORT").expect("MDB_TEST_LOCAL_PORT is not set")
     );
+    println!(
+        "mdb_test_local_port: {}",
+        env::var("MDB_TEST_LOCAL_PORT").unwrap()
+    );
     let adf_url = format!(
         "mongodb://{}:{}@localhost",
         env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set"),
         env::var("ADF_TEST_LOCAL_PWD").expect("ADF_TEST_LOCAL_PWD is not set")
+    );
+    println!(
+        "adf_test_local_user: {}",
+        env::var("ADF_TEST_LOCAL_USER").unwrap()
+    );
+    println!(
+        "adf_test_local_pwd: {}",
+        env::var("ADF_TEST_LOCAL_PWD").unwrap()
     );
 
     // Step 1: Read data files
