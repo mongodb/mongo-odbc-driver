@@ -14,6 +14,7 @@ export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
 export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
 export FEATURE_FLAGS=""
 export PRODUCT_NAME="mongoodbc"
+export PATH_PREFIX=""
 
 echo "snapshot-eap: ${snapshot-eap}"
 
@@ -24,6 +25,7 @@ if [[ "${triggered_by_git_tag}" != "" ]]; then
     if [[ "${triggered_by_git_tag}" == *"beta"* || "${snapshot-eap}" == "true" ]]; then
         export FEATURE_FLAGS="eap"
         export PRODUCT_NAME="mongoodbc-eap"
+        export PATH_PREFIX="eap/"
     fi
 else
     # If not a tag, we are in a snapshot build. We need to see if we're in beta mode or not
@@ -44,6 +46,7 @@ export UBUNTU_FILENAME="$PRODUCT_NAME-$RELEASE_VERSION.tar.gz"
 cat <<EOT >expansions.yml
 RELEASE_VERSION: "$RELEASE_VERSION"
 FEATURE_FLAGS: "$FEATURE_FLAGS"
+PATH_PREFIX: "$PATH_PREFIX"
 PRODUCT_NAME: "$PRODUCT_NAME"
 MSI_FILENAME: "$MSI_FILENAME"
 UBUNTU_FILENAME: "$UBUNTU_FILENAME"
@@ -55,6 +58,7 @@ prepare_shell: |
   set -o errexit
   export RELEASE_VERSION="$RELEASE_VERSION"
   export FEATURE_FLAGS="$FEATURE_FLAGS"
+  export PATH_PREFIX="$PATH_PREFIX"
   export PRODUCT_NAME="$PRODUCT_NAME"
   export MSI_FILENAME="$MSI_FILENAME"
   export UBUNTU_FILENAME="$UBUNTU_FILENAME"
