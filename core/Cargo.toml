@@ -53,7 +53,7 @@ garbage_collect = []
 
 [lib]
 name = "mongo_odbc_core"
-crate-type = ["cdylib", "lib"]
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [lints]
 workspace = true

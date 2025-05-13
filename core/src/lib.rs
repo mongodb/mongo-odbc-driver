@@ -37,3 +37,4 @@ pub mod cluster_type;
 mod mongosqltranslate;
 pub mod oidc_auth;
 pub mod test_config;
+pub mod ffi_wrapper;
