@@ -21,6 +21,17 @@ timeout:
       script: |
         ls -la
 
+modules:
+  - name: sql-engines-common-test-infra
+    owner: 10gen
+    repo: sql-engines-common-test-infra
+    branch: main
+    auto_update: true
+
+include:
+  - filename: evergreen/configs/mongodb_util.yml
+    module: sql-engines-common-test-infra
+
 functions:
   "generate third party licenses":
     - command: subprocess.exec
@@ -73,6 +84,8 @@ functions:
     - command: git.get_project
       params:
         directory: mongosql-odbc-driver
+        revisions:
+          sql-engines-common-test-infra: ${sql-engines-common-test-infra_rev}
 
   "generate expansions":
     - command: shell.exec
@@ -80,6 +93,7 @@ functions:
         shell: bash
         working_dir: mongosql-odbc-driver
         script: |
+          PROJECT_DIRECTORY="$(pwd)"
           export CARGO_NET_GIT_FETCH_WITH_CLI=true
           export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
           export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
@@ -102,6 +116,10 @@ functions:
           export MSI_FILENAME="mongoodbc-eap-$RELEASE_VERSION.msi"
           export UBUNTU_FILENAME="mongoodbc-eap-$RELEASE_VERSION.tar.gz"
 
+          COMMON_TEST_INFRA_DIR="$PROJECT_DIRECTORY/sql-engines-common-test-infra"
+          DRIVERS_TOOLS="$PROJECT_DIRECTORY/evergreen/drivers-tools"
+          MONGO_ORCHESTRATION_HOME="$DRIVERS_TOOLS/.evergreen/orchestration"
+          MONGODB_BINARIES="$DRIVERS_TOOLS/mongodb/bin"
 
           cat <<EOT > expansions.yml
           RELEASE_VERSION: "$RELEASE_VERSION"
@@ -111,6 +129,10 @@ functions:
           UBUNTU2204_INSTALLER_PATH: "eap/mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/$UBUNTU_FILENAME"
           COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
           STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
+          DRIVERS_TOOLS: "$DRIVERS_TOOLS"
+          common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
+          script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
+          MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
           prepare_shell: |
             set -o errexit
             export RELEASE_VERSION="$RELEASE_VERSION"
@@ -145,6 +167,12 @@ functions:
             export COMPLIANCE_REPORT_NAME="$COMPLIANCE_REPORT_NAME"
             export STATIC_CODE_ANALYSIS_NAME="$STATIC_CODE_ANALYSIS_NAME"
             export ALLOW_VULNS="${AllowVulns}"
+          
+            # Common test infra variables
+            export PROJECT_DIRECTORY="$PROJECT_DIRECTORY"
+            export DRIVERS_TOOLS="$DRIVERS_TOOLS"
+            export MONGO_ORCHESTRATION_HOME="$MONGO_ORCHESTRATION_HOME"
+            export MONGODB_BINARIES="$MONGODB_BINARIES"
 
             # Windows variables
             export LOCAL_DUMP_ORIGINAL_REG_VAL="$LOCAL_DUMP_ORIGINAL_REG_VAL"
@@ -1363,7 +1391,7 @@ functions:
           ${prepare_shell}
           set +e
           export RUST_BACKTRACE=1
-          ./resources/run_adf.sh start &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cargo run --bin data_loader &&
           cargo test integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
@@ -1385,7 +1413,7 @@ functions:
             echo "ls -l $DUMP_PATH"
             ls -l $DUMP_PATH
           fi
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "install iODBC":
@@ -1483,7 +1511,8 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --bin data_loader &&
 
           # Run integration tests with ubuntu
           cargo test integration -- --nocapture &&
@@ -1495,7 +1524,7 @@ functions:
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run ubuntu mongosqltranslate integration tests":
@@ -1575,14 +1604,15 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --bin data_loader &&
 
           # Run integration tests with macos
           cargo test --package integration_test --lib test_runner --features definitions/iodbc,cstr/utf32,integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run macos unit tests":
@@ -1619,7 +1649,7 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --nocapture &&
@@ -1630,7 +1660,7 @@ functions:
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run ubuntu result-set tests":
@@ -1654,14 +1684,14 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with ubuntu
           cargo test --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run asan unit tests":
@@ -1704,7 +1734,7 @@ functions:
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
 
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --nocapture &&
@@ -1715,7 +1745,7 @@ functions:
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run asan result-set tests":
@@ -1741,14 +1771,14 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run windows result set test":
@@ -1763,7 +1793,7 @@ functions:
         ${prepare_shell}
         set +e
         export RUST_BACKTRACE=1
-        ./resources/run_adf.sh start &&
+        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
         cargo run --bin data_loader &&
         cargo test --package integration_test --lib test_runner --features integration_test/result_set
         EXITCODE=$?
@@ -1775,7 +1805,7 @@ functions:
             echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
             tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
         fi
-        ./resources/run_adf.sh stop
+        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
         exit $EXITCODE
 
   "upload start_adf logs":
@@ -2069,7 +2099,10 @@ tasks:
         variants: [ubuntu2204]
       - func: "setup driver with iODBC"
         variants: [macos, macos-arm]
-      - func: "generate github token"
+      - func: "prepare resources"
+      - func: "update orchestrator mongod port"
+      - func: "bootstrap mongo-orchestration"
+      - func: "generate sql-engines github token"
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration tests"
@@ -2120,7 +2153,10 @@ tasks:
         variants: [ubuntu2204]
       # - func: "setup driver with iODBC"
       #   variants: [macos, macos-arm]
-      - func: "generate github token"
+      - func: "prepare resources"
+      - func: "update orchestrator mongod port"
+      - func: "bootstrap mongo-orchestration"
+      - func: "generate sql-engines github token"
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
@@ -2301,7 +2337,9 @@ buildvariants:
   - name: windows-64
     tags: ["release-variant"]
     display_name: Windows (64-bit)
-    run_on: [windows-64-vs2019-large]
+    run_on: [windows-64-vsMulti-small]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: compile
       - name: windows-windows-test-unit-group
@@ -2314,6 +2352,8 @@ buildvariants:
     tags: ["release-variant"]
     display_name: Ubuntu 22.04
     run_on: [ubuntu2204-large]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: compile
       - name: unit-test
