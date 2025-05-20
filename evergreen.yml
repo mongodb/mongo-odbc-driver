@@ -1650,7 +1650,8 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && 
+          cargo run --bin data_loader &&
 
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --nocapture &&
