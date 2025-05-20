@@ -2102,9 +2102,13 @@ tasks:
       - func: "setup driver with iODBC"
         variants: [macos, macos-arm]
       - func: "prepare resources"
+        variants: [windows-64, ubuntu2204]
       - func: "update orchestrator mongod port"
+        variants: [windows-64, ubuntu2204]
       - func: "bootstrap mongo-orchestration"
+        variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration tests"
@@ -2156,9 +2160,13 @@ tasks:
       # - func: "setup driver with iODBC"
       #   variants: [macos, macos-arm]
       - func: "prepare resources"
+        variants: [windows-64, ubuntu2204]
       - func: "update orchestrator mongod port"
+        variants: [windows-64, ubuntu2204]
       - func: "bootstrap mongo-orchestration"
+        variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
