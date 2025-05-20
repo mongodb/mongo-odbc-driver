@@ -586,10 +586,17 @@ functions:
           fi
           echo "MONGOSQL_VERSION: $MONGOSQL_VERSION"
 
+          # we need to set the versions of mongosql and agg-ast to be the same so we don't get inconsistencies
+
           if [[ "$(uname -s)" = "Darwin" ]]; then
             sed -i '' 's/\(mongosql = {.*\)branch = "main"\(.*}\)/\1tag = "'"$MONGOSQL_VERSION"'"\2/' core/Cargo.toml
           else
             sed -i "s/^\(mongosql = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
+          fi
+          if [[ "$(uname -s)" = "Darwin" ]]; then
+            sed -i '' 's/\(agg-ast = {.*\)branch = "main"\(.*}\)/\1tag = "'"$MONGOSQL_VERSION"'"\2/' core/Cargo.toml
+          else
+            sed -i "s/^\(agg-ast = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
           fi
 
 
