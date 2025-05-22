@@ -17,6 +17,8 @@ use std::{
 
 #[derive(Debug)]
 #[repr(C)]
+// TODO: SQL-2835
+#[allow(clippy::large_enum_variant)]
 pub enum MongoHandle {
     Env(Env),
     Connection(Connection),
