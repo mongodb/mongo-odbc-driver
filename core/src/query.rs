@@ -20,8 +20,10 @@ const BATCH_SIZE_REPLACEMENT_THRESHOLD: u32 = 100;
 
 use mongosql::{
     build_catalog_from_catalog_schema, get_namespaces, json_schema::Schema, options::SqlOptions,
-    translate_sql, Namespace, Translation,
+    translate_sql, Translation,
 };
+
+use agg_ast::Namespace;
 
 #[derive(Debug)]
 pub struct MongoQuery {
