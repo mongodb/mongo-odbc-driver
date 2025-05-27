@@ -1,4 +1,11 @@
+# common test infra begin
+PROJECT_DIRECTORY="$(pwd)"
+COMMON_TEST_INFRA_DIR="$PROJECT_DIRECTORY/sql-engines-common-test-infra"
+DRIVERS_TOOLS="$PROJECT_DIRECTORY/evergreen/drivers-tools"
+MONGO_ORCHESTRATION_HOME="$DRIVERS_TOOLS/.evergreen/orchestration"
+MONGODB_BINARIES="$DRIVERS_TOOLS/mongodb/bin"
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
+# common test infra end
 export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
 export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
 if [ "Windows_NT" == "$OS" ]; then
@@ -54,6 +61,11 @@ WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$
 UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/$UBUNTU_FILENAME"
 COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
 STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
+PROJECT_DIRECTORY="$(pwd)"
+DRIVERS_TOOLS: "$DRIVERS_TOOLS"
+common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
+script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
+MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
 prepare_shell: |
   set -o errexit
   export RELEASE_VERSION="$RELEASE_VERSION"
@@ -103,6 +115,13 @@ prepare_shell: |
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
   export LIBRARY_PATH="$LD_LIBRARY_PATH"
   export ODBCSYSINI="$(pwd)"/setup
+
+  # Common test infra variables
+  export PROJECT_DIRECTORY="$PROJECT_DIRECTORY"
+  export DRIVERS_TOOLS="$DRIVERS_TOOLS"
+  export MONGO_ORCHESTRATION_HOME="$MONGO_ORCHESTRATION_HOME"
+  export MONGODB_BINARIES="$MONGODB_BINARIES"
+  export COMMON_TEST_INFRA_DIR="$COMMON_TEST_INFRA_DIR"
 EOT
 
 cat expansions.yml
