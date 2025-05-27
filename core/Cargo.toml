@@ -10,7 +10,8 @@ authors = [
 edition = "2021"
 
 [dependencies]
-mongosql = { git = "https://github.com/mongodb/mongosql.git", branch = "main" }
+mongosql = { git = "https://github.com/mongodb/mongosql.git", branch = "main", package = "mongosql" }
+agg-ast = { git = "https://github.com/mongodb/mongosql.git", branch = "main", package = "agg-ast" }
 definitions = { path = "../definitions" }
 bson = { workspace = true }
 thiserror = { workspace = true }

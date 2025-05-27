@@ -21,7 +21,16 @@ timeout:
       script: |
         ls -la
 
+modules:
+  - name: sql-engines-common-test-infra
+    owner: 10gen
+    repo: sql-engines-common-test-infra
+    branch: main
+    auto_update: true
+
 include:
+  - filename: evergreen/configs/mongodb_util.yml
+    module: sql-engines-common-test-infra
   - filename:  evergreen/eap.yml # tasks related to eap snapshot builds
 
 variables:
@@ -53,6 +62,7 @@ variables:
         else
           echo "FEATURE_FLAGS is not 'eap'. Allowing task execution to continue."
         fi
+
 
 functions:
   "check and allow for eap build":
@@ -112,6 +122,8 @@ functions:
     - command: git.get_project
       params:
         directory: mongosql-odbc-driver
+        revisions:
+          sql-engines-common-test-infra: ${sql-engines-common-test-infra_rev}
 
   "generate expansions":
     - command: subprocess.exec
@@ -544,17 +556,25 @@ functions:
           fi
 
           # use the latest mongosql release tag
-          MONGOSQL_VERSION=$(curl -sSfL --retry 5 "https://api.github.com/repos/mongodb/mongosql/tags" | jq -r '.[0].name')
-          echo "MONGOSQL_VERSION: $MONGOSQL_VERSION"
-          if [ -z "$MONGOSQL_VERSION" ] || [ "$MONGOSQL_VERSION" = "null" ] || [ "$MONGOSQL_VERSION" = "" ]; then
+          set -o pipefail
+          MONGOSQL_VERSION=$(git ls-remote --tags --refs https://github.com/mongodb/mongosql.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*' | sed 's/refs\/tags\///' | sort -V | tail -n 1)
+          if [ $? -ne 0 ] || [ -z "$MONGOSQL_VERSION" ] || [ "$MONGOSQL_VERSION" = "null" ] || [ "$MONGOSQL_VERSION" = "" ]; then
               echo "Error: Failed to fetch valid mongosql tags"
               exit 1
           fi
+          echo "MONGOSQL_VERSION: $MONGOSQL_VERSION"
+
+          # we need to set the versions of mongosql and agg-ast to be the same so we don't get inconsistencies
 
           if [[ "$(uname -s)" = "Darwin" ]]; then
             sed -i '' 's/\(mongosql = {.*\)branch = "main"\(.*}\)/\1tag = "'"$MONGOSQL_VERSION"'"\2/' core/Cargo.toml
           else
             sed -i "s/^\(mongosql = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
+          fi
+          if [[ "$(uname -s)" = "Darwin" ]]; then
+            sed -i '' 's/\(agg-ast = {.*\)branch = "main"\(.*}\)/\1tag = "'"$MONGOSQL_VERSION"'"\2/' core/Cargo.toml
+          else
+            sed -i "s/^\(agg-ast = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
           fi
 
 
@@ -1354,7 +1374,7 @@ functions:
           ${prepare_shell}
           set +e
           export RUST_BACKTRACE=1
-          ./resources/run_adf.sh start &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cargo run --bin data_loader &&
           cargo test integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
@@ -1376,7 +1396,7 @@ functions:
             echo "ls -l $DUMP_PATH"
             ls -l $DUMP_PATH
           fi
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "install iODBC":
@@ -1474,7 +1494,8 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --bin data_loader &&
 
           # Run integration tests with ubuntu
           cargo test integration -- --nocapture &&
@@ -1486,7 +1507,7 @@ functions:
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run ubuntu mongosqltranslate integration tests":
@@ -1576,14 +1597,15 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --bin data_loader &&
 
           # Run integration tests with macos
           cargo test --package integration_test --lib test_runner --features definitions/iodbc,cstr/utf32,integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run macos unit tests":
@@ -1620,7 +1642,8 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --bin data_loader &&
 
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --nocapture &&
@@ -1631,7 +1654,7 @@ functions:
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run ubuntu result-set tests":
@@ -1655,14 +1678,14 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with ubuntu
           cargo test --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run asan unit tests":
@@ -1705,7 +1728,7 @@ functions:
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
 
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --nocapture &&
@@ -1716,7 +1739,7 @@ functions:
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run asan result-set tests":
@@ -1742,14 +1765,14 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          ./resources/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
-          ./resources/run_adf.sh stop
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run windows result set test":
@@ -1764,7 +1787,7 @@ functions:
         ${prepare_shell}
         set +e
         export RUST_BACKTRACE=1
-        ./resources/run_adf.sh start &&
+        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
         cargo run --bin data_loader &&
         cargo test --package integration_test --lib test_runner --features integration_test/result_set
         EXITCODE=$?
@@ -1776,7 +1799,7 @@ functions:
             echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
             tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
         fi
-        ./resources/run_adf.sh stop
+        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
         exit $EXITCODE
 
   "upload start_adf logs":
@@ -2070,7 +2093,14 @@ tasks:
         variants: [ubuntu2204]
       - func: "setup driver with iODBC"
         variants: [macos, macos-arm]
-      - func: "generate github token"
+      - func: "prepare resources"
+        variants: [windows-64, ubuntu2204]
+      - func: "update orchestrator mongod port"
+        variants: [windows-64, ubuntu2204]
+      - func: "bootstrap mongo-orchestration"
+        variants: [windows-64, ubuntu2204]
+      - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration tests"
@@ -2121,7 +2151,14 @@ tasks:
         variants: [ubuntu2204]
       # - func: "setup driver with iODBC"
       #   variants: [macos, macos-arm]
-      - func: "generate github token"
+      - func: "prepare resources"
+        variants: [windows-64, ubuntu2204]
+      - func: "update orchestrator mongod port"
+        variants: [windows-64, ubuntu2204]
+      - func: "bootstrap mongo-orchestration"
+        variants: [windows-64, ubuntu2204]
+      - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
@@ -2303,7 +2340,9 @@ buildvariants:
   - name: windows-64
     tags: ["release-variant"]
     display_name: Windows (64-bit)
-    run_on: [windows-64-vs2019-large]
+    run_on: [windows-64-vsMulti-small]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: compile
       - name: windows-windows-test-unit-group
@@ -2321,6 +2360,8 @@ buildvariants:
     tags: ["release-variant"]
     display_name: Ubuntu 22.04
     run_on: [ubuntu2204-large]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: compile
       - name: compile-eap
