@@ -1,9 +1,9 @@
 # common test infra begin
-PROJECT_DIRECTORY="$(pwd)"
-COMMON_TEST_INFRA_DIR="$PROJECT_DIRECTORY/sql-engines-common-test-infra"
-DRIVERS_TOOLS="$PROJECT_DIRECTORY/evergreen/drivers-tools"
-MONGO_ORCHESTRATION_HOME="$DRIVERS_TOOLS/.evergreen/orchestration"
-MONGODB_BINARIES="$DRIVERS_TOOLS/mongodb/bin"
+export PROJECT_DIRECTORY="$(pwd)"
+export COMMON_TEST_INFRA_DIR="$PROJECT_DIRECTORY/sql-engines-common-test-infra"
+export DRIVERS_TOOLS="$PROJECT_DIRECTORY/evergreen/drivers-tools"
+export MONGO_ORCHESTRATION_HOME="$DRIVERS_TOOLS/.evergreen/orchestration"
+export MONGODB_BINARIES="$DRIVERS_TOOLS/mongodb/bin"
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 # common test infra end
 export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
@@ -66,6 +66,7 @@ DRIVERS_TOOLS: "$DRIVERS_TOOLS"
 common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
 script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
 MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
+MONGODB_BINARIES: "$MONGODB_BINARIES"
 prepare_shell: |
   set -o errexit
   export RELEASE_VERSION="$RELEASE_VERSION"
