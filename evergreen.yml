@@ -31,6 +31,8 @@ modules:
 include:
   - filename: evergreen/configs/mongodb_util.yml
     module: sql-engines-common-test-infra
+  - filename: evergreen/configs/rust_util.yml
+    module: sql-engines-common-test-infra
   - filename:  evergreen/eap.yml # tasks related to eap snapshot builds
 
 variables:
@@ -62,7 +64,6 @@ variables:
         else
           echo "FEATURE_FLAGS is not 'eap'. Allowing task execution to continue."
         fi
-
 
 functions:
   "check and allow for eap build":
@@ -145,87 +146,6 @@ functions:
       owner: 10gen
       repo: mongohouse
       expansion_name: github_token
-
-
-  "install rust toolchain":
-    - command: shell.exec
-      params:
-        shell: bash
-        script: |
-          ${prepare_shell}
-
-          # make sure to use msvc toolchain rather than gnu, which is
-          # the default for cygwin
-          if [ "Windows_NT" == "$OS" ]; then
-              if [ 'windows-64' == '${build_variant}' ]; then
-                  export HOST="x86_64-pc-windows-msvc"
-              else
-                  echo 'unknown windows build variant ${build_variant}'
-                  exit 1;
-              fi
-              export DEFAULT_HOST_OPTIONS="--default-host $HOST"
-              export DEFAULT_TOOLCHAIN="stable-$HOST"
-          fi
-
-          # install rustup from scratch
-          rm -rf ~/.rustup
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path $DEFAULT_HOST_OPTIONS
-
-          # rustup installs into C:\Users\$USER instead of
-          # C:\home\$USER, so we symlink both .rustup and .cargo
-          if [ "Windows_NT" == "$OS" ]; then
-              ln -sf /cygdrive/c/Users/$USER/.rustup/toolchains/$DEFAULT_TOOLCHAIN ~/.rustup
-              ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
-
-              rustup toolchain install $DEFAULT_TOOLCHAIN
-              rustup default $DEFAULT_TOOLCHAIN
-          fi
-
-          echo --------- rustup show -----------
-          rustup show
-          echo ----- Rustup toolchain list -----
-          rustup toolchain list
-          echo --------- Cargo version ---------
-          cargo --version
-          echo ---------------------------------
-
-  "check clippy":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          cargo clippy --all-targets -- -D warnings
-
-  "check rustfmt":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          cargo fmt --all --  --check
-
-  "check unused dependencies":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          cargo install cargo-machete
-          set +e
-          cargo machete
-          RETURN=$?
-          set -e
-          if [ $RETURN -ne 0 ]; then
-            >&2 echo "Unused dependencies found"
-            >&2 cargo machete
-          fi
 
   "generate SBOM":
     - command: shell.exec
@@ -530,7 +450,7 @@ functions:
         permissions: public-read
         display_name: mongosql-odbc-${RELEASE_VERSION}.sbom.json
 
-  "set and check packages version":
+  "use latest mongosql version":
     - command: shell.exec
       type: test
       params:
@@ -538,23 +458,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          #no-op when not triggered by a tag
-          if [[ "${triggered_by_git_tag}" != "" ]]; then
-            cargo install cargo-edit
-            cargo set-version $RELEASE_VERSION
-          fi
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get --entry="odbc/Cargo.toml" package.version)
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
-
+          
           # use the latest mongosql release tag
           set -o pipefail
           MONGOSQL_VERSION=$(git ls-remote --tags --refs https://github.com/mongodb/mongosql.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*' | sed 's/refs\/tags\///' | sort -V | tail -n 1)
@@ -576,7 +480,6 @@ functions:
           else
             sed -i "s/^\(agg-ast = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
           fi
-
 
   "sign windows":
     - command: shell.exec
@@ -2006,27 +1909,17 @@ tasks:
       - func: "build odbc documentation"
         run_on: ubuntu2004-large
       - func: "upload odbc docs"
-  - name: clippy
-    commands:
-      - func: "install rust toolchain"
-      - func: "check clippy"
-
-  - name: rustfmt
-    commands:
-      - func: "install rust toolchain"
-      - func: "check rustfmt"
-
-  - name: unused-deps
-    commands:
-      - func: "install rust toolchain"
-      - func: "check unused dependencies"
 
   - name: sbom
     # TODO: Remove the following prior to merging back to master
     disable: true
     commands:
       - func: "install rust toolchain"
-      - func: set and check packages version
+      - func: "set and check packages version"
+        vars:
+          cargo_file: "odbc/Cargo.toml"
+          package_name: "odbc"
+      - func: "use latest mongosql version"
       - func: "generate SBOM"
       - func: "scan SBOM"
       - func: "augment SBOM"
@@ -2044,6 +1937,10 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
+        vars:
+          cargo_file: "odbc/Cargo.toml"
+          package_name: "odbc"
+      - func: "use latest mongosql version"
       - func: "generate third party licenses"
         variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "compile ubuntu and win release"
@@ -2322,10 +2219,12 @@ buildvariants:
   - name: static-analysis
     display_name: "* Static Analysis"
     run_on: [ubuntu2004-test]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: clippy
       - name: rustfmt
-      - name: unused-deps
+      - name: unused-dependencies
       - name: asan-compile
 
   - name: code-quality-security
@@ -2378,6 +2277,8 @@ buildvariants:
   - name: macos
     display_name: "macOS"
     run_on: [macos-11]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: compile
       - name: unit-test
@@ -2388,6 +2289,8 @@ buildvariants:
   - name: macos-arm
     display_name: "macOS arm64"
     run_on: [macos-13-arm64]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: compile
       - name: unit-test
@@ -2398,6 +2301,8 @@ buildvariants:
   - name: release
     display_name: "Release"
     run_on: [ubuntu2004-medium]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: make-odbc-docs
       - name: release

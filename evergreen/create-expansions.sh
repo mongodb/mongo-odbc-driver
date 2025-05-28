@@ -13,10 +13,11 @@ export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
 export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
 if [ "Windows_NT" == "$OS" ]; then
-    export PATH="$HOME/.rustup/bin:$HOME/.cargo/bin:$LD_LIBRARY_PATH:$PATH"
+    export CARGO_BIN="$HOME/.rustup/bin:$HOME/.cargo/bin"
 else
-    export PATH="$HOME/.cargo/bin:$LD_LIBRARY_PATH:$PATH"
+    export CARGO_BIN="$HOME/.cargo/bin"
 fi
+export PATH="$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
 export DUMP_FOLDER=dumps
 export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
 export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
@@ -67,6 +68,7 @@ COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
 STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
 PROJECT_DIRECTORY: "$(pwd)"
 DRIVERS_TOOLS: "$DRIVERS_TOOLS"
+cargo_bin: "$CARGO_BIN"
 common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
 script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
 MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
