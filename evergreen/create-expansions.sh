@@ -1,5 +1,9 @@
 # common test infra begin
-export PROJECT_DIRECTORY="$(pwd)"
+if [ "Windows_NT" == "$OS" ]; then
+    export PROJECT_DIRECTORY=$(cygpath -m "$(pwd)")
+else
+    export PROJECT_DIRECTORY="$(pwd)"
+fi
 export COMMON_TEST_INFRA_DIR="$PROJECT_DIRECTORY/sql-engines-common-test-infra"
 export DRIVERS_TOOLS="$PROJECT_DIRECTORY/evergreen/drivers-tools"
 export MONGO_ORCHESTRATION_HOME="$DRIVERS_TOOLS/.evergreen/orchestration"
