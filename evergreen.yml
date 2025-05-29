@@ -31,8 +31,46 @@ modules:
 include:
   - filename: evergreen/configs/mongodb_util.yml
     module: sql-engines-common-test-infra
+  - filename:  evergreen/eap.yml # tasks related to eap snapshot builds
+
+variables:
+  - &check_and_allow_for_eap_build
+    command: shell.exec
+    type: test
+    params:
+      shell: bash
+      working_dir: mongosql-odbc-driver
+      script: |
+        ${PREPARE_SHELL}
+        if [ "${FEATURE_FLAGS}" != "eap" ]; then
+          echo "FEATURE_FLAGS (${"FEATURE_FLAGS}) is not 'eap'. Stopping task execution."
+          curl -d '{"status":"success", "should_continue": false}' -H "Content-Type: application/json" -X POST localhost:2285/task_status
+        else
+           echo "FEATURE_FLAGS is 'eap'. Allowing task execution to continue."
+        fi
+  - &check_and_allow_for_non_eap_build
+    command: shell.exec
+    type: test
+    params:
+      shell: bash
+      working_dir: mongosql-odbc-driver
+      script: |
+        ${PREPARE_SHELL}
+        if [ "${FEATURE_FLAGS}" == "eap" ]; then
+          echo "FEATURE_FLAGS (${FEATURE_FLAGS}) is 'eap'. Stopping task execution."
+          curl -d '{"status":"success", "should_continue": false}' -H "Content-Type: application/json" -X POST localhost:2285/task_status
+        else
+          echo "FEATURE_FLAGS is not 'eap'. Allowing task execution to continue."
+        fi
+
 
 functions:
+  "check and allow for eap build":
+    - *check_and_allow_for_eap_build
+
+  "check and allow for non-eap build":
+    - *check_and_allow_for_non_eap_build
+
   "generate third party licenses":
     - command: subprocess.exec
       params:
@@ -88,105 +126,15 @@ functions:
           sql-engines-common-test-infra: ${sql-engines-common-test-infra_rev}
 
   "generate expansions":
-    - command: shell.exec
+    - command: subprocess.exec
       params:
-        shell: bash
+        binary: bash
         working_dir: mongosql-odbc-driver
-        script: |
-          PROJECT_DIRECTORY="$(pwd)"
-          export CARGO_NET_GIT_FETCH_WITH_CLI=true
-          export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
-          export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
-          if [ "Windows_NT" == "$OS" ]; then
-            export PATH="$HOME/.rustup/bin:$HOME/.cargo/bin:$LD_LIBRARY_PATH:$PATH"
-          else
-            export PATH="$HOME/.cargo/bin:$LD_LIBRARY_PATH:$PATH"
-          fi
-          export DUMP_FOLDER=dumps
-          export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
-          export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
-          export SCRIPT_FOLDER=resources
-          export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
-          export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
-          if [[ "${triggered_by_git_tag}" != "" ]]; then
-            export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v// )
-          else
-            export RELEASE_VERSION=snapshot
-          fi
-          export MSI_FILENAME="mongoodbc-eap-$RELEASE_VERSION.msi"
-          export UBUNTU_FILENAME="mongoodbc-eap-$RELEASE_VERSION.tar.gz"
-
-          COMMON_TEST_INFRA_DIR="$PROJECT_DIRECTORY/sql-engines-common-test-infra"
-          DRIVERS_TOOLS="$PROJECT_DIRECTORY/evergreen/drivers-tools"
-          MONGO_ORCHESTRATION_HOME="$DRIVERS_TOOLS/.evergreen/orchestration"
-          MONGODB_BINARIES="$DRIVERS_TOOLS/mongodb/bin"
-
-          cat <<EOT > expansions.yml
-          RELEASE_VERSION: "$RELEASE_VERSION"
-          MSI_FILENAME: "$MSI_FILENAME"
-          UBUNTU_FILENAME: "$UBUNTU_FILENAME"
-          WINDOWS_INSTALLER_PATH: "eap/mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
-          UBUNTU2204_INSTALLER_PATH: "eap/mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/$UBUNTU_FILENAME"
-          COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
-          STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
-          DRIVERS_TOOLS: "$DRIVERS_TOOLS"
-          common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
-          script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
-          MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
-          prepare_shell: |
-            set -o errexit
-            export RELEASE_VERSION="$RELEASE_VERSION"
-            export MSI_FILENAME="$MSI_FILENAME"
-            export UBUNTU_FILENAME="$UBUNTU_FILENAME"
-            export WINDOWS_INSTALLER_PATH="$WINDOWS_INSTALLER_PATH"
-            export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
-            export PATH="$PATH"
-            export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
-            export LOCAL_MDB_PORT_COM=${local_mdb_port_com}
-            export LOCAL_MDB_PORT_ENT=${local_mdb_port_ent}
-            export LOCAL_MDB_USER=${local_mdb_user}
-            export LOCAL_MDB_PWD=${local_mdb_pwd}
-            export ADF_TEST_LOCAL_USER="${adf_test_local_user}"
-            export ADF_TEST_LOCAL_PWD="${adf_test_local_pwd}"
-            export ADF_TEST_LOCAL_AUTH_DB="${adf_test_local_auth_db}"
-            export ADF_TEST_LOCAL_HOST="${adf_test_local_host}"
-            export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
-            export ADF_TEST_LOCAL_DB="${adf_test_local_db}"
-            export ADF_TEST_URI="${adf_test_uri}"
-            export SRV_TEST_DB="${srv_test_db}"
-            export SRV_TEST_AUTH_DB="${srv_test_auth_db}"
-            export SRV_TEST_HOST="${srv_test_host}"
-            export SRV_TEST_USER="${srv_test_user}"
-            export SRV_TEST_PWD="${srv_test_pwd}"
-            export SCRIPT_FOLDER="$SCRIPT_FOLDER"
-            export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
-            export SBOM_DIR="sbom_tools"
-            export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
-            export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
-            export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
-            export COMPLIANCE_REPORT_NAME="$COMPLIANCE_REPORT_NAME"
-            export STATIC_CODE_ANALYSIS_NAME="$STATIC_CODE_ANALYSIS_NAME"
-            export ALLOW_VULNS="${AllowVulns}"
-          
-            # Common test infra variables
-            export PROJECT_DIRECTORY="$PROJECT_DIRECTORY"
-            export DRIVERS_TOOLS="$DRIVERS_TOOLS"
-            export MONGO_ORCHESTRATION_HOME="$MONGO_ORCHESTRATION_HOME"
-            export MONGODB_BINARIES="$MONGODB_BINARIES"
-            export COMMON_TEST_INFRA_DIR="$COMMON_TEST_INFRA_DIR"
-
-            # Windows variables
-            export LOCAL_DUMP_ORIGINAL_REG_VAL="$LOCAL_DUMP_ORIGINAL_REG_VAL"
-            export DUMP_FOLDER="$DUMP_FOLDER"
-            export DUMP_PATH="$(pwd)/$DUMP_FOLDER"
-            export MONGOODBC_DEBUGGING_INFO_ARCHIVE=$MONGOODBC_DEBUGGING_INFO_ARCHIVE
-
-            # Non-Windows variables
-            export INSTALLED_ODBC_PATH="$INSTALLED_ODBC_PATH"
-            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
-            export LIBRARY_PATH="$LD_LIBRARY_PATH"
-            export ODBCSYSINI="$(pwd)"/setup
-          EOT
+        env:
+          triggered_by_git_tag: ${triggered_by_git_tag}
+        args:
+          - "./evergreen/create-expansions.sh"
+        add_expansions_to_env: true
     - command: expansions.update
       params:
         file: mongosql-odbc-driver/expansions.yml
@@ -197,6 +145,7 @@ functions:
       owner: 10gen
       repo: mongohouse
       expansion_name: github_token
+
 
   "install rust toolchain":
     - command: shell.exec
@@ -710,9 +659,13 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-
-          # Compile release build
-          cargo build --release
+          # Compile release build with features if needed
+          # if FEATURE_FLAGS is not empty, build with features
+          if [[ "$FEATURE_FLAGS" != "" ]]; then
+            cargo build --release --features $FEATURE_FLAGS
+          else
+            cargo build --release
+          fi
 
           # Verify the version is the expected one from the driver perspective too
           cargo test api::get_info_tests::unit::driver_ver -- --nocapture
@@ -726,8 +679,12 @@ functions:
         script: |
           ${prepare_shell}
 
-          # Compile debug build
-          cargo build
+          # Compile release build with features if needed
+          if [[ "$FEATURE_FLAGS" != "" ]]; then
+            cargo build --features $FEATURE_FLAGS
+          else
+            cargo build
+          fi
 
   "compile ubuntu with asan":
     - command: shell.exec
@@ -742,7 +699,11 @@ functions:
 
           export RUSTFLAGS="-Z sanitizer=address"
 
-          cargo build --target x86_64-unknown-linux-gnu
+          if [[ "$FEATURE_FLAGS" != "" ]]; then
+            cargo build --target x86_64-unknown-linux-gnu --features $FEATURE_FLAGS
+          else
+            cargo build --target x86_64-unknown-linux-gnu
+          fi
 
   "compile release with debug info":
     - command: shell.exec
@@ -753,7 +714,12 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           # Build a release driver with debug information
-          cargo build --release
+          if [[ "$FEATURE_FLAGS" != "" ]]; then
+            cargo build --release --features $FEATURE_FLAGS
+          else
+            cargo build --release
+          fi
+
           export DRIVER_LIB_PATH=$PWD/target/release
 
           cat <<EOT >> expansions.yml
@@ -787,7 +753,12 @@ functions:
         script: |
           ${prepare_shell}
           # Compile debug build
-          cargo build --features definitions/iodbc,cstr/utf32
+          if [[ "$FEATURE_FLAGS" != "" ]]; then
+            cargo build --features definitions/iodbc,cstr/utf32,$FEATURE_FLAGS
+          else
+            cargo build --features definitions/iodbc,cstr/utf32
+          fi
+
 
   "compile macos release with debug info":
     - command: shell.exec
@@ -799,7 +770,11 @@ functions:
           ${prepare_shell}
           echo "env $(env)"
           # Build a release driver with debug information
-          cargo build --features definitions/iodbc,cstr/utf32 --release
+          if [[ "$FEATURE_FLAGS" != "" ]]; then
+            cargo build --release --features definitions/iodbc,cstr/utf32,$FEATURE_FLAGS
+          else
+            cargo build --release --features definitions/iodbc,cstr/utf32
+          fi
           export DRIVER_LIB_PATH=$PWD/target/release
           cat <<EOT >> expansions.yml
             export DRIVER_LIB_PATH="$DRIVER_LIB_PATH"
@@ -832,7 +807,7 @@ functions:
           # TODO: Delete the following line prior to merging back into master
           cp ./THIRD_PARTY_LICENSES.txt ./README.md installer/msi
           cd installer/msi
-          if [ "$RELEASE_VERSION" == "snapshot" ]; then
+          if [[ "$RELEASE_VERSION" == "snapshot" || "$RELEASE_VERSION" == "snapshot-eap" ]]; then
               MINOR_VERSION="0.1"
               VERSION_LABEL="0.1.0"
           else
@@ -1410,7 +1385,7 @@ functions:
           echo "****** ls -l ./target/debug/deps *******"
           ls -l ./target/debug/deps
           echo "****************************************"
-          # The execution termimated with a segfault
+          # The execution terminated with a segfault
           if [ $EXITCODE -eq 139 ]; then
             # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
             SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
@@ -1543,7 +1518,8 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo test mongosqltranslate_tests -- --nocapture
+          cargo build --release --features eap
+          cargo test mongosqltranslate_tests --features eap -- --nocapture
 
   "run ubuntu cluster type integration tests":
     - command: shell.exec
@@ -1563,27 +1539,36 @@ functions:
           # Start MongoDB instances
           ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
 
-
-          # Enterprise test
+          # Enterprise test no eap
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
-          ENTERPRISE_EXITCODE=$?
+          ENTERPRISE_NO_MSQL_EXITCODE=$?
+          # Enterprise test eap
+          cargo test --features cluster_type_tests, eap -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
+          ENTERPRISE_MSQL_EXITCODE=$?
+
+          # Enterprise test with eap
 
           # Community test
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
-          COMMUNITY_EXITCODE=$?
+          COMMUNITY_NO_MSQL_EXITCODE=$?
+          # Community test with eap
+          cargo test --features cluster_type_tests, eap -- cluster_type::test_determine_cluster_type_community_fails --nocapture
+          COMMUNITY_MSQL_EXITCODE=$?
 
           # Stop MongoDB instances
           pkill mongod
 
-          if [ $ENTERPRISE_EXITCODE -eq 0 ] && [ $COMMUNITY_EXITCODE -eq 0 ]; then
+          if [ $ENTERPRISE_NO_MSQL_EXITCODE -eq 0 ] && [ $ENTERPRISE_MSQL_EXITCODE -eq 0 ] && [ $COMMUNITY_NO_MSQL_EXITCODE -eq 0 ] && [ $COMMUNITY_MSQL_EXITCODE -eq 0 ] ; then
             OVERALL_EXITCODE=0
           else
             OVERALL_EXITCODE=1
           fi
 
           echo "Cluster test results:"
-          echo "Enterprise test exit code: $ENTERPRISE_EXITCODE"
-          echo "Community test exit code: $COMMUNITY_EXITCODE"
+          echo "Enterprise no mongosql test exit code: $ENTERPRISE_NO_MSQL_EXITCODE"
+          echo "Enterprise mongosql test exit code: $ENTERPRISE_MSQL_EXITCODE"
+          echo "Community no mongosql test exit code: $COMMUNITY_NO_MSQL_EXITCODE"
+          echo "Community mongosql test exit code: $COMMUNITY_MSQL_EXITCODE"
           echo "Overall exit code: $OVERALL_EXITCODE"
 
           set -e
@@ -1657,7 +1642,7 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && 
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cargo run --bin data_loader &&
 
           # Run integration tests with macos
@@ -1806,7 +1791,7 @@ functions:
         cargo run --bin data_loader &&
         cargo test --package integration_test --lib test_runner --features integration_test/result_set
         EXITCODE=$?
-        # The execution termimated with a segfault
+        # The execution terminated with a segfault
         if [ $EXITCODE -eq 139 ]; then
             # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
             SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
@@ -2238,6 +2223,7 @@ tasks:
     depends_on:
       - name: trace-artifacts
     commands:
+      - func: "check and allow for non-eap build"
       - func: "update download center feed"
 
   - name: release
@@ -2363,6 +2349,11 @@ buildvariants:
       - name: windows-test-integration-group
       - name: windows-test-result-set-group
       - name: sign
+      - name: compile-eap
+      - name: windows-windows-test-unit-group-eap
+      - name: windows-test-integration-group-eap
+      - name: windows-test-result-set-group-eap
+      - name: sign-eap
         run_on: ubuntu2204-large
 
   - name: ubuntu2204
@@ -2373,11 +2364,16 @@ buildvariants:
       - sql-engines-common-test-infra
     tasks:
       - name: compile
+      - name: compile-eap
       - name: unit-test
+      - name: unit-test-eap
       - name: integration-test
+      - name: integration-test-eap
       - name: result-set-test
+      - name: result-set-test-eap
       - name: asan-unit-tests
       - name: sign
+      - name: sign-eap
 
   - name: macos
     display_name: "macOS"
@@ -2406,6 +2402,7 @@ buildvariants:
       - name: make-odbc-docs
       - name: release
       - name: snapshot
+      - name: snapshot-eap
       # - name: trace-artifacts
       # - name: download-center-update
       # - name: ssdlc-artifacts-release

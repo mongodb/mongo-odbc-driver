@@ -1,0 +1,358 @@
+functions:
+  "upload eap release":
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/docs/MongoDB_ODBC_Guide.pdf
+        local_file: mongosql-odbc-driver/release/docs/MongoDB_ODBC_Guide.pdf
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/docs/MongoDB_ODBC_Guide.pdf
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
+        bucket: translators-connectors-releases
+        permissions: public-read
+        skip_existing: false
+        content_type: application/pdf
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
+        remote_file: ${PATH_PREFIX}${WINDOWS_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+        display_name: ${MSI_FILENAME}
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi.sha256
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi.sha256
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi.sha256
+        remote_file: ${PATH_PREFIX}${WINDOWS_INSTALLER_PATH}.sha256
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+        display_name: ${MSI_FILENAME}.sha256
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsql.dll
+        local_file: mongosql-odbc-driver/release/atsql.dll
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/atsql.dll
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.dll
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsqls.dll
+        local_file: mongosql-odbc-driver/release/atsqls.dll
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/atsqls.dll
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsqls.dll
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsql.pdb
+        local_file: mongosql-odbc-driver/release/atsql.pdb
+        bucket: mciuploads
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/release/atsql.pdb
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.pdb
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}
+        remote_file: ${PATH_PREFIX}${UBUNTU2204_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}.sig
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/${UBUNTU_FILENAME}.sig
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/libatsql.so
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        bucket: mciuploads
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+
+tasks:
+  - name: snapshot-eap
+    depends_on:
+      - name: compile-eap
+        variant: "*"
+      - name: clippy
+        variant: "*"
+      - name: rustfmt
+        variant: "*"
+      - name: unit-test-eap
+        variant: ".release-variant"
+      - name: integration-test-eap
+        variant: ".release-variant"
+      - name: result-set-test-eap
+        variant: ".release-variant"
+      - name: sign-eap
+        variant: ".release-variant"
+    commands:
+      - func: "upload eap release"
+
+  - name: compile-eap
+    commands:
+      - func: "generate expansions"
+        vars:
+          snapshot-eap: "true"
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
+      - func: "set and check packages version"
+      - func: "generate third party licenses"
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
+      - func: "compile ubuntu and win release"
+        variants: [ubuntu2204, windows-64]
+      - func: "build msi"
+        variants: [windows-64]
+      - func: "tar linux artifacts"
+        variants: [ubuntu2204]
+      - func: "mciuploads release artifacts"
+
+  - name: unit-test-eap
+    depends_on:
+      - compile-eap
+    commands:
+      - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
+      - func: "run windows unit tests"
+        variants: [windows-64]
+      - func: "run ubuntu unit tests"
+        variants: [ubuntu2204]
+      - func: "run ubuntu rfc8252_http_server tests"
+        variants: [ubuntu2204]
+      - func: "run macos unit tests"
+        variants: [macos, macos-arm]
+
+  - name: integration-test-eap
+    depends_on:
+      - name: compile-eap
+    commands:
+      - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
+      - func: "install iODBC"
+        variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
+      - func: "compile release with debug info"
+        variants: [ubuntu2204]
+      - func: "compile macos release with debug info"
+        variants: [macos, macos-arm]
+      - func: "setup driver with UnixODBC"
+        variants: [ubuntu2204]
+      - func: "setup driver with iODBC"
+        variants: [macos, macos-arm]
+      - func: "prepare resources"
+        variants: [windows-64, ubuntu2204]
+      - func: "update orchestrator mongod port"
+        variants: [windows-64, ubuntu2204]
+      - func: "bootstrap mongo-orchestration"
+        variants: [windows-64, ubuntu2204]
+      - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
+      - func: "run ubuntu integration tests"
+        variants: [ubuntu2204]
+      - func: "run ubuntu cluster type integration tests"
+        variants: [ubuntu2204]
+      - func: "run ubuntu mongosqltranslate integration tests"
+        variants: [ubuntu2204]
+      # Commenting out because the following task only detects
+      # memory leaks in the tests
+      # - func: "run asan integration tests"
+      #   variants: [ ubuntu2204 ]
+      - func: "run windows integration tests"
+        variants: [windows-64]
+      - func: "run macos integration tests"
+        variants: [macos, macos-arm]
+
+  # disabled macos result-set-tests as part of SQL-1688
+  - name: result-set-test-eap
+    depends_on:
+      - name: compile-eap
+    commands:
+      - func: "install rust toolchain"
+        variants: [ubuntu2204, windows-64, macos, macos-arm]
+      # - func: "install iODBC"
+      #   variants: [macos, macos-arm]
+      - func: "install unix odbc"
+        variants: [ubuntu2204]
+      - func: "compile release with debug info"
+        variants: [ubuntu2204]
+      # - func: "compile macos release with debug info"
+      #   variants: [macos, macos-arm]
+      - func: "setup driver with UnixODBC"
+        variants: [ubuntu2204]
+      # - func: "setup driver with iODBC"
+      #   variants: [macos, macos-arm]
+      - func: "prepare resources"
+        variants: [windows-64, ubuntu2204]
+      - func: "update orchestrator mongod port"
+        variants: [windows-64, ubuntu2204]
+      - func: "bootstrap mongo-orchestration"
+        variants: [windows-64, ubuntu2204]
+      - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
+      - func: "run windows result set test"
+        variants: [windows-64]
+      - func: "run ubuntu result-set tests"
+        variants: [ubuntu2204]
+      # - func: "run macos result-set tests"
+      #   variants: [macos, macos-arm]
+      # Commenting out because the following task only detects
+      # memory leaks in the tests
+      # - func: "run asan result-set tests"
+      #   variants: [ ubuntu2204 ]
+
+  - name: sign-eap
+    allowed_requesters: ["ad_hoc", "github_tag"]
+    depends_on:
+      - name: compile-eap
+    commands:
+      - func: "fetch for windows sign"
+        variants: [windows-64]
+      - func: "fetch for ubuntu sign"
+        variants: [ubuntu2204]
+      - func: "sign windows"
+        variants: [windows-64]
+      - func: "sign ubuntu and verify signature"
+        variants: [ubuntu2204]
+      - func: "upload signed windows artifacts"
+        variants: [windows-64]
+      - func: "upload ubuntu sig file"
+        variants: [ubuntu2204]
+
+task_groups:
+  - name: windows-windows-test-unit-group-eap
+    setup_group_can_fail_task: false
+    setup_group:
+      - func: "fetch source"
+      - func: "generate expansions"
+        vars:
+          snapshot-eap: "true"
+    tasks:
+      - unit-test-eap
+
+  - name: windows-test-integration-group-eap
+    setup_group_can_fail_task: false
+    setup_group:
+      - func: "fetch source"
+      - func: "generate expansions"
+        vars:
+          snapshot-eap: "true"
+      - func: "download artifact"
+      - func: "setup driver on Windows"
+      - func: "setup crash dump collection"
+    teardown_group:
+      - func: "upload crash debugging info"
+      - func: "clean-up driver on Windows"
+      - func: "clean-up crash dump collection"
+    tasks:
+      - integration-test-eap
+
+  - name: windows-test-result-set-group-eap
+    setup_group_can_fail_task: false
+    setup_group:
+      - func: "fetch source"
+      - func: "generate expansions"
+        vars:
+          snapshot-eap: "true"
+      - func: "download artifact"
+      - func: "setup driver on Windows"
+      - func: "setup crash dump collection"
+    teardown_group:
+      - func: "upload crash debugging info"
+      - func: "clean-up driver on Windows"
+      - func: "clean-up crash dump collection"
+    tasks:
+      - result-set-test-eap
