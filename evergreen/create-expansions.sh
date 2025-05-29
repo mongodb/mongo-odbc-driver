@@ -71,6 +71,7 @@ DRIVERS_TOOLS: "$DRIVERS_TOOLS"
 cargo_bin: "$CARGO_BIN"
 common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
 script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
+working_dir: "mongosql-odbc-driver"
 MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
 MONGODB_BINARIES: "$MONGODB_BINARIES"
 prepare_shell: |
