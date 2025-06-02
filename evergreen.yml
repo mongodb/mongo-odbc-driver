@@ -1318,7 +1318,7 @@ functions:
   "decompress testdata files":
     - command: subprocess.exec
       params:
-        binayr: bash
+        binary: bash
         working_dir: mongosql-odbc-driver
         args:
           - "./evergreen/decompress_testdata_files.sh"
