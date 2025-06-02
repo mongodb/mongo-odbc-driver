@@ -100,8 +100,10 @@ The other tests that are run are integration and result set tests. These involve
 The first step on either macos or windows is to start a local mongod and Atlas Data Federation instance, and load sample data into them. A necessary prerequisite is having golang installed (see [here](https://go.dev/doc/install)).
 ```
 ./resources/run_adf.sh start
-cargo run --bin data_loader
 ```
+
+To load the data,  use the [sql-engines-common-test-infra](https://github.com/10gen/sql-engines-common-test-infra)
+`data-loader` tool. See `cargo run --bin data-loader -- --help` in that repo for more details.
 
 #### macos
 To run result set sets:
