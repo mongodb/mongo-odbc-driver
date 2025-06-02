@@ -1324,6 +1324,14 @@ functions:
           - ${common_test_infra_dir}/test-environment/run_adf.sh
           - ${run_adf_arg}
 
+  "decompress testdata files":
+    - command: subprocess.exec
+      params:
+        binayr: bash
+        working_dir: mongosql-odbc-driver
+        args:
+          - "./evergreen/decompress_testdata_files.sh"
+
   "run windows unit tests":
     - command: shell.exec
       type: test
@@ -1983,6 +1991,7 @@ tasks:
         variants: [windows-64, ubuntu2204]
         vars:
           run_adf_arg: "start"
+      - func: "decompress testdata files"
       - func: "run data loader"
         vars:
           working_dir: ${common_test_infra_dir}
@@ -2053,6 +2062,7 @@ tasks:
         variants: [windows-64, ubuntu2204]
         vars:
           run_adf_arg: "start"
+      - func: "decompress testdata files"
       - func: "run data loader"
         vars:
           working_dir: ${common_test_infra_dir}
