@@ -1345,7 +1345,7 @@ functions:
           export RUST_BACKTRACE=1
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
           cd - &&
           cargo test integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
@@ -1384,7 +1384,7 @@ functions:
         export RUST_BACKTRACE=1
         $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
         cd $COMMON_TEST_INFRA_DIR &&
-        cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+        cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
         cd - &&
         cargo test --package integration_test --lib test_runner --features integration_test/result_set
         EXITCODE=$?
@@ -1448,7 +1448,7 @@ functions:
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
           cd - &&
 
           # Run integration tests with ubuntu
@@ -1553,7 +1553,7 @@ functions:
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
           cd - &&
 
           # Run integration tests with ubuntu
@@ -1587,7 +1587,7 @@ functions:
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
           cd - &&
 
           # Run integration tests with macos
@@ -1634,7 +1634,7 @@ functions:
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
           cd - &&
 
           # Run integration tests with macos
@@ -1691,7 +1691,7 @@ functions:
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
           cd - &&
 
           # Run integration tests with asan
@@ -1731,7 +1731,7 @@ functions:
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
           cd - &&
 
           # Run integration tests with asan
