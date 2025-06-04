@@ -245,15 +245,8 @@ tasks:
         variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204]
-      - func: "execute run_adf script"
-        variants: [windows-64, ubuntu2204]
-        vars:
-          run_adf_arg: "start"
       - func: "decompress testdata files"
-      - func: "run data loader"
-        vars:
-          working_dir: ${common_test_infra_dir}
-          data_loader_args: "--mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata"
+        variants: [windows-64, ubuntu2204]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration tests"
@@ -268,10 +261,6 @@ tasks:
         variants: [windows-64]
       - func: "run macos integration tests"
         variants: [macos, macos-arm]
-      - func: "execute run_adf script"
-        variants: [windows-64, ubuntu2204]
-        vars:
-          run_adf_arg: "stop"
 
   # disabled macos result-set-tests as part of SQL-1688
   - name: result-set-test-eap
@@ -300,23 +289,11 @@ tasks:
         variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204]
-      - func: "execute run_adf script"
-        variants: [windows-64, ubuntu2204]
-        vars:
-          run_adf_arg: "start"
       - func: "decompress testdata files"
-      - func: "run data loader"
-        vars:
-          working_dir: ${common_test_infra_dir}
-          data_loader_args: "--mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata"
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
         variants: [ubuntu2204]
-      - func: "execute run_adf script"
-        variants: [windows-64, ubuntu2204]
-        vars:
-          run_adf_arg: "stop"
       # - func: "run macos result-set tests"
       #   variants: [macos, macos-arm]
       # Commenting out because the following task only detects

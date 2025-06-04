@@ -1313,17 +1313,6 @@ functions:
   ##############################
   # Test functions and helpers #
   ##############################
-  "execute run_adf script":
-    - command: subprocess.exec
-      params:
-        binary: bash
-        working_dir: mongosql-odbc-driver
-        env:
-          GITHUB_TOKEN: "${github_token}"
-        args:
-          - ${common_test_infra_dir}/test-environment/run_adf.sh
-          - ${run_adf_arg}
-
   "decompress testdata files":
     - command: subprocess.exec
       params:
@@ -1354,6 +1343,10 @@ functions:
           ${prepare_shell}
           set +e
           export RUST_BACKTRACE=1
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cd $COMMON_TEST_INFRA_DIR &&
+          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cd - &&
           cargo test integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
@@ -1374,6 +1367,7 @@ functions:
             echo "ls -l $DUMP_PATH"
             ls -l $DUMP_PATH
           fi
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run windows result set test":
@@ -1388,6 +1382,10 @@ functions:
         ${prepare_shell}
         set +e
         export RUST_BACKTRACE=1
+        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+        cd $COMMON_TEST_INFRA_DIR &&
+        cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+        cd - &&
         cargo test --package integration_test --lib test_runner --features integration_test/result_set
         EXITCODE=$?
         # The execution terminated with a segfault
@@ -1398,6 +1396,7 @@ functions:
             echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
             tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
         fi
+        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
         exit $EXITCODE
 
   "run ubuntu unit tests":
@@ -1446,6 +1445,11 @@ functions:
           ~/.cargo/bin/rustup default stable
 
           export RUST_BACKTRACE=1
+          # Start a local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cd $COMMON_TEST_INFRA_DIR &&
+          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cd - &&
 
           # Run integration tests with ubuntu
           cargo test integration -- --nocapture &&
@@ -1456,6 +1460,8 @@ functions:
 
           EXITCODE=$?
 
+          # Stop the local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run ubuntu mongosqltranslate integration tests":
@@ -1544,11 +1550,18 @@ functions:
           ~/.cargo/bin/rustup default stable
 
           export RUST_BACKTRACE=1
+          # Start a local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cd $COMMON_TEST_INFRA_DIR &&
+          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cd - &&
 
           # Run integration tests with ubuntu
           cargo test --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
+          # Stop the local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run macos result-set tests":
@@ -1571,11 +1584,18 @@ functions:
           ~/.cargo/bin/rustup default stable
 
           export RUST_BACKTRACE=1
+          # Start a local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cd $COMMON_TEST_INFRA_DIR &&
+          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cd - &&
 
           # Run integration tests with macos
           cargo test --package integration_test --lib test_runner --features definitions/iodbc,cstr/utf32,integration_test/result_set
           EXITCODE=$?
 
+          # Stop the local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run macos unit tests":
@@ -1611,6 +1631,11 @@ functions:
           ~/.cargo/bin/rustup default stable
 
           export RUST_BACKTRACE=1
+          # Start a local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cd $COMMON_TEST_INFRA_DIR &&
+          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cd - &&
 
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --nocapture &&
@@ -1620,6 +1645,8 @@ functions:
           cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests,definitions/iodbc,cstr/utf32 -- --nocapture
           EXITCODE=$?
 
+          # Stop the local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run asan unit tests":
@@ -1661,6 +1688,12 @@ functions:
           ~/.cargo/bin/rustup default nightly
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
 
+          # Start a local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cd $COMMON_TEST_INFRA_DIR &&
+          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cd - &&
+
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
@@ -1669,6 +1702,8 @@ functions:
           cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
           EXITCODE=$?
 
+          # Stop the local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "run asan result-set tests":
@@ -1693,11 +1728,18 @@ functions:
           export RUSTFLAGS="-Z sanitizer=leak"
 
           export RUST_BACKTRACE=1
+          # Start a local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cd $COMMON_TEST_INFRA_DIR &&
+          cargo run --bin data_loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
+          cd - &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
+          # Stop the local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
   "upload start_adf logs":
@@ -1987,15 +2029,7 @@ tasks:
         variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204]
-      - func: "execute run_adf script"
-        variants: [windows-64, ubuntu2204]
-        vars:
-          run_adf_arg: "start"
       - func: "decompress testdata files"
-      - func: "run data loader"
-        vars:
-          working_dir: ${common_test_infra_dir}
-          data_loader_args: "--mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata"
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration tests"
@@ -2010,10 +2044,6 @@ tasks:
         variants: [windows-64]
       - func: "run macos integration tests"
         variants: [macos, macos-arm]
-      - func: "execute run_adf script"
-        variants: [windows-64, ubuntu2204]
-        vars:
-          run_adf_arg: "stop"
 
   - name: asan-unit-tests
     commands:
@@ -2058,23 +2088,11 @@ tasks:
         variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204]
-      - func: "execute run_adf script"
-        variants: [windows-64, ubuntu2204]
-        vars:
-          run_adf_arg: "start"
       - func: "decompress testdata files"
-      - func: "run data loader"
-        vars:
-          working_dir: ${common_test_infra_dir}
-          data_loader_args: "--mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata"
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
         variants: [ubuntu2204]
-      - func: "execute run_adf script"
-        variants: [windows-64, ubuntu2204]
-        vars:
-          run_adf_arg: "stop"
       # - func: "run macos result-set tests"
       #   variants: [macos, macos-arm]
       # Commenting out because the following task only detects
