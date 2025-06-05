@@ -52,6 +52,12 @@ else
     fi
 fi
 
+if [[ "$FEATURE_FLAGS" != "" ]]; then
+  export MACHETE_BUILD_FLAGS="--release --features $FEATURE_FLAGS"
+else
+  export MACHETE_BUILD_FLAGS="--release"
+fi
+
 export MSI_FILENAME="$PRODUCT_NAME-$RELEASE_VERSION.msi"
 export UBUNTU_FILENAME="$PRODUCT_NAME-$RELEASE_VERSION.tar.gz"
 
@@ -70,6 +76,7 @@ PROJECT_DIRECTORY: "$(pwd)"
 DRIVERS_TOOLS: "$DRIVERS_TOOLS"
 cargo_bin: "$CARGO_BIN"
 common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
+machete_build_flags: "$MACHETE_BUILD_FLAGS"
 script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
 working_dir: "mongosql-odbc-driver"
 MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
