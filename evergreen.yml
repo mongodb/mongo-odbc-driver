@@ -2349,6 +2349,7 @@ buildvariants:
       - name: windows-test-integration-group
       - name: windows-test-result-set-group
       - name: sign
+        run_on: ubuntu2204-large
       - name: compile-eap
       - name: windows-windows-test-unit-group-eap
       - name: windows-test-integration-group-eap
