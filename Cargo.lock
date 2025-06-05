@@ -1853,7 +1853,6 @@ dependencies = [
  "log",
  "logger",
  "mongo-odbc-core",
- "mongodb",
  "num-traits",
  "regex",
  "serde",
