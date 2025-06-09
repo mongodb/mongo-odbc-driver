@@ -784,16 +784,15 @@ functions:
         file: mongosql-odbc-driver/expansions.yml
 
   "build msi":
-    # TODO: Uncomment prior to merging back into master
-    # - command: s3.get
-    #   params:
-    #     aws_key: ${aws_key}
-    #     aws_secret: ${aws_secret}
-    #     local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-    #     remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
-    #     content_type: application/json
-    #     bucket: mciuploads
-    #     permissions: public-read
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -802,10 +801,7 @@ functions:
           ${prepare_shell}
 
           cp target/release/*.dll installer/msi
-          # TODO: Uncomment prior to merging back into master
-          # cp ./THIRD_PARTY_LICENSES.txt ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
-          # TODO: Delete the following line prior to merging back into master
-          cp ./THIRD_PARTY_LICENSES.txt ./README.md installer/msi
+          cp ./THIRD_PARTY_LICENSES.txt ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
           if [[ "$RELEASE_VERSION" == "snapshot" || "$RELEASE_VERSION" == "snapshot-eap" ]]; then
               MINOR_VERSION="0.1"
@@ -828,16 +824,15 @@ functions:
               -VersionLabel "$VERSION_LABEL"\
 
   "build dmg":
-    # TODO: Uncomment prior to merging back into master
-    # - command: s3.get
-    #   params:
-    #     aws_key: ${aws_key}
-    #     aws_secret: ${aws_secret}
-    #     local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-    #     remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
-    #     content_type: application/json
-    #     bucket: mciuploads
-    #     permissions: public-read
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -1163,16 +1158,15 @@ functions:
         bucket: mciuploads
 
   "tar linux artifacts":
-    # TODO: Uncomment prior to merging back into master
-    # - command: s3.get
-    #   params:
-    #     aws_key: ${aws_key}
-    #     aws_secret: ${aws_secret}
-    #     local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-    #     remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
-    #     content_type: application/json
-    #     bucket: mciuploads
-    #     permissions: public-read
+    - command: s3.get
+      params:
+        aws_key: ${aws_key}
+        aws_secret: ${aws_secret}
+        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        content_type: application/json
+        bucket: mciuploads
+        permissions: public-read
     - command: shell.exec
       params:
         shell: bash
@@ -1182,10 +1176,7 @@ functions:
 
           mkdir -p release/mongoodbc/bin
           cp target/release/*.so release/mongoodbc/bin/
-          # TODO: Uncomment prior to merging back into master
-          # cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
-          # TODO: Delete the following line prior merging back into master
-          cp ./LICENSE ./THIRD_PARTY_LICENSES.txt ./README.md release/mongoodbc/
+          cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
           cd release
           tar -czvf $UBUNTU_FILENAME mongoodbc/
 
@@ -2022,8 +2013,6 @@ tasks:
       - func: "check unused dependencies"
 
   - name: sbom
-    # TODO: Remove the following prior to merging back to master
-    disable: true
     commands:
       - func: "install rust toolchain"
       - func: set and check packages version
@@ -2032,10 +2021,9 @@ tasks:
       - func: "augment SBOM"
 
   - name: compile
-    # TODO: Uncomment the following block prior to merging back to master
-    # depends_on:
-    #   - name: sbom
-    #     variant: code-quality-security
+    depends_on:
+      - name: sbom
+        variant: code-quality-security
     commands:
       - func: "install iODBC"
         variants: [macos, macos-arm]
@@ -2208,8 +2196,6 @@ tasks:
       - func: "upload release"
 
   - name: trace-artifacts
-    # TODO: remove this before merging eap branch back into main branch
-    disable: true
     git_tag_only: true
     depends_on:
       - name: release
@@ -2217,8 +2203,6 @@ tasks:
       - func: "trace artifacts"
 
   - name: download-center-update
-    # TODO: remove this before merging eap branch back into main branch, to allow download center to update.
-    disable: true
     git_tag_only: true
     depends_on:
       - name: trace-artifacts
@@ -2244,8 +2228,6 @@ tasks:
       - func: "generate static code analysis"
 
   - name: ssdlc-artifacts-release
-    # TODO: remove this before merging eap branch back into main branch
-    disable: true
     run_on: ubuntu2204-small
     git_tag_only: true
     depends_on:
@@ -2263,8 +2245,6 @@ tasks:
       - func: "publish compliance report"
 
   - name: ssdlc-artifacts-snapshot
-    # TODO: remove this before merging eap branch back into main branch
-    disable: true
     run_on: ubuntu2204-small
     allow_for_git_tag: false
     depends_on:
@@ -2333,9 +2313,8 @@ buildvariants:
     run_on: [ubuntu2204-small]
     tasks:
       - name: semgrep
-      # TODO: Uncomment the following block prior to merging back to master
-      # - name: sbom
-      # - name: ssdlc-artifacts-snapshot
+      - name: sbom
+      - name: ssdlc-artifacts-snapshot
 
   - name: windows-64
     tags: ["release-variant"]
@@ -2404,6 +2383,6 @@ buildvariants:
       - name: release
       - name: snapshot
       - name: snapshot-eap
-      # - name: trace-artifacts
-      # - name: download-center-update
-      # - name: ssdlc-artifacts-release
+      - name: trace-artifacts
+      - name: download-center-update
+      - name: ssdlc-artifacts-release
