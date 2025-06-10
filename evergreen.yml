@@ -31,6 +31,8 @@ modules:
 include:
   - filename: evergreen/configs/mongodb_util.yml
     module: sql-engines-common-test-infra
+  - filename: evergreen/configs/rust_util.yml
+    module: sql-engines-common-test-infra
   - filename:  evergreen/eap.yml # tasks related to eap snapshot builds
 
 variables:
@@ -63,6 +65,12 @@ variables:
           echo "FEATURE_FLAGS is not 'eap'. Allowing task execution to continue."
         fi
 
+pre:
+  - func: "fetch source"
+  - func: "generate expansions"
+
+post:
+  - func: "upload start_adf logs"
 
 functions:
   "check and allow for eap build":
@@ -145,87 +153,6 @@ functions:
       owner: 10gen
       repo: mongohouse
       expansion_name: github_token
-
-
-  "install rust toolchain":
-    - command: shell.exec
-      params:
-        shell: bash
-        script: |
-          ${prepare_shell}
-
-          # make sure to use msvc toolchain rather than gnu, which is
-          # the default for cygwin
-          if [ "Windows_NT" == "$OS" ]; then
-              if [ 'windows-64' == '${build_variant}' ]; then
-                  export HOST="x86_64-pc-windows-msvc"
-              else
-                  echo 'unknown windows build variant ${build_variant}'
-                  exit 1;
-              fi
-              export DEFAULT_HOST_OPTIONS="--default-host $HOST"
-              export DEFAULT_TOOLCHAIN="stable-$HOST"
-          fi
-
-          # install rustup from scratch
-          rm -rf ~/.rustup
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path $DEFAULT_HOST_OPTIONS
-
-          # rustup installs into C:\Users\$USER instead of
-          # C:\home\$USER, so we symlink both .rustup and .cargo
-          if [ "Windows_NT" == "$OS" ]; then
-              ln -sf /cygdrive/c/Users/$USER/.rustup/toolchains/$DEFAULT_TOOLCHAIN ~/.rustup
-              ln -sf /cygdrive/c/Users/$USER/.cargo/ ~/.cargo
-
-              rustup toolchain install $DEFAULT_TOOLCHAIN
-              rustup default $DEFAULT_TOOLCHAIN
-          fi
-
-          echo --------- rustup show -----------
-          rustup show
-          echo ----- Rustup toolchain list -----
-          rustup toolchain list
-          echo --------- Cargo version ---------
-          cargo --version
-          echo ---------------------------------
-
-  "check clippy":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          cargo clippy --all-targets -- -D warnings
-
-  "check rustfmt":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          cargo fmt --all --  --check
-
-  "check unused dependencies":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          cargo install cargo-machete
-          set +e
-          cargo machete
-          RETURN=$?
-          set -e
-          if [ $RETURN -ne 0 ]; then
-            >&2 echo "Unused dependencies found"
-            >&2 cargo machete
-          fi
 
   "generate SBOM":
     - command: shell.exec
@@ -530,7 +457,7 @@ functions:
         permissions: public-read
         display_name: mongosql-odbc-${RELEASE_VERSION}.sbom.json
 
-  "set and check packages version":
+  "use latest mongosql version":
     - command: shell.exec
       type: test
       params:
@@ -538,23 +465,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          #no-op when not triggered by a tag
-          if [[ "${triggered_by_git_tag}" != "" ]]; then
-            cargo install cargo-edit
-            cargo set-version $RELEASE_VERSION
-          fi
-          cargo install cargo-get
-          CARGO_PKGS_VERSION=$(cargo get --entry="odbc/Cargo.toml" package.version)
-          if [[ "${triggered_by_git_tag}" == "" ]]; then
-            EXPECTED_RELEASE_VERSION="0.0.0"
-          else
-            EXPECTED_RELEASE_VERSION="$RELEASE_VERSION"
-          fi
-          if [[ "$CARGO_PKGS_VERSION" != "$EXPECTED_RELEASE_VERSION" ]]; then
-            echo "Expected version $EXPECTED_RELEASE_VERSION got $CARGO_PKGS_VERSION"
-            exit 1
-          fi
-
+          
           # use the latest mongosql release tag
           set -o pipefail
           MONGOSQL_VERSION=$(git ls-remote --tags --refs https://github.com/mongodb/mongosql.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*' | sed 's/refs\/tags\///' | sort -V | tail -n 1)
@@ -576,7 +487,6 @@ functions:
           else
             sed -i "s/^\(agg-ast = {.*\)branch = \"main\"\(.*}\)/\1tag = \"$MONGOSQL_VERSION\"\2/" core/Cargo.toml
           fi
-
 
   "sign windows":
     - command: shell.exec
@@ -1343,53 +1253,6 @@ functions:
           echo "-------------------------"
           exit $EXITCODE
 
-  "run windows unit tests":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          RUST_BACKTRACE=1 cargo test unit
-
-  "run windows integration tests":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        env:
-          GITHUB_TOKEN: "${github_token}"
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          set +e
-          export RUST_BACKTRACE=1
-          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cargo run --bin data_loader &&
-          cargo test integration -- --nocapture &&
-          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
-          # the test is feature gated and will only run on evergreen.
-          # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
-          EXITCODE=$?
-          echo "****** ls -l ./target/debug/deps *******"
-          ls -l ./target/debug/deps
-          echo "****************************************"
-          # The execution terminated with a segfault
-          if [ $EXITCODE -eq 139 ]; then
-            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
-            SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
-            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
-            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
-            tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
-
-            echo "ls -l $DUMP_PATH"
-            ls -l $DUMP_PATH
-          fi
-          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
-          exit $EXITCODE
-
   "install iODBC":
     - command: shell.exec
       type: system
@@ -1437,6 +1300,97 @@ functions:
           ./configure --prefix="$INSTALLED_ODBC_PATH" --with-pic
           make
           make install
+
+  ##############################
+  # Test functions and helpers #
+  ##############################
+  "decompress testdata files":
+    - command: subprocess.exec
+      params:
+        binary: bash
+        working_dir: mongosql-odbc-driver
+        args:
+          - "./evergreen/decompress_testdata_files.sh"
+
+  "run windows unit tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          RUST_BACKTRACE=1 cargo test unit
+
+  "run windows integration tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          export RUST_BACKTRACE=1
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
+          cargo test integration -- --nocapture &&
+          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
+          # the test is feature gated and will only run on evergreen.
+          # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
+          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
+          EXITCODE=$?
+          echo "****** ls -l ./target/debug/deps *******"
+          ls -l ./target/debug/deps
+          echo "****************************************"
+          # The execution terminated with a segfault
+          if [ $EXITCODE -eq 139 ]; then
+            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
+            SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
+            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
+            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
+            tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
+
+            echo "ls -l $DUMP_PATH"
+            ls -l $DUMP_PATH
+          fi
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
+          exit $EXITCODE
+
+  "run windows result set test":
+    command: shell.exec
+    type: test
+    params:
+      shell: bash
+      env:
+        GITHUB_TOKEN: "${github_token}"
+      working_dir: mongosql-odbc-driver
+      script: |
+        ${prepare_shell}
+        set +e
+        export RUST_BACKTRACE=1
+        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+        cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+          --mongod-uri mongodb://localhost:28017 \
+          --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+          -d "./resources/integration_test/testdata" &&
+        cargo test --package integration_test --lib test_runner --features integration_test/result_set
+        EXITCODE=$?
+        # The execution terminated with a segfault
+        if [ $EXITCODE -eq 139 ]; then
+            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
+            SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
+            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
+            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
+            tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
+        fi
+        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
+        exit $EXITCODE
 
   "run ubuntu unit tests":
     - command: shell.exec
@@ -1486,7 +1440,10 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cargo run --bin data_loader &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with ubuntu
           cargo test integration -- --nocapture &&
@@ -1567,6 +1524,41 @@ functions:
           exit $OVERALL_EXITCODE
 
 
+  "run ubuntu result-set tests":
+    - command: shell.exec
+      type: test
+      params:
+        shell: bash
+        env:
+          GITHUB_TOKEN: "${github_token}"
+        working_dir: mongosql-odbc-driver
+        script: |
+          ${prepare_shell}
+          set +e
+          echo "-------- ODBC related env variable ----------"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "LIBRARY_PATH = $LIBRARY_PATH"
+          echo "ODBCSYSINI = $ODBCSYSINI"
+          echo "----------------------------------------------"
+
+          ~/.cargo/bin/rustup default stable
+
+          export RUST_BACKTRACE=1
+          # Start a local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
+
+          # Run integration tests with ubuntu
+          cargo test --package integration_test --lib test_runner --features integration_test/result_set
+          EXITCODE=$?
+
+          # Stop the local ADF
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
+          exit $EXITCODE
+
   "run macos result-set tests":
     - command: shell.exec
       type: test
@@ -1589,7 +1581,10 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cargo run --bin data_loader &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with macos
           cargo test --package integration_test --lib test_runner --features definitions/iodbc,cstr/utf32,integration_test/result_set
@@ -1634,7 +1629,10 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cargo run --bin data_loader &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --nocapture &&
@@ -1642,37 +1640,6 @@ functions:
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
           cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests,definitions/iodbc,cstr/utf32 -- --nocapture
-          EXITCODE=$?
-
-          # Stop the local ADF
-          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
-          exit $EXITCODE
-
-  "run ubuntu result-set tests":
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        env:
-          GITHUB_TOKEN: "${github_token}"
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-          set +e
-          echo "-------- ODBC related env variable ----------"
-          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
-          echo "LIBRARY_PATH = $LIBRARY_PATH"
-          echo "ODBCSYSINI = $ODBCSYSINI"
-          echo "----------------------------------------------"
-
-          ~/.cargo/bin/rustup default stable
-
-          export RUST_BACKTRACE=1
-          # Start a local ADF
-          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
-
-          # Run integration tests with ubuntu
-          cargo test --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1719,7 +1686,11 @@ functions:
           ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
 
           # Start a local ADF
-          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --nocapture &&
@@ -1756,7 +1727,11 @@ functions:
 
           export RUST_BACKTRACE=1
           # Start a local ADF
-          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start && cargo run --bin data_loader &&
+          $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu --package integration_test --lib test_runner --features integration_test/result_set
@@ -1765,33 +1740,6 @@ functions:
           # Stop the local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
-
-  "run windows result set test":
-    command: shell.exec
-    type: test
-    params:
-      shell: bash
-      env:
-        GITHUB_TOKEN: "${github_token}"
-      working_dir: mongosql-odbc-driver
-      script: |
-        ${prepare_shell}
-        set +e
-        export RUST_BACKTRACE=1
-        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-        cargo run --bin data_loader &&
-        cargo test --package integration_test --lib test_runner --features integration_test/result_set
-        EXITCODE=$?
-        # The execution terminated with a segfault
-        if [ $EXITCODE -eq 139 ]; then
-            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
-            SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
-            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
-            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
-            tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
-        fi
-        $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
-        exit $EXITCODE
 
   "upload start_adf logs":
     - command: s3.put
@@ -1983,12 +1931,6 @@ functions:
         permissions: public-read
         display_name: mongo-odbc-${RELEASE_VERSION}.sast.sarif
 
-pre:
-  - func: "fetch source"
-  - func: "generate expansions"
-post:
-  - func: "upload start_adf logs"
-
 tasks:
   - name: make-odbc-docs
     depends_on:
@@ -1997,25 +1939,15 @@ tasks:
       - func: "build odbc documentation"
         run_on: ubuntu2004-large
       - func: "upload odbc docs"
-  - name: clippy
-    commands:
-      - func: "install rust toolchain"
-      - func: "check clippy"
-
-  - name: rustfmt
-    commands:
-      - func: "install rust toolchain"
-      - func: "check rustfmt"
-
-  - name: unused-deps
-    commands:
-      - func: "install rust toolchain"
-      - func: "check unused dependencies"
 
   - name: sbom
     commands:
       - func: "install rust toolchain"
-      - func: set and check packages version
+      - func: "set and check packages version"
+        vars:
+          cargo_file: "odbc/Cargo.toml"
+          package_name: "odbc"
+      - func: "use latest mongosql version"
       - func: "generate SBOM"
       - func: "scan SBOM"
       - func: "augment SBOM"
@@ -2032,6 +1964,10 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
+        vars:
+          cargo_file: "odbc/Cargo.toml"
+          package_name: "odbc"
+      - func: "use latest mongosql version"
       - func: "generate third party licenses"
         variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "compile ubuntu and win release"
@@ -2088,6 +2024,8 @@ tasks:
       - func: "bootstrap mongo-orchestration"
         variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
+      - func: "decompress testdata files"
         variants: [windows-64, ubuntu2204]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
@@ -2146,6 +2084,8 @@ tasks:
       - func: "bootstrap mongo-orchestration"
         variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
+      - func: "decompress testdata files"
         variants: [windows-64, ubuntu2204]
       - func: "run windows result set test"
         variants: [windows-64]
@@ -2302,15 +2242,19 @@ buildvariants:
   - name: static-analysis
     display_name: "* Static Analysis"
     run_on: [ubuntu2004-test]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: clippy
       - name: rustfmt
-      - name: unused-deps
+      - name: unused-dependencies
       - name: asan-compile
 
   - name: code-quality-security
     display_name: "Code Quality and Security"
     run_on: [ubuntu2204-small]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: semgrep
       - name: sbom
@@ -2358,6 +2302,8 @@ buildvariants:
   - name: macos
     display_name: "macOS"
     run_on: [macos-11]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: compile
       - name: unit-test
@@ -2368,6 +2314,8 @@ buildvariants:
   - name: macos-arm
     display_name: "macOS arm64"
     run_on: [macos-13-arm64]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: compile
       - name: unit-test
@@ -2378,6 +2326,8 @@ buildvariants:
   - name: release
     display_name: "Release"
     run_on: [ubuntu2004-medium]
+    modules:
+      - sql-engines-common-test-infra
     tasks:
       - name: make-odbc-docs
       - name: release
