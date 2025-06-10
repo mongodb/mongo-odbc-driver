@@ -1335,9 +1335,10 @@ functions:
           set +e
           export RUST_BACKTRACE=1
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
-          cd - &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
           cargo test integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
@@ -1374,9 +1375,10 @@ functions:
         set +e
         export RUST_BACKTRACE=1
         $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-        cd $COMMON_TEST_INFRA_DIR &&
-        cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
-        cd - &&
+        cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+          --mongod-uri mongodb://localhost:28017 \
+          --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+          -d "./resources/integration_test/testdata" &&
         cargo test --package integration_test --lib test_runner --features integration_test/result_set
         EXITCODE=$?
         # The execution terminated with a segfault
@@ -1438,9 +1440,10 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
-          cd - &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with ubuntu
           cargo test integration -- --nocapture &&
@@ -1543,9 +1546,10 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
-          cd - &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with ubuntu
           cargo test --package integration_test --lib test_runner --features integration_test/result_set
@@ -1577,9 +1581,10 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
-          cd - &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with macos
           cargo test --package integration_test --lib test_runner --features definitions/iodbc,cstr/utf32,integration_test/result_set
@@ -1624,9 +1629,10 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
-          cd - &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with macos
           cargo test --features definitions/iodbc,cstr/utf32 integration -- --nocapture &&
@@ -1681,9 +1687,10 @@ functions:
 
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
-          cd - &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu integration -- --nocapture &&
@@ -1721,9 +1728,10 @@ functions:
           export RUST_BACKTRACE=1
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
-          cd $COMMON_TEST_INFRA_DIR &&
-          cargo run --bin data-loader -- --mongod-uri mongodb://localhost:28017 --adf-uri mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017 -d ../resources/integration_test/testdata &&
-          cd - &&
+          cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
+            --mongod-uri mongodb://localhost:28017 \
+            --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
+            -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with asan
           cargo test --target x86_64-unknown-linux-gnu --package integration_test --lib test_runner --features integration_test/result_set
@@ -2018,6 +2026,7 @@ tasks:
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204]
       - func: "decompress testdata files"
+        variants: [windows-64, ubuntu2204]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration tests"
@@ -2077,6 +2086,7 @@ tasks:
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204]
       - func: "decompress testdata files"
+        variants: [windows-64, ubuntu2204]
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cd resources/integration_test
 
 echo "Removing existing testdata..."

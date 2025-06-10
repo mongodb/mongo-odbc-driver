@@ -290,6 +290,7 @@ tasks:
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204]
       - func: "decompress testdata files"
+        variants: [windows-64, ubuntu2204]
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
