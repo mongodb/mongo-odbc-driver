@@ -102,7 +102,7 @@ The first step on either macos or windows is to start a local mongod and Atlas D
 ./resources/run_adf.sh start
 ```
 
-To load the data,  use the [sql-engines-common-test-infra](https://github.com/10gen/sql-engines-common-test-infra)
+To load the data,  use the [sql-engines-common-test-infra](https://github.com/mongodb/sql-engines-common-test-infra)
 `data-loader` tool along with the data in the `resources/integration_test/testdata.tar.gz` archive. Decompress that
 data and use it with the `data-loader`. See `cargo run --bin data-loader -- --help` in that repo for more details.
 

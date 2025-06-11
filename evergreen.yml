@@ -5,12 +5,12 @@
 # when the task started failing
 stepback: true
 
-# Mark a failure as a system/bootstrap failure (purple box) rather then a task
+# Mark a failure as a system/bootstrap failure (purple box) rather than a task
 # failure by default.
 # Actual testing tasks are marked with `type: test`
 command_type: system
 
-# Protect ourself against rogue test case, or curl gone wild, that runs forever
+# Protect ourselves against rogue test case, or curl gone wild, that runs forever
 # 12 minutes is the longest we'll ever run
 exec_timeout_secs: 3600 # 12 minutes is the longest we'll ever run
 
@@ -23,7 +23,7 @@ timeout:
 
 modules:
   - name: sql-engines-common-test-infra
-    owner: 10gen
+    owner: mongodb
     repo: sql-engines-common-test-infra
     branch: main
     auto_update: true
