@@ -295,7 +295,7 @@ tasks:
       #   variants: [ ubuntu2204 ]
 
   - name: sign-eap
-    allowed_requesters: ["ad_hoc", "github_tag", "github_merge_queue"]
+    allowed_requesters: ["github_tag", "github_merge_queue"]
     depends_on:
       - name: compile-eap
     commands:
