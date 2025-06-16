@@ -2159,7 +2159,7 @@ tasks:
       #   variants: [ ubuntu2204 ]
 
   - name: sign
-    allowed_requesters: ["github_tag", "github_merge_queue"]
+    allowed_requesters: ["github_tag", "github_merge_queue", "commit"]
     depends_on:
       - name: compile
     commands:
