@@ -186,6 +186,10 @@ tasks:
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "set and check packages version"
+        vars:
+          cargo_file: "odbc/Cargo.toml"
+          package_name: "odbc"
+      - func: "use latest mongosql version"
       - func: "generate third party licenses"
         variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "compile ubuntu and win release"
@@ -241,6 +245,8 @@ tasks:
         variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204]
+      - func: "decompress testdata files"
+        variants: [windows-64, ubuntu2204]
       - func: "run ubuntu integration tests"
         variants: [ubuntu2204]
       - func: "run ubuntu cluster type integration tests"
@@ -282,6 +288,8 @@ tasks:
       - func: "bootstrap mongo-orchestration"
         variants: [windows-64, ubuntu2204]
       - func: "generate sql-engines github token"
+        variants: [windows-64, ubuntu2204]
+      - func: "decompress testdata files"
         variants: [windows-64, ubuntu2204]
       - func: "run windows result set test"
         variants: [windows-64]
