@@ -31,7 +31,7 @@ export PATH_PREFIX=""
 echo "snapshot-eap: ${snapshot-eap}"
 
 if [[ "${triggered_by_git_tag}" != "" ]]; then
-    export RELEASE_VERSION=$(echo ${triggered_by_git_tag} | sed s/v//)
+    export release_version=$(echo ${triggered_by_git_tag} | sed s/v//)
 
     # Check if this is a beta tag or snapshot-eap is set to true
     if [[ "${triggered_by_git_tag}" == *"beta"* || "${snapshot-eap}" == "true" ]]; then
@@ -43,27 +43,27 @@ else
     # If not a tag, we are in a snapshot build. We need to see if we're in beta mode or not
     # and set the release version to either snapshot or snapshot-eap
     if [[ "${snapshot-eap}" == "true" ]]; then
-        export RELEASE_VERSION="snapshot-eap"
+        export release_version="snapshot-eap"
         export FEATURE_FLAGS="eap"
         export PRODUCT_NAME="mongoodbc-eap"
         echo "Building EAP version"
     else
-        export RELEASE_VERSION="snapshot"
+        export release_version="snapshot"
     fi
 fi
 
-export MSI_FILENAME="$PRODUCT_NAME-$RELEASE_VERSION.msi"
-export UBUNTU_FILENAME="$PRODUCT_NAME-$RELEASE_VERSION.tar.gz"
+export MSI_FILENAME="$PRODUCT_NAME-$release_version.msi"
+export UBUNTU_FILENAME="$PRODUCT_NAME-$release_version.tar.gz"
 
 cat <<EOT >expansions.yml
-RELEASE_VERSION: "$RELEASE_VERSION"
+release_version: "$release_version"
 FEATURE_FLAGS: "$FEATURE_FLAGS"
 PATH_PREFIX: "$PATH_PREFIX"
 PRODUCT_NAME: "$PRODUCT_NAME"
 MSI_FILENAME: "$MSI_FILENAME"
 UBUNTU_FILENAME: "$UBUNTU_FILENAME"
-WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$RELEASE_VERSION/release/$MSI_FILENAME"
-UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$RELEASE_VERSION/release/$UBUNTU_FILENAME"
+WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$release_version/release/$MSI_FILENAME"
+UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$release_version/release/$UBUNTU_FILENAME"
 COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
 STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
 PROJECT_DIRECTORY: "$(pwd)"
@@ -77,7 +77,7 @@ MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
 MONGODB_BINARIES: "$MONGODB_BINARIES"
 prepare_shell: |
   set -o errexit
-  export RELEASE_VERSION="$RELEASE_VERSION"
+  export release_version="$release_version"
   export FEATURE_FLAGS="$FEATURE_FLAGS"
   export PATH_PREFIX="$PATH_PREFIX"
   export PRODUCT_NAME="$PRODUCT_NAME"
