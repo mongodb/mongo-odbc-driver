@@ -63,7 +63,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.dll
-        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.dll
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${release_version}/release/atsql.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -79,7 +79,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsqls.dll
-        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsqls.dll
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${release_version}/release/atsqls.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -95,7 +95,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.pdb
-        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.pdb
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/windows/${release_version}/release/atsql.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -131,7 +131,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
-        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/${UBUNTU_FILENAME}.sig
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/ubuntu2204/${release_version}/release/${UBUNTU_FILENAME}.sig
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -149,7 +149,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.so
-        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
+        remote_file: ${PATH_PREFIX}mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
