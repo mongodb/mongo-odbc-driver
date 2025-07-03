@@ -1271,7 +1271,7 @@ pub unsafe extern "C" fn SQLEndTran(
     handle: Handle,
     _completion_type: SmallInt,
 ) -> SqlReturn {
-    unimpl!(handle);
+    SqlReturn::SUCCESS
 }
 
 ///
