@@ -15,6 +15,10 @@ use std::{
     sync::RwLock,
 };
 
+// TODO SQL-2879:
+// Consider using boxes here, I did not want to think about the implications at this time since
+// these cross the unsafe barrier... to some extent (it is opaque, but, I don't want to test this).
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 #[repr(C)]
 pub enum MongoHandle {

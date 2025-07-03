@@ -36,9 +36,9 @@ static mut MONGOSQLTRANSLATE_LIBRARY: Option<Library> = None;
 
 fn get_library_name(library_type: &str) -> String {
     if cfg!(target_os = "windows") {
-        format!("{}.{}", library_type, LIBRARY_EXTENSION)
+        format!("{library_type}.{LIBRARY_EXTENSION}")
     } else {
-        format!("lib{}.{}", library_type, LIBRARY_EXTENSION)
+        format!("lib{library_type}.{LIBRARY_EXTENSION}")
     }
 }
 
@@ -225,11 +225,11 @@ impl CheckDriverVersion {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CommandResponse {
-    Translate(TranslateCommandResponse),
-    GetNamespaces(GetNamespacesCommandResponse),
-    GetMongosqlTranslateVersion(GetMongosqlTranslateVersionCommandResponse),
-    CheckDriverVersion(CheckDriverVersionCommandResponse),
-    Error(ErrorResponse),
+    Translate(Box<TranslateCommandResponse>),
+    GetNamespaces(Box<GetNamespacesCommandResponse>),
+    GetMongosqlTranslateVersion(Box<GetMongosqlTranslateVersionCommandResponse>),
+    CheckDriverVersion(Box<CheckDriverVersionCommandResponse>),
+    Error(Box<ErrorResponse>),
 }
 
 impl CommandResponse {

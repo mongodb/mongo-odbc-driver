@@ -154,7 +154,7 @@ impl MongoQuery {
         let command_response = libmongosqltranslate_run_command(command)?;
 
         if let CommandResponse::Translate(response) = command_response {
-            Ok(response)
+            Ok(*response)
         } else {
             unreachable!()
         }
