@@ -15,10 +15,6 @@ use std::{
     sync::RwLock,
 };
 
-// TODO SQL-2879:
-// Consider using boxes here, I did not want to think about the implications at this time since
-// these cross the unsafe barrier... to some extent (it is opaque, but, I don't want to test this).
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 #[repr(C)]
 // TODO: SQL-2832
@@ -84,7 +80,7 @@ impl MongoHandle {
                 // otherwise this entire chain will cause unhappiness and chaos
                 if !s.connection.is_null() {
                     if let Some(diagnostics) = s.diagnostics.read().unwrap().as_ref() {
-                        log::error!("Query diagnostics: {:?}", diagnostics);
+                        log::error!("Query diagnostics: {diagnostics:?}");
                     }
                 }
                 s.errors.write().unwrap().push(error);

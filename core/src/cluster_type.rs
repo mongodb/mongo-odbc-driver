@@ -29,8 +29,7 @@ pub async fn determine_cluster_type(client: &Client) -> Result<MongoClusterType>
         Some(Bson::Int32(i)) if *i == 1 => {}
         _ => {
             log::error!(
-                "buildInfo command returned a non-ok response: {:?}",
-                cmd_res
+                "buildInfo command returned a non-ok response: {cmd_res:?}"
             );
             return Ok(MongoClusterType::UnknownTarget);
         }

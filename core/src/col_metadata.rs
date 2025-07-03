@@ -934,8 +934,7 @@ mod unit {
 
             assert!(
                 result_set_schema.is_err(),
-                "expected error, got {:?}",
-                result_set_schema
+                "expected error, got {result_set_schema:?}"
             );
 
             if let Err(error) = result_set_schema {
@@ -964,8 +963,7 @@ mod unit {
 
             assert!(
                 result_set_schema.is_err(),
-                "expected error, got {:?}",
-                result_set_schema
+                "expected error, got {result_set_schema:?}"
             );
 
             if let Err(error) = result_set_schema {
