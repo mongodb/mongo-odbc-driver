@@ -20,7 +20,7 @@ macro_rules! make_default_attr_func {
 }
 
 #[non_exhaustive]
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Eq, Clone)]
 pub struct BsonTypeInfo {
     // This is the String bson typename as reported by the $type function in MQL
     pub type_name: &'static str,
@@ -109,13 +109,42 @@ pub struct BsonTypeInfo {
     pub simple_type_info: Option<SimpleTypeInfo>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+impl PartialEq for BsonTypeInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.type_name == other.type_name && self.sql_type == other.sql_type
+            && self.non_concise_type == other.non_concise_type
+            && self.searchable == other.searchable
+            && self.is_case_sensitive == other.is_case_sensitive
+            && self.fixed_prec_scale == other.fixed_prec_scale
+            && self.scale == other.scale
+            && self.precision == other.precision
+            && self.transfer_octet_length == other.transfer_octet_length
+            && self.literal_prefix == other.literal_prefix
+            && self.literal_suffix == other.literal_suffix
+            && self.sql_code == other.sql_code
+            && self.is_auto_unique_value == other.is_auto_unique_value
+            && self.is_unsigned == other.is_unsigned
+            && self.num_prec_radix == other.num_prec_radix
+            && self.decimal_digit == other.decimal_digit
+            && self.simple_type_info == other.simple_type_info
+    }
+}
+
+#[derive(Debug, Eq, Clone)]
 pub struct SimpleTypeInfo {
     pub sql_type: SqlDataType,
     pub non_concise_type: Option<SqlDataType>,
     pub length: fn(Option<u16>) -> Option<u16>,
     pub transfer_octet_length: Option<u16>,
     pub display_size: fn(Option<u16>) -> Option<u16>,
+}
+
+impl PartialEq for SimpleTypeInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.sql_type == other.sql_type
+            && self.non_concise_type == other.non_concise_type
+            && self.transfer_octet_length == other.transfer_octet_length
+    }
 }
 
 macro_rules! new_simple_type_info {
