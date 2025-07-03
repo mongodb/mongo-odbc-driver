@@ -407,6 +407,10 @@ pub const SQL_OJ_NOT_ORDERED: u32 = 0x00000010;
 pub const SQL_OJ_INNER: u32 = 0x00000020;
 pub const SQL_OJ_ALL_COMPARISON_OPS: u32 = 0x00000040;
 
+// SQL Transaction input 
+pub const SQL_COMMIT: i16 = 0x0000;
+pub const SQL_ROLLBACK: i16 = 0x0001;
+
 fn format_driver_version() -> String {
     // The driver version can be obtained from the Cargo.toml file.
     // The env! macro call below gets the version from the Cargo file

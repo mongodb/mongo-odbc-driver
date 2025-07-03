@@ -144,10 +144,10 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         .map_err(|e| {
             let msg = match e {
                 RequestTokenError::ServerResponse(provider_err) => {
-                    format!("Server returned error response: {:?}", provider_err)
+                    format!("Server returned error response: {provider_err:?}")
                 }
                 RequestTokenError::Request(req) => {
-                    format!("Request failed: {:?}", req)
+                    format!("Request failed: {req:?}")
                 }
                 RequestTokenError::Parse(parse_err, res) => {
                     let body = match std::str::from_utf8(&res) {
@@ -155,13 +155,12 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
                         Err(_) => format!("{:?}", &res),
                     };
                     format!(
-                        "Failed to parse server response: {} [response={:?}]",
-                        parse_err, body
+                        "Failed to parse server response: {parse_err} [response={body:?}]"
                     )
                 }
                 RequestTokenError::Other(msg) => msg,
             };
-            Error::Other(format!("OpenID Connect: code exchange failed: {}", msg))
+            Error::Other(format!("OpenID Connect: code exchange failed: {msg}"))
         })?;
 
     // Extract the auth and refresh tokens, and the expiration duration in seconds
@@ -210,10 +209,10 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
         .map_err(|e| {
             let msg = match e {
                 RequestTokenError::ServerResponse(provider_err) => {
-                    format!("Server returned error response: {:?}", provider_err)
+                    format!("Server returned error response: {provider_err:?}")
                 }
                 RequestTokenError::Request(req) => {
-                    format!("Request failed: {:?}", req)
+                    format!("Request failed: {req:?}")
                 }
                 RequestTokenError::Parse(parse_err, res) => {
                     let body = match std::str::from_utf8(&res) {
@@ -221,13 +220,12 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
                         Err(_) => format!("{:?}", &res),
                     };
                     format!(
-                        "Failed to parse server response: {} [response={:?}]",
-                        parse_err, body
+                        "Failed to parse server response: {parse_err} [response={body:?}]"
                     )
                 }
                 RequestTokenError::Other(msg) => msg,
             };
-            Error::Other(format!("OpenID Connect: code exchange failed: {}", msg))
+            Error::Other(format!("OpenID Connect: code exchange failed: {msg}"))
         })?;
 
     // Extract the auth and refresh tokens, and the expiration duration in seconds

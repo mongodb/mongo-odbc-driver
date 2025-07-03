@@ -94,7 +94,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn get_sql_state(&self) -> OdbcState {
+    pub fn get_sql_state(&self) -> OdbcState<'_> {
         match self {
             Error::CollectionCursorUpdate(err)
             | Error::DatabaseVersionRetreival(err)
