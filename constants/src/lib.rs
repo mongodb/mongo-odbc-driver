@@ -407,7 +407,7 @@ pub const SQL_OJ_NOT_ORDERED: u32 = 0x00000010;
 pub const SQL_OJ_INNER: u32 = 0x00000020;
 pub const SQL_OJ_ALL_COMPARISON_OPS: u32 = 0x00000040;
 
-// SQL Transaction input 
+// SQL Transaction input
 pub const SQL_COMMIT: i16 = 0x0000;
 pub const SQL_ROLLBACK: i16 = 0x0001;
 

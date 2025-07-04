@@ -154,9 +154,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
                         Ok(text) => text.to_string(),
                         Err(_) => format!("{:?}", &res),
                     };
-                    format!(
-                        "Failed to parse server response: {parse_err} [response={body:?}]"
-                    )
+                    format!("Failed to parse server response: {parse_err} [response={body:?}]")
                 }
                 RequestTokenError::Other(msg) => msg,
             };
@@ -219,9 +217,7 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
                         Ok(text) => text.to_string(),
                         Err(_) => format!("{:?}", &res),
                     };
-                    format!(
-                        "Failed to parse server response: {parse_err} [response={body:?}]"
-                    )
+                    format!("Failed to parse server response: {parse_err} [response={body:?}]")
                 }
                 RequestTokenError::Other(msg) => msg,
             };

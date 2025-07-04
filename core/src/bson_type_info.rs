@@ -111,7 +111,8 @@ pub struct BsonTypeInfo {
 
 impl PartialEq for BsonTypeInfo {
     fn eq(&self, other: &Self) -> bool {
-        self.type_name == other.type_name && self.sql_type == other.sql_type
+        self.type_name == other.type_name
+            && self.sql_type == other.sql_type
             && self.non_concise_type == other.non_concise_type
             && self.searchable == other.searchable
             && self.is_case_sensitive == other.is_case_sensitive
