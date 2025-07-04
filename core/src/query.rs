@@ -68,8 +68,8 @@ impl MongoQuery {
             collection_names.contains(&SQL_SCHEMAS_COLLECTION.to_string());
 
         if !sql_schemas_collection_exists {
-            log::warn!("There is no schema information in database `{0}`, so all the collections will be assigned empty schemas. \
-            Therefore, SQL capabilities will be very limited. Hint: Please make sure to generate schemas before using the driver", current_db);
+            log::warn!("There is no schema information in database `{current_db}`, so all the collections will be assigned empty schemas. \
+            Therefore, SQL capabilities will be very limited. Hint: Please make sure to generate schemas before using the driver");
         }
 
         let schema_catalog_doc = if !namespaces.is_empty() && sql_schemas_collection_exists {
@@ -139,9 +139,9 @@ impl MongoQuery {
                     schema_catalog_doc_vec.len(),
                 ));
             } else if schema_catalog_doc_vec.is_empty() {
-                log::warn!("No schema information was found for the requested collections `{:?}` in database `{1}`. Either the collections don't exists \
-                in `{1}` or they don't have a schema. For now, they will be assigned empty schemas. Hint: You either need to generate schemas for your collections \
-                or correct your query.", collection_names, current_db);
+                log::warn!("No schema information was found for the requested collections `{collection_names:?}` in database `{current_db}`. Either the collections don't exists \
+                in `{current_db}` or they don't have a schema. For now, they will be assigned empty schemas. Hint: You either need to generate schemas for your collections \
+                or correct your query.");
 
                 let mut collections_schema_doc = doc! {};
 
@@ -170,8 +170,8 @@ impl MongoQuery {
                     .filter(|collection| !collections_schema_doc.contains_key(collection.as_str()))
                     .collect();
 
-                log::warn!("No schema was found for the following collections: {:?}. These collections will be assigned empty schemas.\
-                Hint: Generate schemas for your collections.", missing_collections);
+                log::warn!("No schema was found for the following collections: {missing_collections:?}. These collections will be assigned empty schemas.\
+                Hint: Generate schemas for your collections.");
 
                 for collection in missing_collections {
                     collections_schema_doc.insert(collection, doc! {});

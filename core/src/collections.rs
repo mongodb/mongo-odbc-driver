@@ -148,7 +148,7 @@ impl MongoCollections {
                         MongoODBCCollectionSpecification::new(name, collection_type)
                     }).collect()
                 }).unwrap_or_else(|_| {
-                    log::error!("Error getting collections for db {}", val);
+                    log::error!("Error getting collections for db {val}");
                     vec![]
                 }),
             }

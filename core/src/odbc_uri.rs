@@ -168,7 +168,7 @@ impl ODBCUri {
         // or it is not. When the previous character was '}' and we have reached the end
         // of the input or the current character is ';', we have found the entire value for
         // this attribute.
-        for (i, c) in input.chars().enumerate() {
+        for (i, c) in input.char_indices() {
             if after_brace && c == ';' {
                 let mut rest = input.get(i + 1..);
                 if rest.unwrap() == "" {
@@ -483,7 +483,7 @@ impl ODBCUri {
     fn handle_driver_info(&self, app_name: &'_ str) -> DriverInfo {
         let driver_info = DriverInfo::builder();
         let driver_name = if app_name.contains(POWERBI_CONNECTOR) {
-            format!("{}|{}", DRIVER_SHORT_NAME, POWERBI_CONNECTOR)
+            format!("{DRIVER_SHORT_NAME}|{POWERBI_CONNECTOR}")
         } else {
             DRIVER_SHORT_NAME.to_string()
         };

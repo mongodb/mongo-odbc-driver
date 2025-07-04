@@ -6,5 +6,5 @@ async fn main() {
     let (server, mut oidc_params) = start().await;
     let res = oidc_params.recv().await.unwrap();
     server.stop(true).await;
-    println!("server result: {:?}", res);
+    println!("server result: {res:?}");
 }

@@ -54,7 +54,7 @@ impl From<OutputBuffer> for u16 {
 /// Generate a default uri
 pub fn generate_uri_with_default_connection_string(uri: &str) -> String {
     let host_port = env::var("ADF_TEST_URI").expect("ADF_TEST_URI is not set");
-    let combined_uri = format!("{}/?{}", host_port, uri);
+    let combined_uri = format!("{host_port}/?{uri}");
     format!("{}URI={combined_uri}", generate_default_connection_str())
 }
 

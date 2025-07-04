@@ -96,7 +96,7 @@ async fn callback(
     let params = match get_params(query).await {
         Ok(params) => params,
         Err(e) => {
-            return error(oidc_params_sender, "parameters error", &format!("{}", e)).await;
+            return error(oidc_params_sender, "parameters error", &format!("{e}")).await;
         }
     };
 
@@ -150,7 +150,7 @@ async fn error(
     error_description: &str,
 ) -> Result<HttpResponse> {
     let _ = oidc_params_sender
-        .send(Err(format!("{}: {}", error, error_description)))
+        .send(Err(format!("{error}: {error_description}")))
         .await;
     Ok(HttpResponse::build(http::StatusCode::BAD_REQUEST)
         .content_type("text/html; charset=utf-8")

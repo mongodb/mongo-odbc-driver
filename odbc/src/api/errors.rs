@@ -79,6 +79,8 @@ pub enum ODBCError {
     InvalidTargetType(i16),
     #[error("[{vendor}][API] Invalid driver completion type {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidDriverCompletion(u16),
+    #[error("[{vendor}][API] Invalid transaction completion type {0}", vendor = VENDOR_IDENTIFIER)]
+    InvalidTransactionCompletionType(i16),
     #[error(
         "[{vendor}][API] Missing property \"Driver\" or \"DSN\" in connection string",
         vendor = VENDOR_IDENTIFIER
@@ -144,7 +146,7 @@ pub enum ODBCError {
 pub type Result<T> = std::result::Result<T, ODBCError>;
 
 impl ODBCError {
-    pub fn get_sql_state(&self) -> OdbcState {
+    pub fn get_sql_state(&self) -> OdbcState<'_> {
         match self {
             ODBCError::Unimplemented(_)
             | ODBCError::UnimplementedDataType(_)
@@ -164,6 +166,7 @@ impl ODBCError {
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::InvalidTargetType(_) => PROGRAM_TYPE_OUT_OF_RANGE,
             ODBCError::InvalidDriverCompletion(_) => INVALID_DRIVER_COMPLETION,
+            ODBCError::InvalidTransactionCompletionType(_) => NOT_IMPLEMENTED,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
             ODBCError::MissingDriverOrDSNProperty => NO_DSN_OR_DRIVER,
@@ -224,6 +227,7 @@ impl ODBCError {
             | ODBCError::UnsupportedFieldDescriptor(_)
             | ODBCError::InvalidCharacterValue(_)
             | ODBCError::InvalidDriverCompletion(_)
+            | ODBCError::InvalidTransactionCompletionType(_)
             | ODBCError::NoResultSet
             | ODBCError::UnsupportedInfoTypeRetrieval(_)
             | ODBCError::ConnectionNotOpen
