@@ -1297,7 +1297,7 @@ pub unsafe extern "C" fn SQLEndTran(
             SqlReturn::ERROR
         }
         _ => {
-            // The user is requesting some random competion type not in the spec, we need to report
+            // The user is requesting some random completion type not in the spec, we need to report
             // this as invalid.
             trace_odbc!(
                 info,

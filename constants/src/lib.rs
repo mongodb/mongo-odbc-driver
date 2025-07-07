@@ -187,7 +187,7 @@ pub const INVALID_CHARACTER_VALUE: OdbcState<'static> = OdbcState {
     odbc_3_state: "22018",
 };
 pub const INVALID_TRANSACTION_OPERATION_CODE: OdbcState<'static> = OdbcState {
-    odbc_2_state: "HY012",
+    odbc_2_state: "S1012",
     odbc_3_state: "HY012",
 };
 pub const CONNECTION_NOT_OPEN: OdbcState<'static> = OdbcState {
