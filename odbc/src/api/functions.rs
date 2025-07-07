@@ -1269,9 +1269,49 @@ pub unsafe extern "C" fn SQLDriversW(
 pub unsafe extern "C" fn SQLEndTran(
     _handle_type: HandleType,
     handle: Handle,
-    _completion_type: SmallInt,
+    completion_type: SmallInt,
 ) -> SqlReturn {
-    unimpl!(handle);
+    let mongo_handle = try_mongo_handle!(handle);
+    match completion_type {
+        constants::SQL_COMMIT => {
+            // We do not support transactions, so we just return success because committing
+            // does not do anything.
+            trace_odbc!(
+                info,
+                mongo_handle,
+                "No transaction in progress, returning success for commit",
+                function_name!()
+            );
+            SqlReturn::SUCCESS
+        }
+        constants::SQL_ROLLBACK => {
+            // We do not support transactions, so we just return an error because rolling back
+            // is impossible.
+            trace_odbc!(
+                info,
+                mongo_handle,
+                "No transaction in progress, returning error for rollback",
+                function_name!()
+            );
+            add_diag_info!(mongo_handle, ODBCError::RollbackNotSupported);
+            SqlReturn::ERROR
+        }
+        _ => {
+            // The user is requesting some random completion type not in the spec, we need to report
+            // this as invalid.
+            trace_odbc!(
+                info,
+                mongo_handle,
+                "Invalid transaction completion type: {}. Only SQL_COMMIT (0) and SQL_ROLLBACK (1) are valid.",
+                function_name!()
+            );
+            add_diag_info!(
+                mongo_handle,
+                ODBCError::InvalidTransactionCompletionType(completion_type)
+            );
+            SqlReturn::ERROR
+        }
+    }
 }
 
 ///
