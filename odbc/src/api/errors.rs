@@ -3,9 +3,10 @@ use constants::{
     GENERAL_WARNING, INDICATOR_VARIABLE_REQUIRED, INTEGRAL_TRUNCATION,
     INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE,
     INVALID_COLUMN_NUMBER, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX,
-    INVALID_DRIVER_COMPLETION, INVALID_FIELD_DESCRIPTOR, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE,
-    NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE,
-    RESTRICTED_DATATYPE, RIGHT_TRUNCATED, VENDOR_IDENTIFIER,
+    INVALID_FIELD_DESCRIPTOR, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE,
+    INVALID_TRANSACTION_OPERATION_CODE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET,
+    OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE, RIGHT_TRUNCATED,
+    VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -79,7 +80,9 @@ pub enum ODBCError {
     InvalidTargetType(i16),
     #[error("[{vendor}][API] Invalid driver completion type {0}", vendor = VENDOR_IDENTIFIER)]
     InvalidDriverCompletion(u16),
-    #[error("[{vendor}][API] Invalid transaction completion type {0}", vendor = VENDOR_IDENTIFIER)]
+    #[error("[{vendor}][API] Transaction rollback is not supported", vendor = VENDOR_IDENTIFIER)]
+    RollbackNotSupported,
+    #[error("[{vendor}][API] Invalid transaction completion type {0}, only SQL_COMMIT (0) and SQL_ROLLBACK (1) are valid", vendor = VENDOR_IDENTIFIER)]
     InvalidTransactionCompletionType(i16),
     #[error(
         "[{vendor}][API] Missing property \"Driver\" or \"DSN\" in connection string",
@@ -165,7 +168,8 @@ impl ODBCError {
             ODBCError::InvalidCursorState => INVALID_CURSOR_STATE,
             ODBCError::InvalidHandleType(_) => NOT_IMPLEMENTED,
             ODBCError::InvalidTargetType(_) => PROGRAM_TYPE_OUT_OF_RANGE,
-            ODBCError::InvalidDriverCompletion(_) => INVALID_DRIVER_COMPLETION,
+            ODBCError::RollbackNotSupported => NOT_IMPLEMENTED,
+            ODBCError::InvalidDriverCompletion(_) => INVALID_TRANSACTION_OPERATION_CODE,
             ODBCError::InvalidTransactionCompletionType(_) => NOT_IMPLEMENTED,
             ODBCError::OptionValueChanged(_, _) => OPTION_CHANGED,
             ODBCError::OutStringTruncated(_) => RIGHT_TRUNCATED,
@@ -227,6 +231,7 @@ impl ODBCError {
             | ODBCError::UnsupportedFieldDescriptor(_)
             | ODBCError::InvalidCharacterValue(_)
             | ODBCError::InvalidDriverCompletion(_)
+            | ODBCError::RollbackNotSupported
             | ODBCError::InvalidTransactionCompletionType(_)
             | ODBCError::NoResultSet
             | ODBCError::UnsupportedInfoTypeRetrieval(_)
