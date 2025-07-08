@@ -67,7 +67,7 @@ pub(crate) async fn build_scopes(
     if let Some(client_id) = &idp_info.client_id {
         // If the client_id is provided, we add the default scope for it.
         // This is necessary for Azure OIDC, which uses a special scope format.
-        let client_id_default = format!("{}/.default", client_id);
+        let client_id_default = format!("{client_id}/.default");
         if requested_scopes.contains(&client_id_default) {
             scopes.push(client_id_default);
         }
@@ -78,8 +78,7 @@ pub(crate) async fn build_scopes(
                 scopes.push(scope);
             } else {
                 log::warn!(
-                    "Requested scope '{}' is not supported by the OIDC provider, skipping.",
-                    scope
+                    "Requested scope '{scope}' is not supported by the OIDC provider, skipping.",
                 );
             }
         }
