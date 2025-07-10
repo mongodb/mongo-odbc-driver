@@ -6,11 +6,13 @@ use openidconnect::{
     PkceCodeChallenge, RedirectUrl, RefreshToken, RequestTokenError, Scope,
 };
 use rfc8252_http_server::{start, OidcResponseParams};
-use std::{collections::HashSet, hash::RandomState, time::Instant};
+use std::{collections::HashSet, time::Instant};
 use tokio::time::{self, Duration};
 
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
 const DEFAULT_SLEEP_DURATION: Duration = Duration::from_secs(5 * 60); // from_mins is unstable, so we use from_secs with a multiplication. The multiplication is performed at compile time, anyway
+const OFFLINE_ACCESS_SCOPE: &str = "offline_access";
+const OPENID_SCOPE: &str = "openid";
 
 #[derive(Debug)]
 pub enum Error {
@@ -47,15 +49,58 @@ pub async fn oidc_call_back(params: CallbackContext) -> mongodb::error::Result<I
     }
 }
 
+pub(crate) async fn build_scopes(
+    idp_info: &mongodb::options::oidc::IdpServerInfo,
+    provider_metadata: &CoreProviderMetadata,
+) -> impl Iterator<Item = Scope> {
+    let mut requested_scopes = idp_info.request_scopes.clone().unwrap_or_default();
+    // We always want to request OFFLINE_ACCESS, if supported by the IdP.
+    requested_scopes.push(OFFLINE_ACCESS_SCOPE.to_string());
+    // Always include the openid scope, even if it is not claimed by the IdP.
+    let mut scopes = vec![OPENID_SCOPE.to_string()];
+    let supported_scopes = provider_metadata
+        .scopes_supported()
+        .unwrap_or(&Vec::new())
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<HashSet<_>>();
+    if let Some(client_id) = &idp_info.client_id {
+        // If the client_id is provided, we add the default scope for it.
+        // This is necessary for Azure OIDC, which uses a special scope format.
+        let client_id_default = format!("{client_id}/.default");
+        if requested_scopes.contains(&client_id_default) {
+            scopes.push(client_id_default);
+        }
+    }
+    if !supported_scopes.is_empty() {
+        for scope in requested_scopes {
+            if supported_scopes.contains(&scope) {
+                scopes.push(scope);
+            } else {
+                log::warn!(
+                    "Requested scope '{scope}' is not supported by the OIDC provider, skipping.",
+                );
+            }
+        }
+    // If supported scopes is empty, we just assume reporting is not correct and attempt with what
+    // is requested.
+    } else {
+        scopes.extend(requested_scopes);
+    }
+    scopes.into_iter().map(Scope::new)
+}
+
 pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, Error> {
     let idp_info = params.idp_info.ok_or(Error::NoIdpServerInfo)?;
-    let client_id = idp_info.client_id.ok_or(Error::HumanFlowUnsupported)?;
-    let issuer_uri = IssuerUrl::new(idp_info.issuer).map_err(|e| Error::Other(e.to_string()))?;
+    let client_id = idp_info
+        .client_id
+        .clone()
+        .ok_or(Error::HumanFlowUnsupported)?;
+    let issuer_uri =
+        IssuerUrl::new(idp_info.issuer.clone()).map_err(|e| Error::Other(e.to_string()))?;
     if issuer_uri.url().scheme() != "https" {
         return Err(Error::IssuerUriMustBeHttps);
     }
-    let scopes = idp_info.request_scopes.unwrap_or_else(Vec::new);
-
     let (server, mut oidc_params_channel) = start().await;
 
     // Use OpenID Connect Discovery to fetch the provider metadata.
@@ -67,7 +112,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     // authorization URL and token URL.
     let client = CoreClient::from_provider_metadata(
         provider_metadata.clone(),
-        ClientId::new(client_id),
+        ClientId::new(client_id.clone()),
         None,
     )
     // Set the URL the user will be redirected to after the authorization process.
@@ -85,26 +130,9 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         Nonce::new_random,
     );
 
-    let empty_vec = Vec::new();
-
-    // Define the desired scopes based on the scopes passed in and the scopes available
-    // on the server
-    let scopes_supported: HashSet<String, RandomState> = HashSet::from_iter(
-        provider_metadata
-            .scopes_supported()
-            .unwrap_or(&empty_vec)
-            .iter()
-            .map(|s| s.to_string()),
-    );
-    let mut desired_scopes = HashSet::from_iter(scopes.into_iter());
-    // mongodb is not configured to ask for offline_access by default. We prefer always getting a
-    // refresh token when the server allows it.
-    desired_scopes.insert("offline_access".to_string());
-
-    // Set the desired scopes.
-    for scope in desired_scopes.intersection(&scopes_supported) {
+    for scope in build_scopes(&idp_info, &provider_metadata).await {
         // There does not seem to be a way to do intersection without cloning the scope
-        auth_url = auth_url.add_scope(Scope::new(scope.clone()));
+        auth_url = auth_url.add_scope(scope);
     }
     // Generate the full authorization URL.
     let (auth_url, csrf_token, _nonce) = auth_url
