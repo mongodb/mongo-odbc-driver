@@ -341,9 +341,9 @@ functions:
           ${prepare_shell}
           echo "Author = $AUTHOR"
           echo "Author email = $AUTHOR_EMAIL"
-          echo "Version = $RELEASE_VERSION"
-          SBOM_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}.sbom.json"
-          SARIF_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongo-odbc-$RELEASE_VERSION.sast.sarif"
+          echo "Version = $release_version"
+          SBOM_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongosql-odbc-${release_version}.sbom.json"
+          SARIF_URL="https://translators-connectors-releases.s3.amazonaws.com/mongosql-odbc-driver/mongo-odbc-$release_version.sast.sarif"
           echo "Sbom url = $SBOM_URL"
           echo "Sarif Url = $SARIF_URL"
 
@@ -351,7 +351,7 @@ functions:
           cp resources/ssdlc/mongo-odbc-driver_compliance_report_template.md $COMPLIANCE_REPORT_NAME
 
           # Update the version
-          sed -i.bu "s,%VERSION%,$RELEASE_VERSION,g" $COMPLIANCE_REPORT_NAME
+          sed -i.bu "s,%VERSION%,$release_version,g" $COMPLIANCE_REPORT_NAME
           # Update the SBOM link
           sed -i.bu "s,%SBOM_URL%,$SBOM_URL,g" $COMPLIANCE_REPORT_NAME
           # Update the SARIF link
@@ -383,11 +383,11 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
-        remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${release_version}-compliance-report.md
         content_type: text/markdown
         bucket: translators-connectors-releases
         permissions: public-read
-        display_name: mongosql-odbc-${RELEASE_VERSION}-compliance-report.md
+        display_name: mongosql-odbc-${release_version}-compliance-report.md
 
   "augment SBOM":
     - command: ec2.assume_role
@@ -451,11 +451,11 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/mongosql-odbc-${RELEASE_VERSION}.sbom.json
+        remote_file: mongosql-odbc-driver/mongosql-odbc-${release_version}.sbom.json
         bucket: translators-connectors-releases
         content_type: application/json
         permissions: public-read
-        display_name: mongosql-odbc-${RELEASE_VERSION}.sbom.json
+        display_name: mongosql-odbc-${release_version}.sbom.json
 
   "use latest mongosql version":
     - command: shell.exec
@@ -713,12 +713,12 @@ functions:
           cp target/release/*.dll installer/msi
           cp ./THIRD_PARTY_LICENSES.txt ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
-          if [[ "$RELEASE_VERSION" == "snapshot" || "$RELEASE_VERSION" == "snapshot-eap" ]]; then
+          if [[ "$release_version" == "snapshot" || "$release_version" == "snapshot-eap" ]]; then
               MINOR_VERSION="0.1"
               VERSION_LABEL="0.1.0"
           else
-              MINOR_VERSION=$(echo "$RELEASE_VERSION" | cut -d '.' -f 1-2)
-              VERSION_LABEL="$RELEASE_VERSION"
+              MINOR_VERSION=$(echo "$release_version" | cut -d '.' -f 1-2)
+              VERSION_LABEL="$release_version"
           fi
 
           # unfortunately, using a variable to hold the path to powershell
@@ -753,10 +753,10 @@ functions:
           cp target/release/*.dylib installer/dmg
           cp target/release/macos_postinstall installer/dmg
           cd installer/dmg
-          if [ "$RELEASE_VERSION" == "snapshot" ]; then
+          if [ "$release_version" == "snapshot" ]; then
               MINOR_VERSION="0.1"
           else
-              MINOR_VERSION=$(echo "$RELEASE_VERSION" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
+              MINOR_VERSION=$(echo "$release_version" | sed 's|\([0-9]\+[.][0-9]\+\)[.][0-9]\+|\1|')
           fi
           ./build-dmg.sh "$MINOR_VERSION"
 
@@ -947,7 +947,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.dll
-        remote_file: eap/mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.dll
+        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsql.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -963,7 +963,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsqls.dll
-        remote_file: eap/mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsqls.dll
+        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsqls.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -979,7 +979,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.pdb
-        remote_file: eap/mongosql-odbc-driver/windows/${RELEASE_VERSION}/release/atsql.pdb
+        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsql.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1015,7 +1015,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
-        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/${UBUNTU_FILENAME}.sig
+        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${release_version}/release/${UBUNTU_FILENAME}.sig
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1033,7 +1033,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.so
-        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${RELEASE_VERSION}/release/libatsql.so
+        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1807,7 +1807,7 @@ functions:
         key_id: ${papertrail_id}
         secret_key: ${papertrail_key}
         product: mongo-odbc-driver
-        version: ${RELEASE_VERSION}
+        version: ${release_version}
         filenames:
           - papertrail/*
 
@@ -1835,7 +1835,7 @@ functions:
              exit 0
           fi
           # Update the template to generate the feed for this release
-          sed -i 's@{RELEASE_VERSION}@'${RELEASE_VERSION}'@' mongo-odbc-downloads_template.json
+          sed -i 's@{release_version}@'${release_version}'@' mongo-odbc-downloads_template.json
           sed -i 's@{WINDOWS_INSTALLER_PATH}@'${WINDOWS_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
           sed -i 's@{UBUNTU2204_INSTALLER_PATH}@'${UBUNTU2204_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
           echo "--------- New release object ----------------"
@@ -1925,11 +1925,11 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/${STATIC_CODE_ANALYSIS_NAME}
-        remote_file: mongosql-odbc-driver/mongo-odbc-${RELEASE_VERSION}.sast.sarif
+        remote_file: mongosql-odbc-driver/mongo-odbc-${release_version}.sast.sarif
         content_type: application/json
         bucket: translators-connectors-releases
         permissions: public-read
-        display_name: mongo-odbc-${RELEASE_VERSION}.sast.sarif
+        display_name: mongo-odbc-${release_version}.sast.sarif
 
 tasks:
   - name: make-odbc-docs

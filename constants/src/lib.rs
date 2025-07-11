@@ -186,6 +186,10 @@ pub const INVALID_CHARACTER_VALUE: OdbcState<'static> = OdbcState {
     odbc_2_state: "22005",
     odbc_3_state: "22018",
 };
+pub const INVALID_TRANSACTION_OPERATION_CODE: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1012",
+    odbc_3_state: "HY012",
+};
 pub const CONNECTION_NOT_OPEN: OdbcState<'static> = OdbcState {
     odbc_2_state: "08003",
     odbc_3_state: "08003",
@@ -406,6 +410,10 @@ pub const SQL_OJ_LEFT: u32 = 0x00000001;
 pub const SQL_OJ_NOT_ORDERED: u32 = 0x00000010;
 pub const SQL_OJ_INNER: u32 = 0x00000020;
 pub const SQL_OJ_ALL_COMPARISON_OPS: u32 = 0x00000040;
+
+// SQL Transaction input
+pub const SQL_COMMIT: i16 = 0x0000;
+pub const SQL_ROLLBACK: i16 = 0x0001;
 
 fn format_driver_version() -> String {
     // The driver version can be obtained from the Cargo.toml file.
