@@ -597,9 +597,8 @@ impl MongoFields {
                                 ));
                             } else if schema_coll_agg_response.is_empty() {
                                 log::warn!(
-                                    "No schema was found for collection `{}`. It will be assigned \
-                                    an empty schema. Hint: Generate schemas for your collections.",
-                                    collection_name
+                                    "No schema was found for collection `{collection_name}`. It will be assigned \
+                                    an empty schema. Hint: Generate schemas for your collections."
                                 );
 
                                 // If the schema for `collection_name` isn't found, default to an empty object schema.
@@ -646,7 +645,7 @@ impl MongoFields {
                             }
                             // If there is an error simplifying the schema (e.g. an AnyOf), skip the collection
                             Err(e) => {
-                                log::error!("Error while processing collection metadata: {}", e);
+                                log::error!("Error while processing collection metadata: {e}");
                                 continue;
                             }
                         }
