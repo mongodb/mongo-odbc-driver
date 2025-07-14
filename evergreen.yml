@@ -1832,6 +1832,7 @@ functions:
           # Make sure to only allow releases from the trunk of the project. If the name changes,
           # this will need be updated.
           if [[ $(git branch --show-current) != 'main' ]]; then
+             echo "Updating the download center feed should only run on the main branch. Current branch: $(git branch --show-current). Exiting."
              exit 0
           fi
           # Update the template to generate the feed for this release
