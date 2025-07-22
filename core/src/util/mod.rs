@@ -1,8 +1,11 @@
+use std::sync::LazyLock;
+
 use constants::SQL_ALL_TABLE_TYPES;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use mongodb::results::CollectionType;
 use regex::{Regex, RegexSet, RegexSetBuilder};
+use std::collections::HashSet;
 
 pub mod test_connection;
 
@@ -10,15 +13,21 @@ pub(crate) const TABLE: &str = "TABLE";
 pub(crate) const COLLECTION: &str = "collection";
 pub(crate) const TIMESERIES: &str = "timeseries";
 pub(crate) const VIEW: &str = "view";
-pub(crate) const DISALLOWED_DB_NAMES: [&str; 5] = ["admin", "config", "local", "system", ""];
-pub(crate) const DISALLOWED_COLLECTION_NAMES: [&str; 6] = [
-    "system.namespaces",
-    "system.indexes",
-    "system.profile",
-    "system.js",
-    "system.views",
-    "__sql_schemas",
-];
+pub(crate) static DISALLOWED_DB_NAMES: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    let mut set = HashSet::new();
+    set.insert("admin");
+    set.insert("config");
+    set.insert("local");
+    set.insert("system");
+    set.insert("");
+    set
+});
+pub(crate) const DISALLOWED_COLLECTION_NAMES: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    let mut set = HashSet::new();
+    set.insert("__sql_schemas");
+    set.insert("");
+    set
+});
 
 lazy_static! {
     pub(crate) static ref TABLE_VALUES: RegexSet = RegexSetBuilder::new(["^table$", "^\'table\'$"])

@@ -8,7 +8,7 @@ mod common;
 
 mod integration {
     use crate::common::{
-        fetch_and_get_data, generate_default_connection_str, get_column_attributes,
+        fetch_and_get_data, generate_connection_str, get_column_attributes,
         get_sql_diagnostics, sql_return_to_string, OutputBuffer, BUFFER_LENGTH,
     };
     use definitions::{
@@ -116,6 +116,15 @@ mod integration {
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
     fn power_bi_connect(env_handle: HEnv) -> (definitions::HDbc, String, String, SmallInt) {
+        power_bi_user_connect(env_handle, None)
+    }
+
+    /// Generate connection string with passed option user and returns :
+    /// - The connection handle
+    /// - The string used as the input connection string
+    /// - The retrieved output connection string
+    /// - The retrieved length of the output connection string
+    fn power_bi_user_connect(env_handle: HEnv, user: Option<String>) -> (definitions::HDbc, String, String, SmallInt) {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         #[allow(unused_mut)]
@@ -149,7 +158,7 @@ mod integration {
             }
 
             // Generate the connection string and add a null terminator because PowerBi uses NTS for the length
-            in_connection_string = generate_default_connection_str();
+            in_connection_string = generate_connection_str(user);
             let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
 
@@ -563,6 +572,92 @@ mod integration {
                     SqlReturn::SUCCESS,
                     SqlReturn::SUCCESS,
                     SqlReturn::SUCCESS,
+                    // There should be 4 rows. If this changes perhaps we added more databases.
+                    SqlReturn::NO_DATA,
+                ],
+                vec![CDataType::SQL_C_WCHAR; 5],
+                None,
+            );
+        }
+    }
+
+    ///  Test PowerBI flow for listing tables with default read db2 as only role for user
+    ///  - SQLAllocHandle(SQL_HANDLE_STMT)
+    ///  - SQLTablesW(null pointer, null pointer, null pointer, "TABLE,VIEW")
+    ///  - SQLGetFunctions(SQL_API_SQLFETCHSCROLL)
+    ///  - SQLGetInfoW(SQL_GETDATA_EXTENSIONS)
+    ///  - SQLNumResultCols()
+    ///  - For columns 1 to {numCols}
+    ///      - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
+    ///      - SQLColAttributeW(SQL_DESC_UNSIGNED)
+    ///      - SQLColAttributeW(SQL_COLUMN_NAME)
+    ///      - SQLColAttributeW(SQL_COLUMN_NULLABLE)
+    ///      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
+    ///      - SQLColAttributeW(SQL_COLUMN_LENGTH)
+    ///      - SQLColAttributeW(SQL_COLUMN_SCALE)
+    ///  - Until SQLFetch returns SQL_NO_DATA
+    ///      - SQLFetch()
+    ///      - For columns 1 to {numCols}
+    ///          - SQLGetData({colIndex}, {defaultCtoSqlType})
+    ///  - SQLMoreResults()
+    ///  - SQLFreeHandle(SQL_HANDLE_STMT)
+    #[test]
+    fn test_limited_table_listing() {
+        let env_handle: HEnv = setup();
+        let (conn_handle, _, _, _) = power_bi_user_connect(env_handle, Some("db2reader".to_string()));
+        let mut stmt: Handle = null_mut();
+        let empty_string = WideChar::default();
+
+        unsafe {
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLAllocHandle(
+                    HandleType::SQL_HANDLE_STMT as i16,
+                    conn_handle as *mut _,
+                    &mut stmt as *mut Handle
+                )
+            );
+            let mut table_view: Vec<WideChar> = cstr::to_widechar_vec("TABLE,VIEW");
+            table_view.push(0);
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLTablesW(
+                    stmt as HStmt,
+                    std::ptr::addr_of!(empty_string),
+                    0,
+                    std::ptr::addr_of!(empty_string),
+                    0,
+                    std::ptr::addr_of!(empty_string),
+                    0,
+                    table_view.as_ptr(),
+                    table_view.len() as SmallInt - 1
+                ),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_ENV, env_handle as Handle)
+            );
+
+            //  - SQLNumResultCols()
+            //  - For columns 1 to {numCols}
+            //      - SQLColAttributeW(SQL_DESC_CONCISE_TYPE)
+            //      - SQLColAttributeW(SQL_DESC_UNSIGNED)
+            //      - SQLColAttributeW(SQL_COLUMN_NAME)
+            //      - SQLColAttributeW(SQL_COLUMN_NULLABLE)
+            //      - SQLColAttributeW(SQL_DESC_TYPE_NAME)
+            //      - SQLColAttributeW(SQL_COLUMN_LENGTH)
+            //      - SQLColAttributeW(SQL_COLUMN_SCALE)
+            get_column_attributes(stmt, 5, None);
+
+            //  - Until SQLFetch returns SQL_NO_DATA
+            //      - SQLFetch()
+            //      - For columns 1 to {numCols}
+            //          - SQLGetData({colIndex}, {defaultCtoSqlType})
+            //  - SQLMoreResults()
+            fetch_and_get_data(
+                stmt,
+                None,
+                vec![
+                    SqlReturn::SUCCESS,
+                    // There should only be one ROW
                     SqlReturn::NO_DATA,
                 ],
                 vec![CDataType::SQL_C_WCHAR; 5],

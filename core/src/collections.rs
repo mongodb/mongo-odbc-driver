@@ -102,6 +102,14 @@ pub struct MongoCollections {
     table_types_filter: Option<Vec<CollectionType>>,
 }
 
+fn database_filter(db_name: &str) -> bool {
+    !DISALLOWED_DB_NAMES.contains(&db_name)
+}
+
+fn collection_filter(collection_name: &str) -> bool {
+    !DISALLOWED_COLLECTION_NAMES.contains(&collection_name) && !collection_name.starts_with("system.")
+}
+
 // Statement related to a SQLColumns call.
 impl MongoCollections {
     // Create a new MongoStatement to list tables with the given database (catalogs) and collection
@@ -123,26 +131,30 @@ impl MongoCollections {
                     .list_database_names()
                     .authorized_databases(true)
                     .await
-                    .unwrap_or_else(|e| {
+                    .map_err(|e| {
                         log::error!("Error retrieving database names, Error: {e}");
-                        vec![]
+                        e
                     })
+                    .unwrap()
                     .into_iter()
                     // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
-                    .filter(|db_name| !DISALLOWED_DB_NAMES.contains(&db_name.as_str()))
+                    .filter(|db_name| database_filter(db_name))
                     .filter(|db_name| is_match(db_name, db_name_filter, accept_search_patterns))
                     .map(|val| async move {
                         CollectionsForDb {
                             database_name: val.to_string(),
                             collection_list: mongo_connection.client.database(val.as_str()).run_command(
                                 doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
-                            ).await.unwrap_or_else(|e| {
+                            ).await
+                            .map_err(|e| {
                                 log::error!("Error getting collections for db {val}, Error: {e}");
-                                doc! {}
-                            }).get_document("cursor").map(|doc| {
+                                e
+                            })
+                            .unwrap()
+                            .get_document("cursor").map(|doc| {
                                 doc.get_array("firstBatch").unwrap().iter().filter(|val| {
                                     let name = val.as_document().unwrap().get_str("name").unwrap();
-                                    !DISALLOWED_COLLECTION_NAMES.contains(&name)
+                                    collection_filter(&name)
                                 }).map(|val| {
                                     let doc = val.as_document().unwrap();
                                     let name = doc.get_str("name").unwrap().to_string();
