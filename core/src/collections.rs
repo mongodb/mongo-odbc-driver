@@ -133,7 +133,10 @@ impl MongoCollections {
                 database_name: val.to_string(),
                 collection_list: mongo_connection.client.database(val.as_str()).run_command(
                     doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
-                ).await.unwrap().get_document("cursor").map(|doc| {
+                ).await.unwrap_or_else(|_| {
+                    log::error!("Error getting collections for db {val}");
+                    doc! {}
+                }).get_document("cursor").map(|doc| {
                     doc.get_array("firstBatch").unwrap().iter().filter(|val| {
                         let name = val.as_document().unwrap().get_str("name").unwrap();
                         !DISALLOWED_COLLECTION_NAMES.contains(&name)
