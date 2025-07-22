@@ -116,7 +116,7 @@ mod integration {
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
     fn power_bi_connect(env_handle: HEnv) -> (definitions::HDbc, String, String, SmallInt) {
-        power_bi_user_connect(env_handle, None)
+        power_bi_user_connect(env_handle, None, None)
     }
 
     /// Generate connection string with passed option user and returns :
@@ -124,7 +124,7 @@ mod integration {
     /// - The string used as the input connection string
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
-    fn power_bi_user_connect(env_handle: HEnv, user: Option<String>) -> (definitions::HDbc, String, String, SmallInt) {
+    fn power_bi_user_connect(env_handle: HEnv, user: Option<String>, database: Option<String>) -> (definitions::HDbc, String, String, SmallInt) {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         #[allow(unused_mut)]
@@ -158,7 +158,7 @@ mod integration {
             }
 
             // Generate the connection string and add a null terminator because PowerBi uses NTS for the length
-            in_connection_string = generate_connection_str(user);
+            in_connection_string = generate_connection_str(user, database);
             let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
             in_connection_string_encoded.push(0);
 
@@ -604,7 +604,7 @@ mod integration {
     #[test]
     fn test_limited_table_listing() {
         let env_handle: HEnv = setup();
-        let (conn_handle, _, _, _) = power_bi_user_connect(env_handle, Some("db2reader".to_string()));
+        let (conn_handle, _, _, _) = power_bi_user_connect(env_handle, Some("db2reader".to_string()), Some("db2".to_string()));
         let mut stmt: Handle = null_mut();
         let empty_string = WideChar::default();
 
@@ -657,7 +657,9 @@ mod integration {
                 None,
                 vec![
                     SqlReturn::SUCCESS,
-                    // There should only be one ROW
+                    SqlReturn::SUCCESS,
+                    SqlReturn::SUCCESS,
+                    SqlReturn::SUCCESS,
                     SqlReturn::NO_DATA,
                 ],
                 vec![CDataType::SQL_C_WCHAR; 5],
