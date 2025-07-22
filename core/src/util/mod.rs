@@ -10,7 +10,7 @@ pub(crate) const TABLE: &str = "TABLE";
 pub(crate) const COLLECTION: &str = "collection";
 pub(crate) const TIMESERIES: &str = "timeseries";
 pub(crate) const VIEW: &str = "view";
-pub(crate) const DISALLOWED_DB_NAMES: [&str; 4] = ["admin", "config", "local", "system"];
+pub(crate) const DISALLOWED_DB_NAMES: [&str; 5] = ["admin", "config", "local", "system", ""];
 pub(crate) const DISALLOWED_COLLECTION_NAMES: [&str; 6] = [
     "system.namespaces",
     "system.indexes",

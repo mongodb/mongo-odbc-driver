@@ -123,38 +123,42 @@ impl MongoCollections {
                     .list_database_names()
                     .authorized_databases(true)
                     .await
-                    .unwrap()
-                    .iter()
+                    .unwrap_or_else(|e| {
+                        log::error!("Error retrieving database names, Error: {e}");
+                        vec![]
+                    })
+                    .into_iter()
                     // MHOUSE-7119 - admin database and empty strings are showing in list_database_names
-                    .filter(|&db_name| !DISALLOWED_DB_NAMES.contains(&db_name.as_str()))
-                    .filter(|&db_name| is_match(db_name, db_name_filter, accept_search_patterns))
+                    .filter(|db_name| !DISALLOWED_DB_NAMES.contains(&db_name.as_str()))
+                    .filter(|db_name| is_match(db_name, db_name_filter, accept_search_patterns))
                     .map(|val| async move {
                         CollectionsForDb {
-                database_name: val.to_string(),
-                collection_list: mongo_connection.client.database(val.as_str()).run_command(
-                    doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
-                ).await.unwrap_or_else(|_| {
-                    log::error!("Error getting collections for db {val}");
-                    doc! {}
-                }).get_document("cursor").map(|doc| {
-                    doc.get_array("firstBatch").unwrap().iter().filter(|val| {
-                        let name = val.as_document().unwrap().get_str("name").unwrap();
-                        !DISALLOWED_COLLECTION_NAMES.contains(&name)
-                    }).map(|val| {
-                        let doc = val.as_document().unwrap();
-                        let name = doc.get_str("name").unwrap().to_string();
-                        let collection_type = match doc.get_str("type").unwrap() {
-                            "collection" => CollectionType::Collection,
-                            "view" => CollectionType::View,
-                            _ => CollectionType::Collection
-                        };
-                        MongoODBCCollectionSpecification::new(name, collection_type)
-                    }).collect()
-                }).unwrap_or_else(|_| {
-                    log::error!("Error getting collections for db {val}");
-                    vec![]
-                }),
-            }
+                            database_name: val.to_string(),
+                            collection_list: mongo_connection.client.database(val.as_str()).run_command(
+                                doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
+                            ).await.unwrap_or_else(|e| {
+                                log::error!("Error getting collections for db {val}, Error: {e}");
+                                doc! {}
+                            }).get_document("cursor").map(|doc| {
+                                doc.get_array("firstBatch").unwrap().iter().filter(|val| {
+                                    let name = val.as_document().unwrap().get_str("name").unwrap();
+                                    !DISALLOWED_COLLECTION_NAMES.contains(&name)
+                                }).map(|val| {
+                                    let doc = val.as_document().unwrap();
+                                    let name = doc.get_str("name").unwrap().to_string();
+                                    let collection_type = match doc.get_str("type").unwrap() {
+                                        "collection" => CollectionType::Collection,
+                                        "view" => CollectionType::View,
+                                        _ => CollectionType::Collection
+                                    };
+                                    MongoODBCCollectionSpecification::new(name, collection_type)
+                                }).collect()
+                            })
+                            .unwrap_or_else(|e| {
+                                log::error!("Error getting collections for db {val}, Error: {e}");
+                                vec![]
+                            }),
+                        }
                     }),
             )
             .await
