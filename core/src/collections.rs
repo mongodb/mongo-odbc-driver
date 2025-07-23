@@ -107,7 +107,7 @@ fn database_filter(db_name: &str) -> bool {
 }
 
 fn collection_filter(collection_name: &str) -> bool {
-    !DISALLOWED_COLLECTION_NAMES.contains(&collection_name)
+    !DISALLOWED_COLLECTION_NAMES.contains(collection_name)
         && !collection_name.starts_with("system.")
 }
 
@@ -155,7 +155,7 @@ impl MongoCollections {
                             .get_document("cursor").map(|doc| {
                                 doc.get_array("firstBatch").unwrap().iter().filter(|val| {
                                     let name = val.as_document().unwrap().get_str("name").unwrap();
-                                    collection_filter(&name)
+                                    collection_filter(name)
                                 }).map(|val| {
                                     let doc = val.as_document().unwrap();
                                     let name = doc.get_str("name").unwrap().to_string();

@@ -22,7 +22,7 @@ pub(crate) static DISALLOWED_DB_NAMES: LazyLock<HashSet<&'static str>> = LazyLoc
     set.insert("");
     set
 });
-pub(crate) const DISALLOWED_COLLECTION_NAMES: LazyLock<HashSet<&'static str>> =
+pub(crate) static DISALLOWED_COLLECTION_NAMES: LazyLock<HashSet<&'static str>> =
     LazyLock::new(|| {
         let mut set = HashSet::new();
         set.insert("__sql_schemas");
