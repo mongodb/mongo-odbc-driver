@@ -22,12 +22,13 @@ pub(crate) static DISALLOWED_DB_NAMES: LazyLock<HashSet<&'static str>> = LazyLoc
     set.insert("");
     set
 });
-pub(crate) const DISALLOWED_COLLECTION_NAMES: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    let mut set = HashSet::new();
-    set.insert("__sql_schemas");
-    set.insert("");
-    set
-});
+pub(crate) const DISALLOWED_COLLECTION_NAMES: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| {
+        let mut set = HashSet::new();
+        set.insert("__sql_schemas");
+        set.insert("");
+        set
+    });
 
 lazy_static! {
     pub(crate) static ref TABLE_VALUES: RegexSet = RegexSetBuilder::new(["^table$", "^\'table\'$"])

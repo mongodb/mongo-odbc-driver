@@ -107,7 +107,8 @@ fn database_filter(db_name: &str) -> bool {
 }
 
 fn collection_filter(collection_name: &str) -> bool {
-    !DISALLOWED_COLLECTION_NAMES.contains(&collection_name) && !collection_name.starts_with("system.")
+    !DISALLOWED_COLLECTION_NAMES.contains(&collection_name)
+        && !collection_name.starts_with("system.")
 }
 
 // Statement related to a SQLColumns call.

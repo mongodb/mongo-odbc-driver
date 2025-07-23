@@ -8,8 +8,8 @@ mod common;
 
 mod integration {
     use crate::common::{
-        fetch_and_get_data, generate_connection_str, get_column_attributes,
-        get_sql_diagnostics, sql_return_to_string, OutputBuffer, BUFFER_LENGTH,
+        fetch_and_get_data, generate_connection_str, get_column_attributes, get_sql_diagnostics,
+        sql_return_to_string, OutputBuffer, BUFFER_LENGTH,
     };
     use definitions::{
         AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute,
@@ -124,7 +124,11 @@ mod integration {
     /// - The string used as the input connection string
     /// - The retrieved output connection string
     /// - The retrieved length of the output connection string
-    fn power_bi_user_connect(env_handle: HEnv, user: Option<String>, database: Option<String>) -> (definitions::HDbc, String, String, SmallInt) {
+    fn power_bi_user_connect(
+        env_handle: HEnv,
+        user: Option<String>,
+        database: Option<String>,
+    ) -> (definitions::HDbc, String, String, SmallInt) {
         // Allocate a DBC handle
         let mut dbc: Handle = null_mut();
         #[allow(unused_mut)]
@@ -604,7 +608,11 @@ mod integration {
     #[test]
     fn test_limited_table_listing() {
         let env_handle: HEnv = setup();
-        let (conn_handle, _, _, _) = power_bi_user_connect(env_handle, Some("db2reader".to_string()), Some("db2".to_string()));
+        let (conn_handle, _, _, _) = power_bi_user_connect(
+            env_handle,
+            Some("db2reader".to_string()),
+            Some("db2".to_string()),
+        );
         let mut stmt: Handle = null_mut();
         let empty_string = WideChar::default();
 

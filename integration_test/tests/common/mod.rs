@@ -58,7 +58,7 @@ pub fn generate_uri_with_default_connection_string(uri: &str) -> String {
     format!("{}URI={combined_uri}", generate_default_connection_str())
 }
 
-/// Generate 
+/// Generate
 /// of the form 'Driver={};PWD={};USER={};SERVER={}'.
 /// The default driver is 'MongoDB Atlas SQL ODBC Driver' if not specified.
 /// The default auth db is 'admin' if not specified.
