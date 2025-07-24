@@ -83,7 +83,7 @@ pub fn generate_connection_str(user: Option<String>, database: Option<String>) -
     let db = if let Some(db) = database {
         Ok(db)
     } else {
-        env::var("ADF_TEST_LOCAL_AUTH_DB")
+        env::var("ADF_TEST_LOCAL_DB")
     };
     let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
 
@@ -249,6 +249,7 @@ pub fn connect_with_conn_string(
         }
         let in_connection_string =
             in_connection_string.unwrap_or_else(generate_default_connection_str);
+        println!("Connecting with connection string: {in_connection_string}");
         let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
         in_connection_string_encoded.push(0);
         let mut len_buffer: i16 = 0;
