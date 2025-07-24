@@ -21,6 +21,7 @@ timeout:
       script: |
         ls -la
 
+# Pull in sql-enginers-common-test-infra as a module
 modules:
   - name: sql-engines-common-test-infra
     owner: mongodb

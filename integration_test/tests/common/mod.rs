@@ -58,16 +58,33 @@ pub fn generate_uri_with_default_connection_string(uri: &str) -> String {
     format!("{}URI={combined_uri}", generate_default_connection_str())
 }
 
-/// Generate the default connection setting defined for the tests using a connection string
+/// Generate
 /// of the form 'Driver={};PWD={};USER={};SERVER={}'.
 /// The default driver is 'MongoDB Atlas SQL ODBC Driver' if not specified.
 /// The default auth db is 'admin' if not specified.
 pub fn generate_default_connection_str() -> String {
-    let user_name = env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set");
+    generate_connection_str(None, None)
+}
+
+/// Generate the a connection setting defined for the tests using a connection string with an
+/// optional user name
+/// of the form 'Driver={};PWD={};USER={};SERVER={}'.
+/// The default driver is 'MongoDB Atlas SQL ODBC Driver' if not specified.
+/// The default auth db is 'admin' if not specified.
+pub fn generate_connection_str(user: Option<String>, database: Option<String>) -> String {
+    let user_name = if let Some(user) = user {
+        user
+    } else {
+        env::var("ADF_TEST_LOCAL_USER").expect("ADF_TEST_LOCAL_USER is not set")
+    };
     let password = env::var("ADF_TEST_LOCAL_PWD").expect("ADF_TEST_LOCAL_PWD is not set");
     let host = env::var("ADF_TEST_LOCAL_HOST").expect("ADF_TEST_LOCAL_HOST is not set");
 
-    let db = env::var("ADF_TEST_LOCAL_DB");
+    let db = if let Some(db) = database {
+        Ok(db)
+    } else {
+        env::var("ADF_TEST_LOCAL_DB")
+    };
     let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
 
     let mut connection_string =
@@ -232,6 +249,7 @@ pub fn connect_with_conn_string(
         }
         let in_connection_string =
             in_connection_string.unwrap_or_else(generate_default_connection_str);
+        println!("Connecting with connection string: {in_connection_string}");
         let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
         in_connection_string_encoded.push(0);
         let mut len_buffer: i16 = 0;
