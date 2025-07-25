@@ -88,7 +88,9 @@ impl MongoQuery {
                     "_id": {
                         "$in": &collection_names
                         }
-                    }
+                    },
+                    // Only retrieve documents with a schema.
+                    "schema": { $exists: true }
                 },
                 doc! {"$project":{
                     "_id": 1,
