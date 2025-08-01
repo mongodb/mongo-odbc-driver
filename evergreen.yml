@@ -897,7 +897,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/docs/MongoDB_ODBC_Guide.pdf
-        remote_file: eap/mongodb-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
+        remote_file: mongodb-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
         bucket: translators-connectors-releases
         permissions: public-read
         skip_existing: false
@@ -948,7 +948,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.dll
-        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsql.dll
+        remote_file: mongosql-odbc-driver/windows/${release_version}/release/atsql.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -964,7 +964,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsqls.dll
-        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsqls.dll
+        remote_file: mongosql-odbc-driver/windows/${release_version}/release/atsqls.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -980,7 +980,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.pdb
-        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsql.pdb
+        remote_file: mongosql-odbc-driver/windows/${release_version}/release/atsql.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1016,7 +1016,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
-        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${release_version}/release/${UBUNTU_FILENAME}.sig
+        remote_file: mongosql-odbc-driver/ubuntu2204/${release_version}/release/${UBUNTU_FILENAME}.sig
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1034,7 +1034,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.so
-        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
