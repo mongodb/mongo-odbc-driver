@@ -90,7 +90,7 @@ impl MongoQuery {
                         }
                     },
                     // Only retrieve documents with a schema.
-                    "schema": { $exists: true }
+                    "schema": { "$exists": true }
                 },
                 doc! {"$project":{
                     "_id": 1,
