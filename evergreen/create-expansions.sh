@@ -24,6 +24,8 @@ export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
 export SCRIPT_FOLDER=resources
 export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
 export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
+export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
+export SBOM_DIR="sbom_tools"
 export FEATURE_FLAGS=""
 export PRODUCT_NAME="mongoodbc"
 export PATH_PREFIX=""
@@ -75,6 +77,8 @@ script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
 working_dir: "mongosql-odbc-driver"
 MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
 MONGODB_BINARIES: "$MONGODB_BINARIES"
+SBOM_DIR: "$SBOM_DIR"
+SBOM_LICENSES: "$SBOM_LICENSES"
 prepare_shell: |
   set -o errexit
   export release_version="$release_version"
@@ -105,8 +109,8 @@ prepare_shell: |
   export SRV_TEST_PWD="${srv_test_pwd}"
   export SCRIPT_FOLDER="$SCRIPT_FOLDER"
   export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
-  export SBOM_DIR="sbom_tools"
-  export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
+  export SBOM_DIR="$SBOM_DIR"
+  export SBOM_LICENSES="$SBOM_LICENSES"
   export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
   export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
   export COMPLIANCE_REPORT_NAME="$COMPLIANCE_REPORT_NAME"
