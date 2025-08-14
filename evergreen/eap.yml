@@ -175,6 +175,9 @@ tasks:
       - func: "upload eap release"
 
   - name: compile-eap
+    depends_on:
+    - name: sbom
+      variant: code-quality-security
     commands:
       - func: "generate expansions"
         vars:

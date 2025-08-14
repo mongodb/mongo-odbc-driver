@@ -59,6 +59,10 @@ pub enum Error {
     QueryDeserialization(mongodb::bson::de::Error),
     #[error("Trying to execute query failed with error: {0:?}")]
     QueryExecutionFailed(mongodb::error::Error),
+    #[error("Trying to generate the schema catalog failed with error: {0:?}")]
+    SchemaCatalogGenerationFailed(mongodb::error::Error),
+    #[error("Trying to read the results for the schema catalog failed with error: {0:?}")]
+    SchemaCatalogResultFailed(mongodb::error::Error),
     #[error("Unknown column '{0}' in result set schema")]
     UnknownColumn(String),
     #[error("Error retrieving metadata for field {0}.{1}")]
@@ -100,7 +104,9 @@ impl Error {
             | Error::DatabaseVersionRetreival(err)
             | Error::InvalidClientOptions(err)
             | Error::QueryCursorUpdate(err)
-            | Error::QueryExecutionFailed(err) => {
+            | Error::QueryExecutionFailed(err)
+            | Error::SchemaCatalogGenerationFailed(err)
+            | Error::SchemaCatalogResultFailed(err) => {
                 if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
                     return TIMEOUT_EXPIRED;
@@ -143,6 +149,8 @@ impl Error {
             | Error::InvalidClientOptions(m)
             | Error::QueryCursorUpdate(m)
             | Error::QueryExecutionFailed(m)
+            | Error::SchemaCatalogResultFailed(m)
+            | Error::SchemaCatalogGenerationFailed(m)
             | Error::MongoParseConnectionString(m) => match m.kind.as_ref() {
                 ErrorKind::Command(command_error) => command_error.code,
                 ErrorKind::Write(WriteFailure::WriteConcernError(wc_error)) => wc_error.code,
