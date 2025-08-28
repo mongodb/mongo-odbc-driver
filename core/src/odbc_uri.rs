@@ -444,6 +444,10 @@ impl ODBCUri {
                     }
                 });
             }
+            #[cfg(not(target_os = "windows"))]
+            Some(AuthMechanism::Gssapi) => {
+                client_options.credential.as_mut().unwrap().password = None;
+            }
             _ => {}
         }
 
