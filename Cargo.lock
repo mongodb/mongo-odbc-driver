@@ -2849,10 +2849,12 @@ source = "git+https://github.com/mongodb/libmongocrypt-rust.git?branch=main#66c4
 [[package]]
 name = "mongodb"
 version = "3.2.3"
+source = "git+https://github.com/mongodb/mongo-rust-driver?rev=ac0f721b06cfdd88b7a79ac28a825f23d25077c7#ac0f721b06cfdd88b7a79ac28a825f23d25077c7"
 dependencies = [
  "async-trait",
  "aws-config",
  "aws-credential-types",
+ "aws-sigv4",
  "aws-types",
  "base64 0.13.1",
  "bitflags 1.3.2",
@@ -2869,6 +2871,7 @@ dependencies = [
  "hickory-proto",
  "hickory-resolver",
  "hmac",
+ "http 1.3.1",
  "macro_magic",
  "md-5",
  "mongocrypt",
@@ -2903,6 +2906,7 @@ dependencies = [
 [[package]]
 name = "mongodb-internal-macros"
 version = "3.2.3"
+source = "git+https://github.com/mongodb/mongo-rust-driver?rev=ac0f721b06cfdd88b7a79ac28a825f23d25077c7#ac0f721b06cfdd88b7a79ac28a825f23d25077c7"
 dependencies = [
  "macro_magic",
  "proc-macro2",
