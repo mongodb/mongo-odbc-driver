@@ -16,11 +16,11 @@ if [ "Windows_NT" == "$OS" ]; then
     export CARGO_BIN="$HOME/.rustup/bin:$HOME/.cargo/bin"
     export PATH="/cygdrive/c/cmake/bin:$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
     echo "------------------------------c"
-    ls /cygrive/c/*
+    ls "/cygdrive/c/*"
     echo "------------------------------PF"
-    ls "/cygrive/c/Program Files"
+    ls "/cygdrive/c/Program Files"
     echo "------------------------------PFx86"
-    ls "/cygrive/c/Program Files (x86)"
+    ls "/cygdrive/c/Program Files (x86)"
 else
     export CARGO_BIN="$HOME/.cargo/bin"
     export PATH="$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
