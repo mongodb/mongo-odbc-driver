@@ -2265,7 +2265,7 @@ buildvariants:
   - name: windows-64
     tags: ["release-variant"]
     display_name: Windows (64-bit)
-    run_on: [windows-64-vsMulti-small]
+    run_on: [windows-2022-latest-large]
     modules:
       - sql-engines-common-test-infra
     tasks:
