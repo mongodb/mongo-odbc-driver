@@ -21,6 +21,9 @@ if [ "Windows_NT" == "$OS" ]; then
     ls "/cygdrive/c/Program Files"
     echo "------------------------------PFx86"
     ls "/cygdrive/c/Program Files (x86)"
+    echo "------------------------------fd"
+    find / -regex ".*[Ww]ix.*"
+    echo "FIN"
 else
     export CARGO_BIN="$HOME/.cargo/bin"
     export PATH="$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
