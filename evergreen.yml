@@ -570,7 +570,6 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          env | grep CMAKE`
           # Compile release build with features if needed
           # if FEATURE_FLAGS is not empty, build with features
           if [[ "$FEATURE_FLAGS" != "" ]]; then
