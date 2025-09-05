@@ -15,9 +15,6 @@ export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
 if [ "Windows_NT" == "$OS" ]; then
     export CARGO_BIN="$HOME/.rustup/bin:$HOME/.cargo/bin"
     export PATH="/cygdrive/c/cmake-3.31.8/bin:$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
-    # hack cargo, the aws-lc crate tries to use the newest genarator
-    # that our cmake doesn't support
-    export CMAKE_GENERATOR="Visual Studio 15 2017"
 else
     export CARGO_BIN="$HOME/.cargo/bin"
     export PATH="$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
