@@ -98,7 +98,7 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> Strin
             let mut dst = Vec::new();
             let mut itr = text;
             {
-                while !itr.is_null() && *itr != 0 {
+                while *itr != 0 {
                     dst.push(*itr);
                     itr = itr.offset(1);
                 }
