@@ -33,9 +33,9 @@ include:
     module: sql-engines-common-test-infra
   - filename: evergreen/configs/rust_util.yml
     module: sql-engines-common-test-infra
-  - filename:  evergreen/eap.yml # tasks related to eap snapshot builds
   - filename: evergreen/configs/ssdlc_util.yml
     module: sql-engines-common-test-infra
+  - filename:  evergreen/eap.yml # tasks related to eap snapshot builds
 
 variables:
   - &check_and_allow_for_eap_build
