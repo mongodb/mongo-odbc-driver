@@ -35,4 +35,3 @@ tokio = { workspace = true, features = [
 cluster_type_tests = []
 result_set = []
 evergreen_tests = []
-eap = []
