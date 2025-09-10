@@ -34,38 +34,8 @@ include:
     module: sql-engines-common-test-infra
   - filename: evergreen/configs/rust_util.yml
     module: sql-engines-common-test-infra
-  - filename:  evergreen/eap.yml # tasks related to eap snapshot builds
 
 variables:
-  - &check_and_allow_for_eap_build
-    command: shell.exec
-    type: test
-    params:
-      shell: bash
-      working_dir: mongosql-odbc-driver
-      script: |
-        ${PREPARE_SHELL}
-        if [ "${FEATURE_FLAGS}" != "eap" ]; then
-          echo "FEATURE_FLAGS (${"FEATURE_FLAGS}) is not 'eap'. Stopping task execution."
-          curl -d '{"status":"success", "should_continue": false}' -H "Content-Type: application/json" -X POST localhost:2285/task_status
-        else
-           echo "FEATURE_FLAGS is 'eap'. Allowing task execution to continue."
-        fi
-  - &check_and_allow_for_non_eap_build
-    command: shell.exec
-    type: test
-    params:
-      shell: bash
-      working_dir: mongosql-odbc-driver
-      script: |
-        ${PREPARE_SHELL}
-        if [ "${FEATURE_FLAGS}" == "eap" ]; then
-          echo "FEATURE_FLAGS (${FEATURE_FLAGS}) is 'eap'. Stopping task execution."
-          curl -d '{"status":"success", "should_continue": false}' -H "Content-Type: application/json" -X POST localhost:2285/task_status
-        else
-          echo "FEATURE_FLAGS is not 'eap'. Allowing task execution to continue."
-        fi
-
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -74,12 +44,6 @@ post:
   - func: "upload start_adf logs"
 
 functions:
-  "check and allow for eap build":
-    - *check_and_allow_for_eap_build
-
-  "check and allow for non-eap build":
-    - *check_and_allow_for_non_eap_build
-
   "generate third party licenses":
     - command: subprocess.exec
       params:
@@ -714,7 +678,7 @@ functions:
           cp target/release/*.dll installer/msi
           cp ./THIRD_PARTY_LICENSES.txt ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
           cd installer/msi
-          if [[ "$release_version" == "snapshot" || "$release_version" == "snapshot-eap" ]]; then
+          if [[ "$release_version" == "snapshot" ]]; then
               MINOR_VERSION="0.1"
               VERSION_LABEL="0.1.0"
           else
@@ -1467,8 +1431,8 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo build --release --features eap
-          cargo test mongosqltranslate_tests --features eap -- --nocapture
+          cargo build --release
+          cargo test mongosqltranslate_tests -- --nocapture
 
   "run ubuntu cluster type integration tests":
     - command: shell.exec
@@ -1488,35 +1452,25 @@ functions:
           # Start MongoDB instances
           ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
 
-          # Enterprise test no eap
+          # Enterprise test
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
-          ENTERPRISE_NO_MSQL_EXITCODE=$?
-          # Enterprise test eap
-          cargo test --features cluster_type_tests, eap -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
           ENTERPRISE_MSQL_EXITCODE=$?
-
-          # Enterprise test with eap
 
           # Community test
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
-          COMMUNITY_NO_MSQL_EXITCODE=$?
-          # Community test with eap
-          cargo test --features cluster_type_tests, eap -- cluster_type::test_determine_cluster_type_community_fails --nocapture
           COMMUNITY_MSQL_EXITCODE=$?
 
           # Stop MongoDB instances
           pkill mongod
 
-          if [ $ENTERPRISE_NO_MSQL_EXITCODE -eq 0 ] && [ $ENTERPRISE_MSQL_EXITCODE -eq 0 ] && [ $COMMUNITY_NO_MSQL_EXITCODE -eq 0 ] && [ $COMMUNITY_MSQL_EXITCODE -eq 0 ] ; then
+          if [ $ENTERPRISE_MSQL_EXITCODE -eq 0 ] && [ $COMMUNITY_MSQL_EXITCODE -eq 0 ] ; then
             OVERALL_EXITCODE=0
           else
             OVERALL_EXITCODE=1
           fi
 
           echo "Cluster test results:"
-          echo "Enterprise no mongosql test exit code: $ENTERPRISE_NO_MSQL_EXITCODE"
           echo "Enterprise mongosql test exit code: $ENTERPRISE_MSQL_EXITCODE"
-          echo "Community no mongosql test exit code: $COMMUNITY_NO_MSQL_EXITCODE"
           echo "Community mongosql test exit code: $COMMUNITY_MSQL_EXITCODE"
           echo "Overall exit code: $OVERALL_EXITCODE"
 
@@ -2150,7 +2104,6 @@ tasks:
     depends_on:
       - name: trace-artifacts
     commands:
-      - func: "check and allow for non-eap build"
       - func: "update download center feed"
 
   - name: release
@@ -2276,12 +2229,6 @@ buildvariants:
       - name: windows-test-result-set-group
       - name: sign
         run_on: ubuntu2204-large
-      - name: compile-eap
-      - name: windows-windows-test-unit-group-eap
-      - name: windows-test-integration-group-eap
-      - name: windows-test-result-set-group-eap
-      - name: sign-eap
-        run_on: ubuntu2204-large
 
   - name: ubuntu2204
     tags: ["release-variant"]
@@ -2291,16 +2238,11 @@ buildvariants:
       - sql-engines-common-test-infra
     tasks:
       - name: compile
-      - name: compile-eap
       - name: unit-test
-      - name: unit-test-eap
       - name: integration-test
-      - name: integration-test-eap
       - name: result-set-test
-      - name: result-set-test-eap
       - name: asan-unit-tests
       - name: sign
-      - name: sign-eap
 
   - name: macos-arm
     display_name: "macOS arm64"
@@ -2323,7 +2265,6 @@ buildvariants:
       - name: make-odbc-docs
       - name: release
       - name: snapshot
-      - name: snapshot-eap
       - name: trace-artifacts
       - name: download-center-update
       - name: ssdlc-artifacts-release
