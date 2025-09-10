@@ -85,6 +85,8 @@ impl MongoQuery {
             // "dbName": { "collection1" : "Schema1", "collection2" : "Schema2", ... }
             let schema_catalog_aggregation_pipeline = vec![
                 doc! {"$match": {
+                    // Only retrieve documents with a schema.
+                    "schema": { "$exists": true },
                     "_id": {
                         "$in": &collection_names
                         }

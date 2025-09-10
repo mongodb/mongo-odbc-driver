@@ -4242,7 +4242,7 @@ pub unsafe extern "C" fn SQLTablesW(
             let catalog = input_text_to_string_w(catalog_name, name_length_1.into());
             let schema = input_text_to_string_w_allow_null(schema_name, name_length_2.into());
             let table = input_text_to_string_w_allow_null(table_name, name_length_3.into());
-            let table_t = input_text_to_string_w(table_type, name_length_4.into());
+            let table_t = input_text_to_string_w_allow_null(table_type, name_length_4.into());
             let connection = (*stmt.connection).as_connection().unwrap();
             let max_string_length = *connection.max_string_length.read().unwrap();
             let mongo_statement = sql_tables(

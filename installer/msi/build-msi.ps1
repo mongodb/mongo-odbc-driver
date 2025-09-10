@@ -25,6 +25,22 @@ $resourceDir = Get-Location
 $binDir = Get-Location
 $objDIr = ".\objs\"
 $WixPath = "C:\wixtools\bin\"
+if (-not (Test-Path -Path $WixPath)) {
+    $WixPath = "C:\Program Files (x86)\WiX Toolset\bin"
+}
+if (-not (Test-Path -Path $WixPath)) {
+    $WixPath = "C:\Program Files\WiX Toolset\bin"
+}
+if (-not (Test-Path -Path $WixPath)) {
+    $WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
+}
+if (-not (Test-Path -Path $WixPath)) {
+    $WixPath = "C:\Program Files\WiX Toolset v3.11\bin"
+}
+if (-not (Test-Path -Path $WixPath)) {
+    Write-Host "could not find Wix"
+    exit 1
+}
 # for local building, most installations will be in the directory below
 # $WixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $wixUiExt = "$WixPath\WixUIExtension.dll"

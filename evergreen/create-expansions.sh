@@ -14,10 +14,11 @@ export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
 export LD_LIBRARY_PATH="$INSTALLED_ODBC_PATH/lib"
 if [ "Windows_NT" == "$OS" ]; then
     export CARGO_BIN="$HOME/.rustup/bin:$HOME/.cargo/bin"
+    export PATH="/cygdrive/c/cmake-3.31.8/bin:$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
 else
     export CARGO_BIN="$HOME/.cargo/bin"
+    export PATH="$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
 fi
-export PATH="$CARGO_BIN:$LD_LIBRARY_PATH:$PATH"
 export DUMP_FOLDER=dumps
 export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
 export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo

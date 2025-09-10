@@ -21,6 +21,7 @@ timeout:
       script: |
         ls -la
 
+# Pull in sql-enginers-common-test-infra as a module
 modules:
   - name: sql-engines-common-test-infra
     owner: mongodb
@@ -761,7 +762,7 @@ functions:
     - command: s3.put
       params:
         build_variants:
-          - macos
+          - macos-arm
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.dylib
@@ -772,7 +773,7 @@ functions:
     - command: s3.put
       params:
         build_variants:
-          - macos
+          - macos-arm
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
         local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.dmg
@@ -827,7 +828,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/docs/MongoDB_ODBC_Guide.pdf
-        remote_file: eap/mongodb-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
+        remote_file: mongodb-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
         bucket: translators-connectors-releases
         permissions: public-read
         skip_existing: false
@@ -878,7 +879,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.dll
-        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsql.dll
+        remote_file: mongosql-odbc-driver/windows/${release_version}/release/atsql.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -894,7 +895,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsqls.dll
-        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsqls.dll
+        remote_file: mongosql-odbc-driver/windows/${release_version}/release/atsqls.dll
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -910,7 +911,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.pdb
-        remote_file: eap/mongosql-odbc-driver/windows/${release_version}/release/atsql.pdb
+        remote_file: mongosql-odbc-driver/windows/${release_version}/release/atsql.pdb
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -946,7 +947,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
-        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${release_version}/release/${UBUNTU_FILENAME}.sig
+        remote_file: mongosql-odbc-driver/ubuntu2204/${release_version}/release/${UBUNTU_FILENAME}.sig
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -964,7 +965,7 @@ functions:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/target/release/libatsql.so
-        remote_file: eap/mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1823,13 +1824,14 @@ tasks:
       - func: "scan SBOM"
       - func: "augment SBOM"
 
+  # Removed macos x86 as part of SQL-2942
   - name: compile
     depends_on:
       - name: sbom
         variant: code-quality-security
     commands:
       - func: "install iODBC"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
       - func: "install rust toolchain"
         variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install unix odbc"
@@ -1844,13 +1846,13 @@ tasks:
       - func: "compile ubuntu and win release"
         variants: [ubuntu2204, windows-64]
       - func: "compile macos release"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
       - func: "build msi"
         variants: [windows-64]
       - func: "tar linux artifacts"
         variants: [ubuntu2204]
       - func: "build dmg"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
       - func: "mciuploads release artifacts"
 
   - name: unit-test
@@ -1858,7 +1860,7 @@ tasks:
       - func: "install rust toolchain"
         variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install iODBC"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "run windows unit tests"
@@ -1868,7 +1870,7 @@ tasks:
       - func: "run ubuntu rfc8252_http_server tests"
         variants: [ubuntu2204]
       - func: "run macos unit tests"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
 
   - name: integration-test
     depends_on:
@@ -1877,17 +1879,17 @@ tasks:
       - func: "install rust toolchain"
         variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "install iODBC"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "compile release with debug info"
         variants: [ubuntu2204]
       - func: "compile macos release with debug info"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
       - func: "setup driver with UnixODBC"
         variants: [ubuntu2204]
       - func: "setup driver with iODBC"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
       - func: "prepare resources"
         variants: [windows-64, ubuntu2204]
       - func: "update orchestrator mongod port"
@@ -1911,7 +1913,7 @@ tasks:
       - func: "run windows integration tests"
         variants: [windows-64]
       - func: "run macos integration tests"
-        variants: [macos, macos-arm]
+        variants: [macos-arm]
 
   - name: asan-unit-tests
     commands:
@@ -1935,19 +1937,19 @@ tasks:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64, macos, macos-arm]
+        variants: [ubuntu2204, windows-64, macos-arm]
       # - func: "install iODBC"
-      #   variants: [macos, macos-arm]
+      #   variants: [macos-arm]
       - func: "install unix odbc"
         variants: [ubuntu2204]
       - func: "compile release with debug info"
         variants: [ubuntu2204]
       # - func: "compile macos release with debug info"
-      #   variants: [macos, macos-arm]
+      #   variants: [macos-arm]
       - func: "setup driver with UnixODBC"
         variants: [ubuntu2204]
       # - func: "setup driver with iODBC"
-      #   variants: [macos, macos-arm]
+      #   variants: [macos-arm]
       - func: "prepare resources"
         variants: [windows-64, ubuntu2204]
       - func: "update orchestrator mongod port"
@@ -1963,7 +1965,7 @@ tasks:
       - func: "run ubuntu result-set tests"
         variants: [ubuntu2204]
       # - func: "run macos result-set tests"
-      #   variants: [macos, macos-arm]
+      #   variants: [macos-arm]
       # Commenting out because the following task only detects
       # memory leaks in the tests
       # - func: "run asan result-set tests"
@@ -2142,7 +2144,7 @@ buildvariants:
   - name: windows-64
     tags: ["release-variant"]
     display_name: Windows (64-bit)
-    run_on: [windows-64-vsMulti-small]
+    run_on: [windows-2022-large]
     modules:
       - sql-engines-common-test-infra
     tasks:
@@ -2177,18 +2179,6 @@ buildvariants:
       - name: asan-unit-tests
       - name: sign
       - name: sign-eap
-
-  - name: macos
-    display_name: "macOS"
-    run_on: [macos-11]
-    modules:
-      - sql-engines-common-test-infra
-    tasks:
-      - name: compile
-      - name: unit-test
-      # SQL-1841: Investigate iodbc hanging with odbc 2 integration tests
-      # - name: integration-test
-      - name: result-set-test
 
   - name: macos-arm
     display_name: "macOS arm64"

@@ -149,3 +149,9 @@ tests:
           "",
         ]
       - ["integration_test", null, "example", "TABLE", ""]
+
+  - description: SQLTablesW SQL_ALL_TABLES with null value and  SQL_NTS length lists all tables
+    test_definition: ["sqltablesw", "%2", -3, null, -3, null, -3, null, -3]
+    db: integration_test
+    expected_result:
+      - ["integration_test_2", null, "example_2", "TABLE", ""]

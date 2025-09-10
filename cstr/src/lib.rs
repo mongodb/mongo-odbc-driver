@@ -93,6 +93,9 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: isize) -> String {
 ///
 #[allow(clippy::uninit_vec)]
 pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> String {
+    if text.is_null() {
+        panic!("input_text_to_string_w: text pointer was null.");
+    }
     match len.signum() {
         -1 => {
             let mut dst = Vec::new();
