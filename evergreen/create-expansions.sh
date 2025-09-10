@@ -29,28 +29,11 @@ export FEATURE_FLAGS=""
 export PRODUCT_NAME="mongoodbc"
 export PATH_PREFIX=""
 
-echo "snapshot-eap: ${snapshot-eap}"
 
 if [[ "${triggered_by_git_tag}" != "" ]]; then
     export release_version=$(echo ${triggered_by_git_tag} | sed s/v//)
-
-    # Check if this is a beta tag or snapshot-eap is set to true
-    if [[ "${triggered_by_git_tag}" == *"beta"* || "${snapshot-eap}" == "true" ]]; then
-        export FEATURE_FLAGS="eap"
-        export PRODUCT_NAME="mongoodbc-eap"
-        export PATH_PREFIX="eap/"
-    fi
 else
-    # If not a tag, we are in a snapshot build. We need to see if we're in beta mode or not
-    # and set the release version to either snapshot or snapshot-eap
-    if [[ "${snapshot-eap}" == "true" ]]; then
-        export release_version="snapshot-eap"
-        export FEATURE_FLAGS="eap"
-        export PRODUCT_NAME="mongoodbc-eap"
-        echo "Building EAP version"
-    else
-        export release_version="snapshot"
-    fi
+    export release_version="snapshot"
 fi
 
 export MSI_FILENAME="$PRODUCT_NAME-$release_version.msi"
