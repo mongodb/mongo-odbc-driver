@@ -170,33 +170,14 @@ impl MongoConnection {
 
         let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await })?;
         match type_of_cluster {
-            MongoClusterType::AtlasDataFederation => {}
-            MongoClusterType::Enterprise => {
-                #[cfg(not(feature = "eap"))]
-                return Err(Error::UnsupportedClusterConfiguration(
-                    "Unsupported cluster type. The driver is intended for use with MongoDB Atlas Data Federation."
-                        .to_string(),
-                ));
-            }
+            MongoClusterType::AtlasDataFederation | MongoClusterType::Enterprise => {}
             MongoClusterType::Community => {
                 // Community edition is not supported
-                #[cfg(not(feature = "eap"))]
-                return Err(Error::UnsupportedClusterConfiguration(
-                    "Community edition detected. The driver is intended for use with MongoDB Atlas Data Federation."
-                        .to_string(),
-                ));
-                #[cfg(feature = "eap")]
                 return Err(Error::UnsupportedClusterConfiguration(
                     "Community edition detected. The driver is intended for use with MongoDB Enterprise edition or Atlas Data Federation.".to_string(),
                 ));
             }
             MongoClusterType::UnknownTarget => {
-                // Unknown cluster type is not supported
-                #[cfg(not(feature = "eap"))]
-                return Err(Error::UnsupportedClusterConfiguration(
-                    "Unknown cluster/target type detected. The driver is intendended for use with MongoDB Atlas Data Federation".to_string(),
-                ));
-                #[cfg(feature = "eap")]
                 return Err(Error::UnsupportedClusterConfiguration(
                     "Unknown cluster/target type detected. The driver is intended for use with MongoDB Enterprise edition or Atlas Data Federation.".to_string(),
                 ));
