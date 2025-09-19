@@ -265,26 +265,6 @@ functions:
         bucket: mciuploads
         permissions: public-read
 
-  "publish compliance report":
-    - command: s3.get
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
-        remote_file: mongosql-odbc-driver/artifacts/mongosql-odbc-driver_${version_id}/ssdlc/${COMPLIANCE_REPORT_NAME}
-        content_type: text/markdown
-        bucket: mciuploads
-    - command: s3.put
-      params:
-        aws_key: ${release_aws_key}
-        aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/${COMPLIANCE_REPORT_NAME}
-        remote_file: mongosql-odbc-driver/mongosql-odbc-${release_version}-compliance-report.md
-        content_type: text/markdown
-        bucket: translators-connectors-releases
-        permissions: public-read
-        display_name: mongosql-odbc-${release_version}-compliance-report.md
-
   "augment SBOM":
     - command: ec2.assume_role
       display_name: Assume IAM role with permissions to pull Kondukto API token
@@ -319,39 +299,17 @@ functions:
           docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
           --env-file ${workdir}/kondukto_credentials.env \
           artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:2.0 \
-          augment --repo mongodb/mongo-odbc-driver --branch ${branch_name} --sbom-in /pwd/$SBOM_FINAL --sbom-out /pwd/mongo-odbc-driver.augmented.sbom.json --force
+          augment --repo mongodb/mongo-odbc-driver --branch ${branch_name} --sbom-in /pwd/$SBOM_FINAL --sbom-out /pwd/${AUGMENTED_SBOM_FILENAME} --force
           echo "-------------------------------"
-
     - command: s3.put
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
-
-  "publish augmented SBOM":
-    - command: s3.get
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
-        content_type: application/json
-        bucket: mciuploads
-        permissions: public-read
-    - command: s3.put
-      params:
-        aws_key: ${release_aws_key}
-        aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/mongosql-odbc-${release_version}.sbom.json
-        bucket: translators-connectors-releases
-        content_type: application/json
-        permissions: public-read
-        display_name: mongosql-odbc-${release_version}.sbom.json
 
   "use latest mongosql version":
     - command: shell.exec
@@ -594,8 +552,8 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -607,7 +565,7 @@ functions:
           ${prepare_shell}
 
           cp target/release/*.dll installer/msi
-          cp ./THIRD_PARTY_LICENSES.txt ./README.md ./mongo-odbc-driver.augmented.sbom.json installer/msi
+          cp ./THIRD_PARTY_LICENSES.txt ./README.md ./${AUGMENTED_SBOM_FILENAME} installer/msi
           cd installer/msi
           if [[ "$release_version" == "snapshot" ]]; then
               MINOR_VERSION="0.1"
@@ -634,8 +592,8 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -968,8 +926,8 @@ functions:
       params:
         aws_key: ${aws_key}
         aws_secret: ${aws_secret}
-        local_file: mongosql-odbc-driver/mongo-odbc-driver.augmented.sbom.json
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/mongo-odbc-driver.augmented.sbom.json
+        local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
         content_type: application/json
         bucket: mciuploads
         permissions: public-read
@@ -982,7 +940,7 @@ functions:
 
           mkdir -p release/mongoodbc/bin
           cp target/release/*.so release/mongoodbc/bin/
-          cp ./LICENSE ./README.md ./mongo-odbc-driver.augmented.sbom.json release/mongoodbc/
+          cp ./LICENSE ./README.md ./${AUGMENTED_SBOM_FILENAME} release/mongoodbc/
           cd release
           tar -czvf $UBUNTU_FILENAME mongoodbc/
 
@@ -2012,7 +1970,9 @@ tasks:
       - func: "generate compliance report"
         vars:
           release_version: ${release_version}
-          template_filepath: "resources/ssdlc/mongo-odbc-driver_compliance_report_template.md"
+          repo_name: "mongo-odbc-driver"
+          repo_title: "Mongo ODBC Driver"
+          signing_title: "verify-integrity-of-mongodb-odbc-driver-packages"
       - func: "publish compliance report"
 
   - name: ssdlc-artifacts-snapshot
@@ -2030,7 +1990,9 @@ tasks:
       - func: "generate compliance report"
         vars:
           release_version: ${release_version}
-          template_filepath: "resources/ssdlc/mongo-odbc-driver_compliance_report_template.md"
+          repo_name: "mongo-odbc-driver"
+          repo_title: "Mongo ODBC Driver"
+          signing_title: "verify-integrity-of-mongodb-odbc-driver-packages"
       - func: "publish compliance report"
 
 task_groups:

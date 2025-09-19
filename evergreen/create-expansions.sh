@@ -37,9 +37,10 @@ fi
 
 export MSI_FILENAME="$PRODUCT_NAME-$release_version.msi"
 export UBUNTU_FILENAME="$PRODUCT_NAME-$release_version.tar.gz"
-export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
+export COMPLIANCE_REPORT_NAME="mongosql-odbc-${release_version}-compliance-report.md"
 export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-${release_version}.sast.sarif"
 export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
+export AUGMENTED_SBOM_FILENAME="mongo-odbc-driver.augmented.sbom.json"
 export SBOM_FILENAME="mongosql-odbc-${release_version}.sbom.json"
 
 cat <<EOT >expansions.yml
@@ -65,6 +66,7 @@ MONGODB_BINARIES: "$MONGODB_BINARIES"
 SBOM_DIR: "$SBOM_DIR"
 SBOM_LICENSES: "$SBOM_LICENSES"
 SBOM_FILENAME: "$SBOM_FILENAME"
+AUGMENTED_SBOM_FILENAME: "$AUGMENTED_SBOM_FILENAME"
 prepare_shell: |
   set -o errexit
   export release_version="$release_version"
@@ -98,6 +100,7 @@ prepare_shell: |
   export SBOM_DIR="$SBOM_DIR"
   export SBOM_LICENSES="$SBOM_LICENSES"
   export SBOM_FILENAME="$SBOM_FILENAME"
+  export AUGMENTED_SBOM_FILENAME="$AUGMENTED_SBOM_FILENAME"
   export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
   export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
   export COMPLIANCE_REPORT_NAME="$COMPLIANCE_REPORT_NAME"
