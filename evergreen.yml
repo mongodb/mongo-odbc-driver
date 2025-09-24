@@ -127,6 +127,10 @@ functions:
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
+        include_expansions_in_env:
+          - SBOM_DIR
+          - SBOM_LICENSES
+          - SBOM_VULN
         script: |
           ${prepare_shell}
           echo ">>>> Install SBOM tool..."
@@ -1732,6 +1736,7 @@ tasks:
           cargo_file: "odbc/Cargo.toml"
           package_name: "odbc"
       - func: "use latest mongosql version"
+      - func: "create ssdlc expansions"
       - func: "generate SBOM"
       - func: "scan SBOM"
       - func: "augment SBOM"
@@ -1951,6 +1956,7 @@ tasks:
   - name: semgrep
     exec_timeout_secs: 3600 # 1h
     commands:
+      - func: "create ssdlc expansions"
       - func: "generate static code analysis"
 
   - name: ssdlc-artifacts-release
@@ -1965,14 +1971,15 @@ tasks:
         variant: code-quality-security
     exec_timeout_secs: 300 # 5m
     commands:
+      - func: "create ssdlc expansions"
       - func: "publish static code analysis"
       - func: "publish augmented SBOM"
       - func: "generate compliance report"
         vars:
           release_version: ${release_version}
           repo_name: "mongo-odbc-driver"
-          repo_title: "Mongo ODBC Driver"
-          signing_title: "verify-integrity-of-mongodb-odbc-driver-packages"
+          product_name: "Mongo ODBC Driver"
+          signing_section_bookmark: "verify-integrity-of-mongodb-odbc-driver-packages"
       - func: "publish compliance report"
 
   - name: ssdlc-artifacts-snapshot
@@ -1985,14 +1992,15 @@ tasks:
         variant: code-quality-security
     exec_timeout_secs: 300 # 5m
     commands:
+      - func: "create ssdlc expansions"
       - func: "publish static code analysis"
       - func: "publish augmented SBOM"
       - func: "generate compliance report"
         vars:
           release_version: ${release_version}
           repo_name: "mongo-odbc-driver"
-          repo_title: "Mongo ODBC Driver"
-          signing_title: "verify-integrity-of-mongodb-odbc-driver-packages"
+          product_name: "Mongo ODBC Driver"
+          signing_section_bookmark: "verify-integrity-of-mongodb-odbc-driver-packages"
       - func: "publish compliance report"
 
 task_groups:
