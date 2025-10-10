@@ -41,6 +41,7 @@ variables:
 pre:
   - func: "fetch source"
   - func: "generate expansions"
+  - func: "create ssdlc expansions"
 
 post:
   - func: "upload start_adf logs"
@@ -1736,7 +1737,6 @@ tasks:
           cargo_file: "odbc/Cargo.toml"
           package_name: "odbc"
       - func: "use latest mongosql version"
-      - func: "create ssdlc expansions"
       - func: "generate SBOM"
       - func: "scan SBOM"
       - func: "augment SBOM"
@@ -1956,7 +1956,6 @@ tasks:
   - name: semgrep
     exec_timeout_secs: 3600 # 1h
     commands:
-      - func: "create ssdlc expansions"
       - func: "generate static code analysis"
 
   - name: ssdlc-artifacts-release
@@ -1971,7 +1970,6 @@ tasks:
         variant: code-quality-security
     exec_timeout_secs: 300 # 5m
     commands:
-      - func: "create ssdlc expansions"
       - func: "publish static code analysis"
       - func: "publish augmented SBOM"
       - func: "generate compliance report"
@@ -1992,7 +1990,6 @@ tasks:
         variant: code-quality-security
     exec_timeout_secs: 300 # 5m
     commands:
-      - func: "create ssdlc expansions"
       - func: "publish static code analysis"
       - func: "publish augmented SBOM"
       - func: "generate compliance report"
