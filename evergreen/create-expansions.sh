@@ -23,8 +23,6 @@ export DUMP_FOLDER=dumps
 export LOCAL_DUMP_ORIGINAL_REG_VAL=local_dump_original_value.reg
 export MONGOODBC_DEBUGGING_INFO_ARCHIVE=crashDebuggingInfo
 export SCRIPT_FOLDER=resources
-export COMPLIANCE_REPORT_NAME="mongo-odbc-driver_compliance_report.md"
-export STATIC_CODE_ANALYSIS_NAME="mongo-odbc-driver.sast.sarif"
 export FEATURE_FLAGS=""
 export PRODUCT_NAME="mongoodbc"
 export PATH_PREFIX=""
@@ -48,14 +46,13 @@ MSI_FILENAME: "$MSI_FILENAME"
 UBUNTU_FILENAME: "$UBUNTU_FILENAME"
 WINDOWS_INSTALLER_PATH: "mongosql-odbc-driver/windows/$release_version/release/$MSI_FILENAME"
 UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$release_version/release/$UBUNTU_FILENAME"
-COMPLIANCE_REPORT_NAME: "$COMPLIANCE_REPORT_NAME"
-STATIC_CODE_ANALYSIS_NAME: "$STATIC_CODE_ANALYSIS_NAME"
 PROJECT_DIRECTORY: "$(pwd)"
 DRIVERS_TOOLS: "$DRIVERS_TOOLS"
 cargo_bin: "$CARGO_BIN"
 common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
 skip_machete_build: "true"
 script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
+resources_dir: "$COMMON_TEST_INFRA_DIR/evergreen/resources"
 working_dir: "mongosql-odbc-driver"
 MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
 MONGODB_BINARIES: "$MONGODB_BINARIES"
@@ -89,12 +86,7 @@ prepare_shell: |
   export SRV_TEST_PWD="${srv_test_pwd}"
   export SCRIPT_FOLDER="$SCRIPT_FOLDER"
   export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
-  export SBOM_DIR="sbom_tools"
-  export SBOM_LICENSES="mongo-odbc-driver.licenses.cdx.json"
-  export SBOM_VULN="mongo-odbc-driver.merge.grype.cdx.json"
   export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
-  export COMPLIANCE_REPORT_NAME="$COMPLIANCE_REPORT_NAME"
-  export STATIC_CODE_ANALYSIS_NAME="$STATIC_CODE_ANALYSIS_NAME"
   export ALLOW_VULNS="${AllowVulns}"
 
   # Windows variables
