@@ -2078,7 +2078,7 @@ buildvariants:
   - name: ubuntu2204
     tags: ["release-variant"]
     display_name: Ubuntu 22.04
-    run_on: [rhel8.9-sslv3]
+    run_on: [rhel8.9-arm64-sslv3-small]
     modules:
       - sql-engines-common-test-infra
     tasks:
