@@ -2081,6 +2081,12 @@ buildvariants:
     run_on: [rhel8.9-arm64-sslv3-small]
     modules:
       - sql-engines-common-test-infra
+    expansions:
+      OPENSSL_LIB_DIR: "/opt/openssl3/lib64"
+      LD_LIBRARY_PATH: "/opt/openssl3/lib64"
+      OPENSSL_INCLUDE_DIR: "/opt/openssl3/include"
+      RUSTFLAGS: "-L native=/opt/openssl3/lib64"
+      LIBCLANG_PATH: "/opt/mongodbtoolchain/v5/lib"
     tasks:
       - name: compile
       - name: unit-test
