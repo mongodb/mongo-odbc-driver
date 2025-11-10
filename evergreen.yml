@@ -2078,17 +2078,19 @@ buildvariants:
   - name: ubuntu2204
     tags: ["release-variant"]
     display_name: Ubuntu 22.04
-    run_on: [rhel8.9-arm64-sslv3-small]
+    run_on: [ubuntu2204-large]
     modules:
       - sql-engines-common-test-infra
-    expansions:
-      OPENSSL_LIB_DIR: "/opt/openssl3/lib64"
-      LD_LIBRARY_PATH: "/opt/openssl3/lib64"
-      OPENSSL_INCLUDE_DIR: "/opt/openssl3/include"
-      RUSTFLAGS: "-L native=/opt/openssl3/lib64"
-      LIBCLANG_PATH: "/opt/mongodbtoolchain/v5/lib"
+    # Move these to only be in the compile task
     tasks:
       - name: compile
+        expansions:
+          OPENSSL_LIB_DIR: "/opt/openssl3/lib64"
+          LD_LIBRARY_PATH: "/opt/openssl3/lib64"
+          OPENSSL_INCLUDE_DIR: "/opt/openssl3/include"
+          RUSTFLAGS: "-L native=/opt/openssl3/lib64"
+          LIBCLANG_PATH: "/opt/mongodbtoolchain/v5/lib"
+        run_on: [rhel8.9-sslv3-large]
       - name: unit-test
       - name: integration-test
       - name: result-set-test
