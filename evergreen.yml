@@ -121,6 +121,21 @@ functions:
       owner: 10gen
       repo: mongohouse
       expansion_name: github_token
+  "confirm dependencies with list dynamic dependencies (LDD)":
+    - command: shell.exec
+      params:
+        shell: bash
+        working_dir: mongosql-odbc-driver
+        script: |
+          echo ">>>> Listing Dependencies with LDD"
+          echo "OPENSSL_LIB_DIR = $OPENSSL_LIB_DIR"
+          echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+          echo "RUSTFLAGS = $RUSTFLAGS"
+          echo "LIBCLANG_PATH = $LIBCLANG_PATH"
+          cd ./target/release
+          echo "Running LDD against libatsql.so"
+          ldd -v -u libatsql.so
+          echo "------------------------------------"
 
   "generate SBOM":
     - command: shell.exec
@@ -426,6 +441,7 @@ functions:
       params:
         shell: bash
         working_dir: mongosql-odbc-driver
+        add_expansions_to_env: true
         script: |
           ${prepare_shell}
           # Compile release build with features if needed
@@ -1762,6 +1778,8 @@ tasks:
         variants: [ubuntu2204, windows-64, macos, macos-arm]
       - func: "compile ubuntu and win release"
         variants: [ubuntu2204, windows-64]
+      - func: "confirm dependencies with list dynamic dependencies (LDD)"
+        variants: [ ubuntu2204 ]
       - func: "compile macos release"
         variants: [macos-arm]
       - func: "build msi"
@@ -2081,15 +2099,14 @@ buildvariants:
     run_on: [ubuntu2204-large]
     modules:
       - sql-engines-common-test-infra
-    # Move these to only be in the compile task
+    expansions:
+      OPENSSL_LIB_DIR: "/opt/openssl3/lib64"
+      LD_LIBRARY_PATH: "/opt/openssl3/lib64"
+      OPENSSL_INCLUDE_DIR: "/opt/openssl3/include"
+      RUSTFLAGS: "-L native=/opt/openssl3/lib64"
+      LIBCLANG_PATH: "/opt/mongodbtoolchain/v5/lib"
     tasks:
       - name: compile
-        expansions:
-          OPENSSL_LIB_DIR: "/opt/openssl3/lib64"
-          LD_LIBRARY_PATH: "/opt/openssl3/lib64"
-          OPENSSL_INCLUDE_DIR: "/opt/openssl3/include"
-          RUSTFLAGS: "-L native=/opt/openssl3/lib64"
-          LIBCLANG_PATH: "/opt/mongodbtoolchain/v5/lib"
         run_on: [rhel8.9-sslv3-large]
       - name: unit-test
       - name: integration-test
