@@ -385,7 +385,9 @@ impl ODBCUri {
         let mut client_options = parse_func().await.map_err(Error::InvalidClientOptions)?;
         // the dns resolver is a private, unchangable field in ClientOptions, so we create a second set
         // with the default resolver as a fallback when Cloudflare fails on windows.
-        let mut fallback_client_options = ClientOptions::parse(uri).await.map_err(Error::InvalidClientOptions)?;
+        let mut fallback_client_options = ClientOptions::parse(uri)
+            .await
+            .map_err(Error::InvalidClientOptions)?;
         if client_options.credential.is_some() {
             // user name set as attribute should supercede mongo uri
             let user = self.remove(USER_KWS);
@@ -403,13 +405,25 @@ impl ODBCUri {
             // set as attributes.
             let user = self.remove_mandatory_attribute(USER_KWS)?;
             let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
-            client_options.credential =
-                Some(Credential::builder().username(user.clone()).password(pwd.clone()).build());
+            client_options.credential = Some(
+                Credential::builder()
+                    .username(user.clone())
+                    .password(pwd.clone())
+                    .build(),
+            );
         }
         fallback_client_options.credential = client_options.credential.clone();
 
-        Self::set_server_and_source(&mut client_options, server.clone(), source.map(String::from))?;
-        Self::set_server_and_source(&mut fallback_client_options, server, source.map(String::from))?;
+        Self::set_server_and_source(
+            &mut client_options,
+            server.clone(),
+            source.map(String::from),
+        )?;
+        Self::set_server_and_source(
+            &mut fallback_client_options,
+            server,
+            source.map(String::from),
+        )?;
 
         let app_name = self.handle_app_name(client_options.app_name);
         let driver_name = self.handle_driver_info(app_name.as_ref().unwrap());
@@ -479,13 +493,13 @@ impl ODBCUri {
         let app_name = self.handle_app_name(None);
         let driver_name = self.handle_driver_info(app_name.as_ref().unwrap());
         let client_options = ClientOptions::builder()
-                .hosts(vec![
-                    ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
-                ])
-                .credential(cred)
-                .app_name(app_name)
-                .driver_info(driver_name)
-                .build();
+            .hosts(vec![
+                ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
+            ])
+            .credential(cred)
+            .app_name(app_name)
+            .driver_info(driver_name)
+            .build();
         Ok(UserOptions {
             client_options: client_options.clone(),
             fallback_client_options: client_options,
