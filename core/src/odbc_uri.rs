@@ -77,6 +77,7 @@ lazy_static! {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserOptions {
     pub client_options: ClientOptions,
+    pub fallback_client_options: ClientOptions,
     pub uuid_representation: Option<UuidRepresentation>,
 }
 
@@ -382,12 +383,14 @@ impl ODBCUri {
             }
         };
         let mut client_options = parse_func().await.map_err(Error::InvalidClientOptions)?;
-
+        // the dns resolver is a private, unchangable field in ClientOptions, so we create a second set
+        // with the default resolver as a fallback when Cloudflare fails on windows.
+        let mut fallback_client_options = ClientOptions::parse(uri).await.map_err(Error::InvalidClientOptions)?;
         if client_options.credential.is_some() {
             // user name set as attribute should supercede mongo uri
             let user = self.remove(USER_KWS);
             if user.is_some() {
-                client_options.credential.as_mut().unwrap().username = user;
+                client_options.credential.as_mut().unwrap().username = user.clone();
             }
             // password set as attribute should supercede mongo uri
             let pwd = self.remove(PWD_KWS);
@@ -401,58 +404,69 @@ impl ODBCUri {
             let user = self.remove_mandatory_attribute(USER_KWS)?;
             let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
             client_options.credential =
-                Some(Credential::builder().username(user).password(pwd).build());
+                Some(Credential::builder().username(user.clone()).password(pwd.clone()).build());
         }
+        fallback_client_options.credential = client_options.credential.clone();
 
-        Self::set_server_and_source(&mut client_options, server, source.map(String::from))?;
+        Self::set_server_and_source(&mut client_options, server.clone(), source.map(String::from))?;
+        Self::set_server_and_source(&mut fallback_client_options, server, source.map(String::from))?;
 
         let app_name = self.handle_app_name(client_options.app_name);
         let driver_name = self.handle_driver_info(app_name.as_ref().unwrap());
-        client_options.app_name = app_name;
-        client_options.driver_info = Some(driver_name);
+        client_options.app_name = app_name.clone();
+        client_options.driver_info = Some(driver_name.clone());
+        fallback_client_options.app_name = app_name;
+        fallback_client_options.driver_info = Some(driver_name);
 
         let uuid_representation = ConnectionString::parse(uri)
             .map_err(Error::InvalidClientOptions)?
             .uuid_representation;
 
-        match client_options
-            .credential
-            .as_ref()
-            .unwrap()
-            .mechanism
-            .as_ref()
-        {
-            Some(AuthMechanism::MongoDbX509) => {
-                client_options.credential.as_mut().unwrap().username = None;
-                client_options.credential.as_mut().unwrap().password = None;
-            }
-            Some(AuthMechanism::MongoDbOidc) => {
-                use futures::future::FutureExt;
-                let cred = client_options.credential.as_mut().unwrap();
-                cred.oidc_callback = mongodb::options::oidc::Callback::human(move |c| {
-                    async move { crate::oidc_auth::oidc_call_back(c).await }.boxed()
-                });
-                // Unset the password and username if they are empty strings.
-                // This is to accommodate tools like Power BI that require adding empty username and password fields.
-                // Note: OIDC (OpenID Connect) never uses a password.
-                cred.password = None;
-                cred.username = cred.username.as_ref().and_then(|x| {
-                    if x.is_empty() {
-                        None
-                    } else {
-                        Some(x.clone())
+        macro_rules! handle_auth_mechanism {
+            ($client_options:expr) => {
+                match $client_options
+                    .credential
+                    .as_ref()
+                    .unwrap()
+                    .mechanism
+                    .as_ref()
+                {
+                    Some(AuthMechanism::MongoDbX509) => {
+                        $client_options.credential.as_mut().unwrap().username = None;
+                        $client_options.credential.as_mut().unwrap().password = None;
                     }
-                });
-            }
-            #[cfg(not(target_os = "windows"))]
-            Some(AuthMechanism::Gssapi) => {
-                client_options.credential.as_mut().unwrap().password = None;
-            }
-            _ => {}
+                    Some(AuthMechanism::MongoDbOidc) => {
+                        use futures::future::FutureExt;
+                        let cred = $client_options.credential.as_mut().unwrap();
+                        cred.oidc_callback = mongodb::options::oidc::Callback::human(move |c| {
+                            async move { crate::oidc_auth::oidc_call_back(c).await }.boxed()
+                        });
+                        // Unset the password and username if they are empty strings.
+                        // This is to accommodate tools like Power BI that require adding empty username and password fields.
+                        // Note: OIDC (OpenID Connect) never uses a password.
+                        cred.password = None;
+                        cred.username = cred.username.as_ref().and_then(|x| {
+                            if x.is_empty() {
+                                None
+                            } else {
+                                Some(x.clone())
+                            }
+                        });
+                    }
+                    #[cfg(not(target_os = "windows"))]
+                    Some(AuthMechanism::Gssapi) => {
+                        $client_options.credential.as_mut().unwrap().password = None;
+                    }
+                    _ => {}
+                }
+            };
         }
+        handle_auth_mechanism!(client_options);
+        handle_auth_mechanism!(fallback_client_options);
 
         Ok(UserOptions {
             client_options,
+            fallback_client_options,
             uuid_representation,
         })
     }
@@ -464,15 +478,17 @@ impl ODBCUri {
         let cred = Credential::builder().username(user).password(pwd).build();
         let app_name = self.handle_app_name(None);
         let driver_name = self.handle_driver_info(app_name.as_ref().unwrap());
-        Ok(UserOptions {
-            client_options: ClientOptions::builder()
+        let client_options = ClientOptions::builder()
                 .hosts(vec![
                     ServerAddress::parse(server).map_err(Error::InvalidClientOptions)?
                 ])
                 .credential(cred)
                 .app_name(app_name)
                 .driver_info(driver_name)
-                .build(),
+                .build();
+        Ok(UserOptions {
+            client_options: client_options.clone(),
+            fallback_client_options: client_options,
             uuid_representation: None,
         })
     }
