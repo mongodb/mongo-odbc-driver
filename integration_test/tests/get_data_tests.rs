@@ -59,8 +59,12 @@ mod integration {
         buffer_size: isize,
     ) {
         let mut successful_fetch_count = 0;
+
+        // Let's ensure we don't have overflow when taking abs of isize::MIN
+        let buffer_size_abs:usize = buffer_size.checked_abs().expect("buffer_size overflow on isize::MIN") as usize;
+
         let target_value_ptr =
-            Box::into_raw(Box::from(vec![0u16; (-buffer_size) as usize]) as Box<[u16]>).cast::<c_void>();
+            Box::into_raw(Box::from(vec![0u16; buffer_size_abs]) as Box<[u16]>).cast::<c_void>();
         let buffer_length = isize::try_from(buffer_size * (std::mem::size_of::<u16>() as isize))
             .expect("Buffer length is too large to convert to isize.");
         let str_len_or_ind_ptr = Box::into_raw(Box::from(0isize) as Box<isize>).cast::<isize>();
@@ -101,17 +105,20 @@ mod integration {
             let _ = Box::from_raw(str_len_or_ind_ptr.cast::<isize>());
         }
     }
-    /*
+
+
     #[test]
     fn get_data_with_various_buffer_sizes() {
         let buffer_sizes = [
-            u8::MAX as usize,
-            u16::MAX as usize,
+            i8::MAX as isize,
+            i16::MAX as isize,
             1024 * 1024 * 8,
-            u32::MAX as usize,
+            i32::MAX as isize
         ];
 
         for buffer_size in buffer_sizes {
+            println!("Running test with {buffer_size} buffer size");
+
             let (env_handle, conn_handle, stmt_handle) =
                 default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
 
@@ -153,7 +160,6 @@ mod integration {
             }
         }
     }
-    */
 
     #[test]
     fn get_data_with_negative_buffer_size() {
