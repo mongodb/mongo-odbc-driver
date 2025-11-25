@@ -537,13 +537,25 @@ pub unsafe fn format_binary(
 ) -> SqlReturn {
     let sql_return = {
         let stmt = (*mongo_handle).as_statement().unwrap();
+
+        // Convert buffer length to usize, handling potential conversion errors.
+        // The driver manager protects SQLGetData calls with negative buffer lengths, but the added 
+        // safety here is useful for other places this macro might be used where that protection is not present.
+        let buffer_len: usize = match buffer_len.try_into() {
+            Ok(buffer_len) => buffer_len,
+            Err(_) => {
+                stmt.errors.write().unwrap().push(ODBCError::InvalidStringOrBufferLength(buffer_len));
+                return SqlReturn::ERROR;
+            }
+        };
+        
         isize_len::set_output_binary(
             stmt,
             data,
             col_num,
             index,
             target_value_ptr.cast(),
-            buffer_len as usize,
+            buffer_len,
             str_len_or_ind_ptr,
         )
     };
@@ -559,24 +571,36 @@ pub unsafe fn format_binary(
 
 macro_rules! char_data {
     ($mongo_handle:expr, $col_num:expr, $index:expr, $target_value_ptr:expr, $buffer_len:expr, $str_len_or_ind_ptr:expr, $data:expr, $func:path, $function_name:expr) => {{
-        // force expressions used more than once.
-        let (mongo_handle, buffer_len) = ($mongo_handle, $buffer_len);
+        // Declare expressions used more than once and safely cast when necessary
+        let mongo_handle:&mut MongoHandle = $mongo_handle;
         let sql_return = {
             let stmt = (*mongo_handle).as_statement().unwrap();
+            // Convert buffer length to usize, handling potential conversion errors.
+            // The driver manager protects SQLGetData calls with negative buffer lengths, but the 
+            // added safety here is useful for other places this macro might be used where that 
+            // protection is not present.
+            let buffer_len: usize = match $buffer_len.try_into() {
+                Ok(len) => len,
+                Err(_) => {
+                    stmt.errors.write().unwrap().push(ODBCError::InvalidStringOrBufferLength($buffer_len));
+                    return SqlReturn::ERROR;
+                }
+            };
+
             $func(
                 stmt,
                 $data,
                 $col_num,
                 $index,
                 $target_value_ptr.cast(),
-                $buffer_len as usize,
+                buffer_len,
                 $str_len_or_ind_ptr,
             )
         };
         if sql_return == SqlReturn::SUCCESS_WITH_INFO {
             add_diag_with_function!(
                 mongo_handle,
-                ODBCError::OutStringTruncated(buffer_len as usize),
+                ODBCError::OutStringTruncated($buffer_len as usize),
                 $function_name
             );
         }

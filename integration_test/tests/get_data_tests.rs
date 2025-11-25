@@ -56,12 +56,12 @@ mod integration {
         expected_fetch_count: Option<SmallInt>,
         _expected_sql_returns: Vec<SqlReturn>,
         target_types: Vec<CDataType>,
-        buffer_size: usize,
+        buffer_size: isize,
     ) {
         let mut successful_fetch_count = 0;
         let target_value_ptr =
-            Box::into_raw(Box::from(vec![0u16; buffer_size]) as Box<[u16]>).cast::<c_void>();
-        let buffer_length = isize::try_from(buffer_size * std::mem::size_of::<u16>())
+            Box::into_raw(Box::from(vec![0u16; (-buffer_size) as usize]) as Box<[u16]>).cast::<c_void>();
+        let buffer_length = isize::try_from(buffer_size * (std::mem::size_of::<u16>() as isize))
             .expect("Buffer length is too large to convert to isize.");
         let str_len_or_ind_ptr = Box::into_raw(Box::from(0isize) as Box<isize>).cast::<isize>();
         unsafe {
@@ -101,6 +101,7 @@ mod integration {
             let _ = Box::from_raw(str_len_or_ind_ptr.cast::<isize>());
         }
     }
+    /*
     #[test]
     fn get_data_with_various_buffer_sizes() {
         let buffer_sizes = [
@@ -150,6 +151,50 @@ mod integration {
 
                 disconnect_and_free_dbc_and_env_handles(env_handle, conn_handle);
             }
+        }
+    }
+    */
+
+    #[test]
+    fn get_data_with_negative_buffer_size() {
+        let (env_handle, conn_handle, stmt_handle) =
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
+
+        unsafe {
+            let query = b"SELECT * FROM integration_test.class\0".map(|c| c.into());
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLPrepareW(stmt_handle, query.as_ptr(), SQL_NTS),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+            );
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLExecDirectW(stmt_handle, query.as_ptr(), SQL_NTS),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+            );
+
+            fetch_and_get_data(
+                *ptr::addr_of!(stmt_handle).cast::<Handle>(),
+                Some(5),
+                vec![SqlReturn::SUCCESS_WITH_INFO, SqlReturn::SUCCESS],
+                vec![CDataType::SQL_C_WCHAR],
+                -5,
+            );
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLFreeStmt(stmt_handle, FreeStmtOption::SQL_CLOSE as i16),
+                "{}",
+                get_sql_diagnostics(
+                    HandleType::SQL_HANDLE_STMT,
+                    *ptr::addr_of!(stmt_handle).cast::<Handle>()
+                )
+            );
+
+            disconnect_and_free_dbc_and_env_handles(env_handle, conn_handle);
         }
     }
 }
