@@ -13,8 +13,9 @@ mod integration {
 
     use crate::common::{
         default_setup_connect_and_alloc_stmt, disconnect_and_free_dbc_and_env_handles,
-        get_sql_diagnostics,
+        get_sql_diagnostics, get_sql_diagnostics_full, sql_return_to_string,
     };
+    use constants::{RIGHT_TRUNCATED, INVALID_STRING_OR_BUFFER_LENGTH};
     use definitions::{
         AttrOdbcVersion, CDataType, FreeStmtOption, HStmt, Handle, HandleType, SQLExecDirectW,
         SQLFetch, SQLFreeStmt, SQLGetData, SQLMoreResults, SQLPrepareW, SmallInt, SqlReturn,
@@ -39,22 +40,46 @@ mod integration {
             buffer_len,
             str_len_or_ind_ptr,
         ) {
-            SqlReturn::SUCCESS_WITH_INFO => get_data(
-                statement_handle,
-                col_or_param_num,
-                target_types,
-                target_value_ptr,
-                buffer_len,
-                str_len_or_ind_ptr,
-            ),
-            _ => {}
+            SqlReturn::SUCCESS_WITH_INFO => {
+                // If the sqlstate is RIGHT_TRUNCATED, we get more data until we consumed it all.
+                let sql_diagnostics =
+                    get_sql_diagnostics_full(HandleType::SQL_HANDLE_STMT, statement_handle);
+                assert_eq!(
+                    sql_diagnostics.sqlstate,
+                    RIGHT_TRUNCATED.odbc_3_state,
+                    "SUCCESS_WITH_INFO returned {} while expecting {}. Error is {}",
+                    sql_diagnostics.sqlstate,
+                    RIGHT_TRUNCATED.odbc_3_state,
+                    sql_diagnostics.error_message
+                );
+                get_data(
+                    statement_handle,
+                    col_or_param_num,
+                    target_types,
+                    target_value_ptr,
+                    buffer_len,
+                    str_len_or_ind_ptr,
+                )
+            }
+            SqlReturn::ERROR => {
+                panic!(
+                    "SQL ERROR received while retrieving data: {}",
+                    get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, statement_handle)
+                )
+            }
+            SqlReturn::SUCCESS => { /* all data retrieved successfully */ }
+            ret => {
+                panic!(
+                    "Unexpected {} received while retrieving data",
+                    sql_return_to_string(ret)
+                )
+            }
         }
     }
 
     pub fn fetch_and_get_data(
         stmt: Handle,
         expected_fetch_count: Option<SmallInt>,
-        _expected_sql_returns: Vec<SqlReturn>,
         target_types: Vec<CDataType>,
         buffer_size: isize,
     ) {
@@ -141,7 +166,6 @@ mod integration {
                 fetch_and_get_data(
                     *ptr::addr_of!(stmt_handle).cast::<Handle>(),
                     Some(5),
-                    vec![SqlReturn::SUCCESS_WITH_INFO, SqlReturn::SUCCESS],
                     vec![CDataType::SQL_C_WCHAR],
                     buffer_size,
                 );
@@ -182,12 +206,41 @@ mod integration {
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
 
-            fetch_and_get_data(
-                *ptr::addr_of!(stmt_handle).cast::<Handle>(),
-                Some(5),
-                vec![SqlReturn::SUCCESS_WITH_INFO, SqlReturn::SUCCESS],
-                vec![CDataType::SQL_C_WCHAR],
-                -5,
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLFetch(stmt_handle),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+            );
+
+            let buffer_size:isize = -5;
+            // Let's ensure we don't have overflow when taking abs of isize::MIN
+            let buffer_size_abs: usize = buffer_size
+                .checked_abs()
+                .expect("buffer_size overflow on isize::MIN")
+                as usize;
+            let target_value_ptr =
+                Box::into_raw(Box::from(vec![0u16; buffer_size_abs]) as Box<[u16]>).cast::<c_void>();
+            let buffer_length = isize::try_from(buffer_size * (std::mem::size_of::<u16>() as isize))
+                .expect("Buffer length is too large to convert to isize.");
+            let str_len_or_ind_ptr = Box::into_raw(Box::from(0isize) as Box<isize>).cast::<isize>();
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLGetData(stmt_handle,
+                           1,
+                           CDataType::SQL_C_WCHAR as i16,
+                           target_value_ptr,
+                           buffer_length,
+                           str_len_or_ind_ptr,),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+            );
+            let sql_diagnostics = get_sql_diagnostics_full(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle);
+            assert_eq!(
+                sql_diagnostics.sqlstate,
+                INVALID_STRING_OR_BUFFER_LENGTH.odbc_3_state,
+                "Error is {}",
+                sql_diagnostics.error_message
             );
 
             assert_eq!(

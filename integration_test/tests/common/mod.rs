@@ -122,9 +122,12 @@ pub fn generate_srv_style_connection_string(db: Option<String>) -> String {
 }
 
 #[allow(dead_code)]
-// Verifies that the expected SQL State, message text, and native error in the handle match
-// the expected input
-pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
+pub struct SqlDiagnostics {
+    pub sqlstate: String,
+    pub error_message: String,
+}
+// Returns the SQL State and message text for the error from the input handle
+pub fn get_sql_diagnostics_full(handle_type: HandleType, handle: Handle) -> SqlDiagnostics {
     let text_length_ptr = &mut 0;
     let mut actual_sql_state: [WideChar; 6] = [0; 6];
     let actual_sql_state = &mut actual_sql_state as *mut _;
@@ -143,12 +146,24 @@ pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
             text_length_ptr,
         );
     };
-    unsafe {
-        cstr::from_widechar_ref_lossy(slice::from_raw_parts(
-            actual_message_text as *const WideChar,
-            *text_length_ptr as usize,
+    let sqlstate = unsafe {
+            cstr::from_widechar_ref_lossy(slice::from_raw_parts(
+                actual_sql_state as *const WideChar,
+                5,
         ))
-    }
+    };
+    let message = unsafe {
+            cstr::from_widechar_ref_lossy(slice::from_raw_parts(
+                actual_message_text as *const WideChar,
+                *text_length_ptr as usize,
+        ))
+    };
+    SqlDiagnostics { sqlstate, error_message: message }
+}
+
+// Returns the message text from the error in the input handle
+pub fn get_sql_diagnostics(handle_type: HandleType, handle: Handle) -> String {
+    get_sql_diagnostics_full(handle_type, handle).error_message
 }
 
 #[allow(dead_code)]
