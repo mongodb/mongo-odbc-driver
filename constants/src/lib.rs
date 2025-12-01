@@ -199,7 +199,6 @@ pub const INVALID_STRING_OR_BUFFER_LENGTH: OdbcState<'static> = OdbcState {
     odbc_3_state: "HY090",
 };
 
-
 pub const SQL_ALL_TABLE_TYPES: &str = "%";
 pub const SQL_ALL_CATALOGS: &str = "%";
 pub const SQL_ALL_SCHEMAS: &str = "%";

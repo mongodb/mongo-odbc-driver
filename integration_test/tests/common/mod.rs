@@ -147,18 +147,21 @@ pub fn get_sql_diagnostics_full(handle_type: HandleType, handle: Handle) -> SqlD
         );
     };
     let sqlstate = unsafe {
-            cstr::from_widechar_ref_lossy(slice::from_raw_parts(
-                actual_sql_state as *const WideChar,
-                5,
+        cstr::from_widechar_ref_lossy(slice::from_raw_parts(
+            actual_sql_state as *const WideChar,
+            5,
         ))
     };
     let message = unsafe {
-            cstr::from_widechar_ref_lossy(slice::from_raw_parts(
-                actual_message_text as *const WideChar,
-                *text_length_ptr as usize,
+        cstr::from_widechar_ref_lossy(slice::from_raw_parts(
+            actual_message_text as *const WideChar,
+            *text_length_ptr as usize,
         ))
     };
-    SqlDiagnostics { sqlstate, error_message: message }
+    SqlDiagnostics {
+        sqlstate,
+        error_message: message,
+    }
 }
 
 // Returns the message text from the error in the input handle

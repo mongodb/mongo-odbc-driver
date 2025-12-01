@@ -6,6 +6,7 @@
 
 use std::str::FromStr;
 
+use crate::api::errors::ODBCError;
 use crate::{
     api::functions::{SQLFetch, SQLMoreResults},
     handles::definitions::{
@@ -29,7 +30,6 @@ use mongo_odbc_core::{
     mock_query::MongoQuery,
     TypeMode,
 };
-use crate::api::errors::ODBCError;
 
 const ARRAY_COL: u16 = 1;
 const BIN_COL: u16 = 2;
@@ -1220,10 +1220,7 @@ fn sql_get_string_data(mq: MongoQuery) {
                 out_len_or_ind,
             );
 
-            assert_eq!(
-                SqlReturn::ERROR,
-                sql_return
-            );
+            assert_eq!(SqlReturn::ERROR, sql_return);
 
             assert_eq!(
                 ODBCError::InvalidStringOrBufferLength(-buffer_length).to_string(),

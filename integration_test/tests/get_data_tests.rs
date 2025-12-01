@@ -15,7 +15,7 @@ mod integration {
         default_setup_connect_and_alloc_stmt, disconnect_and_free_dbc_and_env_handles,
         get_sql_diagnostics, get_sql_diagnostics_full, sql_return_to_string,
     };
-    use constants::{RIGHT_TRUNCATED, INVALID_STRING_OR_BUFFER_LENGTH};
+    use constants::{INVALID_STRING_OR_BUFFER_LENGTH, RIGHT_TRUNCATED};
     use definitions::{
         AttrOdbcVersion, CDataType, FreeStmtOption, HStmt, Handle, HandleType, SQLExecDirectW,
         SQLFetch, SQLFreeStmt, SQLGetData, SQLMoreResults, SQLPrepareW, SmallInt, SqlReturn,
@@ -86,12 +86,18 @@ mod integration {
         let mut successful_fetch_count = 0;
 
         // Let's ensure we don't have overflow when taking abs of isize::MIN
-        let buffer_size_abs:usize = buffer_size.checked_abs().expect("buffer_size overflow on isize::MIN") as usize;
+        let buffer_size_abs: usize = buffer_size
+            .checked_abs()
+            .expect("buffer_size overflow on isize::MIN")
+            as usize;
 
         let target_value_ptr =
             Box::into_raw(Box::from(vec![0u16; buffer_size_abs]) as Box<[u16]>).cast::<c_void>();
-        let buffer_length = isize::try_from(buffer_size * (std::mem::size_of::<u16>() as isize))
-            .expect("Buffer length is too large to convert to isize.");
+        let (buffer_length, overflows) =
+            buffer_size.overflowing_mul(std::mem::size_of::<u16>() as isize);
+        if overflows {
+            panic!("Buffer length {buffer_length} is too large to convert to isize.");
+        }
         let str_len_or_ind_ptr = Box::into_raw(Box::from(0isize) as Box<isize>).cast::<isize>();
         unsafe {
             loop {
@@ -131,14 +137,13 @@ mod integration {
         }
     }
 
-
     #[test]
     fn get_data_with_various_buffer_sizes() {
         let buffer_sizes = [
             i8::MAX as isize,
             i16::MAX as isize,
             1024 * 1024 * 8,
-            i32::MAX as isize
+            i32::MAX as isize,
         ];
 
         for buffer_size in buffer_sizes {
@@ -213,32 +218,38 @@ mod integration {
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
 
-            let buffer_size:isize = -5;
+            let buffer_size: isize = -5;
             // Let's ensure we don't have overflow when taking abs of isize::MIN
             let buffer_size_abs: usize = buffer_size
                 .checked_abs()
                 .expect("buffer_size overflow on isize::MIN")
                 as usize;
             let target_value_ptr =
-                Box::into_raw(Box::from(vec![0u16; buffer_size_abs]) as Box<[u16]>).cast::<c_void>();
-            let buffer_length = isize::try_from(buffer_size * (std::mem::size_of::<u16>() as isize))
-                .expect("Buffer length is too large to convert to isize.");
+                Box::into_raw(Box::from(vec![0u16; buffer_size_abs]) as Box<[u16]>)
+                    .cast::<c_void>();
+            let (buffer_length, overflows) =
+                buffer_size.overflowing_mul(std::mem::size_of::<u16>() as isize);
+            if overflows {
+                panic!("Buffer length {buffer_length} is too large to convert to isize.");
+            }
             let str_len_or_ind_ptr = Box::into_raw(Box::from(0isize) as Box<isize>).cast::<isize>();
             assert_eq!(
                 SqlReturn::ERROR,
-                SQLGetData(stmt_handle,
-                           1,
-                           CDataType::SQL_C_WCHAR as i16,
-                           target_value_ptr,
-                           buffer_length,
-                           str_len_or_ind_ptr,),
+                SQLGetData(
+                    stmt_handle,
+                    1,
+                    CDataType::SQL_C_WCHAR as i16,
+                    target_value_ptr,
+                    buffer_length,
+                    str_len_or_ind_ptr,
+                ),
                 "{}",
                 get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
             );
-            let sql_diagnostics = get_sql_diagnostics_full(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle);
+            let sql_diagnostics =
+                get_sql_diagnostics_full(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle);
             assert_eq!(
-                sql_diagnostics.sqlstate,
-                INVALID_STRING_OR_BUFFER_LENGTH.odbc_3_state,
+                sql_diagnostics.sqlstate, INVALID_STRING_OR_BUFFER_LENGTH.odbc_3_state,
                 "Error is {}",
                 sql_diagnostics.error_message
             );

@@ -539,16 +539,19 @@ pub unsafe fn format_binary(
         let stmt = (*mongo_handle).as_statement().unwrap();
 
         // Convert buffer length to usize, handling potential conversion errors.
-        // The driver manager protects SQLGetData calls with negative buffer lengths, but the added 
+        // The driver manager protects SQLGetData calls with negative buffer lengths, but the added
         // safety here is useful for other places this macro might be used where that protection is not present.
         let buffer_len: usize = match buffer_len.try_into() {
             Ok(buffer_len) => buffer_len,
             Err(_) => {
-                stmt.errors.write().unwrap().push(ODBCError::InvalidStringOrBufferLength(buffer_len));
+                stmt.errors
+                    .write()
+                    .unwrap()
+                    .push(ODBCError::InvalidStringOrBufferLength(buffer_len));
                 return SqlReturn::ERROR;
             }
         };
-        
+
         isize_len::set_output_binary(
             stmt,
             data,
@@ -572,17 +575,20 @@ pub unsafe fn format_binary(
 macro_rules! char_data {
     ($mongo_handle:expr, $col_num:expr, $index:expr, $target_value_ptr:expr, $buffer_len:expr, $str_len_or_ind_ptr:expr, $data:expr, $func:path, $function_name:expr) => {{
         // Declare expressions used more than once and safely cast when necessary
-        let mongo_handle:&mut MongoHandle = $mongo_handle;
+        let mongo_handle: &mut MongoHandle = $mongo_handle;
         let sql_return = {
             let stmt = (*mongo_handle).as_statement().unwrap();
             // Convert buffer length to usize, handling potential conversion errors.
-            // The driver manager protects SQLGetData calls with negative buffer lengths, but the 
-            // added safety here is useful for other places this macro might be used where that 
+            // The driver manager protects SQLGetData calls with negative buffer lengths, but the
+            // added safety here is useful for other places this macro might be used where that
             // protection is not present.
             let buffer_len: usize = match $buffer_len.try_into() {
                 Ok(len) => len,
                 Err(_) => {
-                    stmt.errors.write().unwrap().push(ODBCError::InvalidStringOrBufferLength($buffer_len));
+                    stmt.errors
+                        .write()
+                        .unwrap()
+                        .push(ODBCError::InvalidStringOrBufferLength($buffer_len));
                     return SqlReturn::ERROR;
                 }
             };
