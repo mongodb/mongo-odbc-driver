@@ -518,12 +518,12 @@ impl ODBCUri {
         // Build a basic connection string from provided attributes
         let dummy_uri = format!("mongodb://{}", &server);
 
-        let mut fallback_client_options: Option<ClientOptions> = None;
+        let fallback_client_options: Option<ClientOptions> = None;
 
         // Prepare and finalize a fallback set of options without a custom resolver on Windows
         #[cfg(target_os = "windows")]
         {
-            let mut fco = ClientOptions::parse(&dummy_uri)
+            let fco = ClientOptions::parse(&dummy_uri)
                 .await
                 .map_err(Error::InvalidClientOptions)?;
             fco.hosts = vec![ServerAddress::parse(&server).map_err(Error::InvalidClientOptions)?];
