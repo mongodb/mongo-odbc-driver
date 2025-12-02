@@ -128,7 +128,7 @@ impl MongoConnection {
                     // on windows, the default dns resolver sometimes fails with Cloudflare DNS.
                     // we fall back to the default system resolver in this case.
                     Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
-                        Client::with_options(user_options.fallback_client_options)
+                        Client::with_options(user_options.fallback_client_options.unwrap())
                     }
 
                     other => other,
