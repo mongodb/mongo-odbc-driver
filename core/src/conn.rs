@@ -125,18 +125,15 @@ impl MongoConnection {
             // the Client Topology uses tokio::spawn, so we need a guard here.
             let client = runtime.block_on(async {
                 match Client::with_options(user_options.client_options) {
-                    Ok(c) => Ok(c),
-                    Err(e) => {
-                        // on windows, the default dns resolver sometimes fails with Cloudflare DNS.
-                        // we fall back to the default system resolver in this case.
-                        if let ErrorKind::DnsResolve { message: _, .. } = e.kind.as_ref() {
-                            Client::with_options(user_options.fallback_client_options)
-                                .map_err(Error::InvalidClientOptions)
-                        } else {
-                            Err(Error::InvalidClientOptions(e))
-                        }
+                    // on windows, the default dns resolver sometimes fails with Cloudflare DNS.
+                    // we fall back to the default system resolver in this case.
+                    Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
+                        Client::with_options(user_options.fallback_client_options)
                     }
+
+                    other => other,
                 }
+                .map_err(Error::InvalidClientOptions)
             })?;
             // we need to drop the guard before we return the runtime to kill the borrow
             // on the runtime. We drop it before the insert to hold the lock for as little time as
