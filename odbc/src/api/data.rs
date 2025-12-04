@@ -572,7 +572,7 @@ pub unsafe fn format_binary(
     sql_return
 }
 
-macro_rules! char_data {
+macro_rules! set_output_varlength_data {
     ($mongo_handle:expr, $col_num:expr, $index:expr, $target_value_ptr:expr, $buffer_len:expr, $str_len_or_ind_ptr:expr, $data:expr, $func:path, $function_name:expr) => {{
         // Declare expressions used more than once and safely cast when necessary
         let mongo_handle: &mut MongoHandle = $mongo_handle;
@@ -582,15 +582,12 @@ macro_rules! char_data {
             // The driver manager protects SQLGetData calls with negative buffer lengths, but the
             // added safety here is useful for other places this macro might be used where that
             // protection is not present.
-            let buffer_len: usize = match $buffer_len.try_into() {
-                Ok(len) => len,
-                Err(_) => {
-                    stmt.errors
-                        .write()
-                        .unwrap()
-                        .push(ODBCError::InvalidStringOrBufferLength($buffer_len));
-                    return SqlReturn::ERROR;
-                }
+            let Ok(buffer_len) = buffer_len.try_into() else {
+                stmt.errors
+                    .write()
+                    .unwrap()
+                    .push(ODBCError::InvalidStringOrBufferLength(buffer_len));
+                return SqlReturn::ERROR;
             };
 
             $func(
@@ -826,7 +823,7 @@ pub unsafe fn format_cached_data(
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::Char(index, data));
                 return SqlReturn::NO_DATA;
             }
-            char_data!(
+            set_output_varlength_data!(
                 mongo_handle,
                 col_or_param_num,
                 index,
@@ -845,7 +842,7 @@ pub unsafe fn format_cached_data(
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::WChar(index, data));
                 return SqlReturn::NO_DATA;
             }
-            char_data!(
+            set_output_varlength_data!(
                 mongo_handle,
                 col_or_param_num,
                 index,
@@ -928,28 +925,21 @@ pub unsafe fn format_bson_data(
             } else {
                 data.to_binary(uuid_repr)
             };
-            match data {
-                Ok(data) => format_binary(
-                    mongo_handle,
-                    col_num,
-                    0usize,
-                    target_value_ptr,
-                    buffer_len,
-                    str_len_or_ind_ptr,
-                    data,
-                    function_name,
-                ),
-                Err(e) => {
-                    let stmt = (*mongo_handle).as_statement().unwrap();
-
-                    stmt.errors.write().unwrap().push(e);
-                    SqlReturn::ERROR
-                }
-            }
+            set_output_varlength_data!(
+                mongo_handle,
+                col_num,
+                0usize,
+                target_value_ptr,
+                buffer_len,
+                str_len_or_ind_ptr,
+                data,
+                isize_len::set_output_binary,
+                function_name
+            )
         }
         CDataType::SQL_C_CHAR => {
             let data = data.to_json(uuid_repr).bytes().collect::<Vec<u8>>();
-            char_data!(
+            set_output_varlength_data!(
                 mongo_handle,
                 col_num,
                 0usize,
@@ -963,7 +953,7 @@ pub unsafe fn format_bson_data(
         }
         CDataType::SQL_C_WCHAR => {
             let data = cstr::to_widechar_vec(&data.to_json(uuid_repr));
-            char_data!(
+            set_output_varlength_data!(
                 mongo_handle,
                 col_num,
                 0usize,
