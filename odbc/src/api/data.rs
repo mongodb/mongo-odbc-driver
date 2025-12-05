@@ -524,86 +524,39 @@ impl IntoCData for Bson {
         }
     }
 }
-#[allow(clippy::too_many_arguments)]
-pub unsafe fn format_binary(
-    mongo_handle: &mut MongoHandle,
-    col_num: USmallInt,
-    index: usize,
-    target_value_ptr: Pointer,
-    buffer_len: Len,
-    str_len_or_ind_ptr: *mut Len,
-    data: Vec<u8>,
-    function_name: &str,
-) -> SqlReturn {
-    let sql_return = {
-        let stmt = (*mongo_handle).as_statement().unwrap();
-
-        // Convert buffer length to usize, handling potential conversion errors.
-        // The driver manager protects SQLGetData calls with negative buffer lengths, but the added
-        // safety here is useful for other places this macro might be used where that protection is not present.
-        let buffer_len: usize = match buffer_len.try_into() {
-            Ok(buffer_len) => buffer_len,
-            Err(_) => {
-                stmt.errors
-                    .write()
-                    .unwrap()
-                    .push(ODBCError::InvalidStringOrBufferLength(buffer_len));
-                return SqlReturn::ERROR;
-            }
-        };
-
-        isize_len::set_output_binary(
-            stmt,
-            data,
-            col_num,
-            index,
-            target_value_ptr.cast(),
-            buffer_len,
-            str_len_or_ind_ptr,
-        )
-    };
-    if sql_return == SqlReturn::SUCCESS_WITH_INFO {
-        add_diag_with_function!(
-            mongo_handle,
-            ODBCError::OutStringTruncated(buffer_len as usize),
-            function_name
-        );
-    }
-    sql_return
-}
 
 macro_rules! set_output_varlength_data {
     ($mongo_handle:expr, $col_num:expr, $index:expr, $target_value_ptr:expr, $buffer_len:expr, $str_len_or_ind_ptr:expr, $data:expr, $func:path, $function_name:expr) => {{
         // Declare expressions used more than once and safely cast when necessary
         let mongo_handle: &mut MongoHandle = $mongo_handle;
-        let sql_return = {
-            let stmt = (*mongo_handle).as_statement().unwrap();
-            // Convert buffer length to usize, handling potential conversion errors.
-            // The driver manager protects SQLGetData calls with negative buffer lengths, but the
-            // added safety here is useful for other places this macro might be used where that
-            // protection is not present.
-            let Ok(buffer_len) = buffer_len.try_into() else {
-                stmt.errors
-                    .write()
-                    .unwrap()
-                    .push(ODBCError::InvalidStringOrBufferLength(buffer_len));
-                return SqlReturn::ERROR;
-            };
+        let stmt = (*mongo_handle).as_statement().unwrap();
+        // Convert buffer length to usize, handling potential conversion errors.
+        // The driver manager protects SQLGetData calls with negative buffer lengths, but the
+        // added safety here is useful for other places this macro might be used where that
+        // protection is not present.
+        let Ok(buffer_usize_len) = $buffer_len.try_into() else {
+            stmt.errors
+                .write()
+                .unwrap()
+                .push(ODBCError::InvalidStringOrBufferLength($buffer_len));
+            return SqlReturn::ERROR;
+        };
 
+        let sql_return = {
             $func(
                 stmt,
                 $data,
                 $col_num,
                 $index,
                 $target_value_ptr.cast(),
-                buffer_len,
+                buffer_usize_len,
                 $str_len_or_ind_ptr,
             )
         };
         if sql_return == SqlReturn::SUCCESS_WITH_INFO {
             add_diag_with_function!(
                 mongo_handle,
-                ODBCError::OutStringTruncated($buffer_len as usize),
+                ODBCError::OutStringTruncated(buffer_usize_len),
                 $function_name
             );
         }
@@ -861,7 +814,7 @@ pub unsafe fn format_cached_data(
                 stmt.insert_var_data_cache(col_or_param_num, CachedData::Bin(index, data));
                 return SqlReturn::NO_DATA;
             }
-            crate::api::data::format_binary(
+            set_output_varlength_data!(
                 mongo_handle,
                 col_or_param_num,
                 index,
@@ -869,7 +822,8 @@ pub unsafe fn format_cached_data(
                 buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                function_name,
+                isize_len::set_output_binary,
+                function_name
             )
         }
     }
@@ -925,6 +879,12 @@ pub unsafe fn format_bson_data(
             } else {
                 data.to_binary(uuid_repr)
             };
+            let Ok(data) = data else {
+                let stmt = (*mongo_handle).as_statement().unwrap();
+                stmt.errors.write().unwrap().push(data.unwrap_err());
+                return SqlReturn::ERROR;
+            };
+
             set_output_varlength_data!(
                 mongo_handle,
                 col_num,
