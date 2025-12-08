@@ -38,6 +38,16 @@ include:
     module: sql-engines-common-test-infra
 
 variables:
+  - &assume_role_cmd
+    command: ec2.assume_role
+    params:
+      role_arn: ${assume_role_arn}
+      duration_seconds: 3600
+  - &evg_bucket_config
+    aws_key: ${AWS_ACCESS_KEY_ID}
+    aws_secret: ${AWS_SECRET_ACCESS_KEY}
+    aws_session_token: ${AWS_SESSION_TOKEN}
+    bucket: mciuploads
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -66,33 +76,30 @@ functions:
         add_expansions_to_env: true
 
   "upload odbc docs":
+    - *assume_role_cmd
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/docs/MongoDB_ODBC_Guide.pdf
         remote_file: mongosql-odbc-driver/artifacts/docs/MongoDB_ODBC_Guide.pdf
-        bucket: mciuploads
         permissions: public-read
         content_type: application/pdf
 
   "fetch for windows sign":
+    - *assume_role_cmd
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${MSI_FILENAME}
         local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}
-        bucket: mciuploads
 
   "fetch for ubuntu sign":
+    - *assume_role_cmd
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${UBUNTU_FILENAME}
         local_file: mongosql-odbc-driver/installer/tgz/${UBUNTU_FILENAME}
-        bucket: mciuploads
 
   "fetch source":
     - command: git.get_project
@@ -259,15 +266,14 @@ functions:
           done
           echo "-----------------------------"
           echo "<<<< Done generating SBOM"
+    - *assume_role_cmd
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_files_include_filter:
           - mongosql-odbc-driver/*.cdx.json
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
         content_type: text/plain
-        bucket: mciuploads
         permissions: public-read
 
   "augment SBOM":
@@ -306,14 +312,13 @@ functions:
           artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:2.0 \
           augment --repo mongodb/mongo-odbc-driver --branch ${branch_name} --sbom-in /pwd/$SBOM_FINAL --sbom-out /pwd/${AUGMENTED_SBOM_FILENAME} --force
           echo "-------------------------------"
+    - *assume_role_cmd
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
         content_type: application/json
-        bucket: mciuploads
         permissions: public-read
 
   "use latest mongosql version":
@@ -553,14 +558,13 @@ functions:
         file: mongosql-odbc-driver/expansions.yml
 
   "build msi":
+    - *assume_role_cmd
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
         content_type: application/json
-        bucket: mciuploads
         permissions: public-read
     - command: shell.exec
       params:
@@ -593,14 +597,13 @@ functions:
               -VersionLabel "$VERSION_LABEL"\
 
   "build dmg":
+    - *assume_role_cmd
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
         content_type: application/json
-        bucket: mciuploads
         permissions: public-read
     - command: shell.exec
       params:
@@ -620,136 +623,116 @@ functions:
           ./build-dmg.sh "$MINOR_VERSION"
 
   "mciuploads release artifacts":
+    - *assume_role_cmd
     - command: s3.put
       params:
         build_variants:
           - windows-64
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/target/release/atsql.dll
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.dll
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
       params:
         build_variants:
           - windows-64
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/installer/msi/mongoodbc.msi
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${MSI_FILENAME}
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
       params:
         build_variants:
           - windows-64
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/target/release/atsqls.dll
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsqls.dll
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
       params:
         build_variants:
           - windows-64
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/target/release/atsql.pdb
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.pdb
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
       params:
         build_variants:
           - ubuntu2204
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/target/release/libatsql.so
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
       params:
         build_variants:
           - ubuntu2204
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/release/${UBUNTU_FILENAME}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${UBUNTU_FILENAME}
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
       params:
         build_variants:
           - macos-arm
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/target/release/libatsql.dylib
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.dylib
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
       params:
         build_variants:
           - macos-arm
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/installer/dmg/mongoodbc.dmg
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/mongoodbc.dmg
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
 
   "upload signed windows artifacts":
+    - *assume_role_cmd
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
         local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}
-        bucket: mciuploads
         permissions: public-read
         display_name: mongoodbc-signed.msi
         content_type: application/octet-stream
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi.sha256
         local_file: mongosql-odbc-driver/installer/msi/${MSI_FILENAME}.sha256
-        bucket: mciuploads
         permissions: public-read
         display_name: mongoodbc-signed.msi.sha256
         content_type: application/octet-stream
 
   "upload ubuntu sig file":
+    - *assume_role_cmd
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}.sig
         local_file: mongosql-odbc-driver/installer/tgz/${UBUNTU_FILENAME}.sig
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
 
   "upload release":
+    - *assume_role_cmd
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/docs/MongoDB_ODBC_Guide.pdf
         local_file: mongosql-odbc-driver/release/docs/MongoDB_ODBC_Guide.pdf
-        bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
@@ -762,11 +745,9 @@ functions:
         content_type: application/pdf
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi
         local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi
-        bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
@@ -779,11 +760,9 @@ functions:
         display_name: ${MSI_FILENAME}
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/mongoodbc-signed.msi.sha256
         local_file: mongosql-odbc-driver/release/mongoodbc-signed.msi.sha256
-        bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
@@ -796,15 +775,12 @@ functions:
         display_name: ${MSI_FILENAME}.sha256
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsql.dll
         local_file: mongosql-odbc-driver/release/atsql.dll
-        bucket: mciuploads
     - command: s3.put
       params:
-        aws_key: ${release_aws_key}
-        aws_secret: ${release_aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/release/atsql.dll
         remote_file: mongosql-odbc-driver/windows/${release_version}/release/atsql.dll
         bucket: translators-connectors-releases
@@ -812,11 +788,9 @@ functions:
         content_type: application/octet-stream
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsqls.dll
         local_file: mongosql-odbc-driver/release/atsqls.dll
-        bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
@@ -828,11 +802,9 @@ functions:
         content_type: application/octet-stream
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/windows-64/release/atsql.pdb
         local_file: mongosql-odbc-driver/release/atsql.pdb
-        bucket: mciuploads
     - command: s3.put
       params:
         aws_key: ${release_aws_key}
@@ -844,11 +816,9 @@ functions:
         content_type: application/octet-stream
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}
         local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
@@ -862,11 +832,9 @@ functions:
         content_type: application/octet-stream
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}.sig
         local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
@@ -880,11 +848,9 @@ functions:
         content_type: application/octet-stream
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/libatsql.so
         local_file: mongosql-odbc-driver/target/release/libatsql.so
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
@@ -898,43 +864,37 @@ functions:
         content_type: application/octet-stream
 
   "download artifact":
+    - *assume_role_cmd
     - command: s3.get
       params:
         build_variants:
           - windows-64
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsql.dll
         local_file: mongosql-odbc-driver/atsql.dll
-        bucket: mciuploads
     - command: s3.get
       params:
         build_variants:
           - windows-64
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/atsqls.dll
         local_file: mongosql-odbc-driver/atsqls.dll
-        bucket: mciuploads
     - command: s3.get
       params:
         build_variants:
           - ubuntu2204
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
         local_file: mongosql-odbc-driver/libatsql.so
-        bucket: mciuploads
 
   "tar linux artifacts":
+    - *assume_role_cmd
     - command: s3.get
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
         content_type: application/json
-        bucket: mciuploads
         permissions: public-read
     - command: shell.exec
       params:
@@ -1591,36 +1551,32 @@ functions:
           exit $EXITCODE
 
   "upload start_adf logs":
+    - *assume_role_cmd
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/local_adf/logs/mongohoused.log
         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongohoused.log
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/local_adf/logs/mongodb_test.log
         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/mongodb_test.log
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
 
   "upload crash debugging info":
+    - *assume_role_cmd
     - command: s3.put
       params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
+        <<: *evg_bucket_config
         local_files_include_filter_prefix: mongosql-odbc-driver/dumps
         local_files_include_filter:
           - "*.dmp"
           - "*.tar.gz"
         remote_file: mongosql-odbc-driver/artifacts/logs/${version_id}/${build_variant}/
-        bucket: mciuploads
         permissions: public-read
         content_type: application/octet-stream
         display_name: crash-dump-
