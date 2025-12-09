@@ -6,6 +6,7 @@
 
 use std::str::FromStr;
 
+use crate::api::errors::ODBCError;
 use crate::{
     api::functions::{SQLFetch, SQLMoreResults},
     handles::definitions::{
@@ -1207,6 +1208,37 @@ fn sql_get_string_data(mq: MongoQuery) {
         let char_buffer: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 200])) as *mut _;
         let buffer_length: isize = 100;
         let out_len_or_ind = &mut 0;
+
+        // Test error handling for negative buffer length
+        {
+            let sql_return = SQLGetData(
+                stmt_handle as *mut _,
+                1,
+                CDataType::SQL_C_CHAR as i16,
+                char_buffer,
+                -buffer_length,
+                out_len_or_ind,
+            );
+
+            assert_eq!(SqlReturn::ERROR, sql_return);
+
+            assert_eq!(
+                ODBCError::InvalidStringOrBufferLength(-buffer_length).to_string(),
+                format!(
+                    "{}",
+                    (*stmt_handle)
+                        .as_statement()
+                        .unwrap()
+                        .errors
+                        .read()
+                        .unwrap()[0]
+                )
+            );
+
+            stmt_handle.as_mut().unwrap().clear_diagnostics();
+        }
+
+        // Correct functionality tests with valid buffer length
         {
             let mut str_val_test = |col: u16, expected: &str| {
                 assert_eq!(
@@ -1223,12 +1255,12 @@ fn sql_get_string_data(mq: MongoQuery) {
                 assert_eq!(
                     expected.len() as isize,
                     *out_len_or_ind,
-                    "Expected column type {col}",
+                    "Expected len for column {col}",
                 );
                 assert_eq!(
                     expected.to_string(),
                     input_text_to_string_a(char_buffer as *const _, expected.len() as isize),
-                    "Expected column type {col}",
+                    "Expected content for column {col}",
                 );
             };
 
@@ -3096,6 +3128,7 @@ fn sql_get_date_data(mq: MongoQuery) {
             null_val_test(NULL_COL);
             null_val_test(UNDEFINED_COL);
         }
+
         let _ = Box::from_raw(buffer as *mut WChar);
         let _ = Box::from_raw(conn as *mut WChar);
         let _ = Box::from_raw(env as *mut WChar);

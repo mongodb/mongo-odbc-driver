@@ -194,6 +194,10 @@ pub const CONNECTION_NOT_OPEN: OdbcState<'static> = OdbcState {
     odbc_2_state: "08003",
     odbc_3_state: "08003",
 };
+pub const INVALID_STRING_OR_BUFFER_LENGTH: OdbcState<'static> = OdbcState {
+    odbc_2_state: "S1090",
+    odbc_3_state: "HY090",
+};
 
 pub const SQL_ALL_TABLE_TYPES: &str = "%";
 pub const SQL_ALL_CATALOGS: &str = "%";
