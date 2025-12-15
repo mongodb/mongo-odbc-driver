@@ -118,6 +118,9 @@ macro_rules! try_mongo_handle {
         }
     }};
 }
+
+// allow unused because this is used for testing in panic_safe_exec_tests
+#[allow(unused_imports)]
 pub(crate) use try_mongo_handle;
 
 /// panic_safe_exec_clear_diagnostics executes `function` such that any panics do not crash the runtime,
@@ -126,6 +129,7 @@ pub(crate) use try_mongo_handle;
 /// The panic message is added to the diagnostics of `handle` and SqlReturn::ERROR returned.
 macro_rules! panic_safe_exec_clear_diagnostics {
     ($level:ident, $function:expr, $handle:expr) => {{
+        #[allow(unused_imports)]
         use crate::panic_safe_exec_keep_diagnostics;
         let handle = $handle;
         let handle_ref = try_mongo_handle!(handle);
@@ -133,6 +137,9 @@ macro_rules! panic_safe_exec_clear_diagnostics {
         panic_safe_exec_keep_diagnostics!($level, $function, $handle);
     }};
 }
+
+// allow unused because this is used for testing in panic_safe_exec_tests
+#[allow(unused_imports)]
 pub(crate) use panic_safe_exec_clear_diagnostics;
 
 /// panic_safe_exec_keep_diagnostics executes `function` such that any panics do not crash the runtime,

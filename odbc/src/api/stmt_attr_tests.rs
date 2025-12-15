@@ -6,7 +6,7 @@
 
 use crate::{
     handles::definitions::{MongoHandle, Statement, StatementState},
-    map, SQLGetStmtAttrW, SQLSetStmtAttrW,
+    SQLGetStmtAttrW, SQLSetStmtAttrW,
 };
 use definitions::{
     AsyncEnable, BindType, CursorScrollable, CursorSensitivity, CursorType, HStmt, Integer, NoScan,

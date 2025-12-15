@@ -4,11 +4,11 @@
     clippy::cast_possible_wrap
 )]
 
+use crate::SQLSetEnvAttr;
 use crate::{
     handles::definitions::{Env, EnvState, MongoHandle},
     SQLGetDiagRecW, SQLGetEnvAttr,
 };
-use crate::{map, SQLSetEnvAttr};
 use definitions::{
     AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, HEnv, HandleType,
     Integer, Pointer, SqlBool, SqlReturn,
