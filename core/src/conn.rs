@@ -125,7 +125,7 @@ impl MongoConnection {
             // the Client Topology uses tokio::spawn, so we need a guard here.
             let client = runtime.block_on(async {
                 match Client::with_options(user_options.client_options) {
-                    // on windows, the default dns resolver sometimes fails with Cloudflare DNS.
+                    // Because trust-dns-resolver has a performance issue on windows, we default to cloudflare's resolver. Cloudflare DNS sometimes fails in specific customer settings. In which case, we fall back to the default system resolver.
                     // we fall back to the default system resolver in this case.
                     Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
                         Client::with_options(user_options.fallback_client_options.unwrap())
