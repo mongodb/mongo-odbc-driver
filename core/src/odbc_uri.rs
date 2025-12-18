@@ -77,7 +77,7 @@ lazy_static! {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserOptions {
     pub client_options: ClientOptions,
-    // On Windows, when parsing with a custom DNS resolver (e.g., Cloudflare) fails at client creation,
+    // On Windows, when connecting with a custom DNS resolver (e.g., Cloudflare) fails at client creation,
     // we may retry with default resolver (no resolver_config). This holds that alternative options.
     pub fallback_client_options: Option<ClientOptions>,
     pub uuid_representation: Option<UuidRepresentation>,
