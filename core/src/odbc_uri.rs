@@ -255,7 +255,7 @@ impl ODBCUri {
         })
     }
 
-    // Helper extracted from handle_uri to finalize and adjust ClientOptions
+    // Helper to finalize and adjust ClientOptions
     // Takes in a ClientOptions mutable reference, applies server/source overrides,
     // app name and driver info and adjusts credentials based on the selected auth mechanism.
     fn finalize_client_options(
