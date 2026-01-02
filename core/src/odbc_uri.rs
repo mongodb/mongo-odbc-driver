@@ -301,15 +301,9 @@ impl ODBCUri {
             let base = Some(DEFAULT_APP_NAME.to_string());
             let odbc_app = self.get_attribute(&[APPNAME]).cloned();
             let mongo_app = opts.app_name.take();
-            Some(vec![base, odbc_app, mongo_app].into_iter().flatten().fold(
-                String::new(),
-                |acc, x| {
-                    if acc.is_empty() {
-                        x
-                    } else {
-                        format!("{acc}|{x}")
-                    }
-                },
+            Some(vec![odbc_app, mongo_app].into_iter().flatten().fold(
+               DEFAULT_APP_NAME.to_string(),
+                |acc, x| format!("{acc}|{x}")
             ))
         };
         let driver_name = self.handle_driver_info(app_name.as_ref().unwrap());
