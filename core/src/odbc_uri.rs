@@ -265,14 +265,14 @@ impl ODBCUri {
         source: Option<&str>,
     ) -> Result<()> {
         // Merge or create credentials based on attributes vs URI (non-destructive lookup)
-        if opts.credential.is_some() {
+        if let Some(creds) = opts.credential.as_mut() {
             // user name set as attribute should supercede mongo uri
             if let Some(user) = self.get_attribute(USER_KWS).cloned() {
-                opts.credential.as_mut().unwrap().username = Some(user);
+                creds.username = Some(user);
             }
             // password set as attribute should supercede mongo uri
             if let Some(pwd) = self.get_attribute(PWD_KWS).cloned() {
-                opts.credential.as_mut().unwrap().password = Some(pwd);
+                creds.password = Some(pwd);
             }
             Self::check_client_opts_credentials(opts)?;
         } else {
