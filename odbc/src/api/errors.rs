@@ -4,9 +4,9 @@ use constants::{
     INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER, INVALID_ATTR_VALUE, INVALID_CHARACTER_VALUE,
     INVALID_COLUMN_NUMBER, INVALID_CURSOR_STATE, INVALID_DATETIME_FORMAT, INVALID_DESCRIPTOR_INDEX,
     INVALID_FIELD_DESCRIPTOR, INVALID_INFO_TYPE_VALUE, INVALID_SQL_TYPE,
-    INVALID_TRANSACTION_OPERATION_CODE, NOT_IMPLEMENTED, NO_DSN_OR_DRIVER, NO_RESULTSET,
-    OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE, RIGHT_TRUNCATED,
-    VENDOR_IDENTIFIER,
+    INVALID_STRING_OR_BUFFER_LENGTH, INVALID_TRANSACTION_OPERATION_CODE, NOT_IMPLEMENTED,
+    NO_DSN_OR_DRIVER, NO_RESULTSET, OPTION_CHANGED, PROGRAM_TYPE_OUT_OF_RANGE, RESTRICTED_DATATYPE,
+    RIGHT_TRUNCATED, VENDOR_IDENTIFIER,
 };
 use thiserror::Error;
 
@@ -142,6 +142,11 @@ pub enum ODBCError {
     NoResultSet,
     #[error("Connection not open")]
     ConnectionNotOpen,
+    #[error(
+        "[{vendor}][API] Invalid string or buffer size : \"{0}\"",
+        vendor = VENDOR_IDENTIFIER
+    )]
+    InvalidStringOrBufferLength(isize),
     #[error("[{vendor}][Core] {0}", vendor = VENDOR_IDENTIFIER)]
     Core(mongo_odbc_core::Error),
 }
@@ -190,6 +195,7 @@ impl ODBCError {
             ODBCError::NoResultSet => NO_RESULTSET,
             ODBCError::UnknownInfoType(_) => INVALID_INFO_TYPE_VALUE,
             ODBCError::ConnectionNotOpen => CONNECTION_NOT_OPEN,
+            ODBCError::InvalidStringOrBufferLength(_) => INVALID_STRING_OR_BUFFER_LENGTH,
         }
     }
 
@@ -236,7 +242,8 @@ impl ODBCError {
             | ODBCError::NoResultSet
             | ODBCError::UnsupportedInfoTypeRetrieval(_)
             | ODBCError::ConnectionNotOpen
-            | ODBCError::UnknownInfoType(_) => 0,
+            | ODBCError::UnknownInfoType(_)
+            | ODBCError::InvalidStringOrBufferLength(_) => 0,
             ODBCError::Core(me) => me.code(),
         }
     }
