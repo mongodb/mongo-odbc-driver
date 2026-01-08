@@ -780,7 +780,8 @@ functions:
         local_file: mongosql-odbc-driver/release/atsql.dll
     - command: s3.put
       params:
-        <<: *evg_bucket_config
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
         local_file: mongosql-odbc-driver/release/atsql.dll
         remote_file: mongosql-odbc-driver/windows/${release_version}/release/atsql.dll
         bucket: translators-connectors-releases
