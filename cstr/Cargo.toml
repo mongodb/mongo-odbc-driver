@@ -10,7 +10,7 @@ authors = [
 edition = "2021"
 
 [dependencies]
-widestring = "1"
+widestring = "1.0.2"
 num-traits = { workspace = true }
 num-derive = { workspace = true }
 

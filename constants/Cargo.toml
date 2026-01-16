@@ -11,6 +11,6 @@ edition = "2021"
 
 [dependencies]
 lazy_static = { workspace = true }
-cargo_toml = "0"
+cargo_toml = "0.15.2"
 anyhow = "*"
 serde_json = { workspace = true }

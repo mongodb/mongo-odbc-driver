@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 log = { workspace = true }
-log4rs = { version = "1", features = ["background_rotation"] }
+log4rs = { version = "1.2.0", features = ["background_rotation"] }
 shared_sql_utils = { path = "../shared_sql_utils" }
 constants = { path = "../constants" }
-directories = "6"
+directories = "5.0"
 lazy_static = { workspace = true }
