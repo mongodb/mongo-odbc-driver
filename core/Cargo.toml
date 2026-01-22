@@ -18,12 +18,12 @@ thiserror = { workspace = true }
 constants = { path = "../constants" }
 regex = { workspace = true }
 serde = { workspace = true }
-serde_stacker = "0.1"
+serde_stacker = "0"
 itertools = { workspace = true }
 lazy_static = { workspace = true }
 num-traits = { workspace = true }
 cstr = { path = "../cstr" }
-fancy-regex = "0.11.0"
+fancy-regex = "0"
 shared_sql_utils = { path = "../shared_sql_utils" }
 log = { workspace = true }
 mongodb = { workspace = true }
@@ -37,7 +37,7 @@ tokio = { workspace = true, features = [
     "macros",
     "net",
 ] }
-futures = "0.3"
+futures = "0"
 openidconnect = "3"
 open = "5"
 reqwest = { version = "0", features = ["blocking"] }
@@ -46,7 +46,7 @@ once_cell = { workspace = true }
 serde_json = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.44.0", features = [
+windows = { version = "0", features = [
     "Win32_Foundation",
     "Win32_System_Search",
 ] }
