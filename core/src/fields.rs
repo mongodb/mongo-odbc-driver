@@ -531,8 +531,10 @@ impl MongoFields {
         mongo_connection.runtime.block_on(async {
             let mut warnings: Vec<Error> = vec![];
             loop {
+                if let Some(ref mut collections) = self.collections_for_db
+                {
                     if let Some(current_collection) =
-                        self.collections_for_db.as_mut().unwrap().pop_front()
+                        collections.pop_front()
                     {
                         let collection_name = current_collection.name.clone();
                         if self
@@ -649,6 +651,7 @@ impl MongoFields {
                             }
                         }
                     }
+                }
                 if self.dbs.is_empty() {
                     return Ok((false, warnings));
                 }
