@@ -296,15 +296,6 @@ impl ResultSetSchema {
                         remove_and_return_field_if_exist(&mut processed_result_set_metadata, key)
                     })
                     .collect::<Result<Vec<_>>>()?
-            } else {
-                // the select list order is None or empty, for example if using an older adf version, sort by column name
-                processed_result_set_metadata
-                    .into_values()
-                    .sorted_by(|a, b| match Ord::cmp(&a.table_name, &b.table_name) {
-                        core::cmp::Ordering::Equal => Ord::cmp(&a.col_name, &b.col_name),
-                        v => v,
-                    })
-                    .collect()
             },
         )
     }
