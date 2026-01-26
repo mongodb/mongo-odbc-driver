@@ -467,7 +467,7 @@ impl ODBCUri {
         let uri = &self.construct_uri_for_parsing(uri)?;
         let parse_func = || async {
             if cfg!(target_os = "windows") {
-                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS. Fallback resolver is hickory-dns");
+                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS. Fallback resolver is hickory-resolver.");
                 ClientOptions::parse(uri)
                     .resolver_config(ResolverConfig::cloudflare())
                     .await
@@ -539,7 +539,7 @@ impl ODBCUri {
         // Parse primary client options, using Cloudflare resolver on Windows
         let parse_primary = || async {
             if cfg!(target_os = "windows") {
-                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS. Fallback resolver is hickory-dns");
+                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS. Fallback resolver is hickory-resolver.");
                 ClientOptions::parse(&dummy_uri)
                     .resolver_config(ResolverConfig::cloudflare())
                     .await
