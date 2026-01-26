@@ -272,9 +272,21 @@ impl ResultSetSchema {
                 // then finally convert to a HashMap
                 .flatten_ok()
                 .collect::<Result<HashMap<Vec<String>, MongoColMetadata>>>()?;
-
         Ok(
-            if self.select_order.as_ref().is_some_and(|so| !so.is_empty()) {
+            if self
+                .select_order
+                .as_ref()
+                .is_none_or(|order| order.is_empty())
+            {
+                // the select list order is None or empty, for example if using an older adf version, sort by column name
+                processed_result_set_metadata
+                    .into_values()
+                    .sorted_by(|a, b| match Ord::cmp(&a.table_name, &b.table_name) {
+                        core::cmp::Ordering::Equal => Ord::cmp(&a.col_name, &b.col_name),
+                        v => v,
+                    })
+                    .collect()
+            } else {
                 // given a select order, convert the values of the map into an ordered vector
                 self.select_order
                     .as_ref()

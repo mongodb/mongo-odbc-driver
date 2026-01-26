@@ -531,11 +531,8 @@ impl MongoFields {
         mongo_connection.runtime.block_on(async {
             let mut warnings: Vec<Error> = vec![];
             loop {
-                if let Some(ref mut collections) = self.collections_for_db
-                {
-                    if let Some(current_collection) =
-                        collections.pop_front()
-                    {
+                if let Some(collections_for_db) = &mut self.collections_for_db {
+                    if let Some(current_collection) = collections_for_db.pop_front() {
                         let collection_name = current_collection.name.clone();
                         if self
                             .collection_name_filter

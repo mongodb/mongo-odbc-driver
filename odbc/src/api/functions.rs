@@ -2905,16 +2905,15 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
-                InfoType::SQL_DATABASE_NAME => {
+                 InfoType::SQL_DATABASE_NAME => {
                     let conn = must_be_valid!((*conn_handle).as_connection());
                     let attributes = conn.attributes.read().unwrap();
-
-                    if let Some(ref current_catalog) = attributes.current_catalog{
-                        i16_len::set_output_wstring_as_bytes(
-                            current_catalog.as_str(),
-                            info_value_ptr,
-                            buffer_length as usize,
-                            string_length_ptr,
+                    if let Some(catalog) = &attributes.current_catalog {
+                         i16_len::set_output_wstring_as_bytes(
+                            catalog.as_str(),
+                             info_value_ptr,
+                             buffer_length as usize,
+                             string_length_ptr,
                         )
                     } else {
                         err = Some(ODBCError::ConnectionNotOpen);
