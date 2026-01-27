@@ -1894,7 +1894,7 @@ tasks:
       - func: "generate compliance report"
         vars:
           release_version: ${release_version}
-          repo_name: "mongo-odbc-driver"
+          compliance_report_template_path: ${common_test_infra_dir}/evergreen/resources/compliance_report_template.md
           product_name: "Mongo ODBC Driver"
           signing_section_bookmark: "verify-integrity-of-mongodb-odbc-driver-packages"
       - func: "publish compliance report"
@@ -1914,7 +1914,7 @@ tasks:
       - func: "generate compliance report"
         vars:
           release_version: ${release_version}
-          repo_name: "mongo-odbc-driver"
+          compliance_report_template_path: ${common_test_infra_dir}/evergreen/resources/compliance_report_template.md
           product_name: "Mongo ODBC Driver"
           signing_section_bookmark: "verify-integrity-of-mongodb-odbc-driver-packages"
       - func: "publish compliance report"
