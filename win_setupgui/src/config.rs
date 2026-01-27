@@ -42,7 +42,7 @@ unsafe extern "C" fn ConfigDSNW(
 
         match request {
             ODBC_ADD_DSN => {
-                if hwnd.0 == 0 && dsn_opts.is_valid_dsn() {
+                if hwnd.0 == std::ptr::null_mut() && dsn_opts.is_valid_dsn() {
                     dsn_opts.write_dsn_to_registry()
                 } else {
                     config_dsn(dsn_opts, request)

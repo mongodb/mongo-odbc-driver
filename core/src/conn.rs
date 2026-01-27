@@ -128,7 +128,8 @@ impl MongoConnection {
                     // Because trust-dns-resolver has a performance issue on windows, we default to cloudflare's resolver. Cloudflare DNS sometimes fails in specific customer settings. In which case, we fall back to the default system resolver.
                     // we fall back to the default system resolver in this case.
                     Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
-                        Client::with_options(user_options.fallback_client_options.unwrap())
+                        log::warn!("DNS resolution failed with the following error: `{}`. Using fallback DNS resolver instead.", e.kind);
+                        Client::with_options(user_options.fallback_client_options.expect("Error: There is no fallback DNS resolver."))
                     }
 
                     other => other,
