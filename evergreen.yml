@@ -1890,7 +1890,12 @@ tasks:
     exec_timeout_secs: 300 # 5m
     commands:
       - func: "publish static code analysis"
+        vars:
+          get_from_bucket: "mciuploads"
+          local_file_path: ${working_dir}/papertrail/${STATIC_CODE_ANALYSIS_NAME}
       - func: "publish augmented SBOM"
+        vars:
+          local_file_path: ${working_dir}/${AUGMENTED_SBOM_FILENAME}
       - func: "generate compliance report"
         vars:
           release_version: ${release_version}
@@ -1912,7 +1917,12 @@ tasks:
     exec_timeout_secs: 300 # 5m
     commands:
       - func: "publish static code analysis"
+        vars:
+          get_from_bucket: "mciuploads"
+          local_file_path: ${working_dir}/papertrail/${STATIC_CODE_ANALYSIS_NAME}
       - func: "publish augmented SBOM"
+        vars:
+          local_file_path: ${working_dir}/${AUGMENTED_SBOM_FILENAME}
       - func: "generate compliance report"
         vars:
           release_version: ${release_version}
