@@ -1657,8 +1657,6 @@ tasks:
         vars:
           sbom_in_path: ${SBOM_FINAL}
           sbom_out_path: ${AUGMENTED_SBOM_FILENAME}
-          local_file_path: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
-          remote_file_path: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
 
   # Removed macos x86 as part of SQL-2942
   - name: compile
