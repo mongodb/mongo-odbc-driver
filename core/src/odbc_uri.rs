@@ -3,6 +3,7 @@ use constants::{DEFAULT_APP_NAME, DRIVER_SHORT_NAME};
 use lazy_static::lazy_static;
 use mongodb::{
     bson::UuidRepresentation,
+    error::ErrorKind,
     options::{
         AuthMechanism, ClientOptions, ConnectionString, Credential, DriverInfo, ResolverConfig,
         ServerAddress,
@@ -77,9 +78,6 @@ lazy_static! {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserOptions {
     pub client_options: ClientOptions,
-    // On Windows, when connecting with a custom DNS resolver (e.g., Cloudflare) fails at client creation,
-    // we may retry with default resolver (no resolver_config). This holds that alternative options.
-    pub fallback_client_options: Option<ClientOptions>,
     pub uuid_representation: Option<UuidRepresentation>,
 }
 
@@ -467,27 +465,23 @@ impl ODBCUri {
         let uri = &self.construct_uri_for_parsing(uri)?;
         let parse_func = || async {
             if cfg!(target_os = "windows") {
-                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS. Fallback resolver is hickory-resolver.");
-                ClientOptions::parse(uri)
+                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS.");
+                match ClientOptions::parse(uri)
                     .resolver_config(ResolverConfig::cloudflare())
                     .await
+                {
+                    Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
+                        log::warn!("DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.", e);
+                        ClientOptions::parse(uri).await
+                    }
+                    other => other,
+                }
             } else {
-                log::info!(
-                    "Default DNS resolver is hickory-resolver. There is no fallback resolver."
-                );
+                log::info!("Default DNS resolver is hickory-resolver.");
                 ClientOptions::parse(uri).await
             }
         };
         let mut client_options = parse_func().await.map_err(Error::InvalidClientOptions)?;
-        // Prepare a fallback set of options without a custom resolver on Windows
-        #[cfg(target_os = "windows")]
-        let mut fallback_client_options = Some(
-            ClientOptions::parse(uri)
-                .await
-                .map_err(Error::InvalidClientOptions)?,
-        );
-        #[cfg(not(target_os = "windows"))]
-        let fallback_client_options: Option<ClientOptions> = None;
 
         // Extract UUID representation from the connection string before finalizing options
         let uuid_representation = ConnectionString::parse(uri)
@@ -497,15 +491,8 @@ impl ODBCUri {
         // Finalize primary client options
         self.finalize_client_options(&mut client_options, server.as_deref(), source)?;
 
-        // Finalize fallback client options (Windows only)
-        #[cfg(target_os = "windows")]
-        if let Some(ref mut fco) = fallback_client_options {
-            self.finalize_client_options(fco, server.as_deref(), source)?;
-        }
-
         Ok(UserOptions {
             client_options,
-            fallback_client_options,
             uuid_representation,
         })
     }
@@ -517,36 +504,22 @@ impl ODBCUri {
         // Build a basic connection string from provided attributes
         let dummy_uri = format!("mongodb://{}", &server);
 
-        #[allow(unused_mut)]
-        let mut fallback_client_options: Option<ClientOptions> = None;
-        // Prepare and finalize a fallback set of options without a custom resolver on Windows
-        #[cfg(target_os = "windows")]
-        {
-            let mut fco = ClientOptions::parse(&dummy_uri)
-                .await
-                .map_err(Error::InvalidClientOptions)?;
-            fco.hosts = vec![ServerAddress::parse(&server).map_err(Error::InvalidClientOptions)?];
-            fco.credential = Some(
-                Credential::builder()
-                    .username(user.clone())
-                    .password(pwd.clone())
-                    .build(),
-            );
-            self.finalize_client_options(&mut fco, Some(server.as_str()), None)?;
-            fallback_client_options = Some(fco);
-        };
-
         // Parse primary client options, using Cloudflare resolver on Windows
         let parse_primary = || async {
             if cfg!(target_os = "windows") {
-                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS. Fallback resolver is hickory-resolver.");
-                ClientOptions::parse(&dummy_uri)
+                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS.");
+                match ClientOptions::parse(&dummy_uri)
                     .resolver_config(ResolverConfig::cloudflare())
                     .await
+                {
+                    Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
+                        log::warn!("DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.", e);
+                        ClientOptions::parse(&dummy_uri).await
+                    }
+                    other => other,
+                }
             } else {
-                log::info!(
-                    "Default DNS resolver is hickory-resolver. There is no fallback resolver."
-                );
+                log::info!("Default DNS resolver is hickory-resolver.");
                 ClientOptions::parse(&dummy_uri).await
             }
         };
@@ -561,7 +534,6 @@ impl ODBCUri {
         self.finalize_client_options(&mut client_options, Some(server.as_str()), None)?;
         Ok(UserOptions {
             client_options,
-            fallback_client_options,
             uuid_representation: None,
         })
     }
