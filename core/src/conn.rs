@@ -3,7 +3,6 @@ use crate::odbc_uri::UserOptions;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
 use lazy_static::lazy_static;
-use mongodb::error::ErrorKind;
 use mongodb::{
     bson::{doc, Bson, UuidRepresentation},
     Client,
@@ -124,17 +123,8 @@ impl MongoConnection {
             let guard = runtime.enter();
             // the Client Topology uses tokio::spawn, so we need a guard here.
             let client = runtime.block_on(async {
-                match Client::with_options(user_options.client_options) {
-                    // Because trust-dns-resolver has a performance issue on windows, we default to cloudflare's resolver. Cloudflare DNS sometimes fails in specific customer settings. In which case, we fall back to the default system resolver.
-                    // we fall back to the default system resolver in this case.
-                    Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
-                        log::warn!("DNS resolution failed with the following error: `{}`. Using fallback DNS resolver instead.", e.kind);
-                        Client::with_options(user_options.fallback_client_options.expect("Error: There is no fallback DNS resolver."))
-                    }
-
-                    other => other,
-                }
-                .map_err(Error::InvalidClientOptions)
+                Client::with_options(user_options.client_options)
+                    .map_err(Error::InvalidClientOptions)
             })?;
             // we need to drop the guard before we return the runtime to kill the borrow
             // on the runtime. We drop it before the insert to hold the lock for as little time as
