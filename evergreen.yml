@@ -137,6 +137,7 @@ functions:
         working_dir: mongosql-odbc-driver
         include_expansions_in_env:
           - SBOM_DIR
+          - SBOM_FINAL
           - SBOM_LICENSES
           - SBOM_VULN
         script: |
@@ -274,51 +275,6 @@ functions:
           - mongosql-odbc-driver/*.cdx.json
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/
         content_type: text/plain
-        permissions: public-read
-
-  "augment SBOM":
-    - command: ec2.assume_role
-      display_name: Assume IAM role with permissions to pull Kondukto API token
-      params:
-        role_arn: ${kondukto_role_arn}
-    - command: shell.exec
-      display_name: Pull Kondukto API token from AWS Secrets Manager and write it to file
-      params:
-        silent: true
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        include_expansions_in_env: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN]
-        script: |
-          # use AWS CLI to get the Kondukto API token from AWS Secrets Manager
-          kondukto_token=$(aws secretsmanager get-secret-value --secret-id "kondukto-token" --region "us-east-1" --query 'SecretString' --output text)
-          if [ $? -ne 0 ]; then
-              exit 1
-          fi
-          # set the KONDUKTO_TOKEN environment variable
-          echo "KONDUKTO_TOKEN=$kondukto_token" > ${workdir}/kondukto_credentials.env
-    - command: shell.exec
-      type: test
-      params:
-        shell: bash
-        working_dir: mongosql-odbc-driver
-        script: |
-          ${prepare_shell}
-
-          echo "SBOM_FINAL = $SBOM_FINAL"
-
-          echo "-- Augmenting SBOM Lite --"
-          docker run -i --platform="linux/amd64" --rm -v "$PWD":/pwd \
-          --env-file ${workdir}/kondukto_credentials.env \
-          artifactory.corp.mongodb.com/release-tools-container-registry-public-local/silkbomb:2.0 \
-          augment --repo mongodb/mongo-odbc-driver --branch ${branch_name} --sbom-in /pwd/$SBOM_FINAL --sbom-out /pwd/${AUGMENTED_SBOM_FILENAME} --force
-          echo "-------------------------------"
-    - *assume_role_cmd
-    - command: s3.put
-      params:
-        <<: *evg_bucket_config
-        local_file: mongosql-odbc-driver/${AUGMENTED_SBOM_FILENAME}
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ssdlc/${AUGMENTED_SBOM_FILENAME}
-        content_type: application/json
         permissions: public-read
 
   "use latest mongosql version":
@@ -1696,7 +1652,13 @@ tasks:
       - func: "use latest mongosql version"
       - func: "generate SBOM"
       - func: "scan SBOM"
+        vars:
+          sbom_path: ${SBOM_LICENSES}
+      - func: "write aws credentials to file for silkbomb"
       - func: "augment SBOM"
+        vars:
+          sbom_in_path: ${SBOM_FINAL}
+          sbom_out_path: ${AUGMENTED_SBOM_FILENAME}
 
   # Removed macos x86 as part of SQL-2942
   - name: compile
@@ -1928,14 +1890,24 @@ tasks:
     exec_timeout_secs: 300 # 5m
     commands:
       - func: "publish static code analysis"
+        vars:
+          local_file_path: ${working_dir}/papertrail/${STATIC_CODE_ANALYSIS_NAME}
+          published_file_path: ${working_dir}/${STATIC_CODE_ANALYSIS_NAME}
       - func: "publish augmented SBOM"
+        vars:
+          local_file_path: ${working_dir}/${AUGMENTED_SBOM_FILENAME}
+          published_file_path: ${working_dir}/${SBOM_FILENAME}
       - func: "generate compliance report"
         vars:
-          release_version: ${release_version}
-          repo_name: "mongo-odbc-driver"
+          published_sbom_path: ${working_dir}/${SBOM_FILENAME}
+          published_sarif_path: ${working_dir}/${STATIC_CODE_ANALYSIS_NAME}
+          compliance_report_template_path: ${common_test_infra_dir}/evergreen/resources/compliance_report_template.md
           product_name: "Mongo ODBC Driver"
           signing_section_bookmark: "verify-integrity-of-mongodb-odbc-driver-packages"
       - func: "publish compliance report"
+        vars:
+          local_file_path: ${working_dir}/${COMPLIANCE_REPORT_NAME}
+          published_file_path: ${working_dir}/${COMPLIANCE_REPORT_NAME}
 
   - name: ssdlc-artifacts-snapshot
     run_on: ubuntu2204-small
@@ -1948,14 +1920,24 @@ tasks:
     exec_timeout_secs: 300 # 5m
     commands:
       - func: "publish static code analysis"
+        vars:
+          local_file_path: ${working_dir}/papertrail/${STATIC_CODE_ANALYSIS_NAME}
+          published_file_path: ${working_dir}/${STATIC_CODE_ANALYSIS_NAME}
       - func: "publish augmented SBOM"
+        vars:
+          local_file_path: ${working_dir}/${AUGMENTED_SBOM_FILENAME}
+          published_file_path: ${working_dir}/${SBOM_FILENAME}
       - func: "generate compliance report"
         vars:
-          release_version: ${release_version}
-          repo_name: "mongo-odbc-driver"
+          published_sbom_path: ${working_dir}/${SBOM_FILENAME}
+          published_sarif_path: ${working_dir}/${STATIC_CODE_ANALYSIS_NAME}
+          compliance_report_template_path: ${common_test_infra_dir}/evergreen/resources/compliance_report_template.md
           product_name: "Mongo ODBC Driver"
           signing_section_bookmark: "verify-integrity-of-mongodb-odbc-driver-packages"
       - func: "publish compliance report"
+        vars:
+          local_file_path: ${working_dir}/${COMPLIANCE_REPORT_NAME}
+          published_file_path: ${working_dir}/${COMPLIANCE_REPORT_NAME}
 
 task_groups:
   - name: windows-windows-test-unit-group
