@@ -3,6 +3,7 @@ use crate::{
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
     err::{QueryDiagnostics, Result},
+    run_command::run_command_with_retry,
     stmt::MongoStatement,
     Error, TypeMode,
 };
@@ -263,7 +264,7 @@ impl MongoQuery {
 
                     let guard = client.runtime.enter();
                     let schema_response = client.runtime.block_on(async {
-                        db.run_command(get_result_schema_cmd)
+                        run_command_with_retry(&db, get_result_schema_cmd)
                             .await
                             .map_err(Error::QueryExecutionFailed)
                     })?;

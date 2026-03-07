@@ -1,5 +1,6 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
 use crate::odbc_uri::UserOptions;
+use crate::run_command::run_command_with_retry;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
 use lazy_static::lazy_static;
@@ -239,8 +240,7 @@ impl MongoConnection {
     pub fn get_server_version(&self) -> Result<String> {
         self.runtime.block_on(async {
             let db = self.client.database("admin");
-            let cmd_res = db
-                .run_command(doc! {"buildInfo": 1})
+            let cmd_res = run_command_with_retry(&db, doc! {"buildInfo": 1})
                 .await
                 .map_err(Error::DatabaseVersionRetreival)?;
             let build_info: BuildInfoResult = mongodb::bson::from_document(cmd_res)
@@ -275,8 +275,7 @@ impl MongoConnection {
                     .map_err(Error::QueryCursorUpdate)?;
                 if let Some(operation_id) = operation.get("opid") {
                     let killop_doc = doc! { "killOp": 1, "op": operation_id};
-                    admin_db
-                        .run_command(killop_doc)
+                    run_command_with_retry(&admin_db, killop_doc)
                         .await
                         .map_err(Error::QueryExecutionFailed)?;
                 }
