@@ -1,8 +1,8 @@
 //! Retry wrapper for MongoDB `run_command` operations
 //!
 //! This module provides a retry mechanism for MongoDB `run_command` operations
-//! that encounter `ConnectionPoolCleared` errors. The retry logic uses exponential backoff
-//! to handle transient connection pool issues.
+//! that encounter transient connection errors. The retry logic uses exponential backoff
+//! to handle connection pool issues and network errors.
 //!
 //! # Example Usage
 //!
@@ -34,15 +34,17 @@ use std::time::Duration;
 const MAX_RETRIES: u32 = 3;
 const BASE_DELAY_MS: u64 = 100;
 
-/// Check if an error is a ConnectionPoolCleared error
-fn is_connection_pool_cleared_error(error: &mongodb::error::Error) -> bool {
-    matches!(error.kind.as_ref(), ErrorKind::ConnectionPoolCleared { .. })
+/// Check if an error is retryable.
+/// ConnectionPoolCleared and I/O errors are related to network issues and retryable.
+fn is_retryable_error(error: &mongodb::error::Error) -> bool {
+    matches!(error.kind.as_ref(),
+        ErrorKind::Io(..) | ErrorKind::ConnectionPoolCleared { .. })
 }
 
-/// Execute a database command with retry on ConnectionPoolCleared errors
+/// Execute a database command with retry on transient connection errors
 ///
 /// This function wraps the MongoDB `run_command` method and provides retry logic
-/// for `ConnectionPoolCleared` errors. It will retry up to `MAX_RETRIES` times (3)
+/// for transient connection errors. It will retry up to `MAX_RETRIES` times (3)
 /// with exponential backoff starting at `BASE_DELAY_MS` (100ms).
 ///
 /// If you don't want retry behavior, use `db.run_command()` directly instead.
@@ -58,29 +60,11 @@ fn is_connection_pool_cleared_error(error: &mongodb::error::Error) -> bool {
 ///
 /// # Retry Behavior
 ///
-/// - Only retries on `ConnectionPoolCleared` errors
+/// - Retries on `ConnectionPoolCleared` errors
+/// - Retries on I/O error (for example 10054 - connection forcibly closed by remote host)
 /// - Maximum 3 retry attempts
 /// - Exponential backoff: 200ms, 400ms, 800ms
 /// - All other errors are returned immediately
-///
-/// # Example
-///
-/// ```no_run
-/// use mongodb::{bson::doc, Database};
-/// use mongo_odbc_core::run_command::run_command_with_retry;
-///
-/// async fn example(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
-///     let cmd = doc! { "buildInfo": 1 };
-///
-///     // With retries (use this function)
-///     let result = run_command_with_retry(db, cmd.clone()).await?;
-///
-///     // Without retries (use plain run_command)
-///     let result = db.run_command(cmd).await?;
-///
-///     Ok(())
-/// }
-/// ```
 pub async fn run_command_with_retry(
     db: &Database,
     command: Document,
@@ -93,7 +77,7 @@ pub async fn run_command_with_retry(
                 attempt += 1;
 
                 // Check if we should retry
-                if attempt >= MAX_RETRIES || !is_connection_pool_cleared_error(&e) {
+                if attempt >= MAX_RETRIES || !is_retryable_error(&e) {
                     return Err(e);
                 }
 
@@ -102,8 +86,9 @@ pub async fn run_command_with_retry(
                 let delay = Duration::from_millis(delay_ms);
 
                 log::warn!(
-                    "ConnectionPoolCleared error encountered. Retrying attempt {}/{} after {:?}",
-                    attempt + 1,
+                    "Retryable connection error encountered: {}. Retrying attempt {}/{} after {:?}",
+                    e,
+                    attempt,
                     MAX_RETRIES,
                     delay
                 );
