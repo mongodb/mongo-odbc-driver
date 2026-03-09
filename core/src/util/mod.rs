@@ -10,7 +10,7 @@ use mongodb::{
     results::CollectionType,
     Database,
 };
-use rand::RngExt;
+use rand::{Rng};
 use regex::{Regex, RegexSet, RegexSetBuilder};
 use std::collections::HashSet;
 
@@ -125,18 +125,14 @@ macro_rules! set {
         };
     }
 
-// ============================================================================
-// MongoDB run_command retry logic
-// ============================================================================
-
-const MAX_RETRIES: u32 = 3;
-const BASE_DELAY_MS: u64 = 100;
+pub(crate) const MAX_RETRIES: u32 = 3;
+pub(crate) const BASE_DELAY_MS: u64 = 100;
 /// Jitter factor: delay will be multiplied by a random value between (1.0 - JITTER_FACTOR) and (1.0 + JITTER_FACTOR)
 /// This helps prevent thundering herd when multiple clients retry simultaneously
-const JITTER_FACTOR: f64 = 0.25; // ±25% jitter
+pub(crate) const JITTER_FACTOR: f64 = 0.25; // ±25% jitter
 
 /// Check if an error is retryable (ConnectionPoolCleared or specific I/O errors)
-fn is_retryable_error(error: &mongodb::error::Error) -> bool {
+pub(crate) fn is_retryable_error(error: &mongodb::error::Error) -> bool {
     matches!(error.kind.as_ref(),
         ErrorKind::Io(..) | ErrorKind::ConnectionPoolCleared { .. })
 }
@@ -152,7 +148,7 @@ fn is_retryable_error(error: &mongodb::error::Error) -> bool {
 ///     - All other errors are returned immediately
 ///
 /// If you don't want retry behavior, use `db.run_command()` directly instead.
-pub async fn run_command_with_retry(
+pub(crate) async fn run_command_with_retry(
     db: &Database,
     command: Document,
 ) -> std::result::Result<Document, mongodb::error::Error> {
