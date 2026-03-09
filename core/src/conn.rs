@@ -1,6 +1,6 @@
 use crate::cluster_type::{determine_cluster_type, MongoClusterType};
 use crate::odbc_uri::UserOptions;
-use crate::run_command::run_command_with_retry;
+use crate::util::run_command_with_retry;
 use crate::{err::Result, Error};
 use crate::{MongoQuery, TypeMode};
 use lazy_static::lazy_static;

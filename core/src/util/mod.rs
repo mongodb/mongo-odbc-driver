@@ -1,9 +1,15 @@
 use std::sync::LazyLock;
+use std::time::Duration;
 
 use constants::SQL_ALL_TABLE_TYPES;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
-use mongodb::results::CollectionType;
+use mongodb::{
+    bson::Document,
+    error::ErrorKind,
+    results::CollectionType,
+    Database,
+};
 use regex::{Regex, RegexSet, RegexSetBuilder};
 use std::collections::HashSet;
 
@@ -117,6 +123,64 @@ macro_rules! set {
             ].into_iter())
         };
     }
+
+// ============================================================================
+// MongoDB run_command retry logic
+// ============================================================================
+
+const MAX_RETRIES: u32 = 3;
+const BASE_DELAY_MS: u64 = 100;
+
+/// Check if an error is retryable (ConnectionPoolCleared or specific I/O errors)
+fn is_retryable_error(error: &mongodb::error::Error) -> bool {
+    matches!(error.kind.as_ref(),
+        ErrorKind::Io(..) | ErrorKind::ConnectionPoolCleared { .. })
+}
+
+/// Execute a database command with retry on transient connection errors
+///
+/// This function wraps the MongoDB `run_command` method and provides retry logic
+/// for transient connection errors.
+/// # Retry Behavior:
+///     - Retries on `ConnectionPoolCleared` and I/O errors ( for example 10054 - connection forcibly closed by remote host)
+///     - Maximum 3 retry attempts
+///     - Exponential backoff: 200ms, 400ms, 800ms
+///     - All other errors are returned immediately
+///
+/// If you don't want retry behavior, use `db.run_command()` directly instead.
+pub async fn run_command_with_retry(
+    db: &Database,
+    command: Document,
+) -> std::result::Result<Document, mongodb::error::Error> {
+    let mut attempt = 0;
+    loop {
+        match db.run_command(command.clone()).await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                attempt += 1;
+
+                // Check if we should retry
+                if attempt >= MAX_RETRIES || !is_retryable_error(&e) {
+                    return Err(e);
+                }
+
+                // Calculate exponential backoff delay: base_delay * 2^attempt
+                let delay_ms = BASE_DELAY_MS * (1 << attempt);
+                let delay = Duration::from_millis(delay_ms);
+
+                log::warn!(
+                    "Retryable connection error encountered: {}. Retrying attempt {}/{} after {:?}",
+                    e,
+                    attempt,
+                    MAX_RETRIES,
+                    delay
+                );
+
+                tokio::time::sleep(delay).await;
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod filtering {

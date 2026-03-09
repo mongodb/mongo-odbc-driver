@@ -36,4 +36,3 @@ pub use foreign_keys::MongoForeignKeys;
 pub mod cluster_type;
 pub mod oidc_auth;
 pub mod test_config;
-pub mod run_command;

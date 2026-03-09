@@ -1,4 +1,4 @@
-use crate::run_command::run_command_with_retry;
+use crate::util::run_command_with_retry;
 use crate::{err::Result, Error};
 use mongodb::bson::{doc, Bson, Document};
 use mongodb::Client;

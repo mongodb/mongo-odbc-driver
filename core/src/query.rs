@@ -3,8 +3,8 @@ use crate::{
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     conn::MongoConnection,
     err::{QueryDiagnostics, Result},
-    run_command::run_command_with_retry,
     stmt::MongoStatement,
+    util::run_command_with_retry,
     Error, TypeMode,
 };
 use constants::SQL_SCHEMAS_COLLECTION;

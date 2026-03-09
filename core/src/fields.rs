@@ -1,5 +1,4 @@
-use crate::run_command::run_command_with_retry;
-use crate::util::DISALLOWED_COLLECTION_NAMES;
+use crate::util::{run_command_with_retry, DISALLOWED_COLLECTION_NAMES};
 use crate::{
     cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
