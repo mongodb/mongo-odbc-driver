@@ -127,8 +127,9 @@ macro_rules! set {
 
 pub(crate) const MAX_RETRIES: u32 = 3;
 pub(crate) const BASE_DELAY_MS: u64 = 100;
-/// Jitter factor: delay will be multiplied by a random value between (1.0 - JITTER_FACTOR) and (1.0 + JITTER_FACTOR)
-/// This helps prevent thundering herd when multiple clients retry simultaneously
+/// Jitter factor: delay will be multiplied by a random value between (1.0 - JITTER_FACTOR) and
+/// (1.0 + JITTER_FACTOR).
+/// This helps prevent thundering herd when multiple clients retry simultaneously.
 pub(crate) const JITTER_FACTOR: f64 = 0.25; // ±25% jitter
 
 /// Check if an error is retryable (ConnectionPoolCleared or specific I/O errors)
@@ -137,12 +138,13 @@ pub(crate) fn is_retryable_error(error: &mongodb::error::Error) -> bool {
         ErrorKind::Io(..) | ErrorKind::ConnectionPoolCleared { .. })
 }
 
-/// Execute a database command with retry on transient connection errors
+/// Execute a database command with retry on transient connection errors.
 ///
 /// This function wraps the MongoDB `run_command` method and provides retry logic
 /// for transient connection errors.
 /// # Retry Behavior:
-///     - Retries on `ConnectionPoolCleared` and I/O errors ( for example 10054 - connection forcibly closed by remote host)
+///     - Retries on `ConnectionPoolCleared` and I/O errors
+///       ( for example 10054 - connection forcibly closed by remote host)
 ///     - Maximum 3 retry attempts
 ///     - Exponential backoff with jitter: ~150-250ms, ~300-500ms, ~600-1000ms
 ///     - All other errors are returned immediately
