@@ -10,6 +10,7 @@ use mongodb::{
     results::CollectionType,
     Database,
 };
+use rand::RngExt;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 use std::collections::HashSet;
 
@@ -130,6 +131,9 @@ macro_rules! set {
 
 const MAX_RETRIES: u32 = 3;
 const BASE_DELAY_MS: u64 = 100;
+/// Jitter factor: delay will be multiplied by a random value between (1.0 - JITTER_FACTOR) and (1.0 + JITTER_FACTOR)
+/// This helps prevent thundering herd when multiple clients retry simultaneously
+const JITTER_FACTOR: f64 = 0.25; // ±25% jitter
 
 /// Check if an error is retryable (ConnectionPoolCleared or specific I/O errors)
 fn is_retryable_error(error: &mongodb::error::Error) -> bool {
@@ -144,7 +148,7 @@ fn is_retryable_error(error: &mongodb::error::Error) -> bool {
 /// # Retry Behavior:
 ///     - Retries on `ConnectionPoolCleared` and I/O errors ( for example 10054 - connection forcibly closed by remote host)
 ///     - Maximum 3 retry attempts
-///     - Exponential backoff: 200ms, 400ms, 800ms
+///     - Exponential backoff with jitter: ~150-250ms, ~300-500ms, ~600-1000ms
 ///     - All other errors are returned immediately
 ///
 /// If you don't want retry behavior, use `db.run_command()` directly instead.
@@ -164,8 +168,12 @@ pub async fn run_command_with_retry(
                     return Err(e);
                 }
 
-                // Calculate exponential backoff delay: base_delay * 2^attempt
-                let delay_ms = BASE_DELAY_MS * (1 << attempt);
+                // Calculate exponential backoff delay with jitter: base_delay * 2^attempt * (1 ± jitter)
+                let base_delay_ms = BASE_DELAY_MS * (1 << attempt);
+
+                // Add jitter: random factor between (1.0 - JITTER_FACTOR) and (1.0 + JITTER_FACTOR)
+                let jitter_multiplier = rand::rng().random_range((1.0 - JITTER_FACTOR)..=(1.0 + JITTER_FACTOR));
+                let delay_ms = (base_delay_ms as f64 * jitter_multiplier) as u64;
                 let delay = Duration::from_millis(delay_ms);
 
                 log::warn!(
