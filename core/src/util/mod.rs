@@ -169,6 +169,8 @@ pub(crate) async fn run_command_with_retry(
                 // Add jitter: random factor between (1.0 - JITTER_FACTOR) and (1.0 + JITTER_FACTOR)
                 let jitter_multiplier =
                     rand::rng().random_range((1.0 - JITTER_FACTOR)..=(1.0 + JITTER_FACTOR));
+                // there is no try_from implementation for f64 to i64 and the value are safe
+                #[allow(clippy::cast_precision_loss)]
                 let delay_ms = (base_delay_ms as f64 * jitter_multiplier) as u64;
                 let delay = Duration::from_millis(delay_ms);
 
