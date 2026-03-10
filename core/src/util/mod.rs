@@ -4,13 +4,8 @@ use std::time::Duration;
 use constants::SQL_ALL_TABLE_TYPES;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
-use mongodb::{
-    bson::Document,
-    error::ErrorKind,
-    results::CollectionType,
-    Database,
-};
-use rand::{Rng};
+use mongodb::{bson::Document, error::ErrorKind, results::CollectionType, Database};
+use rand::Rng;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 use std::collections::HashSet;
 
@@ -134,8 +129,10 @@ pub(crate) const JITTER_FACTOR: f64 = 0.25; // ±25% jitter
 
 /// Check if an error is retryable (ConnectionPoolCleared or specific I/O errors)
 pub(crate) fn is_retryable_error(error: &mongodb::error::Error) -> bool {
-    matches!(error.kind.as_ref(),
-        ErrorKind::Io(..) | ErrorKind::ConnectionPoolCleared { .. })
+    matches!(
+        error.kind.as_ref(),
+        ErrorKind::Io(..) | ErrorKind::ConnectionPoolCleared { .. }
+    )
 }
 
 /// Execute a database command with retry on transient connection errors.
@@ -170,7 +167,8 @@ pub(crate) async fn run_command_with_retry(
                 let base_delay_ms = BASE_DELAY_MS * (1 << attempt);
 
                 // Add jitter: random factor between (1.0 - JITTER_FACTOR) and (1.0 + JITTER_FACTOR)
-                let jitter_multiplier = rand::rng().random_range((1.0 - JITTER_FACTOR)..=(1.0 + JITTER_FACTOR));
+                let jitter_multiplier =
+                    rand::rng().random_range((1.0 - JITTER_FACTOR)..=(1.0 + JITTER_FACTOR));
                 let delay_ms = (base_delay_ms as f64 * jitter_multiplier) as u64;
                 let delay = Duration::from_millis(delay_ms);
 
