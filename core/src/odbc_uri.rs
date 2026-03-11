@@ -9,6 +9,7 @@ use mongodb::{
         ServerAddress,
     },
 };
+use once_cell::sync::OnceCell;
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use shared_sql_utils::Dsn;
 use std::collections::HashMap;
@@ -75,6 +76,11 @@ lazy_static! {
     static ref USERNAME_PASSWORD_REGEX: Regex = Regex::new(r#"(^.*)@.*/?(.*)?"#).unwrap();
 }
 
+// Cache for the resolver configuration to use on Windows.
+// This is calculated once on first use and reused thereafter.
+// None means use default resolver, Some means use Cloudflare.
+static WINDOWS_RESOLVER_CONFIG: OnceCell<bool> = OnceCell::new();
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserOptions {
     pub client_options: ClientOptions,
@@ -89,6 +95,47 @@ impl std::ops::Deref for ODBCUri {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+/// Helper function to parse ClientOptions with the appropriate DNS resolver.
+/// On Windows, tries Cloudflare DNS first and falls back to default hickory-resolver on DNS errors.
+/// The resolver choice is cached after the first successful determination.
+async fn parse_client_options_with_resolver(uri: &str) -> mongodb::error::Result<ClientOptions> {
+    if cfg!(target_os = "windows") {
+        // Check if we've already determined which resolver to use
+        if let Some(&use_cloudflare) = WINDOWS_RESOLVER_CONFIG.get() {
+            // Use the cached decision
+            if use_cloudflare {
+                return ClientOptions::parse(uri)
+                    .resolver_config(ResolverConfig::cloudflare())
+                    .await;
+            } else {
+                return ClientOptions::parse(uri).await;
+            }
+        }
+
+        // First time: try Cloudflare DNS and fall back to Hickory if Cloudflare fails
+        log::info!("On Windows machine, default DNS resolver is Cloudflare DNS.");
+        match ClientOptions::parse(uri)
+            .resolver_config(ResolverConfig::cloudflare())
+            .await
+        {
+            Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
+                log::warn!("DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.", e);
+                // Cache the decision to use default resolver for future calls
+                let _ = WINDOWS_RESOLVER_CONFIG.set(false);
+                ClientOptions::parse(uri).await
+            }
+            other => {
+                // Cache the decision to use Cloudflare for future calls
+                let _ = WINDOWS_RESOLVER_CONFIG.set(true);
+                other
+            }
+        }
+    } else {
+        log::info!("Default DNS resolver is hickory-resolver.");
+        ClientOptions::parse(uri).await
     }
 }
 
@@ -463,25 +510,7 @@ impl ODBCUri {
         // instead of the system resolver
         // https://github.com/mongodb/mongo-rust-driver?tab=readme-ov-file#windows-dns-note
         let uri = &self.construct_uri_for_parsing(uri)?;
-        let parse_func = || async {
-            if cfg!(target_os = "windows") {
-                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS.");
-                match ClientOptions::parse(uri)
-                    .resolver_config(ResolverConfig::cloudflare())
-                    .await
-                {
-                    Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
-                        log::warn!("DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.", e);
-                        ClientOptions::parse(uri).await
-                    }
-                    other => other,
-                }
-            } else {
-                log::info!("Default DNS resolver is hickory-resolver.");
-                ClientOptions::parse(uri).await
-            }
-        };
-        let mut client_options = parse_func().await.map_err(Error::InvalidClientOptions)?;
+        let mut client_options = parse_client_options_with_resolver(uri).await.map_err(Error::InvalidClientOptions)?;
 
         // Extract UUID representation from the connection string before finalizing options
         let uuid_representation = ConnectionString::parse(uri)
@@ -505,26 +534,7 @@ impl ODBCUri {
         let dummy_uri = format!("mongodb://{}", &server);
 
         // Parse primary client options, using Cloudflare resolver on Windows
-        let parse_primary = || async {
-            if cfg!(target_os = "windows") {
-                log::info!("On Windows machine, default DNS resolver is Cloudflare DNS.");
-                match ClientOptions::parse(&dummy_uri)
-                    .resolver_config(ResolverConfig::cloudflare())
-                    .await
-                {
-                    Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
-                        log::warn!("DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.", e);
-                        ClientOptions::parse(&dummy_uri).await
-                    }
-                    other => other,
-                }
-            } else {
-                log::info!("Default DNS resolver is hickory-resolver.");
-                ClientOptions::parse(&dummy_uri).await
-            }
-        };
-
-        let mut client_options = parse_primary().await.map_err(Error::InvalidClientOptions)?;
+        let mut client_options = parse_client_options_with_resolver(&dummy_uri).await.map_err(Error::InvalidClientOptions)?;
         client_options.hosts =
             vec![ServerAddress::parse(&server).map_err(Error::InvalidClientOptions)?];
         client_options.credential =
