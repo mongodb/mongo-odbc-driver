@@ -37,6 +37,8 @@ fi
 export MSI_FILENAME="$PRODUCT_NAME-$release_version.msi"
 export UBUNTU_FILENAME="$PRODUCT_NAME-$release_version.tar.gz"
 
+SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
+
 cat <<EOT >expansions.yml
 release_version: "$release_version"
 FEATURE_FLAGS: "$FEATURE_FLAGS"
@@ -52,10 +54,10 @@ cargo_bin: "$CARGO_BIN"
 common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
 skip_machete_build: "true"
 script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
-resources_dir: "$COMMON_TEST_INFRA_DIR/evergreen/resources"
 working_dir: "mongosql-odbc-driver"
 MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
 MONGODB_BINARIES: "$MONGODB_BINARIES"
+SBOM_FINAL: "$SBOM_FINAL"
 prepare_shell: |
   set -o errexit
   export release_version="$release_version"
@@ -86,7 +88,7 @@ prepare_shell: |
   export SRV_TEST_PWD="${srv_test_pwd}"
   export SCRIPT_FOLDER="$SCRIPT_FOLDER"
   export SCRIPT_DIR="$(pwd)/$SCRIPT_FOLDER"
-  export SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
+  export SBOM_FINAL="$SBOM_FINAL"
   export ALLOW_VULNS="${AllowVulns}"
 
   # Windows variables
