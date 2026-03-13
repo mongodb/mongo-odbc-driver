@@ -513,7 +513,9 @@ impl ODBCUri {
         // instead of the system resolver
         // https://github.com/mongodb/mongo-rust-driver?tab=readme-ov-file#windows-dns-note
         let uri = &self.construct_uri_for_parsing(uri)?;
-        let mut client_options = parse_client_options_with_resolver(uri).await.map_err(Error::InvalidClientOptions)?;
+        let mut client_options = parse_client_options_with_resolver(uri)
+            .await
+            .map_err(Error::InvalidClientOptions)?;
 
         // Extract UUID representation from the connection string before finalizing options
         let uuid_representation = ConnectionString::parse(uri)
@@ -537,7 +539,9 @@ impl ODBCUri {
         let dummy_uri = format!("mongodb://{}", &server);
 
         // Parse primary client options, using Cloudflare resolver on Windows
-        let mut client_options = parse_client_options_with_resolver(&dummy_uri).await.map_err(Error::InvalidClientOptions)?;
+        let mut client_options = parse_client_options_with_resolver(&dummy_uri)
+            .await
+            .map_err(Error::InvalidClientOptions)?;
         client_options.hosts =
             vec![ServerAddress::parse(&server).map_err(Error::InvalidClientOptions)?];
         client_options.credential =
