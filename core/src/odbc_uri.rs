@@ -122,7 +122,7 @@ async fn parse_client_options_with_resolver(uri: &str) -> mongodb::error::Result
                     other => other,
                 }
             } else {
-                log::debug!("Default DNS resolver is hickory-resolver.");
+                log::debug!("DNS resolver is hickory-resolver.");
                 ClientOptions::parse(uri).await
             };
         }
