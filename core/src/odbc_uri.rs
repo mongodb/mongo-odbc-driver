@@ -107,16 +107,19 @@ async fn parse_client_options_with_resolver(uri: &str) -> mongodb::error::Result
         if let Some(&use_cloudflare) = WINDOWS_RESOLVER_CONFIG.get() {
             // Use the cached decision
             if use_cloudflare {
+                log::debug!("DNS resolver is Cloudflare.");
                 return ClientOptions::parse(uri)
                     .resolver_config(ResolverConfig::cloudflare())
                     .await;
             } else {
+                log::debug!("Default DNS resolver is hickory-resolver.");
                 return ClientOptions::parse(uri).await;
             }
         }
 
         // First time: try Cloudflare DNS and fall back to Hickory if Cloudflare fails
-        log::info!("On Windows machine, default DNS resolver is Cloudflare DNS.");
+        log::info!("Determining DNS resolver to use on Windows.");
+        log::info!("Default DNS resolver is Cloudflare DNS. Falling back to default hickory-resolver if failing.");
         match ClientOptions::parse(uri)
             .resolver_config(ResolverConfig::cloudflare())
             .await
@@ -134,7 +137,7 @@ async fn parse_client_options_with_resolver(uri: &str) -> mongodb::error::Result
             }
         }
     } else {
-        log::info!("Default DNS resolver is hickory-resolver.");
+        log::debug!("Default DNS resolver is hickory-resolver.");
         ClientOptions::parse(uri).await
     }
 }
