@@ -78,7 +78,9 @@ lazy_static! {
 
 // Cache for the resolver configuration to use on Windows.
 // This is calculated once on first use and reused thereafter.
-// None means use default resolver, Some means use Cloudflare.
+// - None: The default resolver has not been initialized,
+// - Some(true): Use Cloudflare,
+// - Some(false): Use default resolver.
 static WINDOWS_RESOLVER_CONFIG: OnceCell<bool> = OnceCell::new();
 
 #[derive(Debug, Clone, PartialEq)]
@@ -105,16 +107,24 @@ async fn parse_client_options_with_resolver(uri: &str) -> mongodb::error::Result
     if cfg!(target_os = "windows") {
         // Check if we've already determined which resolver to use
         if let Some(&use_cloudflare) = WINDOWS_RESOLVER_CONFIG.get() {
-            // Use the cached decision
-            if use_cloudflare {
+            // Use the cached resolver config
+            return if use_cloudflare {
                 log::debug!("DNS resolver is Cloudflare.");
-                return ClientOptions::parse(uri)
+                match ClientOptions::parse(uri)
                     .resolver_config(ResolverConfig::cloudflare())
-                    .await;
+                    .await
+                {
+                    Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
+                        // Cloudflare could be temporarily unavailable, fall back to default resolver if it fails.
+                        log::warn!("Transient failure. DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.", e);
+                        ClientOptions::parse(uri).await
+                    }
+                    other => other,
+                }
             } else {
                 log::debug!("Default DNS resolver is hickory-resolver.");
-                return ClientOptions::parse(uri).await;
-            }
+                ClientOptions::parse(uri).await
+            };
         }
 
         // First time: try Cloudflare DNS and fall back to Hickory if Cloudflare fails
@@ -125,7 +135,7 @@ async fn parse_client_options_with_resolver(uri: &str) -> mongodb::error::Result
             .await
         {
             Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
-                log::warn!("DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.", e);
+                log::warn!("DNS resolution failed with Cloudflare DNS: `{}`. Setting default DNS resolver to hickory-resolver.", e);
                 // Cache the decision to use default resolver for future calls
                 let _ = WINDOWS_RESOLVER_CONFIG.set(false);
                 ClientOptions::parse(uri).await
