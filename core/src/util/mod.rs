@@ -169,7 +169,7 @@ pub(crate) async fn run_command_with_retry(
                 let jitter_multiplier =
                     rand::rng().random_range((1.0 - JITTER_FACTOR)..=(1.0 + JITTER_FACTOR));
                 // there is no try_from implementation for floats (f32/f64) to integers (i8/i16/i32/i64 or u8/u16/u32/u64) and the value are safe
-                #[allow( clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_possible_truncation)]
                 let delay_ms = (f32::from(base_delay_ms) * jitter_multiplier).floor() as u64;
                 let delay = Duration::from_millis(delay_ms);
 
