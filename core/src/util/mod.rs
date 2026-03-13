@@ -120,15 +120,15 @@ macro_rules! set {
         };
     }
 
-pub(crate) const MAX_RETRIES: u32 = 3;
-pub(crate) const BASE_DELAY_MS: u64 = 100;
+const MAX_RETRIES: u8 = 3;
+const BASE_DELAY_MS: u8 = 100;
 /// Jitter factor: delay will be multiplied by a random value between (1.0 - JITTER_FACTOR) and
 /// (1.0 + JITTER_FACTOR).
 /// This helps prevent thundering herd when multiple clients retry simultaneously.
-pub(crate) const JITTER_FACTOR: f64 = 0.25; // ±25% jitter
+const JITTER_FACTOR: f32 = 0.25; // ±25% jitter
 
 /// Check if an error is retryable (ConnectionPoolCleared or specific I/O errors)
-pub(crate) fn is_retryable_error(error: &mongodb::error::Error) -> bool {
+fn is_retryable_error(error: &mongodb::error::Error) -> bool {
     matches!(
         error.kind.as_ref(),
         ErrorKind::Io(..) | ErrorKind::ConnectionPoolCleared { .. }
@@ -162,16 +162,15 @@ pub(crate) async fn run_command_with_retry(
                 if attempt >= MAX_RETRIES || !is_retryable_error(&e) {
                     return Err(e);
                 }
-
                 // Calculate exponential backoff delay with jitter: base_delay * 2^attempt * (1 ± jitter)
                 let base_delay_ms = BASE_DELAY_MS * (1 << attempt);
 
                 // Add jitter: random factor between (1.0 - JITTER_FACTOR) and (1.0 + JITTER_FACTOR)
                 let jitter_multiplier =
                     rand::rng().random_range((1.0 - JITTER_FACTOR)..=(1.0 + JITTER_FACTOR));
-                // there is no try_from implementation for f64 to i64 and the value are safe
-                #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-                let delay_ms = (base_delay_ms as f64 * jitter_multiplier) as u64;
+                // there is no try_from implementation for floats (f32/f64) to integers (i8/i16/i32/i64 or u8/u16/u32/u64) and the value are safe
+                #[allow( clippy::cast_possible_truncation)]
+                let delay_ms = (f32::from(base_delay_ms) * jitter_multiplier).floor() as u64;
                 let delay = Duration::from_millis(delay_ms);
 
                 log::warn!(
