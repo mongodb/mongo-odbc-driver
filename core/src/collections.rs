@@ -216,15 +216,18 @@ impl MongoStatement for MongoCollections {
     // Return true if moving was successful, false otherwise.
     #[allow(clippy::blocks_in_conditions)]
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
-        if self.current_database_index.is_none() {
-            if self.collections_for_db_list.is_empty() {
-                return Ok((false, vec![]));
-            }
-            self.current_database_index = Some(0);
+        // Empty cluster
+        if self.collections_for_db_list.is_empty() {
+            return Ok((false, vec![]));
         }
-        if self.current_collection_index.is_none() {
-            self.current_collection_index = Some(0);
+        // Initialize database index on first call or retrieve current index
+        let db_index = *self.current_database_index.get_or_insert(0);
+        // Cursor was already exhausted
+        if db_index >= self.collections_for_db_list.len() {
+            return Ok((false, vec![]));
         }
+        // Initialize collection index on first call or retrieve current index
+        self.current_collection_index.get_or_insert(0);
 
         loop {
             while self
