@@ -14,8 +14,8 @@ mod integration {
     use definitions::{
         AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute,
         DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
-        Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFreeHandle, SQLGetInfoW,
-        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, SQL_NTS,
+        Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle,
+        SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, SQL_NTS,
     };
 
     use cstr::WideChar;
@@ -672,6 +672,75 @@ mod integration {
                 ],
                 vec![CDataType::SQL_C_WCHAR; 5],
                 None,
+            );
+        }
+    }
+
+    ///  Test that calling SQLFetch after SQL_NO_DATA has already been returned does not crash or error.
+    ///  This exercises the driver's behavior when a caller fetches past the end of the result set.
+    ///  Flow:
+    ///  - SQLAllocHandle(SQL_HANDLE_STMT)
+    ///  - SQLTablesW("integration_test", "", "", "")
+    ///  - SQLFetch() in a loop until SQL_NO_DATA is returned, consuming all rows
+    ///  - One additional SQLFetch() call after SQL_NO_DATA, which must also return SQL_NO_DATA
+    #[test]
+    fn test_table_listing_fetch_after_no_data() {
+        let env_handle: HEnv = setup();
+        let (conn_handle, _, _, _) = power_bi_connect(env_handle);
+        let mut stmt: Handle = null_mut();
+
+        unsafe {
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLAllocHandle(
+                    HandleType::SQL_HANDLE_STMT as i16,
+                    conn_handle as *mut _,
+                    &mut stmt as *mut Handle
+                )
+            );
+
+            let mut catalog_name: Vec<WideChar> = cstr::to_widechar_vec("integration_test");
+            catalog_name.push(0);
+            let empty_string = WideChar::default();
+
+            // SQLTablesW("integration_test", "", "", "")
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLTablesW(
+                    stmt as HStmt,
+                    catalog_name.as_ptr(),
+                    (catalog_name.len() as SmallInt) - 1,
+                    std::ptr::addr_of!(empty_string),
+                    0,
+                    std::ptr::addr_of!(empty_string),
+                    0,
+                    std::ptr::addr_of!(empty_string),
+                    0,
+                ),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
+            );
+
+            // Consume all rows until SQL_NO_DATA is returned
+            loop {
+                let result = SQLFetch(stmt as HStmt);
+                assert!(
+                    result == SqlReturn::SUCCESS || result == SqlReturn::NO_DATA,
+                    "Unexpected SQLFetch result during data consumption: {}. Diagnostic: {}",
+                    sql_return_to_string(result),
+                    get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
+                );
+                if result == SqlReturn::NO_DATA {
+                    break;
+                }
+            }
+
+            // One more SQLFetch after SQL_NO_DATA — must also return SQL_NO_DATA
+            assert_eq!(
+                SqlReturn::NO_DATA,
+                SQLFetch(stmt as HStmt),
+                "Expected SQL_NO_DATA on SQLFetch called after result set was already exhausted. Diagnostic: {}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
             );
         }
     }
