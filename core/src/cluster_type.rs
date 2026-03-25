@@ -1,3 +1,4 @@
+use crate::util::run_command_with_retry;
 use crate::{err::Result, Error};
 use mongodb::bson::{doc, Bson, Document};
 use mongodb::Client;
@@ -17,8 +18,7 @@ pub async fn determine_cluster_type(client: &Client) -> Result<MongoClusterType>
     // The { buildInfo: 1 } command returns information that indicates
     // the type of the cluster.
     let build_info_cmd = doc! { "buildInfo": 1 };
-    let cmd_res: Document = db
-        .run_command(build_info_cmd)
+    let cmd_res: Document = run_command_with_retry(&db, build_info_cmd)
         .await
         .map_err(Error::BuildInfoCmdExecutionFailed)?;
 

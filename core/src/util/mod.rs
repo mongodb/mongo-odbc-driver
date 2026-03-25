@@ -1,9 +1,11 @@
 use std::sync::LazyLock;
+use std::time::Duration;
 
 use constants::SQL_ALL_TABLE_TYPES;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
-use mongodb::results::CollectionType;
+use mongodb::{bson::Document, error::ErrorKind, results::CollectionType, Database};
+use rand::Rng;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 use std::collections::HashSet;
 
@@ -117,6 +119,73 @@ macro_rules! set {
             ].into_iter())
         };
     }
+
+const MAX_RETRIES: u8 = 3;
+const BASE_DELAY_MS: u8 = 100;
+/// Jitter factor: delay will be multiplied by a random value between (1.0 - JITTER_FACTOR) and
+/// (1.0 + JITTER_FACTOR).
+/// This helps prevent thundering herd when multiple clients retry simultaneously.
+const JITTER_FACTOR: f32 = 0.25; // ±25% jitter
+
+/// Check if an error is retryable (ConnectionPoolCleared or specific I/O errors)
+fn is_retryable_error(error: &mongodb::error::Error) -> bool {
+    matches!(
+        error.kind.as_ref(),
+        ErrorKind::Io(..) | ErrorKind::ConnectionPoolCleared { .. }
+    )
+}
+
+/// Execute a database command with retry on transient connection errors.
+///
+/// This function wraps the MongoDB `run_command` method and provides retry logic
+/// for transient connection errors.
+/// # Retry Behavior:
+///     - Retries on `ConnectionPoolCleared` and I/O errors
+///       ( for example 10054 - connection forcibly closed by remote host)
+///     - Maximum 3 retry attempts
+///     - Exponential backoff with jitter: ~150-250ms, ~300-500ms, ~600-1000ms
+///     - All other errors are returned immediately
+///
+/// If you don't want retry behavior, use `db.run_command()` directly instead.
+pub(crate) async fn run_command_with_retry(
+    db: &Database,
+    command: Document,
+) -> std::result::Result<Document, mongodb::error::Error> {
+    let mut attempt = 0;
+    loop {
+        match db.run_command(command.clone()).await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                attempt += 1;
+
+                // Check if we should retry
+                if attempt >= MAX_RETRIES || !is_retryable_error(&e) {
+                    return Err(e);
+                }
+                // Calculate exponential backoff delay with jitter: base_delay * 2^attempt * (1 ± jitter)
+                let base_delay_ms = BASE_DELAY_MS * (1 << attempt);
+
+                // Add jitter: random factor between (1.0 - JITTER_FACTOR) and (1.0 + JITTER_FACTOR)
+                let jitter_multiplier =
+                    rand::rng().random_range((1.0 - JITTER_FACTOR)..=(1.0 + JITTER_FACTOR));
+                // there is no try_from implementation for floats (f32/f64) to integers (i8/i16/i32/i64 or u8/u16/u32/u64) and the value are safe
+                #[allow(clippy::cast_possible_truncation)]
+                let delay_ms = (f32::from(base_delay_ms) * jitter_multiplier).floor() as u64;
+                let delay = Duration::from_millis(delay_ms);
+
+                log::warn!(
+                    "Retryable connection error encountered: {}. Retrying attempt {}/{} after {:?}",
+                    e,
+                    attempt,
+                    MAX_RETRIES,
+                    delay
+                );
+
+                tokio::time::sleep(delay).await;
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod filtering {

@@ -1,4 +1,4 @@
-use crate::util::DISALLOWED_COLLECTION_NAMES;
+use crate::util::{run_command_with_retry, DISALLOWED_COLLECTION_NAMES};
 use crate::{
     cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
@@ -554,7 +554,7 @@ impl MongoFields {
 
                             let sql_get_schema_response: Result<SqlGetSchemaResponse> =
                                 mongodb::bson::from_document(
-                                    db.run_command(get_schema_cmd).await.unwrap(),
+                                    run_command_with_retry(&db, get_schema_cmd).await.unwrap(),
                                 )
                                 .map_err(|e| {
                                     Error::CollectionDeserialization(collection_name.clone(), e)
@@ -653,12 +653,11 @@ impl MongoFields {
                     return Ok((false, warnings));
                 }
                 let db_name = self.dbs.pop_front().unwrap();
+                let db = mongo_connection.client.database(&db_name);
                 self.collections_for_db = Some(
-                mongo_connection
-                    .client
-                    .database(&db_name)
-                    .run_command(
-                    doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
+                run_command_with_retry(
+                    &db,
+                    doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true}
                 ).await.unwrap().get_document("cursor").map(|doc| {
                     doc.get_array("firstBatch").unwrap().iter().map(|val| {
                         let doc = val.as_document().unwrap();

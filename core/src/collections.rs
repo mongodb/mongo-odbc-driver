@@ -1,4 +1,5 @@
 use crate::stmt::EmptyStatement;
+use crate::util::run_command_with_retry;
 use crate::util::{
     is_match, table_type_filter_to_vec, to_name_regex, DISALLOWED_COLLECTION_NAMES,
     DISALLOWED_DB_NAMES,
@@ -142,10 +143,12 @@ impl MongoCollections {
                     .filter(|db_name| database_filter(db_name))
                     .filter(|db_name| is_match(db_name, db_name_filter, accept_search_patterns))
                     .map(|val| async move {
+                        let db = mongo_connection.client.database(val.as_str());
                         CollectionsForDb {
                             database_name: val.to_string(),
-                            collection_list: mongo_connection.client.database(val.as_str()).run_command(
-                                doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true},
+                            collection_list: run_command_with_retry(
+                                &db,
+                                doc! { "listCollections": 1, "nameOnly": true, "authorizedCollections": true}
                             ).await
                             .map_err(|e| {
                                 log::error!("Error getting collections for db {val}, Error: {e}");

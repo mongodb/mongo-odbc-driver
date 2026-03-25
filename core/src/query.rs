@@ -4,6 +4,7 @@ use crate::{
     conn::MongoConnection,
     err::{QueryDiagnostics, Result},
     stmt::MongoStatement,
+    util::run_command_with_retry,
     Error, TypeMode,
 };
 use constants::SQL_SCHEMAS_COLLECTION;
@@ -263,7 +264,7 @@ impl MongoQuery {
 
                     let guard = client.runtime.enter();
                     let schema_response = client.runtime.block_on(async {
-                        db.run_command(get_result_schema_cmd)
+                        run_command_with_retry(&db, get_result_schema_cmd)
                             .await
                             .map_err(Error::QueryExecutionFailed)
                     })?;
