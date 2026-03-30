@@ -1,12 +1,13 @@
 use mongodb::options::oidc::{CallbackContext, IdpServerResponse};
 use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
-    reqwest::async_http_client,
-    AuthorizationCode, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse,
-    PkceCodeChallenge, RedirectUrl, RefreshToken, RequestTokenError, Scope,
+    http, AsyncHttpClient, AuthorizationCode, ClientId, ConfigurationError, CsrfToken,
+    HttpClientError, HttpResponse, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge,
+    RedirectUrl, RefreshToken, RequestTokenError, Scope,
 };
+use reqwest::{redirect, Client};
 use rfc8252_http_server::{start, OidcResponseParams};
-use std::{collections::HashSet, time::Instant};
+use std::{collections::HashSet, future::Future, pin::Pin, time::Instant};
 use tokio::time::{self, Duration};
 
 const DEFAULT_REDIRECT_URI: &str = "http://localhost:27097/redirect";
@@ -16,8 +17,11 @@ const OPENID_SCOPE: &str = "openid";
 
 #[derive(Debug)]
 pub enum Error {
-    IssuerUriMustBeHttps,
+    ClientBuild(reqwest::Error),
+    CodeExchange(ConfigurationError),
+    IssuerUriMustBeHttps(String),
     NoIdpServerInfo,
+    NoRefreshToken,
     CsrfMismatch,
     HumanFlowUnsupported,
     Timedout,
@@ -30,12 +34,66 @@ impl From<Error> for mongodb::error::Error {
     }
 }
 
+/// Creates an async HTTP client backed by reqwest for openidconnect.
+fn async_http_client() -> Result<ReqwestAsyncClient, reqwest::Error> {
+    // HTTPS client for upstream requests
+    //
+    // Note: Redirects should _not_ be enabled as they are susceptible to SSRF vulnerabilities
+    let client = Client::builder()
+        .redirect(redirect::Policy::none())
+        .build()?;
+    Ok(ReqwestAsyncClient(client))
+}
+
+/// Wrapper around a reqwest client for use with openidconnect.
+///
+/// Note: This is shamelessly copied from the `oauth2-reqwest` crate since that
+/// crate is neither stable nor will fix the dependency on an outdated version
+/// of reqwest.
+///
+/// Original source: <https://github.com/ramosbugs/oauth2-rs/blob/72ce74401c26eb4dc85dcbfde587bbcfc149e3ae/oauth2-reqwest/src/lib.rs#L119>
+/// Original license: MIT
+#[derive(Debug, Clone)]
+struct ReqwestAsyncClient(Client);
+
+impl<'c> AsyncHttpClient<'c> for ReqwestAsyncClient {
+    type Error = HttpClientError<reqwest::Error>;
+    type Future =
+        Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + Send + Sync + 'c>>;
+
+    fn call(&'c self, request: openidconnect::HttpRequest) -> Self::Future {
+        Box::pin(async move {
+            let response = self
+                .0
+                .execute(request.try_into().map_err(Box::new)?)
+                .await
+                .map_err(Box::new)?;
+
+            let mut builder = http::Response::builder().status(response.status());
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                builder = builder.version(response.version());
+            }
+            for (name, value) in response.headers() {
+                builder = builder.header(name, value);
+            }
+            builder
+                .body(response.bytes().await.map_err(Box::new)?.to_vec())
+                .map_err(HttpClientError::Http)
+        })
+    }
+}
+
+/// Executes the OIDC callback, choosing between refresh and full auth flow.
+///
+/// # Errors
+/// Returns [`mongodb::error::Error`] if the flow times out or the underlying
+/// [`do_refresh`] or [`do_auth_flow`] call fails.
 pub async fn oidc_call_back(params: CallbackContext) -> mongodb::error::Result<IdpServerResponse> {
     let sleep_duration = params
         .timeout
         // turn the supplied timeout Instant into a Duration from now
-        .map(|x| x - Instant::now())
-        .unwrap_or(DEFAULT_SLEEP_DURATION);
+        .map_or(DEFAULT_SLEEP_DURATION, |x| x - Instant::now());
 
     // If there is a refresh token, we refresh, otherwise we do not
     if params.refresh_token.is_some() {
@@ -49,7 +107,7 @@ pub async fn oidc_call_back(params: CallbackContext) -> mongodb::error::Result<I
     }
 }
 
-pub(crate) async fn build_scopes(
+pub(crate) fn build_scopes(
     idp_info: &mongodb::options::oidc::IdpServerInfo,
     provider_metadata: &CoreProviderMetadata,
 ) -> impl Iterator<Item = Scope> {
@@ -72,7 +130,11 @@ pub(crate) async fn build_scopes(
             scopes.push(client_id_default);
         }
     }
-    if !supported_scopes.is_empty() {
+    // If supported scopes is empty, we just assume reporting is not correct and attempt with what
+    // is requested.
+    if supported_scopes.is_empty() {
+        scopes.extend(requested_scopes);
+    } else {
         for scope in requested_scopes {
             if supported_scopes.contains(&scope) {
                 scopes.push(scope);
@@ -82,10 +144,6 @@ pub(crate) async fn build_scopes(
                 );
             }
         }
-    // If supported scopes is empty, we just assume reporting is not correct and attempt with what
-    // is requested.
-    } else {
-        scopes.extend(requested_scopes);
     }
     scopes.into_iter().map(Scope::new)
 }
@@ -99,12 +157,15 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     let issuer_uri =
         IssuerUrl::new(idp_info.issuer.clone()).map_err(|e| Error::Other(e.to_string()))?;
     if issuer_uri.url().scheme() != "https" {
-        return Err(Error::IssuerUriMustBeHttps);
+        return Err(Error::IssuerUriMustBeHttps(
+            issuer_uri.url().scheme().to_string(),
+        ));
     }
+    let async_http_client = async_http_client().map_err(Error::ClientBuild)?;
     let (server, mut oidc_params_channel) = start().await;
 
     // Use OpenID Connect Discovery to fetch the provider metadata.
-    let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, async_http_client)
+    let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, &async_http_client)
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
 
@@ -130,7 +191,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         Nonce::new_random,
     );
 
-    for scope in build_scopes(&idp_info, &provider_metadata).await {
+    for scope in build_scopes(&idp_info, &provider_metadata) {
         // There does not seem to be a way to do intersection without cloning the scope
         auth_url = auth_url.add_scope(scope);
     }
@@ -163,11 +224,12 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     // implementation must implement RFC9207
     let token_request = client
         .exchange_code(AuthorizationCode::new(code))
+        .map_err(Error::CodeExchange)?
         // Set the PKCE code verifier.
         .set_pkce_verifier(pkce_verifier);
 
     let token_response = token_request
-        .request_async(async_http_client)
+        .request_async(&async_http_client)
         .await
         .map_err(|e| {
             let msg = match e {
@@ -210,11 +272,14 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
     let client_id = idp_info.client_id.ok_or(Error::HumanFlowUnsupported)?;
     let issuer_uri = IssuerUrl::new(idp_info.issuer).map_err(|e| Error::Other(e.to_string()))?;
     if issuer_uri.url().scheme() != "https" {
-        return Err(Error::IssuerUriMustBeHttps);
+        return Err(Error::IssuerUriMustBeHttps(
+            issuer_uri.url().scheme().to_string(),
+        ));
     }
+    let async_http_client = async_http_client().map_err(Error::ClientBuild)?;
 
     // Use OpenID Connect Discovery to fetch the provider metadata.
-    let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, async_http_client)
+    let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, &async_http_client)
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
 
@@ -229,8 +294,11 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
     // This function will never be called without a refresh token (to be checked in the driver function),
     // but we return an error to be explicit about the fact that we expect a refresh token.
     let token_response = client
-        .exchange_refresh_token(&RefreshToken::new(params.refresh_token.unwrap()))
-        .request_async(async_http_client)
+        .exchange_refresh_token(&RefreshToken::new(
+            params.refresh_token.ok_or(Error::NoRefreshToken)?,
+        ))
+        .map_err(Error::CodeExchange)?
+        .request_async(&async_http_client)
         .await
         .map_err(|e| {
             let msg = match e {
