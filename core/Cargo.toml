@@ -38,9 +38,9 @@ tokio = { workspace = true, features = [
     "net",
 ] }
 futures = "0"
-openidconnect = "3"
+openidconnect = { version = "4", default-features = false }
 open = "5"
-reqwest = { version = "0", features = ["blocking"] }
+reqwest = { version = "0", features = ["blocking", "rustls"] }
 rfc8252_http_server = { path = "../rfc8252_http_server" }
 once_cell = { workspace = true }
 serde_json = { workspace = true }
