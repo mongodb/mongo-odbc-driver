@@ -1776,6 +1776,7 @@ tasks:
   - name: compile
     depends_on:
       - name: sbom
+        variant: code-quality-security
     commands:
       - func: "install iODBC"
         variants: [macos-arm]

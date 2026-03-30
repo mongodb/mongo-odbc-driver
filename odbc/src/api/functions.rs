@@ -1081,7 +1081,10 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
             let conn_handle = try_mongo_handle!(connection_handle);
             let conn = must_be_valid!((*conn_handle).as_connection());
 
-            // Close any open cursors on statements and drop all statements
+            // Close any open cursors on statements and clear the statements set.
+            // We do NOT free the statement memory here — that is left to SQLFreeHandle.
+            // Freeing here causes a use-after-free when the application later calls
+            // SQLFreeHandle(SQL_HANDLE_STMT) on the same handle.
             if let Ok(mut stmts) = conn.statements.write() {
                 stmts.iter().for_each(|stmt| {
                     if let Some(stmt) = (*stmt).as_ref() {
@@ -1089,9 +1092,6 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
                             sql_stmt_close_cursor_helper(stmt);
                         }
                     }
-                    // We also deallocate the memory for the statement handles here. We do not share this with SQLFreeHandle
-                    // as it would special case the way handles are... handled in that function in a generic way.
-                    let _ = Box::from_raw(*stmt);
                 });
                 stmts.clear();
             }
