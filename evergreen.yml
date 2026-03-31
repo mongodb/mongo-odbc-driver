@@ -964,7 +964,7 @@ functions:
           echo "----- Downloading Procdump ----"
           PROCDUMP_ZIP="$DUMP_PATH/procdump.zip"
           PROCDUMP_DIR="$DUMP_PATH/procdump"
-          curl -L -o "$PROCDUMP_ZIP" "https://download.sysinternals.com/files/Procdump.zip"
+          curl -f -L --retry 3 -o "$PROCDUMP_ZIP" "https://download.sysinternals.com/files/Procdump.zip"
           if [ $? -eq 0 ]; then
             mkdir -p "$PROCDUMP_DIR"
             unzip -o "$PROCDUMP_ZIP" -d "$PROCDUMP_DIR"
