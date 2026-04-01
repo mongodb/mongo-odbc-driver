@@ -881,10 +881,10 @@ functions:
           sed -i 's@%ADF_TEST_DB%@'"$(echo "${adf_test_local_db}" | sed s',\\,\\\\\\\\,g')"'@' setup/setupDSN.reg
           reg import "setup\setupDSN.reg"
           echo "----- Registry entries after setup ----"
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null || true
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null || true
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null || true
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null || true
           echo "-------------------------"
 
   "setup driver with UnixODBC":
@@ -955,13 +955,50 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          mkdir $DUMP_PATH
+          mkdir -p $DUMP_PATH
           set +e
+
+          # Download and install procdump as JIT debugger for crash dump collection.
+          # Procdump captures first-chance exceptions, which is needed because Rust's
+          # vectored exception handler catches access violations before WER can see them.
+          echo "----- Downloading Procdump ----"
+          PROCDUMP_ZIP="$DUMP_PATH/procdump.zip"
+          PROCDUMP_DIR="$DUMP_PATH/procdump"
+          curl -f -L --retry 3 -o "$PROCDUMP_ZIP" "https://download.sysinternals.com/files/Procdump.zip"
+          if [ $? -eq 0 ]; then
+            mkdir -p "$PROCDUMP_DIR"
+            unzip -o "$PROCDUMP_ZIP" -d "$PROCDUMP_DIR"
+            chmod +x "$PROCDUMP_DIR"/*.exe
+
+            echo "----- Installing Procdump as JIT Debugger ----"
+            DUMP_PATH_WIN=$(cygpath -w "$DUMP_PATH")
+            "$PROCDUMP_DIR/procdump64.exe" -accepteula -i "$DUMP_PATH_WIN"
+            reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug" 2>/dev/null || true
+            echo "-------------------------"
+
+            echo "----- Disabling Windows Silent Crash Handling ----"
+            reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Windows" /v ErrorMode /t REG_DWORD /d 0 /f || true
+            echo "-------------------------"
+          else
+            echo "WARNING: Failed to download procdump, falling back to WER"
+          fi
+
+          # WER setup as a fallback
+          echo "----- WER Service Status (before) ----"
+          sc query WerSvc || true
+          echo "-------------------------"
+
+          echo "----- Starting WER Service ----"
+          sc start WerSvc || true
+          sleep 2
+          echo "----- WER Service Status (after start attempt) ----"
+          sc query WerSvc || true
+          echo "-------------------------"
+
           echo "----- Registry entries before setup ----"
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps"
           REGQUERY_EXITCODE=$?
           if [ $REGQUERY_EXITCODE -eq 0 ]; then
-            # The key exists, save the values
             echo "Saving values in $LOCAL_DUMP_ORIGINAL_REG_VAL"
             reg export "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps" $LOCAL_DUMP_ORIGINAL_REG_VAL
             echo "----- Saved entries ----"
@@ -975,9 +1012,13 @@ functions:
           echo "-------------------------"
           reg import "setup\setup_dumps_collection.reg"
           echo "----- Registry entries after setup ----"
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps" -s 2> /dev/null || true
           echo "-------------------------"
-          echo "App Data = $AppData"
+
+          echo "----- Dump folder permissions ----"
+          ls -la $DUMP_PATH
+          icacls "$(cygpath -w $DUMP_PATH)" || true
+          echo "-------------------------"
 
   "clean-up driver on Windows":
     - command: shell.exec
@@ -991,10 +1032,10 @@ functions:
           fi
           reg import "setup\cleanup_driver.reg"
           echo "----- Registry entries after clean-up----"
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null
-          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null || true
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" -s 2> /dev/null || true
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null || true
+          reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\ODBC\ODBCINST.INI\MongoDB Atlas SQL ODBC Driver" -s 2> /dev/null || true
           echo "-------------------------"
 
   "clean-up crash dump collection":
@@ -1005,12 +1046,33 @@ functions:
         script: |
           ${prepare_shell}
           set +e
-          # See what crash dump has been created. Checking the default path just in case
-          echo "----- Dumps collected stored in $DUMP_PATH ----"
+
+          # Uninstall procdump JIT debugger
+          PROCDUMP_DIR="$DUMP_PATH/procdump"
+          if [ -f "$PROCDUMP_DIR/procdump64.exe" ]; then
+            echo "----- Uninstalling Procdump JIT Debugger ----"
+            "$PROCDUMP_DIR/procdump64.exe" -u
+            echo "-------------------------"
+          fi
+
+          echo "----- Dumps in $DUMP_PATH ----"
           ls -lrt $DUMP_PATH
+          find $DUMP_PATH -name "*.dmp" -ls 2>/dev/null || echo "No .dmp files found"
           echo "-------------------------"
-          echo "----- Dumps collected stored in the default dump folder %LOCALAPPDATA%\CrashDumps ----"
-          ls -lrt /cygdrive/c/Users/Administrator/AppData/Local/CrashDumps
+
+          echo "----- Dumps in \$LOCALAPPDATA/CrashDumps ----"
+          if [ -d "$LOCALAPPDATA/CrashDumps" ]; then
+            ls -lrt "$LOCALAPPDATA/CrashDumps"
+          else
+            echo "No CrashDumps folder found at \$LOCALAPPDATA/CrashDumps"
+          fi
+          # Also check common user locations
+          for user_dir in /cygdrive/c/Users/*/AppData/Local/CrashDumps; do
+            if [ -d "$user_dir" ]; then
+              echo "----- Dumps in $user_dir ----"
+              ls -lrt "$user_dir"
+            fi
+          done
           echo "-------------------------"
           echo "----- Registry entries before clean-up ----"
           reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps"
@@ -1110,29 +1172,79 @@ functions:
           ${prepare_shell}
           set +e
           export RUST_BACKTRACE=1
+
+          PROCDUMP="$DUMP_PATH/procdump/procdump64.exe"
+          DUMP_PATH_WIN=$(cygpath -w "$DUMP_PATH")
+
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
           cargo run --manifest-path "$COMMON_TEST_INFRA_DIR/Cargo.toml" --bin data-loader -- \
             --mongod-uri mongodb://localhost:28017 \
             --adf-uri "mongodb://${adf_test_local_user}:${adf_test_local_pwd}@localhost:27017" \
-            -d "./resources/integration_test/testdata" &&
-          cargo test integration -- --nocapture &&
-          # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
-          # the test is feature gated and will only run on evergreen.
-          # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
-          EXITCODE=$?
-          echo "****** ls -l ./target/debug/deps *******"
-          ls -l ./target/debug/deps
-          echo "****************************************"
-          # The execution terminated with a segfault
-          if [ $EXITCODE -eq 139 ]; then
-            # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
+            -d "./resources/integration_test/testdata"
+          LOAD_EXIT=$?
+          if [ $LOAD_EXIT -ne 0 ]; then
+            $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
+            exit $LOAD_EXIT
+          fi
+
+          # Compile test binaries without running them, then run each under procdump
+          # so that crash dumps are captured for the actual crashing process.
+          echo "----- Compiling integration test binaries ----"
+          cargo test --no-run integration 2>&1
+          COMPILE_EXIT=$?
+          if [ $COMPILE_EXIT -ne 0 ]; then
+            $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
+            exit $COMPILE_EXIT
+          fi
+
+          echo "----- Running integration test binaries under procdump ----"
+          OVERALL_EXIT=0
+          for test_bin in $(find target/debug/deps -maxdepth 1 -name "*_tests-*.exe" -not -name "*.pdb" | sort); do
+            test_name=$(basename "$test_bin")
+            echo "--- Running $test_name ---"
+            test_bin_win=$(cygpath -w "$test_bin")
+            "$PROCDUMP" -accepteula -ma -e 1 -w -x "$DUMP_PATH_WIN" "$test_bin_win" integration --nocapture
+            EXIT=$?
+            if [ $EXIT -ne 0 ]; then
+              echo "FAILED: $test_name exited with $EXIT"
+              OVERALL_EXIT=$EXIT
+            fi
+          done
+
+          # Logger tests run in isolation because other tests would pollute the log file.
+          # Feature gated to only run on evergreen.
+          echo "----- Compiling logger test binary ----"
+          cargo test --no-run --test connection_tests --features evergreen_tests 2>&1
+          LOGGER_BIN=$(find target/debug/deps -maxdepth 1 -name "connection_tests-*.exe" -not -name "*.pdb" -newer target/debug/deps | sort | tail -1)
+          if [ -z "$LOGGER_BIN" ]; then
+            LOGGER_BIN=$(find target/debug/deps -maxdepth 1 -name "connection_tests-*.exe" -not -name "*.pdb" | sort | tail -1)
+          fi
+          if [ -n "$LOGGER_BIN" ]; then
+            echo "--- Running logger test $(basename "$LOGGER_BIN") ---"
+            logger_bin_win=$(cygpath -w "$LOGGER_BIN")
+            "$PROCDUMP" -accepteula -ma -e 1 -w -x "$DUMP_PATH_WIN" "$logger_bin_win" integration::test_driver_log_level --nocapture
+            LOGGER_EXIT=$?
+            if [ $LOGGER_EXIT -ne 0 ]; then
+              OVERALL_EXIT=$LOGGER_EXIT
+            fi
+          else
+            echo "WARNING: Could not find connection_tests binary for logger test"
+            OVERALL_EXIT=1
+          fi
+
+          EXITCODE=$OVERALL_EXIT
+
+          echo "----- Checking for crash dumps ----"
+          DUMP_COUNT=$(find "$DUMP_PATH" -maxdepth 1 -name "*.dmp" 2>/dev/null | wc -l)
+          echo "Found $DUMP_COUNT dump file(s)"
+          ls -la "$DUMP_PATH"/*.dmp 2>/dev/null || echo "No .dmp files found"
+          echo "-------------------------"
+
+          # If any crash occurred, archive sources and PDBs for debugging
+          if [ $EXITCODE -eq 139 ] || [ "$DUMP_COUNT" -gt 0 ]; then
             SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
             PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
-            echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
             tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
-
-            echo "ls -l $DUMP_PATH"
             ls -l $DUMP_PATH
           fi
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
