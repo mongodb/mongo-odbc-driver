@@ -780,4 +780,50 @@ mod unit {
         expected_value = u16::MAX,
         actual_value_modifier = modify_u16_value,
     );
+
+    test_get_info!(
+        data_source_name_no_dsn,
+        info_type = InfoType::SQL_DATA_SOURCE_NAME as u16,
+        expected_sql_return = SqlReturn::SUCCESS,
+        buffer_length = size_of::<WideChar>() as i16,
+        expected_length = 0,
+        expected_value = "",
+        actual_value_modifier = modify_string_value,
+    );
+
+    #[test]
+    fn data_source_name_with_dsn() {
+        unsafe {
+            let dsn_value = "MY_DSN";
+            let mut conn =
+                Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+            conn.attributes.write().unwrap().dsn = Some(dsn_value.to_string());
+            let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
+
+            let value_ptr: *mut std::ffi::c_void =
+                Box::into_raw(Box::new([0u8; 900])) as *mut _;
+            let out_length: *mut SmallInt = &mut 0;
+            let buffer_length: SmallInt =
+                (dsn_value.len() + 1) as i16 * size_of::<WideChar>() as i16;
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLGetInfoW(
+                    mongo_handle as *mut _,
+                    InfoType::SQL_DATA_SOURCE_NAME as u16,
+                    value_ptr as Pointer,
+                    buffer_length,
+                    out_length,
+                )
+            );
+
+            assert_eq!(
+                dsn_value.len() as i16 * size_of::<WideChar>() as i16,
+                *out_length
+            );
+            assert_eq!(dsn_value, modify_string_value(value_ptr, *out_length as usize));
+
+            let _ = Box::from_raw(value_ptr as *mut u8);
+        }
+    }
 }
