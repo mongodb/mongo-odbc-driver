@@ -795,13 +795,11 @@ mod unit {
     fn data_source_name_with_dsn() {
         unsafe {
             let dsn_value = "MY_DSN";
-            let mut conn =
-                Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
+            let conn = Connection::with_state(std::ptr::null_mut(), ConnectionState::Connected);
             conn.attributes.write().unwrap().dsn = Some(dsn_value.to_string());
             let mongo_handle: *mut _ = &mut MongoHandle::Connection(conn);
 
-            let value_ptr: *mut std::ffi::c_void =
-                Box::into_raw(Box::new([0u8; 900])) as *mut _;
+            let value_ptr: *mut std::ffi::c_void = Box::into_raw(Box::new([0u8; 900])) as *mut _;
             let out_length: *mut SmallInt = &mut 0;
             let buffer_length: SmallInt =
                 (dsn_value.len() + 1) as i16 * size_of::<WideChar>() as i16;
@@ -821,7 +819,10 @@ mod unit {
                 dsn_value.len() as i16 * size_of::<WideChar>() as i16,
                 *out_length
             );
-            assert_eq!(dsn_value, modify_string_value(value_ptr, *out_length as usize));
+            assert_eq!(
+                dsn_value,
+                modify_string_value(value_ptr, *out_length as usize)
+            );
 
             let _ = Box::from_raw(value_ptr as *mut u8);
         }
