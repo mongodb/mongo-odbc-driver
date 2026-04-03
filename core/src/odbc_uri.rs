@@ -977,6 +977,22 @@ mod unit {
                 ODBCUri::new("Driver=foo;SERVER=bAr;LOGLEVEL=debug".to_string()).unwrap()
             );
         }
+
+        // Verifies that get_attribute returns the DSN value after parsing.
+        #[test]
+        fn dsn_keyword_is_accessible_via_get_attribute() {
+            use crate::odbc_uri::ODBCUri;
+            let dsn = "DSN_Test";
+            let odbc_uri = ODBCUri::process_uri(format!("DSN={dsn};UID=user")).unwrap();
+            assert_eq!(odbc_uri.get_attribute(&["dsn"]), Some(&dsn.to_string()));
+        }
+
+        #[test]
+        fn driver_keyword_yields_no_dsn() {
+            use crate::odbc_uri::ODBCUri;
+            let odbc_uri = ODBCUri::new("DRIVER=Foo;UID=user".to_string()).unwrap();
+            assert_eq!(odbc_uri.get_attribute(&["dsn"]), None);
+        }
     }
 
     #[cfg(test)]

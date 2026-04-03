@@ -323,6 +323,9 @@ pub struct ConnectionAttributes {
     // to wait for any operation on a connection to timeout (other than
     // initial login).
     pub connection_timeout: Option<u32>,
+    // SQL_DATA_SOURCE_NAME: the DSN used to connect, if any.
+    // Empty string if the connection was made with DRIVER= instead of DSN=.
+    pub dsn: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

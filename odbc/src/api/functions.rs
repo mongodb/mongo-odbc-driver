@@ -1114,6 +1114,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         .build()
         .unwrap();
     let client_options = runtime.block_on(async { odbc_uri.try_into_client_options().await })?;
+    let dsn = odbc_uri.get_attribute(&["dsn"]).cloned();
     odbc_uri
         .remove(&["driver", "dsn"])
         .ok_or(ODBCError::MissingDriverOrDSNProperty)?;
@@ -1137,6 +1138,7 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
     }
 
     let mut conn_attrs = conn.attributes.write().unwrap();
+    conn_attrs.dsn = dsn;
     let database = if conn_attrs.current_catalog.is_some() {
         conn_attrs.current_catalog.as_deref().map(|s| s.to_string())
     } else {
@@ -2905,7 +2907,18 @@ macro_rules! sql_get_info_helper {
                         string_length_ptr,
                     )
                 }
-                 InfoType::SQL_DATABASE_NAME => {
+                 InfoType::SQL_DATA_SOURCE_NAME => {
+                    let conn = must_be_valid!((*conn_handle).as_connection());
+                    let attributes = conn.attributes.read().unwrap();
+                    let dsn = attributes.dsn.as_deref().unwrap_or("");
+                    i16_len::set_output_wstring_as_bytes(
+                        dsn,
+                        info_value_ptr,
+                        buffer_length as usize,
+                        string_length_ptr,
+                    )
+                }
+                InfoType::SQL_DATABASE_NAME => {
                     let conn = must_be_valid!((*conn_handle).as_connection());
                     let attributes = conn.attributes.read().unwrap();
                     if let Some(catalog) = &attributes.current_catalog {
