@@ -14,8 +14,8 @@ mod integration {
     use definitions::{
         AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute,
         DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
-        Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle,
-        SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, SQL_NTS,
+        Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFreeHandle, SQLGetInfoW,
+        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, SQL_NTS,
     };
 
     use cstr::WideChar;

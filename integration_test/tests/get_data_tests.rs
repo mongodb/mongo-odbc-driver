@@ -19,12 +19,12 @@ mod integration {
     use constants::{
         INVALID_STRING_OR_BUFFER_LENGTH, RIGHT_TRUNCATED, SQL_ALL_CATALOGS, SQL_ALL_TABLE_TYPES,
     };
+    use cstr::WideChar;
     use definitions::{
         AttrOdbcVersion, CDataType, FreeStmtOption, HStmt, Handle, HandleType, SQLColumnsW,
         SQLExecDirectW, SQLFetch, SQLFreeStmt, SQLGetData, SQLGetTypeInfo, SQLMoreResults,
         SQLPrepareW, SQLTablesW, SmallInt, SqlDataType, SqlReturn, USmallInt, SQL_NTS,
     };
-    use cstr::WideChar;
     use tailcall::tailcall;
 
     #[tailcall]
@@ -345,14 +345,17 @@ mod integration {
                 std::ptr::addr_of!(empty_string),
                 SQL_NTS as SmallInt,
                 std::ptr::addr_of!(empty_string),
-                SQL_NTS as SmallInt
+                SQL_NTS as SmallInt,
             )
         });
     }
 
     #[test]
     fn test_type_info_fetch_after_no_data() {
-        run_fetch_after_no_data!(|stmt_handle| SQLGetTypeInfo(stmt_handle, SqlDataType::SQL_UNKNOWN_TYPE as i16));
+        run_fetch_after_no_data!(|stmt_handle| SQLGetTypeInfo(
+            stmt_handle,
+            SqlDataType::SQL_UNKNOWN_TYPE as i16
+        ));
     }
 
     #[test]
