@@ -13,14 +13,18 @@ mod integration {
 
     use crate::common::{
         default_setup_connect_and_alloc_stmt, disconnect_and_free_dbc_and_env_handles,
-        get_sql_diagnostics, get_sql_diagnostics_full, sql_return_to_string,
+        exec_direct_default_query, get_sql_diagnostics, get_sql_diagnostics_full,
+        sql_return_to_string,
     };
-    use constants::{INVALID_STRING_OR_BUFFER_LENGTH, RIGHT_TRUNCATED};
+    use constants::{
+        INVALID_STRING_OR_BUFFER_LENGTH, RIGHT_TRUNCATED, SQL_ALL_CATALOGS, SQL_ALL_TABLE_TYPES,
+    };
     use definitions::{
-        AttrOdbcVersion, CDataType, FreeStmtOption, HStmt, Handle, HandleType, SQLExecDirectW,
-        SQLFetch, SQLFreeStmt, SQLGetData, SQLMoreResults, SQLPrepareW, SmallInt, SqlReturn,
-        USmallInt, SQL_NTS,
+        AttrOdbcVersion, CDataType, FreeStmtOption, HStmt, Handle, HandleType, SQLColumnsW,
+        SQLExecDirectW, SQLFetch, SQLFreeStmt, SQLGetData, SQLGetTypeInfo, SQLMoreResults,
+        SQLPrepareW, SQLTablesW, SmallInt, SqlDataType, SqlReturn, USmallInt, SQL_NTS,
     };
+    use cstr::WideChar;
     use tailcall::tailcall;
 
     #[tailcall]
@@ -266,5 +270,137 @@ mod integration {
 
             disconnect_and_free_dbc_and_env_handles(env_handle, conn_handle);
         }
+    }
+
+    /// Connects and allocates a statement handle (bound as `$stmt`), asserts that `$call`
+    /// returns `SQL_SUCCESS` to populate a result set, consumes all rows until `SQL_NO_DATA`
+    /// is returned, then asserts that one additional `SQLFetch` also returns `SQL_NO_DATA`.
+    /// Disconnects and frees all handles on exit.
+    macro_rules! run_fetch_after_no_data {
+        (|$stmt:ident| $call:expr) => {{
+            let (env_handle, conn_handle, $stmt) =
+                default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
+            unsafe {
+                assert_eq!(
+                    SqlReturn::SUCCESS,
+                    $call,
+                    "{}",
+                    get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, $stmt as Handle)
+                );
+                loop {
+                    let result = SQLFetch($stmt);
+                    assert!(
+                        result == SqlReturn::SUCCESS || result == SqlReturn::NO_DATA,
+                        "Unexpected SQLFetch result during data consumption: {}. Diagnostic: {}",
+                        sql_return_to_string(result),
+                        get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, $stmt as Handle)
+                    );
+                    if result == SqlReturn::NO_DATA {
+                        break;
+                    }
+                }
+                assert_eq!(
+                    SqlReturn::NO_DATA,
+                    SQLFetch($stmt),
+                    "Expected SQL_NO_DATA on SQLFetch called after result set was already exhausted. Diagnostic: {}",
+                    get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, $stmt as Handle)
+                );
+                disconnect_and_free_dbc_and_env_handles(env_handle, conn_handle);
+            }
+        }};
+    }
+
+    #[test]
+    fn test_table_listing_fetch_after_no_data() {
+        run_fetch_after_no_data!(|stmt_handle| {
+            let mut catalog_name: Vec<WideChar> = cstr::to_widechar_vec("integration_test");
+            catalog_name.push(0);
+            let empty_string = WideChar::default();
+            SQLTablesW(
+                stmt_handle,
+                catalog_name.as_ptr(),
+                (catalog_name.len() as SmallInt) - 1,
+                std::ptr::addr_of!(empty_string),
+                0,
+                std::ptr::addr_of!(empty_string),
+                0,
+                std::ptr::addr_of!(empty_string),
+                0,
+            )
+        });
+    }
+
+    #[test]
+    fn test_database_listing_fetch_after_no_data() {
+        run_fetch_after_no_data!(|stmt_handle| {
+            let mut all_catalogs: Vec<WideChar> = cstr::to_widechar_vec(SQL_ALL_CATALOGS);
+            all_catalogs.push(0);
+            let empty_string = WideChar::default();
+            SQLTablesW(
+                stmt_handle,
+                all_catalogs.as_ptr(),
+                SQL_NTS as SmallInt,
+                std::ptr::addr_of!(empty_string),
+                SQL_NTS as SmallInt,
+                std::ptr::addr_of!(empty_string),
+                SQL_NTS as SmallInt,
+                std::ptr::addr_of!(empty_string),
+                SQL_NTS as SmallInt
+            )
+        });
+    }
+
+    #[test]
+    fn test_type_info_fetch_after_no_data() {
+        run_fetch_after_no_data!(|stmt_handle| SQLGetTypeInfo(stmt_handle, SqlDataType::SQL_UNKNOWN_TYPE as i16));
+    }
+
+    #[test]
+    fn test_column_listing_fetch_after_no_data() {
+        run_fetch_after_no_data!(|stmt_handle| {
+            let mut catalog_name: Vec<WideChar> = cstr::to_widechar_vec("integration_test");
+            catalog_name.push(0);
+            let mut table_name: Vec<WideChar> = cstr::to_widechar_vec("foo");
+            table_name.push(0);
+            SQLColumnsW(
+                stmt_handle,
+                catalog_name.as_ptr(),
+                SQL_NTS as SmallInt,
+                ptr::null(),
+                0,
+                table_name.as_ptr(),
+                SQL_NTS as SmallInt,
+                ptr::null(),
+                0,
+            )
+        });
+    }
+
+    #[test]
+    fn test_all_table_types_fetch_after_no_data() {
+        run_fetch_after_no_data!(|stmt_handle| {
+            let empty_string = WideChar::default();
+            let mut all_table_types: Vec<WideChar> = cstr::to_widechar_vec(SQL_ALL_TABLE_TYPES);
+            all_table_types.push(0);
+            SQLTablesW(
+                stmt_handle,
+                std::ptr::addr_of!(empty_string),
+                SQL_NTS as SmallInt,
+                std::ptr::addr_of!(empty_string),
+                SQL_NTS as SmallInt,
+                std::ptr::addr_of!(empty_string),
+                SQL_NTS as SmallInt,
+                all_table_types.as_ptr(),
+                SQL_NTS as SmallInt,
+            )
+        });
+    }
+
+    #[test]
+    fn test_sql_query_fetch_after_no_data() {
+        run_fetch_after_no_data!(|stmt_handle| {
+            exec_direct_default_query(stmt_handle);
+            SqlReturn::SUCCESS
+        });
     }
 }
