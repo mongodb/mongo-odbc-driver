@@ -265,7 +265,7 @@ impl MongoStatement for MongoCollections {
                             self.current_collection = Some(collection.clone());
                             return Ok((true, vec![]));
                         } else {
-                            // collection doens't match the filter, advance the collection index
+                            // collection doesn't match the filter, advance the collection index
                             self.current_collection_index =
                                 self.current_collection_index.map(|val| val + 1);
                         }

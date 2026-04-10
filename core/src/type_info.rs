@@ -95,7 +95,8 @@ impl MongoStatement for MongoTypesInfo {
     // iterate through the list, searching for the next "valid" data type.
     // a type is valid if its sql type matches the desired sql type, or if we are getting all types.
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
-        // Cursor was already exhausted
+        // Guard against unbounded index growth: Once the cursor is exhausted we
+        // stop incrementing to avoid index overflow.
         if self.current_type_index > DATA_TYPES.len() {
             return Ok((false, vec![]));
         }

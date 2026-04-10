@@ -27,7 +27,8 @@ impl MongoStatement for MongoQuery {
     // Move the current index to the next Document in the Vec.
     // Return true if moving was successful, false otherwise.
     fn next(&mut self, _: Option<&MongoConnection>) -> Result<(bool, Vec<Error>)> {
-        // Cursor was already exhausted
+        // Guard against unbounded index growth: Once the cursor is exhausted we
+        // stop incrementing to avoid index overflow.
         if self.current.is_some_and(|c| c >= self.resultset.len()) {
             return Ok((false, vec![]));
         }
