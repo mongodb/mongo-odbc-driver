@@ -200,7 +200,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "agg-ast"
 version = "0.0.0"
-source = "git+https://github.com/mongodb/mongosql.git?rev=ebd5999826b2a694ec951d050006ff256501cc50#ebd5999826b2a694ec951d050006ff256501cc50"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#ebd5999826b2a694ec951d050006ff256501cc50"
 dependencies = [
  "bson",
  "linked-hash-map",
@@ -2958,7 +2958,7 @@ dependencies = [
 [[package]]
 name = "mongosql"
 version = "0.0.0"
-source = "git+https://github.com/mongodb/mongosql.git?rev=ebd5999826b2a694ec951d050006ff256501cc50#ebd5999826b2a694ec951d050006ff256501cc50"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#cb8bfd8a4d0fd3684b6bc4d84295938392b83082"
 dependencies = [
  "agg-ast",
  "base64 0.22.1",
@@ -2974,7 +2974,7 @@ dependencies = [
  "linked-hash-map",
  "mongosql-datastructures",
  "quickcheck",
- "rand 0.9.4",
+ "rand 0.8.6",
  "regex",
  "serde",
  "serde_json",
@@ -2990,7 +2990,7 @@ dependencies = [
 [[package]]
 name = "mongosql-datastructures"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?rev=ebd5999826b2a694ec951d050006ff256501cc50#ebd5999826b2a694ec951d050006ff256501cc50"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#cb8bfd8a4d0fd3684b6bc4d84295938392b83082"
 dependencies = [
  "linked-hash-map",
  "thiserror 2.0.18",
@@ -4933,7 +4933,7 @@ checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 [[package]]
 name = "usererrordisplay-impl"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?rev=ebd5999826b2a694ec951d050006ff256501cc50#ebd5999826b2a694ec951d050006ff256501cc50"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#cb8bfd8a4d0fd3684b6bc4d84295938392b83082"
 dependencies = [
  "quote",
  "syn 2.0.117",
@@ -4977,7 +4977,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "visitgen"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?rev=ebd5999826b2a694ec951d050006ff256501cc50#ebd5999826b2a694ec951d050006ff256501cc50"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#cb8bfd8a4d0fd3684b6bc4d84295938392b83082"
 dependencies = [
  "lazy_static",
  "proc-macro2",
