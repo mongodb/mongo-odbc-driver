@@ -1751,7 +1751,7 @@ tasks:
       - name: compile
     commands:
       - func: "build odbc documentation"
-        run_on: ubuntu2004-large
+        run_on: ubuntu2204-large
       - func: "upload odbc docs"
 
   - name: sbom
@@ -2093,7 +2093,7 @@ task_groups:
 buildvariants:
   - name: static-analysis
     display_name: "* Static Analysis"
-    run_on: [ubuntu2004-test]
+    run_on: [ubuntu2204-small]
     modules:
       - sql-engines-common-test-infra
     tasks:
@@ -2154,7 +2154,7 @@ buildvariants:
 
   - name: release
     display_name: "Release"
-    run_on: [ubuntu2004-medium]
+    run_on: [ubuntu2204-medium]
     modules:
       - sql-engines-common-test-infra
     tasks:
