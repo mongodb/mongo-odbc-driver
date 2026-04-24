@@ -5,7 +5,7 @@ use constants::SQL_ALL_TABLE_TYPES;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
 use mongodb::{bson::Document, error::ErrorKind, results::CollectionType, Database};
-use rand::RngExt;
+use rand::RngExt as _;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 use std::collections::HashSet;
 
