@@ -503,6 +503,11 @@ impl ODBCUri {
     fn inject_username_and_password_into_uri(&mut self, uri: &str) -> Result<String> {
         let (protocol, rest) = Self::split_uri(uri)?;
 
+        // We inject a dummy username and password, so that this URI works with `ClientOptions::parse(uri)`.
+        // If there was no username and password in the URI, the parse function would fail. Additionally, we
+        // don't inject the actual username and password because that will be handled by `finalize_client_options` later.
+        // Also, if we inject the actual username and password here, we risk putting a reserved character in the URI, which
+        // will cause a `must be URL encoded` error.
         Ok(format!("{protocol}dummy_username:dummy_password@{rest}"))
     }
 
