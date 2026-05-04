@@ -502,15 +502,8 @@ impl ODBCUri {
 
     fn inject_username_and_password_into_uri(&mut self, uri: &str) -> Result<String> {
         let (protocol, rest) = Self::split_uri(uri)?;
-        let username = self.get_attribute(USER_KWS);
-        let password = self.get_attribute(PWD_KWS);
-        Ok(
-            if let (Some(username), Some(password)) = (username, password) {
-                format!("{protocol}{username}:{password}@{rest}")
-            } else {
-                uri.to_string()
-            },
-        )
+
+        Ok(format!("{protocol}dummy_username:dummy_password@{rest}"))
     }
 
     async fn handle_uri(&mut self, uri: &str) -> Result<UserOptions> {
@@ -645,7 +638,7 @@ mod unit {
         fn test_scram_sha1_specified() {
             use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-1";
-            let expected = "mongodb://foo:bar@localhost:27017/abc?authMechanism=SCRAM-SHA-1";
+            let expected = "mongodb://dummy_username:dummy_password@localhost:27017/abc?authMechanism=SCRAM-SHA-1";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
         }
@@ -654,7 +647,7 @@ mod unit {
         fn test_scram_sha_256_specified() {
             use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-256";
-            let expected = "mongodb://foo:bar@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
+            let expected = "mongodb://dummy_username:dummy_password@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar;")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
         }
@@ -664,7 +657,7 @@ mod unit {
             use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
             let expected =
-                "mongodb://foo:bar@localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
+                "mongodb://dummy_username:dummy_password@localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
         }
