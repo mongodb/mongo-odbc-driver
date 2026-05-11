@@ -414,6 +414,25 @@ impl ODBCUri {
     }
 
     fn check_client_opts_credentials(client_options: &ClientOptions) -> Result<()> {
+        // Kerberos (GSSAPI) Doesn't require user + pass as USER; PASS; if specified in the URI
+        // X509 should not require user or pass either
+        let auth_mechanism = client_options
+            .credential
+            .as_ref()
+            .unwrap()
+            .mechanism
+            .as_ref()
+            .unwrap();
+
+        // X509 and Kerberos (GSSAPI) do not require username and password as part of client options.
+        // X509 does not specify username/pass in the URI because auth is done with a client cert
+        // GSSAPI specifies username/pass in the uri, so it doesn't need to be specified in attributes.
+        if (auth_mechanism == &AuthMechanism::MongoDbX509
+            || auth_mechanism == &AuthMechanism::Gssapi)
+        {
+            return Ok(());
+        }
+
         if client_options
             .credential
             .as_ref()
@@ -630,6 +649,18 @@ mod unit {
                 "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-1"
             ));
         }
+
+        #[test]
+        fn test_gssapi_username_password_detection() {
+            use crate::odbc_uri::ODBCUri;
+            // GSSAPI URIs can have an '@' in the username, so we should not treat that as a separator for username and password
+            // GSSAPI has this format when specifying username + pass in the uri:
+            // mongodb://{user@domain}:{password}@host:port/?authMechanism=GSSAPI&authSource=$external
+            // We need to introduce a regex to account for that, otherwise we'll have to continue to specify username and pass in URL + attributes, which is not ideal.
+            assert!(!ODBCUri::contains_username_and_or_password(
+                "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external"
+            ));
+        }
     }
 
     mod test_uri_construction {
@@ -693,6 +724,15 @@ mod unit {
             let uri =
                 "mongodb://localhost:27017/abc?authSource=$external&authMechanism=MONGODB-AWS";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+
+        #[test]
+        fn test_gssapi_does_not_modify_uri() {
+            use crate::odbc_uri::ODBCUri;
+            let uri =
+                "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri}")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
         }
     }
@@ -1028,6 +1068,30 @@ mod unit {
             )
         );
         }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn gssapi_parses_password_from_uri() {
+            use crate::odbc_uri::ODBCUri;
+            // Arrange: Sample URL where authmechanism is GSSAPI, and specified in the url, but not in options
+            assert_eq!(
+                ClientOptions::parse("mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external")
+                    .await
+                    .unwrap()
+                    .credential
+                    .unwrap()
+                    .password,
+                ODBCUri::new("URI=mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external;".to_string())
+                    .unwrap()
+                    .try_into_client_options()
+                    .await
+                    .unwrap()
+                    .client_options
+                    .credential
+                    .unwrap()
+                    .password
+            );
+        }
+
         #[tokio::test(flavor = "current_thread")]
         async fn missing_user_is_err() {
             use crate::odbc_uri::ODBCUri;

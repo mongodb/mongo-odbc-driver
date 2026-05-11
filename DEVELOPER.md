@@ -20,7 +20,7 @@ You may need to set the following environment variables in order to run and test
 
 For macos, we use [iodbc](https://www.iodbc.org/dataspace/doc/iodbc/wiki/iodbcWiki/WelcomeVisitors) as the driver manager. To set up iODBC, first download and install it using the following commands:
 ```
-export $INSTALLED_ODBC_PATH=$PWD/installed_odbc/install"
+export INSTALLED_ODBC_PATH="$PWD/installed_odbc/install"
 mkdir -p "$INSTALLED_ODBC_PATH"
 cd installed_odbc
 echo "downloading iODBC"
