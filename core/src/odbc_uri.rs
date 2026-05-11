@@ -414,6 +414,25 @@ impl ODBCUri {
     }
 
     fn check_client_opts_credentials(client_options: &ClientOptions) -> Result<()> {
+        // Kerberos (GSSAPI) Doesn't require user + pass as USER; PASS; if specified in the URI
+        // X509 should not require user or pass either
+        let auth_mechanism = client_options
+            .credential
+            .as_ref()
+            .unwrap()
+            .mechanism
+            .as_ref()
+            .unwrap();
+
+        // X509 and Kerberos (GSSAPI) do not require username and password as part of client options.
+        // X509 does not specify username/pass in the URI because auth is done with a client cert
+        // GSSAPI specifies username/pass in the uri, so it doesn't need to be specified in attributes.
+        if (auth_mechanism == &AuthMechanism::MongoDbX509
+            || auth_mechanism == &AuthMechanism::Gssapi)
+        {
+            return Ok(());
+        }
+
         if client_options
             .credential
             .as_ref()
@@ -600,15 +619,15 @@ impl ODBCUri {
                 self.remove(&[APPNAME]),
                 app_name,
             ]
-            .into_iter()
-            .flatten()
-            .fold(String::new(), |acc, x| {
-                if acc.is_empty() {
-                    x
-                } else {
-                    format!("{acc}|{x}")
-                }
-            }),
+                .into_iter()
+                .flatten()
+                .fold(String::new(), |acc, x| {
+                    if acc.is_empty() {
+                        x
+                    } else {
+                        format!("{acc}|{x}")
+                    }
+                }),
         )
     }
 }
@@ -628,6 +647,18 @@ mod unit {
             ));
             assert!(!ODBCUri::contains_username_and_or_password(
                 "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-1"
+            ));
+        }
+
+        #[test]
+        fn test_gssapi_username_password_detection() {
+            use crate::odbc_uri::ODBCUri;
+            // GSSAPI URIs can have an '@' in the username, so we should not treat that as a separator for username and password
+            // GSSAPI has this format when specifying username + pass in the uri:
+            // mongodb://{user@domain}:{password}@host:port/?authMechanism=GSSAPI&authSource=$external
+            // We need to introduce a regex to account for that, otherwise we'll have to continue to specify username and pass in URL + attributes, which is not ideal.
+            assert!(!ODBCUri::contains_username_and_or_password(
+                "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external"
             ));
         }
     }
@@ -693,6 +724,15 @@ mod unit {
             let uri =
                 "mongodb://localhost:27017/abc?authSource=$external&authMechanism=MONGODB-AWS";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+
+        #[test]
+        fn test_gssapi_does_not_modify_uri() {
+            use crate::odbc_uri::ODBCUri;
+            let uri =
+                "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri}")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
         }
     }
@@ -1018,16 +1058,40 @@ mod unit {
         async fn missing_pwd_is_err() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
-            "Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri",
-            format!(
-                "{}",
-                ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017".to_string())
-                    .unwrap()
-                    .try_into_client_options().await
-                    .unwrap_err()
-            )
-        );
+                "Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri",
+                format!(
+                    "{}",
+                    ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017".to_string())
+                        .unwrap()
+                        .try_into_client_options().await
+                        .unwrap_err()
+                )
+            );
         }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn gssapi_parses_password_from_uri() {
+            use crate::odbc_uri::ODBCUri;
+            // Arrange: Sample URL where authmechanism is GSSAPI, and specified in the url, but not in options
+            assert_eq!(
+                ClientOptions::parse("mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external")
+                    .await
+                    .unwrap()
+                    .credential
+                    .unwrap()
+                    .password,
+                ODBCUri::new("URI=mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external;".to_string())
+                    .unwrap()
+                    .try_into_client_options()
+                    .await
+                    .unwrap()
+                    .client_options
+                    .credential
+                    .unwrap()
+                    .password
+            );
+        }
+
         #[tokio::test(flavor = "current_thread")]
         async fn missing_user_is_err() {
             use crate::odbc_uri::ODBCUri;
@@ -1139,11 +1203,11 @@ mod unit {
             let opts = ODBCUri::new(
                 "USER=foo2;PWD=bar2;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap()
-            .client_options;
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap()
+                .client_options;
             let cred = opts.credential.unwrap();
             assert_eq!(expected_cred.username, cred.username);
             assert_eq!(expected_cred.password, cred.password);
@@ -1251,8 +1315,8 @@ mod unit {
                 (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
             ] {
                 let actual = ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().await.unwrap().client_options.credential.unwrap().source;
-            assert_eq!(
-                expected, actual, "expected {expected:?}, got {actual:?}" );
+                assert_eq!(
+                    expected, actual, "expected {expected:?}, got {actual:?}" );
             }
         }
 
@@ -1265,11 +1329,11 @@ mod unit {
             let opts = ODBCUri::new(
                 "SERVER=127.0.0.2:27017;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap()
-            .client_options;
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap()
+                .client_options;
             assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
         }
 
@@ -1280,8 +1344,8 @@ mod unit {
             let expected_opts = ClientOptions::parse(
                 "mongodb://foo:bar@www.atlas.net:27017/?authSource=authDB&ssl=true",
             )
-            .await
-            .unwrap();
+                .await
+                .unwrap();
             let expected_cred = expected_opts.credential.unwrap();
             let opts = ODBCUri::new("UID=foo;PWD=bar;SERVER=www.atlas.net:27017;User=foo2;Password=bar2;uri=mongodb://localhost:29000/?authSource=authDB&ssl=true".to_string())
                 .unwrap()
@@ -1315,10 +1379,10 @@ mod unit {
                 "USER=foo;PWD=bar;SERVER=localhost:27017;APPNAME=powerbi-connector+1.0.0"
                     .to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap();
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
             assert_eq!(
                 format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
                 uri_opts.client_options.app_name.unwrap()
@@ -1345,10 +1409,10 @@ mod unit {
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/;APPNAME=powerbi-connector+1.0.0"
                     .to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap();
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
 
             assert_eq!(
                 format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
@@ -1363,10 +1427,10 @@ mod unit {
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;APPNAME=powerbi-connector+1.0.0"
                     .to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap();
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
 
             assert_eq!(
                 format!("{}|powerbi-connector+1.0.0|foo", *DEFAULT_APP_NAME),
@@ -1382,10 +1446,10 @@ mod unit {
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;APPNAME=powerbi-connector+1.0.0"
                     .to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap();
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
 
             assert_eq!(
                 format!("{DRIVER_SHORT_NAME}|powerbi-connector",),
@@ -1400,10 +1464,10 @@ mod unit {
             let uri_opts = ODBCUri::new(
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;".to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap();
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
 
             assert_eq!(
                 DRIVER_SHORT_NAME,
