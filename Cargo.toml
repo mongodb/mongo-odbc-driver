@@ -42,3 +42,13 @@ once_cell = "1"
 
 [profile.release]
 debug = true
+
+[patch.crates-io]
+# Pin mongodb to a git commit that upgrades hickory-proto to 0.26 (hickory-net),
+# fixing RUSTSEC-2026-0118 (unbounded loop in NSEC3 DNS validation).
+# Remove this patch once a mongodb crate release containing PR #1682 is published.
+mongodb = { git = "https://github.com/mongodb/mongo-rust-driver", rev = "1c9ae3c25fc9140e598df2aa25ba5ea462cdb443" }
+# The pinned mongodb git revision depends on bson from the 2.15.x git branch rather
+# than the crates.io release. Patch bson to the same source so there is only one
+# copy in the dependency graph (avoids "mismatched types" across bson::Document).
+bson = { git = "https://github.com/mongodb/bson-rust", branch = "2.15.x" }
