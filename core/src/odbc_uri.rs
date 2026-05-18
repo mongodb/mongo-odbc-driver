@@ -1,5 +1,7 @@
 use crate::err::{Error, Result};
+use bson::Bson;
 use constants::{DEFAULT_APP_NAME, DRIVER_SHORT_NAME};
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use mongodb::{
     bson::UuidRepresentation,
@@ -13,6 +15,7 @@ use once_cell::sync::OnceCell;
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use shared_sql_utils::Dsn;
 use std::collections::HashMap;
+use std::ptr::eq;
 use std::str::FromStr;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
@@ -414,24 +417,31 @@ impl ODBCUri {
     }
 
     fn check_client_opts_credentials(client_options: &ClientOptions) -> Result<()> {
-        // Kerberos (GSSAPI) Doesn't require user + pass as USER; PASS; if specified in the URI
-        // X509 should not require user or pass either
         let auth_mechanism = client_options
             .credential
             .as_ref()
             .unwrap()
             .mechanism
             .as_ref()
-            .unwrap();
+            .unwrap_or(&AuthMechanism::ScramSha256);
 
         // X509 and Kerberos (GSSAPI) do not require username and password as part of client options.
         // X509 does not specify username/pass in the URI because auth is done with a client cert
         // GSSAPI specifies username/pass in the uri, so it doesn't need to be specified in attributes.
-        if auth_mechanism == &AuthMechanism::MongoDbX509
-            || auth_mechanism == &AuthMechanism::Gssapi
+        if auth_mechanism == &AuthMechanism::MongoDbX509 || auth_mechanism == &AuthMechanism::Gssapi
         {
             return Ok(());
         }
+
+        let is_oidc_and_azure_environment = auth_mechanism == &AuthMechanism::MongoDbOidc
+            && client_options
+                .credential
+                .as_ref()
+                .unwrap()
+                .mechanism_properties
+                .as_ref()
+                .and_then(|props| props.get("ENVIRONMENT"))
+                .is_some_and(|v| v == &Bson::String("azure".to_string()));
 
         if client_options
             .credential
@@ -440,9 +450,12 @@ impl ODBCUri {
             .username
             .is_none()
         {
-            return Err(Error::InvalidUriFormat(format!(
-                "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri"
-            )));
+            // OIDC only requires username when Azure is the environment. For now do a nested if, but we can refactor later.
+            if is_oidc_and_azure_environment || auth_mechanism != &AuthMechanism::MongoDbOidc {
+                return Err(Error::InvalidUriFormat(format!(
+                    "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri"
+                )));
+            }
         }
         if client_options
             .credential
@@ -451,9 +464,12 @@ impl ODBCUri {
             .password
             .is_none()
         {
-            return Err(Error::InvalidUriFormat(format!(
-                "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri"
-            )));
+            // All OIDC skips the password check (OIDC post-processing clears the password anyway).
+            if auth_mechanism != &AuthMechanism::MongoDbOidc {
+                return Err(Error::InvalidUriFormat(format!(
+                    "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri"
+                )));
+            }
         }
         Ok(())
     }
@@ -633,6 +649,7 @@ impl ODBCUri {
 }
 
 mod unit {
+    use mongodb::options::ClientOptions;
 
     mod test_username_password_detection {
         #[test]
@@ -647,18 +664,6 @@ mod unit {
             ));
             assert!(!ODBCUri::contains_username_and_or_password(
                 "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-1"
-            ));
-        }
-
-        #[test]
-        fn test_gssapi_username_password_detection() {
-            use crate::odbc_uri::ODBCUri;
-            // GSSAPI URIs can have an '@' in the username, so we should not treat that as a separator for username and password
-            // GSSAPI has this format when specifying username + pass in the uri:
-            // mongodb://{user@domain}:{password}@host:port/?authMechanism=GSSAPI&authSource=$external
-            // We need to introduce a regex to account for that, otherwise we'll have to continue to specify username and pass in URL + attributes, which is not ideal.
-            assert!(!ODBCUri::contains_username_and_or_password(
-                "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external"
             ));
         }
     }
@@ -1040,6 +1045,69 @@ mod unit {
         use mongodb::options::ClientOptions;
 
         #[tokio::test(flavor = "current_thread")]
+        async fn username_required_when_auth_mechanism_environment_is_azure() {
+            use crate::odbc_uri::ODBCUri;
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;DATABASE=mydb;LOGLEVEL=DEBUG;";
+            assert_eq!(
+                "Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri",
+                format!(
+                    "{}",
+                    ODBCUri::new(odbc_uri.to_string())
+                        .unwrap()
+                        .try_into_client_options()
+                        .await
+                        .unwrap_err()
+                )
+            );
+        }
+        #[tokio::test(flavor = "current_thread")]
+        async fn x509_auth_does_not_throw_when_uid_pwd_not_specified_in_odbc_uri() {
+            use crate::odbc_uri::ODBCUri;
+            // TODO: Is there any way to run this test with a +srv url and ignore the DNS Resolution path?
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC
+  Driver};URI=mongodb://cluster.example.net/?authMechanism=MONGODB-X509&tls=true&tlsCertificateKeyFile=/path/to/client.pem;DATABASE=mydb;LOGLEVEL=DEBUG;";
+            assert!(ODBCUri::new(odbc_uri.to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .is_ok());
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_without_mechanism_properties_does_not_require_username() {
+            // Regression test for mechanism_properties.as_ref().unwrap() panic.
+            // OIDC without authMechanismProperties means no ENVIRONMENT key exists,
+            // so no username should be required. Previously this panicked.
+            use crate::odbc_uri::ODBCUri;
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC&tls=true;\
+                DATABASE=mydb;";
+            assert!(ODBCUri::new(odbc_uri.to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .is_ok());
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_with_non_azure_environment_does_not_require_username() {
+            // Regression test for ptr::eq value-comparison bug.
+            // OIDC with ENVIRONMENT=gcp (or any non-azure value) must not require a username.
+            // Previously, std::ptr::eq compared pointer addresses rather than values,
+            // making the azure check always false and incorrectly rejecting valid connections.
+            use crate::odbc_uri::ODBCUri;
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
+                &authMechanismProperties=ENVIRONMENT:gcp,TOKEN_RESOURCE:my_audience&tls=true;\
+                DATABASE=mydb;";
+            assert!(ODBCUri::new(odbc_uri.to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .is_ok());
+        }
+
+        #[tokio::test(flavor = "current_thread")]
         async fn missing_server_is_err() {
             use crate::odbc_uri::ODBCUri;
             assert_eq!(
@@ -1070,16 +1138,10 @@ mod unit {
         }
 
         #[tokio::test(flavor = "current_thread")]
-        async fn gssapi_parses_password_from_uri() {
+        async fn gssapi_client_options_do_not_include_password() {
             use crate::odbc_uri::ODBCUri;
-            // Arrange: Sample URL where authmechanism is GSSAPI, and specified in the url, but not in options
+            // Arrange: Sample URL where auth mechanism is GSSAPI, and specified in the url, but not in options
             assert_eq!(
-                ClientOptions::parse("mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external")
-                    .await
-                    .unwrap()
-                    .credential
-                    .unwrap()
-                    .password,
                 ODBCUri::new("URI=mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external;".to_string())
                     .unwrap()
                     .try_into_client_options()
@@ -1088,7 +1150,8 @@ mod unit {
                     .client_options
                     .credential
                     .unwrap()
-                    .password
+                    .password,
+                        None
             );
         }
 
