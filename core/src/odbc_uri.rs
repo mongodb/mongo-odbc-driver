@@ -427,8 +427,8 @@ impl ODBCUri {
         // X509 and Kerberos (GSSAPI) do not require username and password as part of client options.
         // X509 does not specify username/pass in the URI because auth is done with a client cert
         // GSSAPI specifies username/pass in the uri, so it doesn't need to be specified in attributes.
-        if (auth_mechanism == &AuthMechanism::MongoDbX509
-            || auth_mechanism == &AuthMechanism::Gssapi)
+        if auth_mechanism == &AuthMechanism::MongoDbX509
+            || auth_mechanism == &AuthMechanism::Gssapi
         {
             return Ok(());
         }
@@ -619,15 +619,15 @@ impl ODBCUri {
                 self.remove(&[APPNAME]),
                 app_name,
             ]
-                .into_iter()
-                .flatten()
-                .fold(String::new(), |acc, x| {
-                    if acc.is_empty() {
-                        x
-                    } else {
-                        format!("{acc}|{x}")
-                    }
-                }),
+            .into_iter()
+            .flatten()
+            .fold(String::new(), |acc, x| {
+                if acc.is_empty() {
+                    x
+                } else {
+                    format!("{acc}|{x}")
+                }
+            }),
         )
     }
 }
@@ -1203,11 +1203,11 @@ mod unit {
             let opts = ODBCUri::new(
                 "USER=foo2;PWD=bar2;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
             )
-                .unwrap()
-                .try_into_client_options()
-                .await
-                .unwrap()
-                .client_options;
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap()
+            .client_options;
             let cred = opts.credential.unwrap();
             assert_eq!(expected_cred.username, cred.username);
             assert_eq!(expected_cred.password, cred.password);
@@ -1329,11 +1329,11 @@ mod unit {
             let opts = ODBCUri::new(
                 "SERVER=127.0.0.2:27017;URI=mongodb://foo:bar@127.0.0.1:27017".to_string(),
             )
-                .unwrap()
-                .try_into_client_options()
-                .await
-                .unwrap()
-                .client_options;
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap()
+            .client_options;
             assert_eq!(expected_opts.hosts[0], opts.hosts[0]);
         }
 
@@ -1344,8 +1344,8 @@ mod unit {
             let expected_opts = ClientOptions::parse(
                 "mongodb://foo:bar@www.atlas.net:27017/?authSource=authDB&ssl=true",
             )
-                .await
-                .unwrap();
+            .await
+            .unwrap();
             let expected_cred = expected_opts.credential.unwrap();
             let opts = ODBCUri::new("UID=foo;PWD=bar;SERVER=www.atlas.net:27017;User=foo2;Password=bar2;uri=mongodb://localhost:29000/?authSource=authDB&ssl=true".to_string())
                 .unwrap()
@@ -1379,10 +1379,10 @@ mod unit {
                 "USER=foo;PWD=bar;SERVER=localhost:27017;APPNAME=powerbi-connector+1.0.0"
                     .to_string(),
             )
-                .unwrap()
-                .try_into_client_options()
-                .await
-                .unwrap();
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap();
             assert_eq!(
                 format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
                 uri_opts.client_options.app_name.unwrap()
@@ -1409,10 +1409,10 @@ mod unit {
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/;APPNAME=powerbi-connector+1.0.0"
                     .to_string(),
             )
-                .unwrap()
-                .try_into_client_options()
-                .await
-                .unwrap();
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap();
 
             assert_eq!(
                 format!("{}|powerbi-connector+1.0.0", *DEFAULT_APP_NAME),
@@ -1464,10 +1464,10 @@ mod unit {
             let uri_opts = ODBCUri::new(
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;".to_string(),
             )
-                .unwrap()
-                .try_into_client_options()
-                .await
-                .unwrap();
+            .unwrap()
+            .try_into_client_options()
+            .await
+            .unwrap();
 
             assert_eq!(
                 DRIVER_SHORT_NAME,
