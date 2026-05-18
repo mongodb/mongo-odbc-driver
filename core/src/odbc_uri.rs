@@ -649,12 +649,44 @@ mod unit {
         }
 
         #[test]
+        fn test_scram_sha1_specified_with_username_in_uri_is_unmodified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://foo:@localhost:27017/abc?authMechanism=SCRAM-SHA-1";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+
+        #[test]
+        fn test_scram_sha1_specified_with_username_and_password_in_uri_is_unmodified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://foo:bar@localhost:27017/abc?authMechanism=SCRAM-SHA-1";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+
+        #[test]
         fn test_scram_sha_256_specified() {
             use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-256";
             let expected = "mongodb://dummy_username:dummy_password@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar;")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
+        }
+
+        #[test]
+        fn test_scram_sha_256_specified_with_username_in_uri_is_unmodified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://foo:@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+
+        #[test]
+        fn test_scram_sha_256_specified_with_username_and_password_in_uri_is_unmodified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://foo:bar@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
         }
 
         #[test]
@@ -668,7 +700,23 @@ mod unit {
         }
 
         #[test]
-        fn test_mechanism_not_recognized() {
+        fn test_plain_specified_with_username_in_uri_is_unmodified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://foo:@localhost:27017/abc?authMechanism=PLAIN";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+
+        #[test]
+        fn test_plain_specified_with_username_and_password_in_uri_is_unmodified() {
+            use crate::odbc_uri::ODBCUri;
+            let uri = "mongodb://foo:bar@localhost:27017/abc?authMechanism=PLAIN";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
+
+        #[test]
+        fn test_mechanism_not_recognized_is_unmodified() {
             use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-512";
             let expected = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-512";
