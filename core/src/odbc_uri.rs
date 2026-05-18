@@ -1,7 +1,6 @@
 use crate::err::{Error, Result};
 use bson::Bson;
 use constants::{DEFAULT_APP_NAME, DRIVER_SHORT_NAME};
-use itertools::Itertools;
 use lazy_static::lazy_static;
 use mongodb::{
     bson::UuidRepresentation,
@@ -15,7 +14,6 @@ use once_cell::sync::OnceCell;
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 use shared_sql_utils::Dsn;
 use std::collections::HashMap;
-use std::ptr::eq;
 use std::str::FromStr;
 
 const EMPTY_URI_ERROR: &str = "URI must not be empty";
@@ -649,7 +647,6 @@ impl ODBCUri {
 }
 
 mod unit {
-    use mongodb::options::ClientOptions;
 
     mod test_username_password_detection {
         #[test]
