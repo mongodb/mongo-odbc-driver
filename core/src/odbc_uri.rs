@@ -1060,7 +1060,6 @@ mod unit {
         #[tokio::test(flavor = "current_thread")]
         async fn x509_auth_does_not_throw_when_uid_pwd_not_specified_in_odbc_uri() {
             use crate::odbc_uri::ODBCUri;
-            // TODO: Is there any way to run this test with a +srv url and ignore the DNS Resolution path?
             let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC
   Driver};URI=mongodb://cluster.example.net/?authMechanism=MONGODB-X509&tls=true&tlsCertificateKeyFile=/path/to/client.pem;DATABASE=mydb;LOGLEVEL=DEBUG;";
             assert!(ODBCUri::new(odbc_uri.to_string())
@@ -1072,9 +1071,8 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn oidc_without_mechanism_properties_does_not_require_username() {
-            // Regression test for mechanism_properties.as_ref().unwrap() panic.
             // OIDC without authMechanismProperties means no ENVIRONMENT key exists,
-            // so no username should be required. Previously this panicked.
+            // so no username should be required.
             use crate::odbc_uri::ODBCUri;
             let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                 URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC&tls=true;\
@@ -1088,10 +1086,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn oidc_with_non_azure_environment_does_not_require_username() {
-            // Regression test for ptr::eq value-comparison bug.
-            // OIDC with ENVIRONMENT=gcp (or any non-azure value) must not require a username.
-            // Previously, std::ptr::eq compared pointer addresses rather than values,
-            // making the azure check always false and incorrectly rejecting valid connections.
             use crate::odbc_uri::ODBCUri;
             let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                 URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
@@ -1102,6 +1096,34 @@ mod unit {
                 .try_into_client_options()
                 .await
                 .is_ok());
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_with_azure_environment_and_username_succeeds() {
+            use crate::odbc_uri::ODBCUri;
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+         URI=mongodb://myuser@cluster.example.net/?authMechanism=MONGODB-OIDC\
+         &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
+         DATABASE=mydb;UID=myUser";
+            assert!(ODBCUri::new(odbc_uri.to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .is_ok());
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_with_azure_environment_and_without_username_fails() {
+            use crate::odbc_uri::ODBCUri;
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+         URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
+         &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
+         DATABASE=mydb;";
+            assert!(ODBCUri::new(odbc_uri.to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .is_err());
         }
 
         #[tokio::test(flavor = "current_thread")]
