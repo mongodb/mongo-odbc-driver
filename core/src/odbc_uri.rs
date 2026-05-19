@@ -1039,10 +1039,7 @@ mod unit {
 
     #[cfg(test)]
     mod try_into_client_options {
-        use crate::odbc_uri::{DATABASE, PWD, UID, URI};
         use mongodb::options::ClientOptions;
-        use num_traits::One;
-        use openidconnect::http::Uri;
 
         #[tokio::test(flavor = "current_thread")]
         async fn username_required_when_auth_mechanism_environment_is_azure() {
