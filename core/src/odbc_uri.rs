@@ -462,7 +462,7 @@ impl ODBCUri {
             .password
             .is_none()
         {
-            // All OIDC skips the password check (OIDC post-processing clears the password anyway).
+            // OIDC doesn't require password either.
             if auth_mechanism != &AuthMechanism::MongoDbOidc {
                 return Err(Error::InvalidUriFormat(format!(
                     "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri"
