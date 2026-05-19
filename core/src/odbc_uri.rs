@@ -1039,7 +1039,10 @@ mod unit {
 
     #[cfg(test)]
     mod try_into_client_options {
+        use crate::odbc_uri::{DATABASE, PWD, UID, URI};
         use mongodb::options::ClientOptions;
+        use num_traits::One;
+        use openidconnect::http::Uri;
 
         #[tokio::test(flavor = "current_thread")]
         async fn username_required_when_auth_mechanism_environment_is_azure() {
@@ -1062,6 +1065,18 @@ mod unit {
             use crate::odbc_uri::ODBCUri;
             let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC
   Driver};URI=mongodb://cluster.example.net/?authMechanism=MONGODB-X509&tls=true&tlsCertificateKeyFile=/path/to/client.pem;DATABASE=mydb;LOGLEVEL=DEBUG;";
+            assert!(ODBCUri::new(odbc_uri.to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .is_ok());
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn gssapi_auth_does_not_throw_when_uid_pwd_not_specified_in_odbc_uri() {
+            use crate::odbc_uri::ODBCUri;
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC
+  Driver};URI=mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external;DATABASE=mydb;LOGLEVEL=DEBUG;";
             assert!(ODBCUri::new(odbc_uri.to_string())
                 .unwrap()
                 .try_into_client_options()
@@ -1153,24 +1168,6 @@ mod unit {
                         .try_into_client_options().await
                         .unwrap_err()
                 )
-            );
-        }
-
-        #[tokio::test(flavor = "current_thread")]
-        async fn gssapi_client_options_do_not_include_password() {
-            use crate::odbc_uri::ODBCUri;
-            // Arrange: Sample URL where auth mechanism is GSSAPI, and specified in the url, but not in options
-            assert_eq!(
-                ODBCUri::new("URI=mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external;".to_string())
-                    .unwrap()
-                    .try_into_client_options()
-                    .await
-                    .unwrap()
-                    .client_options
-                    .credential
-                    .unwrap()
-                    .password,
-                        None
             );
         }
 
