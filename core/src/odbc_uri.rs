@@ -448,7 +448,7 @@ impl ODBCUri {
             .username
             .is_none()
         {
-            // OIDC only requires username when Azure is the environment. For now do a nested if, but we can refactor later.
+            // OIDC only requires username when Azure is the environment.
             if is_oidc_and_azure_environment || auth_mechanism != &AuthMechanism::MongoDbOidc {
                 return Err(Error::InvalidUriFormat(format!(
                     "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri"
