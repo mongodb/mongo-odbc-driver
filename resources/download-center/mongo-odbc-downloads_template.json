@@ -6,7 +6,7 @@
           "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{WINDOWS_INSTALLER_PATH}"
         },
         {
-          "name": "Linux x64 - Requires Openssl 3 - glibc 2.34+",
+          "name": "Linux x64 - Requires glibc 2.34+",
           "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{UBUNTU2204_INSTALLER_PATH}"
         }
       ]
