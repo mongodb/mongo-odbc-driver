@@ -1100,7 +1100,7 @@ mod unit {
         async fn oidc_with_azure_environment_and_username_succeeds() {
             use crate::odbc_uri::ODBCUri;
             let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
-         URI=mongodb://myuser@cluster.example.net/?authMechanism=MONGODB-OIDC\
+         URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
          &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
          DATABASE=mydb;UID=myUser";
             assert!(ODBCUri::new(odbc_uri.to_string())
