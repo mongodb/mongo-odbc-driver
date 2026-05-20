@@ -40,5 +40,8 @@ bson = "2"
 itertools = "0"
 once_cell = "1"
 
+[patch.crates-io]
+mongodb = { git = "https://github.com/mongodb/mongo-rust-driver", rev = "2c7c7e94d87529b4ec0114ab33c7e077fc483154" }
+
 [profile.release]
 debug = true
