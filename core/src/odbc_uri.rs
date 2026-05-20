@@ -1026,7 +1026,6 @@ mod unit {
     #[cfg(test)]
     mod try_into_client_options {
         use mongodb::options::ClientOptions;
-        use serde_json::to_string;
 
         #[tokio::test(flavor = "current_thread")]
         async fn username_required_when_auth_mechanism_environment_is_azure() {
