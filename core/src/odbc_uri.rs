@@ -1026,6 +1026,7 @@ mod unit {
     #[cfg(test)]
     mod try_into_client_options {
         use mongodb::options::ClientOptions;
+        use serde_json::to_string;
 
         #[tokio::test(flavor = "current_thread")]
         async fn username_required_when_auth_mechanism_environment_is_azure() {
@@ -1108,6 +1109,21 @@ mod unit {
                 .try_into_client_options()
                 .await
                 .is_ok());
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_with_azure_environment_and_username_in_uri_succeeds() {
+            use crate::odbc_uri::ODBCUri;
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+         URI=mongodb://test_user@cluster.example.net/?authMechanism=MONGODB-OIDC\
+         &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
+         DATABASE=mydb;";
+            let parsed_odbc_uri = ODBCUri::new(odbc_uri.to_string())
+                .unwrap()
+                .try_into_client_options()
+                .await;
+
+            assert!(parsed_odbc_uri.is_ok());
         }
 
         #[tokio::test(flavor = "current_thread")]
