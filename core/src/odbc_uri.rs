@@ -415,10 +415,11 @@ impl ODBCUri {
     }
 
     fn check_client_opts_credentials(client_options: &ClientOptions) -> Result<()> {
-        let auth_mechanism = client_options
+        let client_credentials = client_options
             .credential
             .as_ref()
-            .unwrap()
+            .expect("credential must be set before validation");
+        let auth_mechanism = client_credentials
             .mechanism
             .as_ref()
             .unwrap_or(&AuthMechanism::ScramSha256);
@@ -432,22 +433,13 @@ impl ODBCUri {
         }
 
         let is_oidc_and_azure_environment = auth_mechanism == &AuthMechanism::MongoDbOidc
-            && client_options
-                .credential
-                .as_ref()
-                .unwrap()
+            && client_credentials
                 .mechanism_properties
                 .as_ref()
                 .and_then(|props| props.get("ENVIRONMENT"))
                 .is_some_and(|v| v == &Bson::String("azure".to_string()));
 
-        if client_options
-            .credential
-            .as_ref()
-            .unwrap()
-            .username
-            .is_none()
-        {
+        if client_credentials.username.is_none() {
             // OIDC only requires username when Azure is the environment.
             if is_oidc_and_azure_environment || auth_mechanism != &AuthMechanism::MongoDbOidc {
                 return Err(Error::InvalidUriFormat(format!(
@@ -455,13 +447,7 @@ impl ODBCUri {
                 )));
             }
         }
-        if client_options
-            .credential
-            .as_ref()
-            .unwrap()
-            .password
-            .is_none()
-        {
+        if client_credentials.password.is_none() {
             // OIDC doesn't require password either.
             if auth_mechanism != &AuthMechanism::MongoDbOidc {
                 return Err(Error::InvalidUriFormat(format!(
