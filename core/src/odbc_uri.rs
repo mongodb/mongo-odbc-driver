@@ -756,7 +756,7 @@ mod unit {
         fn test_gssapi_does_not_modify_uri() {
             let uri =
                 "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external";
-            let mut odbc_uri = ODBCUri::new(format!("URI={uri}")).unwrap();
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar;")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
         }
     }
