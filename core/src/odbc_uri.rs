@@ -432,18 +432,18 @@ impl ODBCUri {
             return Ok(());
         }
 
-        let is_oidc_and_azure_environment = auth_mechanism == &AuthMechanism::MongoDbOidc
-            && client_credentials
-                .mechanism_properties
-                .as_ref()
-                .and_then(|props| props.get("ENVIRONMENT"))
-                .is_some_and(|v| v == &Bson::String("azure".to_string()));
-
         if client_credentials.username.is_none() {
             // OIDC only requires username when Azure is the environment.
+            let is_oidc_and_azure_environment = auth_mechanism == &AuthMechanism::MongoDbOidc
+                && client_credentials
+                    .mechanism_properties
+                    .as_ref()
+                    .and_then(|props| props.get("ENVIRONMENT"))
+                    .is_some_and(|v| v == &Bson::String("azure".to_string()));
+
             if is_oidc_and_azure_environment || auth_mechanism != &AuthMechanism::MongoDbOidc {
                 return Err(Error::InvalidUriFormat(format!(
-                    "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri"
+                    "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri when using an Azure managed identity. Set this to the client ID of the managed identity or the application ID of the service principal."
                 )));
             }
         }
@@ -451,7 +451,7 @@ impl ODBCUri {
             // OIDC doesn't require password either.
             if auth_mechanism != &AuthMechanism::MongoDbOidc {
                 return Err(Error::InvalidUriFormat(format!(
-                    "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri"
+                    "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri when the authication mechanism is {:?}", auth_mechanism
                 )));
             }
         }
