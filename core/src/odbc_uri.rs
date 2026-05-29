@@ -1048,29 +1048,11 @@ mod unit {
         use crate::odbc_uri::ODBCUri;
         use mongodb::options::ClientOptions;
 
-        macro_rules! validate_odbc_uri_parsing {
-            ($uri:expr, ok) => {
-                assert!(
-                    ODBCUri::new($uri.to_string())
-                        .unwrap()
-                        .try_into_client_options()
-                        .await
-                        .is_ok(),
-                    "Expected URI to parse successfully: {}",
-                    $uri
-                );
-            };
-            ($uri:expr, err) => {
-                assert!(
-                    ODBCUri::new($uri.to_string())
-                        .unwrap()
-                        .try_into_client_options()
-                        .await
-                        .is_err(),
-                    "Expected URI parsing to fail: {}",
-                    $uri
-                );
-            };
+        async fn parse_uri(uri: &str) -> crate::err::Result<crate::odbc_uri::UserOptions> {
+            ODBCUri::new(uri.to_string())
+                .expect("test URI should be parseable by ODBCUri::new")
+                .try_into_client_options()
+                .await
         }
 
         #[tokio::test(flavor = "current_thread")]
@@ -1090,23 +1072,27 @@ mod unit {
         }
         #[tokio::test(flavor = "current_thread")]
         async fn x509_auth_does_not_throw_when_uid_pwd_not_specified_in_odbc_uri() {
-            validate_odbc_uri_parsing!(
-                "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                  URI=mongodb://cluster.example.net/?authMechanism=MONGODB-X509\
                  &tls=true&tlsCertificateKeyFile=/path/to/client.pem;\
-                 DATABASE=mydb;LOGLEVEL=DEBUG;",
-                ok
+                 DATABASE=mydb;LOGLEVEL=DEBUG;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
             );
         }
 
         #[tokio::test(flavor = "current_thread")]
         async fn gssapi_auth_does_not_throw_when_uid_pwd_not_specified_in_odbc_uri() {
-            validate_odbc_uri_parsing!(
-                "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                  URI=mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/\
                  ?authMechanism=GSSAPI&authSource=$external;\
-                 DATABASE=mydb;LOGLEVEL=DEBUG;",
-                ok
+                 DATABASE=mydb;LOGLEVEL=DEBUG;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
             );
         }
 
@@ -1114,55 +1100,64 @@ mod unit {
         async fn oidc_without_mechanism_properties_does_not_require_username() {
             // OIDC without authMechanismProperties means no ENVIRONMENT key exists,
             // so no username should be required.
-            validate_odbc_uri_parsing!(
-                "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                  URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC&tls=true;\
-                 DATABASE=mydb;",
-                ok
+                 DATABASE=mydb;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
             );
         }
 
         #[tokio::test(flavor = "current_thread")]
         async fn oidc_with_non_azure_environment_does_not_require_username() {
-            validate_odbc_uri_parsing!(
-                "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                  URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
                  &authMechanismProperties=ENVIRONMENT:gcp,TOKEN_RESOURCE:my_audience&tls=true;\
-                 DATABASE=mydb;",
-                ok
+                 DATABASE=mydb;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
             );
         }
 
         #[tokio::test(flavor = "current_thread")]
         async fn oidc_with_azure_environment_and_username_succeeds() {
-            validate_odbc_uri_parsing!(
-                "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                  URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
                  &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
-                 DATABASE=mydb;UID=myUser",
-                ok
+                 DATABASE=mydb;UID=myUser";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
             );
         }
 
         #[tokio::test(flavor = "current_thread")]
         async fn oidc_with_azure_environment_and_username_in_uri_succeeds() {
-            validate_odbc_uri_parsing!(
-                "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                  URI=mongodb://test_user@cluster.example.net/?authMechanism=MONGODB-OIDC\
                  &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
-                 DATABASE=mydb;",
-                ok
+                 DATABASE=mydb;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
             );
         }
 
         #[tokio::test(flavor = "current_thread")]
         async fn oidc_with_azure_environment_and_without_username_fails() {
-            validate_odbc_uri_parsing!(
-                "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                  URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
                  &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
-                 DATABASE=mydb;",
-                err
+                 DATABASE=mydb;";
+            assert!(
+                parse_uri(uri).await.is_err(),
+                "Expected URI parsing to fail: {uri}"
             );
         }
 
