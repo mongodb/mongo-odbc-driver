@@ -1,4 +1,5 @@
 use crate::err::{Error, Result};
+use bson::Bson;
 use constants::{DEFAULT_APP_NAME, DRIVER_SHORT_NAME};
 use lazy_static::lazy_static;
 use mongodb::{
@@ -414,27 +415,45 @@ impl ODBCUri {
     }
 
     fn check_client_opts_credentials(client_options: &ClientOptions) -> Result<()> {
-        if client_options
+        let client_credentials = client_options
             .credential
             .as_ref()
-            .unwrap()
-            .username
-            .is_none()
+            .expect("credential must be set before validation");
+        let auth_mechanism = client_credentials
+            .mechanism
+            .as_ref()
+            .unwrap_or(&AuthMechanism::ScramSha256);
+
+        // X509 and Kerberos (GSSAPI) do not require username and password as part of client options.
+        // X509 does not specify username/pass in the URI because auth is done with a client cert
+        // GSSAPI specifies username/pass in the uri, so it doesn't need to be specified in attributes.
+        if auth_mechanism == &AuthMechanism::MongoDbX509 || auth_mechanism == &AuthMechanism::Gssapi
         {
-            return Err(Error::InvalidUriFormat(format!(
-                "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri"
-            )));
+            return Ok(());
         }
-        if client_options
-            .credential
-            .as_ref()
-            .unwrap()
-            .password
-            .is_none()
-        {
-            return Err(Error::InvalidUriFormat(format!(
-                "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri"
-            )));
+
+        if client_credentials.username.is_none() {
+            // OIDC only requires username when Azure is the environment.
+            let is_oidc_and_azure_environment = auth_mechanism == &AuthMechanism::MongoDbOidc
+                && client_credentials
+                    .mechanism_properties
+                    .as_ref()
+                    .and_then(|props| props.get("ENVIRONMENT"))
+                    .is_some_and(|v| v == &Bson::String("azure".to_string()));
+
+            if is_oidc_and_azure_environment || auth_mechanism != &AuthMechanism::MongoDbOidc {
+                return Err(Error::InvalidUriFormat(format!(
+                    "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri when using an Azure managed identity. Set this to the client ID of the managed identity or the application ID of the service principal."
+                )));
+            }
+        }
+        if client_credentials.password.is_none() {
+            // OIDC doesn't require password either.
+            if auth_mechanism != &AuthMechanism::MongoDbOidc {
+                return Err(Error::InvalidUriFormat(format!(
+                    "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri when the authication mechanism is {:?}", auth_mechanism
+                )));
+            }
         }
         Ok(())
     }
@@ -612,11 +631,12 @@ impl ODBCUri {
 }
 
 mod unit {
-
+    #[cfg(test)]
     mod test_username_password_detection {
+        use crate::odbc_uri::ODBCUri;
+
         #[test]
         fn test_username_password_detection() {
-            use crate::odbc_uri::ODBCUri;
             assert!(ODBCUri::contains_username_and_or_password(
                 "foo:bar@localhost"
             ));
@@ -630,10 +650,12 @@ mod unit {
         }
     }
 
+    #[cfg(test)]
     mod test_uri_construction {
+        use crate::odbc_uri::ODBCUri;
+
         #[test]
         fn test_no_auth_mechanism_specified_is_unmodified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
@@ -641,7 +663,6 @@ mod unit {
 
         #[test]
         fn test_scram_sha1_specified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-1";
             let expected = "mongodb://dummy_username:dummy_password@localhost:27017/abc?authMechanism=SCRAM-SHA-1";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
@@ -650,7 +671,6 @@ mod unit {
 
         #[test]
         fn test_scram_sha1_specified_with_username_in_uri_is_unmodified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://foo:@localhost:27017/abc?authMechanism=SCRAM-SHA-1";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
@@ -658,7 +678,6 @@ mod unit {
 
         #[test]
         fn test_scram_sha1_specified_with_username_and_password_in_uri_is_unmodified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://foo:bar@localhost:27017/abc?authMechanism=SCRAM-SHA-1";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
@@ -666,7 +685,6 @@ mod unit {
 
         #[test]
         fn test_scram_sha_256_specified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-256";
             let expected = "mongodb://dummy_username:dummy_password@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar;")).unwrap();
@@ -675,7 +693,6 @@ mod unit {
 
         #[test]
         fn test_scram_sha_256_specified_with_username_in_uri_is_unmodified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://foo:@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
@@ -683,7 +700,6 @@ mod unit {
 
         #[test]
         fn test_scram_sha_256_specified_with_username_and_password_in_uri_is_unmodified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://foo:bar@localhost:27017/abc?authMechanism=SCRAM-SHA-256";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
@@ -691,7 +707,6 @@ mod unit {
 
         #[test]
         fn test_plain_specified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
             let expected =
                 "mongodb://dummy_username:dummy_password@localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
@@ -701,7 +716,6 @@ mod unit {
 
         #[test]
         fn test_plain_specified_with_username_in_uri_is_unmodified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://foo:@localhost:27017/abc?authMechanism=PLAIN";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
@@ -709,7 +723,6 @@ mod unit {
 
         #[test]
         fn test_plain_specified_with_username_and_password_in_uri_is_unmodified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://foo:bar@localhost:27017/abc?authMechanism=PLAIN";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
@@ -717,7 +730,6 @@ mod unit {
 
         #[test]
         fn test_mechanism_not_recognized_is_unmodified() {
-            use crate::odbc_uri::ODBCUri;
             let uri = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-512";
             let expected = "mongodb://localhost:27017/abc?authMechanism=SCRAM-SHA-512";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
@@ -726,7 +738,6 @@ mod unit {
 
         #[test]
         fn test_x509_does_not_modify_uri() {
-            use crate::odbc_uri::ODBCUri;
             let uri =
                 "mongodb://localhost:27017/abc?authSource=$external&authMechanism=MONGODB-X509";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
@@ -735,18 +746,27 @@ mod unit {
 
         #[test]
         fn test_aws_does_not_modify_uri() {
-            use crate::odbc_uri::ODBCUri;
             let uri =
                 "mongodb://localhost:27017/abc?authSource=$external&authMechanism=MONGODB-AWS";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
         }
+
+        #[test]
+        fn test_gssapi_does_not_modify_uri() {
+            let uri =
+                "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external";
+            let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar;")).unwrap();
+            assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
+        }
     }
 
+    #[cfg(test)]
     mod get_next_attribute {
+        use crate::odbc_uri::ODBCUri;
+
         #[test]
         fn get_unbraced() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("driver".to_string(), "foo".to_string(), None),
                 ODBCUri::get_next_attribute("DRIVER=foo".to_string())
@@ -757,7 +777,6 @@ mod unit {
 
         #[test]
         fn get_braced() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("driver".to_string(), "fo[]=o".to_string(), None),
                 ODBCUri::get_next_attribute("DRIVER={fo[]=o}".to_string())
@@ -768,7 +787,6 @@ mod unit {
 
         #[test]
         fn get_unbraced_with_rest() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 (
                     "driver".to_string(),
@@ -783,7 +801,6 @@ mod unit {
 
         #[test]
         fn get_braced_with_rest() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 (
                     "driver".to_string(),
@@ -798,7 +815,6 @@ mod unit {
 
         #[test]
         fn get_with_non_keyword_in_keyword_position_is_error() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 "Invalid Uri: 'stuff' is not a valid URI keyword",
                 format!(
@@ -809,10 +825,12 @@ mod unit {
         }
     }
 
+    #[cfg(test)]
     mod handle_braced_value {
+        use crate::odbc_uri::ODBCUri;
+
         #[test]
         fn no_closing_brace_is_error() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 "Invalid Uri: attribute value beginning with '{' must end with '}'",
                 format!(
@@ -824,7 +842,6 @@ mod unit {
 
         #[test]
         fn ends_with_brace() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stuff".to_string(), None),
                 ODBCUri::handle_braced_value("stuff}").unwrap()
@@ -833,7 +850,6 @@ mod unit {
 
         #[test]
         fn ends_with_semi() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stuff".to_string(), None),
                 ODBCUri::handle_braced_value("stuff};").unwrap()
@@ -842,7 +858,6 @@ mod unit {
 
         #[test]
         fn has_rest() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stuff".to_string(), Some("DRIVER=foo".to_string())),
                 ODBCUri::handle_braced_value("stuff};DRIVER=foo").unwrap()
@@ -851,7 +866,6 @@ mod unit {
 
         #[test]
         fn ends_with_brace_special_chars() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stu%=[]}ff".to_string(), None),
                 ODBCUri::handle_braced_value("stu%=[]}ff}").unwrap()
@@ -860,7 +874,6 @@ mod unit {
 
         #[test]
         fn ends_with_semi_special_chars() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stu%=[]}ff".to_string(), None),
                 ODBCUri::handle_braced_value("stu%=[]}ff};").unwrap()
@@ -869,7 +882,6 @@ mod unit {
 
         #[test]
         fn has_rest_special_chars() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stu%=[]}ff".to_string(), Some("DRIVER=foo".to_string())),
                 ODBCUri::handle_braced_value("stu%=[]}ff};DRIVER=foo").unwrap()
@@ -877,10 +889,12 @@ mod unit {
         }
     }
 
+    #[cfg(test)]
     mod handle_unbraced_value {
+        use crate::odbc_uri::ODBCUri;
+
         #[test]
         fn ends_with_empty() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stuff".to_string(), None),
                 ODBCUri::handle_unbraced_value("stuff").unwrap()
@@ -889,7 +903,6 @@ mod unit {
 
         #[test]
         fn ends_with_semi() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stuff".to_string(), None),
                 ODBCUri::handle_unbraced_value("stuff;").unwrap()
@@ -898,7 +911,6 @@ mod unit {
 
         #[test]
         fn has_rest() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ("stuff".to_string(), Some("DRIVER=foo".to_string())),
                 ODBCUri::handle_unbraced_value("stuff;DRIVER=foo").unwrap()
@@ -906,29 +918,28 @@ mod unit {
         }
     }
 
+    #[cfg(test)]
     mod new {
+        use crate::odbc_uri::ODBCUri;
+
         #[test]
         fn empty_uri_is_err() {
-            use crate::odbc_uri::ODBCUri;
-            assert!(ODBCUri::new("".to_string()).is_err());
+            assert!(ODBCUri::new(String::new()).is_err());
         }
 
         #[test]
         fn string_foo_is_err() {
-            use crate::odbc_uri::ODBCUri;
             assert!(ODBCUri::new("Foo".to_string()).is_err());
         }
 
         #[test]
         fn missing_equals_is_err() {
-            use crate::odbc_uri::ODBCUri;
             assert!(ODBCUri::new("driver=Foo;Bar".to_string()).is_err());
         }
 
         #[test]
         fn one_attribute_works() {
             use crate::map;
-            use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(map! {"driver".to_string() => "Foo".to_string()});
             assert_eq!(expected, ODBCUri::new("Driver=Foo".to_string()).unwrap());
         }
@@ -936,7 +947,6 @@ mod unit {
         #[test]
         fn two_attributes_works() {
             use crate::map;
-            use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
                 map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
             );
@@ -949,7 +959,6 @@ mod unit {
         #[test]
         fn standard_types_test() {
             use crate::map;
-            use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
                 map! {"driver".to_string() => "Foo".to_string(), "simple_types_only".to_string() => "0".to_string()},
             );
@@ -962,7 +971,6 @@ mod unit {
         #[test]
         fn enable_max_string_length_test() {
             use crate::map;
-            use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
                 map! {"driver".to_string() => "Foo".to_string(), "enable_max_string_length".to_string() => "1".to_string()},
             );
@@ -975,7 +983,6 @@ mod unit {
         #[test]
         fn repeated_attribute_selects_first() {
             use crate::map;
-            use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
                 map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
             );
@@ -988,7 +995,6 @@ mod unit {
         #[test]
         fn two_attributes_with_trailing_semi_works() {
             use crate::map;
-            use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
                 map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
             );
@@ -1001,7 +1007,6 @@ mod unit {
         #[test]
         fn two_attributes_with_triple_trailing_semis_works() {
             use crate::map;
-            use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
                 map! {"driver".to_string() => "Foo".to_string(), "server".to_string() => "bAr".to_string()},
             );
@@ -1014,7 +1019,6 @@ mod unit {
         #[test]
         fn log_level() {
             use crate::map;
-            use crate::odbc_uri::ODBCUri;
             let expected = ODBCUri(
                 map! {"driver".to_string() => "foo".to_string(), "server".to_string() => "bAr".to_string(), "loglevel".to_string() => "debug".to_string()},
             );
@@ -1027,7 +1031,6 @@ mod unit {
         // Verifies that get_attribute returns the DSN value after parsing.
         #[test]
         fn dsn_keyword_is_accessible_via_get_attribute() {
-            use crate::odbc_uri::ODBCUri;
             let dsn = "DSN_Test";
             let odbc_uri = ODBCUri::process_uri(format!("DSN={dsn};UID=user")).unwrap();
             assert_eq!(odbc_uri.get_attribute(&["dsn"]), Some(&dsn.to_string()));
@@ -1035,7 +1038,6 @@ mod unit {
 
         #[test]
         fn driver_keyword_yields_no_dsn() {
-            use crate::odbc_uri::ODBCUri;
             let odbc_uri = ODBCUri::new("DRIVER=Foo;UID=user".to_string()).unwrap();
             assert_eq!(odbc_uri.get_attribute(&["dsn"]), None);
         }
@@ -1043,11 +1045,124 @@ mod unit {
 
     #[cfg(test)]
     mod try_into_client_options {
+        use crate::odbc_uri::ODBCUri;
         use mongodb::options::ClientOptions;
+
+        async fn parse_uri(uri: &str) -> crate::err::Result<crate::odbc_uri::UserOptions> {
+            ODBCUri::new(uri.to_string())
+                .expect("test URI should be parseable by ODBCUri::new")
+                .try_into_client_options()
+                .await
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn username_required_when_auth_mechanism_environment_is_azure() {
+            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;DATABASE=mydb;LOGLEVEL=DEBUG;";
+            assert_eq!(
+                "Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri when using an Azure managed identity. Set this to the client ID of the managed identity or the application ID of the service principal.",
+                format!(
+                    "{}",
+                    ODBCUri::new(odbc_uri.to_string())
+                        .unwrap()
+                        .try_into_client_options()
+                        .await
+                        .unwrap_err()
+                )
+            );
+        }
+        #[tokio::test(flavor = "current_thread")]
+        async fn x509_auth_does_not_throw_when_uid_pwd_not_specified_in_odbc_uri() {
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                 URI=mongodb://cluster.example.net/?authMechanism=MONGODB-X509\
+                 &tls=true&tlsCertificateKeyFile=/path/to/client.pem;\
+                 DATABASE=mydb;LOGLEVEL=DEBUG;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
+            );
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn gssapi_auth_does_not_throw_when_uid_pwd_not_specified_in_odbc_uri() {
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                 URI=mongodb://alice%40CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/\
+                 ?authMechanism=GSSAPI&authSource=$external;\
+                 DATABASE=mydb;LOGLEVEL=DEBUG;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
+            );
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_without_mechanism_properties_does_not_require_username() {
+            // OIDC without authMechanismProperties means no ENVIRONMENT key exists,
+            // so no username should be required.
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                 URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC&tls=true;\
+                 DATABASE=mydb;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
+            );
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_with_non_azure_environment_does_not_require_username() {
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                 URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
+                 &authMechanismProperties=ENVIRONMENT:gcp,TOKEN_RESOURCE:my_audience&tls=true;\
+                 DATABASE=mydb;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
+            );
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_with_azure_environment_and_username_succeeds() {
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                 URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
+                 &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
+                 DATABASE=mydb;UID=myUser";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
+            );
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_with_azure_environment_and_username_in_uri_succeeds() {
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                 URI=mongodb://test_user@cluster.example.net/?authMechanism=MONGODB-OIDC\
+                 &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
+                 DATABASE=mydb;";
+            let result = parse_uri(uri).await;
+            assert!(
+                result.is_ok(),
+                "Expected URI to parse successfully, got: {result:?}"
+            );
+        }
+
+        #[tokio::test(flavor = "current_thread")]
+        async fn oidc_with_azure_environment_and_without_username_fails() {
+            let uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};\
+                 URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
+                 &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
+                 DATABASE=mydb;";
+            assert!(
+                parse_uri(uri).await.is_err(),
+                "Expected URI parsing to fail: {uri}"
+            );
+        }
 
         #[tokio::test(flavor = "current_thread")]
         async fn missing_server_is_err() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 "Invalid Uri: server is required for a valid Mongo ODBC Uri",
                 format!(
@@ -1062,21 +1177,20 @@ mod unit {
         }
         #[tokio::test(flavor = "current_thread")]
         async fn missing_pwd_is_err() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
-            "Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri",
-            format!(
-                "{}",
-                ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017".to_string())
-                    .unwrap()
-                    .try_into_client_options().await
-                    .unwrap_err()
-            )
-        );
+                "Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri",
+                format!(
+                    "{}",
+                    ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017".to_string())
+                        .unwrap()
+                        .try_into_client_options().await
+                        .unwrap_err()
+                )
+            );
         }
+
         #[tokio::test(flavor = "current_thread")]
         async fn missing_user_is_err() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 "Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri",
                 format!(
@@ -1092,7 +1206,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn use_pwd_server_works() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
                     .await
@@ -1114,7 +1227,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn uid_instead_of_user_works() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
                     .await
@@ -1136,7 +1248,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn password_instead_of_pwd_works() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
                     .await
@@ -1158,7 +1269,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn uri_with_embedded_user_and_password_works() {
-            use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
                 .await
                 .unwrap();
@@ -1177,7 +1287,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn uri_seperate_user_and_password_replace_embedded() {
-            use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse("mongodb://foo2:bar2@127.0.0.1:27017")
                 .await
                 .unwrap();
@@ -1198,7 +1307,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn uri_with_separate_user_and_password_works() {
-            use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
                 .await
                 .unwrap();
@@ -1217,7 +1325,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn uri_with_separate_password_works() {
-            use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse("mongodb://foo:bar@127.0.0.1:27017")
                 .await
                 .unwrap();
@@ -1236,7 +1343,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn credless_uri_without_user_and_password_is_error() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
                 "Err(InvalidUriFormat(\"One of [\\\"uid\\\", \\\"user\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
                 format!(
@@ -1251,9 +1357,8 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn credless_uri_with_user_and_no_password_is_error() {
-            use crate::odbc_uri::ODBCUri;
             assert_eq!(
-                "Err(InvalidUriFormat(\"One of [\\\"password\\\", \\\"pwd\\\"] is required for a valid Mongo ODBC Uri\"))".to_string(),
+                "Err(InvalidUriFormat(\"One of [\\\"password\\\", \\\"pwd\\\"] is required for a valid Mongo ODBC Uri when the authication mechanism is ScramSha256\"))".to_string(),
                 format!(
                     "{:?}",
                     ODBCUri::new("URI=mongodb://foo@127.0.0.1:27017".to_string())
@@ -1266,7 +1371,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn ldap_correctness() {
-            use crate::odbc_uri::ODBCUri;
             let odbc_str = "URI=mongodb://localhost/abc?authSource=$external&authMechanism=PLAIN;UID=foo;PWD=bar";
             let actual = ODBCUri::new(odbc_str.to_string())
                 .unwrap()
@@ -1286,7 +1390,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn auth_source_correctness() {
-            use crate::odbc_uri::ODBCUri;
             for (expected, uri) in [
                 (Some("authDB".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar"),
                 (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
@@ -1297,14 +1400,13 @@ mod unit {
                 (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
             ] {
                 let actual = ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().await.unwrap().client_options.credential.unwrap().source;
-            assert_eq!(
-                expected, actual, "expected {expected:?}, got {actual:?}" );
+                assert_eq!(
+                    expected, actual, "expected {expected:?}, got {actual:?}" );
             }
         }
 
         #[tokio::test(flavor = "current_thread")]
         async fn uri_seperate_server_replaces_embedded() {
-            use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse("mongodb://foo2:bar2@127.0.0.2:27017")
                 .await
                 .unwrap();
@@ -1322,7 +1424,6 @@ mod unit {
         #[tokio::test(flavor = "current_thread")]
         async fn supplied_args_override_dsn_args() {
             // we leave dsn out of the uri so that it doesn't try to query the registry in the test
-            use crate::odbc_uri::ODBCUri;
             let expected_opts = ClientOptions::parse(
                 "mongodb://foo:bar@www.atlas.net:27017/?authSource=authDB&ssl=true",
             )
@@ -1342,7 +1443,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn no_app_name_in_odbc_uri_or_mongodb_uri_still_shows_odbc_driver_version() {
-            use crate::odbc_uri::ODBCUri;
             use constants::DEFAULT_APP_NAME;
             let uri_opts =
                 ODBCUri::new("USER=foo;PWD=bar;URI=mongodb://localhost:27017/".to_string())
@@ -1355,7 +1455,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn app_name_in_odbc_uri_and_no_mongodb_uri() {
-            use crate::odbc_uri::ODBCUri;
             use constants::DEFAULT_APP_NAME;
             let uri_opts = ODBCUri::new(
                 "USER=foo;PWD=bar;SERVER=localhost:27017;APPNAME=powerbi-connector+1.0.0"
@@ -1373,7 +1472,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn no_app_name_in_odbc_uri_and_no_mongodb_uri() {
-            use crate::odbc_uri::ODBCUri;
             use constants::DEFAULT_APP_NAME;
             let uri_opts = ODBCUri::new("USER=foo;PWD=bar;SERVER=localhost:27017;".to_string())
                 .unwrap()
@@ -1385,7 +1483,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn app_name_in_odbc_uri_shows_with_odbc_driver_version_added() {
-            use crate::odbc_uri::ODBCUri;
             use constants::DEFAULT_APP_NAME;
             let uri_opts = ODBCUri::new(
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/;APPNAME=powerbi-connector+1.0.0"
@@ -1403,16 +1500,15 @@ mod unit {
         }
         #[tokio::test(flavor = "current_thread")]
         async fn app_name_in_odbc_uri_and_mongodb_uri_chains_and_adds_odbc_driver_version() {
-            use crate::odbc_uri::ODBCUri;
             use constants::DEFAULT_APP_NAME;
             let uri_opts = ODBCUri::new(
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;APPNAME=powerbi-connector+1.0.0"
                     .to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap();
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
 
             assert_eq!(
                 format!("{}|powerbi-connector+1.0.0|foo", *DEFAULT_APP_NAME),
@@ -1422,16 +1518,15 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn driver_info_with_powerbi_provided() {
-            use crate::odbc_uri::ODBCUri;
             use constants::DRIVER_SHORT_NAME;
             let uri_opts = ODBCUri::new(
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;APPNAME=powerbi-connector+1.0.0"
                     .to_string(),
             )
-            .unwrap()
-            .try_into_client_options()
-            .await
-            .unwrap();
+                .unwrap()
+                .try_into_client_options()
+                .await
+                .unwrap();
 
             assert_eq!(
                 format!("{DRIVER_SHORT_NAME}|powerbi-connector",),
@@ -1441,7 +1536,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn driver_info_with_no_powerbi_provided() {
-            use crate::odbc_uri::ODBCUri;
             use constants::DRIVER_SHORT_NAME;
             let uri_opts = ODBCUri::new(
                 "USER=foo;PWD=bar;URI=mongodb://localhost:27017/?appName=foo;".to_string(),
@@ -1459,7 +1553,6 @@ mod unit {
 
         #[tokio::test(flavor = "current_thread")]
         async fn driver_info_with_no_mongodb_uri_and_no_odbc_uri_appname() {
-            use crate::odbc_uri::ODBCUri;
             use constants::DRIVER_SHORT_NAME;
             let uri_opts = ODBCUri::new("USER=foo;PWD=bar;SERVER=localhost:27017".to_string())
                 .unwrap()
