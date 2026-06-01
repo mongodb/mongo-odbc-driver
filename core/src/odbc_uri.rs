@@ -443,7 +443,7 @@ impl ODBCUri {
 
             if is_oidc_and_azure_environment || auth_mechanism != &AuthMechanism::MongoDbOidc {
                 log::warn!(
-                    "One of {USER_KWS:?} is required for a valid Mongo ODBC Uri when using an Azure managed identity. Set this to the client ID of the managed identity or the application ID of the service principal."
+                     "No {USER_KWS:?} provided with an Azure managed identity. If you are encountering connection issue, you might need to set it to the client ID of the managed identity or the application ID of the service principal."
                 );
             }
         }
@@ -1065,6 +1065,7 @@ mod unit {
             };
         }
 
+        #[allow(unused_macros)]
         macro_rules! assert_parse_err {
             ($uri:expr) => {
                 let uri = $uri;
