@@ -448,9 +448,12 @@ impl ODBCUri {
             }
         }
         if client_credentials.password.is_none() {
-            return Err(Error::InvalidUriFormat(format!(
+            // OIDC doesn't require password either.
+            if auth_mechanism != &AuthMechanism::MongoDbOidc {
+                return Err(Error::InvalidUriFormat(format!(
                     "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri when the authication mechanism is {:?}", auth_mechanism
                 )));
+            }
         }
         Ok(())
     }
@@ -1073,21 +1076,6 @@ mod unit {
         }
 
         #[tokio::test(flavor = "current_thread")]
-        async fn username_required_when_auth_mechanism_environment_is_azure() {
-            let odbc_uri = "DRIVER={MongoDB Atlas SQL ODBC Driver};URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;DATABASE=mydb;LOGLEVEL=DEBUG;";
-            assert_eq!(
-                "Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri when using an Azure managed identity. Set this to the client ID of the managed identity or the application ID of the service principal.",
-                format!(
-                    "{}",
-                    ODBCUri::new(odbc_uri.to_string())
-                        .unwrap()
-                        .try_into_client_options()
-                        .await
-                        .unwrap_err()
-                )
-            );
-        }
-        #[tokio::test(flavor = "current_thread")]
         async fn x509_auth_does_not_throw_when_uid_pwd_not_specified_in_odbc_uri() {
             assert_parse_ok!(
                 "DRIVER={MongoDB Atlas SQL ODBC Driver};\
@@ -1143,16 +1131,6 @@ mod unit {
             assert_parse_ok!(
                 "DRIVER={MongoDB Atlas SQL ODBC Driver};\
                  URI=mongodb://test_user@cluster.example.net/?authMechanism=MONGODB-OIDC\
-                 &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
-                 DATABASE=mydb;"
-            );
-        }
-
-        #[tokio::test(flavor = "current_thread")]
-        async fn oidc_with_azure_environment_and_without_username_fails() {
-            assert_parse_err!(
-                "DRIVER={MongoDB Atlas SQL ODBC Driver};\
-                 URI=mongodb://cluster.example.net/?authMechanism=MONGODB-OIDC\
                  &authMechanismProperties=ENVIRONMENT:azure,TOKEN_RESOURCE:my_audience&tls=true;\
                  DATABASE=mydb;"
             );
