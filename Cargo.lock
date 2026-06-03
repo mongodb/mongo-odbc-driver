@@ -200,7 +200,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "agg-ast"
 version = "0.0.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#46ac64e35fc62b052caddfd6400c9e777326353a"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#9ab8ae4adf51662b6259d71930c737be6e31f0ce"
 dependencies = [
  "bson",
  "linked-hash-map",
@@ -1580,22 +1580,22 @@ dependencies = [
 
 [[package]]
 name = "enum-iterator"
-version = "0.7.0"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4eeac5c5edb79e4e39fe8439ef35207780a11f69c52cbe424ce3dfad4cb78de6"
+checksum = "a4549325971814bda7a44061bf3fe7e487d447cba01e4220a4b454d630d7a016"
 dependencies = [
  "enum-iterator-derive",
 ]
 
 [[package]]
 name = "enum-iterator-derive"
-version = "0.7.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c134c37760b27a871ba422106eedbb8247da973a09e82558bf26d619c882b159"
+checksum = "685adfa4d6f3d765a26bc5dbc936577de9abf756c1feeb3089b01dd395034842"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -3026,7 +3026,7 @@ dependencies = [
 [[package]]
 name = "mongosql"
 version = "0.0.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#46ac64e35fc62b052caddfd6400c9e777326353a"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#9ab8ae4adf51662b6259d71930c737be6e31f0ce"
 dependencies = [
  "agg-ast",
  "base64 0.22.1",
@@ -3058,7 +3058,7 @@ dependencies = [
 [[package]]
 name = "mongosql-datastructures"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#46ac64e35fc62b052caddfd6400c9e777326353a"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#9ab8ae4adf51662b6259d71930c737be6e31f0ce"
 dependencies = [
  "linked-hash-map",
  "thiserror 2.0.18",
@@ -5047,7 +5047,7 @@ checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 [[package]]
 name = "usererrordisplay-impl"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#46ac64e35fc62b052caddfd6400c9e777326353a"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#9ab8ae4adf51662b6259d71930c737be6e31f0ce"
 dependencies = [
  "quote",
  "syn 2.0.117",
@@ -5091,7 +5091,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "visitgen"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#46ac64e35fc62b052caddfd6400c9e777326353a"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#9ab8ae4adf51662b6259d71930c737be6e31f0ce"
 dependencies = [
  "lazy_static",
  "proc-macro2",
