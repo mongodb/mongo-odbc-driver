@@ -548,7 +548,8 @@ mod test {
         let expected = "test";
         let test = to_widechar_vec("test");
         let test = test.as_ptr();
-        let test = unsafe { input_text_to_string_w_allow_null(test, expected.len() as isize, false) };
+        let test =
+            unsafe { input_text_to_string_w_allow_null(test, expected.len() as isize, false) };
         assert_eq!(expected, test);
     }
 }

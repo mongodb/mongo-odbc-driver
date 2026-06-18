@@ -4259,7 +4259,8 @@ pub unsafe extern "C" fn SQLTablesW(
             let mongo_handle = try_mongo_handle!(statement_handle);
             let odbc_behavior = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog = input_text_to_string_w_allow_null(catalog_name, name_length_1.into(), true);
+            let catalog =
+                input_text_to_string_w_allow_null(catalog_name, name_length_1.into(), true);
             let schema = input_text_to_string_w_allow_null(schema_name, name_length_2.into(), true);
             let table = input_text_to_string_w_allow_null(table_name, name_length_3.into(), true);
             let table_t = input_text_to_string_w_allow_null(table_type, name_length_4.into(), true);
