@@ -124,7 +124,12 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> Strin
 /// input_text_to_string_w_allow_null converts a u16 cstring to a rust String.
 /// It assumes null termination if the supplied length is negative.
 ///
-/// If `as_pattern_value` is true, the value is treated as a pattern value and a null pointer is converted to "%".
+/// If `as_pattern_value` is true, the value is treated as a pattern value and a null pointer is
+/// converted to "%". This allows to support search pattern arguments as describe in
+/// https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/pattern-value-arguments:
+/// Passing a null pointer to a search pattern argument does not constrain the search for that argument;
+/// that is, a null pointer and the search pattern % (any characters) are equivalent.
+///
 /// If `pattern_value` is false, a null pointer is converted to "".
 ///
 /// # Safety
@@ -138,9 +143,6 @@ pub unsafe fn input_text_to_string_w_allow_null(
 ) -> String {
     if text.is_null() {
         if as_pattern_value {
-            // According to https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/pattern-value-arguments
-            // Passing a null pointer to a search pattern argument does not constrain the search for that argument;
-            // that is, a null pointer and the search pattern % (any characters) are equivalent.
             "%".to_string()
         } else {
             String::new()
