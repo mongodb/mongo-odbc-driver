@@ -124,15 +124,27 @@ pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> Strin
 /// input_text_to_string_w_allow_null converts a u16 cstring to a rust String.
 /// It assumes null termination if the supplied length is negative.
 ///
-/// This function will return an empty string if passed a null pointer.
+/// If `as_pattern_value` is true, the value is treated as a pattern value and a null pointer is converted to "%".
+/// If `pattern_value` is false, a null pointer is converted to "".
 ///
 /// # Safety
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_text_to_string_w_allow_null(text: *const WideChar, len: isize) -> String {
+pub unsafe fn input_text_to_string_w_allow_null(
+    text: *const WideChar,
+    len: isize,
+    as_pattern_value: bool,
+) -> String {
     if text.is_null() {
-        String::new()
+        if as_pattern_value {
+            // According to https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/pattern-value-arguments
+            // Passing a null pointer to a search pattern argument does not constrain the search for that argument;
+            // that is, a null pointer and the search pattern % (any characters) are equivalent.
+            "%".to_string()
+        } else {
+            String::new()
+        }
     } else {
         input_text_to_string_w(text, len)
     }
@@ -514,10 +526,18 @@ mod test {
     }
 
     #[test]
-    fn test_null_ptr_input_text_to_string_w() {
+    fn test_null_ptr_input_text_to_string_w_no_pattern() {
         let expected = "";
         let test = std::ptr::null();
-        let test = unsafe { input_text_to_string_w_allow_null(test, 0) };
+        let test = unsafe { input_text_to_string_w_allow_null(test, 0, false) };
+        assert_eq!(expected, test);
+    }
+
+    #[test]
+    fn test_null_ptr_input_text_to_string_w_pattern_value() {
+        let expected = "%";
+        let test = std::ptr::null();
+        let test = unsafe { input_text_to_string_w_allow_null(test, 0, true) };
         assert_eq!(expected, test);
     }
 
@@ -526,7 +546,7 @@ mod test {
         let expected = "test";
         let test = to_widechar_vec("test");
         let test = test.as_ptr();
-        let test = unsafe { input_text_to_string_w_allow_null(test, expected.len() as isize) };
+        let test = unsafe { input_text_to_string_w_allow_null(test, expected.len() as isize, false) };
         assert_eq!(expected, test);
     }
 }

@@ -852,7 +852,7 @@ pub unsafe extern "C" fn SQLColumnsW(
             let odbc_3_data_types = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
             let catalog_string =
-                input_text_to_string_w_allow_null(catalog_name, catalog_name_length.into());
+                input_text_to_string_w_allow_null(catalog_name, catalog_name_length.into(), false);
             let catalog = if catalog_name.is_null() || catalog_string.is_empty() {
                 None
             } else {
@@ -860,14 +860,14 @@ pub unsafe extern "C" fn SQLColumnsW(
             };
             // ignore schema
             let table_string =
-                input_text_to_string_w_allow_null(table_name, table_name_length.into());
+                input_text_to_string_w_allow_null(table_name, table_name_length.into(), true);
             let table = if table_name.is_null() {
                 None
             } else {
                 Some(table_string.as_str())
             };
             let column_name_string =
-                input_text_to_string_w_allow_null(column_name, column_name_length.into());
+                input_text_to_string_w_allow_null(column_name, column_name_length.into(), true);
             let column = if column_name.is_null() {
                 None
             } else {
@@ -4259,10 +4259,10 @@ pub unsafe extern "C" fn SQLTablesW(
             let mongo_handle = try_mongo_handle!(statement_handle);
             let odbc_behavior = has_odbc_3_behavior!(mongo_handle);
             let stmt = must_be_valid!((*mongo_handle).as_statement());
-            let catalog = input_text_to_string_w(catalog_name, name_length_1.into());
-            let schema = input_text_to_string_w_allow_null(schema_name, name_length_2.into());
-            let table = input_text_to_string_w_allow_null(table_name, name_length_3.into());
-            let table_t = input_text_to_string_w_allow_null(table_type, name_length_4.into());
+            let catalog = input_text_to_string_w_allow_null(catalog_name, name_length_1.into(), true);
+            let schema = input_text_to_string_w_allow_null(schema_name, name_length_2.into(), true);
+            let table = input_text_to_string_w_allow_null(table_name, name_length_3.into(), true);
+            let table_t = input_text_to_string_w_allow_null(table_type, name_length_4.into(), true);
             let connection = (*stmt.connection).as_connection().unwrap();
             let max_string_length = *connection.max_string_length.read().unwrap();
             let mongo_statement = sql_tables(

@@ -21,13 +21,34 @@ tests:
     expected_scale: [0, 0, 0, 0, 0]
     expected_nullability: [0, 1, 1, 1, 1]
 
+  - description: SQLTablesW NULL is synonym of SQL_ALL_CATALOGS lists valid catalogs
+    test_definition: ["sqltablesw", null, -3, "", 0, "", 0, "", 0]
+    db: integration_test
+    expected_result:
+      - ["db2", null, null, null, null]
+      - ["integration_test", null, null, null, null]
+      - ["integration_test_2", null, null, null, null]
+      - ["tdvt", null, null, null, null]
+
   - description: SQLTablesW SQL_ALL_SCHEMA returns empty list
     test_definition: ["sqltablesw", "", 0, "%", 1, "", 0, "", 0]
     db: integration_test
     expected_result: []
 
+  - description: SQLTablesW NULL is synonym of SQL_ALL_SCHEMA  returns empty list
+    test_definition: [ "sqltablesw", "", 0, null, -3, "", 0, "", 0 ]
+    db: integration_test
+    expected_result: [ ]
+
   - description: SQLTablesW SQL_ALL_TABLE_TYPES lists valid types
     test_definition: ["sqltablesw", "", 0, "", 0, "", 0, "%", 1]
+    db: integration_test
+    expected_result:
+      - [null, null, null, "TABLE", null]
+      - [null, null, null, "VIEW", null]
+
+  - description: SQLTablesW NULL is synonym of SQL_ALL_TABLE_TYPES lists valid types
+    test_definition: ["sqltablesw", "", 0, "", 0, "", 0,  null, -3]
     db: integration_test
     expected_result:
       - [null, null, null, "TABLE", null]
@@ -102,6 +123,12 @@ tests:
     expected_result:
       - ["integration_test", null, "baz", "VIEW", ""]
 
+  - description: SQLTablesW NULL is synonym of SQL_ALL_CATALOGS with view TableTypes
+    test_definition: [ "sqltablesw", null, -3, "", 0, "", 0, "VIEW", 4 ]
+    db: integration_test
+    expected_result:
+      - [ "integration_test", null, "baz", "VIEW", "" ]
+
   - description: SQLTablesW catalog filter
     test_definition: ["sqltablesw", "%2", 2, "", 0, "", 0, "TABLE,VIEW", 10]
     db: integration_test
@@ -126,6 +153,27 @@ tests:
           "TABLE",
           "",
         ]
+      - ["integration_test", null, "example", "TABLE", ""]
+      - ["integration_test_2", null, "example_2", "TABLE", ""]
+
+  - description: SQLTablesW table filter and NULL is synonym of SQL_ALL_CATALOGS
+    test_definition: ["sqltablesw", null, -3, "", 0, "%x%", 3, "TABLE,VIEW", 10]
+    db: integration_test
+    expected_result:
+      - [
+        "integration_test",
+        null,
+        "a_non_lexicographic_field_order",
+        "TABLE",
+        "",
+      ]
+      - [
+        "integration_test",
+        null,
+        "b_non_lexicographic_field_order",
+        "TABLE",
+        "",
+      ]
       - ["integration_test", null, "example", "TABLE", ""]
       - ["integration_test_2", null, "example_2", "TABLE", ""]
 
@@ -155,3 +203,6 @@ tests:
     db: integration_test
     expected_result:
       - ["integration_test_2", null, "example_2", "TABLE", ""]
+
+
+
