@@ -6,3 +6,11 @@ tests:
     expected_result:
       - ["integration_test_2", null, "example_2", "_id", 8, "double", 15, 8, 0, 10, 1, "", null, 8 , null , null, 1, "YES"]
       - ["integration_test_2", null, "example_2", "b", -9, "string", -4, -4, null, null, 1, "", null, -9, null, -4, 2, "YES"]
+
+  - description: SQLColumnsW db filter - null is synonym of `%`
+    test_definition: [ "sqlcolumnsw", "integration_test_2", 18, null, -3, null, -3, null, -3 ]
+    is_standard_type: true
+    db: integration_test
+    expected_result:
+      - [ "integration_test_2", null, "example_2", "_id", 8, "double", 15, 8, 0, 10, 1, "", null, 8 , null , null, 1, "YES" ]
+      - [ "integration_test_2", null, "example_2", "b", -9, "string", -4, -4, null, null, 1, "", null, -9, null, -4, 2, "YES" ]
