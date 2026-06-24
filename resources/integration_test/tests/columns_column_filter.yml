@@ -21,3 +21,26 @@ tests:
       - ["tdvt", null, "batters", "_id", 0, "objectId", 24, 24, null, null, 0, "", null, "0" , null , null, 22, "NO"]
       - ["tdvt", null, "calcs", "_id", 0, "objectId", 24, 24, null, null, 0, "", null, "0" , null , null, 1, "NO"]
       - ["tdvt", null, "staples", "_id", 0, "objectId", 24, 24, null, null, 0, "", null, "0" , null , null, 51, "NO"]
+
+  - description: SQLColumnsW column filter - - null is synonym of `%` for pattern values and empty strings for ordinary arguments
+    test_definition: [ "sqlcolumnsw", null, -3, null, -3, null, -3, "%id%", 3 ]
+    is_standard_type: true
+    db: integration_test
+    expected_result:
+      - ["integration_test", null, "a_non_lexicographic_field_order", "_id", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , null, 4, "NO"]
+      - ["integration_test", null, "any_collection", "_id", 4, "int", 10, 4, 0, 10, 1, "", null, "4" , null , null, 1, "YES"]
+      - ["integration_test", null, "anyof_collection", "_id", 4, "int", 10, 4, 0, 10, 1, "", null, "4" , null , null, 1, "YES"]
+      - ["integration_test", null, "b_non_lexicographic_field_order", "_id", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , null, 1, "NO"]
+      - ["integration_test", null, "class", "_id", 4, "int", 10, 4, 0, 10, 1, "", null, "4" , null , null, 1, "YES"]
+      - ["integration_test", null, "class", "studentid", 4, "int", 10, 4, 0, 10, 1, "", null, "4" , null , null, 5, "YES"]
+      - ["integration_test", null, "example", "_id", 4, "int", 10, 4, 0, 10, 1, "", null, "4" , null , null, 1, "YES"]
+      - ["integration_test", null, "foo", "_id", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , null, 1, "NO"]
+      - ["integration_test", null, "grades", "_id", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , null, 1, "NO"]
+      - ["integration_test", null, "grades", "studentid", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , null, 3, "NO"]
+      - ["integration_test", null, "grades", "testid", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , null, 4, "NO"]
+      - ["integration_test", null, "null_and_missing", "_id", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , null, 1, "NO"]
+      - ["integration_test", null, "types_other", "_id", 4, "int", 10, 4, 0, 10, 0, "", null, "4" , null , null, 1, "NO"]
+      - ["integration_test_2", null, "example_2", "_id", 8, "double", 15, 8, 0, 10, 1, "", null, 8 , null , null, 1, "YES"]
+      - ["tdvt", null, "batters", "_id", 0, "objectId", 24, 24, null, null, 0, "", null, "0" , null , null, 22, "NO"]
+      - ["tdvt", null, "calcs", "_id", 0, "objectId", 24, 24, null, null, 0, "", null, "0" , null , null, 1, "NO"]
+      - ["tdvt", null, "staples", "_id", 0, "objectId", 24, 24, null, null, 0, "", null, "0" , null , null, 51, "NO"]
