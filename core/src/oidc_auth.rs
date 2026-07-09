@@ -19,7 +19,7 @@ const OPENID_SCOPE: &str = "openid";
 pub enum Error {
     ClientBuild(reqwest::Error),
     CodeExchange(ConfigurationError),
-    IssuerUriMustBeHttps(String),
+    UrlMustBeHttps(String),
     NoIdpServerInfo,
     NoRefreshToken,
     CsrfMismatch,
@@ -32,6 +32,18 @@ impl From<Error> for mongodb::error::Error {
     fn from(e: Error) -> Self {
         mongodb::error::Error::custom(e)
     }
+}
+
+/// Returns an error unless `url` uses the `https` scheme.
+///
+/// # Errors
+/// Returns [`Error::UrlMustBeHttps`] if `url`'s scheme is not `https`, carrying the
+/// offending URL for diagnostics.
+fn ensure_https(url: &openidconnect::url::Url) -> Result<(), Error> {
+    if url.scheme() != "https" {
+        return Err(Error::UrlMustBeHttps(url.to_string()));
+    }
+    Ok(())
 }
 
 /// Creates an async HTTP client backed by reqwest for openidconnect.
@@ -156,11 +168,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         .ok_or(Error::HumanFlowUnsupported)?;
     let issuer_uri =
         IssuerUrl::new(idp_info.issuer.clone()).map_err(|e| Error::Other(e.to_string()))?;
-    if issuer_uri.url().scheme() != "https" {
-        return Err(Error::IssuerUriMustBeHttps(
-            issuer_uri.url().scheme().to_string(),
-        ));
-    }
+    ensure_https(issuer_uri.url())?;
     let async_http_client = async_http_client().map_err(Error::ClientBuild)?;
     let (server, mut oidc_params_channel) = start().await;
 
@@ -168,6 +176,14 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, &async_http_client)
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
+
+    // The authorization and token endpoints come from the (untrusted) discovery
+    // document. Reject any non-`https` scheme before the authorization URL is opened
+    // via the OS protocol handler or used for token exchange.
+    ensure_https(provider_metadata.authorization_endpoint().url())?;
+    if let Some(token_endpoint) = provider_metadata.token_endpoint() {
+        ensure_https(token_endpoint.url())?;
+    }
 
     // Create an OpenID Connect client by specifying the client ID, client secret,
     // authorization URL and token URL.
@@ -271,17 +287,20 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
     let idp_info = params.idp_info.ok_or(Error::NoIdpServerInfo)?;
     let client_id = idp_info.client_id.ok_or(Error::HumanFlowUnsupported)?;
     let issuer_uri = IssuerUrl::new(idp_info.issuer).map_err(|e| Error::Other(e.to_string()))?;
-    if issuer_uri.url().scheme() != "https" {
-        return Err(Error::IssuerUriMustBeHttps(
-            issuer_uri.url().scheme().to_string(),
-        ));
-    }
+    ensure_https(issuer_uri.url())?;
     let async_http_client = async_http_client().map_err(Error::ClientBuild)?;
 
     // Use OpenID Connect Discovery to fetch the provider metadata.
     let provider_metadata = CoreProviderMetadata::discover_async(issuer_uri, &async_http_client)
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
+
+    // The authorization and token endpoints come from the (untrusted) discovery
+    // document. Reject any non-`https` scheme before it is used for token exchange.
+    ensure_https(provider_metadata.authorization_endpoint().url())?;
+    if let Some(token_endpoint) = provider_metadata.token_endpoint() {
+        ensure_https(token_endpoint.url())?;
+    }
 
     // Create an OpenID Connect client by specifying the client ID, client secret,
     // authorization URL and token URL.
@@ -332,4 +351,47 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
         .expires(expires.map(|e| Instant::now() + e))
         .refresh_token(refresh_token)
         .build())
+}
+
+mod unit {
+    #[cfg(test)]
+    mod ensure_https {
+        use crate::oidc_auth::{ensure_https, Error};
+        use openidconnect::AuthUrl;
+
+        #[test]
+        fn https_url_is_ok() {
+            let url = AuthUrl::new("https://idp.example.com/authorize".to_string()).unwrap();
+            assert!(ensure_https(url.url()).is_ok());
+        }
+
+        #[test]
+        fn http_url_is_rejected() {
+            let url = AuthUrl::new("http://idp.example.com/authorize".to_string()).unwrap();
+            let err = ensure_https(url.url()).unwrap_err();
+            assert!(
+                matches!(err, Error::UrlMustBeHttps(_)),
+                "expected UrlMustBeHttps, found {err:?}"
+            );
+        }
+
+        #[test]
+        fn custom_scheme_is_rejected() {
+            let url = AuthUrl::new("ms-appx://launch/attacker".to_string()).unwrap();
+            let err = ensure_https(url.url()).unwrap_err();
+            assert!(
+                matches!(err, Error::UrlMustBeHttps(_)),
+                "expected UrlMustBeHttps, found {err:?}"
+            );
+        }
+
+        #[test]
+        fn error_carries_offending_url() {
+            let url = AuthUrl::new("http://idp.example.com/authorize".to_string()).unwrap();
+            let Error::UrlMustBeHttps(offending) = ensure_https(url.url()).unwrap_err() else {
+                panic!("expected UrlMustBeHttps");
+            };
+            assert_eq!(offending, "http://idp.example.com/authorize");
+        }
+    }
 }
