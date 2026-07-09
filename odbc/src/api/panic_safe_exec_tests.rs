@@ -82,7 +82,7 @@ mod unit {
             assert!(
                 PANIC_ERROR_MSG.is_match(actual_error.as_str()),
                 "Expected an error due to panic, but got {}",
-                &actual_error
+                actual_error
             );
         }
     }
