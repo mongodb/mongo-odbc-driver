@@ -563,7 +563,7 @@ impl ODBCUri {
         let pwd = self.remove_mandatory_attribute(PWD_KWS)?;
         let server = self.remove_mandatory_attribute(SERVER_KWS)?;
         // Build a basic connection string from provided attributes
-        let dummy_uri = format!("mongodb://{}", &server);
+        let dummy_uri = format!("mongodb://{}", server);
 
         // Parse primary client options, using Cloudflare resolver on Windows
         let mut client_options = parse_client_options_with_resolver(&dummy_uri)

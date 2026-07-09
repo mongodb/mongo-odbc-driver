@@ -258,7 +258,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
                 RequestTokenError::Parse(parse_err, res) => {
                     let body = match std::str::from_utf8(&res) {
                         Ok(text) => text.to_string(),
-                        Err(_) => format!("{:?}", &res),
+                        Err(_) => format!("{:?}", res),
                     };
                     format!("Failed to parse server response: {parse_err} [response={body:?}]")
                 }
@@ -330,7 +330,7 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
                 RequestTokenError::Parse(parse_err, res) => {
                     let body = match std::str::from_utf8(&res) {
                         Ok(text) => text.to_string(),
-                        Err(_) => format!("{:?}", &res),
+                        Err(_) => format!("{:?}", res),
                     };
                     format!("Failed to parse server response: {parse_err} [response={body:?}]")
                 }
