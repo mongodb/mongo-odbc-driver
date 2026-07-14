@@ -177,10 +177,11 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
 
-    // The authorization and token endpoints come from the (untrusted) discovery
+    // The authorization,token, and jwks_uri endpoints come from the (untrusted) discovery
     // document. Reject any non-`https` scheme before the authorization URL is opened
     // via the OS protocol handler or used for token exchange.
     ensure_https(provider_metadata.authorization_endpoint().url())?;
+    ensure_https(provider_metadata.jwks_uri().url())?;
     if let Some(token_endpoint) = provider_metadata.token_endpoint() {
         ensure_https(token_endpoint.url())?;
     }
@@ -295,9 +296,10 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
 
-    // The authorization and token endpoints come from the (untrusted) discovery
+    // The authorization,token, and jwks_uri endpoints come from the (untrusted) discovery
     // document. Reject any non-`https` scheme before it is used for token exchange.
     ensure_https(provider_metadata.authorization_endpoint().url())?;
+    ensure_https(provider_metadata.jwks_uri().url())?;
     if let Some(token_endpoint) = provider_metadata.token_endpoint() {
         ensure_https(token_endpoint.url())?;
     }
@@ -357,12 +359,22 @@ mod unit {
     #[cfg(test)]
     mod ensure_https {
         use crate::oidc_auth::{ensure_https, Error};
-        use openidconnect::AuthUrl;
+        use openidconnect::{AuthUrl, JsonWebKeySetUrl};
 
         #[test]
         fn https_url_is_ok() {
             let url = AuthUrl::new("https://idp.example.com/authorize".to_string()).unwrap();
             assert!(ensure_https(url.url()).is_ok());
+        }
+
+        #[test]
+        fn http_jwks_uri_is_rejected() {
+            let url = JsonWebKeySetUrl::new("http://idp.example.com/jwks".to_string()).unwrap();
+            let err = ensure_https(url.url()).unwrap_err();
+            assert!(
+                matches!(err, Error::UrlMustBeHttps(_)),
+                "expected UrlMustBeHttps, found {err:?}"
+            );
         }
 
         #[test]
