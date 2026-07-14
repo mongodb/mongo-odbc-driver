@@ -1,7 +1,7 @@
 use mongodb::options::oidc::{CallbackContext, IdpServerResponse};
 use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
-    http, AsyncHttpClient, AuthorizationCode, ClientId, ConfigurationError, CsrfToken,
+    http, url, AsyncHttpClient, AuthorizationCode, ClientId, ConfigurationError, CsrfToken,
     HttpClientError, HttpResponse, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge,
     RedirectUrl, RefreshToken, RequestTokenError, Scope,
 };
@@ -20,6 +20,9 @@ pub enum Error {
     ClientBuild(reqwest::Error),
     CodeExchange(ConfigurationError),
     IssuerUriMustBeHttps(String),
+    AuthUrlMustBeHttps(String),
+    TokenEndpointMustBeHttps(String),
+    JwksUriMustBeHttps(String),
     NoIdpServerInfo,
     NoRefreshToken,
     CsrfMismatch,
@@ -32,6 +35,40 @@ impl From<Error> for mongodb::error::Error {
     fn from(e: Error) -> Self {
         mongodb::error::Error::custom(e)
     }
+}
+
+/// Rejects non-`https` endpoints found in the (untrusted) provider metadata.
+///
+/// # Errors
+/// Returns [`Error::TokenEndpointMustBeHttps`] or [`Error::JwksUriMustBeHttps`] if the
+/// respective endpoint does not use the `https` scheme, carrying the offending scheme
+/// for diagnostics.
+fn validate_provider_metadata_urls(provider_metadata: &CoreProviderMetadata) -> Result<(), Error> {
+    if let Some(token_endpoint) = provider_metadata.token_endpoint() {
+        if token_endpoint.url().scheme() != "https" {
+            return Err(Error::TokenEndpointMustBeHttps(
+                token_endpoint.url().scheme().to_string(),
+            ));
+        }
+    }
+    if provider_metadata.jwks_uri().url().scheme() != "https" {
+        return Err(Error::JwksUriMustBeHttps(
+            provider_metadata.jwks_uri().url().scheme().to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// Rejects a generated authorization URL that does not use the `https` scheme.
+///
+/// # Errors
+/// Returns [`Error::AuthUrlMustBeHttps`] if `auth_url`'s scheme is not `https`,
+/// carrying the offending scheme for diagnostics.
+fn validate_auth_url(auth_url: &url::Url) -> Result<(), Error> {
+    if auth_url.scheme() != "https" {
+        return Err(Error::AuthUrlMustBeHttps(auth_url.scheme().to_string()));
+    }
+    Ok(())
 }
 
 /// Creates an async HTTP client backed by reqwest for openidconnect.
@@ -169,6 +206,11 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
 
+    // The token and jwks_uri endpoints come from the (untrusted) discovery document.
+    // Reject any non-`https` scheme before they are used for token exchange or key
+    // retrieval. The authorization endpoint is validated via the generated auth URL below.
+    validate_provider_metadata_urls(&provider_metadata)?;
+
     // Create an OpenID Connect client by specifying the client ID, client secret,
     // authorization URL and token URL.
     let client = CoreClient::from_provider_metadata(
@@ -200,6 +242,10 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
         // Set the PKCE code challenge.
         .set_pkce_challenge(pkce_challenge)
         .url();
+
+    // The authorization URL is opened via the OS protocol handler; reject any
+    // non-`https` scheme first.
+    validate_auth_url(&auth_url)?;
 
     open::that(auth_url.to_string()).map_err(|e| Error::Other(e.to_string()))?;
     // awaiting on the listener waits for an actual response
@@ -242,7 +288,7 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
                 RequestTokenError::Parse(parse_err, res) => {
                     let body = match std::str::from_utf8(&res) {
                         Ok(text) => text.to_string(),
-                        Err(_) => format!("{:?}", &res),
+                        Err(_) => format!("{:?}", res),
                     };
                     format!("Failed to parse server response: {parse_err} [response={body:?}]")
                 }
@@ -283,6 +329,11 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
         .await
         .map_err(|e| Error::Other(e.to_string()))?;
 
+    // The token and jwks_uri endpoints come from the (untrusted) discovery document.
+    // Reject any non-`https` scheme before they are used for token exchange or key
+    // retrieval. There is no authorization flow during refresh.
+    validate_provider_metadata_urls(&provider_metadata)?;
+
     // Create an OpenID Connect client by specifying the client ID, client secret,
     // authorization URL and token URL.
     let client = CoreClient::from_provider_metadata(
@@ -311,7 +362,7 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
                 RequestTokenError::Parse(parse_err, res) => {
                     let body = match std::str::from_utf8(&res) {
                         Ok(text) => text.to_string(),
-                        Err(_) => format!("{:?}", &res),
+                        Err(_) => format!("{:?}", res),
                     };
                     format!("Failed to parse server response: {parse_err} [response={body:?}]")
                 }
@@ -332,4 +383,110 @@ pub async fn do_refresh(params: CallbackContext) -> Result<IdpServerResponse, Er
         .expires(expires.map(|e| Instant::now() + e))
         .refresh_token(refresh_token)
         .build())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mongodb::options::oidc::IdpServerInfo;
+    use openidconnect::{
+        core::{CoreJwsSigningAlgorithm, CoreResponseType, CoreSubjectIdentifierType},
+        AuthUrl, EmptyAdditionalProviderMetadata, JsonWebKeySetUrl, ResponseTypes, TokenUrl,
+    };
+
+    fn make_provider_metadata(
+        jwks_uri: &str,
+        token_endpoint: Option<&str>,
+    ) -> CoreProviderMetadata {
+        let metadata = CoreProviderMetadata::new(
+            IssuerUrl::new("https://example.com".to_string()).unwrap(),
+            AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+            JsonWebKeySetUrl::new(jwks_uri.to_string()).unwrap(),
+            vec![ResponseTypes::new(vec![CoreResponseType::Code])],
+            vec![CoreSubjectIdentifierType::Public],
+            vec![CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256],
+            EmptyAdditionalProviderMetadata {},
+        );
+        if let Some(token_url) = token_endpoint {
+            metadata.set_token_endpoint(Some(TokenUrl::new(token_url.to_string()).unwrap()))
+        } else {
+            metadata
+        }
+    }
+
+    fn make_callback_context(issuer: &str) -> CallbackContext {
+        CallbackContext::builder()
+            .idp_info(Some(
+                IdpServerInfo::builder()
+                    .issuer(issuer.to_string())
+                    .client_id(Some("client_id".to_string()))
+                    .build(),
+            ))
+            .build()
+    }
+
+    // Validate Protocol Endpoints scheme as per https://datatracker.ietf.org/doc/html/rfc6749#section-3
+    #[test]
+    fn non_https_token_endpoint_is_rejected() {
+        let metadata =
+            make_provider_metadata("https://example.com/jwks", Some("http://example.com/token"));
+        assert!(matches!(
+            validate_provider_metadata_urls(&metadata),
+            Err(Error::TokenEndpointMustBeHttps(ref s)) if s == "http"
+        ));
+    }
+
+    #[test]
+    fn non_https_jwks_uri_is_rejected() {
+        let metadata =
+            make_provider_metadata("http://example.com/jwks", Some("https://example.com/token"));
+        assert!(matches!(
+            validate_provider_metadata_urls(&metadata),
+            Err(Error::JwksUriMustBeHttps(ref s)) if s == "http"
+        ));
+    }
+
+    #[test]
+    fn https_provider_metadata_is_accepted() {
+        let metadata = make_provider_metadata(
+            "https://example.com/jwks",
+            Some("https://example.com/token"),
+        );
+        assert!(validate_provider_metadata_urls(&metadata).is_ok());
+    }
+
+    #[test]
+    fn non_https_auth_url_is_rejected() {
+        let u = url::Url::parse("http://example.com/auth").unwrap();
+        assert!(matches!(
+            validate_auth_url(&u),
+            Err(Error::AuthUrlMustBeHttps(ref s)) if s == "http"
+        ));
+    }
+
+    #[test]
+    fn https_auth_url_is_accepted() {
+        let u = url::Url::parse("https://example.com/auth").unwrap();
+        assert!(validate_auth_url(&u).is_ok());
+    }
+
+    #[tokio::test]
+    async fn do_auth_flow_rejects_non_https_issuer() {
+        // --- do_auth_flow issuer check (no network needed; fails before discovery) ---
+        let ctx = make_callback_context("http://example.com");
+        assert!(matches!(
+            do_auth_flow(ctx).await,
+            Err(Error::IssuerUriMustBeHttps(ref s)) if s == "http"
+        ));
+    }
+
+    #[tokio::test]
+    async fn do_refresh_rejects_non_https_issuer() {
+        // --- do_refresh issuer check (no network needed; fails before discovery) ---
+        let ctx = make_callback_context("http://example.com");
+        assert!(matches!(
+            do_refresh(ctx).await,
+            Err(Error::IssuerUriMustBeHttps(ref s)) if s == "http"
+        ));
+    }
 }
