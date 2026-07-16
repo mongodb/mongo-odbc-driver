@@ -8,6 +8,10 @@
         {
           "name": "Linux x64 - Requires Openssl 3 - glibc 2.34+",
           "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{UBUNTU2204_INSTALLER_PATH}"
+        },
+        {
+          "name": "Linux arm64 - Requires Openssl 3 - glibc 2.34+",
+          "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{UBUNTU2204_ARM_INSTALLER_PATH}"
         }
       ]
     }
