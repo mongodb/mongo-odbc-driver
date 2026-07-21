@@ -62,6 +62,12 @@ if [[ "$arch" = "aarch64" ]]; then
   arch="arm64"
 fi
 
+# We use x64 for the download links, but technically that is not standard,
+# so we map the standard x86_64 to x64 here to fix that.
+if [[ "$arch" = "x86_64" ]]; then
+  arch="x64"
+fi
+
 community_base_url="fastdl.mongodb.org"
 enterprise_base_url="downloads.mongodb.com"
 
