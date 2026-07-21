@@ -285,7 +285,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          
+
           # use the latest mongosql release tag
           set -o pipefail
           MONGOSQL_VERSION=$(git ls-remote --tags --refs https://github.com/mongodb/mongosql.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*' | sed 's/refs\/tags\///' | sort -V | tail -n 1)
@@ -424,15 +424,16 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+
           ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          ~/.cargo/bin/rustup target add $CARGO_TARGET_TRIPLE
 
           export RUSTFLAGS="-Z sanitizer=address"
 
           if [[ "$FEATURE_FLAGS" != "" ]]; then
-            cargo build --target x86_64-unknown-linux-gnu --features $FEATURE_FLAGS
+            cargo build --target $CARGO_TARGET_TRIPLE --features $FEATURE_FLAGS
           else
-            cargo build --target x86_64-unknown-linux-gnu
+            cargo build --target $CARGO_TARGET_TRIPLE
           fi
 
   "compile release with debug info":
@@ -488,7 +489,6 @@ functions:
           else
             cargo build --features definitions/iodbc,cstr/utf32
           fi
-
 
   "compile macos release with debug info":
     - command: shell.exec
@@ -619,6 +619,24 @@ functions:
     - command: s3.put
       params:
         build_variants:
+          - ubuntu2204-arm64
+        <<: *evg_bucket_config
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
+          - ubuntu2204-arm64
+        <<: *evg_bucket_config
+        local_file: mongosql-odbc-driver/release/${UBUNTU_FILENAME}
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${UBUNTU_FILENAME}
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        build_variants:
           - ubuntu2204
         <<: *evg_bucket_config
         local_file: mongosql-odbc-driver/target/release/libatsql.so
@@ -677,7 +695,7 @@ functions:
     - command: s3.put
       params:
         <<: *evg_bucket_config
-        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204/release/${UBUNTU_FILENAME}.sig
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/${UBUNTU_FILENAME}.sig
         local_file: mongosql-odbc-driver/installer/tgz/${UBUNTU_FILENAME}.sig
         permissions: public-read
         content_type: application/octet-stream
@@ -819,6 +837,54 @@ functions:
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
+    - command: s3.get
+      params:
+        <<: *evg_bucket_config
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204-arm64/release/${UBUNTU_FILENAME}
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}
+        remote_file: ${UBUNTU2204_ARM_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        <<: *evg_bucket_config
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204-arm64/release/${UBUNTU_FILENAME}.sig
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/${UBUNTU_FILENAME}.sig
+        remote_file: mongosql-odbc-driver/ubuntu2204-arm64/${release_version}/release/${UBUNTU_FILENAME}.sig
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        <<: *evg_bucket_config
+        remote_file: mongosql-odbc-driver/artifacts/${version_id}/ubuntu2204-arm64/release/libatsql.so
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.put
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/target/release/libatsql.so
+        remote_file: mongosql-odbc-driver/ubuntu2204-arm64/${release_version}/release/libatsql.so
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
 
   "download artifact":
     - *assume_role_cmd
@@ -840,6 +906,7 @@ functions:
       params:
         build_variants:
           - ubuntu2204
+          - ubuntu2204-arm64
         <<: *evg_bucket_config
         remote_file: mongosql-odbc-driver/artifacts/${version_id}/${build_variant}/release/libatsql.so
         local_file: mongosql-odbc-driver/libatsql.so
@@ -1368,12 +1435,11 @@ functions:
 
           set +e
 
-          mdb_version_com="mongodb-linux-x86_64-ubuntu2204-7.0.14"
-          mdb_version_ent="mongodb-linux-x86_64-enterprise-ubuntu2204-7.0.14"
-          arch="x64"
+          mdb_version_com="mongodb-linux-$ARCH-ubuntu2204-7.0.14"
+          mdb_version_ent="mongodb-linux-$ARCH-enterprise-ubuntu2204-7.0.14"
 
           # Start MongoDB instances
-          ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
+          ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $ARCH
 
           # Enterprise test
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
@@ -1400,7 +1466,6 @@ functions:
           set -e
 
           exit $OVERALL_EXITCODE
-
 
   "run ubuntu result-set tests":
     - command: shell.exec
@@ -1532,12 +1597,13 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
+
           ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          ~/.cargo/bin/rustup target add $CARGO_TARGET_TRIPLE
 
           export RUSTFLAGS="-Z sanitizer=leak"
           # we only run asan on the unit tests for now
-          cargo test --target x86_64-unknown-linux-gnu unit
+          cargo test --target $CARGO_TARGET_TRIPLE unit
 
   "run asan integration tests":
     - command: shell.exec
@@ -1561,7 +1627,7 @@ functions:
           echo "env $(env)"
 
           ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          ~/.cargo/bin/rustup target add $CARGO_TARGET_TRIPLE
 
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
@@ -1571,11 +1637,11 @@ functions:
             -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with asan
-          cargo test --target x86_64-unknown-linux-gnu integration -- --nocapture &&
+          cargo test --target $CARGO_TARGET_TRIPLE integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --target x86_64-unknown-linux-gnu --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
+          cargo test --target $CARGO_TARGET_TRIPLE --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1600,7 +1666,8 @@ functions:
           echo "----------------------------------------------"
 
           ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+          ~/.cargo/bin/rustup target add $CARGO_TARGET_TRIPLE
+
           export RUSTFLAGS="-Z sanitizer=leak"
 
           export RUST_BACKTRACE=1
@@ -1612,7 +1679,7 @@ functions:
             -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with asan
-          cargo test --target x86_64-unknown-linux-gnu --package integration_test --lib test_runner --features integration_test/result_set
+          cargo test --target $CARGO_TARGET_TRIPLE --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1649,7 +1716,7 @@ functions:
         permissions: public-read
         content_type: application/octet-stream
         display_name: crash-dump-
-  
+
   "trace artifacts":
     - command: shell.exec
       params:
@@ -1670,8 +1737,17 @@ functions:
       params:
         aws_key: ${release_aws_key}
         aws_secret: ${release_aws_secret}
-        local_file: mongosql-odbc-driver/papertrail/${UBUNTU_FILENAME}
+        local_file: mongosql-odbc-driver/papertrail/x86_64.${UBUNTU_FILENAME}
         remote_file: ${UBUNTU2204_INSTALLER_PATH}
+        bucket: translators-connectors-releases
+        permissions: public-read
+        content_type: application/octet-stream
+    - command: s3.get
+      params:
+        aws_key: ${release_aws_key}
+        aws_secret: ${release_aws_secret}
+        local_file: mongosql-odbc-driver/papertrail/arm64.${UBUNTU_FILENAME}
+        remote_file: ${UBUNTU2204_ARM_INSTALLER_PATH}
         bucket: translators-connectors-releases
         permissions: public-read
         content_type: application/octet-stream
@@ -1713,6 +1789,7 @@ functions:
           sed -i 's@{release_version}@'${release_version}'@' mongo-odbc-downloads_template.json
           sed -i 's@{WINDOWS_INSTALLER_PATH}@'${WINDOWS_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
           sed -i 's@{UBUNTU2204_INSTALLER_PATH}@'${UBUNTU2204_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
+          sed -i 's@{UBUNTU2204_ARM_INSTALLER_PATH}@'${UBUNTU2204_ARM_INSTALLER_PATH}'@' mongo-odbc-downloads_template.json
           echo "--------- New release object ----------------"
           cat mongo-odbc-downloads_template.json
           echo "---------------------------------------------"
@@ -1781,24 +1858,24 @@ tasks:
       - func: "install iODBC"
         variants: [macos-arm]
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64, macos, macos-arm]
+        variants: [ubuntu2204, ubuntu2204-arm64, windows-64, macos, macos-arm]
       - func: "install unix odbc"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "set and check packages version"
         vars:
           cargo_file: "odbc/Cargo.toml"
           package_name: "odbc"
       - func: "use latest mongosql version"
       - func: "generate third party licenses"
-        variants: [ubuntu2204, windows-64, macos, macos-arm]
+        variants: [ubuntu2204, ubuntu2204-arm64, windows-64, macos, macos-arm]
       - func: "compile ubuntu and win release"
-        variants: [ubuntu2204, windows-64]
+        variants: [ubuntu2204, ubuntu2204-arm64, windows-64]
       - func: "compile macos release"
         variants: [macos-arm]
       - func: "build msi"
         variants: [windows-64]
       - func: "tar linux artifacts"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "build dmg"
         variants: [macos-arm]
       - func: "mciuploads release artifacts"
@@ -1806,17 +1883,17 @@ tasks:
   - name: unit-test
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64, macos, macos-arm]
+        variants: [ubuntu2204, ubuntu2204-arm64, windows-64, macos, macos-arm]
       - func: "install iODBC"
         variants: [macos-arm]
       - func: "install unix odbc"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "run windows unit tests"
         variants: [windows-64]
       - func: "run ubuntu unit tests"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "run ubuntu rfc8252_http_server tests"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "run macos unit tests"
         variants: [macos-arm]
 
@@ -1825,35 +1902,35 @@ tasks:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64, macos, macos-arm]
+        variants: [ubuntu2204, ubuntu2204-arm64, windows-64, macos, macos-arm]
       - func: "install iODBC"
         variants: [macos-arm]
       - func: "install unix odbc"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "compile release with debug info"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "compile macos release with debug info"
         variants: [macos-arm]
       - func: "setup driver with UnixODBC"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "setup driver with iODBC"
         variants: [macos-arm]
       - func: "prepare resources"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "update orchestrator mongod port"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "bootstrap mongo-orchestration"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "generate sql-engines github token"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "decompress testdata files"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "run ubuntu integration tests"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "run ubuntu cluster type integration tests"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "run ubuntu mongosqltranslate integration tests"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       # Commenting out because the following task only detects
       # memory leaks in the tests
       # - func: "run asan integration tests"
@@ -1866,18 +1943,18 @@ tasks:
   - name: asan-unit-tests
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "install unix odbc"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "run asan unit tests"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
 
   - name: asan-compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "compile ubuntu with asan"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
 
   # disabled macos result-set-tests as part of SQL-1688
   - name: result-set-test
@@ -1885,33 +1962,33 @@ tasks:
       - name: compile
     commands:
       - func: "install rust toolchain"
-        variants: [ubuntu2204, windows-64, macos-arm]
+        variants: [ubuntu2204, ubuntu2204-arm64, windows-64, macos-arm]
       # - func: "install iODBC"
       #   variants: [macos-arm]
       - func: "install unix odbc"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "compile release with debug info"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       # - func: "compile macos release with debug info"
       #   variants: [macos-arm]
       - func: "setup driver with UnixODBC"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       # - func: "setup driver with iODBC"
       #   variants: [macos-arm]
       - func: "prepare resources"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "update orchestrator mongod port"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "bootstrap mongo-orchestration"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "generate sql-engines github token"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "decompress testdata files"
-        variants: [windows-64, ubuntu2204]
+        variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "run windows result set test"
         variants: [windows-64]
       - func: "run ubuntu result-set tests"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       # - func: "run macos result-set tests"
       #   variants: [macos-arm]
       # Commenting out because the following task only detects
@@ -1927,15 +2004,15 @@ tasks:
       - func: "fetch for windows sign"
         variants: [windows-64]
       - func: "fetch for ubuntu sign"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "sign windows"
         variants: [windows-64]
       - func: "sign ubuntu and verify signature"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "upload signed windows artifacts"
         variants: [windows-64]
       - func: "upload ubuntu sig file"
-        variants: [ubuntu2204]
+        variants: [ubuntu2204, ubuntu2204-arm64]
 
   - name: snapshot
     depends_on:
@@ -2130,6 +2207,20 @@ buildvariants:
     tags: ["release-variant"]
     display_name: Ubuntu 22.04
     run_on: [ubuntu2204-large]
+    modules:
+      - sql-engines-common-test-infra
+    tasks:
+      - name: compile
+      - name: unit-test
+      - name: integration-test
+      - name: result-set-test
+      - name: asan-unit-tests
+      - name: sign
+
+  - name: ubuntu2204-arm64
+    tags: ["release-variant"]
+    display_name: Ubuntu 22.04 (ARM64)
+    run_on: [ubuntu2204-arm64-large]
     modules:
       - sql-engines-common-test-infra
     tasks:
