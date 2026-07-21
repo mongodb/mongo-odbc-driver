@@ -56,6 +56,12 @@ community_mdb_version="$1"
 enterprise_mdb_version="$2"
 arch="$3"
 
+# We use ARM64 for the download links, but technically that is not standard,
+# so we map the standard aarch64 to arm64 here to fix that.
+if [[ "$arch" = "aarch64" ]]; then
+  arch="arm64"
+fi
+
 community_base_url="fastdl.mongodb.org"
 enterprise_base_url="downloads.mongodb.com"
 
@@ -66,4 +72,3 @@ download_mongosh $arch
 
 start_mdb_and_create_user "community" $LOCAL_MDB_PORT_COM $LOCAL_MDB_USER $LOCAL_MDB_PWD $community_mdb_version
 start_mdb_and_create_user "enterprise" $LOCAL_MDB_PORT_ENT $LOCAL_MDB_USER $LOCAL_MDB_PWD $enterprise_mdb_version
-

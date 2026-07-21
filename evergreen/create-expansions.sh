@@ -27,7 +27,6 @@ export FEATURE_FLAGS=""
 export PRODUCT_NAME="mongoodbc"
 export PATH_PREFIX=""
 
-
 if [[ "${triggered_by_git_tag}" != "" ]]; then
     export release_version=$(echo ${triggered_by_git_tag} | sed s/v//)
 else
@@ -38,6 +37,10 @@ export MSI_FILENAME="$PRODUCT_NAME-$release_version.msi"
 export UBUNTU_FILENAME="$PRODUCT_NAME-$release_version.tar.gz"
 
 SBOM_FINAL="mongo-odbc-driver.full.cdx.json"
+
+# Configure architecture-specific tooling variables
+ARCH="$(uname -m)"
+CARGO_TARGET_TRIPLE="$ARCH-unknown-linux-gnu"
 
 cat <<EOT >expansions.yml
 release_version: "$release_version"
@@ -51,6 +54,8 @@ UBUNTU2204_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204/$release_version/rel
 UBUNTU2204_ARM_INSTALLER_PATH: "mongosql-odbc-driver/ubuntu2204-arm64/$release_version/release/$UBUNTU_FILENAME"
 PROJECT_DIRECTORY: "$(pwd)"
 DRIVERS_TOOLS: "$DRIVERS_TOOLS"
+ARCH: "$ARCH"
+CARGO_TARGET_TRIPLE: "$CARGO_TARGET_TRIPLE"
 cargo_bin: "$CARGO_BIN"
 common_test_infra_dir: "$COMMON_TEST_INFRA_DIR"
 skip_machete_build: "true"
@@ -71,6 +76,8 @@ prepare_shell: |
   export UBUNTU2204_INSTALLER_PATH="$UBUNTU2204_INSTALLER_PATH"
   export UBUNTU2204_ARM_INSTALLER_PATH="$UBUNTU2204_ARM_INSTALLER_PATH"
   export PATH="$PATH"
+  export ARCH="$ARCH"
+  export CARGO_TARGET_TRIPLE="$CARGO_TARGET_TRIPLE"
   export CARGO_NET_GIT_FETCH_WITH_CLI="$CARGO_NET_GIT_FETCH_WITH_CLI"
   export LOCAL_MDB_PORT_COM=${local_mdb_port_com}
   export LOCAL_MDB_PORT_ENT=${local_mdb_port_ent}

@@ -425,21 +425,15 @@ functions:
         script: |
           ${prepare_shell}
 
-          if [[ "${build_variant}" == *"-arm64" ]]; then
-            target=aarch64-unknown-linux-gnu
-          else
-            target=x86_64-unknown-linux-gnu
-          fi
-
           ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add $target
+          ~/.cargo/bin/rustup target add $CARGO_TARGET_TRIPLE
 
           export RUSTFLAGS="-Z sanitizer=address"
 
           if [[ "$FEATURE_FLAGS" != "" ]]; then
-            cargo build --target $target --features $FEATURE_FLAGS
+            cargo build --target $CARGO_TARGET_TRIPLE --features $FEATURE_FLAGS
           else
-            cargo build --target $target
+            cargo build --target $CARGO_TARGET_TRIPLE
           fi
 
   "compile release with debug info":
@@ -1441,18 +1435,11 @@ functions:
 
           set +e
 
-          if [[ "${build_variant}" == *"-arm64" ]]; then
-            download_arch="linux-aarch64"
-            arch="arm64"
-          else
-            download_arch="linux-x86_64"
-            arch="x64"
-          fi
-          mdb_version_com="mongodb-$download_arch-ubuntu2204-7.0.14"
-          mdb_version_ent="mongodb-$download_arch-enterprise-ubuntu2204-7.0.14"
+          mdb_version_com="mongodb-linux-$ARCH-ubuntu2204-7.0.14"
+          mdb_version_ent="mongodb-linux-$ARCH-enterprise-ubuntu2204-7.0.14"
 
           # Start MongoDB instances
-          ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $arch
+          ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $ARCH
 
           # Enterprise test
           cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
@@ -1611,18 +1598,12 @@ functions:
         script: |
           ${prepare_shell}
 
-          if [[ "${build_variant}" == *"-arm64" ]]; then
-            target=aarch64-unknown-linux-gnu
-          else
-            target=x86_64-unknown-linux-gnu
-          fi
-
           ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add $target
+          ~/.cargo/bin/rustup target add $CARGO_TARGET_TRIPLE
 
           export RUSTFLAGS="-Z sanitizer=leak"
           # we only run asan on the unit tests for now
-          cargo test --target $target unit
+          cargo test --target $CARGO_TARGET_TRIPLE unit
 
   "run asan integration tests":
     - command: shell.exec
@@ -1645,14 +1626,8 @@ functions:
           export RUST_BACKTRACE=1
           echo "env $(env)"
 
-          if [[ "${build_variant}" == *"-arm64" ]]; then
-            target=aarch64-unknown-linux-gnu
-          else
-            target=x86_64-unknown-linux-gnu
-          fi
-
           ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add $target
+          ~/.cargo/bin/rustup target add $CARGO_TARGET_TRIPLE
 
           # Start a local ADF
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh start &&
@@ -1662,11 +1637,11 @@ functions:
             -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with asan
-          cargo test --target $target integration -- --nocapture &&
+          cargo test --target $CARGO_TARGET_TRIPLE integration -- --nocapture &&
           # Logger tests will delete existing logs, in order to avoid destroying important logs from our local environment
           # the test is feature gated and will only run on evergreen.
           # Logger tests also have to run in isolation because other tests running simultaneously will "pollute" the log file the logger tests analyse.
-          cargo test --target $target --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
+          cargo test --target $CARGO_TARGET_TRIPLE --test connection_tests integration::test_driver_log_level --features evergreen_tests -- --nocapture
           EXITCODE=$?
 
           # Stop the local ADF
@@ -1690,14 +1665,8 @@ functions:
           echo "ODBCSYSINI = $ODBCSYSINI"
           echo "----------------------------------------------"
 
-          if [[ "${build_variant}" == *"-arm64" ]]; then
-            target=aarch64-unknown-linux-gnu
-          else
-            target=x86_64-unknown-linux-gnu
-          fi
-
           ~/.cargo/bin/rustup default nightly
-          ~/.cargo/bin/rustup target add $target
+          ~/.cargo/bin/rustup target add $CARGO_TARGET_TRIPLE
 
           export RUSTFLAGS="-Z sanitizer=leak"
 
@@ -1710,7 +1679,7 @@ functions:
             -d "./resources/integration_test/testdata" &&
 
           # Run integration tests with asan
-          cargo test --target $target --package integration_test --lib test_runner --features integration_test/result_set
+          cargo test --target $CARGO_TARGET_TRIPLE --package integration_test --lib test_runner --features integration_test/result_set
           EXITCODE=$?
 
           # Stop the local ADF
