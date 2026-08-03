@@ -48,6 +48,21 @@ variables:
     aws_secret: ${AWS_SECRET_ACCESS_KEY}
     aws_session_token: ${AWS_SESSION_TOKEN}
     bucket: mciuploads
+  - &assume_devprod_ecr_readonly_role
+    command: ec2.assume_role
+    display_name: Assume DevProd Platforms ECR readonly IAM role
+    params:
+      role_arn: ${devprod_platforms_ecr_readonly_role_arn}
+  - &login_devprod_ecr
+    command: shell.exec
+    type: system
+    retry_on_failure: true
+    params:
+      silent: true
+      include_expansions_in_env: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN]
+      script: |
+        set -o errexit
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 901841024863.dkr.ecr.us-east-1.amazonaws.com
 pre:
   - func: "fetch source"
   - func: "generate expansions"
@@ -309,12 +324,8 @@ functions:
           fi
 
   "sign windows":
-    - command: shell.exec
-      type: system
-      params:
-        silent: true
-        script: |
-          docker login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${release_tools_container_registry}
+    - *assume_devprod_ecr_readonly_role
+    - *login_devprod_ecr
     - command: shell.exec
       type: system
       params:
@@ -342,12 +353,8 @@ functions:
           fi
 
   "sign ubuntu and verify signature":
-    - command: shell.exec
-      type: system
-      params:
-        silent: true
-        script: |
-          docker login --username ${sql_engines_artifactory_username} --password ${sql_engines_artifactory_auth_token} ${release_tools_container_registry}
+    - *assume_devprod_ecr_readonly_role
+    - *login_devprod_ecr
     - command: shell.exec
       type: system
       params:
