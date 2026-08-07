@@ -1,17 +1,23 @@
+{
+  "manual_link": "https://www.mongodb.com/docs/atlas/data-federation/query/query-with-sql/",
+  "release_notes_link": "https://www.mongodb.com/docs/atlas/data-federation/query/sql/release-notes/",
+  "versions": [
     {
       "version": "{release_version}",
       "platform": [
         {
           "name": "Windows",
-          "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{WINDOWS_INSTALLER_PATH}"
+          "download_link": "https://downloads.mongodb.org/{WINDOWS_INSTALLER_PATH}"
         },
         {
           "name": "Linux x64 - Requires glibc 2.34+",
-          "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{UBUNTU2204_INSTALLER_PATH}"
+          "download_link": "https://downloads.mongodb.org/{UBUNTU2204_INSTALLER_PATH}"
         },
         {
           "name": "Linux arm64 - Requires glibc 2.34+",
-          "download_link": "https://translators-connectors-releases.s3.amazonaws.com/{UBUNTU2204_ARM_INSTALLER_PATH}"
+          "download_link": "https://downloads.mongodb.org/{UBUNTU2204_ARM_INSTALLER_PATH}"
         }
       ]
     }
+  ]
+}
