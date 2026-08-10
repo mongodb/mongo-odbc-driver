@@ -95,6 +95,10 @@ pub enum Error {
     BuildInfoCmdExecutionFailed(mongodb::error::Error),
     #[error("Library path error: {0}")]
     LibraryPathError(String),
+    #[error("{0}")]
+    SqlInterfaceNotEntitled(String),
+    #[error("Failed to verify the Atlas SQL interface entitlement: {0}")]
+    SqlInterfaceEntitlementCheckFailed(mongodb::error::Error),
 }
 
 impl Error {
@@ -106,7 +110,8 @@ impl Error {
             | Error::QueryCursorUpdate(err)
             | Error::QueryExecutionFailed(err)
             | Error::SchemaCatalogGenerationFailed(err)
-            | Error::SchemaCatalogResultFailed(err) => {
+            | Error::SchemaCatalogResultFailed(err)
+            | Error::SqlInterfaceEntitlementCheckFailed(err) => {
                 if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
                     return TIMEOUT_EXPIRED;
@@ -115,6 +120,7 @@ impl Error {
             }
             Error::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
             Error::MongoParseConnectionString(_) => UNABLE_TO_CONNECT,
+            Error::SqlInterfaceNotEntitled(_) => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
             Error::InvalidCursorState => INVALID_CURSOR_STATE,
@@ -151,6 +157,7 @@ impl Error {
             | Error::QueryExecutionFailed(m)
             | Error::SchemaCatalogResultFailed(m)
             | Error::SchemaCatalogGenerationFailed(m)
+            | Error::SqlInterfaceEntitlementCheckFailed(m)
             | Error::MongoParseConnectionString(m) => match m.kind.as_ref() {
                 ErrorKind::Command(command_error) => command_error.code,
                 ErrorKind::Write(WriteFailure::WriteConcernError(wc_error)) => wc_error.code,
@@ -185,6 +192,7 @@ impl Error {
             | Error::LibraryPathError(_)
             | Error::MultipleSchemaDocumentsReturned(_)
             | Error::BuildInfoCmdExecutionFailed(_)
+            | Error::SqlInterfaceNotEntitled(_)
             | Error::MetadataAccess(_, _) => 0,
         }
     }

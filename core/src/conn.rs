@@ -171,7 +171,19 @@ impl MongoConnection {
 
         let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await })?;
         match type_of_cluster {
-            MongoClusterType::AtlasDataFederation | MongoClusterType::Enterprise => {}
+            MongoClusterType::AtlasDataFederation => {}
+            MongoClusterType::Enterprise => {
+                // SQL-3340: Atlas SQL Direct Cluster entitlement gate. This only applies to Atlas
+                // dedicated clusters; verify_sql_interface_entitlement skips the check for on-prem
+                // / self-managed Enterprise hosts (which have no marker). ADF is unaffected.
+                runtime.block_on(async {
+                    crate::entitlement::verify_sql_interface_entitlement(
+                        &client,
+                        &crate::entitlement::StubKeyProvider,
+                    )
+                    .await
+                })?;
+            }
             MongoClusterType::Community => {
                 // Community edition is not supported
                 return Err(Error::UnsupportedClusterConfiguration(

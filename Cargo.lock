@@ -2869,10 +2869,12 @@ name = "mongo-odbc-core"
 version = "0.0.0"
 dependencies = [
  "agg-ast",
+ "base64 0.22.1",
  "bson",
  "constants",
  "cstr",
  "definitions",
+ "ed25519-dalek",
  "fancy-regex",
  "futures",
  "itertools 0.10.5",

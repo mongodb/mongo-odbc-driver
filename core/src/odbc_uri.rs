@@ -33,6 +33,10 @@ pub const APPNAME: &str = "appname";
 pub const LOGLEVEL: &str = "loglevel";
 pub const SIMPLE_TYPES_ONLY: &str = "simple_types_only";
 pub const ENABLE_MAX_STRING_LENGTH: &str = "enable_max_string_length";
+// SQL-3340 / task 28: optional path to a local JWKS (jwks.json) used to verify the Atlas SQL
+// interface entitlement marker in air-gapped environments where the well-known JWKS endpoint is
+// unreachable. Consumed by entitlement::JwksKeyProvider once key retrieval (task 28) is wired in.
+pub const SQL_PUBLIC_KEY_PATH: &str = "sqlpublickeypath";
 
 const POWERBI_CONNECTOR: &str = "powerbi-connector";
 
@@ -57,6 +61,7 @@ lazy_static! {
             LOGLEVEL,
             SIMPLE_TYPES_ONLY,
             ENABLE_MAX_STRING_LENGTH,
+            SQL_PUBLIC_KEY_PATH,
         ]
         .into_iter()
         .map(|x| "^".to_string() + x + "$")
