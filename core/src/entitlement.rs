@@ -46,9 +46,8 @@ const MARKER_ID: &str = "entitlement";
 //   cluster0-shard-00-mongos-g0.abc123.mongodb.net:27017 (mongos)
 // The cluster name is the prefix before `-shard-`. On-prem / self-managed hosts do not match,
 // which is exactly how we scope the entitlement gate to Atlas dedicated clusters only.
-static ATLAS_DEDICATED_HOST: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb\.net(:\d+)?$").unwrap()
-});
+static ATLAS_DEDICATED_HOST: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb\.net(:\d+)?$").unwrap());
 
 /// Supplies the Ed25519 public key used to verify a marker signature, selected by the JWT `kid`.
 ///
@@ -121,13 +120,22 @@ fn parse_jwks(body: &str) -> Result<HashMap<String, VerifyingKey>> {
             continue;
         }
         let raw = URL_SAFE_NO_PAD.decode(&jwk.x).map_err(|_| {
-            not_entitled(format!("SQL interface JWKS key '{}' has invalid base64url", jwk.kid))
+            not_entitled(format!(
+                "SQL interface JWKS key '{}' has invalid base64url",
+                jwk.kid
+            ))
         })?;
         let bytes: [u8; 32] = raw.as_slice().try_into().map_err(|_| {
-            not_entitled(format!("SQL interface JWKS key '{}' is not a 32-byte key", jwk.kid))
+            not_entitled(format!(
+                "SQL interface JWKS key '{}' is not a 32-byte key",
+                jwk.kid
+            ))
         })?;
         let key = VerifyingKey::from_bytes(&bytes).map_err(|_| {
-            not_entitled(format!("SQL interface JWKS key '{}' is not a valid Ed25519 key", jwk.kid))
+            not_entitled(format!(
+                "SQL interface JWKS key '{}' is not a valid Ed25519 key",
+                jwk.kid
+            ))
         })?;
         keys.insert(jwk.kid, key);
     }
@@ -186,10 +194,14 @@ impl JwksKeyProvider {
             });
         }
         let resp = self.http.get(&self.jwks_url).send().map_err(|e| {
-            not_entitled(format!("unable to fetch the SQL interface JWKS from the registry: {e}"))
+            not_entitled(format!(
+                "unable to fetch the SQL interface JWKS from the registry: {e}"
+            ))
         })?;
         resp.text().map_err(|e| {
-            not_entitled(format!("unable to read the SQL interface JWKS response body: {e}"))
+            not_entitled(format!(
+                "unable to read the SQL interface JWKS response body: {e}"
+            ))
         })
     }
 
@@ -277,7 +289,11 @@ pub(crate) async fn verify_sql_interface_entitlement(
         .await
         .map_err(Error::SqlInterfaceEntitlementCheckFailed)?;
 
-    let cluster_name = match hello.get_str("me").ok().and_then(atlas_dedicated_cluster_name) {
+    let cluster_name = match hello
+        .get_str("me")
+        .ok()
+        .and_then(atlas_dedicated_cluster_name)
+    {
         Some(name) => name,
         // Not an Atlas dedicated cluster (on-prem / self-managed Enterprise, or no resolvable
         // Atlas host). The entitlement gate does not apply; allow the connection.
@@ -467,7 +483,13 @@ mod test {
     }
 
     fn far_future() -> i64 {
-        i64::try_from(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()).unwrap()
+        i64::try_from(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        )
+        .unwrap()
             + 3600
     }
 
@@ -578,9 +600,15 @@ mod test {
 
     #[test]
     fn non_atlas_hostnames_are_not_gated() {
-        assert_eq!(atlas_dedicated_cluster_name("my-onprem-host.example.com:27017"), None);
+        assert_eq!(
+            atlas_dedicated_cluster_name("my-onprem-host.example.com:27017"),
+            None
+        );
         assert_eq!(atlas_dedicated_cluster_name("localhost:27017"), None);
         // ADF-style hosts have no `-shard-` segment.
-        assert_eq!(atlas_dedicated_cluster_name("mycluster-abc123.a.query.mongodb.net"), None);
+        assert_eq!(
+            atlas_dedicated_cluster_name("mycluster-abc123.a.query.mongodb.net"),
+            None
+        );
     }
 }
