@@ -1428,6 +1428,8 @@ functions:
         working_dir: mongosql-odbc-driver
         include_expansions_in_env:
           - build_variant
+          - on_prem_test_user
+          - on_prem_test_pwd
         script: |
           ${prepare_shell}
           ./evergreen/set_up_on_prem_int_tests.sh

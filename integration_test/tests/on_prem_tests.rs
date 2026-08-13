@@ -33,8 +33,7 @@ mod on_prem_tests {
     //     }
 
     #[test]
-    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created(
-    ) {
+    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_on_prem_test_connection_string(
