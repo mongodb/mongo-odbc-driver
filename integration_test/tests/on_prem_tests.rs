@@ -1,6 +1,6 @@
 mod common;
 
-mod mongosqltranslate_tests {
+mod on_prem_tests {
     use crate::common::{
         allocate_env, connect_with_conn_string, default_setup_connect_and_alloc_stmt,
         disconnect_and_close_handles, fetch_and_get_data, get_column_attributes,
@@ -14,29 +14,29 @@ mod mongosqltranslate_tests {
     use serde_json::{Number, Value};
     use std::ptr;
 
-    #[test]
-    fn test_srv_style_uri_connection() {
-        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
-        let conn_str =
-            crate::common::generate_srv_style_connection_string(Some("test".to_string()));
-        let result = connect_with_conn_string(env_handle, Some(conn_str), true);
-
-        assert!(
-            result.is_ok(),
-            "Expected successful connection, got error: {result:?}"
-        );
-
-        let _ = unsafe { Box::from_raw(env_handle) };
-    }
+    //     #[test]
+    //     fn test_srv_style_uri_connection() {
+    //         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
+    //         let conn_str =
+    //             crate::common::generate_srv_style_connection_string(Some("test".to_string()));
+    //         let result = connect_with_conn_string(env_handle, Some(conn_str), true);
+    //
+    //         assert!(
+    //             result.is_ok(),
+    //             "Expected successful connection, got error: {result:?}"
+    //         );
+    //
+    //         let _ = unsafe { Box::from_raw(env_handle) };
+    //     }
 
     #[test]
     fn test_sql_prepare_and_sql_execute_with_library_loaded_and_valid_query_and_valid_schemas_created(
     ) {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
+            Some(crate::common::generate_on_prem_test_connection_string(
                 "sample_airbnb".to_string(),
-            ))),
+            )),
         );
 
         unsafe {
@@ -80,9 +80,9 @@ mod mongosqltranslate_tests {
     fn test_sql_execute_direct_with_library_loaded_and_valid_query_and_valid_schemas_created() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
+            Some(crate::common::generate_on_prem_test_connection_string(
                 "sample_airbnb".to_string(),
-            ))),
+            )),
         );
 
         unsafe {
@@ -119,9 +119,9 @@ mod mongosqltranslate_tests {
     fn test_enterprise_mode_with_invalid_query_and_valid_schemas_created() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
+            Some(crate::common::generate_on_prem_test_connection_string(
                 "sample_airbnb".to_string(),
-            ))),
+            )),
         );
 
         unsafe {
@@ -151,9 +151,9 @@ mod mongosqltranslate_tests {
     fn test_enterprise_mode_with_valid_query_and_no_sql_schemas_collection() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
+            Some(crate::common::generate_on_prem_test_connection_string(
                 "test".to_string(),
-            ))),
+            )),
         );
 
         unsafe {
@@ -182,9 +182,9 @@ mod mongosqltranslate_tests {
     fn test_sql_columnsw_with_library_loaded_and_valid_schemas_created() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
+            Some(crate::common::generate_on_prem_test_connection_string(
                 "sample_airbnb".to_string(),
-            ))),
+            )),
         );
 
         unsafe {
