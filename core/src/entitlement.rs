@@ -198,6 +198,13 @@ impl JwksKeyProvider {
                 "unable to fetch the SQL interface JWKS from the registry: {e}"
             ))
         })?;
+        // `send` only fails on transport errors; a 404/500 is a "successful" response whose body
+        // would otherwise surface as a misleading "not valid JSON" parse failure.
+        let resp = resp.error_for_status().map_err(|e| {
+            not_entitled(format!(
+                "the SQL interface JWKS registry returned an error status: {e}"
+            ))
+        })?;
         resp.text().map_err(|e| {
             not_entitled(format!(
                 "unable to read the SQL interface JWKS response body: {e}"
@@ -460,8 +467,21 @@ mod test {
         SigningKey::from_bytes(&[7u8; 32])
     }
 
+    /// Signs an arbitrary header/payload pair with the test key, producing a compact JWS. Kept
+    /// generic so tests can vary the header (`alg`, `kid`) and omit individual claims.
+    fn sign(header: serde_json::Value, payload: serde_json::Value) -> String {
+        let h = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap());
+        let p = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&payload).unwrap());
+        let signing_input = format!("{h}.{p}");
+        let sig = signing_key().sign(signing_input.as_bytes());
+        format!("{signing_input}.{}", URL_SAFE_NO_PAD.encode(sig.to_bytes()))
+    }
+
+    fn test_header() -> serde_json::Value {
+        serde_json::json!({ "alg": "EdDSA", "typ": "JWT", "kid": TEST_KID })
+    }
+
     fn make_token(iss: &str, sub: &str, enabled: bool, exp: Option<i64>) -> String {
-        let header = serde_json::json!({ "alg": "EdDSA", "typ": "JWT", "kid": TEST_KID });
         let mut payload = serde_json::json!({
             "iss": iss,
             "sub": sub,
@@ -471,11 +491,31 @@ mod test {
         if let Some(exp) = exp {
             payload["exp"] = serde_json::json!(exp);
         }
-        let h = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap());
-        let p = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&payload).unwrap());
-        let signing_input = format!("{h}.{p}");
-        let sig = signing_key().sign(signing_input.as_bytes());
-        format!("{signing_input}.{}", URL_SAFE_NO_PAD.encode(sig.to_bytes()))
+        sign(test_header(), payload)
+    }
+
+    /// A well-formed payload for `CLUSTER` with every claim present, so tests can remove exactly
+    /// one claim and attribute the resulting failure to that claim alone.
+    fn full_payload() -> serde_json::Value {
+        serde_json::json!({
+            "iss": ISSUER_NORMAL,
+            "sub": CLUSTER,
+            "iat": 1_748_000_000i64,
+            "enabled": true,
+        })
+    }
+
+    fn payload_without(claim: &str) -> serde_json::Value {
+        let mut payload = full_payload();
+        payload.as_object_mut().unwrap().remove(claim);
+        payload
+    }
+
+    fn error_message(err: Error) -> String {
+        match err {
+            Error::SqlInterfaceNotEntitled(msg) => msg,
+            other => panic!("expected SqlInterfaceNotEntitled, got {other:?}"),
+        }
     }
 
     fn provider() -> StaticKeyProvider {
@@ -596,6 +636,192 @@ mod test {
         })
         .to_string();
         assert!(parse_jwks(&body).is_err());
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Algorithm pinning (alg confusion). The `alg` header is attacker-controlled, so it must be
+    // checked against EXPECTED_ALG before any key material is touched.
+    // -----------------------------------------------------------------------------------------
+
+    #[test]
+    fn alg_none_is_rejected() {
+        // The canonical alg-confusion attack: claim `none` and supply an empty signature.
+        let header = serde_json::json!({ "alg": "none", "typ": "JWT", "kid": TEST_KID });
+        let h = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap());
+        let p = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&full_payload()).unwrap());
+        let token = format!("{h}.{p}.");
+
+        let msg = error_message(verify_token(&token, CLUSTER, &provider()).unwrap_err());
+        assert!(
+            msg.contains("unsupported algorithm"),
+            "expected an algorithm rejection, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn symmetric_alg_is_rejected() {
+        // A validly Ed25519-signed token that *claims* HS256 must still be refused: we trust our
+        // own pinned algorithm, never the token's self-declaration.
+        let header = serde_json::json!({ "alg": "HS256", "typ": "JWT", "kid": TEST_KID });
+        let token = sign(header, full_payload());
+
+        let msg = error_message(verify_token(&token, CLUSTER, &provider()).unwrap_err());
+        assert!(
+            msg.contains("unsupported algorithm") && msg.contains("HS256"),
+            "expected an algorithm rejection naming HS256, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn missing_kid_is_rejected() {
+        let header = serde_json::json!({ "alg": "EdDSA", "typ": "JWT" });
+        let token = sign(header, full_payload());
+
+        let msg = error_message(verify_token(&token, CLUSTER, &provider()).unwrap_err());
+        assert!(
+            msg.contains("missing a key id"),
+            "expected a missing-kid rejection, got: {msg}"
+        );
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Absent claims. Every claim is `Option` with a serde default, so "absent" must fail closed
+    // rather than being treated as a benign value.
+    // -----------------------------------------------------------------------------------------
+
+    #[test]
+    fn missing_enabled_claim_is_rejected() {
+        // Absent must behave like `false`, not like "unset, so allow".
+        let token = sign(test_header(), payload_without("enabled"));
+        let msg = error_message(verify_token(&token, CLUSTER, &provider()).unwrap_err());
+        assert!(
+            msg.contains("currently disabled"),
+            "expected a disabled rejection, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn missing_issuer_claim_is_rejected() {
+        let token = sign(test_header(), payload_without("iss"));
+        let msg = error_message(verify_token(&token, CLUSTER, &provider()).unwrap_err());
+        assert!(
+            msg.contains("unrecognized issuer") && msg.contains("<missing>"),
+            "expected an issuer rejection reporting the claim as missing, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn missing_subject_claim_is_rejected() {
+        let token = sign(test_header(), payload_without("sub"));
+        let msg = error_message(verify_token(&token, CLUSTER, &provider()).unwrap_err());
+        assert!(
+            msg.contains("different cluster"),
+            "expected a subject rejection, got: {msg}"
+        );
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // JwksKeyProvider cache behaviour. Driven through the `local_jwks_path` branch, which uses
+    // the same fetch/parse/cache pipeline as the HTTP branch but needs no network.
+    // -----------------------------------------------------------------------------------------
+
+    /// Writes a JWKS document containing the test key to a unique temp path.
+    fn write_test_jwks(name: &str) -> PathBuf {
+        let vk = signing_key().verifying_key();
+        let body = serde_json::json!({
+            "keys": [{
+                "kty": "OKP", "crv": "Ed25519", "kid": TEST_KID, "use": "sig",
+                "x": URL_SAFE_NO_PAD.encode(vk.to_bytes()),
+            }]
+        })
+        .to_string();
+
+        let path = std::env::temp_dir().join(format!(
+            "odbc-entitlement-{}-{name}.json",
+            std::process::id()
+        ));
+        std::fs::write(&path, body).unwrap();
+        path
+    }
+
+    /// Builds a local-file-backed provider with an explicit TTL, so cache staleness is
+    /// deterministic instead of depending on wall-clock time.
+    fn local_provider(path: Option<PathBuf>, ttl: Duration) -> JwksKeyProvider {
+        JwksKeyProvider {
+            // Unused: `local_jwks_path` short-circuits before any HTTP request is made.
+            jwks_url: "http://127.0.0.1:1/unused".to_string(),
+            local_jwks_path: path,
+            http: reqwest::blocking::Client::new(),
+            cache: Mutex::new(JwksCache::default()),
+            ttl,
+        }
+    }
+
+    #[test]
+    fn jwks_provider_loads_keys_from_local_file() {
+        let path = write_test_jwks("load");
+        let provider = local_provider(Some(path.clone()), JWKS_CACHE_TTL);
+
+        let key = provider.verifying_key(TEST_KID).unwrap();
+        assert_eq!(key.to_bytes(), signing_key().verifying_key().to_bytes());
+
+        // The key must actually verify a real marker, not just parse.
+        let token = make_token(ISSUER_NORMAL, CLUSTER, true, None);
+        assert!(verify_token(&token, CLUSTER, &provider).is_ok());
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn jwks_provider_serves_cached_key_within_ttl() {
+        let path = write_test_jwks("cached");
+        let provider = local_provider(Some(path.clone()), JWKS_CACHE_TTL);
+
+        provider.verifying_key(TEST_KID).unwrap();
+        // Remove the source: a fresh cache must not re-read it.
+        std::fs::remove_file(&path).unwrap();
+        assert!(provider.verifying_key(TEST_KID).is_ok());
+    }
+
+    #[test]
+    fn jwks_provider_falls_back_to_stale_keys_when_refetch_fails() {
+        let path = write_test_jwks("stale");
+        // A zero TTL makes the cache stale on every lookup, forcing a re-fetch each time.
+        let provider = local_provider(Some(path.clone()), Duration::ZERO);
+
+        provider.verifying_key(TEST_KID).unwrap();
+        std::fs::remove_file(&path).unwrap();
+
+        // Re-fetch now fails, but a previously cached key is better than refusing the connection.
+        assert!(provider.verifying_key(TEST_KID).is_ok());
+    }
+
+    #[test]
+    fn jwks_provider_reports_unknown_kid_as_possible_rotation() {
+        let path = write_test_jwks("unknown-kid");
+        let provider = local_provider(Some(path.clone()), JWKS_CACHE_TTL);
+
+        // An unknown `kid` triggers a re-fetch (mid-rotation); the key is still absent afterwards.
+        let msg = error_message(provider.verifying_key("no-such-kid").unwrap_err());
+        assert!(
+            msg.contains("rotated out") && msg.contains("no-such-kid"),
+            "expected a rotated-out error naming the kid, got: {msg}"
+        );
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn jwks_provider_surfaces_fetch_error_when_nothing_is_cached() {
+        let missing = std::env::temp_dir().join("odbc-entitlement-does-not-exist.json");
+        let _ = std::fs::remove_file(&missing);
+        let provider = local_provider(Some(missing), JWKS_CACHE_TTL);
+
+        let msg = error_message(provider.verifying_key(TEST_KID).unwrap_err());
+        assert!(
+            msg.contains("unable to read the local SQL interface public key file"),
+            "expected the local-file read error, got: {msg}"
+        );
     }
 
     #[test]
