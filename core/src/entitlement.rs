@@ -296,11 +296,7 @@ pub(crate) async fn verify_sql_interface_entitlement(
         .await
         .map_err(Error::SqlInterfaceEntitlementCheckFailed)?;
 
-    let cluster_name = match hello
-        .get_str("me")
-        .ok()
-        .and_then(atlas_dedicated_cluster_name)
-    {
+    let cluster_name = match gate_cluster_name(&hello) {
         Some(name) => name,
         // Not an Atlas dedicated cluster (on-prem / self-managed Enterprise, or no resolvable
         // Atlas host). The entitlement gate does not apply; allow the connection.
@@ -316,23 +312,41 @@ pub(crate) async fn verify_sql_interface_entitlement(
         .await
         .map_err(Error::SqlInterfaceEntitlementCheckFailed)?;
 
-    let token = match marker {
+    let token = token_from_marker(marker)?;
+
+    // 3. Verify the compact JWS and validate its claims.
+    verify_token(&token, &cluster_name, key_provider)
+}
+
+/// Decides whether the entitlement gate applies to the host described by a `hello` reply, and if
+/// so, which cluster name the marker's `sub` must match. Split out from the DB access so it can be
+/// unit-tested directly.
+///
+/// A `hello` reply with no usable `me` field yields `None` (gate does not apply): `me` is absent on
+/// some standalone/direct-connection topologies, and treating that as "not an Atlas dedicated
+/// cluster" is the same allow decision we make for any other non-Atlas host.
+fn gate_cluster_name(hello: &mongodb::bson::Document) -> Option<String> {
+    hello
+        .get_str("me")
+        .ok()
+        .and_then(atlas_dedicated_cluster_name)
+}
+
+/// Extracts the compact-JWS token from the entitlement marker document. Split out from the DB
+/// access so it can be unit-tested directly.
+fn token_from_marker(marker: Option<mongodb::bson::Document>) -> Result<String> {
+    match marker {
         Some(doc) => doc.get_str("token").map(str::to_string).map_err(|_| {
             not_entitled(
                 "the Atlas SQL interface entitlement marker is malformed (missing 'token'); the \
                  SQL interface may not be enabled for this cluster",
             )
-        })?,
-        None => {
-            return Err(not_entitled(
-                "the SQL interface is not enabled for this Atlas cluster. Enable it for the \
-                 cluster in Atlas before connecting.",
-            ))
-        }
-    };
-
-    // 3. Verify the compact JWS and validate its claims.
-    verify_token(&token, &cluster_name, key_provider)
+        }),
+        None => Err(not_entitled(
+            "the SQL interface is not enabled for this Atlas cluster. Enable it for the \
+             cluster in Atlas before connecting.",
+        )),
+    }
 }
 
 /// Verifies the compact-JWS marker string against the cluster name. Split out from the DB access
@@ -836,5 +850,65 @@ mod test {
             atlas_dedicated_cluster_name("mycluster-abc123.a.query.mongodb.net"),
             None
         );
+    }
+
+    // The gate decision made on a `hello` reply: `Some(name)` means "check the marker against this
+    // cluster", `None` means "allow the connection without checking".
+
+    #[test]
+    fn gate_applies_to_atlas_dedicated_hello() {
+        let hello = doc! { "me": "cluster0-shard-00-00.abc123.mongodb.net:27017", "ok": 1 };
+        assert_eq!(gate_cluster_name(&hello), Some("cluster0".to_string()));
+    }
+
+    #[test]
+    fn gate_does_not_apply_to_non_atlas_hello() {
+        let hello = doc! { "me": "my-onprem-host.example.com:27017", "ok": 1 };
+        assert_eq!(gate_cluster_name(&hello), None);
+    }
+
+    #[test]
+    fn gate_does_not_apply_when_hello_has_no_me_field() {
+        // Some standalone / direct-connection topologies omit `me` entirely. Absent `me` must not
+        // reject the connection.
+        let hello = doc! { "ok": 1 };
+        assert_eq!(gate_cluster_name(&hello), None);
+    }
+
+    #[test]
+    fn gate_does_not_apply_when_hello_me_is_not_a_string() {
+        let hello = doc! { "me": 42, "ok": 1 };
+        assert_eq!(gate_cluster_name(&hello), None);
+    }
+
+    // The marker read, once the gate has been determined to apply.
+
+    #[test]
+    fn marker_with_token_yields_the_token() {
+        let marker = doc! { "_id": MARKER_ID, "token": "a.b.c" };
+        assert_eq!(token_from_marker(Some(marker)).unwrap(), "a.b.c");
+    }
+
+    #[test]
+    fn absent_marker_is_rejected() {
+        let err = token_from_marker(None).unwrap_err();
+        assert!(
+            error_message(err).contains("the SQL interface is not enabled for this Atlas cluster"),
+            "an Atlas dedicated cluster with no marker must be rejected"
+        );
+    }
+
+    #[test]
+    fn marker_without_token_field_is_rejected() {
+        let marker = doc! { "_id": MARKER_ID, "enabled": true };
+        let err = token_from_marker(Some(marker)).unwrap_err();
+        assert!(error_message(err).contains("marker is malformed"));
+    }
+
+    #[test]
+    fn marker_with_non_string_token_is_rejected() {
+        let marker = doc! { "_id": MARKER_ID, "token": 42 };
+        let err = token_from_marker(Some(marker)).unwrap_err();
+        assert!(error_message(err).contains("marker is malformed"));
     }
 }
