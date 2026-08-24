@@ -2238,18 +2238,6 @@ buildvariants:
       - name: asan-unit-tests
       - name: sign
 
-  - name: macos-arm
-    display_name: "macOS arm64"
-    run_on: [macos-13-arm64]
-    modules:
-      - sql-engines-common-test-infra
-    tasks:
-      - name: compile
-      - name: unit-test
-      # SQL-1841: Investigate iodbc hanging with odbc 2 integration tests
-      # - name: integration-test
-      - name: result-set-test
-
   - name: release
     display_name: "Release"
     run_on: [ubuntu2204-medium]
