@@ -2874,7 +2874,6 @@ dependencies = [
  "constants",
  "cstr",
  "definitions",
- "ed25519-dalek",
  "fancy-regex",
  "futures",
  "itertools 0.10.5",

@@ -95,10 +95,16 @@ pub enum Error {
     BuildInfoCmdExecutionFailed(mongodb::error::Error),
     #[error("Library path error: {0}")]
     LibraryPathError(String),
-    #[error("{0}")]
-    SqlInterfaceNotEntitled(String),
-    #[error("Failed to verify the Atlas SQL interface entitlement: {0}")]
-    SqlInterfaceEntitlementCheckFailed(mongodb::error::Error),
+    // SQL-3340: SQL interface status gate failures. The messages are user-facing and must never
+    // contain marker material (token, payload, or signature); details are logged at warn level.
+    #[error("Unable to determine SQL Interface status for this cluster. Verify that the SQL interface is enabled for your cluster and retry. If the error persists, please contact MongoDB support at https://support.mongodb.com")]
+    SqlInterfaceUnavailable,
+    #[error("SQL Interface is disabled for this cluster. Enable the SQL Interface for your cluster on Atlas and retry. Contact your admin if necessary.")]
+    SqlInterfaceDisabled,
+    #[error("SQL Interface status for this cluster could not be validated. For more details, enable logging with warn level minimum. Contact MongoDB support at https://support.mongodb.com if you need help.")]
+    SqlInterfaceStatusInvalid,
+    #[error("Unable to read SQL Interface status for this cluster: {0}. Please contact MongoDB support at https://support.mongodb.com")]
+    SqlInterfaceStatusReadFailed(mongodb::error::Error),
 }
 
 impl Error {
@@ -111,7 +117,7 @@ impl Error {
             | Error::QueryExecutionFailed(err)
             | Error::SchemaCatalogGenerationFailed(err)
             | Error::SchemaCatalogResultFailed(err)
-            | Error::SqlInterfaceEntitlementCheckFailed(err) => {
+            | Error::SqlInterfaceStatusReadFailed(err) => {
                 if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
                     return TIMEOUT_EXPIRED;
@@ -120,7 +126,9 @@ impl Error {
             }
             Error::InvalidUriFormat(_) => UNABLE_TO_CONNECT,
             Error::MongoParseConnectionString(_) => UNABLE_TO_CONNECT,
-            Error::SqlInterfaceNotEntitled(_) => UNABLE_TO_CONNECT,
+            Error::SqlInterfaceUnavailable
+            | Error::SqlInterfaceDisabled
+            | Error::SqlInterfaceStatusInvalid => UNABLE_TO_CONNECT,
             Error::NoDatabase => NO_DSN_OR_DRIVER,
             Error::ColIndexOutOfBounds(_) => INVALID_DESCRIPTOR_INDEX,
             Error::InvalidCursorState => INVALID_CURSOR_STATE,
@@ -157,7 +165,7 @@ impl Error {
             | Error::QueryExecutionFailed(m)
             | Error::SchemaCatalogResultFailed(m)
             | Error::SchemaCatalogGenerationFailed(m)
-            | Error::SqlInterfaceEntitlementCheckFailed(m)
+            | Error::SqlInterfaceStatusReadFailed(m)
             | Error::MongoParseConnectionString(m) => match m.kind.as_ref() {
                 ErrorKind::Command(command_error) => command_error.code,
                 ErrorKind::Write(WriteFailure::WriteConcernError(wc_error)) => wc_error.code,
@@ -192,7 +200,9 @@ impl Error {
             | Error::LibraryPathError(_)
             | Error::MultipleSchemaDocumentsReturned(_)
             | Error::BuildInfoCmdExecutionFailed(_)
-            | Error::SqlInterfaceNotEntitled(_)
+            | Error::SqlInterfaceUnavailable
+            | Error::SqlInterfaceDisabled
+            | Error::SqlInterfaceStatusInvalid
             | Error::MetadataAccess(_, _) => 0,
         }
     }

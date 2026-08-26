@@ -45,10 +45,8 @@ rfc8252_http_server = { path = "../rfc8252_http_server" }
 once_cell = { workspace = true }
 serde_json = { workspace = true }
 rand = "0.10"
-# SQL-3340: Atlas SQL Direct Cluster entitlement marker (Ed25519-signed JWS) verification.
-# The JWKS publishes raw OKP public keys, so we verify the compact JWS by hand with
-# ed25519-dalek rather than pulling in a full JWT library that expects DER/PEM keys.
-ed25519-dalek = "2"
+# SQL-3340: base64url-decoding the SQL interface status marker's JWS payload. Signature
+# verification is descoped for GA, so no JWT/crypto library is needed.
 base64 = "0.22"
 
 [target.'cfg(windows)'.dependencies]

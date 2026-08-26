@@ -34,6 +34,6 @@ pub use primary_keys::MongoPrimaryKeys;
 mod foreign_keys;
 pub use foreign_keys::MongoForeignKeys;
 pub mod cluster_type;
-pub mod entitlement;
 pub mod oidc_auth;
+pub mod sql_interface_status;
 pub mod test_config;

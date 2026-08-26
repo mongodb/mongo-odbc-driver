@@ -17,10 +17,14 @@ use tokio::runtime::Runtime;
 // we make from UserOptions to Client and Weak<Runtime> so that we do not hold around
 // Clients and Runtimes that are no longer in use. In most cases it won't matter, but for drivers that live in
 // memory for a long time, this could be a problem.
+// Each entry also caches the Atlas dedicated cluster name derived from `hello.me` when the Client
+// was created (SQL-3340). Resolving it is part of basic mongo connection setup, so it is done once
+// per Client rather than on every logical connection; the SQL interface status gate that consumes
+// it still runs per logical connection. `None` means the host is not an Atlas dedicated cluster.
 #[cfg(feature = "garbage_collect")]
-struct ClientMap(Vec<(UserOptions, Client, Weak<Runtime>)>);
+struct ClientMap(Vec<(UserOptions, Client, Weak<Runtime>, Option<String>)>);
 #[cfg(not(feature = "garbage_collect"))]
-struct ClientMap(Vec<(UserOptions, Client, Arc<Runtime>)>);
+struct ClientMap(Vec<(UserOptions, Client, Arc<Runtime>, Option<String>)>);
 
 impl ClientMap {
     // new creates a new ClientMap.
@@ -30,12 +34,15 @@ impl ClientMap {
 
     // get returns the client associated with the given user options if it exists.
     #[cfg(feature = "garbage_collect")]
-    fn get(&mut self, user_options: &UserOptions) -> Option<(Client, Arc<Runtime>)> {
+    fn get(
+        &mut self,
+        user_options: &UserOptions,
+    ) -> Option<(Client, Arc<Runtime>, Option<String>)> {
         let mut to_remove = Vec::new();
-        for (i, (options, client, weak_rt)) in self.0.iter().enumerate() {
+        for (i, (options, client, weak_rt, cluster_name)) in self.0.iter().enumerate() {
             if options == user_options {
                 if let Some(rt) = weak_rt.upgrade() {
-                    return Some((client.clone(), rt));
+                    return Some((client.clone(), rt, cluster_name.clone()));
                 // if somehow the Runtime cannot be upgraded, we want to remove this entry in the
                 // ClientMap, because the Runtime associated with the Client has been dropped,
                 // which will make the Topology hang forever.
@@ -54,10 +61,13 @@ impl ClientMap {
 
     // get returns the client associated with the given user options if it exists.
     #[cfg(not(feature = "garbage_collect"))]
-    fn get(&mut self, user_options: &UserOptions) -> Option<(Client, Arc<Runtime>)> {
-        for (options, client, rt) in self.0.iter() {
+    fn get(
+        &mut self,
+        user_options: &UserOptions,
+    ) -> Option<(Client, Arc<Runtime>, Option<String>)> {
+        for (options, client, rt, cluster_name) in self.0.iter() {
             if options == user_options {
-                return Some((client.clone(), rt.clone()));
+                return Some((client.clone(), rt.clone(), cluster_name.clone()));
             }
         }
         None
@@ -67,20 +77,37 @@ impl ClientMap {
     #[cfg(feature = "garbage_collect")]
     fn gc(&mut self) {
         self.0
-            .retain(|(_, _, weak_client)| Weak::strong_count(weak_client) != 0);
+            .retain(|(_, _, weak_client, _)| Weak::strong_count(weak_client) != 0);
     }
 
     // insert inserts a new client into the client map keyed on the user options. Note this will
     // insert duplicates and it is on the user to check if an entry already exists.
     #[cfg(feature = "garbage_collect")]
-    fn insert(&mut self, user_options: UserOptions, client: &Client, rt: &Arc<Runtime>) {
-        self.0
-            .push((user_options, client.clone(), Arc::downgrade(rt)));
+    fn insert(
+        &mut self,
+        user_options: UserOptions,
+        client: &Client,
+        rt: &Arc<Runtime>,
+        atlas_cluster_name: Option<String>,
+    ) {
+        self.0.push((
+            user_options,
+            client.clone(),
+            Arc::downgrade(rt),
+            atlas_cluster_name,
+        ));
     }
 
     #[cfg(not(feature = "garbage_collect"))]
-    fn insert(&mut self, user_options: UserOptions, client: &Client, rt: &Arc<Runtime>) {
-        self.0.push((user_options, client.clone(), rt.clone()));
+    fn insert(
+        &mut self,
+        user_options: UserOptions,
+        client: &Client,
+        rt: &Arc<Runtime>,
+        atlas_cluster_name: Option<String>,
+    ) {
+        self.0
+            .push((user_options, client.clone(), rt.clone(), atlas_cluster_name));
     }
 }
 
@@ -110,10 +137,14 @@ pub struct MongoConnection {
 }
 
 impl MongoConnection {
+    /// Returns the Client and Runtime for these user options, along with the Atlas dedicated
+    /// cluster name resolved from `hello.me` during connection setup (`None` when the host is not
+    /// an Atlas dedicated cluster). All three are cached together, so `hello` runs once per Client
+    /// rather than once per logical connection.
     fn get_client_and_runtime(
         user_options: UserOptions,
         runtime: Arc<Runtime>,
-    ) -> Result<(Client, Arc<Runtime>)> {
+    ) -> Result<(Client, Arc<Runtime>, Option<String>)> {
         let mut client_map = runtime.block_on(async { CLIENT_MAP.lock().await });
         if let Some(cv) = client_map.get(&user_options) {
             log::info!("reusing Client");
@@ -127,12 +158,22 @@ impl MongoConnection {
                 Client::with_options(user_options.client_options)
                     .map_err(Error::InvalidClientOptions)
             })?;
+            // SQL-3340: resolving the cluster name is part of basic connection setup, so it is
+            // done here, once per Client, and cached for the per-connection status gate.
+            let atlas_cluster_name = runtime.block_on(async {
+                crate::sql_interface_status::resolve_atlas_cluster_name(&client).await
+            })?;
             // we need to drop the guard before we return the runtime to kill the borrow
             // on the runtime. We drop it before the insert to hold the lock for as little time as
             // possible.
             drop(guard);
-            client_map.insert(key_user_options, &client, &runtime);
-            Ok((client, runtime))
+            client_map.insert(
+                key_user_options,
+                &client,
+                &runtime,
+                atlas_cluster_name.clone(),
+            );
+            Ok((client, runtime, atlas_cluster_name))
         }
     }
 
@@ -167,19 +208,23 @@ impl MongoConnection {
 
         let uuid_repr = user_options.uuid_representation;
 
-        let (client, runtime) = Self::get_client_and_runtime(user_options, runtime)?;
+        let (client, runtime, atlas_cluster_name) =
+            Self::get_client_and_runtime(user_options, runtime)?;
 
         let type_of_cluster = runtime.block_on(async { determine_cluster_type(&client).await })?;
         match type_of_cluster {
             MongoClusterType::AtlasDataFederation => {}
             MongoClusterType::Enterprise => {
-                // SQL-3340: Atlas SQL Direct Cluster entitlement gate. This only applies to Atlas
-                // dedicated clusters; verify_sql_interface_entitlement skips the check for on-prem
-                // / self-managed Enterprise hosts (which have no marker). ADF is unaffected.
+                // SQL-3340: Atlas SQL Direct Cluster SQL interface status gate. This runs for
+                // every logical connection so that a cluster toggled off in Atlas is rejected by
+                // the next connection rather than riding on a cached decision. It only applies to
+                // Atlas dedicated clusters; `atlas_cluster_name` is `None` for on-prem /
+                // self-managed Enterprise hosts (which have no marker), and the gate is skipped.
+                // ADF is unaffected.
                 runtime.block_on(async {
-                    crate::entitlement::verify_sql_interface_entitlement(
+                    crate::sql_interface_status::verify_sql_interface_enabled(
                         &client,
-                        &crate::entitlement::StubKeyProvider,
+                        atlas_cluster_name.as_deref(),
                     )
                     .await
                 })?;
