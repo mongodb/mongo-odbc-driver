@@ -3365,7 +3365,7 @@ mod unit_tests {
         unsafe {
             assert_eq!(SqlReturn::ERROR, SQLFetch(stmt_handle as *mut _,));
             assert_eq!(
-                format!("[MongoDB][API] No ResultSet"),
+                "[MongoDB][API] No ResultSet".to_string(),
                 format!(
                     "{}",
                     (*stmt_handle)
