@@ -95,7 +95,7 @@ pub enum Error {
     BuildInfoCmdExecutionFailed(mongodb::error::Error),
     #[error("Library path error: {0}")]
     LibraryPathError(String),
-    // SQL-3340: SQL interface status gate failures. The messages are user-facing and must never
+    // SQL interface status gate failures. The messages are user-facing and must never
     // contain marker material (token, payload, or signature); details are logged at warn level.
     #[error("Unable to determine SQL Interface status for this cluster. Verify that the SQL interface is enabled for your cluster and retry. If the error persists, please contact MongoDB support at https://support.mongodb.com")]
     SqlInterfaceUnavailable,

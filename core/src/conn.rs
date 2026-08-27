@@ -18,7 +18,7 @@ use tokio::runtime::Runtime;
 // Clients and Runtimes that are no longer in use. In most cases it won't matter, but for drivers that live in
 // memory for a long time, this could be a problem.
 // Each entry also caches the Atlas dedicated cluster name derived from `hello.me` when the Client
-// was created (SQL-3340). Resolving it is part of basic mongo connection setup, so it is done once
+// was created. Resolving it is part of basic mongo connection setup, so it is done once
 // per Client rather than on every logical connection; the SQL interface status gate that consumes
 // it still runs per logical connection. `None` means the host is not an Atlas dedicated cluster.
 #[cfg(feature = "garbage_collect")]
@@ -158,7 +158,7 @@ impl MongoConnection {
                 Client::with_options(user_options.client_options)
                     .map_err(Error::InvalidClientOptions)
             })?;
-            // SQL-3340: resolving the cluster name is part of basic connection setup, so it is
+            // Resolving the cluster name is part of basic connection setup, so it is
             // done here, once per Client, and cached for the per-connection status gate.
             let atlas_cluster_name = runtime.block_on(async {
                 crate::sql_interface_status::resolve_atlas_cluster_name(&client).await
@@ -215,7 +215,7 @@ impl MongoConnection {
         match type_of_cluster {
             MongoClusterType::AtlasDataFederation => {}
             MongoClusterType::Enterprise => {
-                // SQL-3340: Atlas SQL Direct Cluster SQL interface status gate. This runs for
+                // Atlas SQL Direct Cluster SQL interface status gate. This runs for
                 // every logical connection so that a cluster toggled off in Atlas is rejected by
                 // the next connection rather than riding on a cached decision. It only applies to
                 // Atlas dedicated clusters; `atlas_cluster_name` is `None` for on-prem /

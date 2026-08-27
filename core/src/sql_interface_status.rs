@@ -1,4 +1,4 @@
-//! SQL-3340: Atlas SQL Direct Cluster SQL Interface status gate.
+//! Atlas SQL Direct Cluster SQL Interface status gate.
 //!
 //! Atlas SQL "Direct Cluster" is a per-cluster toggle. When it is enabled, the Atlas control plane
 //! writes a status marker — a compact JWS (signed JWT) — into the reserved
@@ -10,8 +10,7 @@
 //! verification ("fingerprinting") can be added in a later milestone, but this gate only
 //! base64url-decodes the payload and evaluates the status-bearing claims. See
 //! `AtlasSQLDirectCluster_marker.md` and `AtlasSQLDirectCluster_marker_fingerprinting.md` in
-//! 10gen/engineering-documents. This mirrors the schema-manager gate added in
-//! 10gen/schema-manager-rs#1014.
+//! the engineering-documents repo. This mirrors the equivalent gate in the schema manager.
 //!
 //! Scope: the gate applies **only to Atlas dedicated clusters**. On-prem / self-managed Enterprise
 //! deployments have no marker and must still be allowed to connect, so the cluster name is derived
@@ -19,7 +18,7 @@
 //! not an Atlas dedicated host.
 
 use crate::{err::Result, Error};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use data_encoding::BASE64URL_NOPAD;
 use mongodb::{bson::doc, bson::Document, Client};
 use serde::Deserialize;
 use std::sync::LazyLock;
@@ -27,7 +26,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Issuer (`iss`) for normal markers written by the CNCP SQL Interface service.
 pub const ISSUER_NORMAL: &str = "mongosql-service";
-/// Issuer (`iss`) for break-glass markers written by the restricted support tool (SQL-3337).
+/// Issuer (`iss`) for break-glass markers written by the restricted support tool.
 /// These are short-lived and MUST carry a valid `exp`.
 pub const ISSUER_EMERGENCY: &str = "mongosql-emergency";
 
@@ -48,7 +47,7 @@ const MARKER_ID: &str = "entitlement";
 // happens to be named `<something>-shard-0.<domain>` is not mistaken for an Atlas cluster and
 // wrongly gated.
 static ATLAS_DEDICATED_HOST: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb\.net(:\d+)?$").unwrap());
+    LazyLock::new(|| regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb\.net(?::\d+)?$").unwrap());
 
 /// The status-bearing claims of the marker payload. Only the fields this gate inspects are
 /// modeled; every field is optional so a marker missing any of them is a status validation
@@ -162,7 +161,7 @@ async fn read_marker_token(client: &Client) -> Result<String> {
 /// per the status-only gate.
 fn decode_marker_claims(token: &str) -> Option<MarkerClaims> {
     let payload = token.split('.').nth(1)?;
-    let bytes = URL_SAFE_NO_PAD.decode(payload.as_bytes()).ok()?;
+    let bytes = BASE64URL_NOPAD.decode(payload.as_bytes()).ok()?;
     serde_json::from_slice(&bytes).ok()
 }
 
@@ -238,8 +237,8 @@ mod test {
     /// payload. The header alg and the signature are deliberately junk: the status-only gate must
     /// never look at either.
     fn token_with_claims(claims: &serde_json::Value) -> String {
-        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"Ed25519","typ":"JWT"}"#);
-        let payload = URL_SAFE_NO_PAD.encode(claims.to_string().as_bytes());
+        let header = BASE64URL_NOPAD.encode(br#"{"alg":"Ed25519","typ":"JWT"}"#);
+        let payload = BASE64URL_NOPAD.encode(claims.to_string().as_bytes());
         format!("{header}.{payload}.c2lnbmF0dXJl")
     }
 
@@ -293,7 +292,7 @@ mod test {
         assert!(decode_marker_claims("aaa.!!!.bbb").is_none());
         // A middle segment that decodes but is not a JSON object.
         assert!(
-            decode_marker_claims(&format!("aaa.{}.bbb", URL_SAFE_NO_PAD.encode(b"{"))).is_none()
+            decode_marker_claims(&format!("aaa.{}.bbb", BASE64URL_NOPAD.encode(b"{"))).is_none()
         );
     }
 
@@ -454,6 +453,17 @@ mod test {
         // `.mongodb.net` suffix is required.
         assert_eq!(
             atlas_dedicated_cluster_name("foo-shard-0.internal.example.com:27017"),
+            None
+        );
+        // The port separator is required when a port is present: the `:` is a literal inside the
+        // optional group, so digits may not be glued directly onto the hostname.
+        assert_eq!(
+            atlas_dedicated_cluster_name("cluster0-shard-00-00.abc123.mongodb.net27017"),
+            None
+        );
+        // A non-numeric port does not match either.
+        assert_eq!(
+            atlas_dedicated_cluster_name("cluster0-shard-00-00.abc123.mongodb.net:notaport"),
             None
         );
     }
