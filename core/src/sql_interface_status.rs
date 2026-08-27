@@ -1,22 +1,3 @@
-//! Atlas SQL Direct Cluster SQL Interface status gate.
-//!
-//! Atlas SQL "Direct Cluster" is a per-cluster toggle. When it is enabled, the Atlas control plane
-//! writes a status marker — a compact JWS (signed JWT) — into the reserved
-//! `__mdb_internal_sqlinterface.__sql_status` collection on the user cluster. The driver inspects
-//! that marker when a logical connection is established and refuses to connect when the SQL
-//! interface is not enabled for the cluster.
-//!
-//! **Signature verification is descoped for GA.** Markers are still signed so that signature
-//! verification ("fingerprinting") can be added in a later milestone, but this gate only
-//! base64url-decodes the payload and evaluates the status-bearing claims. See
-//! `AtlasSQLDirectCluster_marker.md` and `AtlasSQLDirectCluster_marker_fingerprinting.md` in
-//! the engineering-documents repo. This mirrors the equivalent gate in the schema manager.
-//!
-//! Scope: the gate applies **only to Atlas dedicated clusters**. On-prem / self-managed Enterprise
-//! deployments have no marker and must still be allowed to connect, so the cluster name is derived
-//! from `hello.me` (see [`atlas_dedicated_cluster_name`]) and the gate is skipped when the host is
-//! not an Atlas dedicated host.
-
 use crate::{err::Result, Error};
 use data_encoding::BASE64URL_NOPAD;
 use mongodb::{bson::doc, bson::Document, Client};
@@ -37,15 +18,6 @@ const MARKER_COLLECTION: &str = "__sql_status";
 /// Singleton document `_id` for the status marker.
 const MARKER_ID: &str = "entitlement";
 
-// Atlas dedicated cluster hostnames always embed the cluster name before the first `-shard-`
-// segment and resolve under `.mongodb.net`, e.g.
-//   cluster0-shard-00-00.abc123.mongodb.net:27017        (replica set node)
-//   cluster0-shard-00-mongos-g0.abc123.mongodb.net:27017 (mongos)
-// The cluster name is the prefix before `-shard-`. On-prem / self-managed hosts do not match,
-// which is exactly how we scope the status gate to Atlas dedicated clusters only. We require the
-// `.mongodb.net` suffix rather than just looking for `-shard-`, so that a self-managed host that
-// happens to be named `<something>-shard-0.<domain>` is not mistaken for an Atlas cluster and
-// wrongly gated.
 static ATLAS_DEDICATED_HOST: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb\.net(?::\d+)?$").unwrap());
 
