@@ -1,6 +1,9 @@
 use crate::{err::Result, Error};
 use data_encoding::BASE64URL_NOPAD;
-use mongodb::{bson::doc, bson::Document, Client};
+use mongodb::{
+    bson::{doc, from_document, Document},
+    Client,
+};
 use serde::Deserialize;
 use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -18,8 +21,10 @@ const MARKER_COLLECTION: &str = "__sql_status";
 /// Singleton document `_id` for the status marker.
 const MARKER_ID: &str = "entitlement";
 
-static ATLAS_DEDICATED_HOST: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb\.net(?::\d+)?$").unwrap());
+static ATLAS_DEDICATED_HOST: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb\.net(?::\d+)?$")
+        .expect("the Atlas dedicated host pattern should be a valid regex")
+});
 
 /// The status-bearing claims of the marker payload. Only the fields this gate inspects are
 /// modeled; every field is optional so a marker missing any of them is a status validation
@@ -40,9 +45,16 @@ struct MarkerClaims {
 /// The name is lowercased to match the producer's convention for the marker's `sub` claim. Atlas
 /// hostnames are already lowercase; this is defensive normalization.
 pub fn atlas_dedicated_cluster_name(me: &str) -> Option<String> {
-    ATLAS_DEDICATED_HOST
-        .captures(me)
-        .map(|caps| caps[1].to_lowercase())
+    ATLAS_DEDICATED_HOST.captures(me).map(|caps| {
+        // A missing group here would mean the pattern above lost its capture group, not that this
+        // host is non-Atlas. Panicking is deliberate: it is caught at the ODBC boundary and fails
+        // the connection, whereas returning `None` would be read as "not an Atlas cluster" and
+        // would silently disable the gate for every Atlas cluster.
+        caps.get(1)
+            .expect("a matched Atlas dedicated host always has a cluster-name capture group")
+            .as_str()
+            .to_lowercase()
+    })
 }
 
 /// Runs `hello` and derives the Atlas dedicated cluster name from its `me` field, returning `None`
@@ -96,11 +108,22 @@ pub async fn verify_sql_interface_enabled(
     evaluate_claims(&claims, cluster_name)
 }
 
+/// The marker document stored in `__sql_status`. Only `token` is consumed here; `_id` and the
+/// producer's `timestamp` field are ignored.
+///
+/// This is deserialized from a fetched [`Document`] rather than by typing the collection itself,
+/// so that a malformed marker is reported as [`Error::SqlInterfaceStatusInvalid`] rather than
+/// arriving on `find_one`'s error channel and being misreported as a read failure.
+#[derive(Debug, Deserialize)]
+struct MarkerDoc {
+    token: String,
+}
+
 /// Reads the marker token from `__sql_status` using a Primary read, so the gate never observes a
 /// stale replica and always sees the latest toggle state. A read failure is
 /// [`Error::SqlInterfaceStatusReadFailed`]; a missing document is
-/// [`Error::SqlInterfaceUnavailable`]; a present document with an empty or non-string token is
-/// [`Error::SqlInterfaceStatusInvalid`].
+/// [`Error::SqlInterfaceUnavailable`]; a present document whose `token` is missing, not a string,
+/// or empty is [`Error::SqlInterfaceStatusInvalid`].
 async fn read_marker_token(client: &Client) -> Result<String> {
     let marker = client
         .database(MARKER_DB)
@@ -119,20 +142,32 @@ async fn read_marker_token(client: &Client) -> Result<String> {
             Error::SqlInterfaceUnavailable
         })?;
 
-    match marker.get_str("token") {
-        Ok(token) if !token.is_empty() => Ok(token.to_string()),
-        _ => {
-            log::warn!("SQL interface status marker has no readable token field");
-            Err(Error::SqlInterfaceStatusInvalid)
-        }
+    let marker: MarkerDoc = from_document(marker).map_err(|e| {
+        log::warn!("SQL interface status marker has no readable token field: {e}");
+        Error::SqlInterfaceStatusInvalid
+    })?;
+
+    if marker.token.is_empty() {
+        log::warn!("SQL interface status marker has an empty token field");
+        return Err(Error::SqlInterfaceStatusInvalid);
     }
+
+    Ok(marker.token)
 }
 
 /// Extracts the status-bearing claims from a compact JWS by base64url-decoding its payload (the
-/// second segment), per RFC 4648 §5 (no padding). The signature is neither required nor validated,
-/// per the status-only gate.
+/// second segment), per RFC 4648 §5 (no padding). The signature segment must be present but is
+/// neither decoded nor validated, per the status-only gate.
+///
+/// The token must have exactly three segments. Requiring the signature segment does not
+/// authenticate anything — we do not verify it — but it keeps a truncated or otherwise malformed
+/// marker from being honored as if it were well formed, which matches the gate's fail-closed
+/// stance and the shape a signature-verifying gate will require.
 fn decode_marker_claims(token: &str) -> Option<MarkerClaims> {
-    let payload = token.split('.').nth(1)?;
+    let segments: Vec<&str> = token.split('.').collect();
+    let [_header, payload, _signature] = segments[..] else {
+        return None;
+    };
     let bytes = BASE64URL_NOPAD.decode(payload.as_bytes()).ok()?;
     serde_json::from_slice(&bytes).ok()
 }

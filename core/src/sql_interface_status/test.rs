@@ -1,11 +1,19 @@
 use super::*;
 use serde_json::json;
 
-/// Builds a compact JWS with an arbitrary header/signature and the given claims as the
-/// payload. The header alg and the signature are deliberately junk: the status-only gate must
-/// never look at either.
+/// Builds a compact JWS carrying the given claims as its payload.
+///
+/// The header mirrors what a real marker carries — `EdDSA` is the JOSE algorithm name for an
+/// Ed25519 signature (`Ed25519` itself is the *curve*, and belongs in a JWK's `crv`). The
+/// signature segment is the literal string "signature", which is deliberately not a valid
+/// signature: the status-only gate must never look at it.
 fn token_with_claims(claims: &serde_json::Value) -> String {
-    let header = BASE64URL_NOPAD.encode(br#"{"alg":"Ed25519","typ":"JWT"}"#);
+    token_with_header_and_claims(br#"{"alg":"EdDSA","typ":"JWT","kid":"test-kid"}"#, claims)
+}
+
+/// Builds a compact JWS with an arbitrary header, for asserting that the header is ignored.
+fn token_with_header_and_claims(header: &[u8], claims: &serde_json::Value) -> String {
+    let header = BASE64URL_NOPAD.encode(header);
     let payload = BASE64URL_NOPAD.encode(claims.to_string().as_bytes());
     format!("{header}.{payload}.c2lnbmF0dXJl")
 }
@@ -29,6 +37,13 @@ fn decode_marker_claims_decodes_external_reference_payload() {
     // The payload segment was produced independently by Python's base64.urlsafe_b64encode
     // (padding stripped), proving we decode a real externally-encoded token, not just our own
     // encoder. Header/signature segments are irrelevant to the status-only gate.
+    //
+    // The encoded payload below decodes to:
+    //
+    //     {"iss":"mongosql-service","sub":"jonathantestcluster","iat":1787333854,"enabled":true}
+    //
+    // i.e. a normal (non-emergency) marker, issued 2026-08-21T17:37:34Z, reporting the SQL
+    // interface as enabled for the cluster `jonathantestcluster`.
     let token = format!(
         "aaa.{}.bbb",
         "eyJpc3MiOiJtb25nb3NxbC1zZXJ2aWNlIiwic3ViIjoiam9uYXRoYW50ZXN0Y2x1c3RlciIsImlhdCI6MTc4NzMzMzg1NCwiZW5hYmxlZCI6dHJ1ZX0"
@@ -63,15 +78,61 @@ fn decode_marker_claims_rejects_malformed_input() {
 }
 
 #[test]
+fn marker_doc_requires_a_string_token() {
+    // The producer also writes `_id` and `timestamp`; unknown fields are ignored.
+    let ok = from_document::<MarkerDoc>(doc! {
+        "_id": "entitlement",
+        "token": "aaa.bbb.ccc",
+        "timestamp": "2026-08-21T17:37:34Z",
+    })
+    .expect("a well-formed marker deserializes");
+    assert_eq!(ok.token, "aaa.bbb.ccc");
+
+    // A marker with no token at all.
+    assert!(from_document::<MarkerDoc>(doc! { "_id": "entitlement" }).is_err());
+    // A token of the wrong BSON type.
+    assert!(from_document::<MarkerDoc>(doc! { "token": 42 }).is_err());
+}
+
+#[test]
+fn decode_marker_claims_requires_exactly_three_segments() {
+    let payload = BASE64URL_NOPAD.encode(
+        json!({
+            "iss": ISSUER_NORMAL,
+            "sub": "cluster0",
+            "enabled": true,
+        })
+        .to_string()
+        .as_bytes(),
+    );
+    // The payload itself is perfectly good, so these are rejected purely on container shape.
+    assert!(decode_marker_claims(&format!("aaa.{payload}.bbb")).is_some());
+
+    // A truncated marker missing its signature segment is not a compact JWS.
+    assert!(decode_marker_claims(&format!("aaa.{payload}")).is_none());
+    // Neither is one with a trailing extra segment.
+    assert!(decode_marker_claims(&format!("aaa.{payload}.bbb.ccc")).is_none());
+}
+
+#[test]
 fn no_signature_validation_is_attempted() {
-    // The signature segment is garbage and the header alg is non-standard, yet an enabled
-    // marker with a matching issuer and sub still passes: the gate never inspects either.
-    let token = token_with_claims(&json!({
+    let claims = json!({
         "iss": ISSUER_NORMAL,
         "sub": "cluster0",
         "enabled": true,
-    }));
+    });
+
+    // The signature segment is not a real signature, yet an enabled marker with a matching issuer
+    // and sub still passes: the gate never verifies it.
+    let token = token_with_claims(&claims);
     let decoded = decode_marker_claims(&token).expect("payload decodes");
+    assert!(evaluate_claims(&decoded, "cluster0").is_ok());
+
+    // The header is not inspected either, so a nonsense algorithm changes nothing. When signature
+    // fingerprinting is enabled this must stop being true: the verifier will need to pin
+    // `alg == "EdDSA"` and reject anything else.
+    let bogus_header = token_with_header_and_claims(br#"{"alg":"NOT-A-REAL-ALG"}"#, &claims);
+    let decoded = decode_marker_claims(&bogus_header).expect("payload decodes");
     assert!(evaluate_claims(&decoded, "cluster0").is_ok());
 }
 
