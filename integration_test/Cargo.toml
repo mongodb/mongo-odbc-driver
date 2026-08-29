@@ -32,6 +32,6 @@ tokio = { workspace = true, features = [
 
 
 [features]
-cluster_type_tests = []
+on_prem_cluster_type_tests = []
 result_set = []
 evergreen_tests = []

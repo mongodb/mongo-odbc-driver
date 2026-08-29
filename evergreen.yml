@@ -1452,11 +1452,11 @@ functions:
           ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $ARCH
 
           # Enterprise test
-          cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
+          cargo test --features on_prem_cluster_type_tests -- on_prem_cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
           ENTERPRISE_MSQL_EXITCODE=$?
 
           # Community test
-          cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
+          cargo test --features on_prem_cluster_type_tests -- on_prem_cluster_type::test_determine_cluster_type_community_fails --nocapture
           COMMUNITY_MSQL_EXITCODE=$?
 
           # Stop MongoDB instances
