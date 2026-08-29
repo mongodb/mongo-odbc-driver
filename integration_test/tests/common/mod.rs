@@ -400,7 +400,7 @@ pub fn fetch_and_get_data(
     expected_fetch_count: Option<SmallInt>,
     expected_sql_returns: Vec<SqlReturn>,
     target_types: Vec<CDataType>,
-    mongosqltranslate_test_exp_vals: Option<Vec<Vec<Value>>>,
+    direct_cluster_test_exp_vals: Option<Vec<Vec<Value>>>,
 ) {
     let output_buffer: *mut std::ffi::c_void =
         Box::into_raw(Box::new([0u8; BUFFER_LENGTH as usize])) as *mut _;
@@ -434,7 +434,7 @@ pub fn fetch_and_get_data(
                             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                         );
 
-                        if let Some(ref values) = mongosqltranslate_test_exp_vals {
+                        if let Some(ref values) = direct_cluster_test_exp_vals {
                             let actual_val = match target_types[col_num] {
                                 CDataType::SQL_C_SLONG => json!(*(output_buffer as *mut i32)),
                                 CDataType::SQL_C_WCHAR => {
@@ -489,7 +489,7 @@ pub fn fetch_and_get_data(
 pub fn get_column_attributes(
     stmt: Handle,
     expected_col_count: SmallInt,
-    mongosqltranslate_test_exp_vals: Option<Vec<Vec<Value>>>,
+    direct_cluster_test_exp_vals: Option<Vec<Vec<Value>>>,
 ) {
     let str_len_ptr = &mut 0;
     let character_attrib_ptr: *mut std::ffi::c_void =
@@ -531,7 +531,7 @@ pub fn get_column_attributes(
                     get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                 );
 
-                if let Some(ref values) = mongosqltranslate_test_exp_vals {
+                if let Some(ref values) = direct_cluster_test_exp_vals {
                     let actual_val = match values[col_num as usize][i] {
                         Value::String(_) => json!(cstr::from_widechar_ref_lossy(
                             &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH as usize])

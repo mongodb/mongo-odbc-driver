@@ -44,6 +44,24 @@ mod integration {
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
+    // Connects to a real Atlas cluster that has the SQL interface enabled, so the status marker is
+    // present and reports `enabled: true`. This exercises the SQL interface status gate against a
+    // live marker rather than a fixture.
+    #[test]
+    fn test_atlas_cluster_with_sql_interface_enabled_succeeds() {
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
+        let conn_str =
+            crate::common::generate_srv_style_connection_string(Some("test".to_string()));
+        let result = connect_with_conn_string(env_handle, Some(conn_str), true);
+
+        assert!(
+            result.is_ok(),
+            "Expected successful connection, got error: {result:?}"
+        );
+
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
     #[test]
     fn uuid_csharp_legacy() {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);

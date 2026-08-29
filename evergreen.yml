@@ -1424,7 +1424,7 @@ functions:
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
-  "run ubuntu mongosqltranslate integration tests":
+  "run ubuntu direct cluster integration tests":
     - command: shell.exec
       type: test
       params:
@@ -1432,7 +1432,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo test mongosqltranslate_tests -- --nocapture
+          cargo test direct_cluster_tests -- --nocapture
 
   "run ubuntu cluster type integration tests":
     - command: shell.exec
@@ -1939,7 +1939,7 @@ tasks:
         variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "run ubuntu cluster type integration tests"
         variants: [ubuntu2204, ubuntu2204-arm64]
-      - func: "run ubuntu mongosqltranslate integration tests"
+      - func: "run ubuntu direct cluster integration tests"
         variants: [ubuntu2204, ubuntu2204-arm64]
       # Commenting out because the following task only detects
       # memory leaks in the tests
