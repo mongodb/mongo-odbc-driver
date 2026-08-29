@@ -4,9 +4,11 @@ use serde_json::json;
 /// Builds a compact JWS carrying the given claims as its payload.
 ///
 /// The header mirrors what a real marker carries — `EdDSA` is the JOSE algorithm name for an
-/// Ed25519 signature (`Ed25519` itself is the *curve*, and belongs in a JWK's `crv`). The
-/// signature segment is the literal string "signature", which is deliberately not a valid
-/// signature: the status-only gate must never look at it.
+/// Ed25519 signature (`Ed25519` itself is the *curve*, and belongs in a JWK's `crv`).
+///
+/// The signature segment is `c2lnbmF0dXJl` — base64url for the word "signature" — which is
+/// plainly not a real Ed25519 signature (those are 64 bytes, so 86 base64url characters). The
+/// status-only gate must never look at it.
 fn token_with_claims(claims: &serde_json::Value) -> String {
     token_with_header_and_claims(br#"{"alg":"EdDSA","typ":"JWT","kid":"test-kid"}"#, claims)
 }
