@@ -51,10 +51,7 @@ mod integration {
     #[test]
     fn test_atlas_cluster_with_sql_interface_enabled_succeeds() {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
-        let conn_str = crate::common::generate_srv_style_connection_string(
-            Some("test".to_string()),
-            "cluster0".to_string(),
-        );
+        let conn_str = crate::common::generate_srv_style_connection_string("test", "cluster0");
         let result = connect_with_conn_string(env_handle, Some(conn_str), true);
 
         assert!(
@@ -70,10 +67,7 @@ mod integration {
     // asserting that the SQL interface status gate rejects the connection.
     fn expect_srv_connection_error(cluster_name: &str) -> String {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
-        let conn_str = crate::common::generate_srv_style_connection_string(
-            Some("test".to_string()),
-            cluster_name.to_string(),
-        );
+        let conn_str = crate::common::generate_srv_style_connection_string("test", cluster_name);
         let result = connect_with_conn_string(env_handle, Some(conn_str), true);
 
         let error = match result {

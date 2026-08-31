@@ -19,8 +19,8 @@ mod direct_cluster_tests {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_srv_style_connection_string(
-                Some("sample_airbnb".to_string()),
-                "cluster0".to_string(),
+                "sample_airbnb",
+                "cluster0",
             )),
         );
 
@@ -66,8 +66,8 @@ mod direct_cluster_tests {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_srv_style_connection_string(
-                Some("sample_airbnb".to_string()),
-                "cluster0".to_string(),
+                "sample_airbnb",
+                "cluster0",
             )),
         );
 
@@ -106,8 +106,8 @@ mod direct_cluster_tests {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_srv_style_connection_string(
-                Some("sample_airbnb".to_string()),
-                "cluster0".to_string(),
+                "sample_airbnb",
+                "cluster0",
             )),
         );
 
@@ -139,8 +139,7 @@ mod direct_cluster_tests {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_srv_style_connection_string(
-                Some("test".to_string()),
-                "cluster0".to_string(),
+                "test", "cluster0",
             )),
         );
 
@@ -171,8 +170,8 @@ mod direct_cluster_tests {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_srv_style_connection_string(
-                Some("sample_airbnb".to_string()),
-                "cluster0".to_string(),
+                "sample_airbnb",
+                "cluster0",
             )),
         );
 
