@@ -101,7 +101,7 @@ pub fn generate_connection_str(user: Option<String>, database: Option<String>) -
 
 #[allow(dead_code)]
 /// generate a "mongodb+srv" connection string based on the specified environmental variables.
-pub fn generate_srv_style_connection_string(db: Option<String>) -> String {
+pub fn generate_srv_style_connection_string(db: Option<String>, cluster_name: String) -> String {
     // The driver used is the same as the one used for ADF
     let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
 
@@ -116,7 +116,8 @@ pub fn generate_srv_style_connection_string(db: Option<String>) -> String {
     let username = env::var("SRV_TEST_USER").expect("SRV_TEST_USER is not set");
     let password = env::var("SRV_TEST_PWD").expect("SRV_TEST_PWD is not set");
 
-    let mongodb_uri = format!("mongodb+srv://{username}:{password}@{host}/?authSource={auth_db}");
+    let mongodb_uri =
+        format!("mongodb+srv://{username}:{password}@{cluster_name}.{host}/?authSource={auth_db}");
 
     format!("DRIVER={driver};DATABASE={db};URI={mongodb_uri}")
 }

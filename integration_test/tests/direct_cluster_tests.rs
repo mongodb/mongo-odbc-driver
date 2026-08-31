@@ -18,9 +18,10 @@ mod direct_cluster_tests {
     ) {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
-                "sample_airbnb".to_string(),
-            ))),
+            Some(crate::common::generate_srv_style_connection_string(
+                Some("sample_airbnb".to_string()),
+                "cluster0".to_string(),
+            )),
         );
 
         unsafe {
@@ -64,9 +65,10 @@ mod direct_cluster_tests {
     fn test_sql_execute_direct_with_valid_query_and_valid_schemas_created_in_direct_cluster_mode() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
-                "sample_airbnb".to_string(),
-            ))),
+            Some(crate::common::generate_srv_style_connection_string(
+                Some("sample_airbnb".to_string()),
+                "cluster0".to_string(),
+            )),
         );
 
         unsafe {
@@ -103,9 +105,10 @@ mod direct_cluster_tests {
     fn test_invalid_query_with_valid_schemas_created_in_direct_cluster_mode() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
-                "sample_airbnb".to_string(),
-            ))),
+            Some(crate::common::generate_srv_style_connection_string(
+                Some("sample_airbnb".to_string()),
+                "cluster0".to_string(),
+            )),
         );
 
         unsafe {
@@ -135,9 +138,10 @@ mod direct_cluster_tests {
     fn test_valid_query_with_no_schemas_created_in_direct_cluster_mode() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
-                "test".to_string(),
-            ))),
+            Some(crate::common::generate_srv_style_connection_string(
+                Some("test".to_string()),
+                "cluster0".to_string(),
+            )),
         );
 
         unsafe {
@@ -166,9 +170,10 @@ mod direct_cluster_tests {
     fn test_sql_columnsw_with_valid_schemas_created_in_direct_cluster_mode() {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
-            Some(crate::common::generate_srv_style_connection_string(Some(
-                "sample_airbnb".to_string(),
-            ))),
+            Some(crate::common::generate_srv_style_connection_string(
+                Some("sample_airbnb".to_string()),
+                "cluster0".to_string(),
+            )),
         );
 
         unsafe {

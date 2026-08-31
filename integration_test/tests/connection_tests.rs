@@ -46,12 +46,15 @@ mod integration {
 
     // Connects to a real Atlas cluster that has the SQL interface enabled, so the status marker is
     // present and reports `enabled: true`. This exercises the SQL interface status gate against a
-    // live marker rather than a fixture.
+    // live marker rather than a fixture. It doubles as coverage that SRV style URI connection
+    // strings connect successfully.
     #[test]
     fn test_atlas_cluster_with_sql_interface_enabled_succeeds() {
         let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
-        let conn_str =
-            crate::common::generate_srv_style_connection_string(Some("test".to_string()));
+        let conn_str = crate::common::generate_srv_style_connection_string(
+            Some("test".to_string()),
+            "cluster0".to_string(),
+        );
         let result = connect_with_conn_string(env_handle, Some(conn_str), true);
 
         assert!(
@@ -60,6 +63,70 @@ mod integration {
         );
 
         let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    // Attempts a connection to the named Atlas cluster and returns the diagnostics text from the
+    // failure. Panics if the connection unexpectedly succeeds, since every caller here is
+    // asserting that the SQL interface status gate rejects the connection.
+    fn expect_srv_connection_error(cluster_name: &str) -> String {
+        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
+        let conn_str = crate::common::generate_srv_style_connection_string(
+            Some("test".to_string()),
+            cluster_name.to_string(),
+        );
+        let result = connect_with_conn_string(env_handle, Some(conn_str), true);
+
+        let error = match result {
+            Ok(_) => {
+                panic!("Expected the connection to {cluster_name} to be rejected, but it succeeded")
+            }
+            Err(e) => e.to_string(),
+        };
+
+        let _ = unsafe { Box::from_raw(env_handle) };
+
+        error
+    }
+
+    // Connects to a real Atlas cluster whose marker is present but reports `enabled: false`, i.e.
+    // the SQL interface was enabled at some point and has since been turned off. The gate must
+    // reject this with the "disabled" message rather than the generic "unable to determine" one,
+    // since the user has a concrete action to take in Atlas.
+    #[test]
+    fn test_atlas_cluster_with_sql_interface_disabled_fails() {
+        let error = expect_srv_connection_error("cluster1");
+
+        assert!(
+            error.contains("SQL Interface is disabled for this cluster"),
+            "Expected the SQL interface disabled error; actual error message: {error}"
+        );
+    }
+
+    // Connects to a real Atlas cluster that has never had the SQL interface enabled, so no status
+    // marker was ever written. A missing marker is indistinguishable from a marker we cannot read,
+    // so the gate fails closed with the "unable to determine" message.
+    #[test]
+    fn test_atlas_cluster_with_sql_interface_never_enabled_fails() {
+        let error = expect_srv_connection_error("cluster2");
+
+        assert!(
+            error.contains("Unable to determine SQL Interface status for this cluster"),
+            "Expected the SQL interface unavailable error; actual error message: {error}"
+        );
+    }
+
+    // Connects to a free tier cluster, which cannot have the SQL interface enabled and therefore
+    // has no status marker. From the client's point of view this is the same rejection as a
+    // dedicated cluster that was never enabled; the test exists to confirm that a non dedicated
+    // host does not accidentally take the "gate not applicable" path and get let through.
+    #[test]
+    fn test_non_dedicated_atlas_cluster_fails() {
+        let error = expect_srv_connection_error("testfree");
+
+        assert!(
+            error.contains("Unable to determine SQL Interface status for this cluster"),
+            "Expected the SQL interface unavailable error; actual error message: {error}"
+        );
     }
 
     #[test]
