@@ -62,24 +62,33 @@ mod integration {
         let _ = unsafe { Box::from_raw(env_handle) };
     }
 
-    // Attempts a connection to the named Atlas cluster and returns the diagnostics text from the
-    // failure. Panics if the connection unexpectedly succeeds, since every caller here is
-    // asserting that the SQL interface status gate rejects the connection.
-    fn expect_srv_connection_error(cluster_name: &str) -> String {
-        let env_handle = allocate_env(AttrOdbcVersion::SQL_OV_ODBC3);
+    // Attempts a connection to the named Atlas cluster and returns the driver's error message.
+    // Panics if the connection unexpectedly succeeds, since every caller here is asserting that
+    // the SQL interface status gate rejects the connection.
+    //
+    // This goes through `atlas_sql_test_connection` rather than SQLDriverConnectW because the
+    // Windows Driver Manager replaces the driver's diagnostic records on a failed connection with
+    // its own, leaving the gate's message unavailable to the test. Calling the driver directly
+    // yields the same message on every platform.
+    fn expect_atlas_connection_rejected(cluster_name: &str) -> String {
         let conn_str = crate::common::generate_srv_style_connection_string("test", cluster_name);
-        let result = connect_with_conn_string(env_handle, Some(conn_str), true);
-
-        let error = match result {
-            Ok(_) => {
-                panic!("Expected the connection to {cluster_name} to be rejected, but it succeeded")
-            }
-            Err(e) => e.to_string(),
+        let mut buffer = [0; 1024];
+        let mut buffer_len = 0;
+        let connected = unsafe {
+            atlas_sql_test_connection(
+                to_widechar_ptr(&conn_str).0 as *const cstr::WideChar,
+                buffer.as_mut_ptr(),
+                buffer.len(),
+                &mut buffer_len,
+            )
         };
 
-        let _ = unsafe { Box::from_raw(env_handle) };
+        assert!(
+            !connected,
+            "Expected the connection to {cluster_name} to be rejected, but it succeeded"
+        );
 
-        error
+        unsafe { input_text_to_string_w(buffer.as_ptr(), buffer_len as isize) }
     }
 
     // Connects to a real Atlas cluster whose marker is present but reports `enabled: false`, i.e.
@@ -88,7 +97,7 @@ mod integration {
     // since the user has a concrete action to take in Atlas.
     #[test]
     fn test_atlas_cluster_with_sql_interface_disabled_fails() {
-        let error = expect_srv_connection_error("cluster1");
+        let error = expect_atlas_connection_rejected("cluster1");
 
         assert!(
             error.contains("SQL Interface is disabled for this cluster"),
@@ -101,7 +110,7 @@ mod integration {
     // so the gate fails closed with the "unable to determine" message.
     #[test]
     fn test_atlas_cluster_with_sql_interface_never_enabled_fails() {
-        let error = expect_srv_connection_error("cluster2");
+        let error = expect_atlas_connection_rejected("cluster2");
 
         assert!(
             error.contains("Unable to determine SQL Interface status for this cluster"),
@@ -115,7 +124,7 @@ mod integration {
     // host does not accidentally take the "gate not applicable" path and get let through.
     #[test]
     fn test_non_dedicated_atlas_cluster_fails() {
-        let error = expect_srv_connection_error("testfree");
+        let error = expect_atlas_connection_rejected("testfree");
 
         assert!(
             error.contains("Unable to determine SQL Interface status for this cluster"),
