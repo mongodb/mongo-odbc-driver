@@ -1,7 +1,7 @@
 mod common;
 
-#[cfg(feature = "cluster_type_tests")]
-mod cluster_type {
+#[cfg(feature = "on_prem_cluster_type_tests")]
+mod on_prem_cluster_type {
     use crate::common::{allocate_env, connect_with_conn_string};
     use definitions::AttrOdbcVersion;
     use std::panic;

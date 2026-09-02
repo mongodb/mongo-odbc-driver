@@ -45,6 +45,7 @@ rfc8252_http_server = { path = "../rfc8252_http_server" }
 once_cell = { workspace = true }
 serde_json = { workspace = true }
 rand = "0.10"
+data-encoding = "2.11.1"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0", features = [

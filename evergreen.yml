@@ -10,6 +10,10 @@ stepback: true
 # Actual testing tasks are marked with `type: test`
 command_type: system
 
+# Do not create patches for changes that only modify the following file types
+ignore:
+  - "*.md"
+
 # Protect ourselves against rogue test case, or curl gone wild, that runs forever
 # 12 minutes is the longest we'll ever run
 exec_timeout_secs: 3600 # 12 minutes is the longest we'll ever run
@@ -1420,7 +1424,7 @@ functions:
           $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
           exit $EXITCODE
 
-  "run ubuntu mongosqltranslate integration tests":
+  "run ubuntu direct cluster integration tests":
     - command: shell.exec
       type: test
       params:
@@ -1428,8 +1432,7 @@ functions:
         working_dir: mongosql-odbc-driver
         script: |
           ${prepare_shell}
-          cargo build --release
-          cargo test mongosqltranslate_tests -- --nocapture
+          cargo test direct_cluster_tests -- --nocapture
 
   "run ubuntu cluster type integration tests":
     - command: shell.exec
@@ -1449,11 +1452,11 @@ functions:
           ./resources/start_local_mdb.sh $mdb_version_com $mdb_version_ent $ARCH
 
           # Enterprise test
-          cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
+          cargo test --features on_prem_cluster_type_tests -- on_prem_cluster_type::test_determine_cluster_type_enterprise_succeeds --nocapture
           ENTERPRISE_MSQL_EXITCODE=$?
 
           # Community test
-          cargo test --features cluster_type_tests -- cluster_type::test_determine_cluster_type_community_fails --nocapture
+          cargo test --features on_prem_cluster_type_tests -- on_prem_cluster_type::test_determine_cluster_type_community_fails --nocapture
           COMMUNITY_MSQL_EXITCODE=$?
 
           # Stop MongoDB instances
@@ -1903,7 +1906,7 @@ tasks:
         variants: [ubuntu2204, ubuntu2204-arm64]
       - func: "run ubuntu cluster type integration tests"
         variants: [ubuntu2204, ubuntu2204-arm64]
-      - func: "run ubuntu mongosqltranslate integration tests"
+      - func: "run ubuntu direct cluster integration tests"
         variants: [ubuntu2204, ubuntu2204-arm64]
       # Commenting out because the following task only detects
       # memory leaks in the tests

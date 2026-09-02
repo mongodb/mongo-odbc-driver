@@ -90,7 +90,6 @@ prepare_shell: |
   export MDB_TEST_LOCAL_PORT="${mdb_test_local_port}"
   export ADF_TEST_LOCAL_DB="${adf_test_local_db}"
   export ADF_TEST_URI="${adf_test_uri}"
-  export SRV_TEST_DB="${srv_test_db}"
   export SRV_TEST_AUTH_DB="${srv_test_auth_db}"
   export SRV_TEST_HOST="${srv_test_host}"
   export SRV_TEST_USER="${srv_test_user}"

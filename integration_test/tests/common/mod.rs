@@ -101,22 +101,17 @@ pub fn generate_connection_str(user: Option<String>, database: Option<String>) -
 
 #[allow(dead_code)]
 /// generate a "mongodb+srv" connection string based on the specified environmental variables.
-pub fn generate_srv_style_connection_string(db: Option<String>) -> String {
+pub fn generate_srv_style_connection_string(db: &str, cluster_name: &str) -> String {
     // The driver used is the same as the one used for ADF
     let driver = env::var("ADF_TEST_LOCAL_DRIVER").unwrap_or_else(|_e| DRIVER_NAME.to_string());
-
-    let db = if let Some(db) = db {
-        db
-    } else {
-        env::var("SRV_TEST_DB").expect("SRV_TEST_DB is not set")
-    };
 
     let auth_db = env::var("SRV_TEST_AUTH_DB").expect("SRV_TEST_AUTH_DB is not set");
     let host = env::var("SRV_TEST_HOST").expect("SRV_TEST_HOST is not set");
     let username = env::var("SRV_TEST_USER").expect("SRV_TEST_USER is not set");
     let password = env::var("SRV_TEST_PWD").expect("SRV_TEST_PWD is not set");
 
-    let mongodb_uri = format!("mongodb+srv://{username}:{password}@{host}/?authSource={auth_db}");
+    let mongodb_uri =
+        format!("mongodb+srv://{username}:{password}@{cluster_name}.{host}/?authSource={auth_db}");
 
     format!("DRIVER={driver};DATABASE={db};URI={mongodb_uri}")
 }
@@ -400,7 +395,7 @@ pub fn fetch_and_get_data(
     expected_fetch_count: Option<SmallInt>,
     expected_sql_returns: Vec<SqlReturn>,
     target_types: Vec<CDataType>,
-    mongosqltranslate_test_exp_vals: Option<Vec<Vec<Value>>>,
+    direct_cluster_test_exp_vals: Option<Vec<Vec<Value>>>,
 ) {
     let output_buffer: *mut std::ffi::c_void =
         Box::into_raw(Box::new([0u8; BUFFER_LENGTH as usize])) as *mut _;
@@ -434,7 +429,7 @@ pub fn fetch_and_get_data(
                             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                         );
 
-                        if let Some(ref values) = mongosqltranslate_test_exp_vals {
+                        if let Some(ref values) = direct_cluster_test_exp_vals {
                             let actual_val = match target_types[col_num] {
                                 CDataType::SQL_C_SLONG => json!(*(output_buffer as *mut i32)),
                                 CDataType::SQL_C_WCHAR => {
@@ -489,7 +484,7 @@ pub fn fetch_and_get_data(
 pub fn get_column_attributes(
     stmt: Handle,
     expected_col_count: SmallInt,
-    mongosqltranslate_test_exp_vals: Option<Vec<Vec<Value>>>,
+    direct_cluster_test_exp_vals: Option<Vec<Vec<Value>>>,
 ) {
     let str_len_ptr = &mut 0;
     let character_attrib_ptr: *mut std::ffi::c_void =
@@ -531,7 +526,7 @@ pub fn get_column_attributes(
                     get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
                 );
 
-                if let Some(ref values) = mongosqltranslate_test_exp_vals {
+                if let Some(ref values) = direct_cluster_test_exp_vals {
                     let actual_val = match values[col_num as usize][i] {
                         Value::String(_) => json!(cstr::from_widechar_ref_lossy(
                             &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH as usize])
