@@ -22,7 +22,7 @@ const MARKER_COLLECTION: &str = "__sql_status";
 const MARKER_ID: &str = "entitlement";
 
 static ATLAS_DEDICATED_HOST: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb\.net(?::\d+)?$")
+    regex::Regex::new(r"^([^.]+)-shard-\d+.*\.mongodb(?:gov)?\.net(?::\d+)?$")
         .expect("the Atlas dedicated host pattern should be a valid regex")
 });
 
@@ -41,6 +41,9 @@ struct MarkerClaims {
 /// Extracts the Atlas dedicated cluster name from a `hello.me` value, if the host is an Atlas
 /// dedicated cluster. Returns `None` for any other host (on-prem, self-managed, ADF, …), which
 /// signals that the status gate does not apply.
+///
+/// Atlas dedicated clusters live on the `.mongodb.net` domain in commercial Atlas and on
+/// `.mongodbgov.net` in Atlas for Government; both are gated.
 ///
 /// The name is lowercased to match the producer's convention for the marker's `sub` claim. Atlas
 /// hostnames are already lowercase; this is defensive normalization.
