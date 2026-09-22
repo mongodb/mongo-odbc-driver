@@ -200,7 +200,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "agg-ast"
 version = "0.0.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#27baefa1f1eb4ba3462114313245552bc880df87"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#c96e39ebea2ed648d6185715b8fbdfb2d8562c34"
 dependencies = [
  "bson",
  "linked-hash-map",
@@ -747,7 +747,7 @@ dependencies = [
  "bitflags 2.11.1",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -1443,7 +1443,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.2",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1611,7 +1611,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2206,7 +2206,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.61.2",
+ "windows-core 0.62.2",
 ]
 
 [[package]]
@@ -2738,7 +2738,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 name = "macos_postinstall"
 version = "0.0.0"
 dependencies = [
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "lazy_static",
  "rust-ini",
 ]
@@ -2876,7 +2876,7 @@ dependencies = [
  "definitions",
  "fancy-regex",
  "futures",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "lazy_static",
  "log",
  "mongodb",
@@ -3011,7 +3011,7 @@ dependencies = [
 [[package]]
 name = "mongosql"
 version = "0.0.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#27baefa1f1eb4ba3462114313245552bc880df87"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#c96e39ebea2ed648d6185715b8fbdfb2d8562c34"
 dependencies = [
  "agg-ast",
  "base64 0.22.1",
@@ -3020,7 +3020,7 @@ dependencies = [
  "derive-new",
  "edit-distance",
  "enum-iterator",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "lalrpop",
  "lalrpop-util",
  "lazy_static",
@@ -3041,7 +3041,7 @@ dependencies = [
 [[package]]
 name = "mongosql-datastructures"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#27baefa1f1eb4ba3462114313245552bc880df87"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#c96e39ebea2ed648d6185715b8fbdfb2d8562c34"
 dependencies = [
  "linked-hash-map",
  "thiserror 2.0.18",
@@ -3999,7 +3999,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4409,7 +4409,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4444,7 +4444,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "psm",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5020,7 +5020,7 @@ checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 [[package]]
 name = "usererrordisplay-impl"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#27baefa1f1eb4ba3462114313245552bc880df87"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#c96e39ebea2ed648d6185715b8fbdfb2d8562c34"
 dependencies = [
  "quote",
  "syn 2.0.117",
@@ -5064,7 +5064,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "visitgen"
 version = "0.1.0"
-source = "git+https://github.com/mongodb/mongosql.git?branch=main#27baefa1f1eb4ba3462114313245552bc880df87"
+source = "git+https://github.com/mongodb/mongosql.git?branch=main#c96e39ebea2ed648d6185715b8fbdfb2d8562c34"
 dependencies = [
  "lazy_static",
  "proc-macro2",
@@ -5298,7 +5298,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
