@@ -85,10 +85,12 @@ Check that the released files, library and symbols, are available at the followi
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/atsql.pdb`
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/windows/${release_version}/release/mongoodbc-${release_version}.msi`
 - Ubuntu 2204
-  - Release build
+  - Release build (x86_64)
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}/release/libatsql.so`
     - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}/release/mongoodbc.tar.gz`
-
+  - Release build (aarch64)
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}-arm64/release/libatsql.so`
+    - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongosql-odbc-driver/ubuntu2204/${release_version}-arm64/release/mongoodbc-${release_version}.tar.gz`
 - Documentation
   - `https://translators-connectors-releases.s3.us-east-1.amazonaws.com/mongodb-odbc-driver/docs/MongoDB_ODBC_Guide.pdf`
 
@@ -107,4 +109,4 @@ Move the JIRA ticket tracking this release to the "Closed" state.
 #### Ensure next release ticket and fixVersion created
 
 Ensure that a JIRA ticket tracking the next release has been created and is assigned the appropriate fixVersion. The fixVersion should
-contain the `mongosql-rs` version. 
+contain the `mongosql` version.
