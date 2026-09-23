@@ -11,7 +11,6 @@ use definitions::{
     SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW,
     SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
-use regex::Regex;
 use serde_json::{json, Value};
 use std::ptr::null_mut;
 use std::{env, slice};
