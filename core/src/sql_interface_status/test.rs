@@ -262,6 +262,15 @@ fn derives_cluster_name_without_port() {
 }
 
 #[test]
+fn derives_cluster_name_from_gov_host() {
+    // Atlas for Government clusters live on the `.mongodbgov.net` domain and must be gated too.
+    assert_eq!(
+        atlas_dedicated_cluster_name("cluster0-shard-00-00.abc123.mongodbgov.net:27017"),
+        Some("cluster0".to_string())
+    );
+}
+
+#[test]
 fn derive_cluster_name_lowercases_to_match_producer_convention() {
     // Atlas hosts are lowercase, but normalize defensively so a mixed-case host still matches
     // the producer's lowercase `sub`.
