@@ -11,6 +11,7 @@ use definitions::{
     SQLDriverConnectW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLGetData, SQLGetDiagRecW,
     SQLMoreResults, SQLNumResultCols, SQLSetEnvAttr, SmallInt, SqlReturn, USmallInt, SQL_NTS,
 };
+use regex::Regex;
 use serde_json::{json, Value};
 use std::ptr::null_mut;
 use std::{env, slice};
@@ -260,9 +261,18 @@ pub fn connect_with_conn_string(
             SqlReturn::SUCCESS => (),
             sql_return => return Err(Error::HandleAllocation(sql_return_to_string(sql_return))),
         }
-        let in_connection_string =
-            in_connection_string.unwrap_or_else(generate_default_connection_str);
-        println!("Connecting with connection string: {in_connection_string}");
+        let (in_connection_string, in_connection_redacted) = {
+            let conn = in_connection_string.unwrap_or_else(generate_default_connection_str);
+
+            // Redact the password, if supplied, so that it doesn't get leaked when
+            // testing
+            let redaction = Regex::new("PWD=[^;]+;").expect("valid password replacement regex");
+            let redacted = redaction.replace_all(&conn, "PWD=<REDACTED>;").to_string();
+
+            (conn, redacted)
+        };
+
+        println!("Connecting with connection string: {in_connection_redacted}");
         let mut in_connection_string_encoded = cstr::to_widechar_vec(&in_connection_string);
         in_connection_string_encoded.push(0);
         let mut len_buffer: i16 = 0;

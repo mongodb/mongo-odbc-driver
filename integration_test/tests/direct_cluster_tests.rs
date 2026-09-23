@@ -14,6 +14,54 @@ mod direct_cluster_tests {
     use std::ptr;
 
     #[test]
+    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_atlas_infinite(
+    ) {
+        let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
+            AttrOdbcVersion::SQL_OV_ODBC3,
+            Some(crate::common::generate_srv_style_connection_string(
+                "sample_airbnb",
+                "infinite",
+            )),
+        );
+
+        unsafe {
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews ORDER BY _id LIMIT 3");
+            query.push(0);
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLPrepareW(stmt as HStmt, query.as_ptr(), SQL_NTS),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
+            );
+
+            let expected_column_metadata_values = create_expected_column_metadata();
+
+            get_column_attributes(stmt as Handle, 5, Some(expected_column_metadata_values));
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLExecute(stmt as HStmt),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt as Handle)
+            );
+
+            let expected_column_values = create_expected_column_values();
+
+            fetch_and_get_data(
+                stmt as Handle,
+                Some(3),
+                vec![SqlReturn::SUCCESS; 5],
+                vec![CDataType::SQL_C_WCHAR; 5],
+                Some(expected_column_values),
+            );
+
+            disconnect_and_close_handles(dbc, stmt);
+        }
+        let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    #[test]
     fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_direct_cluster_mode(
     ) {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
