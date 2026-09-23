@@ -13,14 +13,14 @@ mod direct_cluster_tests {
     use serde_json::{Number, Value};
     use std::ptr;
 
-    #[test]
-    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_direct_cluster_mode(
-    ) {
+    /// Helper method to run a simple test against the airbnb sample dataset at
+    /// the specified cluster.
+    fn run_prepare_execute_airbnb_test(cluster_name: &str) {
         let (env_handle, dbc, stmt) = default_setup_connect_and_alloc_stmt(
             AttrOdbcVersion::SQL_OV_ODBC3,
             Some(crate::common::generate_srv_style_connection_string(
                 "sample_airbnb",
-                "cluster0",
+                cluster_name,
             )),
         );
 
@@ -59,6 +59,18 @@ mod direct_cluster_tests {
             disconnect_and_close_handles(dbc, stmt);
         }
         let _ = unsafe { Box::from_raw(env_handle) };
+    }
+
+    #[test]
+    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_atlas_infinite(
+    ) {
+        run_prepare_execute_airbnb_test("infinite");
+    }
+
+    #[test]
+    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_direct_cluster_mode(
+    ) {
+        run_prepare_execute_airbnb_test("cluster0");
     }
 
     #[test]
