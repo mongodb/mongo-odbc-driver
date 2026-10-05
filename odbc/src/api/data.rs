@@ -750,6 +750,29 @@ fn format_date_helper(date: NaiveDate) -> Result<Date> {
     })
 }
 
+///
+/// bound_col_element_size returns the distance in bytes between consecutive elements of a
+/// column-wise bound array. Per the ODBC spec, BufferLength is ignored for fixed-length C types,
+/// so their element size is the size of the C type. This must stay in sync with the fixed-length
+/// types written by [`format_bson_data`].
+///
+pub fn bound_col_element_size(target_type: CDataType, buffer_length: Len) -> usize {
+    match target_type {
+        CDataType::SQL_C_BIT => size_of::<u8>(),
+        CDataType::SQL_C_DOUBLE => size_of::<f64>(),
+        CDataType::SQL_C_FLOAT => size_of::<f32>(),
+        CDataType::SQL_C_SBIGINT => size_of::<i64>(),
+        CDataType::SQL_C_UBIGINT => size_of::<u64>(),
+        CDataType::SQL_C_SLONG | CDataType::SQL_C_LONG => size_of::<i32>(),
+        CDataType::SQL_C_ULONG => size_of::<u32>(),
+        CDataType::SQL_C_TIMESTAMP | CDataType::SQL_C_TYPE_TIMESTAMP => size_of::<Timestamp>(),
+        CDataType::SQL_C_TIME | CDataType::SQL_C_TYPE_TIME => size_of::<Time>(),
+        CDataType::SQL_C_DATE | CDataType::SQL_C_TYPE_DATE => size_of::<Date>(),
+        // Variable-length types, including SQL_C_GUID which is currently written as variable-length data.
+        _ => usize::try_from(buffer_length).unwrap_or(0),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub unsafe fn format_cached_data(
     mongo_handle: &mut MongoHandle,

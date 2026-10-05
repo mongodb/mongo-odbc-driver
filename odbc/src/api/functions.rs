@@ -1623,20 +1623,35 @@ unsafe fn sql_fetch_bound_buffers(
     let mut encountered_success_with_info_getting_data = false;
 
     for (col, bound_col_info) in bound_cols.iter() {
-        // Set target_buffer to the correct buffer in the array of buffers
-        let target_buffer = (bound_col_info.target_buffer as ULen
-            + (index * (bound_col_info.buffer_length as ULen)))
-            as Pointer;
+        // this conversion is checked in SQLBindCol, so it is guaranteed to work here.
+        let target_type: CDataType = FromPrimitive::from_i16(bound_col_info.target_type).unwrap();
+
+        // Set target_buffer to the correct buffer in the array of buffers. Only column-wise binding
+        // is supported, so the stride is the element size of the bound type, not a row size.
+        let element_size =
+            crate::api::data::bound_col_element_size(target_type, bound_col_info.buffer_length);
+        let Some(target_buffer) = index
+            .checked_mul(element_size)
+            .and_then(|offset| (bound_col_info.target_buffer as ULen).checked_add(offset))
+        else {
+            add_diag_with_function!(
+                mongo_handle_for_sql_get_data_helper,
+                ODBCError::General("bound column buffer address overflow"),
+                function_name.to_string()
+            );
+            encountered_error_getting_data = true;
+            continue;
+        };
 
         // Set length/indicator buffer to the correct buffer in the array of buffers
         let len_ind_buffer =
-            (bound_col_info.length_or_indicator as ULen + (index * size_of::<isize>())) as *mut Len;
+            (bound_col_info.length_or_indicator as ULen + (index * size_of::<Len>())) as *mut Len;
 
         let sql_return = sql_get_data_helper(
             mongo_handle_for_sql_get_data_helper,
             *col,
-            FromPrimitive::from_i16(bound_col_info.target_type).unwrap(), // this conversion is checked in SQLBindCol, so it is guaranteed to work here.
-            target_buffer,
+            target_type,
+            target_buffer as Pointer,
             bound_col_info.buffer_length,
             len_ind_buffer,
             function_name,
