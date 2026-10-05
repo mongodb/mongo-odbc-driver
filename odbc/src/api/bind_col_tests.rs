@@ -6,6 +6,7 @@
 
 mod unit {
     use crate::{
+        errors::ODBCError,
         handles::definitions::{
             BoundColInfo, Connection, ConnectionState, Env, EnvState, MongoHandle, Statement,
             StatementState,
@@ -359,6 +360,56 @@ mod unit {
 
             // free buffer
             let _ = Box::from_raw(buffer as *mut WChar);
+        }
+    }
+
+    #[test]
+    fn test_negative_buffer_length() {
+        // Set up MongoHandle
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+
+        unsafe {
+            let s = (*stmt).as_statement().unwrap();
+            *s.mongo_statement.write().unwrap() =
+                Some(Box::new(create_mongo_query_for_bind_col_tests()));
+
+            let mut buffer = [0u8; 4];
+            let mut indicator: Len = 0;
+
+            // Assert that SQLBindCol returns HY090 and does not bind the column.
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLBindCol(
+                    stmt as *mut _,
+                    1,
+                    CDataType::SQL_C_CHAR as SmallInt,
+                    buffer.as_mut_ptr() as *mut _,
+                    -1,
+                    &mut indicator,
+                )
+            );
+            assert!(matches!(
+                s.errors.read().unwrap().last(),
+                Some(ODBCError::InvalidStringOrBufferLength(-1))
+            ));
+            assert!(s.bound_cols.read().unwrap().is_none());
+
+            // Unbinding ignores buffer_length.
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLBindCol(
+                    stmt as *mut _,
+                    1,
+                    CDataType::SQL_C_CHAR as SmallInt,
+                    null_mut(),
+                    -1,
+                    null_mut(),
+                )
+            );
         }
     }
 

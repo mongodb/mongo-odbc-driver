@@ -413,6 +413,16 @@ pub unsafe extern "C" fn SQLBindCol(
                 return SqlReturn::ERROR;
             }
 
+            // make sure that buffer_length is not negative, since it is used to compute array strides.
+            if !target_value.is_null() && buffer_length < 0 {
+                let mongo_handle = try_mongo_handle!(hstmt);
+                add_diag_info!(
+                    mongo_handle,
+                    ODBCError::InvalidStringOrBufferLength(buffer_length)
+                );
+                return SqlReturn::ERROR;
+            }
+
             if stmt.bound_cols.read().unwrap().is_none() {
                 *stmt.bound_cols.write().unwrap() = Some(HashMap::new());
             }
