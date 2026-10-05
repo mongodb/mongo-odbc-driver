@@ -181,4 +181,90 @@ mod integration {
             }
         }
     }
+
+    /// BufferLength is ignored for fixed-length C types, so binding them with a
+    /// non-canonical BufferLength must not change where rowset elements are written.
+    #[test]
+    fn test_bind_fixed_width_cols_with_noncanonical_buffer_length() {
+        let (_, _, stmt_handle) =
+            default_setup_connect_and_alloc_stmt(AttrOdbcVersion::SQL_OV_ODBC3, None);
+
+        unsafe {
+            const ROW_ARRAY_SIZE: usize = 2;
+            const BUFFER_LENGTH: Len = 64;
+            const CANARY: u8 = 0xAB;
+            const CANARY_LEN: usize = 256;
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLSetStmtAttrW(
+                    stmt_handle,
+                    StatementAttribute::SQL_ATTR_ROW_ARRAY_SIZE as Integer,
+                    ROW_ARRAY_SIZE as Pointer,
+                    0
+                ),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+            );
+
+            exec_direct_default_query(stmt_handle);
+
+            const ID_DATA_LEN: usize = ROW_ARRAY_SIZE * ID_TRANSFER_OCTET_LEN;
+            let id_buffer = &mut [CANARY; ID_DATA_LEN + CANARY_LEN];
+            let id_indicator = &mut [0isize; ROW_ARRAY_SIZE];
+
+            const A_DATA_LEN: usize = ROW_ARRAY_SIZE * A_TRANSFER_OCTET_LEN;
+            let a_buffer = &mut [CANARY; A_DATA_LEN + CANARY_LEN];
+            let a_indicator = &mut [0isize; ROW_ARRAY_SIZE];
+
+            bind_cols(
+                stmt_handle,
+                vec![
+                    (
+                        CDataType::SQL_C_SLONG,
+                        id_buffer.as_mut_ptr() as Pointer,
+                        BUFFER_LENGTH,
+                        id_indicator as *mut Len,
+                    ),
+                    (
+                        CDataType::SQL_C_SBIGINT,
+                        a_buffer.as_mut_ptr() as Pointer,
+                        BUFFER_LENGTH,
+                        a_indicator as *mut Len,
+                    ),
+                ],
+            );
+
+            // Data:
+            // - {_id: 0, a: {$numberLong: "42"}}
+            // - {_id: 1, a: {$numberLong: "13"}}
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLFetchScroll(stmt_handle, FetchOrientation::SQL_FETCH_NEXT as SmallInt, 0),
+                "{}",
+                get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
+            );
+
+            assert_eq!(0, *(id_buffer.as_ptr() as *const i32));
+            assert_eq!(
+                1,
+                *(id_buffer.as_ptr().add(ID_TRANSFER_OCTET_LEN) as *const i32)
+            );
+            assert!(id_buffer[ID_DATA_LEN..].iter().all(|b| *b == CANARY));
+            assert_eq!(
+                [ID_TRANSFER_OCTET_LEN as isize; ROW_ARRAY_SIZE],
+                *id_indicator
+            );
+
+            assert_eq!(42, *(a_buffer.as_ptr() as *const i64));
+            assert_eq!(
+                13,
+                *(a_buffer.as_ptr().add(A_TRANSFER_OCTET_LEN) as *const i64)
+            );
+            assert!(a_buffer[A_DATA_LEN..].iter().all(|b| *b == CANARY));
+            assert_eq!(
+                [A_TRANSFER_OCTET_LEN as isize; ROW_ARRAY_SIZE],
+                *a_indicator
+            );
+        }
+    }
 }
