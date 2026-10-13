@@ -1116,10 +1116,10 @@ pub unsafe extern "C" fn SQLDisconnect(connection_handle: HDbc) -> SqlReturn {
                 // SQLFreeHandle(SQL_HANDLE_STMT) on the same handle.
                 if let Ok(mut stmts) = conn.statements.write() {
                     stmts.iter().for_each(|stmt| {
-                        if let Some(stmt) = (*stmt).as_ref() {
-                            if let Some(stmt) = stmt.as_statement() {
-                                sql_stmt_close_cursor_helper(stmt);
-                            }
+                        if let Some(stmt) = (*stmt).as_ref()
+                            && let Some(stmt) = stmt.as_statement()
+                        {
+                            sql_stmt_close_cursor_helper(stmt);
                         }
                     });
                     stmts.clear();
@@ -1155,16 +1155,16 @@ fn sql_driver_connect(conn: &Connection, odbc_uri_string: &str) -> Result<MongoC
         Logger::set_log_level(log_level);
     }
 
-    if let Some(simple) = odbc_uri.remove(&["simple_types_only"]) {
-        if simple.eq("0") {
-            *conn.type_mode.write().unwrap() = TypeMode::Standard;
-        }
+    if let Some(simple) = odbc_uri.remove(&["simple_types_only"])
+        && simple.eq("0")
+    {
+        *conn.type_mode.write().unwrap() = TypeMode::Standard;
     }
 
-    if let Some(enable_max_string_length) = odbc_uri.remove(&["enable_max_string_length"]) {
-        if enable_max_string_length.eq("1") {
-            *conn.max_string_length.write().unwrap() = Some(constants::DEFAULT_MAX_STRING_LENGTH);
-        }
+    if let Some(enable_max_string_length) = odbc_uri.remove(&["enable_max_string_length"])
+        && enable_max_string_length.eq("1")
+    {
+        *conn.max_string_length.write().unwrap() = Some(constants::DEFAULT_MAX_STRING_LENGTH);
     }
 
     let mut conn_attrs = conn.attributes.write().unwrap();
@@ -1432,7 +1432,8 @@ pub unsafe extern "C" fn SQLExecute(statement_handle: HStmt) -> SqlReturn {
 
 unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool> {
     let stmt_id = stmt.statement_id.read().unwrap().clone();
-    let mongo_statement = {
+
+    {
         if let Some(mongo_connection) = connection.mongo_connection.read().unwrap().as_ref() {
             let rowset_size = match u32::try_from(stmt.attributes.read().unwrap().row_array_size) {
                 Ok(size) => size,
@@ -1451,9 +1452,7 @@ unsafe fn sql_execute(stmt: &Statement, connection: &Connection) -> Result<bool>
         } else {
             Err(ODBCError::InvalidCursorState)
         }
-    };
-
-    mongo_statement
+    }
 }
 
 ///
@@ -3528,7 +3527,8 @@ fn sql_prepare(
         )
     };
     query = query.strip_suffix(';').unwrap_or(&query).to_string();
-    let mongo_statement = {
+
+    {
         let type_mode = *connection.type_mode.read().unwrap();
         let max_string_length = *connection.max_string_length.read().unwrap();
         let attributes = connection.attributes.read().unwrap();
@@ -3547,8 +3547,7 @@ fn sql_prepare(
         } else {
             Err(ODBCError::InvalidCursorState)
         }
-    };
-    mongo_statement
+    }
 }
 
 ///

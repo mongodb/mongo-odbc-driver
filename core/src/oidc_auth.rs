@@ -45,12 +45,12 @@ impl From<Error> for mongodb::error::Error {
 /// respective endpoint does not use the `https` scheme, carrying the offending scheme
 /// for diagnostics.
 fn validate_provider_metadata_urls(provider_metadata: &CoreProviderMetadata) -> Result<(), Error> {
-    if let Some(token_endpoint) = provider_metadata.token_endpoint() {
-        if token_endpoint.url().scheme() != "https" {
-            return Err(Error::TokenEndpointMustBeHttps(
-                token_endpoint.url().scheme().to_string(),
-            ));
-        }
+    if let Some(token_endpoint) = provider_metadata.token_endpoint()
+        && token_endpoint.url().scheme() != "https"
+    {
+        return Err(Error::TokenEndpointMustBeHttps(
+            token_endpoint.url().scheme().to_string(),
+        ));
     }
     if provider_metadata.jwks_uri().url().scheme() != "https" {
         return Err(Error::JwksUriMustBeHttps(
@@ -261,10 +261,10 @@ pub async fn do_auth_flow(params: CallbackContext) -> Result<IdpServerResponse, 
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the
     // `response_csrf` (`state`) parameter returned by the server matches `csrf_token`.
-    if let Some(state) = state {
-        if state != *csrf_token.secret() {
-            return Err(Error::CsrfMismatch);
-        }
+    if let Some(state) = state
+        && state != *csrf_token.secret()
+    {
+        return Err(Error::CsrfMismatch);
     }
 
     // Now you can exchange it for an access token and ID token.

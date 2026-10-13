@@ -78,10 +78,10 @@ impl MongoHandle {
             MongoHandle::Statement(s) => {
                 // SAFETY: we must ensure the connection is not null,
                 // otherwise this entire chain will cause unhappiness and chaos
-                if !s.connection.is_null() {
-                    if let Some(diagnostics) = s.diagnostics.read().unwrap().as_ref() {
-                        log::error!("Query diagnostics: {diagnostics:?}");
-                    }
+                if !s.connection.is_null()
+                    && let Some(diagnostics) = s.diagnostics.read().unwrap().as_ref()
+                {
+                    log::error!("Query diagnostics: {diagnostics:?}");
                 }
                 s.errors.write().unwrap().push(error);
             }
