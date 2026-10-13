@@ -5,7 +5,7 @@
 )]
 
 use crate::api::errors::ODBCError;
-use crate::{handles::definitions::*, has_odbc_3_behavior, SQLAllocHandle, SQLFreeHandle};
+use crate::{SQLAllocHandle, SQLFreeHandle, handles::definitions::*, has_odbc_3_behavior};
 use definitions::{AttrOdbcVersion, HDbc, HDesc, HEnv, HStmt, Handle, HandleType, SqlReturn};
 
 #[test]

@@ -59,30 +59,34 @@ pub fn to_widechar_vec(s: &str) -> Vec<WideChar> {
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_text_to_string_a(text: *const Char, len: isize) -> String { unsafe {
-    match len.signum() {
-        -1 => {
-            let mut dst = Vec::new();
-            let mut itr = text;
-            {
-                while *itr != 0 {
-                    dst.push(*itr);
-                    itr = itr.offset(1);
+pub unsafe fn input_text_to_string_a(text: *const Char, len: isize) -> String {
+    unsafe {
+        match len.signum() {
+            -1 => {
+                let mut dst = Vec::new();
+                let mut itr = text;
+                {
+                    while *itr != 0 {
+                        dst.push(*itr);
+                        itr = itr.offset(1);
+                    }
                 }
+                String::from_utf8_unchecked(dst)
             }
-            String::from_utf8_unchecked(dst)
+            0 => String::new(),
+            1 => {
+                let len = len as usize;
+                let mut dst = Vec::with_capacity(len);
+                dst.set_len(len);
+                copy_nonoverlapping(text, dst.as_mut_ptr(), len);
+                String::from_utf8_unchecked(dst)
+            }
+            _ => unreachable!(
+                "input_text_to_string_a: len was neither negative, zero, nor positive."
+            ),
         }
-        0 => String::new(),
-        1 => {
-            let len = len as usize;
-            let mut dst = Vec::with_capacity(len);
-            dst.set_len(len);
-            copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-            String::from_utf8_unchecked(dst)
-        }
-        _ => unreachable!("input_text_to_string_a: len was neither negative, zero, nor positive."),
     }
-}}
+}
 
 ///
 /// input_text_to_string_w converts a u16 cstring to a rust String.
@@ -92,33 +96,37 @@ pub unsafe fn input_text_to_string_a(text: *const Char, len: isize) -> String { 
 /// This converts raw C-pointers to rust Strings, which requires unsafe operations
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> String { unsafe {
-    if text.is_null() {
-        panic!("input_text_to_string_w: text pointer was null.");
-    }
-    match len.signum() {
-        -1 => {
-            let mut dst = Vec::new();
-            let mut itr = text;
-            {
-                while *itr != 0 {
-                    dst.push(*itr);
-                    itr = itr.offset(1);
+pub unsafe fn input_text_to_string_w(text: *const WideChar, len: isize) -> String {
+    unsafe {
+        if text.is_null() {
+            panic!("input_text_to_string_w: text pointer was null.");
+        }
+        match len.signum() {
+            -1 => {
+                let mut dst = Vec::new();
+                let mut itr = text;
+                {
+                    while *itr != 0 {
+                        dst.push(*itr);
+                        itr = itr.offset(1);
+                    }
                 }
+                from_widechar_vec_lossy(dst)
             }
-            from_widechar_vec_lossy(dst)
+            0 => String::new(),
+            1 => {
+                let len = len as usize;
+                let mut dst = Vec::with_capacity(len);
+                dst.set_len(len);
+                copy_nonoverlapping(text, dst.as_mut_ptr(), len);
+                from_widechar_vec_lossy(dst)
+            }
+            _ => unreachable!(
+                "input_text_to_string_w: len was neither negative, zero, nor positive."
+            ),
         }
-        0 => String::new(),
-        1 => {
-            let len = len as usize;
-            let mut dst = Vec::with_capacity(len);
-            dst.set_len(len);
-            copy_nonoverlapping(text, dst.as_mut_ptr(), len);
-            from_widechar_vec_lossy(dst)
-        }
-        _ => unreachable!("input_text_to_string_w: len was neither negative, zero, nor positive."),
     }
-}}
+}
 
 ///
 /// input_text_to_string_w_allow_null converts a u16 cstring to a rust String.
@@ -140,17 +148,19 @@ pub unsafe fn input_text_to_string_w_allow_null(
     text: *const WideChar,
     len: isize,
     as_pattern_value: bool,
-) -> String { unsafe {
-    if text.is_null() {
-        if as_pattern_value {
-            "%".to_string()
+) -> String {
+    unsafe {
+        if text.is_null() {
+            if as_pattern_value {
+                "%".to_string()
+            } else {
+                String::new()
+            }
         } else {
-            String::new()
+            input_text_to_string_w(text, len)
         }
-    } else {
-        input_text_to_string_w(text, len)
     }
-}}
+}
 
 ///
 /// parse_attribute_string_w converts a null-separated doubly null terminated *Widechar string to a Rust
@@ -162,17 +172,19 @@ pub unsafe fn input_text_to_string_w_allow_null(
 /// null terminated. Only use this method if you are certain the input string is doubly null terminated.
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn parse_attribute_string_w(text: *const WideChar) -> String { unsafe {
-    let mut dst = Vec::new();
-    let mut itr = text;
-    {
-        while *itr != 0 || *itr.offset(1) != 0 {
-            dst.push(*itr);
-            itr = itr.offset(1);
+pub unsafe fn parse_attribute_string_w(text: *const WideChar) -> String {
+    unsafe {
+        let mut dst = Vec::new();
+        let mut itr = text;
+        {
+            while *itr != 0 || *itr.offset(1) != 0 {
+                dst.push(*itr);
+                itr = itr.offset(1);
+            }
         }
+        from_widechar_vec_lossy(dst).replace(char::from(0), ";")
     }
-    from_widechar_vec_lossy(dst).replace(char::from(0), ";")
-}}
+}
 
 ///
 /// parse_attribute_string_a converts a null-separated doubly null terminated *Char string to a Rust
@@ -184,17 +196,19 @@ pub unsafe fn parse_attribute_string_w(text: *const WideChar) -> String { unsafe
 /// null terminated. Only use this method if you are certain the input string is doubly null terminated.
 ///
 #[allow(clippy::uninit_vec)]
-pub unsafe fn parse_attribute_string_a(text: *const Char) -> String { unsafe {
-    let mut dst = Vec::new();
-    let mut itr = text;
-    {
-        while *itr != 0 || *itr.offset(1) != 0 {
-            dst.push(*itr);
-            itr = itr.offset(1);
+pub unsafe fn parse_attribute_string_a(text: *const Char) -> String {
+    unsafe {
+        let mut dst = Vec::new();
+        let mut itr = text;
+        {
+            while *itr != 0 || *itr.offset(1) != 0 {
+                dst.push(*itr);
+                itr = itr.offset(1);
+            }
         }
+        String::from_utf8(dst).unwrap().replace(char::from(0), ";")
     }
-    String::from_utf8(dst).unwrap().replace(char::from(0), ";")
-}}
+}
 
 ///
 /// to_widechar_ptr converts the input string to a null terminated string encoded in UTF-16.
@@ -319,9 +333,11 @@ pub unsafe fn write_binary_slice_to_buffer(
 ///
 /// # Safety
 /// This writes to a raw c-pointer, which requires unsafe operations
-pub unsafe fn write_fixed_data<T: core::fmt::Debug>(data: &T, output_ptr: *mut c_void) { unsafe {
-    copy_nonoverlapping(data as *const _, output_ptr.cast::<T>(), 1);
-}}
+pub unsafe fn write_fixed_data<T: core::fmt::Debug>(data: &T, output_ptr: *mut c_void) {
+    unsafe {
+        copy_nonoverlapping(data as *const _, output_ptr.cast::<T>(), 1);
+    }
+}
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 #[cfg(test)]

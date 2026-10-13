@@ -1,21 +1,21 @@
 use crate::stmt::EmptyStatement;
 use crate::util::run_command_with_retry;
 use crate::util::{
-    is_match, table_type_filter_to_vec, to_name_regex, DISALLOWED_COLLECTION_NAMES,
-    DISALLOWED_DB_NAMES,
+    DISALLOWED_COLLECTION_NAMES, DISALLOWED_DB_NAMES, is_match, table_type_filter_to_vec,
+    to_name_regex,
 };
 use crate::{
+    BsonTypeInfo, Error,
     col_metadata::MongoColMetadata,
     conn::MongoConnection,
     err::Result,
     stmt::MongoStatement,
     util::{COLLECTION, TABLE, TIMESERIES},
-    BsonTypeInfo, Error,
 };
 use definitions::Nullability;
 use futures::future;
 use mongodb::{
-    bson::{doc, Bson},
+    bson::{Bson, doc},
     results::CollectionType,
 };
 use once_cell::sync::OnceCell;

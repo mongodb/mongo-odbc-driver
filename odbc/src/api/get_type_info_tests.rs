@@ -4,7 +4,7 @@
     clippy::cast_possible_wrap
 )]
 
-use crate::{handles::definitions::*, SQLFetch, SQLGetDiagFieldW, SQLGetTypeInfoW};
+use crate::{SQLFetch, SQLGetDiagFieldW, SQLGetTypeInfoW, handles::definitions::*};
 use bson::Bson;
 use definitions::{AttrOdbcVersion, DiagType, HandleType::SQL_HANDLE_STMT, SqlDataType, SqlReturn};
 

@@ -1,6 +1,6 @@
 use crate::{
-    col_metadata::MongoColMetadata, conn::MongoConnection, err::Result, stmt::MongoStatement,
-    util::DISALLOWED_DB_NAMES, BsonTypeInfo, Error,
+    BsonTypeInfo, Error, col_metadata::MongoColMetadata, conn::MongoConnection, err::Result,
+    stmt::MongoStatement, util::DISALLOWED_DB_NAMES,
 };
 use definitions::Nullability;
 use mongodb::bson::Bson;

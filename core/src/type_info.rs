@@ -1,6 +1,6 @@
 use crate::{
-    bson_type_info::SQL_PRED_BASIC, col_metadata::MongoColMetadata, conn::MongoConnection,
-    err::Result, stmt::MongoStatement, BsonTypeInfo, Error, TypeMode,
+    BsonTypeInfo, Error, TypeMode, bson_type_info::SQL_PRED_BASIC, col_metadata::MongoColMetadata,
+    conn::MongoConnection, err::Result, stmt::MongoStatement,
 };
 use definitions::{Nullability, SqlCode, SqlDataType};
 use mongodb::bson::Bson;

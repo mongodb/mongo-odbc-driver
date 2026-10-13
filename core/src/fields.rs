@@ -1,19 +1,19 @@
-use crate::util::{run_command_with_retry, DISALLOWED_COLLECTION_NAMES};
+use crate::util::{DISALLOWED_COLLECTION_NAMES, run_command_with_retry};
 use crate::{
+    BsonTypeInfo, TypeMode,
     cluster_type::MongoClusterType,
     col_metadata::{MongoColMetadata, ResultSetSchema, SqlGetSchemaResponse},
     collections::MongoODBCCollectionSpecification,
     conn::MongoConnection,
     err::{Error, Result},
     stmt::MongoStatement,
-    util::{to_name_regex, DISALLOWED_DB_NAMES},
-    BsonTypeInfo, TypeMode,
+    util::{DISALLOWED_DB_NAMES, to_name_regex},
 };
 use constants::SQL_SCHEMAS_COLLECTION;
 use definitions::{Nullability, SqlDataType};
 use futures::TryStreamExt;
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{Bson, Document, doc},
     results::CollectionType,
 };
 use once_cell::sync::OnceCell;

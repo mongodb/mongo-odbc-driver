@@ -6,8 +6,8 @@
 
 use crate::SQLSetEnvAttr;
 use crate::{
-    handles::definitions::{Env, EnvState, MongoHandle},
     SQLGetDiagRecW, SQLGetEnvAttr,
+    handles::definitions::{Env, EnvState, MongoHandle},
 };
 use definitions::{
     AttrConnectionPooling, AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, HEnv, HandleType,
@@ -198,7 +198,7 @@ mod unit {
                 cstr::from_widechar_ref_lossy(&*(sql_state as *const [WideChar; 6]))
             );
             assert_eq!(
-             "[MongoDB][API] Invalid value for attribute SQL_ATTR_CP_MATCH, changed to SQL_CP_STRICT_MATCH\0",
+                "[MongoDB][API] Invalid value for attribute SQL_ATTR_CP_MATCH, changed to SQL_CP_STRICT_MATCH\0",
                 cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 93]))
             );
         }

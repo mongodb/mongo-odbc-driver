@@ -5,8 +5,8 @@
 )]
 
 use crate::{
-    handles::definitions::{MongoHandle, Statement, StatementState},
     SQLColAttributeW, SQLDescribeColW,
+    handles::definitions::{MongoHandle, Statement, StatementState},
 };
 use definitions::{Desc, Nullability, SmallInt, SqlReturn, WChar};
 use mongo_odbc_core::{MongoFields, SQL_SEARCHABLE};

@@ -1,8 +1,8 @@
-use crate::{err::Result, Error};
+use crate::{Error, err::Result};
 use data_encoding::BASE64URL_NOPAD;
 use mongodb::{
-    bson::{doc, from_document, Document},
     Client,
+    bson::{Document, doc, from_document},
 };
 use serde::Deserialize;
 use std::sync::LazyLock;

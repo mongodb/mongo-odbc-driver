@@ -1,5 +1,5 @@
 use actix_web::{
-    self, dev::ServerHandle, http, web, App, HttpRequest, HttpResponse, HttpServer, Result,
+    self, App, HttpRequest, HttpResponse, HttpServer, Result, dev::ServerHandle, http, web,
 };
 use askama::Template;
 use std::collections::HashMap;

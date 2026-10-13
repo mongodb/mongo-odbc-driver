@@ -44,21 +44,27 @@ pub enum Error {
         expected: usize,
         actual: usize,
     },
-    #[error("mismatch in result set column counts for test {test}: expected {expected}, actual {actual}, row {row}")]
+    #[error(
+        "mismatch in result set column counts for test {test}: expected {expected}, actual {actual}, row {row}"
+    )]
     RSColumnCount {
         test: String,
         expected: usize,
         actual: usize,
         row: usize,
     },
-    #[error("mismatch in metadata column counts for test {test}: expected {expected}, actual {actual}, descriptor {descriptor}")]
+    #[error(
+        "mismatch in metadata column counts for test {test}: expected {expected}, actual {actual}, descriptor {descriptor}"
+    )]
     MetadataColumnCount {
         test: String,
         expected: usize,
         actual: usize,
         descriptor: String,
     },
-    #[error("mismatch in metadata column value for test {test}: expected {expected}, actual {actual}, descriptor {descriptor}, column {column}")]
+    #[error(
+        "mismatch in metadata column value for test {test}: expected {expected}, actual {actual}, descriptor {descriptor}, column {column}"
+    )]
     MetadataColumnValue {
         test: String,
         expected: String,
@@ -717,10 +723,12 @@ fn get_column_attribute(
             numeric_attrib_ptr,
         ) {
             SqlReturn::SUCCESS => Ok(match column_metadata_type {
-                Value::String(_) => json!((cstr::from_widechar_ref_lossy(
-                    &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH])
-                ))[0..(*string_length_ptr as usize / std::mem::size_of::<WideChar>())]
-                    .to_string()),
+                Value::String(_) => json!(
+                    (cstr::from_widechar_ref_lossy(
+                        &*(character_attrib_ptr as *const [WideChar; BUFFER_LENGTH])
+                    ))[0..(*string_length_ptr as usize / std::mem::size_of::<WideChar>())]
+                        .to_string()
+                ),
                 Value::Number(_) => json!(*numeric_attrib_ptr),
                 meta_type => return Err(Error::UnexpectedMetadataType(format!("{meta_type:?}"))),
             }),
@@ -757,9 +765,11 @@ fn get_data(stmt: HStmt, column: USmallInt, data_type: CDataType) -> Result<Valu
                 } else {
                     match data_type {
                         CDataType::SQL_C_CHAR => {
-                            data = json!((String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
-                                [0..*out_len_or_ind as usize]
-                                .to_string());
+                            data = json!(
+                                (String::from_utf8_lossy(&*(buffer as *const [u8; 256])))
+                                    [0..*out_len_or_ind as usize]
+                                    .to_string()
+                            );
                         }
                         CDataType::SQL_C_SLONG => data = json!(*(buffer as *const i32)),
                         CDataType::SQL_C_DOUBLE => data = json!(*(buffer as *const f64)),

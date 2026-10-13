@@ -6,26 +6,27 @@
 
 mod unit {
     use crate::{
+        SQLBindCol, SQLFetch,
         handles::definitions::{
             BoundColInfo, Connection, ConnectionState, Env, EnvState, MongoHandle, Statement,
             StatementState,
         },
-        map, SQLBindCol, SQLFetch,
+        map,
     };
     use bson::doc;
-    use cstr::{input_text_to_string_w, WideChar};
+    use cstr::{WideChar, input_text_to_string_w};
     use definitions::{
         BindType, CDataType, Len, Nullability,
         RowStatus::{SQL_ROW_NOROW, SQL_ROW_SUCCESS},
-        SmallInt, SqlReturn, ULen, USmallInt, WChar, SQL_NTS_ISIZE,
+        SQL_NTS_ISIZE, SmallInt, SqlReturn, ULen, USmallInt, WChar,
     };
     use mongo_odbc_core::{
+        MongoColMetadata, MongoStatement, TypeMode,
         json_schema::{
-            simplified::{Atomic, Schema},
             BsonTypeName,
+            simplified::{Atomic, Schema},
         },
         mock_query::MongoQuery,
-        MongoColMetadata, MongoStatement, TypeMode,
     };
     use std::collections::HashMap;
     use std::ptr::null_mut;

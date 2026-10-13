@@ -1,7 +1,7 @@
 use crate::util::run_command_with_retry;
-use crate::{err::Result, Error};
-use mongodb::bson::{doc, Bson, Document};
+use crate::{Error, err::Result};
 use mongodb::Client;
+use mongodb::bson::{Bson, Document, doc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]

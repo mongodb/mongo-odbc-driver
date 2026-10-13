@@ -3,15 +3,15 @@ use directories::UserDirs;
 use lazy_static::lazy_static;
 use log::LevelFilter;
 use log4rs::{
+    Handle,
     append::rolling_file::{
-        policy::compound::{
-            roll::fixed_window::FixedWindowRoller, trigger::size::SizeTrigger, CompoundPolicy,
-        },
         RollingFileAppender,
+        policy::compound::{
+            CompoundPolicy, roll::fixed_window::FixedWindowRoller, trigger::size::SizeTrigger,
+        },
     },
     config::{Appender, Config, Root},
     encode::pattern::PatternEncoder,
-    Handle,
 };
 use shared_sql_utils::driver_settings::DriverSettings;
 use std::path::{Path, PathBuf};

@@ -12,8 +12,8 @@ mod integration {
         get_column_attributes, get_sql_diagnostics,
     };
     use definitions::{
-        AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQLExecute, SQLFetch, SQLPrepareW,
-        SqlReturn, SQL_NTS,
+        AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQL_NTS, SQLExecute, SQLFetch,
+        SQLPrepareW, SqlReturn,
     };
 
     use cstr::WideChar;

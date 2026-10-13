@@ -4,7 +4,7 @@
     clippy::cast_possible_wrap
 )]
 
-use crate::{api::errors::ODBCError, handles::definitions::*, SQLGetDiagRecW};
+use crate::{SQLGetDiagRecW, api::errors::ODBCError, handles::definitions::*};
 use definitions::{HandleType, SqlReturn};
 
 const UNIMPLEMENTED_FUNC: &str = "HYC00\0";

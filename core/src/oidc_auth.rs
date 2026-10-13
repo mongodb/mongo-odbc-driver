@@ -1,12 +1,13 @@
 use mongodb::options::oidc::{CallbackContext, IdpServerResponse};
 use openidconnect::{
+    AsyncHttpClient, AuthorizationCode, ClientId, ConfigurationError, CsrfToken, HttpClientError,
+    HttpResponse, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge, RedirectUrl,
+    RefreshToken, RequestTokenError, Scope,
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
-    http, url, AsyncHttpClient, AuthorizationCode, ClientId, ConfigurationError, CsrfToken,
-    HttpClientError, HttpResponse, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge,
-    RedirectUrl, RefreshToken, RequestTokenError, Scope,
+    http, url,
 };
-use reqwest::{redirect, Client};
-use rfc8252_http_server::{start, OidcResponseParams};
+use reqwest::{Client, redirect};
+use rfc8252_http_server::{OidcResponseParams, start};
 use std::{collections::HashSet, future::Future, pin::Pin, time::Instant};
 use tokio::time::{self, Duration};
 
@@ -390,8 +391,8 @@ mod tests {
     use super::*;
     use mongodb::options::oidc::IdpServerInfo;
     use openidconnect::{
-        core::{CoreJwsSigningAlgorithm, CoreResponseType, CoreSubjectIdentifierType},
         AuthUrl, EmptyAdditionalProviderMetadata, JsonWebKeySetUrl, ResponseTypes, TokenUrl,
+        core::{CoreJwsSigningAlgorithm, CoreResponseType, CoreSubjectIdentifierType},
     };
 
     fn make_provider_metadata(

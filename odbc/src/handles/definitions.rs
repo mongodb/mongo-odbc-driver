@@ -111,43 +111,45 @@ impl MongoHandle {
     ///
     /// Generate a String containing the current handle and its parents address.
     ///
-    pub(crate) unsafe fn get_handle_info(&mut self) -> String { unsafe {
-        let mut handle_info = String::new();
-        let mut handle = self;
-        loop {
-            let handle_ptr: *mut MongoHandle = handle;
-            match handle {
-                MongoHandle::Env(_) => {
-                    handle_info = format!("[Env_{handle_ptr:?}]{handle_info}");
-                    return handle_info;
-                }
-                MongoHandle::Connection(c) => {
-                    let env = c.env;
-                    handle_info = format!("[Conn_{handle_ptr:?}]{handle_info}");
-                    if env.is_null() {
+    pub(crate) unsafe fn get_handle_info(&mut self) -> String {
+        unsafe {
+            let mut handle_info = String::new();
+            let mut handle = self;
+            loop {
+                let handle_ptr: *mut MongoHandle = handle;
+                match handle {
+                    MongoHandle::Env(_) => {
+                        handle_info = format!("[Env_{handle_ptr:?}]{handle_info}");
                         return handle_info;
                     }
-                    handle = &mut *env;
-                }
-                MongoHandle::Statement(s) => {
-                    let conn = s.connection;
-                    handle_info = format!("[Stmt_{handle_ptr:?}]{handle_info}");
-                    if conn.is_null() {
-                        return handle_info;
+                    MongoHandle::Connection(c) => {
+                        let env = c.env;
+                        handle_info = format!("[Conn_{handle_ptr:?}]{handle_info}");
+                        if env.is_null() {
+                            return handle_info;
+                        }
+                        handle = &mut *env;
                     }
-                    handle = &mut *conn;
-                }
-                MongoHandle::Descriptor(d) => {
-                    let conn = d.connection;
-                    handle_info = format!("[Desc_{handle_ptr:?}]{handle_info}");
-                    if conn.is_null() {
-                        return handle_info;
+                    MongoHandle::Statement(s) => {
+                        let conn = s.connection;
+                        handle_info = format!("[Stmt_{handle_ptr:?}]{handle_info}");
+                        if conn.is_null() {
+                            return handle_info;
+                        }
+                        handle = &mut *conn;
                     }
-                    handle = &mut *conn;
+                    MongoHandle::Descriptor(d) => {
+                        let conn = d.connection;
+                        handle_info = format!("[Desc_{handle_ptr:?}]{handle_info}");
+                        if conn.is_null() {
+                            return handle_info;
+                        }
+                        handle = &mut *conn;
+                    }
                 }
             }
         }
-    }}
+    }
 
     /// get the odbc_version from the underlying env handle, used to handle
     /// behavior that is different between odbc versions properly

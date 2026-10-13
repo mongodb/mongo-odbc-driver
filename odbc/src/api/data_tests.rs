@@ -15,20 +15,20 @@ use crate::{
     map, set,
 };
 use bson::{
-    doc, oid::ObjectId, spec::BinarySubtype, Binary, Bson, DateTime, JavaScriptCodeWithScope, Regex,
+    Binary, Bson, DateTime, JavaScriptCodeWithScope, Regex, doc, oid::ObjectId, spec::BinarySubtype,
 };
 use chrono::prelude::*;
 use cstr::WideChar;
 use definitions::{Date, Nullability, SqlReturn, Time, Timestamp, WChar};
 use lazy_static::lazy_static;
 use mongo_odbc_core::{
+    TypeMode,
     col_metadata::MongoColMetadata,
     json_schema::{
-        simplified::{Atomic, ObjectSchema, Schema},
         BsonTypeName,
+        simplified::{Atomic, ObjectSchema, Schema},
     },
     mock_query::MongoQuery,
-    TypeMode,
 };
 
 const ARRAY_COL: u16 = 1;
@@ -1649,7 +1649,12 @@ fn sql_get_i64_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type Int64",
             );
-            i64_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Int64");
+            i64_val_test(
+                JS_W_S_COL,
+                0,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Int64",
+            );
             i64_val_test(
                 MAXKEY_COL,
                 0,
@@ -1848,7 +1853,12 @@ fn sql_get_u64_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type UInt64",
             );
-            u64_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type UInt64");
+            u64_val_test(
+                JS_W_S_COL,
+                0,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type UInt64",
+            );
             u64_val_test(
                 MAXKEY_COL,
                 0,
@@ -2053,7 +2063,12 @@ fn sql_get_i32_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type Int32",
             );
-            i32_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Int32");
+            i32_val_test(
+                JS_W_S_COL,
+                0,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Int32",
+            );
             i32_val_test(
                 MAXKEY_COL,
                 0,
@@ -2252,7 +2267,12 @@ fn sql_get_u32_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type UInt32",
             );
-            u32_val_test(JS_W_S_COL, 0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type UInt32");
+            u32_val_test(
+                JS_W_S_COL,
+                0,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type UInt32",
+            );
             u32_val_test(
                 MAXKEY_COL,
                 0,
@@ -2450,7 +2470,12 @@ fn sql_get_f64_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type Double",
             );
-            f64_val_test(JS_W_S_COL, 0.0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Double");
+            f64_val_test(
+                JS_W_S_COL,
+                0.0,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Double",
+            );
             f64_val_test(
                 MAXKEY_COL,
                 0.0,
@@ -2637,7 +2662,12 @@ fn sql_get_f32_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type Double",
             );
-            f32_val_test(JS_W_S_COL, 0.0, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Double");
+            f32_val_test(
+                JS_W_S_COL,
+                0.0,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type Double",
+            );
             f32_val_test(
                 MAXKEY_COL,
                 0.0,
@@ -2849,7 +2879,12 @@ fn sql_get_datetime_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type DateTime",
             );
-            datetime_val_test(JS_W_S_COL, empty, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type DateTime");
+            datetime_val_test(
+                JS_W_S_COL,
+                empty,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type DateTime",
+            );
             datetime_val_test(
                 MAXKEY_COL,
                 empty,
@@ -3059,7 +3094,12 @@ fn sql_get_date_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type DateTime",
             );
-            date_val_test(JS_W_S_COL, empty, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type DateTime");
+            date_val_test(
+                JS_W_S_COL,
+                empty,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type DateTime",
+            );
             date_val_test(
                 MAXKEY_COL,
                 empty,
@@ -3269,7 +3309,12 @@ fn sql_get_time_data(mq: MongoQuery) {
                 SqlReturn::ERROR,
                 "[MongoDB][API] BSON type javascript cannot be converted to ODBC type DateTime",
             );
-            time_val_test(JS_W_S_COL, empty, SqlReturn::ERROR, "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type DateTime");
+            time_val_test(
+                JS_W_S_COL,
+                empty,
+                SqlReturn::ERROR,
+                "[MongoDB][API] BSON type javascriptWithScope cannot be converted to ODBC type DateTime",
+            );
             time_val_test(
                 MAXKEY_COL,
                 empty,

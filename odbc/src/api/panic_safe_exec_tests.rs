@@ -30,14 +30,18 @@ mod unit {
     }
 
     #[named]
-    unsafe fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn { unsafe {
-        panic_safe_exec_clear_diagnostics!(debug, || { SqlReturn::SUCCESS }, stmt_handle);
-    }}
+    unsafe fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn {
+        unsafe {
+            panic_safe_exec_clear_diagnostics!(debug, || { SqlReturn::SUCCESS }, stmt_handle);
+        }
+    }
 
     #[named]
-    unsafe fn panic_fn(stmt_handle: HStmt) -> SqlReturn { unsafe {
-        panic_safe_exec_clear_diagnostics!(error, || { panic!("panic test") }, stmt_handle);
-    }}
+    unsafe fn panic_fn(stmt_handle: HStmt) -> SqlReturn {
+        unsafe {
+            panic_safe_exec_clear_diagnostics!(error, || { panic!("panic test") }, stmt_handle);
+        }
+    }
 
     #[test]
     fn test_non_panic() {
@@ -48,13 +52,15 @@ mod unit {
         unsafe {
             let sql_return = non_panic_fn(stmt_handle as *mut _);
             assert_eq!(SqlReturn::SUCCESS, sql_return);
-            assert!((*stmt_handle)
-                .as_statement()
-                .unwrap()
-                .errors
-                .read()
-                .unwrap()
-                .is_empty());
+            assert!(
+                (*stmt_handle)
+                    .as_statement()
+                    .unwrap()
+                    .errors
+                    .read()
+                    .unwrap()
+                    .is_empty()
+            );
         }
     }
 

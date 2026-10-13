@@ -4,7 +4,7 @@ use std::time::Duration;
 use constants::SQL_ALL_TABLE_TYPES;
 use fancy_regex::Regex as FancyRegex;
 use lazy_static::lazy_static;
-use mongodb::{bson::Document, error::ErrorKind, results::CollectionType, Database};
+use mongodb::{Database, bson::Document, error::ErrorKind, results::CollectionType};
 use rand::RngExt as _;
 use regex::{Regex, RegexSet, RegexSetBuilder};
 use std::collections::HashSet;

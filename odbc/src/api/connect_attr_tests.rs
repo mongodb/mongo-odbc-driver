@@ -6,14 +6,14 @@
 
 mod unit {
     use crate::{
+        SQLGetConnectAttrW, SQLGetDiagFieldW, SQLSetConnectAttrW,
         errors::ODBCError,
         handles::definitions::{
             Connection, ConnectionAttributes, ConnectionState, Env, EnvState, MongoHandle,
         },
         util::connection_attribute_to_string,
-        SQLGetConnectAttrW, SQLGetDiagFieldW, SQLSetConnectAttrW,
     };
-    use cstr::{input_text_to_string_w, WideChar};
+    use cstr::{WideChar, input_text_to_string_w};
     use definitions::{
         AccessMode, ConnectionAttribute, HandleType, Integer, Pointer, SqlReturn, UInteger, WChar,
     };
@@ -74,16 +74,18 @@ mod unit {
         };
     }
 
-        unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String { unsafe {
-            input_text_to_string_w(
-                value_ptr as *const _,
-                (out_length / std::mem::size_of::<WideChar>()) as isize,
-            )
-        }}
+        unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String {
+            unsafe {
+                input_text_to_string_w(
+                    value_ptr as *const _,
+                    (out_length / std::mem::size_of::<WideChar>()) as isize,
+                )
+            }
+        }
 
-        unsafe fn modify_numeric_attr(value_ptr: Pointer, _: usize) -> u32 { unsafe {
-            *(value_ptr as *mut UInteger)
-        }}
+        unsafe fn modify_numeric_attr(value_ptr: Pointer, _: usize) -> u32 {
+            unsafe { *(value_ptr as *mut UInteger) }
+        }
 
         test_get_attr!(
             current_catalog_default,
@@ -255,7 +257,7 @@ mod unit {
                 )
             );
             assert_eq!(
-             "[MongoDB][API] Invalid value for attribute SQL_MODE_READ_WRITE, changed to SQL_MODE_READ\0",
+                "[MongoDB][API] Invalid value for attribute SQL_MODE_READ_WRITE, changed to SQL_MODE_READ\0",
                 cstr::from_widechar_ref_lossy(&*(message_text as *const [WideChar; 89]))
             );
 
@@ -343,16 +345,18 @@ mod unit {
     unsafe fn assert_unsupported_connection_attr_error(
         mongo_handle: *mut MongoHandle,
         attr: ConnectionAttribute,
-    ) { unsafe {
-        let conn_handle = (*mongo_handle).as_connection().unwrap();
-        let errors = &conn_handle.errors.read().unwrap();
-        assert_eq!(1, errors.len());
-        let actual_err = errors.first().unwrap();
-        match actual_err {
-            ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
-                assert_eq!(connection_attribute_to_string(attr), *actual_attr)
+    ) {
+        unsafe {
+            let conn_handle = (*mongo_handle).as_connection().unwrap();
+            let errors = &conn_handle.errors.read().unwrap();
+            assert_eq!(1, errors.len());
+            let actual_err = errors.first().unwrap();
+            match actual_err {
+                ODBCError::UnsupportedConnectionAttribute(actual_attr) => {
+                    assert_eq!(connection_attribute_to_string(attr), *actual_attr)
+                }
+                _ => panic!("unexpected err: {actual_err:?}"),
             }
-            _ => panic!("unexpected err: {actual_err:?}"),
         }
-    }}
+    }
 }

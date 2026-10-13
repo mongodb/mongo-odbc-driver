@@ -8,9 +8,9 @@ mod common;
 
 mod integration {
     use crate::common::{
-        allocate_env, connect_and_allocate_statement, default_setup_connect_and_alloc_stmt,
-        disconnect_and_close_handles, generate_default_connection_str, get_sql_diagnostics,
-        BUFFER_LENGTH,
+        BUFFER_LENGTH, allocate_env, connect_and_allocate_statement,
+        default_setup_connect_and_alloc_stmt, disconnect_and_close_handles,
+        generate_default_connection_str, get_sql_diagnostics,
     };
     use definitions::{
         AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, Len, Pointer, SQLFetch, SQLGetData,

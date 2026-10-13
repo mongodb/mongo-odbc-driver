@@ -6,21 +6,22 @@
 
 mod unit {
     use crate::{
+        SQLFreeStmt,
         handles::definitions::{
             BoundColInfo, Connection, ConnectionState, Env, EnvState, MongoHandle, Statement,
             StatementState,
         },
-        map, SQLFreeStmt,
+        map,
     };
     use bson::doc;
     use definitions::{FreeStmtOption, Nullability, SqlReturn};
     use mongo_odbc_core::{
+        Error, MongoColMetadata, MongoCollections, MongoStatement, TypeMode,
         json_schema::{
-            simplified::{Atomic, Schema},
             BsonTypeName,
+            simplified::{Atomic, Schema},
         },
         mock_query::MongoQuery,
-        Error, MongoColMetadata, MongoCollections, MongoStatement, TypeMode,
     };
     use std::ptr::null_mut;
 

@@ -117,7 +117,10 @@ async fn parse_client_options_with_resolver(uri: &str) -> mongodb::error::Result
                 {
                     Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
                         // Cloudflare could be temporarily unavailable, fall back to default resolver if it fails.
-                        log::warn!("Transient failure. DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.", e);
+                        log::warn!(
+                            "Transient failure. DNS resolution failed with Cloudflare DNS: `{}`. Falling back to default hickory-resolver.",
+                            e
+                        );
                         ClientOptions::parse(uri).await
                     }
                     other => other,
@@ -130,13 +133,18 @@ async fn parse_client_options_with_resolver(uri: &str) -> mongodb::error::Result
 
         // First time: try Cloudflare DNS and fall back to Hickory if Cloudflare fails
         log::info!("Determining DNS resolver to use on Windows.");
-        log::info!("Default DNS resolver is Cloudflare DNS. Falling back to default hickory-resolver if failing.");
+        log::info!(
+            "Default DNS resolver is Cloudflare DNS. Falling back to default hickory-resolver if failing."
+        );
         match ClientOptions::parse(uri)
             .resolver_config(ResolverConfig::cloudflare())
             .await
         {
             Err(e) if matches!(e.kind.as_ref(), ErrorKind::DnsResolve { .. }) => {
-                log::warn!("DNS resolution failed with Cloudflare DNS: `{}`. Setting default DNS resolver to hickory-resolver.", e);
+                log::warn!(
+                    "DNS resolution failed with Cloudflare DNS: `{}`. Setting default DNS resolver to hickory-resolver.",
+                    e
+                );
                 // Cache the decision to use default resolver for future calls
                 let _ = WINDOWS_RESOLVER_CONFIG.set(false);
                 ClientOptions::parse(uri).await
@@ -386,13 +394,10 @@ impl ODBCUri {
                 // This is to accommodate tools like Power BI that require adding empty username and password fields.
                 // Note: OIDC (OpenID Connect) never uses a password.
                 cred.password = None;
-                cred.username = cred.username.as_ref().and_then(|x| {
-                    if x.is_empty() {
-                        None
-                    } else {
-                        Some(x.clone())
-                    }
-                });
+                cred.username = cred
+                    .username
+                    .as_ref()
+                    .and_then(|x| if x.is_empty() { None } else { Some(x.clone()) });
             }
             #[cfg(not(target_os = "windows"))]
             Some(AuthMechanism::Gssapi) => {
@@ -443,7 +448,7 @@ impl ODBCUri {
 
             if is_oidc_and_azure_environment || auth_mechanism != &AuthMechanism::MongoDbOidc {
                 log::warn!(
-                     "No {USER_KWS:?} provided with an Azure managed identity. If you are encountering connection issue, you might need to set it to the client ID of the managed identity or the application ID of the service principal."
+                    "No {USER_KWS:?} provided with an Azure managed identity. If you are encountering connection issue, you might need to set it to the client ID of the managed identity or the application ID of the service principal."
                 );
             }
         }
@@ -451,7 +456,8 @@ impl ODBCUri {
             // OIDC doesn't require password either.
             if auth_mechanism != &AuthMechanism::MongoDbOidc {
                 return Err(Error::InvalidUriFormat(format!(
-                    "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri when the authication mechanism is {:?}", auth_mechanism
+                    "One of {PWD_KWS:?} is required for a valid Mongo ODBC Uri when the authication mechanism is {:?}",
+                    auth_mechanism
                 )));
             }
         }
@@ -708,8 +714,7 @@ mod unit {
         #[test]
         fn test_plain_specified() {
             let uri = "mongodb://localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
-            let expected =
-                "mongodb://dummy_username:dummy_password@localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
+            let expected = "mongodb://dummy_username:dummy_password@localhost:27017/abc?authSource=$external&authMechanism=PLAIN";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), expected);
         }
@@ -754,8 +759,7 @@ mod unit {
 
         #[test]
         fn test_gssapi_does_not_modify_uri() {
-            let uri =
-                "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external";
+            let uri = "mongodb://alice@CORP.EXAMPLE.COM:s3cr3t@mongo.corp.example.com/?authMechanism=GSSAPI&authSource=$external";
             let mut odbc_uri = ODBCUri::new(format!("URI={uri};User=foo;PWD=bar;")).unwrap();
             assert_eq!(odbc_uri.construct_uri_for_parsing(uri).unwrap(), uri);
         }
@@ -1159,7 +1163,8 @@ mod unit {
                     "{}",
                     ODBCUri::new("USER=foo;SERVER=127.0.0.1:27017".to_string())
                         .unwrap()
-                        .try_into_client_options().await
+                        .try_into_client_options()
+                        .await
                         .unwrap_err()
                 )
             );
@@ -1367,17 +1372,42 @@ mod unit {
         #[tokio::test(flavor = "current_thread")]
         async fn auth_source_correctness() {
             for (expected, uri) in [
-                (Some("authDB".to_string()), "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar"),
+                (
+                    Some("authDB".to_string()),
+                    "URI=mongodb://localhost/?authSource=authDB;UID=foo;PWD=bar",
+                ),
                 (None, "URI=mongodb://localhost/;UID=foo;PWD=bar"),
-                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B;UID=foo;PWD=bar"),
-                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?auTHSource=aut:hD@B&appName=tgg#fed;UID=foo;PWD=bar"),
-                (Some("$external".to_string()), "URI=mongodb://uid:pwd@localhost/?authSource=$external&appName=tgg#fed;UID=foo;PWD=bar"),
-                (Some("aut:hD@B".to_string()), "URI=mongodb://localhost/?appName=test&auTHSource=aut:hD@B;UID=foo;PWD=bar"),
-                (Some("jfhbgvhj".to_string()), "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b" ),
+                (
+                    Some("aut:hD@B".to_string()),
+                    "URI=mongodb://localhost/?auTHSource=aut:hD@B;UID=foo;PWD=bar",
+                ),
+                (
+                    Some("aut:hD@B".to_string()),
+                    "URI=mongodb://localhost/?auTHSource=aut:hD@B&appName=tgg#fed;UID=foo;PWD=bar",
+                ),
+                (
+                    Some("$external".to_string()),
+                    "URI=mongodb://uid:pwd@localhost/?authSource=$external&appName=tgg#fed;UID=foo;PWD=bar",
+                ),
+                (
+                    Some("aut:hD@B".to_string()),
+                    "URI=mongodb://localhost/?appName=test&auTHSource=aut:hD@B;UID=foo;PWD=bar",
+                ),
+                (
+                    Some("jfhbgvhj".to_string()),
+                    "URI=mongodb://localhost/?ssl=true&appName='myauthSource=aut:hD@B'&authSource=jfhbgvhj;UID=f;PWD=b",
+                ),
             ] {
-                let actual = ODBCUri::new(uri.to_string()).unwrap().try_into_client_options().await.unwrap().client_options.credential.unwrap().source;
-                assert_eq!(
-                    expected, actual, "expected {expected:?}, got {actual:?}" );
+                let actual = ODBCUri::new(uri.to_string())
+                    .unwrap()
+                    .try_into_client_options()
+                    .await
+                    .unwrap()
+                    .client_options
+                    .credential
+                    .unwrap()
+                    .source;
+                assert_eq!(expected, actual, "expected {expected:?}, got {actual:?}");
             }
         }
 

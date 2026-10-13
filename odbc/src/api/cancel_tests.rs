@@ -4,7 +4,7 @@
     clippy::cast_possible_wrap
 )]
 
-use crate::{handles::definitions::*, SQLCancel};
+use crate::{SQLCancel, handles::definitions::*};
 use definitions::SqlReturn;
 use mongo_odbc_core::MongoConnection;
 use mongodb::Client;
