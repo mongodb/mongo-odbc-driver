@@ -74,16 +74,16 @@ mod unit {
         };
     }
 
-        unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String {
+        unsafe fn modify_string_attr(value_ptr: Pointer, out_length: usize) -> String { unsafe {
             input_text_to_string_w(
                 value_ptr as *const _,
                 (out_length / std::mem::size_of::<WideChar>()) as isize,
             )
-        }
+        }}
 
-        unsafe fn modify_numeric_attr(value_ptr: Pointer, _: usize) -> u32 {
+        unsafe fn modify_numeric_attr(value_ptr: Pointer, _: usize) -> u32 { unsafe {
             *(value_ptr as *mut UInteger)
-        }
+        }}
 
         test_get_attr!(
             current_catalog_default,
@@ -343,7 +343,7 @@ mod unit {
     unsafe fn assert_unsupported_connection_attr_error(
         mongo_handle: *mut MongoHandle,
         attr: ConnectionAttribute,
-    ) {
+    ) { unsafe {
         let conn_handle = (*mongo_handle).as_connection().unwrap();
         let errors = &conn_handle.errors.read().unwrap();
         assert_eq!(1, errors.len());
@@ -354,5 +354,5 @@ mod unit {
             }
             _ => panic!("unexpected err: {actual_err:?}"),
         }
-    }
+    }}
 }

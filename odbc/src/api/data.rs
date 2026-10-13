@@ -592,7 +592,7 @@ pub unsafe fn format_datetime(
     target_value_ptr: Pointer,
     str_len_or_ind_ptr: *mut Len,
     data: Bson,
-) -> SqlReturn {
+) -> SqlReturn { unsafe {
     let stmt = (*mongo_handle).as_statement().unwrap();
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
     let dt = data.to_datetime();
@@ -618,7 +618,7 @@ pub unsafe fn format_datetime(
             SqlReturn::ERROR
         }
     }
-}
+}}
 
 fn format_datetime_helper(datetime: DateTime<Utc>) -> Result<Timestamp> {
     Ok(Timestamp {
@@ -656,7 +656,7 @@ pub unsafe fn format_time(
     target_value_ptr: Pointer,
     str_len_or_ind_ptr: *mut Len,
     data: Bson,
-) -> SqlReturn {
+) -> SqlReturn { unsafe {
     let stmt = (*mongo_handle).as_statement().unwrap();
     let time = data.to_time();
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
@@ -681,7 +681,7 @@ pub unsafe fn format_time(
             SqlReturn::ERROR
         }
     }
-}
+}}
 
 fn format_time_helper(time: NaiveTime) -> Result<Time> {
     Ok(Time {
@@ -706,7 +706,7 @@ pub unsafe fn format_date(
     target_value_ptr: Pointer,
     str_len_or_ind_ptr: *mut Len,
     data: Bson,
-) -> SqlReturn {
+) -> SqlReturn { unsafe {
     let stmt = (*mongo_handle).as_statement().unwrap();
     let dt = data.to_date();
     stmt.insert_var_data_cache(col_num, CachedData::Fixed);
@@ -731,7 +731,7 @@ pub unsafe fn format_date(
             SqlReturn::ERROR
         }
     }
-}
+}}
 
 fn format_date_helper(date: NaiveDate) -> Result<Date> {
     Ok(Date {
@@ -760,7 +760,7 @@ pub unsafe fn format_cached_data(
     buffer_len: Len,
     str_len_or_ind_ptr: *mut Len,
     function_name: &str,
-) -> SqlReturn {
+) -> SqlReturn { unsafe {
     match cached_data {
         // Fixed cannot be streamed, and this data has already been retrieved before.
         a @ CachedData::Fixed => {
@@ -827,7 +827,7 @@ pub unsafe fn format_cached_data(
             )
         }
     }
-}
+}}
 #[allow(clippy::too_many_arguments)]
 pub unsafe fn format_bson_data(
     mongo_handle: &mut MongoHandle,
@@ -838,7 +838,7 @@ pub unsafe fn format_bson_data(
     str_len_or_ind_ptr: *mut Len,
     data: Bson,
     function_name: &str,
-) -> SqlReturn {
+) -> SqlReturn { unsafe {
     // If the data is null or undefined we immediately return NULL_DATA indicator.
     match data {
         Bson::Null | Bson::Undefined => {
@@ -1018,7 +1018,7 @@ pub unsafe fn format_bson_data(
             SqlReturn::ERROR
         }
     }
-}
+}}
 
 ///
 /// set_output_wstring_helper writes [`message`] to the *WideChar [`output_ptr`]. [`buffer_len`] is the
@@ -1033,7 +1033,7 @@ unsafe fn set_output_wstring_helper(
     output_ptr: *mut WideChar,
     buffer_len: usize,
     max_string_length: Option<u16>,
-) -> (usize, SqlReturn) {
+) -> (usize, SqlReturn) { unsafe {
     // If the output_ptr is null or no buffer space has been allocated, we need
     // to return SUCCESS_WITH_INFO.
     if output_ptr.is_null() || buffer_len == 0 {
@@ -1068,7 +1068,7 @@ unsafe fn set_output_wstring_helper(
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
-}
+}}
 
 ///
 /// set_output_string_helper writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
@@ -1082,7 +1082,7 @@ unsafe fn set_output_string_helper(
     message: &[u8],
     output_ptr: *mut Char,
     buffer_len: usize,
-) -> (usize, SqlReturn) {
+) -> (usize, SqlReturn) { unsafe {
     // If the output_ptr is null or no buffer space has been allocated, we need
     // to return SUCCESS_WITH_INFO.
     if output_ptr.is_null() || buffer_len == 0 {
@@ -1112,7 +1112,7 @@ unsafe fn set_output_string_helper(
     } else {
         (message.len(), SqlReturn::SUCCESS)
     }
-}
+}}
 
 ///
 /// set_output_binary_helper writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
@@ -1126,7 +1126,7 @@ unsafe fn set_output_binary_helper(
     data: &[u8],
     output_ptr: *mut Char,
     buffer_len: usize,
-) -> (usize, SqlReturn) {
+) -> (usize, SqlReturn) { unsafe {
     // If the output_ptr is null or no buffer space has been allocated, we need
     // to return SUCCESS_WITH_INFO.
     if output_ptr.is_null() || buffer_len == 0 {
@@ -1141,7 +1141,7 @@ unsafe fn set_output_binary_helper(
     } else {
         (num_bytes_written, SqlReturn::SUCCESS)
     }
-}
+}}
 
 pub mod i16_len {
     use super::*;
@@ -1159,7 +1159,7 @@ pub mod i16_len {
         output_ptr: Pointer,
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         let message = cstr::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(
             &message,
@@ -1177,7 +1177,7 @@ pub mod i16_len {
                 .expect("Required buffer size exceeds {i16::MAX} on this platform"),
         );
         ret
-    }
+    }}
 
     ///
     /// set_output_wstring writes [`message`] to the *WideChar [`output_ptr`]. [`buffer_len`] is the
@@ -1193,7 +1193,7 @@ pub mod i16_len {
         output_ptr: *mut WideChar,
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         let message = cstr::to_widechar_vec(message);
         let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len, None);
         // Only copy the length if the pointer is not null
@@ -1203,7 +1203,7 @@ pub mod i16_len {
                 .expect("The data is too large to fit in the buffer on this platform."),
         );
         ret
-    }
+    }}
 
     ///
     /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
@@ -1217,7 +1217,7 @@ pub mod i16_len {
         data: &T,
         output_ptr: Pointer,
         data_len_ptr: *mut SmallInt,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         // If the output_ptr is NULL, we should still return the length of the message.
         ptr_safe_write(data_len_ptr, size_of::<T>() as i16);
@@ -1227,7 +1227,7 @@ pub mod i16_len {
         }
         write_fixed_data(data, output_ptr);
         SqlReturn::SUCCESS
-    }
+    }}
 }
 
 pub mod i32_len {
@@ -1246,7 +1246,7 @@ pub mod i32_len {
         output_ptr: Pointer,
         buffer_len: usize,
         text_length_ptr: *mut Integer,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         let (len, ret) = set_output_wstring_helper(
             &cstr::to_widechar_vec(message),
             output_ptr.cast::<WideChar>(),
@@ -1261,7 +1261,7 @@ pub mod i32_len {
                 .expect("Data too large to fit"),
         );
         ret
-    }
+    }}
 
     ///
     /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
@@ -1275,7 +1275,7 @@ pub mod i32_len {
         data: &T,
         output_ptr: Pointer,
         data_len_ptr: *mut Integer,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         // If the output_ptr is NULL, we should still return the length of the message.
         ptr_safe_write(data_len_ptr, size_of::<T>() as i32);
@@ -1285,7 +1285,7 @@ pub mod i32_len {
         }
         write_fixed_data(data, output_ptr);
         SqlReturn::SUCCESS
-    }
+    }}
 }
 
 pub mod isize_len {
@@ -1307,7 +1307,7 @@ pub mod isize_len {
         output_ptr: *mut WideChar,
         buffer_len: usize,
         text_length_ptr: *mut Len,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         // This should be impossible per the DM.
         if output_ptr.is_null() {
             return SqlReturn::ERROR;
@@ -1347,7 +1347,7 @@ pub mod isize_len {
         );
         stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
         ret
-    }
+    }}
 
     ///
     /// set_output_string writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
@@ -1366,7 +1366,7 @@ pub mod isize_len {
         output_ptr: *mut Char,
         buffer_len: usize,
         text_length_ptr: *mut Len,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         // This should be impossible per the DM.
         if output_ptr.is_null() {
             return SqlReturn::ERROR;
@@ -1390,7 +1390,7 @@ pub mod isize_len {
         // we can obtain it from message.chars().count() above.
         stmt.insert_var_data_cache(col_num, CachedData::Char(len + index, message));
         ret
-    }
+    }}
 
     ///
     /// set_output_binary writes [`message`] to the *Char [`output_ptr`]. [`buffer_len`] is the
@@ -1409,7 +1409,7 @@ pub mod isize_len {
         output_ptr: *mut Char,
         buffer_len: usize,
         text_length_ptr: *mut Len,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         // This should be impossible per the DM.
         if output_ptr.is_null() {
             return SqlReturn::ERROR;
@@ -1430,7 +1430,7 @@ pub mod isize_len {
         );
         stmt.insert_var_data_cache(col_num, CachedData::Bin(len + index, data));
         ret
-    }
+    }}
 
     ///
     /// set_output_fixed_data writes [`data`], which must be a fixed sized type, to the Pointer [`output_ptr`].
@@ -1444,7 +1444,7 @@ pub mod isize_len {
         data: &T,
         output_ptr: Pointer,
         data_len_ptr: *mut Len,
-    ) -> SqlReturn {
+    ) -> SqlReturn { unsafe {
         // This should be impossible per the DM.
         if output_ptr.is_null() {
             return SqlReturn::ERROR;
@@ -1456,7 +1456,7 @@ pub mod isize_len {
 
         write_fixed_data(data, output_ptr);
         SqlReturn::SUCCESS
-    }
+    }}
 }
 
 ///
@@ -1465,11 +1465,11 @@ pub mod isize_len {
 /// # Safety
 /// This writes to a raw C-pointers
 ///
-pub unsafe fn ptr_safe_write<T>(ptr: *mut T, data: T) {
+pub unsafe fn ptr_safe_write<T>(ptr: *mut T, data: T) { unsafe {
     if !ptr.is_null() {
         *ptr = data;
     }
-}
+}}
 
 #[cfg(test)]
 mod unit {

@@ -111,7 +111,7 @@ impl MongoHandle {
     ///
     /// Generate a String containing the current handle and its parents address.
     ///
-    pub(crate) unsafe fn get_handle_info(&mut self) -> String {
+    pub(crate) unsafe fn get_handle_info(&mut self) -> String { unsafe {
         let mut handle_info = String::new();
         let mut handle = self;
         loop {
@@ -147,7 +147,7 @@ impl MongoHandle {
                 }
             }
         }
-    }
+    }}
 
     /// get the odbc_version from the underlying env handle, used to handle
     /// behavior that is different between odbc versions properly

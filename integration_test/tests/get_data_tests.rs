@@ -35,7 +35,7 @@ mod integration {
         target_value_ptr: *mut c_void,
         buffer_len: isize,
         str_len_or_ind_ptr: *mut isize,
-    ) {
+    ) { unsafe {
         match SQLGetData(
             statement_handle as HStmt,
             (col_or_param_num + 1) as USmallInt,
@@ -79,7 +79,7 @@ mod integration {
                 )
             }
         }
-    }
+    }}
 
     pub fn fetch_and_get_data(
         stmt: Handle,

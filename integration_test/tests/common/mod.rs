@@ -550,7 +550,7 @@ pub fn get_column_attributes(
 pub unsafe fn bind_cols(
     stmt_handle: HStmt,
     target_types: Vec<(CDataType, Pointer, Len, *mut Len)>,
-) {
+) { unsafe {
     for (i, (target_type, binding_buffer, buffer_length, indicator)) in
         target_types.iter().enumerate()
     {
@@ -568,13 +568,13 @@ pub unsafe fn bind_cols(
             get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
         )
     }
-}
+}}
 
 #[allow(dead_code)]
 /// Helper function to execute the default query
 ///    SELECT * FROM integration_test.foo
 /// via SQLExecDirectW.
-pub unsafe fn exec_direct_default_query(stmt_handle: HStmt) {
+pub unsafe fn exec_direct_default_query(stmt_handle: HStmt) { unsafe {
     let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT * FROM integration_test.foo");
     query.push(0);
     assert_eq!(
@@ -583,4 +583,4 @@ pub unsafe fn exec_direct_default_query(stmt_handle: HStmt) {
         "{}",
         get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, stmt_handle as Handle)
     );
-}
+}}

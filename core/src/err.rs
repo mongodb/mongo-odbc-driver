@@ -118,7 +118,7 @@ impl Error {
             | Error::SchemaCatalogGenerationFailed(err)
             | Error::SchemaCatalogResultFailed(err)
             | Error::SqlInterfaceStatusReadFailed(err) => {
-                if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
+                if matches!(err.kind.as_ref(), ErrorKind::Io(io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
                     return TIMEOUT_EXPIRED;
                 }

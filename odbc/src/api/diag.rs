@@ -11,14 +11,14 @@ use std::ptr::copy_nonoverlapping;
 /// # Safety
 /// This writes to a raw C-pointer
 ///
-pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WideChar) {
+pub unsafe fn set_sql_statew(sql_state: &str, output_ptr: *mut WideChar) { unsafe {
     if output_ptr.is_null() {
         return;
     }
     let sql_state = &format!("{sql_state}\0");
     let state_u16 = cstr::to_widechar_vec(sql_state);
     copy_nonoverlapping(state_u16.as_ptr(), output_ptr, 6);
-}
+}}
 
 ///
 /// get_diag_recw copies the given ODBC error's diagnostic information
@@ -35,7 +35,7 @@ pub unsafe fn get_diag_recw(
     buffer_length: SmallInt,
     text_length_ptr: *mut SmallInt,
     native_error_ptr: *mut Integer,
-) -> SqlReturn {
+) -> SqlReturn { unsafe {
     if !native_error_ptr.is_null() {
         *native_error_ptr = error.get_native_err_code();
     }
@@ -53,7 +53,7 @@ pub unsafe fn get_diag_recw(
         buffer_length as usize,
         text_length_ptr,
     )
-}
+}}
 
 ///
 /// get_stmt_diag_field copies a part of the given ODBC error's diagnostic information
@@ -62,7 +62,7 @@ pub unsafe fn get_diag_recw(
 /// # Safety
 /// This writes to a raw C-pointer
 ///
-pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Pointer) -> SqlReturn {
+pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Pointer) -> SqlReturn { unsafe {
     // NOTE: at the moment, this could be merged with get_diag_field. However, as part of SQL-1152,
     // some functionality will be specific to the statement handle, and thus warrants a separate function
     match diag_identifier {
@@ -77,7 +77,7 @@ pub unsafe fn get_stmt_diag_field(diag_identifier: DiagType, diag_info_ptr: Poin
         // this should not be reachable if match branches here match those in SQLGetDiagFieldW
         _ => SqlReturn::ERROR,
     }
-}
+}}
 
 ///
 /// get_diag_field copies a part of the given ODBC error's diagnostic information
@@ -94,7 +94,7 @@ pub unsafe fn get_diag_fieldw(
     record_number: i16,
     buffer_length: i16,
     string_length_ptr: *mut i16,
-) -> SqlReturn {
+) -> SqlReturn { unsafe {
     // NOTE: number is dependent on the list of errors, but is a header, hence separating it from the match
     if diag_identifier == DiagType::SQL_DIAG_NUMBER {
         *diag_info_ptr.cast::<usize>() = errors.len();
@@ -144,4 +144,4 @@ pub unsafe fn get_diag_fieldw(
             _ => SqlReturn::NO_DATA,
         }
     }
-}
+}}

@@ -22,14 +22,14 @@ use definitions::{Integer, SQL_NTS_ISIZE};
 /// # Safety
 /// Because this function is called from C, it is unsafe.
 ///
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const WideChar,
     buffer: *const WideChar,
     buffer_in_len: usize,
     buffer_out_len: *mut Integer,
-) -> bool {
-    let conn_str = unsafe { input_text_to_string_w(connection_string, SQL_NTS_ISIZE) };
+) -> bool { unsafe {
+    let conn_str = input_text_to_string_w(connection_string, SQL_NTS_ISIZE);
     if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -78,4 +78,4 @@ pub unsafe extern "C" fn atlas_sql_test_connection(
         *buffer_out_len = len as Integer;
         false
     }
-}
+}}

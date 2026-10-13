@@ -30,14 +30,14 @@ mod unit {
     }
 
     #[named]
-    unsafe fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn {
+    unsafe fn non_panic_fn(stmt_handle: HStmt) -> SqlReturn { unsafe {
         panic_safe_exec_clear_diagnostics!(debug, || { SqlReturn::SUCCESS }, stmt_handle);
-    }
+    }}
 
     #[named]
-    unsafe fn panic_fn(stmt_handle: HStmt) -> SqlReturn {
+    unsafe fn panic_fn(stmt_handle: HStmt) -> SqlReturn { unsafe {
         panic_safe_exec_clear_diagnostics!(error, || { panic!("panic test") }, stmt_handle);
-    }
+    }}
 
     #[test]
     fn test_non_panic() {
