@@ -2,7 +2,7 @@
 name = "macos_postinstall"
 version = "0.0.0"
 authors = ["Patrick Meredith <pmeredit@protonmail.com>"]
-edition = "2021"
+edition.workspace = true
 
 [dependencies]
 rust-ini = "0"

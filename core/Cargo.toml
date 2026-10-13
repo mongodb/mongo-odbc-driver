@@ -7,7 +7,7 @@ authors = [
     "Patrick Meredith <pmeredit@protonmail.com>",
     "Nathan Leniz <nathan.leniz@mongodb.com>",
 ]
-edition = "2021"
+edition.workspace = true
 
 [dependencies]
 mongosql = { git = "https://github.com/mongodb/mongosql.git", branch = "main", package = "mongosql" }

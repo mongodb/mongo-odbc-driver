@@ -1,0 +1,2 @@
+# Keep this in sync with the edition in `Cargo.toml` at the workspace root
+edition = "2024"
