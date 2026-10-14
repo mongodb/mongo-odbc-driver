@@ -126,7 +126,7 @@ pub fn get_sql_diagnostics_full(handle_type: HandleType, handle: Handle) -> SqlD
     let text_length_ptr = &mut 0;
     let mut actual_sql_state: [WideChar; 6] = [0; 6];
     let actual_sql_state = &mut actual_sql_state as *mut _;
-    let mut actual_message_text: [WideChar; 512] = [0; 512];
+    let mut actual_message_text: [WideChar; 1024] = [0; 1024];
     let actual_message_text = &mut actual_message_text as *mut _;
     let actual_native_error = &mut 0;
     unsafe {
@@ -150,7 +150,7 @@ pub fn get_sql_diagnostics_full(handle_type: HandleType, handle: Handle) -> SqlD
     let message = unsafe {
         cstr::from_widechar_ref_lossy(slice::from_raw_parts(
             actual_message_text as *const WideChar,
-            *text_length_ptr as usize,
+            (*text_length_ptr as usize).min(1023),
         ))
     };
     SqlDiagnostics {
