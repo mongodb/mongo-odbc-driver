@@ -21,9 +21,9 @@ mod integration {
     };
     use cstr::WideChar;
     use definitions::{
-        AttrOdbcVersion, CDataType, FreeStmtOption, HStmt, Handle, HandleType, SQLColumnsW,
-        SQLExecDirectW, SQLFetch, SQLFreeStmt, SQLGetData, SQLGetTypeInfo, SQLMoreResults,
-        SQLPrepareW, SQLTablesW, SmallInt, SqlDataType, SqlReturn, USmallInt, SQL_NTS,
+        AttrOdbcVersion, CDataType, FreeStmtOption, HStmt, Handle, HandleType, SQL_NTS,
+        SQLColumnsW, SQLExecDirectW, SQLFetch, SQLFreeStmt, SQLGetData, SQLGetTypeInfo,
+        SQLMoreResults, SQLPrepareW, SQLTablesW, SmallInt, SqlDataType, SqlReturn, USmallInt,
     };
     use tailcall::tailcall;
 
@@ -36,47 +36,49 @@ mod integration {
         buffer_len: isize,
         str_len_or_ind_ptr: *mut isize,
     ) {
-        match SQLGetData(
-            statement_handle as HStmt,
-            (col_or_param_num + 1) as USmallInt,
-            target_types[col_or_param_num] as i16,
-            target_value_ptr,
-            buffer_len,
-            str_len_or_ind_ptr,
-        ) {
-            SqlReturn::SUCCESS_WITH_INFO => {
-                // If the sqlstate is RIGHT_TRUNCATED, we get more data until we consumed it all.
-                let sql_diagnostics =
-                    get_sql_diagnostics_full(HandleType::SQL_HANDLE_STMT, statement_handle);
-                assert_eq!(
-                    sql_diagnostics.sqlstate,
-                    RIGHT_TRUNCATED.odbc_3_state,
-                    "SUCCESS_WITH_INFO returned {} while expecting {}. Error is {}",
-                    sql_diagnostics.sqlstate,
-                    RIGHT_TRUNCATED.odbc_3_state,
-                    sql_diagnostics.error_message
-                );
-                get_data(
-                    statement_handle,
-                    col_or_param_num,
-                    target_types,
-                    target_value_ptr,
-                    buffer_len,
-                    str_len_or_ind_ptr,
-                )
-            }
-            SqlReturn::ERROR => {
-                panic!(
-                    "SQL ERROR received while retrieving data: {}",
-                    get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, statement_handle)
-                )
-            }
-            SqlReturn::SUCCESS => { /* all data retrieved successfully */ }
-            ret => {
-                panic!(
-                    "Unexpected {} received while retrieving data",
-                    sql_return_to_string(ret)
-                )
+        unsafe {
+            match SQLGetData(
+                statement_handle as HStmt,
+                (col_or_param_num + 1) as USmallInt,
+                target_types[col_or_param_num] as i16,
+                target_value_ptr,
+                buffer_len,
+                str_len_or_ind_ptr,
+            ) {
+                SqlReturn::SUCCESS_WITH_INFO => {
+                    // If the sqlstate is RIGHT_TRUNCATED, we get more data until we consumed it all.
+                    let sql_diagnostics =
+                        get_sql_diagnostics_full(HandleType::SQL_HANDLE_STMT, statement_handle);
+                    assert_eq!(
+                        sql_diagnostics.sqlstate,
+                        RIGHT_TRUNCATED.odbc_3_state,
+                        "SUCCESS_WITH_INFO returned {} while expecting {}. Error is {}",
+                        sql_diagnostics.sqlstate,
+                        RIGHT_TRUNCATED.odbc_3_state,
+                        sql_diagnostics.error_message
+                    );
+                    get_data(
+                        statement_handle,
+                        col_or_param_num,
+                        target_types,
+                        target_value_ptr,
+                        buffer_len,
+                        str_len_or_ind_ptr,
+                    )
+                }
+                SqlReturn::ERROR => {
+                    panic!(
+                        "SQL ERROR received while retrieving data: {}",
+                        get_sql_diagnostics(HandleType::SQL_HANDLE_STMT, statement_handle)
+                    )
+                }
+                SqlReturn::SUCCESS => { /* all data retrieved successfully */ }
+                ret => {
+                    panic!(
+                        "Unexpected {} received while retrieving data",
+                        sql_return_to_string(ret)
+                    )
+                }
             }
         }
     }
@@ -130,9 +132,9 @@ mod integration {
 
             if let Some(exp_fetch_count) = expected_fetch_count {
                 assert_eq!(
-                exp_fetch_count as usize, successful_fetch_count,
-                "Expected {exp_fetch_count:?} successful calls to SQLFetch, got {successful_fetch_count}."
-            );
+                    exp_fetch_count as usize, successful_fetch_count,
+                    "Expected {exp_fetch_count:?} successful calls to SQLFetch, got {successful_fetch_count}."
+                );
             }
 
             assert_eq!(SqlReturn::NO_DATA, SQLMoreResults(stmt as HStmt));

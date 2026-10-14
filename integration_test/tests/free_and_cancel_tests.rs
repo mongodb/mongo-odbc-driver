@@ -21,8 +21,8 @@ mod integration {
     };
     use cstr::WideChar;
     use definitions::{
-        AttrOdbcVersion, CDataType, FreeStmtOption, Handle, HandleType, Pointer, SQLCancel,
-        SQLFreeStmt, SQLPrepareW, SQLSetStmtAttrW, SqlReturn, StatementAttribute, SQL_NTS,
+        AttrOdbcVersion, CDataType, FreeStmtOption, Handle, HandleType, Pointer, SQL_NTS,
+        SQLCancel, SQLFreeStmt, SQLPrepareW, SQLSetStmtAttrW, SqlReturn, StatementAttribute,
     };
 
     /// This test is inspired by the SSIS Preview Data result set metadata flow.

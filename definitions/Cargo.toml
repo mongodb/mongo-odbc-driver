@@ -2,7 +2,7 @@
 name = "definitions"
 version = "0.0.0"
 build = "build.rs"
-edition = "2021"
+edition.workspace = true
 
 [dependencies]
 cstr = { path = "../cstr" }

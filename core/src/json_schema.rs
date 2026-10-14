@@ -271,9 +271,9 @@ impl From<BsonTypeName> for BsonTypeInfo {
 pub mod simplified {
 
     use crate::{
+        BsonTypeInfo, Error,
         err::Result,
         json_schema::{self, BsonType, BsonTypeName, Items},
-        BsonTypeInfo, Error,
     };
     use std::collections::{BTreeMap, BTreeSet};
 
@@ -758,12 +758,12 @@ mod unit {
     // Testing TryFrom<json_schema::Schema> for json_schema::simplified::Atomic
     mod atomic {
         use crate::{
+            Error,
             json_schema::{
-                self,
+                self, BsonType, BsonTypeName, Items,
                 simplified::{self, Atomic, ObjectSchema},
-                BsonType, BsonTypeName, Items,
             },
-            map, set, Error,
+            map, set,
         };
 
         try_from_test!(
@@ -889,12 +889,12 @@ mod unit {
     // omitting Atomic variants in favor of the unit tests above
     mod schema {
         use crate::{
+            Error,
             json_schema::{
-                self,
+                self, BsonType, BsonTypeName,
                 simplified::{Atomic, Schema},
-                BsonType, BsonTypeName,
             },
-            set, Error,
+            set,
         };
 
         try_from_test!(
@@ -960,8 +960,8 @@ mod unit {
     }
     mod bson_type_info {
         use crate::{
-            json_schema::{self, simplified, BsonType, BsonTypeName},
             BsonTypeInfo,
+            json_schema::{self, BsonType, BsonTypeName, simplified},
         };
 
         #[test]

@@ -1,5 +1,5 @@
 use crate::test_runner::{
-    fetch_row, get_column_attribute, get_column_count, get_data, Error, Result, TestEntry,
+    Error, Result, TestEntry, fetch_row, get_column_attribute, get_column_count, get_data,
 };
 use definitions::{CDataType, Desc, HStmt, SqlDataType, USmallInt};
 use lazy_static::lazy_static;

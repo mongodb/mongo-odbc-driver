@@ -4,18 +4,18 @@ use crate::{
     handles::definitions::{CachedData, MongoHandle, Statement},
 };
 use chrono::{
-    offset::Utc, DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike,
+    DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, offset::Utc,
 };
 use cstr::{
-    write_binary_slice_to_buffer, write_fixed_data, write_string_slice_to_buffer,
-    write_wstring_slice_to_buffer, WideChar,
+    WideChar, write_binary_slice_to_buffer, write_fixed_data, write_string_slice_to_buffer,
+    write_wstring_slice_to_buffer,
 };
 use definitions::{
     CDataType, Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
 };
-use mongodb::bson::{spec::BinarySubtype, Bson, UuidRepresentation};
+use mongodb::bson::{Bson, UuidRepresentation, spec::BinarySubtype};
 use regex::Regex;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{mem::size_of, str::FromStr};
 
 const DOUBLE: &str = "Double";
@@ -593,29 +593,34 @@ pub unsafe fn format_datetime(
     str_len_or_ind_ptr: *mut Len,
     data: Bson,
 ) -> SqlReturn {
-    let stmt = (*mongo_handle).as_statement().unwrap();
-    stmt.insert_var_data_cache(col_num, CachedData::Fixed);
-    let dt = data.to_datetime();
+    unsafe {
+        let stmt = (*mongo_handle).as_statement().unwrap();
+        stmt.insert_var_data_cache(col_num, CachedData::Fixed);
+        let dt = data.to_datetime();
 
-    match dt {
-        Ok((dt, warning)) => match format_datetime_helper(dt) {
-            Ok(data) => {
-                let sqlreturn =
-                    isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
-                if let Some(warning) = warning {
-                    stmt.errors.write().unwrap().push(warning);
-                    return SqlReturn::SUCCESS_WITH_INFO;
+        match dt {
+            Ok((dt, warning)) => match format_datetime_helper(dt) {
+                Ok(data) => {
+                    let sqlreturn = isize_len::set_output_fixed_data(
+                        &data,
+                        target_value_ptr,
+                        str_len_or_ind_ptr,
+                    );
+                    if let Some(warning) = warning {
+                        stmt.errors.write().unwrap().push(warning);
+                        return SqlReturn::SUCCESS_WITH_INFO;
+                    }
+                    sqlreturn
                 }
-                sqlreturn
-            }
+                Err(e) => {
+                    stmt.errors.write().unwrap().push(e);
+                    SqlReturn::ERROR
+                }
+            },
             Err(e) => {
                 stmt.errors.write().unwrap().push(e);
                 SqlReturn::ERROR
             }
-        },
-        Err(e) => {
-            stmt.errors.write().unwrap().push(e);
-            SqlReturn::ERROR
         }
     }
 }
@@ -657,28 +662,33 @@ pub unsafe fn format_time(
     str_len_or_ind_ptr: *mut Len,
     data: Bson,
 ) -> SqlReturn {
-    let stmt = (*mongo_handle).as_statement().unwrap();
-    let time = data.to_time();
-    stmt.insert_var_data_cache(col_num, CachedData::Fixed);
-    match time {
-        Ok((time, warning)) => match format_time_helper(time) {
-            Ok(data) => {
-                let sqlreturn =
-                    isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
-                if let Some(warning) = warning {
-                    stmt.errors.write().unwrap().push(warning);
-                    return SqlReturn::SUCCESS_WITH_INFO;
+    unsafe {
+        let stmt = (*mongo_handle).as_statement().unwrap();
+        let time = data.to_time();
+        stmt.insert_var_data_cache(col_num, CachedData::Fixed);
+        match time {
+            Ok((time, warning)) => match format_time_helper(time) {
+                Ok(data) => {
+                    let sqlreturn = isize_len::set_output_fixed_data(
+                        &data,
+                        target_value_ptr,
+                        str_len_or_ind_ptr,
+                    );
+                    if let Some(warning) = warning {
+                        stmt.errors.write().unwrap().push(warning);
+                        return SqlReturn::SUCCESS_WITH_INFO;
+                    }
+                    sqlreturn
                 }
-                sqlreturn
-            }
+                Err(e) => {
+                    stmt.errors.write().unwrap().push(e);
+                    SqlReturn::ERROR
+                }
+            },
             Err(e) => {
                 stmt.errors.write().unwrap().push(e);
                 SqlReturn::ERROR
             }
-        },
-        Err(e) => {
-            stmt.errors.write().unwrap().push(e);
-            SqlReturn::ERROR
         }
     }
 }
@@ -707,28 +717,33 @@ pub unsafe fn format_date(
     str_len_or_ind_ptr: *mut Len,
     data: Bson,
 ) -> SqlReturn {
-    let stmt = (*mongo_handle).as_statement().unwrap();
-    let dt = data.to_date();
-    stmt.insert_var_data_cache(col_num, CachedData::Fixed);
-    match dt {
-        Ok((dt, warning)) => match format_date_helper(dt) {
-            Ok(data) => {
-                let sqlreturn =
-                    isize_len::set_output_fixed_data(&data, target_value_ptr, str_len_or_ind_ptr);
-                if let Some(warning) = warning {
-                    stmt.errors.write().unwrap().push(warning);
-                    return SqlReturn::SUCCESS_WITH_INFO;
+    unsafe {
+        let stmt = (*mongo_handle).as_statement().unwrap();
+        let dt = data.to_date();
+        stmt.insert_var_data_cache(col_num, CachedData::Fixed);
+        match dt {
+            Ok((dt, warning)) => match format_date_helper(dt) {
+                Ok(data) => {
+                    let sqlreturn = isize_len::set_output_fixed_data(
+                        &data,
+                        target_value_ptr,
+                        str_len_or_ind_ptr,
+                    );
+                    if let Some(warning) = warning {
+                        stmt.errors.write().unwrap().push(warning);
+                        return SqlReturn::SUCCESS_WITH_INFO;
+                    }
+                    sqlreturn
                 }
-                sqlreturn
-            }
+                Err(e) => {
+                    stmt.errors.write().unwrap().push(e);
+                    SqlReturn::ERROR
+                }
+            },
             Err(e) => {
                 stmt.errors.write().unwrap().push(e);
                 SqlReturn::ERROR
             }
-        },
-        Err(e) => {
-            stmt.errors.write().unwrap().push(e);
-            SqlReturn::ERROR
         }
     }
 }
@@ -761,70 +776,72 @@ pub unsafe fn format_cached_data(
     str_len_or_ind_ptr: *mut Len,
     function_name: &str,
 ) -> SqlReturn {
-    match cached_data {
-        // Fixed cannot be streamed, and this data has already been retrieved before.
-        a @ CachedData::Fixed => {
-            let stmt = (*mongo_handle).as_statement().unwrap();
-            // we need to insert Fixed so that we can return SqlReturn::NO_DATA if this is
-            // called again.
-            stmt.insert_var_data_cache(col_or_param_num, a);
-            SqlReturn::NO_DATA
-        }
-        CachedData::Char(index, data) => {
-            if target_type != CDataType::SQL_C_CHAR {
+    unsafe {
+        match cached_data {
+            // Fixed cannot be streamed, and this data has already been retrieved before.
+            a @ CachedData::Fixed => {
                 let stmt = (*mongo_handle).as_statement().unwrap();
-                stmt.insert_var_data_cache(col_or_param_num, CachedData::Char(index, data));
-                return SqlReturn::NO_DATA;
+                // we need to insert Fixed so that we can return SqlReturn::NO_DATA if this is
+                // called again.
+                stmt.insert_var_data_cache(col_or_param_num, a);
+                SqlReturn::NO_DATA
             }
-            set_output_varlength_data!(
-                mongo_handle,
-                col_or_param_num,
-                index,
-                target_value_ptr,
-                buffer_len,
-                str_len_or_ind_ptr,
-                data,
-                isize_len::set_output_string,
-                function_name
-            )
-        }
-        CachedData::WChar(index, data) => {
-            if target_type != CDataType::SQL_C_WCHAR {
-                let stmt = (*mongo_handle).as_statement().unwrap();
+            CachedData::Char(index, data) => {
+                if target_type != CDataType::SQL_C_CHAR {
+                    let stmt = (*mongo_handle).as_statement().unwrap();
+                    stmt.insert_var_data_cache(col_or_param_num, CachedData::Char(index, data));
+                    return SqlReturn::NO_DATA;
+                }
+                set_output_varlength_data!(
+                    mongo_handle,
+                    col_or_param_num,
+                    index,
+                    target_value_ptr,
+                    buffer_len,
+                    str_len_or_ind_ptr,
+                    data,
+                    isize_len::set_output_string,
+                    function_name
+                )
+            }
+            CachedData::WChar(index, data) => {
+                if target_type != CDataType::SQL_C_WCHAR {
+                    let stmt = (*mongo_handle).as_statement().unwrap();
 
-                stmt.insert_var_data_cache(col_or_param_num, CachedData::WChar(index, data));
-                return SqlReturn::NO_DATA;
+                    stmt.insert_var_data_cache(col_or_param_num, CachedData::WChar(index, data));
+                    return SqlReturn::NO_DATA;
+                }
+                set_output_varlength_data!(
+                    mongo_handle,
+                    col_or_param_num,
+                    index,
+                    target_value_ptr,
+                    buffer_len,
+                    str_len_or_ind_ptr,
+                    data,
+                    isize_len::set_output_wstring_as_bytes,
+                    function_name
+                )
             }
-            set_output_varlength_data!(
-                mongo_handle,
-                col_or_param_num,
-                index,
-                target_value_ptr,
-                buffer_len,
-                str_len_or_ind_ptr,
-                data,
-                isize_len::set_output_wstring_as_bytes,
-                function_name
-            )
-        }
-        CachedData::Bin(index, data) => {
-            if target_type != CDataType::SQL_C_BINARY {
-                let stmt = (*mongo_handle).as_statement().unwrap();
+            CachedData::Bin(index, data) => {
+                if target_type != CDataType::SQL_C_BINARY {
+                    let stmt = (*mongo_handle).as_statement().unwrap();
 
-                stmt.insert_var_data_cache(col_or_param_num, CachedData::Bin(index, data));
-                return SqlReturn::NO_DATA;
+                    stmt.insert_var_data_cache(col_or_param_num, CachedData::Bin(index, data));
+                    return SqlReturn::NO_DATA;
+                }
+                set_output_varlength_data!(
+                    mongo_handle,
+                    col_or_param_num,
+                    index,
+                    target_value_ptr,
+                    buffer_len,
+                    str_len_or_ind_ptr,
+                    data,
+                    isize_len::set_output_binary,
+                    function_name
+                )
             }
-            set_output_varlength_data!(
-                mongo_handle,
-                col_or_param_num,
-                index,
-                target_value_ptr,
-                buffer_len,
-                str_len_or_ind_ptr,
-                data,
-                isize_len::set_output_binary,
-                function_name
-            )
         }
     }
 }
@@ -839,183 +856,185 @@ pub unsafe fn format_bson_data(
     data: Bson,
     function_name: &str,
 ) -> SqlReturn {
-    // If the data is null or undefined we immediately return NULL_DATA indicator.
-    match data {
-        Bson::Null | Bson::Undefined => {
-            let stmt = (*mongo_handle).as_statement().unwrap();
-
-            if str_len_or_ind_ptr.is_null() {
-                stmt.errors
-                    .write()
-                    .unwrap()
-                    .push(ODBCError::IndicatorVariableRequiredButNotSupplied);
-                return SqlReturn::SUCCESS_WITH_INFO;
-            }
-            *str_len_or_ind_ptr = definitions::SQL_NULL_DATA;
-            stmt.insert_var_data_cache(col_num, CachedData::Fixed);
-            return SqlReturn::SUCCESS;
-        }
-        _ => {}
-    }
-
-    let uuid_repr = match (*mongo_handle).as_statement_connection() {
-        Some(conn) => match conn.mongo_connection.read() {
-            Ok(conn) => {
-                if conn.as_ref().is_some() {
-                    conn.as_ref().unwrap().uuid_repr
-                } else {
-                    None
-                }
-            }
-            Err(_) => None,
-        },
-        None => None,
-    };
-
-    match target_type {
-        CDataType::SQL_C_BINARY | CDataType::SQL_C_GUID => {
-            let data = if target_type == CDataType::SQL_C_GUID {
-                data.to_guid(uuid_repr)
-            } else {
-                data.to_binary(uuid_repr)
-            };
-            let Ok(data) = data else {
+    unsafe {
+        // If the data is null or undefined we immediately return NULL_DATA indicator.
+        match data {
+            Bson::Null | Bson::Undefined => {
                 let stmt = (*mongo_handle).as_statement().unwrap();
-                stmt.errors.write().unwrap().push(data.unwrap_err());
-                return SqlReturn::ERROR;
-            };
 
-            set_output_varlength_data!(
+                if str_len_or_ind_ptr.is_null() {
+                    stmt.errors
+                        .write()
+                        .unwrap()
+                        .push(ODBCError::IndicatorVariableRequiredButNotSupplied);
+                    return SqlReturn::SUCCESS_WITH_INFO;
+                }
+                *str_len_or_ind_ptr = definitions::SQL_NULL_DATA;
+                stmt.insert_var_data_cache(col_num, CachedData::Fixed);
+                return SqlReturn::SUCCESS;
+            }
+            _ => {}
+        }
+
+        let uuid_repr = match (*mongo_handle).as_statement_connection() {
+            Some(conn) => match conn.mongo_connection.read() {
+                Ok(conn) => {
+                    if conn.as_ref().is_some() {
+                        conn.as_ref().unwrap().uuid_repr
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            },
+            None => None,
+        };
+
+        match target_type {
+            CDataType::SQL_C_BINARY | CDataType::SQL_C_GUID => {
+                let data = if target_type == CDataType::SQL_C_GUID {
+                    data.to_guid(uuid_repr)
+                } else {
+                    data.to_binary(uuid_repr)
+                };
+                let Ok(data) = data else {
+                    let stmt = (*mongo_handle).as_statement().unwrap();
+                    stmt.errors.write().unwrap().push(data.unwrap_err());
+                    return SqlReturn::ERROR;
+                };
+
+                set_output_varlength_data!(
+                    mongo_handle,
+                    col_num,
+                    0usize,
+                    target_value_ptr,
+                    buffer_len,
+                    str_len_or_ind_ptr,
+                    data,
+                    isize_len::set_output_binary,
+                    function_name
+                )
+            }
+            CDataType::SQL_C_CHAR => {
+                let data = data.to_json(uuid_repr).bytes().collect::<Vec<u8>>();
+                set_output_varlength_data!(
+                    mongo_handle,
+                    col_num,
+                    0usize,
+                    target_value_ptr,
+                    buffer_len,
+                    str_len_or_ind_ptr,
+                    data,
+                    isize_len::set_output_string,
+                    function_name
+                )
+            }
+            CDataType::SQL_C_WCHAR => {
+                let data = cstr::to_widechar_vec(&data.to_json(uuid_repr));
+                set_output_varlength_data!(
+                    mongo_handle,
+                    col_num,
+                    0usize,
+                    target_value_ptr,
+                    buffer_len,
+                    str_len_or_ind_ptr,
+                    data,
+                    isize_len::set_output_wstring_as_bytes,
+                    function_name
+                )
+            }
+            CDataType::SQL_C_BIT => {
+                fixed_data_with_warnings!(
+                    mongo_handle,
+                    col_num,
+                    data.to_bit(),
+                    target_value_ptr,
+                    str_len_or_ind_ptr
+                )
+            }
+            CDataType::SQL_C_DOUBLE => {
+                fixed_data_with_warnings!(
+                    mongo_handle,
+                    col_num,
+                    data.to_f64(),
+                    target_value_ptr,
+                    str_len_or_ind_ptr
+                )
+            }
+            CDataType::SQL_C_FLOAT => {
+                fixed_data_with_warnings!(
+                    mongo_handle,
+                    col_num,
+                    data.to_f32(),
+                    target_value_ptr,
+                    str_len_or_ind_ptr
+                )
+            }
+            CDataType::SQL_C_SBIGINT => {
+                fixed_data_with_warnings!(
+                    mongo_handle,
+                    col_num,
+                    data.to_i64(),
+                    target_value_ptr,
+                    str_len_or_ind_ptr
+                )
+            }
+            CDataType::SQL_C_UBIGINT => {
+                fixed_data_with_warnings!(
+                    mongo_handle,
+                    col_num,
+                    data.to_u64(),
+                    target_value_ptr,
+                    str_len_or_ind_ptr
+                )
+            }
+            CDataType::SQL_C_SLONG | CDataType::SQL_C_LONG => {
+                fixed_data_with_warnings!(
+                    mongo_handle,
+                    col_num,
+                    data.to_i32(),
+                    target_value_ptr,
+                    str_len_or_ind_ptr
+                )
+            }
+            CDataType::SQL_C_ULONG => {
+                fixed_data_with_warnings!(
+                    mongo_handle,
+                    col_num,
+                    data.to_u32(),
+                    target_value_ptr,
+                    str_len_or_ind_ptr
+                )
+            }
+            CDataType::SQL_C_TIMESTAMP | CDataType::SQL_C_TYPE_TIMESTAMP => format_datetime(
                 mongo_handle,
                 col_num,
-                0usize,
                 target_value_ptr,
-                buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_binary,
-                function_name
-            )
-        }
-        CDataType::SQL_C_CHAR => {
-            let data = data.to_json(uuid_repr).bytes().collect::<Vec<u8>>();
-            set_output_varlength_data!(
+            ),
+            CDataType::SQL_C_TIME | CDataType::SQL_C_TYPE_TIME => format_time(
                 mongo_handle,
                 col_num,
-                0usize,
                 target_value_ptr,
-                buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_string,
-                function_name
-            )
-        }
-        CDataType::SQL_C_WCHAR => {
-            let data = cstr::to_widechar_vec(&data.to_json(uuid_repr));
-            set_output_varlength_data!(
+            ),
+            CDataType::SQL_C_DATE | CDataType::SQL_C_TYPE_DATE => format_date(
                 mongo_handle,
                 col_num,
-                0usize,
                 target_value_ptr,
-                buffer_len,
                 str_len_or_ind_ptr,
                 data,
-                isize_len::set_output_wstring_as_bytes,
-                function_name
-            )
-        }
-        CDataType::SQL_C_BIT => {
-            fixed_data_with_warnings!(
-                mongo_handle,
-                col_num,
-                data.to_bit(),
-                target_value_ptr,
-                str_len_or_ind_ptr
-            )
-        }
-        CDataType::SQL_C_DOUBLE => {
-            fixed_data_with_warnings!(
-                mongo_handle,
-                col_num,
-                data.to_f64(),
-                target_value_ptr,
-                str_len_or_ind_ptr
-            )
-        }
-        CDataType::SQL_C_FLOAT => {
-            fixed_data_with_warnings!(
-                mongo_handle,
-                col_num,
-                data.to_f32(),
-                target_value_ptr,
-                str_len_or_ind_ptr
-            )
-        }
-        CDataType::SQL_C_SBIGINT => {
-            fixed_data_with_warnings!(
-                mongo_handle,
-                col_num,
-                data.to_i64(),
-                target_value_ptr,
-                str_len_or_ind_ptr
-            )
-        }
-        CDataType::SQL_C_UBIGINT => {
-            fixed_data_with_warnings!(
-                mongo_handle,
-                col_num,
-                data.to_u64(),
-                target_value_ptr,
-                str_len_or_ind_ptr
-            )
-        }
-        CDataType::SQL_C_SLONG | CDataType::SQL_C_LONG => {
-            fixed_data_with_warnings!(
-                mongo_handle,
-                col_num,
-                data.to_i32(),
-                target_value_ptr,
-                str_len_or_ind_ptr
-            )
-        }
-        CDataType::SQL_C_ULONG => {
-            fixed_data_with_warnings!(
-                mongo_handle,
-                col_num,
-                data.to_u32(),
-                target_value_ptr,
-                str_len_or_ind_ptr
-            )
-        }
-        CDataType::SQL_C_TIMESTAMP | CDataType::SQL_C_TYPE_TIMESTAMP => format_datetime(
-            mongo_handle,
-            col_num,
-            target_value_ptr,
-            str_len_or_ind_ptr,
-            data,
-        ),
-        CDataType::SQL_C_TIME | CDataType::SQL_C_TYPE_TIME => format_time(
-            mongo_handle,
-            col_num,
-            target_value_ptr,
-            str_len_or_ind_ptr,
-            data,
-        ),
-        CDataType::SQL_C_DATE | CDataType::SQL_C_TYPE_DATE => format_date(
-            mongo_handle,
-            col_num,
-            target_value_ptr,
-            str_len_or_ind_ptr,
-            data,
-        ),
-        other => {
-            add_diag_with_function!(
-                mongo_handle,
-                ODBCError::UnimplementedDataType(format!("{other:?}")),
-                function_name
-            );
-            SqlReturn::ERROR
+            ),
+            other => {
+                add_diag_with_function!(
+                    mongo_handle,
+                    ODBCError::UnimplementedDataType(format!("{other:?}")),
+                    function_name
+                );
+                SqlReturn::ERROR
+            }
         }
     }
 }
@@ -1034,39 +1053,41 @@ unsafe fn set_output_wstring_helper(
     buffer_len: usize,
     max_string_length: Option<u16>,
 ) -> (usize, SqlReturn) {
-    // If the output_ptr is null or no buffer space has been allocated, we need
-    // to return SUCCESS_WITH_INFO.
-    if output_ptr.is_null() || buffer_len == 0 {
-        return (0usize, SqlReturn::SUCCESS_WITH_INFO);
-    }
-    // TODO SQL-1084: This will currently not work when we need to truncate data that takes more than
-    // two bytes, such as emojis because it's assuming every character is 2 bytes.
-    // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
-    // reassemble parts.
-    let num_chars_to_write = match max_string_length {
-        Some(s) => std::cmp::min((s as usize) * size_of::<WideChar>(), buffer_len),
-        None => buffer_len,
-    };
-    let num_chars_written = write_wstring_slice_to_buffer(
-        message,
-        num_chars_to_write
-            .try_into()
-            .expect("message exceeds {isize::MAX} on this platform"),
-        output_ptr,
-    );
-    // return the number of characters in the message string, excluding the
-    // null terminator
-    if num_chars_written != 0
-        && num_chars_written
-            <= <usize as std::convert::TryInto<isize>>::try_into(message.len())
-                .expect("message len could not be converted to isize")
-    {
-        (
-            (num_chars_written - 1) as usize,
-            SqlReturn::SUCCESS_WITH_INFO,
-        )
-    } else {
-        (message.len(), SqlReturn::SUCCESS)
+    unsafe {
+        // If the output_ptr is null or no buffer space has been allocated, we need
+        // to return SUCCESS_WITH_INFO.
+        if output_ptr.is_null() || buffer_len == 0 {
+            return (0usize, SqlReturn::SUCCESS_WITH_INFO);
+        }
+        // TODO SQL-1084: This will currently not work when we need to truncate data that takes more than
+        // two bytes, such as emojis because it's assuming every character is 2 bytes.
+        // Actually, this is not clear now. The spec suggests it may be up to the user to correctly
+        // reassemble parts.
+        let num_chars_to_write = match max_string_length {
+            Some(s) => std::cmp::min((s as usize) * size_of::<WideChar>(), buffer_len),
+            None => buffer_len,
+        };
+        let num_chars_written = write_wstring_slice_to_buffer(
+            message,
+            num_chars_to_write
+                .try_into()
+                .expect("message exceeds {isize::MAX} on this platform"),
+            output_ptr,
+        );
+        // return the number of characters in the message string, excluding the
+        // null terminator
+        if num_chars_written != 0
+            && num_chars_written
+                <= <usize as std::convert::TryInto<isize>>::try_into(message.len())
+                    .expect("message len could not be converted to isize")
+        {
+            (
+                (num_chars_written - 1) as usize,
+                SqlReturn::SUCCESS_WITH_INFO,
+            )
+        } else {
+            (message.len(), SqlReturn::SUCCESS)
+        }
     }
 }
 
@@ -1083,34 +1104,36 @@ unsafe fn set_output_string_helper(
     output_ptr: *mut Char,
     buffer_len: usize,
 ) -> (usize, SqlReturn) {
-    // If the output_ptr is null or no buffer space has been allocated, we need
-    // to return SUCCESS_WITH_INFO.
-    if output_ptr.is_null() || buffer_len == 0 {
-        return (0usize, SqlReturn::SUCCESS_WITH_INFO);
-    }
+    unsafe {
+        // If the output_ptr is null or no buffer space has been allocated, we need
+        // to return SUCCESS_WITH_INFO.
+        if output_ptr.is_null() || buffer_len == 0 {
+            return (0usize, SqlReturn::SUCCESS_WITH_INFO);
+        }
 
-    let num_chars_written = write_string_slice_to_buffer(
-        message,
-        buffer_len
-            .try_into()
-            .expect("the buffer is too large and exceeds isize::MAX on this platform"),
-        output_ptr,
-    );
+        let num_chars_written = write_string_slice_to_buffer(
+            message,
+            buffer_len
+                .try_into()
+                .expect("the buffer is too large and exceeds isize::MAX on this platform"),
+            output_ptr,
+        );
 
-    // return the number of characters in the message string, excluding the
-    // null terminator
-    if num_chars_written != 0
-        && num_chars_written
-            <= <usize as std::convert::TryInto<isize>>::try_into(message.len())
-                .expect("message len could not be converted to isize")
-    {
-        // if the num_chars_written is 0, we didn't even write a null terminator
-        (
-            (num_chars_written - 1) as usize,
-            SqlReturn::SUCCESS_WITH_INFO,
-        )
-    } else {
-        (message.len(), SqlReturn::SUCCESS)
+        // return the number of characters in the message string, excluding the
+        // null terminator
+        if num_chars_written != 0
+            && num_chars_written
+                <= <usize as std::convert::TryInto<isize>>::try_into(message.len())
+                    .expect("message len could not be converted to isize")
+        {
+            // if the num_chars_written is 0, we didn't even write a null terminator
+            (
+                (num_chars_written - 1) as usize,
+                SqlReturn::SUCCESS_WITH_INFO,
+            )
+        } else {
+            (message.len(), SqlReturn::SUCCESS)
+        }
     }
 }
 
@@ -1127,19 +1150,21 @@ unsafe fn set_output_binary_helper(
     output_ptr: *mut Char,
     buffer_len: usize,
 ) -> (usize, SqlReturn) {
-    // If the output_ptr is null or no buffer space has been allocated, we need
-    // to return SUCCESS_WITH_INFO.
-    if output_ptr.is_null() || buffer_len == 0 {
-        return (0usize, SqlReturn::SUCCESS_WITH_INFO);
-    }
+    unsafe {
+        // If the output_ptr is null or no buffer space has been allocated, we need
+        // to return SUCCESS_WITH_INFO.
+        if output_ptr.is_null() || buffer_len == 0 {
+            return (0usize, SqlReturn::SUCCESS_WITH_INFO);
+        }
 
-    let num_bytes_written = write_binary_slice_to_buffer(data, buffer_len, output_ptr);
+        let num_bytes_written = write_binary_slice_to_buffer(data, buffer_len, output_ptr);
 
-    // return the number of characters in the binary
-    if num_bytes_written < data.len() {
-        (num_bytes_written, SqlReturn::SUCCESS_WITH_INFO)
-    } else {
-        (num_bytes_written, SqlReturn::SUCCESS)
+        // return the number of characters in the binary
+        if num_bytes_written < data.len() {
+            (num_bytes_written, SqlReturn::SUCCESS_WITH_INFO)
+        } else {
+            (num_bytes_written, SqlReturn::SUCCESS)
+        }
     }
 }
 
@@ -1160,23 +1185,25 @@ pub mod i16_len {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = cstr::to_widechar_vec(message);
-        let (len, ret) = set_output_wstring_helper(
-            &message,
-            output_ptr.cast::<WideChar>(),
-            buffer_len / size_of::<WideChar>(),
-            None,
-        );
-        // size_of::<WideChar>() will always be 2, so this cast is safe
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        // Only copy the length if the pointer is not null
-        ptr_safe_write(
-            text_length_ptr,
-            (size_of::<WideChar>() * len)
-                .try_into()
-                .expect("Required buffer size exceeds {i16::MAX} on this platform"),
-        );
-        ret
+        unsafe {
+            let message = cstr::to_widechar_vec(message);
+            let (len, ret) = set_output_wstring_helper(
+                &message,
+                output_ptr.cast::<WideChar>(),
+                buffer_len / size_of::<WideChar>(),
+                None,
+            );
+            // size_of::<WideChar>() will always be 2, so this cast is safe
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            // Only copy the length if the pointer is not null
+            ptr_safe_write(
+                text_length_ptr,
+                (size_of::<WideChar>() * len)
+                    .try_into()
+                    .expect("Required buffer size exceeds {i16::MAX} on this platform"),
+            );
+            ret
+        }
     }
 
     ///
@@ -1194,15 +1221,17 @@ pub mod i16_len {
         buffer_len: usize,
         text_length_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        let message = cstr::to_widechar_vec(message);
-        let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len, None);
-        // Only copy the length if the pointer is not null
-        ptr_safe_write(
-            text_length_ptr,
-            len.try_into()
-                .expect("The data is too large to fit in the buffer on this platform."),
-        );
-        ret
+        unsafe {
+            let message = cstr::to_widechar_vec(message);
+            let (len, ret) = set_output_wstring_helper(&message, output_ptr, buffer_len, None);
+            // Only copy the length if the pointer is not null
+            ptr_safe_write(
+                text_length_ptr,
+                len.try_into()
+                    .expect("The data is too large to fit in the buffer on this platform."),
+            );
+            ret
+        }
     }
 
     ///
@@ -1218,15 +1247,17 @@ pub mod i16_len {
         output_ptr: Pointer,
         data_len_ptr: *mut SmallInt,
     ) -> SqlReturn {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        // If the output_ptr is NULL, we should still return the length of the message.
-        ptr_safe_write(data_len_ptr, size_of::<T>() as i16);
+        unsafe {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            // If the output_ptr is NULL, we should still return the length of the message.
+            ptr_safe_write(data_len_ptr, size_of::<T>() as i16);
 
-        if output_ptr.is_null() {
-            return SqlReturn::SUCCESS_WITH_INFO;
+            if output_ptr.is_null() {
+                return SqlReturn::SUCCESS_WITH_INFO;
+            }
+            write_fixed_data(data, output_ptr);
+            SqlReturn::SUCCESS
         }
-        write_fixed_data(data, output_ptr);
-        SqlReturn::SUCCESS
     }
 }
 
@@ -1247,20 +1278,22 @@ pub mod i32_len {
         buffer_len: usize,
         text_length_ptr: *mut Integer,
     ) -> SqlReturn {
-        let (len, ret) = set_output_wstring_helper(
-            &cstr::to_widechar_vec(message),
-            output_ptr.cast::<WideChar>(),
-            buffer_len / size_of::<WideChar>(),
-            None,
-        );
+        unsafe {
+            let (len, ret) = set_output_wstring_helper(
+                &cstr::to_widechar_vec(message),
+                output_ptr.cast::<WideChar>(),
+                buffer_len / size_of::<WideChar>(),
+                None,
+            );
 
-        ptr_safe_write(
-            text_length_ptr,
-            (size_of::<WideChar>() * len)
-                .try_into()
-                .expect("Data too large to fit"),
-        );
-        ret
+            ptr_safe_write(
+                text_length_ptr,
+                (size_of::<WideChar>() * len)
+                    .try_into()
+                    .expect("Data too large to fit"),
+            );
+            ret
+        }
     }
 
     ///
@@ -1276,15 +1309,17 @@ pub mod i32_len {
         output_ptr: Pointer,
         data_len_ptr: *mut Integer,
     ) -> SqlReturn {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        // If the output_ptr is NULL, we should still return the length of the message.
-        ptr_safe_write(data_len_ptr, size_of::<T>() as i32);
+        unsafe {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            // If the output_ptr is NULL, we should still return the length of the message.
+            ptr_safe_write(data_len_ptr, size_of::<T>() as i32);
 
-        if output_ptr.is_null() {
-            return SqlReturn::SUCCESS_WITH_INFO;
+            if output_ptr.is_null() {
+                return SqlReturn::SUCCESS_WITH_INFO;
+            }
+            write_fixed_data(data, output_ptr);
+            SqlReturn::SUCCESS
         }
-        write_fixed_data(data, output_ptr);
-        SqlReturn::SUCCESS
     }
 }
 
@@ -1308,45 +1343,47 @@ pub mod isize_len {
         buffer_len: usize,
         text_length_ptr: *mut Len,
     ) -> SqlReturn {
-        // This should be impossible per the DM.
-        if output_ptr.is_null() {
-            return SqlReturn::ERROR;
+        unsafe {
+            // This should be impossible per the DM.
+            if output_ptr.is_null() {
+                return SqlReturn::ERROR;
+            }
+            // TODO Power BI: This will return NO_DATA if the string is size 0 to begin with, not just
+            // when the data runs out. Check to see if this is correct behavior.
+            if index >= message.len() {
+                ptr_safe_write(text_length_ptr, 0);
+                return SqlReturn::NO_DATA;
+            }
+            let max_string_length = *stmt
+                .connection
+                .as_ref()
+                .unwrap()
+                .as_connection()
+                .unwrap()
+                .max_string_length
+                .read()
+                .unwrap();
+            let (len, ret) = set_output_wstring_helper(
+                message.get(index..).unwrap(),
+                output_ptr,
+                buffer_len / size_of::<WideChar>(),
+                max_string_length,
+            );
+            // if we have a max string length and the total length of the data is greater, return the max string length,
+            // functionally truncating the data. In all other cases, the returned length should be the total length of the data.
+            let text_length = match max_string_length {
+                Some(s) => std::cmp::min(s as usize, message.len() - index),
+                None => message.len() - index,
+            };
+            ptr_safe_write(
+                text_length_ptr,
+                (size_of::<WideChar>() * text_length)
+                    .try_into()
+                    .expect("Data too large to fit"),
+            );
+            stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
+            ret
         }
-        // TODO Power BI: This will return NO_DATA if the string is size 0 to begin with, not just
-        // when the data runs out. Check to see if this is correct behavior.
-        if index >= message.len() {
-            ptr_safe_write(text_length_ptr, 0);
-            return SqlReturn::NO_DATA;
-        }
-        let max_string_length = *stmt
-            .connection
-            .as_ref()
-            .unwrap()
-            .as_connection()
-            .unwrap()
-            .max_string_length
-            .read()
-            .unwrap();
-        let (len, ret) = set_output_wstring_helper(
-            message.get(index..).unwrap(),
-            output_ptr,
-            buffer_len / size_of::<WideChar>(),
-            max_string_length,
-        );
-        // if we have a max string length and the total length of the data is greater, return the max string length,
-        // functionally truncating the data. In all other cases, the returned length should be the total length of the data.
-        let text_length = match max_string_length {
-            Some(s) => std::cmp::min(s as usize, message.len() - index),
-            None => message.len() - index,
-        };
-        ptr_safe_write(
-            text_length_ptr,
-            (size_of::<WideChar>() * text_length)
-                .try_into()
-                .expect("Data too large to fit"),
-        );
-        stmt.insert_var_data_cache(col_num, CachedData::WChar(index + len, message));
-        ret
     }
 
     ///
@@ -1367,29 +1404,31 @@ pub mod isize_len {
         buffer_len: usize,
         text_length_ptr: *mut Len,
     ) -> SqlReturn {
-        // This should be impossible per the DM.
-        if output_ptr.is_null() {
-            return SqlReturn::ERROR;
+        unsafe {
+            // This should be impossible per the DM.
+            if output_ptr.is_null() {
+                return SqlReturn::ERROR;
+            }
+            // TODO Power BI: This will return NO_DATA if the string is size 0 to begin with, not just
+            // when the data runs out. Check to see if this is correct behavior.
+            if index >= message.len() {
+                ptr_safe_write(text_length_ptr, 0);
+                return SqlReturn::NO_DATA;
+            }
+            let (len, ret) =
+                set_output_string_helper(message.get(index..).unwrap(), output_ptr, buffer_len);
+            // the returned length should always be the total length of the data.
+            ptr_safe_write(
+                text_length_ptr,
+                (message.len() - index)
+                    .try_into()
+                    .expect("Data too large for buffer"),
+            );
+            // The length parameter does not matter because character data uses 8bit words and
+            // we can obtain it from message.chars().count() above.
+            stmt.insert_var_data_cache(col_num, CachedData::Char(len + index, message));
+            ret
         }
-        // TODO Power BI: This will return NO_DATA if the string is size 0 to begin with, not just
-        // when the data runs out. Check to see if this is correct behavior.
-        if index >= message.len() {
-            ptr_safe_write(text_length_ptr, 0);
-            return SqlReturn::NO_DATA;
-        }
-        let (len, ret) =
-            set_output_string_helper(message.get(index..).unwrap(), output_ptr, buffer_len);
-        // the returned length should always be the total length of the data.
-        ptr_safe_write(
-            text_length_ptr,
-            (message.len() - index)
-                .try_into()
-                .expect("Data too large for buffer"),
-        );
-        // The length parameter does not matter because character data uses 8bit words and
-        // we can obtain it from message.chars().count() above.
-        stmt.insert_var_data_cache(col_num, CachedData::Char(len + index, message));
-        ret
     }
 
     ///
@@ -1410,26 +1449,28 @@ pub mod isize_len {
         buffer_len: usize,
         text_length_ptr: *mut Len,
     ) -> SqlReturn {
-        // This should be impossible per the DM.
-        if output_ptr.is_null() {
-            return SqlReturn::ERROR;
+        unsafe {
+            // This should be impossible per the DM.
+            if output_ptr.is_null() {
+                return SqlReturn::ERROR;
+            }
+            // TODO Power BI: This will return NO_DATA if the data is size 0 to begin with, not just
+            // when the data runs out. Check to see if this is correct behavior.
+            if index >= data.len() {
+                ptr_safe_write(text_length_ptr, 0);
+                return SqlReturn::NO_DATA;
+            }
+            let (len, ret) =
+                set_output_binary_helper(data.get(index..).unwrap(), output_ptr, buffer_len);
+            ptr_safe_write(
+                text_length_ptr,
+                (data.len() - index)
+                    .try_into()
+                    .expect("Data too large for buffer"),
+            );
+            stmt.insert_var_data_cache(col_num, CachedData::Bin(len + index, data));
+            ret
         }
-        // TODO Power BI: This will return NO_DATA if the data is size 0 to begin with, not just
-        // when the data runs out. Check to see if this is correct behavior.
-        if index >= data.len() {
-            ptr_safe_write(text_length_ptr, 0);
-            return SqlReturn::NO_DATA;
-        }
-        let (len, ret) =
-            set_output_binary_helper(data.get(index..).unwrap(), output_ptr, buffer_len);
-        ptr_safe_write(
-            text_length_ptr,
-            (data.len() - index)
-                .try_into()
-                .expect("Data too large for buffer"),
-        );
-        stmt.insert_var_data_cache(col_num, CachedData::Bin(len + index, data));
-        ret
     }
 
     ///
@@ -1445,17 +1486,19 @@ pub mod isize_len {
         output_ptr: Pointer,
         data_len_ptr: *mut Len,
     ) -> SqlReturn {
-        // This should be impossible per the DM.
-        if output_ptr.is_null() {
-            return SqlReturn::ERROR;
+        unsafe {
+            // This should be impossible per the DM.
+            if output_ptr.is_null() {
+                return SqlReturn::ERROR;
+            }
+
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            // If the output_ptr is NULL, we should still return the length of the message.
+            ptr_safe_write(data_len_ptr, size_of::<T>() as isize);
+
+            write_fixed_data(data, output_ptr);
+            SqlReturn::SUCCESS
         }
-
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        // If the output_ptr is NULL, we should still return the length of the message.
-        ptr_safe_write(data_len_ptr, size_of::<T>() as isize);
-
-        write_fixed_data(data, output_ptr);
-        SqlReturn::SUCCESS
     }
 }
 
@@ -1466,8 +1509,10 @@ pub mod isize_len {
 /// This writes to a raw C-pointers
 ///
 pub unsafe fn ptr_safe_write<T>(ptr: *mut T, data: T) {
-    if !ptr.is_null() {
-        *ptr = data;
+    unsafe {
+        if !ptr.is_null() {
+            *ptr = data;
+        }
     }
 }
 
@@ -1490,8 +1535,8 @@ mod unit {
         use crate::{api::data::IntoCData, map};
         use bson::Bson;
         use constants::{
-            OdbcState, FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE,
-            INVALID_DATETIME_FORMAT,
+            FRACTIONAL_TRUNCATION, INTEGRAL_TRUNCATION, INVALID_CHARACTER_VALUE,
+            INVALID_DATETIME_FORMAT, OdbcState,
         };
 
         use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
@@ -2064,14 +2109,16 @@ mod unit {
 
         #[test]
         fn nan() {
-            assert!(f64::from_str(
-                &Bson::Decimal128(Decimal128::from_bytes([
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 124
-                ]))
-                .to_string(),
-            )
-            .unwrap()
-            .is_nan());
+            assert!(
+                f64::from_str(
+                    &Bson::Decimal128(Decimal128::from_bytes([
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 124
+                    ]))
+                    .to_string(),
+                )
+                .unwrap()
+                .is_nan()
+            );
         }
 
         #[test]

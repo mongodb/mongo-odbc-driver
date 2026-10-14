@@ -1,12 +1,12 @@
-use crate::cluster_type::{determine_cluster_type, MongoClusterType};
+use crate::cluster_type::{MongoClusterType, determine_cluster_type};
 use crate::odbc_uri::UserOptions;
 use crate::util::run_command_with_retry;
-use crate::{err::Result, Error};
+use crate::{Error, err::Result};
 use crate::{MongoQuery, TypeMode};
 use lazy_static::lazy_static;
 use mongodb::{
-    bson::{doc, Bson, UuidRepresentation},
     Client,
+    bson::{Bson, UuidRepresentation, doc},
 };
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "garbage_collect")]

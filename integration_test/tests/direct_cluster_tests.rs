@@ -7,8 +7,8 @@ mod direct_cluster_tests {
     };
     use cstr::WideChar;
     use definitions::{
-        AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQLColumnsW, SQLExecDirectW,
-        SQLExecute, SQLPrepareW, SmallInt, SqlReturn, SQL_NTS,
+        AttrOdbcVersion, CDataType, HStmt, Handle, HandleType, SQL_NTS, SQLColumnsW,
+        SQLExecDirectW, SQLExecute, SQLPrepareW, SmallInt, SqlReturn,
     };
     use serde_json::{Number, Value};
     use std::ptr;
@@ -25,7 +25,9 @@ mod direct_cluster_tests {
         );
 
         unsafe {
-            let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews ORDER BY _id LIMIT 3");
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec(
+                "SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews ORDER BY _id LIMIT 3",
+            );
             query.push(0);
 
             assert_eq!(
@@ -62,14 +64,14 @@ mod direct_cluster_tests {
     }
 
     #[test]
-    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_atlas_infinite(
-    ) {
+    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_atlas_infinite()
+     {
         run_prepare_execute_airbnb_test("infinite");
     }
 
     #[test]
-    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_direct_cluster_mode(
-    ) {
+    fn test_sql_prepare_and_sql_execute_with_valid_query_and_valid_schemas_created_in_direct_cluster_mode()
+     {
         run_prepare_execute_airbnb_test("cluster0");
     }
 
@@ -84,7 +86,9 @@ mod direct_cluster_tests {
         );
 
         unsafe {
-            let mut query: Vec<WideChar> = cstr::to_widechar_vec("SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews ORDER BY _id LIMIT 3");
+            let mut query: Vec<WideChar> = cstr::to_widechar_vec(
+                "SELECT property_type, room_type, bed_type, minimum_nights, maximum_nights FROM listingsAndReviews ORDER BY _id LIMIT 3",
+            );
             query.push(0);
 
             assert_eq!(

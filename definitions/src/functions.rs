@@ -25,7 +25,7 @@ pub static mut NUM_ENVIRONMENT: u32 = 0;
     all(not(windows), feature = "static", feature = "iodbc"),
     link(name = "iodbc", kind = "static")
 )]
-extern "system" {
+unsafe extern "system" {
     /// Allocates an environment, connection, statement, or descriptor handle.
     ///
     /// # Returns
@@ -437,7 +437,7 @@ extern "system" {
     /// `SUCCESS`, `SUCCESS_WITH_INFO`, `ERROR`, `INVALID_HANDLE`, or
     /// `SQL_STILL_EXECUTING`
     pub fn SQLPrepare(hstmt: HStmt, statement_text: *const Char, text_length: Integer)
-        -> SqlReturn;
+    -> SqlReturn;
 
     /// Compiles the statement and generates an access plan.
     ///

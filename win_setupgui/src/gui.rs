@@ -9,7 +9,7 @@ use std::{cell::RefCell, thread};
 use windows::Win32::System::Search::{ODBC_ADD_DSN, ODBC_CONFIG_DSN};
 
 #[link(name = "atsql", kind = "raw-dylib")]
-extern "C" {
+unsafe extern "C" {
     /// atlas_sql_test_connection returns true if a connection can be established
     /// with the provided connection string.
     /// If the connection fails, the error message is written to the buffer.

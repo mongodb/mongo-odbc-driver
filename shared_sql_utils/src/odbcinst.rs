@@ -5,7 +5,7 @@ use cstr::{Char, WideChar};
 #[cfg_attr(target_os = "linux", link(name = "odbcinst", kind = "dylib"))]
 #[cfg_attr(target_os = "macos", link(name = "iodbcinst", kind = "dylib"))]
 #[cfg_attr(target_os = "windows", link(name = "odbccp32", kind = "raw-dylib"))]
-extern "C" {
+unsafe extern "C" {
     pub fn SQLValidDSNW(dsn: *const WideChar) -> bool;
     pub fn SQLWriteDSNToIniW(dsn: *const WideChar, driver: *const WideChar) -> bool;
     pub fn SQLWritePrivateProfileStringW(

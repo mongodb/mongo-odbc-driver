@@ -4,8 +4,8 @@
     clippy::cast_possible_wrap
 )]
 
-use crate::{odbc_uri::ODBCUri, MongoConnection, TypeMode};
-use cstr::{input_text_to_string_w, write_string_to_buffer, WideChar};
+use crate::{MongoConnection, TypeMode, odbc_uri::ODBCUri};
+use cstr::{WideChar, input_text_to_string_w, write_string_to_buffer};
 use definitions::{Integer, SQL_NTS_ISIZE};
 
 /// This function is exported as part of the atsql public API, and must not be moved from this crate.
@@ -22,60 +22,63 @@ use definitions::{Integer, SQL_NTS_ISIZE};
 /// # Safety
 /// Because this function is called from C, it is unsafe.
 ///
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn atlas_sql_test_connection(
     connection_string: *const WideChar,
     buffer: *const WideChar,
     buffer_in_len: usize,
     buffer_out_len: *mut Integer,
 ) -> bool {
-    let conn_str = unsafe { input_text_to_string_w(connection_string, SQL_NTS_ISIZE) };
-    if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let client_options = runtime.block_on(async { odbc_uri.try_into_client_options().await });
-        match client_options {
-            Ok(client_options) => {
-                match MongoConnection::connect(
-                    client_options,
-                    odbc_uri.get("database").map(|s| s.to_owned()),
-                    None,
-                    Some(30),
-                    TypeMode::Standard,
-                    Some(runtime),
-                    None,
-                ) {
-                    Ok(_) => true,
-                    Err(e) => {
-                        let len = write_string_to_buffer(
-                            &e.to_string(),
-                            buffer_in_len as isize,
-                            buffer as *mut WideChar,
-                        );
-                        *buffer_out_len = len as Integer;
-                        false
+    unsafe {
+        let conn_str = input_text_to_string_w(connection_string, SQL_NTS_ISIZE);
+        if let Ok(mut odbc_uri) = ODBCUri::new(conn_str) {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            let client_options =
+                runtime.block_on(async { odbc_uri.try_into_client_options().await });
+            match client_options {
+                Ok(client_options) => {
+                    match MongoConnection::connect(
+                        client_options,
+                        odbc_uri.get("database").map(|s| s.to_owned()),
+                        None,
+                        Some(30),
+                        TypeMode::Standard,
+                        Some(runtime),
+                        None,
+                    ) {
+                        Ok(_) => true,
+                        Err(e) => {
+                            let len = write_string_to_buffer(
+                                &e.to_string(),
+                                buffer_in_len as isize,
+                                buffer as *mut WideChar,
+                            );
+                            *buffer_out_len = len as Integer;
+                            false
+                        }
                     }
                 }
+                Err(e) => {
+                    let len = write_string_to_buffer(
+                        &e.to_string(),
+                        buffer_in_len as isize,
+                        buffer as *mut WideChar,
+                    );
+                    *buffer_out_len = len as Integer;
+                    false
+                }
             }
-            Err(e) => {
-                let len = write_string_to_buffer(
-                    &e.to_string(),
-                    buffer_in_len as isize,
-                    buffer as *mut WideChar,
-                );
-                *buffer_out_len = len as Integer;
-                false
-            }
+        } else {
+            let len = write_string_to_buffer(
+                "Invalid connection string.",
+                buffer_in_len as isize,
+                buffer as *mut WideChar,
+            );
+            *buffer_out_len = len as Integer;
+            false
         }
-    } else {
-        let len = write_string_to_buffer(
-            "Invalid connection string.",
-            buffer_in_len as isize,
-            buffer as *mut WideChar,
-        );
-        *buffer_out_len = len as Integer;
-        false
     }
 }

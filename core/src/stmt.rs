@@ -1,6 +1,6 @@
 use crate::{
-    err::{Error, Result},
     MongoColMetadata, MongoConnection,
+    err::{Error, Result},
 };
 use mongodb::bson::Bson;
 use std::fmt::Debug;
@@ -64,13 +64,13 @@ impl MongoStatement for EmptyStatement {
 #[cfg(test)]
 mod unit {
     use crate::{
+        TypeMode,
         col_metadata::MongoColMetadata,
         json_schema::{
-            simplified::{Atomic, Schema},
             BsonTypeName,
+            simplified::{Atomic, Schema},
         },
         stmt::{EmptyStatement, MongoStatement},
-        TypeMode,
     };
     use definitions::Nullability;
     use lazy_static::lazy_static;

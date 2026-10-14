@@ -1,4 +1,4 @@
-use crate::{col_metadata::MongoColMetadata, stmt::EmptyStatement, BsonTypeInfo};
+use crate::{BsonTypeInfo, col_metadata::MongoColMetadata, stmt::EmptyStatement};
 use definitions::Nullability;
 use once_cell::sync::OnceCell;
 

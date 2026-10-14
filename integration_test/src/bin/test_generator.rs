@@ -1,4 +1,4 @@
-use integration_test::test_runner::{run_resultset_tests, Result};
+use integration_test::test_runner::{Result, run_resultset_tests};
 
 /// This is a standalone executable that generates baseline integration
 /// test files based on the description, db, and test_definition fields

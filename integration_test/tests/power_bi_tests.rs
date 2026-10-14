@@ -8,14 +8,14 @@ mod common;
 
 mod integration {
     use crate::common::{
-        fetch_and_get_data, generate_connection_str, get_column_attributes, get_sql_diagnostics,
-        sql_return_to_string, OutputBuffer, BUFFER_LENGTH,
+        BUFFER_LENGTH, OutputBuffer, fetch_and_get_data, generate_connection_str,
+        get_column_attributes, get_sql_diagnostics, sql_return_to_string,
     };
     use definitions::{
         AttrConnectionPooling, AttrOdbcVersion, CDataType, ConnectionAttribute,
         DriverConnectOption, EnvironmentAttribute, HDbc, HEnv, HStmt, Handle, HandleType, InfoType,
-        Pointer, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFreeHandle, SQLGetInfoW,
-        SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn, SQL_NTS,
+        Pointer, SQL_NTS, SQLAllocHandle, SQLDriverConnectW, SQLExecDirectW, SQLFreeHandle,
+        SQLGetInfoW, SQLSetConnectAttrW, SQLSetEnvAttr, SQLTablesW, SmallInt, SqlReturn,
     };
 
     use cstr::WideChar;
@@ -252,7 +252,10 @@ mod integration {
             println!("Input connection string = {in_connection_string}\nLength is {input_len}");
             println!("Output connection string = {out_connection_string}\nLength is {output_len}");
             // The output string should be the same as the input string except with extra curly braces around the driver name
-            assert_eq!(input_len, output_len, "Expect that both connection the input connection string and output connection string have the same length but input string length is {input_len} and output string length is {output_len}");
+            assert_eq!(
+                input_len, output_len,
+                "Expect that both connection the input connection string and output connection string have the same length but input string length is {input_len} and output string length is {output_len}"
+            );
 
             // SQL_DRIVER_NAME is not accessible through definitions
             /*

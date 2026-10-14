@@ -1,11 +1,11 @@
 use crate::{
-    json_schema::{
-        simplified::{Atomic, ObjectSchema, Schema},
-        BsonTypeName,
-    },
     BsonTypeInfo, Error, Result, TypeMode,
+    json_schema::{
+        BsonTypeName,
+        simplified::{Atomic, ObjectSchema, Schema},
+    },
 };
-use bson::{doc, Bson, Document};
+use bson::{Bson, Document, doc};
 use definitions::{Nullability, SqlCode, SqlDataType};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -460,9 +460,10 @@ impl ObjectSchema {
 mod unit {
     mod process_metadata {
         use crate::{
+            Error, TypeMode,
             col_metadata::ResultSetSchema,
             json_schema::{BsonType, BsonTypeName, Schema},
-            map, Error, TypeMode,
+            map,
         };
 
         #[test]
@@ -770,11 +771,12 @@ mod unit {
 
     mod object_schema {
         use crate::{
+            Error,
             json_schema::{
-                simplified::{Atomic, ObjectSchema, Schema},
                 BsonTypeName,
+                simplified::{Atomic, ObjectSchema, Schema},
             },
-            map, set, Error,
+            map, set,
         };
         use definitions::Nullability;
 
@@ -919,8 +921,8 @@ mod unit {
     }
 
     mod from_sql_schemas_document_function_error_handling_tests {
-        use crate::{col_metadata::ResultSetSchema, Error};
-        use bson::{datetime, doc, Bson};
+        use crate::{Error, col_metadata::ResultSetSchema};
+        use bson::{Bson, datetime, doc};
 
         #[test]
         fn schema_field_is_the_wrong_type() {
@@ -941,7 +943,10 @@ mod unit {
             );
 
             if let Err(error) = result_set_schema {
-                assert_eq!("Getting metadata for collection 'coll_name' failed with error: invalid type: integer `1`, expected struct Schema", error.to_string());
+                assert_eq!(
+                    "Getting metadata for collection 'coll_name' failed with error: invalid type: integer `1`, expected struct Schema",
+                    error.to_string()
+                );
             }
         }
 
@@ -970,7 +975,10 @@ mod unit {
             );
 
             if let Err(error) = result_set_schema {
-                assert_eq!("Getting metadata for collection 'coll_name' failed with error: data did not match any variant of untagged enum BsonType", error.to_string());
+                assert_eq!(
+                    "Getting metadata for collection 'coll_name' failed with error: data did not match any variant of untagged enum BsonType",
+                    error.to_string()
+                );
             }
         }
     }

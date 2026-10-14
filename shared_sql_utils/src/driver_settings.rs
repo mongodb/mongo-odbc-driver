@@ -64,7 +64,9 @@ impl DriverSettings {
                 );
 
                 if len > MAX_VALUE_LENGTH as i32 {
-                    return Err(SettingError::Generic(format!("If you see this error, please report it. Attempted to read setting list from registry that was over {MAX_VALUE_LENGTH} characters for section: `{DRIVER_NAME}`.")));
+                    return Err(SettingError::Generic(format!(
+                        "If you see this error, please report it. Attempted to read setting list from registry that was over {MAX_VALUE_LENGTH} characters for section: `{DRIVER_NAME}`."
+                    )));
                 } else if len < 1 {
                     None
                 } else {
@@ -82,7 +84,9 @@ impl DriverSettings {
                     to_char_ptr(ODBCINSTINI).0,
                 );
                 if len > MAX_VALUE_LENGTH as i32 {
-                    return Err(SettingError::Generic(format!("If you see this error, please report it. Attempted to read setting list from registry that was over {MAX_VALUE_LENGTH} characters for section: `{DRIVER_NAME}`.")));
+                    return Err(SettingError::Generic(format!(
+                        "If you see this error, please report it. Attempted to read setting list from registry that was over {MAX_VALUE_LENGTH} characters for section: `{DRIVER_NAME}`."
+                    )));
                 } else if len < 1 {
                     None
                 } else {
@@ -109,7 +113,9 @@ impl DriverSettings {
                                 to_widechar_ptr(ODBCINSTINI).0,
                             );
                             if len > MAX_VALUE_LENGTH as i32 {
-                                return Err(SettingError::Generic(format!("If you see this error, please report it. Attempted to read a value from registry that was over {MAX_VALUE_LENGTH} characters for key: `{DRIVER}.{key}`.")));
+                                return Err(SettingError::Generic(format!(
+                                    "If you see this error, please report it. Attempted to read a value from registry that was over {MAX_VALUE_LENGTH} characters for key: `{DRIVER}.{key}`."
+                                )));
                             } else if len < 1 {
                                 /* Ignore keys not found since we get values from key list */
                             } else {
@@ -129,7 +135,9 @@ impl DriverSettings {
                             );
 
                             if len > MAX_VALUE_LENGTH as i32 {
-                                return Err(SettingError::Generic(format!("If you see this error, please report it. Attempted to read a value from registry that was over {MAX_VALUE_LENGTH} characters for key: `{DRIVER}.{key}`.")));
+                                return Err(SettingError::Generic(format!(
+                                    "If you see this error, please report it. Attempted to read a value from registry that was over {MAX_VALUE_LENGTH} characters for key: `{DRIVER}.{key}`."
+                                )));
                             } else if len < 1 {
                                 /* Ignore keys not found since we get values from key list */
                             } else {

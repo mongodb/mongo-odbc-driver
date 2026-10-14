@@ -5,11 +5,11 @@
 )]
 
 use crate::{
-    handles::definitions::{Connection, ConnectionState, MongoHandle},
     SQLGetInfoW,
+    handles::definitions::{Connection, ConnectionState, MongoHandle},
 };
 use constants::*;
-use cstr::{input_text_to_string_w, WideChar};
+use cstr::{WideChar, input_text_to_string_w};
 use definitions::*;
 
 macro_rules! test_get_info {
@@ -96,22 +96,24 @@ macro_rules! test_get_info_expect_u32_sql_all {
 }
 
 unsafe fn modify_string_value(value_ptr: Pointer, out_length: usize) -> String {
-    input_text_to_string_w(
-        value_ptr as *const _,
-        (out_length / std::mem::size_of::<WideChar>()) as isize,
-    )
+    unsafe {
+        input_text_to_string_w(
+            value_ptr as *const _,
+            (out_length / std::mem::size_of::<WideChar>()) as isize,
+        )
+    }
 }
 
 unsafe fn modify_string_value_from_runes(value_ptr: Pointer, out_length: usize) -> String {
-    input_text_to_string_w(value_ptr as *const _, out_length as isize)
+    unsafe { input_text_to_string_w(value_ptr as *const _, out_length as isize) }
 }
 
 unsafe fn modify_u32_value(value_ptr: Pointer, _: usize) -> u32 {
-    *(value_ptr as *mut UInteger)
+    unsafe { *(value_ptr as *mut UInteger) }
 }
 
 unsafe fn modify_u16_value(value_ptr: Pointer, _: usize) -> u16 {
-    *(value_ptr as *mut USmallInt)
+    unsafe { *(value_ptr as *mut USmallInt) }
 }
 
 mod unit {

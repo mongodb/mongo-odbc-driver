@@ -8,7 +8,7 @@ authors = [
     "Varsha Subrahmanyam <varsha.subrahmanyam@mongodb.com>",
     "Nathan Leniz <nathan.leniz@gmail.com>",
 ]
-edition = "2021"
+edition.workspace = true
 
 [dependencies]
 thiserror = { workspace = true }

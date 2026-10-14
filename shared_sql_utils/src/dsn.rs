@@ -201,7 +201,9 @@ impl Dsn {
             });
         // Somehow the registry value was too long. This should never happen unless Microsoft changes registry value rules.
         if !error_key.is_empty() {
-            return Err(DsnError::Generic(format!("If you see this error, please report it. Attempted to read a value from registry that was too long for key: `{error_key}`.")));
+            return Err(DsnError::Generic(format!(
+                "If you see this error, please report it. Attempted to read a value from registry that was too long for key: `{error_key}`."
+            )));
         }
         dsn_opts.driver_name.clone_from(&self.driver_name);
         dsn_opts.dsn.clone_from(&self.dsn);

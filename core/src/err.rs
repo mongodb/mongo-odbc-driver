@@ -1,7 +1,6 @@
 use constants::{
-    OdbcState, FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE,
-    INVALID_DESCRIPTOR_INDEX, NO_DSN_OR_DRIVER, OPERATION_CANCELLED, TIMEOUT_EXPIRED,
-    UNABLE_TO_CONNECT,
+    FUNCTION_SEQUENCE_ERROR, GENERAL_ERROR, INVALID_CURSOR_STATE, INVALID_DESCRIPTOR_INDEX,
+    NO_DSN_OR_DRIVER, OPERATION_CANCELLED, OdbcState, TIMEOUT_EXPIRED, UNABLE_TO_CONNECT,
 };
 use mongodb::error::{ErrorKind, WriteFailure};
 use thiserror::Error;
@@ -85,7 +84,9 @@ pub enum Error {
         "The mongosql Translation `pipeline` should be an array; however this was not the case."
     )]
     TranslationPipelineNotArray,
-    #[error("The mongosql Translation `pipeline` array should only contain Documents; however, a non-document bson-type was encountered.")]
+    #[error(
+        "The mongosql Translation `pipeline` array should only contain Documents; however, a non-document bson-type was encountered."
+    )]
     TranslationPipelineArrayContainsNonDocument,
     #[error(
         "Multiple Documents were returned when getting the schema; however, only one was expected."
@@ -97,13 +98,21 @@ pub enum Error {
     LibraryPathError(String),
     // SQL interface status gate failures. The messages are user-facing and must never
     // contain marker material (token, payload, or signature); details are logged at warn level.
-    #[error("Unable to determine SQL Interface status for this cluster. Verify that the SQL interface is enabled for your cluster and retry. If the error persists, please contact MongoDB support at https://support.mongodb.com")]
+    #[error(
+        "Unable to determine SQL Interface status for this cluster. Verify that the SQL interface is enabled for your cluster and retry. If the error persists, please contact MongoDB support at https://support.mongodb.com"
+    )]
     SqlInterfaceUnavailable,
-    #[error("SQL Interface is disabled for this cluster. Enable the SQL Interface for your cluster on Atlas and retry. Contact your admin if necessary.")]
+    #[error(
+        "SQL Interface is disabled for this cluster. Enable the SQL Interface for your cluster on Atlas and retry. Contact your admin if necessary."
+    )]
     SqlInterfaceDisabled,
-    #[error("SQL Interface status for this cluster could not be validated. For more details, enable logging with warn level minimum. Contact MongoDB support at https://support.mongodb.com if you need help.")]
+    #[error(
+        "SQL Interface status for this cluster could not be validated. For more details, enable logging with warn level minimum. Contact MongoDB support at https://support.mongodb.com if you need help."
+    )]
     SqlInterfaceStatusInvalid,
-    #[error("Unable to read SQL Interface status for this cluster: {0}. Please contact MongoDB support at https://support.mongodb.com")]
+    #[error(
+        "Unable to read SQL Interface status for this cluster: {0}. Please contact MongoDB support at https://support.mongodb.com"
+    )]
     SqlInterfaceStatusReadFailed(mongodb::error::Error),
 }
 
@@ -118,7 +127,7 @@ impl Error {
             | Error::SchemaCatalogGenerationFailed(err)
             | Error::SchemaCatalogResultFailed(err)
             | Error::SqlInterfaceStatusReadFailed(err) => {
-                if matches!(err.kind.as_ref(), ErrorKind::Io(ref io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
+                if matches!(err.kind.as_ref(), ErrorKind::Io(io_err) if io_err.kind() == std::io::ErrorKind::TimedOut)
                 {
                     return TIMEOUT_EXPIRED;
                 }

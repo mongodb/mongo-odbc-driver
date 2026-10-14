@@ -96,22 +96,22 @@ mod integration {
     use definitions::{DriverConnectOption, Handle, HandleType, SqlReturn};
     use std::ptr::null_mut;
 
-    test_connection_diagnostics! (
-            missing_user_in_connection_string,
-            in_connection_string = "Driver=MongoDB Atlas SQL ODBC Driver;SERVER=N_A;PWD=N_A",
-            driver_completion = DriverConnectOption::SQL_DRIVER_NO_PROMPT,
-            expected_sql_state = UNABLE_TO_CONNECT,
-            expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][Core] Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri"
-        );
-    test_connection_diagnostics! (
-            missing_pwd_in_connection_string,
-            in_connection_string = "Driver=MongoDB Atlas SQL ODBC Driver;SERVER=N_A;USER=N_A",
-            driver_completion = DriverConnectOption::SQL_DRIVER_NO_PROMPT,
-            expected_sql_state = UNABLE_TO_CONNECT,
-            expected_sql_return = SqlReturn::ERROR,
-            expected_error_message = "[MongoDB][Core] Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri"
-        );
+    test_connection_diagnostics!(
+        missing_user_in_connection_string,
+        in_connection_string = "Driver=MongoDB Atlas SQL ODBC Driver;SERVER=N_A;PWD=N_A",
+        driver_completion = DriverConnectOption::SQL_DRIVER_NO_PROMPT,
+        expected_sql_state = UNABLE_TO_CONNECT,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message = "[MongoDB][Core] Invalid Uri: One of [\"uid\", \"user\"] is required for a valid Mongo ODBC Uri"
+    );
+    test_connection_diagnostics!(
+        missing_pwd_in_connection_string,
+        in_connection_string = "Driver=MongoDB Atlas SQL ODBC Driver;SERVER=N_A;USER=N_A",
+        driver_completion = DriverConnectOption::SQL_DRIVER_NO_PROMPT,
+        expected_sql_state = UNABLE_TO_CONNECT,
+        expected_sql_return = SqlReturn::ERROR,
+        expected_error_message = "[MongoDB][Core] Invalid Uri: One of [\"password\", \"pwd\"] is required for a valid Mongo ODBC Uri"
+    );
     test_connection_diagnostics!(
         missing_driver_in_connection_string,
         in_connection_string = "USER=N_A;SERVER=N_A;PWD=N_A",

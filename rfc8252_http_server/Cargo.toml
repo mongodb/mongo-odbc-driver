@@ -5,7 +5,7 @@ authors = [
     "Patrick Meredith <pmeredit@protonmail.com>",
     "Nathan Leniz <nathan.leniz@gmail.com>",
 ]
-edition = "2021"
+edition.workspace = true
 
 [dependencies]
 actix-web = "4"

@@ -1,19 +1,22 @@
 [workspace]
+resolver = "3"
 
 members = [
     "constants",
-    "cstr",
-    "odbc",
-    "definitions",
     "core",
+    "cstr",
+    "definitions",
     "integration_test",
-    "win_setupgui",
-    "shared_sql_utils",
     "logger",
     "macos_postinstall",
+    "odbc",
     "rfc8252_http_server",
+    "shared_sql_utils",
+    "win_setupgui",
 ]
 
+[workspace.package]
+edition = "2024"
 
 [workspace.lints.clippy]
 unnecessary_cast = "deny"

@@ -1,5 +1,5 @@
 use mongo_odbc_core::{
-    oidc_auth::{oidc_call_back, Error},
+    oidc_auth::{Error, oidc_call_back},
     test_config::*,
 };
 use mongodb::options::oidc::{CallbackContext, IdpServerInfo};
@@ -19,5 +19,8 @@ async fn main() {
         .timeout(std::time::Instant::now() + std::time::Duration::from_secs(2))
         .version(1u32)
         .build();
-    println!("This is very timing dependent, but we should see a timeout, if we play with the value: {:?}", oidc_call_back(c).await.unwrap_err().get_custom::<Error>());
+    println!(
+        "This is very timing dependent, but we should see a timeout, if we play with the value: {:?}",
+        oidc_call_back(c).await.unwrap_err().get_custom::<Error>()
+    );
 }

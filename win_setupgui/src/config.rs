@@ -18,7 +18,7 @@ use windows::Win32::{
 /// # Safety
 /// Because this is a C-interface, this is necessarily unsafe
 ///
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn ConfigDSNW(
     hwnd: HWND,
     request: u32,
@@ -26,7 +26,8 @@ unsafe extern "C" fn ConfigDSNW(
     attributes: *mut cstr::WideChar,
 ) -> bool {
     std::panic::catch_unwind(|| {
-        let mut dsn_opts = Dsn::from_attribute_string(&parse_attribute_string_w(attributes));
+        let attrs = unsafe { parse_attribute_string_w(attributes) };
+        let mut dsn_opts = Dsn::from_attribute_string(&attrs);
 
         // If a data source name is passed to ConfigDSN in lpszAttributes, ConfigDSN checks that the name is valid. If the
         // data source name matches an existing data source name and hwndParent is null, ConfigDSN overwrites the existing name.
@@ -42,7 +43,7 @@ unsafe extern "C" fn ConfigDSNW(
 
         match request {
             ODBC_ADD_DSN => {
-                if hwnd.0 == std::ptr::null_mut() && dsn_opts.is_valid_dsn() {
+                if hwnd.0.is_null() && dsn_opts.is_valid_dsn() {
                     dsn_opts.write_dsn_to_registry()
                 } else {
                     config_dsn(dsn_opts, request)
