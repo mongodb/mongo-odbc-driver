@@ -52,6 +52,7 @@ lazy_static! {
         "SYMBOL".to_string(),
         "UNDEFINED".to_string(),
         "UNWIND".to_string(),
+        "VALUE".to_string(),
     ]
     .join(",");
 }
