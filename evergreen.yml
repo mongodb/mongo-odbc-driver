@@ -1896,7 +1896,7 @@ tasks:
         variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "update orchestrator mongod port"
         variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
-      - func: "bootstrap mongo-orchestration"
+      - func: "start mongodb"
         variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
@@ -1956,7 +1956,7 @@ tasks:
         variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "update orchestrator mongod port"
         variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
-      - func: "bootstrap mongo-orchestration"
+      - func: "start mongodb"
         variants: [windows-64, ubuntu2204, ubuntu2204-arm64]
       - func: "generate sql-engines github token"
         variants: [windows-64, ubuntu2204, ubuntu2204-arm64]

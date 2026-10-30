@@ -63,6 +63,7 @@ script_dir: "$COMMON_TEST_INFRA_DIR/evergreen/scripts"
 working_dir: "mongosql-odbc-driver"
 MONGO_ORCHESTRATION_HOME: "$DRIVERS_TOOLS/.evergreen/orchestration"
 MONGODB_BINARIES: "$MONGODB_BINARIES"
+USE_MONGODB_RUNNER: "true"
 SBOM_FINAL: "$SBOM_FINAL"
 prepare_shell: |
   set -o errexit
