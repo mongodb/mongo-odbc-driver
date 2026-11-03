@@ -7,13 +7,14 @@
 mod unit {
     use crate::{
         SQLBindCol, SQLFetch,
+        errors::ODBCError,
         handles::definitions::{
             BoundColInfo, Connection, ConnectionState, Env, EnvState, MongoHandle, Statement,
             StatementState,
         },
         map,
     };
-    use bson::doc;
+    use bson::{DateTime, doc};
     use cstr::{WideChar, input_text_to_string_w};
     use definitions::{
         BindType, CDataType, Len, Nullability,
@@ -360,6 +361,56 @@ mod unit {
 
             // free buffer
             let _ = Box::from_raw(buffer as *mut WChar);
+        }
+    }
+
+    #[test]
+    fn test_negative_buffer_length() {
+        // Set up MongoHandle
+        let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+        let conn =
+            &mut MongoHandle::Connection(Connection::with_state(env, ConnectionState::Allocated));
+        let stmt: *mut _ =
+            &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+
+        unsafe {
+            let s = (*stmt).as_statement().unwrap();
+            *s.mongo_statement.write().unwrap() =
+                Some(Box::new(create_mongo_query_for_bind_col_tests()));
+
+            let mut buffer = [0u8; 4];
+            let mut indicator: Len = 0;
+
+            // Assert that SQLBindCol returns HY090 and does not bind the column.
+            assert_eq!(
+                SqlReturn::ERROR,
+                SQLBindCol(
+                    stmt as *mut _,
+                    1,
+                    CDataType::SQL_C_CHAR as SmallInt,
+                    buffer.as_mut_ptr() as *mut _,
+                    -1,
+                    &mut indicator,
+                )
+            );
+            assert!(matches!(
+                s.errors.read().unwrap().last(),
+                Some(ODBCError::InvalidStringOrBufferLength(-1))
+            ));
+            assert!(s.bound_cols.read().unwrap().is_none());
+
+            // Unbinding ignores buffer_length.
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLBindCol(
+                    stmt as *mut _,
+                    1,
+                    CDataType::SQL_C_CHAR as SmallInt,
+                    null_mut(),
+                    -1,
+                    null_mut(),
+                )
+            );
         }
     }
 
@@ -927,5 +978,132 @@ mod unit {
             },
 
         })
+    }
+
+    const CANARY: u8 = 0xAB;
+    const CANARY_LEN: usize = 256;
+    const ROWSET_SIZE: usize = 2;
+
+    fn create_mongo_query_for_fixed_width_tests() -> MongoQuery {
+        let col = |name: &str, bson_type| {
+            MongoColMetadata::new(
+                "",
+                "test".to_string(),
+                name.to_string(),
+                Schema::Atomic(Atomic::Scalar(bson_type)),
+                Nullability::SQL_NO_NULLS,
+                TypeMode::Simple,
+                None,
+            )
+        };
+        MongoQuery::new(
+            vec![
+                doc! {"test": {"b": true, "i": 10, "l": 10_000_000_000i64, "d": 1.5, "dt": DateTime::from_millis(1_000_000_000_000)}},
+                doc! {"test": {"b": false, "i": 20, "l": 20_000_000_000i64, "d": 2.5, "dt": DateTime::from_millis(1_700_000_000_123)}},
+            ],
+            vec![
+                col("b", BsonTypeName::Bool),
+                col("i", BsonTypeName::Int),
+                col("l", BsonTypeName::Long),
+                col("d", BsonTypeName::Double),
+                col("dt", BsonTypeName::Date),
+            ],
+        )
+    }
+
+    // Binds `col` as `target_type` with `buffer_length`, fetches one rowset, and returns the bound
+    // buffer after asserting that nothing past the last element was written.
+    unsafe fn fetch_fixed_width_rowset(
+        col: USmallInt,
+        target_type: CDataType,
+        element_size: usize,
+        buffer_length: Len,
+    ) -> Vec<u8> {
+        unsafe {
+            // Set up MongoHandle
+            let env = &mut MongoHandle::Env(Env::with_state(EnvState::Allocated));
+            let conn = &mut MongoHandle::Connection(Connection::with_state(
+                env,
+                ConnectionState::Allocated,
+            ));
+            let stmt: *mut _ =
+                &mut MongoHandle::Statement(Statement::with_state(conn, StatementState::Allocated));
+            let s = (*stmt).as_statement().unwrap();
+            s.attributes.write().unwrap().row_array_size = ROWSET_SIZE;
+            *s.mongo_statement.write().unwrap() =
+                Some(Box::new(create_mongo_query_for_fixed_width_tests()));
+
+            let data_len = ROWSET_SIZE * element_size;
+            let mut buffer = vec![CANARY; data_len + CANARY_LEN];
+            let mut indicators = [0 as Len; ROWSET_SIZE];
+
+            assert_eq!(
+                SqlReturn::SUCCESS,
+                SQLBindCol(
+                    stmt as *mut _,
+                    col,
+                    target_type as SmallInt,
+                    buffer.as_mut_ptr() as *mut _,
+                    buffer_length,
+                    indicators.as_mut_ptr(),
+                )
+            );
+            let fetch_ret = SQLFetch(stmt as *mut _);
+            assert!(
+                matches!(fetch_ret, SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO),
+                "{target_type:?} BufferLength={buffer_length}: SQLFetch returned {fetch_ret:?}"
+            );
+
+            assert!(
+                buffer[data_len..].iter().all(|b| *b == CANARY),
+                "{target_type:?} BufferLength={buffer_length}: wrote past the end of the bound array"
+            );
+            assert_eq!([element_size as Len; ROWSET_SIZE], indicators);
+            buffer
+        }
+    }
+
+    /// BufferLength is ignored for fixed-length C types, so it must not affect where array
+    /// elements are written.
+    #[test]
+    fn test_fixed_width_rowset_ignores_buffer_length() {
+        // (column, target type, size of the C type)
+        let cases = [
+            (1, CDataType::SQL_C_BIT, 1),
+            (2, CDataType::SQL_C_SLONG, 4),
+            (2, CDataType::SQL_C_LONG, 4),
+            (2, CDataType::SQL_C_ULONG, 4),
+            (3, CDataType::SQL_C_SBIGINT, 8),
+            (3, CDataType::SQL_C_UBIGINT, 8),
+            (4, CDataType::SQL_C_FLOAT, 4),
+            (4, CDataType::SQL_C_DOUBLE, 8),
+            (5, CDataType::SQL_C_DATE, 6),
+            (5, CDataType::SQL_C_TYPE_DATE, 6),
+            (5, CDataType::SQL_C_TIME, 6),
+            (5, CDataType::SQL_C_TYPE_TIME, 6),
+            (5, CDataType::SQL_C_TIMESTAMP, 16),
+            (5, CDataType::SQL_C_TYPE_TIMESTAMP, 16),
+        ];
+
+        for (col, target_type, element_size) in cases {
+            unsafe {
+                let expected =
+                    fetch_fixed_width_rowset(col, target_type, element_size, element_size as Len);
+                // Each row must be written, i.e. the second row did not overwrite the first.
+                assert_ne!(
+                    expected[..element_size],
+                    expected[element_size..2 * element_size],
+                    "{target_type:?}: rows should differ"
+                );
+
+                for buffer_length in [0, 1, 64] {
+                    assert_eq!(
+                        expected,
+                        fetch_fixed_width_rowset(col, target_type, element_size, buffer_length),
+                        "{target_type:?} BufferLength={buffer_length}"
+                    );
+                }
+            }
+        }
     }
 }

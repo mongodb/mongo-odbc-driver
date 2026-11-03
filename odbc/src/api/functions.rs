@@ -1,7 +1,7 @@
 use crate::{
     add_diag_with_function,
     api::{
-        data::{i16_len, i32_len, ptr_safe_write},
+        data::{bound_col_element_size, i16_len, i32_len, ptr_safe_write},
         diag::{get_diag_fieldw, get_diag_recw, get_stmt_diag_field},
         errors::{ODBCError, Result},
         util::{connection_attribute_to_string, handle_sql_type, statement_attribute_to_string},
@@ -414,6 +414,16 @@ pub unsafe extern "C" fn SQLBindCol(
                 if <CDataType as FromPrimitive>::from_i16(target_type).is_none() {
                     let mongo_handle = try_mongo_handle!(hstmt);
                     add_diag_info!(mongo_handle, ODBCError::InvalidTargetType(target_type));
+                    return SqlReturn::ERROR;
+                }
+
+                // make sure that buffer_length is not negative, since it is used to compute array strides.
+                if !target_value.is_null() && buffer_length < 0 {
+                    let mongo_handle = try_mongo_handle!(hstmt);
+                    add_diag_info!(
+                        mongo_handle,
+                        ODBCError::InvalidStringOrBufferLength(buffer_length)
+                    );
                     return SqlReturn::ERROR;
                 }
 
@@ -1668,10 +1678,15 @@ unsafe fn sql_fetch_bound_buffers(
         let mut encountered_success_with_info_getting_data = false;
 
         for (col, bound_col_info) in bound_cols.iter() {
-            // Set target_buffer to the correct buffer in the array of buffers
-            let target_buffer = (bound_col_info.target_buffer as ULen
-                + (index * (bound_col_info.buffer_length as ULen)))
-                as Pointer;
+            // this conversion is checked in SQLBindCol, so it is guaranteed to work here.
+            let target_type: CDataType =
+                FromPrimitive::from_i16(bound_col_info.target_type).unwrap();
+
+            // Set target_buffer to the correct buffer in the array of buffers. BufferLength is ignored
+            // for fixed-length types, so the stride is the size of the bound C type.
+            let element_size = bound_col_element_size(target_type, bound_col_info.buffer_length);
+            let target_buffer =
+                (bound_col_info.target_buffer as ULen + (index * element_size)) as Pointer;
 
             // Set length/indicator buffer to the correct buffer in the array of buffers
             let len_ind_buffer = (bound_col_info.length_or_indicator as ULen
@@ -1680,7 +1695,7 @@ unsafe fn sql_fetch_bound_buffers(
             let sql_return = sql_get_data_helper(
                 mongo_handle_for_sql_get_data_helper,
                 *col,
-                FromPrimitive::from_i16(bound_col_info.target_type).unwrap(), // this conversion is checked in SQLBindCol, so it is guaranteed to work here.
+                target_type,
                 target_buffer,
                 bound_col_info.buffer_length,
                 len_ind_buffer,
