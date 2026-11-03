@@ -210,6 +210,15 @@ pub struct Timestamp {
 }
 
 /// SQLGUID
+///
+/// ```c
+/// struct tagSQLGUID {
+///     DWORD Data1;
+///     WORD  Data2;
+///     WORD  Data3;
+///     BYTE  Data4[8];
+/// };
+/// ```
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Guid {

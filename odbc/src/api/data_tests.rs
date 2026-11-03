@@ -933,13 +933,77 @@ fn sql_get_guid_data(mq: MongoQuery) {
                         .unwrap()[0]
                 ),
             );
-            guid_val_test(
-                GUID_COL,
-                &[
-                    123, 34, 36, 117, 117, 105, 100, 34, 58, 34, 100, 53, 101, 51, 97,
-                ],
+        }
+
+        // SQL_C_GUID is fixed-width: per the ODBC spec the driver ignores
+        // BufferLength for fixed-size C types and always writes a whole
+        // SQLGUID (16 bytes). So the GUID must be written in full even when
+        // buffer_length is 0 or smaller than the GUID, and nothing may be
+        // written past it. The buffer is pre-filled with a canary byte so
+        // that any write beyond the GUID is detectable.
+        const CANARY: u8 = 0xAA;
+        let guid_size = std::mem::size_of::<definitions::Guid>();
+        assert_eq!(16, guid_size);
+        // The expected value is the UUID d5e3ac31-fd29-49e3-8759-08d116e98b29
+        // laid out as a SQLGUID (d1/d2/d3 are native-endian integers).
+        let expected_guid = definitions::Guid {
+            d1: 0xd5e3ac31,
+            d2: 0xfd29,
+            d3: 0x49e3,
+            d4: [0x87, 0x59, 0x08, 0xd1, 0x16, 0xe9, 0x8b, 0x29],
+        };
+        for buffer_length in [0isize, 16, 48, 100, 200] {
+            let mut buffer = [CANARY; 200];
+            let out_len_or_ind = &mut 0;
+            assert_eq!(
                 SqlReturn::SUCCESS,
+                SQLGetData(
+                    stmt_handle as *mut _,
+                    GUID_COL,
+                    CDataType::SQL_C_GUID as i16,
+                    buffer.as_mut_ptr() as *mut _,
+                    buffer_length,
+                    out_len_or_ind,
+                )
             );
+            // The reported length is the size of a SQLGUID, regardless of buffer_length.
+            assert_eq!(guid_size as isize, *out_len_or_ind);
+            // The start of the buffer holds the expected GUID.
+            assert_eq!(
+                expected_guid,
+                std::ptr::read_unaligned(buffer.as_ptr() as *const definitions::Guid),
+            );
+            // Every byte after the GUID is still the canary, i.e. no overrun.
+            assert!(
+                buffer[guid_size..].iter().all(|&b| b == CANARY),
+                "SQL_C_GUID wrote past the SQLGUID with buffer_length {buffer_length}"
+            );
+            // Fixed-width data cannot be retrieved in parts, so asking for
+            // the same column again after it was fully returned yields
+            // NO_DATA and must not touch the buffer.
+            assert_eq!(
+                SqlReturn::NO_DATA,
+                SQLGetData(
+                    stmt_handle as *mut _,
+                    GUID_COL,
+                    CDataType::SQL_C_GUID as i16,
+                    buffer.as_mut_ptr() as *mut _,
+                    buffer_length,
+                    out_len_or_ind,
+                )
+            );
+            assert!(buffer[guid_size..].iter().all(|&b| b == CANARY));
+            // Clear the per-column "already returned" state so the next
+            // buffer_length iteration can fetch the column again.
+            (*stmt_handle)
+                .as_statement()
+                .unwrap()
+                .var_data_cache
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .remove(&GUID_COL);
         }
         let _ = Box::from_raw(buffer as *mut WChar);
         let _ = Box::from_raw(conn as *mut WChar);

@@ -11,7 +11,8 @@ use cstr::{
     write_wstring_slice_to_buffer,
 };
 use definitions::{
-    CDataType, Char, Date, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp, USmallInt,
+    CDataType, Char, Date, Guid, Integer, Len, Pointer, SmallInt, SqlReturn, Time, Timestamp,
+    USmallInt,
 };
 use mongodb::bson::{Bson, UuidRepresentation, spec::BinarySubtype};
 use regex::Regex;
@@ -34,7 +35,7 @@ trait IntoCData {
     fn to_json(self, uuid_repr: Option<UuidRepresentation>) -> String;
     fn to_json_val(self, uuid_repr: Option<UuidRepresentation>) -> Value;
     fn to_binary(self, uuid_repr: Option<UuidRepresentation>) -> Result<Vec<u8>>;
-    fn to_guid(self, uuid_repr: Option<UuidRepresentation>) -> Result<Vec<u8>>;
+    fn to_guid(&self) -> Result<(Guid, Option<ODBCError>)>;
     fn to_f64(&self) -> Result<(f64, Option<ODBCError>)>;
     fn to_f32(&self) -> Result<(f32, Option<ODBCError>)>;
     fn to_i64(&self) -> Result<(i64, Option<ODBCError>)>;
@@ -115,12 +116,39 @@ impl IntoCData for Bson {
         Ok(self.to_json(uuid_repr).into_bytes())
     }
 
-    fn to_guid(self, uuid_repr: Option<UuidRepresentation>) -> Result<Vec<u8>> {
+    fn to_guid(&self) -> Result<(Guid, Option<ODBCError>)> {
         match self {
             Bson::Binary(b) if b.subtype != BinarySubtype::Uuid => Err(
                 ODBCError::RestrictedDataType("binary with non-uuid subtype", GUID),
             ),
-            Bson::Binary(_) => Ok(self.to_json(uuid_repr).into_bytes()),
+            Bson::Binary(b) => {
+                let bytes = b
+                    .to_uuid()
+                    .map_err(|_| ODBCError::RestrictedDataType("malformed uuid binary", GUID))?
+                    .bytes();
+                // SQLGUID is laid out as:
+                //   struct tagSQLGUID {
+                //       DWORD Data1;    // u32
+                //       WORD  Data2;    // u16
+                //       WORD  Data3;    // u16
+                //       BYTE  Data4[8];
+                //   };
+                // Data1-3 are native-endian integers, while the UUID bytes are
+                // big-endian (RFC 4122 order), so they are decoded from the first
+                // 8 bytes and the remaining 8 bytes are copied as-is into Data4.
+                Ok((
+                    Guid {
+                        d1: u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]),
+                        d2: u16::from_be_bytes([bytes[4], bytes[5]]),
+                        d3: u16::from_be_bytes([bytes[6], bytes[7]]),
+                        d4: [
+                            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13],
+                            bytes[14], bytes[15],
+                        ],
+                    },
+                    None,
+                ))
+            }
             o => Err(ODBCError::RestrictedDataType(o.to_type_str(), GUID)),
         }
     }
@@ -891,12 +919,8 @@ pub unsafe fn format_bson_data(
         };
 
         match target_type {
-            CDataType::SQL_C_BINARY | CDataType::SQL_C_GUID => {
-                let data = if target_type == CDataType::SQL_C_GUID {
-                    data.to_guid(uuid_repr)
-                } else {
-                    data.to_binary(uuid_repr)
-                };
+            CDataType::SQL_C_BINARY => {
+                let data = data.to_binary(uuid_repr);
                 let Ok(data) = data else {
                     let stmt = (*mongo_handle).as_statement().unwrap();
                     stmt.errors.write().unwrap().push(data.unwrap_err());
@@ -941,6 +965,16 @@ pub unsafe fn format_bson_data(
                     data,
                     isize_len::set_output_wstring_as_bytes,
                     function_name
+                )
+            }
+            // SQL_C_GUID is a fixed-width SQLGUID, so buffer_len must be ignored.
+            CDataType::SQL_C_GUID => {
+                fixed_data_with_warnings!(
+                    mongo_handle,
+                    col_num,
+                    data.to_guid(),
+                    target_value_ptr,
+                    str_len_or_ind_ptr
                 )
             }
             CDataType::SQL_C_BIT => {
