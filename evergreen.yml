@@ -1267,8 +1267,10 @@ functions:
 
           # Compile test binaries without running them, then run each under procdump
           # so that crash dumps are captured for the actual crashing process.
+          # Newer Cargo versions no longer place test executables in target/debug/deps,
+          # so ask Cargo for the executable paths instead of guessing the location.
           echo "----- Compiling integration test binaries ----"
-          cargo test --no-run integration 2>&1
+          cargo test --no-run integration --message-format=json-render-diagnostics > "$DUMP_PATH/test_bins.json"
           COMPILE_EXIT=$?
           if [ $COMPILE_EXIT -ne 0 ]; then
             $COMMON_TEST_INFRA_DIR/test-environment/run_adf.sh stop
@@ -1277,7 +1279,8 @@ functions:
 
           echo "----- Running integration test binaries under procdump ----"
           OVERALL_EXIT=0
-          for test_bin in $(find target/debug/deps -maxdepth 1 -name "*_tests-*.exe" -not -name "*.pdb" | sort); do
+          TEST_BINS=$(grep -o '"executable":"[^"]*"' "$DUMP_PATH/test_bins.json" | sed -e 's/^"executable":"//' -e 's/"$//' -e 's#\\\\#/#g' | grep '_tests-.*\.exe$' | sort -u)
+          for test_bin in $TEST_BINS; do
             test_name=$(basename "$test_bin")
             echo "--- Running $test_name ---"
             test_bin_win=$(cygpath -w "$test_bin")
@@ -1292,11 +1295,8 @@ functions:
           # Logger tests run in isolation because other tests would pollute the log file.
           # Feature gated to only run on evergreen.
           echo "----- Compiling logger test binary ----"
-          cargo test --no-run --test connection_tests --features evergreen_tests 2>&1
-          LOGGER_BIN=$(find target/debug/deps -maxdepth 1 -name "connection_tests-*.exe" -not -name "*.pdb" -newer target/debug/deps | sort | tail -1)
-          if [ -z "$LOGGER_BIN" ]; then
-            LOGGER_BIN=$(find target/debug/deps -maxdepth 1 -name "connection_tests-*.exe" -not -name "*.pdb" | sort | tail -1)
-          fi
+          cargo test --no-run --test connection_tests --features evergreen_tests --message-format=json-render-diagnostics > "$DUMP_PATH/logger_bin.json"
+          LOGGER_BIN=$(grep -o '"executable":"[^"]*"' "$DUMP_PATH/logger_bin.json" | sed -e 's/^"executable":"//' -e 's/"$//' -e 's#\\\\#/#g' | grep 'connection_tests-.*\.exe$' | sort -u | tail -1)
           if [ -n "$LOGGER_BIN" ]; then
             echo "--- Running logger test $(basename "$LOGGER_BIN") ---"
             logger_bin_win=$(cygpath -w "$LOGGER_BIN")
@@ -1321,7 +1321,7 @@ functions:
           # If any crash occurred, archive sources and PDBs for debugging
           if [ $EXITCODE -eq 139 ] || [ "$DUMP_COUNT" -gt 0 ]; then
             SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
-            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
+            PDB_FILES=$(find $(pwd) -path '*/target/debug/*' -name '*test*.pdb' | tr '\n' ' ')
             tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
             ls -l $DUMP_PATH
           fi
@@ -1351,7 +1351,7 @@ functions:
         if [ $EXITCODE -eq 139 ]; then
             # Compress the sources and pdbs so that we'll have everything for debugging available in Evergreen after a run
             SOURCES_FOLDERS=$(find $(pwd) -path '*/src' | tr '\n' ' ')
-            PDB_FILES=$(find $(pwd) -path '*/target/debug/deps/*test*.pdb' | tr '\n' ' ')
+            PDB_FILES=$(find $(pwd) -path '*/target/debug/*' -name '*test*.pdb' | tr '\n' ' ')
             echo "tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES"
             tar czvf "$DUMP_PATH/$MONGOODBC_DEBUGGING_INFO_ARCHIVE.tar.gz" $SOURCES_FOLDERS $PDB_FILES
         fi
